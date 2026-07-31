@@ -290,9 +290,14 @@ export type MercureEvent =
           dayNumber: number;
           type: string;
           message: string;
-          action?: "navigate";
-          actionLat?: number;
-          actionLon?: number;
+          // Absent when no station was found anywhere along the trip.
+          action?: {
+            kind: "navigate";
+            label: string;
+            payload: { lat: number; lon: number };
+          };
+          lat?: number;
+          lon?: number;
         }[];
       };
     }
@@ -304,7 +309,11 @@ export type MercureEvent =
           dayNumber: number;
           type: "nudge";
           message: string;
-          action: "navigate";
+          action: {
+            kind: "navigate";
+            label: string;
+            payload: { lat: number; lon: number };
+          };
           lat: number;
           lon: number;
         }[];

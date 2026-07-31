@@ -261,6 +261,44 @@ export function terrainAlertsEvent(): MercureEvent {
   };
 }
 
+/**
+ * Terrain alerts in the wire format the backend emits since issue #863:
+ * coordinates AND the contextual action travel with the live event, and only the
+ * kinds the frontend wires (`navigate`, `dismiss`) are transmitted — the
+ * `auto_fix` action of the elevation rule is dropped server-side, so its alert
+ * arrives without any action at all.
+ */
+export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
+  return {
+    type: "terrain_alerts",
+    data: {
+      alertsByStage: {
+        "0": [
+          {
+            type: "critical",
+            message: "Discontinuity between stage 1 and 2",
+            lat: 44.61,
+            lon: 4.51,
+            action: {
+              kind: "navigate",
+              label: "Show the discontinuity on the map",
+              payload: { lat: 44.61, lon: 4.51 },
+            },
+          },
+        ],
+        "1": [
+          {
+            type: "warning",
+            message: "Significant elevation gain (1200m)",
+            lat: 44.4,
+            lon: 4.2,
+          },
+        ],
+      },
+    },
+  };
+}
+
 export function alertsWithActionsEvent(): MercureEvent {
   return {
     type: "terrain_alerts",

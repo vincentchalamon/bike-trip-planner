@@ -6,6 +6,8 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -14,6 +16,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
+use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
@@ -81,6 +84,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $analyzerRegistry,
             $waysRepository,
             $distributor,
+            new StagePayloadMapper(),
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -206,6 +210,88 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
+    }
+
+    #[Test]
+    public function publishedAlertsCarryCoordinatesAndWiredActionsOnly(): void
+    {
+        $stage = $this->createStage();
+        $tripRequest = new TripRequest();
+        $tripRequest->ebikeMode = false;
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('fr');
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        $navigateAlert = new Alert(
+            type: AlertType::CRITICAL,
+            message: 'Discontinuité',
+            lat: 48.1,
+            lon: 2.2,
+            action: new AlertAction(
+                kind: AlertActionKind::NAVIGATE,
+                label: 'Voir la discontinuité sur la carte',
+                payload: ['lat' => 48.1, 'lon' => 2.2],
+            ),
+        );
+        // auto_fix is not wired in the frontend (#397): it must not be published,
+        // otherwise a dead disabled button shows up.
+        $autoFixAlert = new Alert(
+            type: AlertType::WARNING,
+            message: 'Important dénivelé',
+            lat: 48.3,
+            lon: 2.4,
+            action: new AlertAction(
+                kind: AlertActionKind::AUTO_FIX,
+                label: "Couper l'étape en deux",
+                payload: ['splitAt' => 40.0],
+            ),
+        );
+
+        $analyzerRegistry = $this->createStub(AnalyzerRegistryInterface::class);
+        $analyzerRegistry->method('analyze')->willReturn([$navigateAlert, $autoFixAlert]);
+
+        $published = null;
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->willReturnCallback(function (string $tripId, MercureEventType $type, array $data) use (&$published): void {
+                self::assertSame(MercureEventType::TERRAIN_ALERTS, $type);
+                $published = $data;
+            });
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $analyzerRegistry,
+            $publisher,
+            $this->waysRepository([]),
+            $distributor,
+        );
+
+        $handler(new AnalyzeTerrain('trip-1'));
+
+        $this->assertIsArray($published);
+        $alerts = $published['alertsByStage'][0];
+        $this->assertCount(2, $alerts);
+
+        $this->assertSame(48.1, $alerts[0]['lat']);
+        $this->assertSame(2.2, $alerts[0]['lon']);
+        $this->assertSame([
+            'kind' => 'navigate',
+            'label' => 'Voir la discontinuité sur la carte',
+            'payload' => ['lat' => 48.1, 'lon' => 2.2],
+        ], $alerts[0]['action']);
+
+        $this->assertSame(48.3, $alerts[1]['lat']);
+        $this->assertSame(2.4, $alerts[1]['lon']);
+        $this->assertArrayNotHasKey('action', $alerts[1]);
     }
 
     #[Test]

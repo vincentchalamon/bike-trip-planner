@@ -227,6 +227,8 @@ final readonly class TripDetailProvider implements ProviderInterface
             'message' => $alert->message,
             'lat' => $alert->lat,
             'lon' => $alert->lon,
+            // Only the kinds the frontend actually handles are exposed (issue #863).
+            'action' => $alert->action?->toDeliverablePayload(),
         ];
     }
 

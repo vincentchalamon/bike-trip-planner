@@ -121,7 +121,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
                         && str_contains((string) $alerts[0]['message'], 'Belgium')
-                        && 'navigate' === $alerts[0]['action']
+                        && 'navigate' === $alerts[0]['action']['kind']
+                        && 'alert.border_crossing.action' === $alerts[0]['action']['label']
                         && 0 === $alerts[0]['stageIndex'];
                 }),
             );
@@ -306,7 +307,9 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                     }
 
                     // The crossing point should be the end point of stage 1 (entry into Belgium)
-                    return 'navigate' === $alert['action']
+                    return 'navigate' === $alert['action']['kind']
+                        && abs($alert['action']['payload']['lat'] - 50.8279) < 0.001
+                        && abs($alert['action']['payload']['lon'] - 3.2646) < 0.001
                         && abs($alert['lat'] - 50.8279) < 0.001
                         && abs($alert['lon'] - 3.2646) < 0.001;
                 }),

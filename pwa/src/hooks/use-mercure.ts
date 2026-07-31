@@ -386,20 +386,11 @@ function dispatchEvent(event: MercureEvent): void {
           alerts.map((a) => ({
             type: "nudge" as const,
             message: a.message,
-            lat: a.actionLat ?? null,
-            lon: a.actionLon ?? null,
+            lat: a.lat ?? null,
+            lon: a.lon ?? null,
             source: "railway_station",
-            ...(a.action === "navigate" &&
-            a.actionLat != null &&
-            a.actionLon != null
-              ? {
-                  action: {
-                    kind: "navigate" as const,
-                    label: "Navigate to station",
-                    payload: { lat: a.actionLat, lon: a.actionLon },
-                  },
-                }
-              : {}),
+            // The action (and its translated label) is built server-side.
+            ...(a.action ? { action: a.action } : {}),
           })),
           "railway_station",
         );
@@ -423,11 +414,8 @@ function dispatchEvent(event: MercureEvent): void {
             lat: a.lat,
             lon: a.lon,
             source: "border_crossing",
-            action: {
-              kind: "navigate" as const,
-              label: "Navigate to crossing",
-              payload: { lat: a.lat, lon: a.lon },
-            },
+            // The action (and its translated label) is built server-side.
+            action: a.action,
           })),
           "border_crossing",
         );

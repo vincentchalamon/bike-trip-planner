@@ -80,14 +80,13 @@ final readonly class StagePayloadMapper
         return array_map($this->toPayload(...), $stages);
     }
 
-    /** @return array{lat: float, lon: float, ele: float} */
-    private function coordinateToPayload(Coordinate $coordinate): array
-    {
-        return ['lat' => $coordinate->lat, 'lon' => $coordinate->lon, 'ele' => $coordinate->ele];
-    }
-
-    /** @return array<string, mixed> */
-    private function alertToPayload(Alert $alert): array
+    /**
+     * Serialises a single alert, including its contextual action when the kind is
+     * actually wired in the frontend (see {@see AlertAction::toDeliverablePayload()}).
+     *
+     * @return array<string, mixed>
+     */
+    public function alertToPayload(Alert $alert): array
     {
         $payload = [
             'type' => $alert->type->value,
@@ -96,15 +95,18 @@ final readonly class StagePayloadMapper
             'lon' => $alert->lon,
         ];
 
-        if ($alert->action instanceof AlertAction) {
-            $payload['action'] = [
-                'kind' => $alert->action->kind->value,
-                'label' => $alert->action->label,
-                'payload' => $alert->action->payload,
-            ];
+        $action = $alert->action?->toDeliverablePayload();
+        if (null !== $action) {
+            $payload['action'] = $action;
         }
 
         return $payload;
+    }
+
+    /** @return array{lat: float, lon: float, ele: float} */
+    private function coordinateToPayload(Coordinate $coordinate): array
+    {
+        return ['lat' => $coordinate->lat, 'lon' => $coordinate->lon, 'ele' => $coordinate->ele];
     }
 
     /** @return array<string, mixed> */

@@ -6,6 +6,8 @@ namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
@@ -629,7 +631,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         // Alerts
-        /** @var list<array{type: string, message: string, lat?: ?float, lon?: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
+        /** @var list<array{type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
         $alertsData = $entity->getAlerts();
         foreach ($alertsData as $alertData) {
             $dto->addAlert($this->arrayToAlert($alertData));
@@ -701,7 +703,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{type: string, message: string, lat: ?float, lon: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
+    /** @return array{type: string, message: string, lat: ?float, lon: ?float, action?: array{kind: string, label: string, payload: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
     private function alertToArray(Alert $alert): array
     {
         $data = [
@@ -710,6 +712,16 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             'lat' => $alert->lat,
             'lon' => $alert->lon,
         ];
+
+        // The action is persisted whole; the kind filtering happens at emission
+        // (TripDetailProvider / StagePayloadMapper), see issue #863.
+        if ($alert->action instanceof AlertAction) {
+            $data['action'] = [
+                'kind' => $alert->action->kind->value,
+                'label' => $alert->action->label,
+                'payload' => $alert->action->payload,
+            ];
+        }
 
         if ($alert instanceof CulturalPoiAlert) {
             $data['_class'] = 'CulturalPoiAlert';
@@ -725,13 +737,22 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $data;
     }
 
-    /** @param array{type: string, message: string, lat?: ?float, lon?: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
+    /** @param array{type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
     private function arrayToAlert(array $data): Alert
     {
         $type = AlertType::from($data['type']);
         $message = $data['message'];
         $lat = $data['lat'] ?? null;
         $lon = $data['lon'] ?? null;
+        // Alerts persisted before issue #863 carry no action at all.
+        $actionData = $data['action'] ?? null;
+        $action = null !== $actionData
+            ? new AlertAction(
+                kind: AlertActionKind::from($actionData['kind']),
+                label: $actionData['label'],
+                payload: $actionData['payload'] ?? [],
+            )
+            : null;
 
         if (($data['_class'] ?? null) === 'CulturalPoiAlert') {
             return new CulturalPoiAlert(
@@ -744,6 +765,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
                 poiLat: $data['poiLat'] ?? 0.0,
                 poiLon: $data['poiLon'] ?? 0.0,
                 distanceFromRoute: $data['distanceFromRoute'] ?? 0,
+                action: $action,
             );
         }
 
@@ -756,6 +778,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             message: $message,
             lat: $lat,
             lon: $lon,
+            action: $action,
         );
     }
 
