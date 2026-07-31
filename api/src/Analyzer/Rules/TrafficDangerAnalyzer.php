@@ -63,11 +63,12 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             if ($isCritical) {
                 $criticalSegments[] = $way;
             } else {
+                // An absent or unreadable maxspeed is missing data, not a danger: it stays a NUDGE.
                 $maxspeed = $this->parseMaxspeed($way['maxspeed'] ?? '');
-                if (null !== $maxspeed && $maxspeed <= self::NUDGE_MAX_SPEED) {
-                    $nudgeSegments[] = $way;
-                } else {
+                if (null !== $maxspeed && $maxspeed > self::NUDGE_MAX_SPEED) {
                     $warningSegments[] = $way;
+                } else {
+                    $nudgeSegments[] = $way;
                 }
             }
         }
