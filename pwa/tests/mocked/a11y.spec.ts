@@ -12,12 +12,10 @@ test.describe("a11y smoke", () => {
   test("axe harness runs on the welcome screen", async ({ mockedPage }) => {
     await expect(mockedPage.getByTestId("card-selection")).toBeVisible();
     const blocking = await getCriticalA11yViolations(mockedPage);
-    test
-      .info()
-      .annotations.push({
-        type: "a11y",
-        description: `welcome: ${blocking.length} critical/serious violations (audited in Sprint 35.2)`,
-      });
+    test.info().annotations.push({
+      type: "a11y",
+      description: `welcome: ${blocking.length} critical/serious violations (audited in Sprint 35.2)`,
+    });
   });
 
   test("axe harness runs on a loaded trip", async ({
@@ -27,11 +25,9 @@ test.describe("a11y smoke", () => {
     await createFullTrip();
     await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible();
     const blocking = await getCriticalA11yViolations(mockedPage);
-    test
-      .info()
-      .annotations.push({
-        type: "a11y",
-        description: `trip: ${blocking.length} critical/serious violations (audited in Sprint 35.2)`,
-      });
+    test.info().annotations.push({
+      type: "a11y",
+      description: `trip: ${blocking.length} critical/serious violations (audited in Sprint 35.2)`,
+    });
   });
 });

@@ -62,7 +62,6 @@ function makeEvent(name: string): EventData {
   };
 }
 
-
 describe("getUndoableSlice", () => {
   it("extracts the undoable fields from state", () => {
     const state = {
@@ -431,8 +430,16 @@ describe("dropStaleDateAlerts on structural edits (recette Sunday nudge)", () =>
     const store = useTripStore.getState();
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
     // Tag a date-derived calendar nudge + a geographic terrain alert on day 3.
-    store.updateStageAlerts(2, [makeAlert("L'étape 3 tombe un dimanche")], "calendar");
-    store.updateStageAlerts(2, [makeAlert("segment sans piste cyclable")], "terrain");
+    store.updateStageAlerts(
+      2,
+      [makeAlert("L'étape 3 tombe un dimanche")],
+      "calendar",
+    );
+    store.updateStageAlerts(
+      2,
+      [makeAlert("segment sans piste cyclable")],
+      "terrain",
+    );
 
     store.insertRestDay(2); // rest day after day 3
 
@@ -441,19 +448,23 @@ describe("dropStaleDateAlerts on structural edits (recette Sunday nudge)", () =>
     // The calendar nudge is dropped (it will be republished by CheckCalendar)...
     expect(allAlerts.some((a) => a.message.includes("dimanche"))).toBe(false);
     // ...but the geographic terrain alert survives.
-    expect(allAlerts.some((a) => a.message.includes("piste cyclable"))).toBe(true);
+    expect(allAlerts.some((a) => a.message.includes("piste cyclable"))).toBe(
+      true,
+    );
   });
 
   it("drops calendar-group nudges on deleteStage", () => {
     const store = useTripStore.getState();
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
-    store.updateStageAlerts(1, [makeAlert("L'étape 2 tombe un dimanche")], "calendar");
+    store.updateStageAlerts(
+      1,
+      [makeAlert("L'étape 2 tombe un dimanche")],
+      "calendar",
+    );
 
     store.deleteStage(2);
 
-    const allAlerts = useTripStore
-      .getState()
-      .stages.flatMap((s) => s.alerts);
+    const allAlerts = useTripStore.getState().stages.flatMap((s) => s.alerts);
     expect(allAlerts.some((a) => a.message.includes("dimanche"))).toBe(false);
   });
 });

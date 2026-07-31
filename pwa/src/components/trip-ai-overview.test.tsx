@@ -36,7 +36,9 @@ describe("TripAiOverview — outdated (stale) banner", () => {
 
   it("hides the banner when the overview is fresh", () => {
     render(<TripAiOverview onRegenerate={() => {}} />);
-    expect(screen.queryByTestId("trip-ai-overview-stale")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("trip-ai-overview-stale"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the outdated banner + regenerate button when stale", () => {

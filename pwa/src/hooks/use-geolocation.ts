@@ -11,10 +11,7 @@ import { useCallback, useRef, useState } from "react";
  * - `unsupported`: the `navigator.geolocation` API is not available.
  */
 export type GeolocationErrorCode =
-  | "denied"
-  | "unavailable"
-  | "timeout"
-  | "unsupported";
+  "denied" | "unavailable" | "timeout" | "unsupported";
 
 export interface GeolocationCoords {
   latitude: number;

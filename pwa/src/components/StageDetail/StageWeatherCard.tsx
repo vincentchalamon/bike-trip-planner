@@ -206,9 +206,7 @@ export function StageWeatherCard({
             <span className="tabular-nums">
               {formatSunTime(sunTimes.sunrise)}
             </span>
-            <span className="text-muted-foreground">
-              {t("sunriseShort")}
-            </span>
+            <span className="text-muted-foreground">{t("sunriseShort")}</span>
           </div>
 
           {sunIsUp !== null && (

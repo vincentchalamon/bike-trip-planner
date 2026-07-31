@@ -148,7 +148,9 @@ describe("AiChatCard (ADR-045)", () => {
   });
 
   it("does not recommend launch when readyToGenerate is false even with a start", async () => {
-    sendAiChat.mockResolvedValueOnce(ok("Need more", { start: "Lille" }, false));
+    sendAiChat.mockResolvedValueOnce(
+      ok("Need more", { start: "Lille" }, false),
+    );
     render(<AiChatCard />);
 
     await sendUserTurn("Départ Lille");
@@ -264,9 +266,7 @@ describe("AiChatCard (ADR-045)", () => {
     for (let i = 0; i < MAX_USER_TURNS; i++) {
       await sendUserTurn(`turn ${i}`);
       // Wait for each reply so the next send sees the updated turn count.
-      await waitFor(() =>
-        expect(sendAiChat).toHaveBeenCalledTimes(i + 1),
-      );
+      await waitFor(() => expect(sendAiChat).toHaveBeenCalledTimes(i + 1));
     }
 
     // The (MAX+1)-th attempt must not hit the API and must surface the hint.

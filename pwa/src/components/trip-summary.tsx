@@ -83,7 +83,8 @@ export function TripSummary({
   // `blockStatus`.
   const isWeatherPending =
     weatherBlockStatus === "pending" || weatherBlockStatus === "running";
-  const showWeatherSkeleton = !weather && (isWeatherPending || isWeatherLoading);
+  const showWeatherSkeleton =
+    !weather && (isWeatherPending || isWeatherLoading);
 
   if (!showSkeleton && totalDistance === null && totalElevation === null)
     return null;
@@ -182,7 +183,10 @@ export function TripSummary({
             section with a pencil hint; a plain, non-interactive label in the
             read-only shared view (recette #649). */}
         {readOnly ? (
-          <div className="flex items-center gap-1.5" data-testid="summary-dates">
+          <div
+            className="flex items-center gap-1.5"
+            data-testid="summary-dates"
+          >
             <CalendarDays className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{datesDisplay}</span>
           </div>

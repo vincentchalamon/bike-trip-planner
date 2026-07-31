@@ -149,18 +149,14 @@ When("je clique sur ce voyage dans la liste", async ({ mockedPage }) => {
   // The detail route must return a loaded trip so the trip view mounts on
   // navigation (synchronous flow, ADR-043) — otherwise it stays on the loader.
   await mockLoadedTripDetail(mockedPage);
-  const firstTrip = mockedPage
-    .locator('[data-testid^="recent-trip-"]')
-    .first();
+  const firstTrip = mockedPage.locator('[data-testid^="recent-trip-"]').first();
   await expect(firstTrip).toBeVisible({ timeout: 5000 });
   await firstTrip.click();
 });
 
 When("je duplique ce voyage", async ({ mockedPage }) => {
   await mockLoadedTripDetail(mockedPage);
-  const firstTrip = mockedPage
-    .locator('[data-testid^="recent-trip-"]')
-    .first();
+  const firstTrip = mockedPage.locator('[data-testid^="recent-trip-"]').first();
   await expect(firstTrip).toBeVisible({ timeout: 5000 });
   await firstTrip.click();
   await mockedPage.route("**/trips/*/duplicate", (route, request) => {
@@ -212,18 +208,14 @@ When("I click on that trip in the list", async ({ mockedPage }) => {
   // navigation (synchronous flow, ADR-043) — otherwise it stays on the loader
   // and `config-open-button` never appears.
   await mockLoadedTripDetail(mockedPage);
-  const firstTrip = mockedPage
-    .locator('[data-testid^="recent-trip-"]')
-    .first();
+  const firstTrip = mockedPage.locator('[data-testid^="recent-trip-"]').first();
   await expect(firstTrip).toBeVisible({ timeout: 5000 });
   await firstTrip.click();
 });
 
 When("I duplicate that trip", async ({ mockedPage }) => {
   await mockLoadedTripDetail(mockedPage);
-  const firstTrip = mockedPage
-    .locator('[data-testid^="recent-trip-"]')
-    .first();
+  const firstTrip = mockedPage.locator('[data-testid^="recent-trip-"]').first();
   await expect(firstTrip).toBeVisible({ timeout: 5000 });
   await firstTrip.click();
   await mockedPage.route("**/trips/*/duplicate", (route, request) => {

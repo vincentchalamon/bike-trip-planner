@@ -59,9 +59,7 @@ test.describe("Error handling", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.fill("not-a-valid-url");
     await input.press("Enter");
-    await expect(
-      mockedPage.getByText("Entre une URL valide."),
-    ).toBeVisible();
+    await expect(mockedPage.getByText("Entre une URL valide.")).toBeVisible();
   });
 
   test("reverts stages after failed deletion", async ({ page }) => {

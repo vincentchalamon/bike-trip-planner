@@ -33,10 +33,7 @@ export function KomootLogo({ className }: LogoProps) {
 export function StravaLogo({ className }: LogoProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path
-        d="M10.8 2.5 4.5 14.9h3.7l2.6-5.2 2.6 5.2h3.6z"
-        fill="#FC4C02"
-      />
+      <path d="M10.8 2.5 4.5 14.9h3.7l2.6-5.2 2.6 5.2h3.6z" fill="#FC4C02" />
       <path
         d="M14.4 14.9l-1.9 3.8-1.9-3.8H8.1l4.4 8.6 4.4-8.6z"
         fill="#FC4C02"
