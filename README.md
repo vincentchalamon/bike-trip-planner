@@ -121,7 +121,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Continuity** | 5 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Gap 100-500 m between stages |
 | **Elevation** | 10 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Elevation gain > 1 200 m on a stage |
 | **Steep gradient** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Sustained >= 8 % gradient over >= 500 m |
-| **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Unpaved section >= 500 m (gravel, dirt, mud, grass, sand...) |
+| **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Rough surface section >= 500 m: unpaved (gravel, dirt, mud, sand...) or rough paved (sett, cobblestone, paving stones); composite values like `gravel;dirt` count, and `tracktype=grade3..5` / `smoothness=bad..impassable` are used as a fallback when `surface` is absent |
 | **Traffic** | 20 | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Primary/trunk road without cycle infrastructure >= 500 m |
 | **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, `maxspeed` tagged and > 50 km/h |
 | **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, no cycleway, `maxspeed` <= 50 km/h or absent/unreadable |
