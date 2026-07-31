@@ -387,6 +387,68 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
+    public function resupplyTimingWarningSkippedOnRestDay(): void
+    {
+        // Same setup as allResupplyPoisClosedAtEstimatedTimeEmitsWarning, flagged as a
+        // rest day: no timing warning, but the POIs are still scanned and published,
+        // because knowing what is around is useful on the spot.
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+            geometry: [
+                new Coordinate(48.0, 2.0),
+                new Coordinate(48.2, 2.2),
+                new Coordinate(48.5, 2.5),
+            ],
+            isRestDay: true,
+        );
+        $tripStateManager = $this->createTripStateManager([$stage]);
+
+        $poiRepository = $this->poiSourceRegistry([
+            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+            ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [0 => [
+                ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+                ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
+            ]],
+            [],
+        );
+
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+
+        // 16:00 → both restaurants closed (restaurants: 12-14, 19-22), so without the
+        // rest-day guard this stage would emit the timing warning.
+        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_first($poisScannedEvents)['payload'];
+        self::assertFalse(
+            array_any($data['alerts'] ?? [], static fn (array $a): bool => 'warning' === $a['type']),
+            'Expected no resupply timing warning on a rest day',
+        );
+        self::assertNotEmpty($data['pois'] ?? [], 'POIs must still be published on a rest day');
+    }
+
+    #[Test]
     public function resolveScheduleMapsBakeryCorrectly(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);

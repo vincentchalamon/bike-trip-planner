@@ -299,6 +299,35 @@ export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
   };
 }
 
+/**
+ * Calendar alerts on the post-#864 contract: the `alerts` key (was `nudges`),
+ * a `dayNumber`, and an `AlertType` value carried in `type` rather than the
+ * literal `"nudge"` the frontend used to hardcode.
+ */
+export function calendarAlertsEvent(): MercureEvent {
+  return {
+    type: "calendar_alerts",
+    data: {
+      alerts: [
+        {
+          stageIndex: 0,
+          dayNumber: 1,
+          type: "nudge",
+          message: "L'etape 1 coincide avec un jour ferie (La Fete nationale)",
+          date: "2026-07-14",
+        },
+        {
+          stageIndex: 1,
+          dayNumber: 2,
+          type: "warning",
+          message: "L'etape 2 tombe un dimanche",
+          date: "2026-07-19",
+        },
+      ],
+    },
+  };
+}
+
 export function alertsWithActionsEvent(): MercureEvent {
   return {
     type: "terrain_alerts",
