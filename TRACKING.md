@@ -1200,14 +1200,24 @@ Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, c
 >
 > **Ordre interne impératif :** #862 (formateur) **après** #859 (attribution). Formater joliment un nombre mal attribué est pire que de le laisser brut : « 43,9 km » se lit comme une mesure autorisée, `43871m` se lit comme un artefact machine.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | - | - |
-| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | - | - |
-| 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | - | - |
-| 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | - | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) |
-| 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | - | - |
-| 6 | [#864](https://github.com/vincentchalamon/bike-trip-planner/issues/864) | fix(alerts): rest-day guard, local-time sunset and multi-year calendar | - | - | - |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | [#894](https://github.com/vincentchalamon/bike-trip-planner/pull/894) `feature/859` | En cours | - |
+| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | [#895](https://github.com/vincentchalamon/bike-trip-planner/pull/895) `feature/860` | En cours | - |
+| 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | [#896](https://github.com/vincentchalamon/bike-trip-planner/pull/896) `feature/861` | En cours | - |
+| 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | [#899](https://github.com/vincentchalamon/bike-trip-planner/pull/899) `feature/862` → base `feature/859` | En cours | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) |
+| 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | [#897](https://github.com/vincentchalamon/bike-trip-planner/pull/897) `feature/863` | En cours | - |
+| 6 | [#864](https://github.com/vincentchalamon/bike-trip-planner/issues/864) | fix(alerts): rest-day guard, local-time sunset and multi-year calendar | - | [#898](https://github.com/vincentchalamon/bike-trip-planner/pull/898) `feature/864` | En cours | - |
+
+### Ordre de merge et conflits attendus (sprint 44)
+
+Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs branches touchent les mêmes fichiers. Points à surveiller au merge :
+
+- **#899 est empilée sur `feature/859`** (base ≠ `main`) : merger **#894 d'abord**, puis #899 se retargette automatiquement sur `main`.
+- **`SurfaceAlertAnalyzer.php`** — #895 étend le vocabulaire, #896 **supprime** `detectMissingSurfaceData()`, #898 y ajoute le garde `isRestDay`, #899 y injecte le formateur. La suppression de #896 doit gagner ; vérifier que le repli `tracktype` de #895 ne la réintroduit pas.
+- **`WaysRepository.php`** — #894 réécrit le SQL du corridor, #895 ajoute deux colonnes au `SELECT`. Diffs disjoints par construction.
+- **`alerts.fr.yaml` / `alerts.en.yaml`** — touchés par #895, #896, #897, #898 et #899. #899 laisse volontairement `alert.surface.fallback` en place parce que #896 la supprime (évite une suppression concurrente).
+- **`use-mercure.ts`** — #897 (reconstruction d'action) et #898 (payload calendrier) ; diffs sur des `case` distincts.
 
 ### Recette Sprint 44
 
