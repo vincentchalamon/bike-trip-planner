@@ -54,11 +54,11 @@ final readonly class PoiSuggestionDto
      *     lon: float,
      *     distance_m: int,
      *     detour_m: int,
-     *     opening_hours_today: ?string,
-     *     closes_at: ?string,
-     *     phone: ?string,
+     *     opening_hours_today?: ?string,
+     *     closes_at?: ?string,
+     *     phone?: ?string,
      *     deeplink: string,
-     *     warning: ?string,
+     *     warning?: ?string,
      * } $payload
      */
     public static function fromArray(array $payload): self

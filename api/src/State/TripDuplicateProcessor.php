@@ -51,8 +51,6 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
-        \assert($data instanceof TripRequest);
-
         // Cap per user: duplication clones DB rows + Redis blobs (SEC-009).
         $user = $this->security->getUser();
         \assert($user instanceof User);

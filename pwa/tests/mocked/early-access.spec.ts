@@ -74,9 +74,7 @@ test.describe("Early access form", () => {
 
     // The "Créer un itinéraire" CTA was removed from this block (it stays in
     // the hero only).
-    await expect(
-      section.getByTestId("cta-create-itinerary"),
-    ).toHaveCount(0);
+    await expect(section.getByTestId("cta-create-itinerary")).toHaveCount(0);
 
     // The submit button uses the amber brand fill (same as the hero CTA).
     const submit = page.getByTestId("early-access-submit");

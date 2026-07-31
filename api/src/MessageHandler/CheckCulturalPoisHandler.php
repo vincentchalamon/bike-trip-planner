@@ -168,7 +168,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         $alert['wikidataId'] = $poi['wikidataId'];
                     }
 
-                    if (null !== ($poi['source'] ?? null)) {
+                    if (null !== $poi['source']) {
                         $alert['source'] = $poi['source'];
                     }
 

@@ -67,6 +67,8 @@ test.describe("Plausible analytics", () => {
     // No Plausible cookie set (Plausible is cookieless by design); scoped to the
     // analytics domain so unrelated cookies (locale/theme/auth) can't break this test.
     const cookies = await page.context().cookies();
-    expect(cookies.filter((c) => c.domain.includes("plausible"))).toHaveLength(0);
+    expect(cookies.filter((c) => c.domain.includes("plausible"))).toHaveLength(
+      0,
+    );
   });
 });

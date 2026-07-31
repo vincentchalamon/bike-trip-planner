@@ -33,8 +33,8 @@ RUN apt-get update \
 # `make coverage`/`coverage-ci` on the provisioner leg (same driver as the php dev
 # image), off by default so normal `make test-php` is unaffected; the coverage
 # targets set XDEBUG_MODE=coverage per run.
-ADD --checksum=sha256:ca45e43f4299997f3cc78459eb7cc29c125281db8779f99209dc3fe3298fd117 \
-    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.1/install-php-extensions /usr/local/bin/
+ADD --checksum=sha256:7c133ae4b9490d912287188c62ea570729cfa74f0ea357e4be672ce696b4aa29 \
+    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
 RUN install-php-extensions xdebug zip
 ENV XDEBUG_MODE=off
 
@@ -60,8 +60,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # zip drives the DataTourisme flux import (ext-zip → ZipArchive).
-ADD --checksum=sha256:ca45e43f4299997f3cc78459eb7cc29c125281db8779f99209dc3fe3298fd117 \
-    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.1/install-php-extensions /usr/local/bin/
+ADD --checksum=sha256:7c133ae4b9490d912287188c62ea570729cfa74f0ea357e4be672ce696b4aa29 \
+    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
 RUN install-php-extensions zip
 
 WORKDIR /app

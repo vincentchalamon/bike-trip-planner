@@ -2,7 +2,7 @@
 
 
 # Versions
-FROM docker.io/node:26@sha256:0473e7dc433a1310f436edee02aa79737ec78a4b345433ab0963d4a256f9ad85 AS node_upstream
+FROM docker.io/node:26@sha256:a9875b5ccb02aa527cf7f2297b16ae425a0ff3da2f7d87fce3df41f04ffa0524 AS node_upstream
 
 
 # Base stage for dev and build
@@ -100,7 +100,9 @@ RUN mkdir .next; \
 COPY --from=builder --link --chown=1001:1001 /srv/app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /srv/app/.next/static ./.next/static
 
-USER nextjs
+# Numeric uid:gid (hadolint DL3066) — same ids as the `nextjs`/`nodejs` pair
+# created above and as the `--chown=1001:1001` copies.
+USER 1001:1001
 
 EXPOSE 3000
 

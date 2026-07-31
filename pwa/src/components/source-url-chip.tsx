@@ -13,10 +13,7 @@ import { isValidUrl } from "@/lib/validation/url";
  * feedback as a coloured chip beneath the input.
  */
 export type SourceProvider =
-  | "komoot"
-  | "strava"
-  | "ridewithgps"
-  | "unsupported";
+  "komoot" | "strava" | "ridewithgps" | "unsupported";
 
 const PROVIDER_PATTERNS: Record<
   Exclude<SourceProvider, "unsupported">,

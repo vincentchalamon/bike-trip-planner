@@ -140,15 +140,23 @@ export async function renderInfographic(
   // Size the map column to the route's aspect ratio so the right column sits
   // just past the route, with no background and no dead space (recette #649).
   const aspect = routeBboxAspect(data.stages);
-  const mapWidth = aspect !== null
-    ? Math.min(
-        MAP_WIDTH_MAX,
-        Math.max(MAP_WIDTH_MIN, Math.round(MAP_HEIGHT * aspect)),
-      )
-    : MAP_WIDTH_MAX;
+  const mapWidth =
+    aspect !== null
+      ? Math.min(
+          MAP_WIDTH_MAX,
+          Math.max(MAP_WIDTH_MIN, Math.round(MAP_HEIGHT * aspect)),
+        )
+      : MAP_WIDTH_MAX;
 
   // Route map (left of the content row), left-aligned — async tile fetch
-  await drawRouteMap(ctx, PADDING, CONTENT_TOP, mapWidth, MAP_HEIGHT, data.stages);
+  await drawRouteMap(
+    ctx,
+    PADDING,
+    CONTENT_TOP,
+    mapWidth,
+    MAP_HEIGHT,
+    data.stages,
+  );
 
   // OSM attribution, directly under the map
   ctx.fillStyle = "#475569";

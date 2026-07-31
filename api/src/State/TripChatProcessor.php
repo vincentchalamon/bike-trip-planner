@@ -107,8 +107,6 @@ final readonly class TripChatProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripChatResponse|JsonResponse
     {
-        \assert($data instanceof TripChatRequest);
-
         $tripId = $uriVariables['id'] ?? '';
         if ('' === $tripId) {
             throw new NotFoundHttpException('Trip not found.');

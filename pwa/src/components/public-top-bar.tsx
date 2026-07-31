@@ -15,7 +15,11 @@ import { cn } from "@/lib/utils";
  * `transparent` overlays it on the hero (absolute, no border/background) for the
  * landing; the default solid variant suits standalone public pages.
  */
-export function PublicTopBar({ transparent = false }: { transparent?: boolean }) {
+export function PublicTopBar({
+  transparent = false,
+}: {
+  transparent?: boolean;
+}) {
   const t = useTranslations("navigation");
 
   return (

@@ -36,7 +36,6 @@ export function useTileMode(): {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(TILE_MODE_STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (isTileMode(stored)) setTileModeState(stored);
     } catch {
       // localStorage may be unavailable (e.g. strict privacy mode) — keep default.

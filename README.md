@@ -177,7 +177,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State | Zustand + Immer (in-memory), Mercure SSE (real-time) |
 | Styling | Tailwind CSS |
-| Testing | PHPUnit 13 (backend), Playwright 1.61 (E2E) |
+| Testing | PHPUnit 13 (backend), Playwright 1.62 (E2E) |
 | Quality | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier |
 | Async | Symfony Messenger, Redis transport, 5 workers |
 | Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node) |

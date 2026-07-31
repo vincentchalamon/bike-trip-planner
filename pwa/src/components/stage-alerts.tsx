@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Landmark,
-} from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Landmark } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -64,7 +59,10 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
           </Button>
 
           {alertsExpanded && (
-            <div className="mt-2 pl-[22px] pr-1" data-testid="stage-alerts-body">
+            <div
+              className="mt-2 pl-[22px] pr-1"
+              data-testid="stage-alerts-body"
+            >
               <AlertList alerts={others} onAddPoiWaypoint={onAddPoiWaypoint} />
             </div>
           )}
@@ -99,7 +97,10 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
               className="mt-2 pl-[22px] pr-1"
               data-testid="stage-cultural-body"
             >
-              <AlertList alerts={cultural} onAddPoiWaypoint={onAddPoiWaypoint} />
+              <AlertList
+                alerts={cultural}
+                onAddPoiWaypoint={onAddPoiWaypoint}
+              />
             </div>
           )}
         </div>

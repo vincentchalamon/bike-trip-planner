@@ -57,7 +57,6 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
-        \assert($data instanceof TripBatchRecomputeRequest);
         $tripId = $uriVariables['id'] ?? '';
 
         if ('' === $tripId) {

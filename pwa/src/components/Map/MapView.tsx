@@ -323,8 +323,7 @@ export const MapView = memo(function MapView({
         const features = e.features;
         if (!features?.length) return;
         const dayNumber = features[0]?.properties?.dayNumber as
-          | number
-          | undefined;
+          number | undefined;
         if (dayNumber === undefined) return;
         const idx = activeStagesRef.current.findIndex(
           (s) => s.dayNumber === dayNumber,
@@ -378,8 +377,7 @@ export const MapView = memo(function MapView({
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const source = mapRef.current.getSource("route") as
-      | maplibregl.GeoJSONSource
-      | undefined;
+      maplibregl.GeoJSONSource | undefined;
     if (source) {
       source.setData(buildRouteGeoJSON(activeStages));
     }
@@ -614,8 +612,7 @@ export const MapView = memo(function MapView({
 
     // Update accommodation link dashed line
     const source = mapRef.current?.getSource("accommodation-link") as
-      | maplibregl.GeoJSONSource
-      | undefined;
+      maplibregl.GeoJSONSource | undefined;
     if (source) {
       if (hoveredAccommodation) {
         const stage = activeStages[hoveredAccommodation.stageIndex];

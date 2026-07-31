@@ -106,7 +106,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
@@ -175,7 +175,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
@@ -302,16 +302,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
         working-directory: pwa
         run: npm ci
       - name: Download OpenAPI spec
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: openapi-spec
           path: pwa
@@ -336,7 +336,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Run Hadolint
-        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        uses: hadolint/hadolint-action@2a66e89f53d0771bb131a7fa31f3136336094aa6 # v3.4.0
         with:
           dockerfile: .docker/**/Dockerfile
 
@@ -437,9 +437,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
       # Internal links/anchors only (deterministic, no network). The script uses
       # Node built-ins only, so no dependency install is needed. The external URL
       # probe (--external) is network-dependent and flaky, so it is NOT gated in
@@ -676,7 +676,7 @@ jobs:
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.61.0-noble
+          mcr.microsoft.com/playwright:v1.62.1-noble
           /bin/sh -c 'npm ci; npx playwright test'
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -744,14 +744,14 @@ jobs:
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.61.0-noble
+          mcr.microsoft.com/playwright:v1.62.1-noble
           /bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts'
       - name: Run BDD recette scenarios
         run: >-
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.61.0-noble
+          mcr.microsoft.com/playwright:v1.62.1-noble
           /bin/sh -c 'npx playwright test --config playwright.bdd.config.ts'
       - uses: actions/upload-artifact@v7
         if: always()
@@ -778,9 +778,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
@@ -801,9 +801,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
@@ -824,9 +824,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
@@ -847,9 +847,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
@@ -870,9 +870,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
@@ -894,9 +894,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "25"
+          node-version: "26"
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Setup Java

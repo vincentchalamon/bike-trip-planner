@@ -24,8 +24,6 @@ final readonly class TripShareDeleteProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Response
     {
-        \assert($data instanceof TripShare);
-
         $data->softDelete();
         $this->entityManager->flush();
 

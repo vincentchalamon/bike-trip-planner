@@ -52,6 +52,7 @@ class MagicLink
         // `?? null` (not a bare read): plainToken is a promoted, non-mapped property,
         // so on an entity Doctrine hydrates via newInstanceWithoutConstructor() it is
         // uninitialized; `??` yields null instead of throwing (SEC-003).
+        // @phpstan-ignore nullCoalesce.unnecessary (PHPStan cannot model newInstanceWithoutConstructor)
         return $this->plainToken ?? null;
     }
 

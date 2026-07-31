@@ -4,7 +4,7 @@
 
 
 # Versions
-FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:da270879b95225345b2ee984f717aef5cba7336e1f206ec005074a79235af347 AS frankenphp_upstream
+FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:b7b15592078ee8f3ed4d7ded9bd6fadc63ce31d8dd927cf191f78d89d21179fd AS frankenphp_upstream
 
 
 # The different stages of this Dockerfile are meant to be built into separate images
@@ -54,7 +54,9 @@ COPY --link .docker/php/Caddyfile /etc/frankenphp/Caddyfile
 
 ENTRYPOINT ["docker-entrypoint"]
 
-HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
+# Exec form (no shell): `curl -f` already exits non-zero on an error status, so
+# the previous `|| exit 1` was redundant (hadolint DL3025).
+HEALTHCHECK --start-period=60s CMD ["curl", "-f", "http://localhost:2019/metrics"]
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 
 # Dev FrankenPHP image

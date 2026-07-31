@@ -16,6 +16,8 @@ final class GpxEncoderTest extends TestCase
         $encoder = new GpxEncoder();
         $xml = $encoder->encode($this->sampleData(), 'gpx');
 
+        self::assertNotSame('', $xml);
+
         $doc = new \DOMDocument();
         self::assertTrue($doc->loadXML($xml));
     }
@@ -140,6 +142,8 @@ final class GpxEncoderTest extends TestCase
         ];
 
         $xml = $encoder->encode($data, 'gpx');
+
+        self::assertNotSame('', $xml);
 
         $doc = new \DOMDocument();
         self::assertTrue($doc->loadXML($xml));
