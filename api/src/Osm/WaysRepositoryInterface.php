@@ -7,9 +7,11 @@ namespace App\Osm;
 interface WaysRepositoryInterface
 {
     /**
-     * Highway ways whose geometry is within $radiusMeters of the route corridor,
-     * each reduced to its centroid, length (m) and the tags the terrain analyzers
-     * read (surface, highway, cycleway*, bicycle, maxspeed).
+     * Highway ways whose geometry runs within $radiusMeters of the route corridor,
+     * each reduced to the tags the terrain analyzers read (surface, highway,
+     * cycleway*, bicycle, maxspeed) plus the centroid and the length (m) of the
+     * portion inside the corridor -- not of the whole way, so a way the route only
+     * brushes weighs no more than the metres actually shared with it.
      *
      * @param list<array{lat: float, lon: float}> $route
      *

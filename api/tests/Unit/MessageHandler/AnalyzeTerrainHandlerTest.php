@@ -51,7 +51,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $repository = $this->createStub(WaysRepositoryInterface::class);
         $repository->method('findInCorridor')->willReturnCallback(
             static function (array $route, int $radiusMeters) use ($ways): array {
-                self::assertSame(100, $radiusMeters, 'findInCorridor must use the 100 m ways corridor');
+                self::assertSame(20, $radiusMeters, 'findInCorridor must use the 20 m ways corridor');
 
                 return $ways;
             },
@@ -225,7 +225,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $waysRepository = $this->createStub(WaysRepositoryInterface::class);
         $waysRepository->method('findInCorridor')->willReturnCallback(
             static function (array $route, int $radiusMeters): array {
-                self::assertSame(100, $radiusMeters);
+                self::assertSame(20, $radiusMeters);
                 self::assertSame([
                     ['lat' => 48.0, 'lon' => 2.0],
                     ['lat' => 48.25, 'lon' => 2.25],

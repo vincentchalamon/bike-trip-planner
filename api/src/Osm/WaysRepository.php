@@ -7,20 +7,26 @@ namespace App\Osm;
 use Doctrine\DBAL\Connection;
 
 /**
- * Reads highway ways from the local-first Tier-1 index along the route corridor
- * (ST_DWithin), replacing the runtime Overpass ways scan (ADR-040). Each way is
- * reduced in SQL to the shape the terrain analyzers consume: centroid + length
- * (meters, via geography) + the surface/traffic tags. The full linestring stays
- * in the table; only the derived fields cross the wire.
+ * Reads highway ways from the local-first Tier-1 index along the route corridor,
+ * replacing the runtime Overpass ways scan (ADR-040). Each way is reduced in SQL
+ * to the shape the terrain analyzers consume: centroid + length (meters, via
+ * geography) + the surface/traffic tags. The full linestring stays in the table;
+ * only the derived fields cross the wire.
+ *
+ * Both the length and the centroid describe the *clipped* way -- the portion
+ * running inside the metric corridor -- not the whole way. A 40 km departemental
+ * that shares 200 m with the route contributes 200 m to the surface / traffic
+ * totals, and its centroid lands on that shared portion so the stage
+ * distribution (GeometryBasedDistributor) attributes it to the right day.
  *
  * This is the only Tier-1 corridor scan that runs against linestrings of the
  * whole road network (the POI tables hold sparse points), so the per-row
  * `geom::geography` cast that defeats the GiST index is unacceptable here. The
- * query keeps the exact ST_DWithin(geography, 100 m) predicate but gates it
- * behind an index-usable `geom && <expanded bbox>` pre-filter (ADR-043, PR1):
- * the bounding box strictly contains the 100 m corridor, so the candidate set
- * is a superset and the returned ways are byte-for-byte identical to the
- * unoptimised scan. See WaysIndexReadTest for the behaviour guard.
+ * metric predicate is an intersection with the buffered corridor, gated behind
+ * an index-usable `geom && <expanded bbox>` pre-filter (ADR-043, PR1): the
+ * bounding box strictly contains the corridor, so the candidate set is a
+ * superset and the result is identical to the unfiltered scan. See
+ * WaysIndexReadTest for the behaviour guard.
  *
  * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}
  */
@@ -53,8 +59,8 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                     -- metres-per-degree shrink with latitude, so divide by the
                     -- cosine at the envelope's highest |lat| (the widest box, the
                     -- safe over-cover), clamped to keep the box finite near the
-                    -- poles. The result strictly contains the metric ST_DWithin
-                    -- corridor, so the candidate set is a superset.
+                    -- poles. The result strictly contains the metric corridor
+                    -- below, so the candidate set is a superset.
                     SELECT ST_Expand(
                         ST_Envelope(geom),
                         :radius / (111320.0 * GREATEST(
@@ -70,28 +76,45 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                         :radius / 111320.0
                     ) AS geom
                     FROM corridor
+                ),
+                ridden AS MATERIALIZED (
+                    -- The metric corridor itself: the route line buffered by the
+                    -- radius in metres (geography buffer, i.e. projected by PostGIS
+                    -- in the best local SRID, so the width is metric everywhere).
+                    -- MATERIALIZED is load-bearing: inlined, the buffer of a ~1.5k
+                    -- point route would be rebuilt for every candidate row.
+                    SELECT ST_Buffer(geom::geography, :radius)::geometry AS geom
+                    FROM corridor
+                ),
+                followed AS MATERIALIZED (
+                    -- Clip each candidate way to the corridor. Materialised so the
+                    -- clip runs once per way and feeds both the length and the
+                    -- centroid below.
+                    SELECT w.tags AS tags,
+                           ST_Intersection(w.geom, r.geom) AS geom
+                    FROM osm.ways AS w,
+                         bbox AS b,
+                         ridden AS r
+                    WHERE w.geom && b.geom
+                      AND ST_Intersects(w.geom, r.geom)
                 )
                 SELECT ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
-                       ST_Length(w.geom::geography) AS length,
-                       w.tags->>'surface' AS surface,
-                       w.tags->>'highway' AS highway,
-                       w.tags->>'cycleway' AS cycleway,
-                       w.tags->>'cycleway:right' AS cycleway_right,
-                       w.tags->>'cycleway:left' AS cycleway_left,
-                       w.tags->>'cycleway:both' AS cycleway_both,
-                       w.tags->>'bicycle' AS bicycle,
-                       w.tags->>'maxspeed' AS maxspeed
-                FROM osm.ways AS w,
-                     corridor AS c,
-                     bbox AS b,
-                     LATERAL (SELECT ST_Centroid(w.geom) AS centroid) AS _c
-                WHERE w.geom && b.geom
-                  AND ST_DWithin(
-                      w.geom::geography,
-                      c.geom::geography,
-                      :radius
-                  )
+                       _l.length AS length,
+                       f.tags->>'surface' AS surface,
+                       f.tags->>'highway' AS highway,
+                       f.tags->>'cycleway' AS cycleway,
+                       f.tags->>'cycleway:right' AS cycleway_right,
+                       f.tags->>'cycleway:left' AS cycleway_left,
+                       f.tags->>'cycleway:both' AS cycleway_both,
+                       f.tags->>'bicycle' AS bicycle,
+                       f.tags->>'maxspeed' AS maxspeed
+                FROM followed AS f,
+                     LATERAL (SELECT ST_Length(f.geom::geography) AS length) AS _l,
+                     LATERAL (SELECT ST_Centroid(f.geom) AS centroid) AS _c
+                -- Ways that only graze the corridor boundary clip to an empty or
+                -- punctual geometry: they are not followed, so they are dropped.
+                WHERE _l.length > 0
                 SQL,
             [
                 'wkt' => WktGeometry::lineStringOrPoint($route),

@@ -24,8 +24,14 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
 {
-    /** Corridor half-width (m) for the local-first ways reads (ADR-040). */
-    private const int WAYS_CORRIDOR_RADIUS_METERS = 100;
+    /**
+     * Corridor half-width (m) for the local-first ways reads (ADR-040). Sized on
+     * the route's own positional error -- Douglas-Peucker decimation at 20 m
+     * (ADR-004) dominates GPS noise -- so a way actually ridden stays inside it,
+     * while roads merely running alongside (greenway next to a trunk road) fall
+     * out instead of being counted as ridden.
+     */
+    private const int WAYS_CORRIDOR_RADIUS_METERS = 20;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -108,8 +114,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
 
     /**
      * Reads OSM ways along the route from the local-first index and distributes
-     * them to stages (ADR-040). The index already reduces each way to its centroid,
-     * length (m) and surface/traffic tags, so no per-way geometry math is needed here.
+     * them to stages (ADR-040). The index already reduces each way to the centroid
+     * and length (m) of its portion inside the corridor plus the surface/traffic
+     * tags, so no per-way geometry math is needed here.
      *
      * @param list<Stage> $stages
      *

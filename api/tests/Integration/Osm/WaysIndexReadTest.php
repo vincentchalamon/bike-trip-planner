@@ -13,8 +13,8 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * Integration coverage for the local-first ways read layer (ADR-040): seeds real
- * PostGIS LineStrings in osm.ways and asserts the ST_DWithin corridor filtering
- * plus the centroid / geography-length / tag projection the terrain analyzers consume.
+ * PostGIS LineStrings in osm.ways and asserts the corridor filtering plus the
+ * centroid / clipped-geography-length / tag projection the terrain analyzers consume.
  *
  * @phpstan-import-type WayRow from WaysRepository
  */
@@ -22,10 +22,19 @@ final class WaysIndexReadTest extends KernelTestCase
 {
     use ResetDatabase;
 
+    /** The production corridor half-width (AnalyzeTerrainHandler). */
+    private const int RADIUS_METERS = 20;
+
     /** Route running along the seeded secondary road. */
     private const array CORRIDOR_ROUTE = [
         ['lat' => 49.60, 'lon' => 6.13],
         ['lat' => 49.62, 'lon' => 6.15],
+    ];
+
+    /** Straight west-east route at lat 49.60, ~7.2 km long, for the clipping cases. */
+    private const array STRAIGHT_ROUTE = [
+        ['lat' => 49.60, 'lon' => 6.10],
+        ['lat' => 49.60, 'lon' => 6.20],
     ];
 
     private Connection $connection;
@@ -53,9 +62,9 @@ final class WaysIndexReadTest extends KernelTestCase
     #[Test]
     public function findInCorridorProjectsCentroidLengthAndTags(): void
     {
-        $ways = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, 100);
+        $ways = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
 
-        // The far primary road is excluded by ST_DWithin.
+        // The far primary road is outside the corridor.
         self::assertCount(1, $ways);
 
         $way = $ways[0];
@@ -72,16 +81,68 @@ final class WaysIndexReadTest extends KernelTestCase
     }
 
     /**
+     * The measured length is the length of the portion running inside the corridor,
+     * and only the ways the route actually follows are returned. Four cases on the
+     * same straight route: followed end to end, followed for 200 m then leaving,
+     * parallel inside the radius, parallel outside it.
+     */
+    #[Test]
+    public function lengthIsClippedToTheCorridorAndParallelRoadsAreExcluded(): void
+    {
+        $this->connection->executeStatement('TRUNCATE osm.ways');
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.ways (osm_id, tags, geom) VALUES
+              -- Followed end to end: the clipped length is the full length (~7229 m).
+              (20, '{"highway":"residential","surface":"asphalt"}'::jsonb,
+                   ST_SetSRID(ST_GeomFromText('LINESTRING(6.10 49.60, 6.20 49.60)'), 4326)),
+              -- 202 m along the route, then 5.5 km due south: a 5763 m way of which
+              -- only the shared part (plus the 20 m the corridor extends over the
+              -- turn) may be counted.
+              (21, '{"highway":"unclassified","surface":"gravel"}'::jsonb,
+                   ST_SetSRID(ST_GeomFromText('LINESTRING(6.10 49.60, 6.1028 49.60, 6.1028 49.55)'), 4326)),
+              -- Parallel 40 m north (the greenway-along-a-trunk-road false positive
+              -- the 100 m corridor used to report): beyond the radius, dropped.
+              (22, '{"highway":"trunk","surface":"asphalt"}'::jsonb,
+                   ST_SetSRID(ST_GeomFromText('LINESTRING(6.12 49.6003593, 6.18 49.6003593)'), 4326)),
+              -- Parallel 10 m north: within GPS/decimation error, still followed.
+              (23, '{"highway":"service","surface":"asphalt"}'::jsonb,
+                   ST_SetSRID(ST_GeomFromText('LINESTRING(6.12 49.6000898, 6.18 49.6000898)'), 4326))
+            SQL);
+
+        $ways = new WaysRepository($this->connection)->findInCorridor(self::STRAIGHT_ROUTE, self::RADIUS_METERS);
+
+        $byHighway = [];
+        foreach ($ways as $way) {
+            $byHighway[$way['highway']] = $way;
+        }
+
+        // The trunk road running 40 m alongside is not part of the ride.
+        $highways = array_keys($byHighway);
+        sort($highways);
+        self::assertSame(['residential', 'service', 'unclassified'], $highways);
+        // Non-regression: a way followed from end to end keeps its full length.
+        self::assertEqualsWithDelta(7228.9, $byHighway['residential']['length'], 1.0);
+        // Clipped: 202 m shared + the 20 m of the southern branch inside the corridor,
+        // instead of the 5763 m of the whole way.
+        self::assertEqualsWithDelta(222.4, $byHighway['unclassified']['length'], 1.0);
+        // The centroid describes the clipped portion too, so the stage distribution
+        // sees the way where the route meets it, not 3 km south.
+        self::assertEqualsWithDelta(49.60, $byHighway['unclassified']['lat'], 0.001);
+        self::assertEqualsWithDelta(6.1015, $byHighway['unclassified']['lon'], 0.001);
+        self::assertEqualsWithDelta(4337.3, $byHighway['service']['length'], 1.0);
+    }
+
+    /**
      * Behaviour guard for the index-friendly rewrite (ADR-043, PR1): the bbox
      * pre-filter must not change which ways the corridor scan returns. We seed a
      * varied network -- in/out of the corridor, mixed highway/surface tags, and a
-     * way whose bounding box overlaps the corridor envelope yet sits >100 m from
-     * the route (a bbox false positive the metric ST_DWithin must still reject) --
-     * and assert the optimised query returns exactly the same set as the original
-     * naive `geom::geography` scan run against the same data.
+     * way whose bounding box overlaps the corridor envelope yet sits ~600 m from
+     * the route (a bbox false positive the metric predicate must still reject) --
+     * and assert the optimised query returns exactly the same set as the same clip
+     * run without the bbox pre-filter against the same data.
      */
     #[Test]
-    public function indexFriendlyScanMatchesTheNaiveCorridorScan(): void
+    public function indexFriendlyScanMatchesTheUnfilteredCorridorScan(): void
     {
         $this->connection->executeStatement('TRUNCATE osm.ways');
         $this->connection->executeStatement(<<<'SQL'
@@ -96,7 +157,7 @@ final class WaysIndexReadTest extends KernelTestCase
               (12, '{"highway":"residential"}'::jsonb,
                    ST_SetSRID(ST_GeomFromText('LINESTRING(6.140 49.610, 6.142 49.612)'), 4326)),
               -- Bbox false positive: within the padded envelope but ~600 m north of
-              -- the route line, so excluded by the 100 m metric predicate.
+              -- the route line, so excluded by the metric predicate.
               (13, '{"highway":"primary","surface":"asphalt"}'::jsonb,
                    ST_SetSRID(ST_GeomFromText('LINESTRING(6.138 49.6165, 6.142 49.6165)'), 4326)),
               -- Far outside the corridor entirely.
@@ -104,8 +165,8 @@ final class WaysIndexReadTest extends KernelTestCase
                    ST_SetSRID(ST_GeomFromText('LINESTRING(6.80 49.90, 6.81 49.91)'), 4326))
             SQL);
 
-        $expected = $this->naiveCorridorScan(self::CORRIDOR_ROUTE, 100);
-        $actual = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, 100);
+        $expected = $this->unfilteredCorridorScan(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
+        $actual = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
 
         // Order is not guaranteed by either query; compare as sets keyed by centroid.
         usort($expected, $this->byCentroid(...));
@@ -120,26 +181,34 @@ final class WaysIndexReadTest extends KernelTestCase
     #[Test]
     public function emptyRouteYieldsNoQuery(): void
     {
-        self::assertSame([], new WaysRepository($this->connection)->findInCorridor([], 100));
+        self::assertSame([], new WaysRepository($this->connection)->findInCorridor([], self::RADIUS_METERS));
     }
 
     /**
-     * The pre-optimisation query (per-row `geom::geography`, no bbox pre-filter),
-     * used as the behaviour oracle. Projects the exact same columns/shape as
-     * WaysRepository so the two results are directly comparable.
+     * The same corridor clip without the index-usable bbox pre-filter, used as the
+     * behaviour oracle. Projects the exact same columns/shape as WaysRepository so
+     * the two results are directly comparable.
      *
      * @param list<array{lat: float, lon: float}> $route
      *
      * @return list<WayRow>
      */
-    private function naiveCorridorScan(array $route, int $radiusMeters): array
+    private function unfilteredCorridorScan(array $route, int $radiusMeters): array
     {
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
+                WITH ridden AS MATERIALIZED (
+                    SELECT ST_Buffer(ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography, :radius)::geometry AS geom
+                ),
+                followed AS MATERIALIZED (
+                    SELECT w.tags AS tags, ST_Intersection(w.geom, r.geom) AS geom
+                    FROM osm.ways AS w, ridden AS r
+                    WHERE ST_Intersects(w.geom, r.geom)
+                )
                 SELECT ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
-                       ST_Length(geom::geography) AS length,
+                       _l.length AS length,
                        tags->>'surface' AS surface,
                        tags->>'highway' AS highway,
                        tags->>'cycleway' AS cycleway,
@@ -148,13 +217,10 @@ final class WaysIndexReadTest extends KernelTestCase
                        tags->>'cycleway:both' AS cycleway_both,
                        tags->>'bicycle' AS bicycle,
                        tags->>'maxspeed' AS maxspeed
-                FROM osm.ways,
-                LATERAL (SELECT ST_Centroid(geom) AS centroid) AS _c
-                WHERE ST_DWithin(
-                    geom::geography,
-                    ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                    :radius
-                )
+                FROM followed AS f,
+                     LATERAL (SELECT ST_Length(f.geom::geography) AS length) AS _l,
+                     LATERAL (SELECT ST_Centroid(f.geom) AS centroid) AS _c
+                WHERE _l.length > 0
                 SQL,
             [
                 'wkt' => WktGeometry::lineStringOrPoint($route),
