@@ -85,7 +85,10 @@ typescript-check: ## Run TypeScript Check
 	@docker compose run --rm --no-deps pwa npm run test:ts
 
 hadolint: ## Run Hadolint on Dockerfiles
-	@find .docker -name Dockerfile -exec sh -c 'echo "=> {}"; docker run --rm -i hadolint/hadolint < "{}"' \;
+	@status=0; for f in $$(find .docker -name Dockerfile); do \
+		echo "=> $$f"; \
+		docker run --rm -i hadolint/hadolint < "$$f" || status=1; \
+	done; exit $$status
 
 markdownlint: ## Run Markdownlint
 	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!**/node_modules/**" "!pwa/.next/**"

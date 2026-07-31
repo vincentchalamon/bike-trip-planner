@@ -100,7 +100,9 @@ RUN mkdir .next; \
 COPY --from=builder --link --chown=1001:1001 /srv/app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /srv/app/.next/static ./.next/static
 
-USER nextjs
+# Numeric uid:gid (hadolint DL3066) — same ids as the `nextjs`/`nodejs` pair
+# created above and as the `--chown=1001:1001` copies.
+USER 1001:1001
 
 EXPOSE 3000
 

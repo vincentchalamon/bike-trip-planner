@@ -54,7 +54,9 @@ COPY --link .docker/php/Caddyfile /etc/frankenphp/Caddyfile
 
 ENTRYPOINT ["docker-entrypoint"]
 
-HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
+# Exec form (no shell): `curl -f` already exits non-zero on an error status, so
+# the previous `|| exit 1` was redundant (hadolint DL3025).
+HEALTHCHECK --start-period=60s CMD ["curl", "-f", "http://localhost:2019/metrics"]
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 
 # Dev FrankenPHP image
