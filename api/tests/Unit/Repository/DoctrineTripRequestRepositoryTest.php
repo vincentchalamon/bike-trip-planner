@@ -638,7 +638,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->willReturn($trip);
 
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('Unhandled Alert subclass "UnknownAlertType"');
+        $this->expectExceptionMessageIsOrContains('Unhandled Alert subclass "UnknownAlertType"');
 
         $this->repository->getStages($tripId);
     }
@@ -665,7 +665,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $stageDto->addAlert($unknownAlert);
 
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('Unhandled Alert subclass');
+        $this->expectExceptionMessageIsOrContains('Unhandled Alert subclass');
 
         $this->repository->storeStages($tripId, [$stageDto]);
     }

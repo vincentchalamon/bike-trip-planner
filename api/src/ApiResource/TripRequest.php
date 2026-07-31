@@ -30,7 +30,7 @@ final class TripRequest
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     #[ApiProperty(readable: false, writable: false)]
-    public ?Uuid $id = null;
+    public ?Uuid $id;
 
     #[ORM\Column(length: 2048, nullable: true)]
     #[Assert\NotBlank(groups: ['trip_request:create'])]

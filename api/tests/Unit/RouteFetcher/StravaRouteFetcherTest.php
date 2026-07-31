@@ -97,7 +97,7 @@ final class StravaRouteFetcherTest extends TestCase
         );
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('not found (404)');
+        $this->expectExceptionMessageIsOrContains('not found (404)');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');
     }
@@ -123,7 +123,7 @@ final class StravaRouteFetcherTest extends TestCase
         );
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('private or access denied (403)');
+        $this->expectExceptionMessageIsOrContains('private or access denied (403)');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');
     }
@@ -149,7 +149,7 @@ final class StravaRouteFetcherTest extends TestCase
         $fetcher = new StravaRouteFetcher($client, $gpxParser, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('no valid coordinates');
+        $this->expectExceptionMessageIsOrContains('no valid coordinates');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');
     }

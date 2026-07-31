@@ -31,7 +31,7 @@ final class RouteFetcherRegistryTest extends TestCase
         $registry = new RouteFetcherRegistry(new \ArrayIterator([$fetcher]));
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Strava Route, RideWithGPS Route');
+        $this->expectExceptionMessageIsOrContains('Strava Route, RideWithGPS Route');
 
         $registry->get('https://unsupported.example.com');
     }

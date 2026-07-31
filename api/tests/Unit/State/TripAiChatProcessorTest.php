@@ -140,7 +140,7 @@ final class TripAiChatProcessorTest extends TestCase
         $processor = $this->newProcessor(configured: true, llmContent: '{}', llmClient: $llmClient);
 
         $this->expectException(UnprocessableEntityHttpException::class);
-        $this->expectExceptionMessage('Invalid message role "system"');
+        $this->expectExceptionMessageIsOrContains('Invalid message role "system"');
 
         $processor->process(
             new AiChatRequest([
@@ -162,7 +162,7 @@ final class TripAiChatProcessorTest extends TestCase
         $processor = $this->newProcessor(configured: true, llmContent: '{}');
 
         $this->expectException(UnprocessableEntityHttpException::class);
-        $this->expectExceptionMessage('Too many messages');
+        $this->expectExceptionMessageIsOrContains('Too many messages');
 
         $processor->process(new AiChatRequest($messages), new Post());
     }
@@ -173,7 +173,7 @@ final class TripAiChatProcessorTest extends TestCase
         $processor = $this->newProcessor(configured: true, llmContent: '{}');
 
         $this->expectException(UnprocessableEntityHttpException::class);
-        $this->expectExceptionMessage('Message too long');
+        $this->expectExceptionMessageIsOrContains('Message too long');
 
         $processor->process(
             new AiChatRequest([new AiChatMessage('user', str_repeat('a', AiChatMessage::MAX_CONTENT_LENGTH + 1))]),

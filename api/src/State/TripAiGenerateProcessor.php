@@ -63,8 +63,6 @@ final readonly class TripAiGenerateProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
-        \assert($data instanceof TripAiGenerateRequest);
-
         /** @var User $user */
         $user = $this->security->getUser();
 

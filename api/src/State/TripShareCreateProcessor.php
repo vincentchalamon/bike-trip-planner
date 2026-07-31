@@ -36,8 +36,6 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripShare
     {
-        \assert($data instanceof TripShare);
-
         $trip = $this->resolveTrip($uriVariables);
 
         // Always create a brand-new active share. The POST shares its URI template
@@ -62,8 +60,6 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         } catch (UniqueConstraintViolationException) {
             throw new ConflictHttpException('An active share link already exists for this trip.');
         }
-
-        \assert($result instanceof TripShare);
 
         return $result;
     }

@@ -117,8 +117,6 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): AiChatResponse|JsonResponse
     {
-        \assert($data instanceof AiChatRequest);
-
         $user = $this->security->getUser();
         if (!$user instanceof User) {
             throw new HttpException(401, 'Authentication required.');

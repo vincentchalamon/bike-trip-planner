@@ -177,7 +177,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 $foodPoisWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_values($foodPoisRaw));
                 $waterPointsWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_map(
-                    static fn (array $w): array => ['name' => $w['name'] ?? null, 'category' => 'water', 'lat' => $w['lat'], 'lon' => $w['lon']],
+                    static fn (array $w): array => ['name' => $w['name'], 'category' => 'water', 'lat' => $w['lat'], 'lon' => $w['lon']],
                     $waterByStage[$i] ?? [],
                 ));
 

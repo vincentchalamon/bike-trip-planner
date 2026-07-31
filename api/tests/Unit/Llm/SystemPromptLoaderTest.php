@@ -103,7 +103,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('System prompt "missing" not found');
+        $this->expectExceptionMessageIsOrContains('System prompt "missing" not found');
 
         $loader->load('missing');
     }
@@ -122,7 +122,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Failed to read system prompt "unreadable"');
+        $this->expectExceptionMessageIsOrContains('Failed to read system prompt "unreadable"');
 
         try {
             $loader->load('unreadable');
@@ -137,7 +137,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Prompt name must not be empty.');
+        $this->expectExceptionMessageIsOrContains('Prompt name must not be empty.');
 
         // @phpstan-ignore argument.type (intentional: this test verifies the runtime guard against empty input)
         $loader->load('');
@@ -149,7 +149,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must not contain path separators');
+        $this->expectExceptionMessageIsOrContains('must not contain path separators');
 
         $loader->load('../escape');
     }
@@ -160,7 +160,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must not contain path separators');
+        $this->expectExceptionMessageIsOrContains('must not contain path separators');
 
         $loader->load('escape\\windows');
     }
@@ -171,7 +171,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must not contain path separators');
+        $this->expectExceptionMessageIsOrContains('must not contain path separators');
 
         $loader->load("nul\0byte");
     }
@@ -182,7 +182,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must not contain path separators');
+        $this->expectExceptionMessageIsOrContains('must not contain path separators');
 
         $loader->load('.');
     }
@@ -193,7 +193,7 @@ final class SystemPromptLoaderTest extends TestCase
         $loader = new SystemPromptLoader($this->tmpDir);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must not contain path separators');
+        $this->expectExceptionMessageIsOrContains('must not contain path separators');
 
         $loader->load('..');
     }

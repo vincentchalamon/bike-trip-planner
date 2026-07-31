@@ -67,7 +67,6 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
-        \assert($data instanceof TripRequest);
         $tripId = $uriVariables['id'] ?? '';
 
         if ('' === $tripId) {
