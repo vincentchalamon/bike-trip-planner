@@ -10,6 +10,7 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
@@ -26,6 +27,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
     public function __construct(
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
     ) {
     }
 
@@ -77,7 +79,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $criticalSegments) {
             $first = $criticalSegments[0];
-            $totalLength = (int) array_sum(array_column($criticalSegments, 'length'));
+            $totalLength = $this->distanceFormatter->format(array_sum(array_column($criticalSegments, 'length')), $locale);
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
@@ -100,7 +102,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $warningSegments) {
             $first = $warningSegments[0];
-            $totalLength = (int) array_sum(array_column($warningSegments, 'length'));
+            $totalLength = $this->distanceFormatter->format(array_sum(array_column($warningSegments, 'length')), $locale);
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
@@ -123,7 +125,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $nudgeSegments) {
             $first = $nudgeSegments[0];
-            $totalLength = (int) array_sum(array_column($nudgeSegments, 'length'));
+            $totalLength = $this->distanceFormatter->format(array_sum(array_column($nudgeSegments, 'length')), $locale);
             $speeds = array_filter(array_map(
                 fn (array $w): ?int => $this->parseMaxspeed($w['maxspeed'] ?? ''),
                 $nudgeSegments,

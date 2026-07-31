@@ -9,6 +9,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -16,6 +17,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SurfaceAlertAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private SurfaceAlertAnalyzer $analyzer;
 
     #[\Override]
@@ -26,7 +29,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new SurfaceAlertAnalyzer($translator);
+        $this->analyzer = new SurfaceAlertAnalyzer($translator, $this->createDistanceFormatter());
     }
 
     #[Test]
@@ -157,7 +160,9 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $this->assertCount(1, $alerts);
         $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
         // Both components are reported, not the raw composite string.
-        $this->assertStringContainsString('gravel, dirt', $alerts[0]->message);
+        // Both components are translated now (issue #862), so the stub echoes their keys.
+        $this->assertStringContainsString('surface.gravel', $alerts[0]->message);
+        $this->assertStringContainsString('surface.dirt', $alerts[0]->message);
     }
 
     #[Test]
@@ -200,7 +205,8 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         // as a tag-presence alert (issue #861).
         $this->assertCount(1, $alerts);
         $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
-        $this->assertStringContainsString('tracktype='.$tracktype, $alerts[0]->message);
+        // The fallback signal is translated as well, so no raw tag expression leaks.
+        $this->assertStringContainsString('surface.tracktype_'.$tracktype, $alerts[0]->message);
     }
 
     #[Test]
@@ -232,7 +238,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
-        $this->assertStringContainsString('smoothness=very_bad', $alerts[0]->message);
+        $this->assertStringContainsString('surface.smoothness_very_bad', $alerts[0]->message);
     }
 
     #[Test]
@@ -341,6 +347,51 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     public function priority(): void
     {
         $this->assertSame(20, SurfaceAlertAnalyzer::getPriority());
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', 'Revêtement difficile sur 43,9 km au total (gravier, terre). Vérifie si ton vélo est adapté.'];
+        yield 'english' => ['en', 'Rough surface totalling 43.9 km (gravel, dirt). Check bike suitability.'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function renderedMessageUsesKilometresAndTranslatedSurfaces(string $locale, string $expected): void
+    {
+        $analyzer = new SurfaceAlertAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+
+        $alerts = $analyzer->analyze($this->createStage(), [
+            'locale' => $locale,
+            'osmWays' => [
+                ['surface' => 'gravel', 'length' => 40_000.0],
+                ['surface' => 'dirt', 'length' => 3_871.0],
+            ],
+        ]);
+
+        $this->assertSame($expected, $alerts[0]->message);
+    }
+
+    #[DataProvider('unpavedSurfaceProvider')]
+    #[Test]
+    public function frenchMessageNeverLeaksARawSurfaceTag(string $surface): void
+    {
+        $analyzer = new SurfaceAlertAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+
+        $alerts = $analyzer->analyze($this->createStage(), [
+            'locale' => 'fr',
+            'osmWays' => [['surface' => $surface, 'length' => 600.0]],
+        ]);
+
+        $this->assertStringNotContainsString($surface, $alerts[0]->message);
+        $this->assertStringNotContainsString(
+            'revêtement non documenté',
+            $alerts[0]->message,
+            \sprintf('Surface "%s" has no "surface.%s" translation.', $surface, $surface),
+        );
     }
 
     private function createStage(): Stage

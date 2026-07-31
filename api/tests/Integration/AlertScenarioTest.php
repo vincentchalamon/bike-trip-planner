@@ -12,6 +12,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
+use App\Format\DecimalFormatter;
+use App\Format\DistanceFormatter;
 use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,6 +68,8 @@ final class AlertScenarioTest extends TestCase
         $analyzer = new SteepGradientAnalyzer(
             $this->createHaversineDistanceCalculator(),
             $this->createTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
+            new DecimalFormatter(),
         );
 
         $alerts = $analyzer->analyze($stage);
@@ -101,6 +105,7 @@ final class AlertScenarioTest extends TestCase
         $analyzer = new ContinuityAnalyzer(
             $this->createHaversineDistanceCalculator(),
             $this->createTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
         );
 
         $alerts = $analyzer->analyze($stages[0], ['nextStage' => $stages[1]]);
@@ -207,6 +212,8 @@ final class AlertScenarioTest extends TestCase
             SteepGradientAnalyzer::class => new SteepGradientAnalyzer(
                 $this->createHaversineDistanceCalculator(),
                 $this->createTranslator(),
+                new DistanceFormatter(new DecimalFormatter()),
+                new DecimalFormatter(),
             ),
             ElevationAlertAnalyzer::class => new ElevationAlertAnalyzer($this->createTranslator()),
             EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository()),
@@ -229,6 +236,7 @@ final class AlertScenarioTest extends TestCase
         $analyzer = new ContinuityAnalyzer(
             $this->createHaversineDistanceCalculator(),
             $this->createTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
         );
 
         // No next stage → no continuity alert

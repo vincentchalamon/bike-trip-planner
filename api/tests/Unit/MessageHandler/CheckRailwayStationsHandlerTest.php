@@ -8,6 +8,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Format\DecimalFormatter;
+use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -15,14 +17,54 @@ use App\Message\CheckRailwayStations;
 use App\MessageHandler\CheckRailwayStationsHandler;
 use App\Osm\RailwayStationRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckRailwayStationsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', "Aucune gare ferroviaire à moins de 10 km de l'étape 1. En cas d'urgence, la gare la plus proche peut être éloignée."];
+        yield 'english' => ['en', 'No train station within 10 km of stage 1. In case of emergency, the nearest station may be far away.'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function nudgeMessageDerivesItsThresholdFromTheConstant(string $locale, string $expected): void
+    {
+        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 1), $locale);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::RAILWAY_STATION_ALERTS,
+                $this->callback(static function (array $data) use ($expected): bool {
+                    self::assertSame($expected, $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->railwayStationRepository([]),
+            $this->createStub(GeoDistanceInterface::class),
+        );
+        $handler(new CheckRailwayStations('trip-1'));
+    }
+
     /**
      * @return list<Stage>
      */
@@ -63,11 +105,11 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function tripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function tripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getLocale')->willReturn($locale);
 
         return $tripStateManager;
     }
@@ -81,14 +123,6 @@ final class CheckRailwayStationsHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $params): string => match ($id) {
-                'alert.railway_station.nudge' => \sprintf('No train station near stage %s.', $params['%stage%']),
-                default => $id,
-            },
-        );
-
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new CheckRailwayStationsHandler(
@@ -99,7 +133,8 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             $tripStateManager,
             $railwayStationRepository,
             $haversine,
-            $translator,
+            $this->createAlertTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -148,7 +183,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
 
                     return 3 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'No train station near stage 1')
+                        && str_contains((string) $alerts[0]['message'], 'No train station within 10 km of stage 1')
                         && !isset($alerts[0]['action']);
                 }),
             );
@@ -173,20 +208,24 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             static fn (float $lat1): float => $lat1 >= 48.5 ? 15000.0 : 5000.0,
         );
 
+        // The label is translated server-side (issue #863), and this test builds the
+        // real catalogue, so assert the rendered string rather than the key.
+        $expectedLabel = $this->createAlertTranslator()->trans('alert.railway_station.action', [], 'alerts', 'en');
+
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
             ->method('publish')
             ->with(
                 'trip-1',
                 MercureEventType::RAILWAY_STATION_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($expectedLabel): bool {
                     $alerts = $data['alerts'];
 
                     // Only Stage 2 has no nearby station and gets a nudge alert
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
                         && 'navigate' === $alerts[0]['action']['kind']
-                        && 'alert.railway_station.action' === $alerts[0]['action']['label']
+                        && $expectedLabel === $alerts[0]['action']['label']
                         && isset($alerts[0]['action']['payload']['lat'], $alerts[0]['action']['payload']['lon'])
                         && isset($alerts[0]['lat'], $alerts[0]['lon']);
                 }),

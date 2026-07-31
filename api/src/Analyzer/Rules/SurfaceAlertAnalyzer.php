@@ -10,6 +10,7 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
@@ -49,6 +50,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 
     public function __construct(
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
     ) {
     }
 
@@ -98,13 +100,18 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        $surfaceLabels = array_unique(array_map(
+            fn (string $surface): string => $this->translateSurface($surface, $locale),
+            array_keys($surfaces),
+        ));
+
         return [new Alert(
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.surface.warning',
                 [
-                    '%length%' => (int) $roughLength,
-                    '%surface%' => implode(', ', array_keys($surfaces)),
+                    '%length%' => $this->distanceFormatter->format($roughLength, $locale),
+                    '%surface%' => implode(', ', $surfaceLabels),
                 ],
                 'alerts',
                 $locale,
@@ -154,5 +161,21 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         }
 
         return [];
+    }
+
+    /**
+     * Maps a raw OSM surface value to its localised label. An undocumented
+     * value falls back to a generic wording rather than leaking the tag.
+     *
+     * {@see roughSurfacesOf()} also reports the fallback signals as `tracktype=grade4`
+     * / `smoothness=bad`; those are translated too (`surface.tracktype_grade4`), so no
+     * raw tag expression ever reaches a message.
+     */
+    private function translateSurface(string $surface, string $locale): string
+    {
+        $key = 'surface.'.str_replace('=', '_', $surface);
+        $label = $this->translator->trans($key, [], 'alerts', $locale);
+
+        return $key === $label ? $this->translator->trans('surface.unknown', [], 'alerts', $locale) : $label;
     }
 }

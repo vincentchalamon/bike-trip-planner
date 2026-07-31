@@ -13,6 +13,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Format\DecimalFormatter;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
@@ -38,6 +39,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private TranslatorInterface $translator,
+        private DecimalFormatter $decimalFormatter,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -94,7 +96,11 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             ) {
                 $message = $this->translator->trans(
                     'alert.wind.warning',
-                    ['%count%' => $headwindCount, '%total%' => $stagesWithWeather],
+                    [
+                        '%count%' => $headwindCount,
+                        '%total%' => $stagesWithWeather,
+                        '%threshold%' => $this->decimalFormatter->format(self::WIND_SPEED_THRESHOLD_KMH, $locale),
+                    ],
                     'alerts',
                     $locale,
                 );

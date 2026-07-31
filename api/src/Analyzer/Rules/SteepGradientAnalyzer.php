@@ -12,6 +12,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
+use App\Format\DecimalFormatter;
+use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
@@ -23,6 +25,8 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
     public function __construct(
         private DistanceCalculatorInterface $distanceCalculator,
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
+        private DecimalFormatter $decimalFormatter,
     ) {
     }
 
@@ -99,8 +103,8 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
             message: $this->translator->trans(
                 'alert.steep_gradient.warning',
                 [
-                    '%gradient%' => round($averageGradient, 1),
-                    '%distance%' => (int) $distance,
+                    '%gradient%' => $this->decimalFormatter->format($averageGradient, $locale, 1, 1),
+                    '%distance%' => $this->distanceFormatter->format($distance, $locale),
                 ],
                 'alerts',
                 $locale,

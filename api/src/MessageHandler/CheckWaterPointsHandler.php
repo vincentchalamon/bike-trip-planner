@@ -11,6 +11,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -41,6 +42,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -97,7 +99,10 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                         'type' => AlertType::NUDGE->value,
                         'message' => $this->translator->trans(
                             'alert.water.nudge',
-                            ['%stage%' => $stage->dayNumber],
+                            [
+                                '%stage%' => $stage->dayNumber,
+                                '%threshold%' => $this->distanceFormatter->format(self::WATER_GAP_THRESHOLD_KM * 1000, $locale),
+                            ],
                             'alerts',
                             $locale,
                         ),

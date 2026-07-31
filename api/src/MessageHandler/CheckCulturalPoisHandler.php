@@ -131,7 +131,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         [
                             '%stage%' => $stage->dayNumber,
                             '%name%' => $poi['name'],
-                            '%type%' => $poi['type'],
+                            '%type%' => $this->translatePoiType($poi['type'], $locale),
                             '%distance%' => $poi['distanceFromRoute'],
                         ],
                         'alerts',
@@ -188,6 +188,19 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 'alerts' => $alerts,
             ]);
         }, $generation);
+    }
+
+    /**
+     * Maps a raw POI category (OSM tag value or DataTourisme-derived) to its
+     * localised label. An unmapped value falls back to a generic wording
+     * rather than leaking the tag into a translated message.
+     */
+    private function translatePoiType(string $type, string $locale): string
+    {
+        $key = 'poi_type.'.$type;
+        $label = $this->translator->trans($key, [], 'alerts', $locale);
+
+        return $key === $label ? $this->translator->trans('poi_type.unknown', [], 'alerts', $locale) : $label;
     }
 
     /**

@@ -51,7 +51,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             $startDate = $request->startDate ?? new \DateTimeImmutable('today');
             $year = (int) $startDate->format('Y');
 
-            $holidays = Yasumi::create('France', $year);
+            $holidays = Yasumi::create('France', $year, $locale);
 
             $nudges = [];
 

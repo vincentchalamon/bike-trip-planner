@@ -10,6 +10,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -43,6 +44,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         private HealthServiceRepositoryInterface $healthServiceRepository,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -103,7 +105,10 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                     'type' => AlertType::NUDGE->value,
                     'message' => $this->translator->trans(
                         'alert.health_service.nudge',
-                        ['%stage%' => $stage->dayNumber],
+                        [
+                            '%stage%' => $stage->dayNumber,
+                            '%threshold%' => $this->distanceFormatter->format(self::HEALTH_SERVICE_PROXIMITY_METERS, $locale),
+                        ],
                         'alerts',
                         $locale,
                     ),

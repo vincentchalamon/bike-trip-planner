@@ -11,6 +11,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
+use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
@@ -22,6 +23,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
     public function __construct(
         private DistanceCalculatorInterface $distanceCalculator,
         private TranslatorInterface $translator,
+        private DistanceFormatter $distanceFormatter,
     ) {
     }
 
@@ -45,7 +47,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
                 message: $this->translator->trans(
                     'alert.continuity.critical',
                     [
-                        '%distance%' => number_format($gapMeters / 1000, 1),
+                        '%distance%' => $this->distanceFormatter->formatKilometers($gapMeters, $locale),
                         '%from%' => $stage->dayNumber,
                         '%to%' => $nextStage->dayNumber,
                     ],

@@ -9,6 +9,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Format\DecimalFormatter;
+use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -17,14 +19,52 @@ use App\Message\CheckWaterPoints;
 use App\MessageHandler\CheckWaterPointsHandler;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckWaterPointsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', "Tronçon de plus de 30 km sans point d'eau potable détecté sur l'étape 1. Emporte suffisamment d'eau."];
+        yield 'english' => ['en', 'Stretch of over 30 km without a detected drinking-water source on stage 1. Carry enough water.'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function nudgeMessageDerivesItsThresholdFromTheConstant(string $locale, string $expected): void
+    {
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)], $locale);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WATER_POINT_ALERTS,
+                $this->callback(static function (array $data) use ($expected): bool {
+                    self::assertSame($expected, $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->waterPointRepository([]), $distributor, $this->createStub(GeoDistanceInterface::class));
+        $handler(new CheckWaterPoints('trip-1'));
+    }
+
     private function createStage(string $tripId, int $dayNumber, float $distance = 80.0): Stage
     {
         return new Stage(
@@ -55,11 +95,6 @@ final class CheckWaterPointsHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $params): string => \sprintf('No water on stage %s for 30+ km.', $params['%stage%'] ?? ''),
-        );
-
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new CheckWaterPointsHandler(
@@ -71,7 +106,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
             $waterPointRepository,
             $distributor,
             $haversine,
-            $translator,
+            $this->createAlertTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -103,11 +139,11 @@ final class CheckWaterPointsHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function tripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function tripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getLocale')->willReturn($locale);
         $tripStateManager->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
             ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
