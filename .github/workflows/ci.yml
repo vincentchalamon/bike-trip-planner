@@ -900,7 +900,7 @@ jobs:
           cache: npm
           cache-dependency-path: pwa/package-lock.json
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           distribution: temurin
           java-version: "21"
