@@ -49,6 +49,57 @@ Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
 Never declare a task done without proof of execution. Paste the real output of `make qa` / `make test` (or run `/check`); never claim success from assumption. A green claim without evidence is not acceptable.
 
+### Local QA: `make qa` cannot complete on a dev machine
+
+**`make qa` dies at the `rector` leg with `Child process error: Killed` (exit 137). This is not your diff.** The `php` service is capped at `deploy.resources.limits.memory: 768M` in `compose.yaml`, Rector spawns ~13 parallel workers, and it has no `--no-parallel` flag. Same root cause for `make phpstan`. In a worktree, `make qa-pwa` additionally fails with `eslint: not found` because each compose project gets its own **empty** `pwa_node_modules` named volume.
+
+Do not spend turns diagnosing this, and do not conclude the branch is broken. Run the legs individually instead, and paste **their** output as the evidence:
+
+```bash
+# Rector + PHPStan: one-off container outside the compose memory cap
+docker run --rm -m 4g -v "$PWD/api:/app" -w /app --entrypoint sh bike-trip-planner-php:dev \
+  -c "vendor/bin/rector process --dry-run"
+docker run --rm -m 4g -v "$PWD/api:/app" -w /app -e APP_ENV=dev --entrypoint sh bike-trip-planner-php:dev \
+  -c "bin/console cache:warmup -e dev >/dev/null && vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=3G --no-progress"
+
+# PHP-CS-Fixer (fine inside compose)
+docker run --rm -v "$PWD/api:/app" -w /app -e PHP_CS_FIXER_IGNORE_ENV=1 --entrypoint php \
+  bike-trip-planner-php:dev vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php
+
+# Frontend legs: run the binaries directly (needs a populated pwa/node_modules)
+# NB: the npm script is `i18n:check` with a COLON. The hyphen belongs to the Makefile
+# target (`make i18n-check`) and to the .mjs filename; `npm run i18n-check` fails with
+# `Missing script`. In a worktree the Make target is unusable anyway — it goes through
+# `docker compose run --no-deps pwa`, i.e. the empty node_modules volume.
+cd pwa && node_modules/.bin/tsc --noEmit && node_modules/.bin/eslint <files> \
+  && npx --yes prettier@3.9.6 --check <files> && npm run i18n:check
+```
+
+Run each leg so you actually see its output. Piping through `| tail` hides an `npm error Missing script` behind the pipe's zero exit status, which reads as a silent pass — that trap produced two unfounded "i18n green" claims during Sprint 44.
+
+**PHPUnit including the Functional and Integration suites** needs Postgres + Redis + a JWT keypair. Point a throwaway container at the *main* stack's network (`make start-dev` in the main checkout) rather than booting a second stack:
+
+Every command below runs **from the worktree root** — the `docker run` resolves `$PWD/api` and `$PWD/README.md`, so a stray `cd` into `api/` silently points the mounts at `api/api` and `api/README.md`. The keypair step is wrapped in a subshell for that reason.
+
+```bash
+# One-time, inside the worktree: a test keypair with the passphrase CI uses
+(cd api && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
+  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test)
+
+docker run --rm --network bike-trip-planner_default -e APP_ENV=test -e XDEBUG_MODE=off -e JWT_PASSPHRASE=test \
+  -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8" \
+  -e REDIS_URL="redis://redis:6379" -e FRONTEND_URL="https://localhost" \
+  -v "$PWD/api:/app" -v "$PWD/README.md:/README.md:ro" \
+  -w /app --entrypoint vendor/bin/phpunit bike-trip-planner-php:dev --no-coverage tests/Unit tests/Integration
+```
+
+Two traps in that command:
+
+- **`-v "$PWD/README.md:/README.md:ro"` is required.** `AlertDocumentationTest` reads the README at the project root, i.e. `/app/../README.md`. Mounting only `api/` makes it fail with `README.md not found at project root` — a false alarm that looks like a real regression.
+- The test database is auto-suffixed `_test` (`doctrine.php dbname_suffix`), so this never touches the dev data.
+
+`make test-e2e` needs the PWA built and served on `https://localhost`; a worktree's changes are not in the main stack's bundle. **CI is the real gate for Playwright** — say so plainly rather than implying local coverage you did not have. Since the pre-commit hook replays `make qa`, commit with `git -c core.hooksPath=/dev/null commit` once the legs are individually green.
+
 ### Claude Code Skills
 
 ```bash

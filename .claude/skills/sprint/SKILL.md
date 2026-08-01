@@ -33,6 +33,22 @@ Use the Agent tool to fetch all issue bodies in parallel (up to 3 concurrent age
 
 Alternatively, fetch issues sequentially if the count is small (≤5).
 
+## Step 2b — Map file overlap between issues (do not skip)
+
+The `Dépend de` column models **issue** dependencies only. It says nothing about two independent issues editing the same file, which is where the real cost of a parallel sprint lands: at merge time, on the user.
+
+Before launching any agent, build an overlap map from the issue bodies fetched in Step 2 — their "Fichiers impactés" sections, plus any file path named in the Scope. Group by file and keep every file claimed by **two or more** issues.
+
+For each overlapping file, decide and record:
+- **which change must win** if the two are semantically incompatible (a deletion beating an extension is the common case);
+- whether the diffs can be kept **disjoint by construction** (e.g. one issue rewrites a SQL predicate, another adds two columns to the same `SELECT`).
+
+Then **inject the overlap into each agent's prompt** — name the sibling issue, the shared file, and the instruction to keep the diff surgical. Observed in Sprint 44: the branches that received this warning produced trivial conflicts; the arbitration written up-front (#861's deletion of `detectMissingSurfaceData()` beating #860's extension of the same class) was exactly what the rebases needed four merges later.
+
+Carry the map into Step 7 so `TRACKING.md` records the expected conflicts and the merge order **before** the user starts merging.
+
+Sanity check: if one file is claimed by four or more issues, say so and ask the user whether those issues should be serialised into one wave instead of run in parallel. Four branches editing `SurfaceAlertAnalyzer.php` cost four rounds of conflict resolution in Sprint 44.
+
 ## Step 3 — Phase 1: Code in parallel (worktree agents)
 
 For each wave, in order, launch worktree agents to implement each issue. **Maximum 3 concurrent agents per batch** (Agent tool limitation). If a wave has more than 3 issues, split into batches of 3.
@@ -57,8 +73,8 @@ You are implementing GitHub issue #<number>: <title>
    done
    ```
 4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns)
-5. Run `make qa` and commit autofixes (PHP-CS-Fixer, Rector, Prettier auto-apply). Repeat until `make qa` exits 0 with no working-tree diff. PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make typegen` / `make install`** — the main agent handles those during Phase 2 (Docker container spin-up is shared there).
-   - **If `make qa` can't run fully** (e.g. the frontend leg is broken by a stale `node_modules`), still run `make rector` and `make php-cs-fixer` on their own first. Their rules are deterministic and PHP-only, so they pass locally even when the JS toolchain is unavailable — and a skipped Rector autofix fails CI in dry-run mode, costing a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`).
+5. **`make qa` will NOT complete — do not spend turns on it.** Read the "Local QA" section of CLAUDE.md and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
+   - Report the per-leg output verbatim in your final message. Do not write "make qa passes" — it cannot; say which legs you ran and what they printed.
 6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
 7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
 8. If you add new dependencies to composer.json or package.json, include "DEPS_CHANGED" in your final message
@@ -73,16 +89,27 @@ Use `isolation: "worktree"` for each agent.
 
 Track results: for each issue, record SUCCESS (with worktree branch), DTO_CHANGED, DEPS_CHANGED, FAILED, or BLOCKED.
 
-## Step 4 — Phase 2: QA and tests (sequential, Docker shared)
+## Step 4 — Phase 2: verify what is verifiable locally, then let CI be the gate
+
+**Do not run `make qa` or `make test` here.** Neither can complete on a dev machine (768M cap on the `php` service → Rector OOM; empty `pwa_node_modules` volume per worktree; Playwright needs the PWA built and served on `https://localhost`, which a worktree's changes are not). Running them anyway produces red output that has nothing to do with the code and burns a lot of wall-clock. See the "Local QA" section of CLAUDE.md for the container recipes used below.
 
 For each successfully coded branch, **in dependency order**:
 
-1. `cd` into the agent's worktree (or `git checkout feature/<issue-number>` if working from a shared one)
-2. If DEPS_CHANGED: `make install`
-3. If DTO_CHANGED: `make typegen`
-4. Run `make qa` — Phase 1 already ran this in the agent, so this is the safety net. If it fails, read errors, fix, commit, retry (up to 3 attempts)
-5. Run `make test` — if it fails, read errors, fix, commit, retry (up to 3 attempts)
-6. If QA/tests still fail after 3 attempts, mark as **FAILED** and continue to the next branch
+1. `cd` into the agent's worktree.
+2. If DEPS_CHANGED: `make install`.
+3. If DTO_CHANGED: `make typegen`. In a worktree this fails twice over — the php entrypoint waits on a `database` container that `--no-deps` never starts, and `npm run typegen` hits the empty node_modules volume. Fall back to the two commands below, both run **from the worktree root** so the binary and its arguments share one frame of reference (`npm run typegen` uses `pwa/`-relative paths because npm sets the cwd to `pwa/`; invoking the binary directly does not). Commit the regenerated `schema.d.ts`.
+
+   ```bash
+   docker compose run --rm --no-deps --entrypoint php php bin/console api:openapi:export > pwa/openapi.json
+   pwa/node_modules/.bin/openapi-typescript pwa/openapi.json -o pwa/src/lib/api/schema.d.ts
+   ```
+4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the CLAUDE.md recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
+5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with the README mounted at `/README.md` (see CLAUDE.md — without it `AlertDocumentationTest` fails on a missing README and looks like a regression). Up to 3 attempts.
+6. If a leg still fails after 3 attempts, mark **FAILED** and move on.
+
+**Playwright and the Functional suite are CI's job.** State that plainly in the PR body and in the final report — never imply local E2E coverage you did not have.
+
+**When you add or change a test, prove it can fail.** Mutate the code it guards (remove the guard, revert the line) and check the assertion goes red, then restore. A test committed without that check may assert nothing: in Sprint 44 this caught a REST-boundary test that passed for the wrong reason, and it is the only cheap defence when the suite itself cannot run end-to-end locally.
 
 ## Step 5 — Phase 3: Push and create PRs
 
@@ -93,6 +120,23 @@ For each branch that passed Phase 2, create a PR:
    - Title: Conventional Commit format matching the issue type
    - Body: summary + Auto-critique section per CLAUDE.md
    - Base branch: `main` (or `feature/<dep-number>` for dependent issues)
+
+**Prefer GitHub's native stacks over a hand-rolled `feature/<dep-number>` base.** GitHub ships an official CLI extension:
+
+```bash
+gh extension install github/gh-stack   # once per machine
+gh stack init <bottom-branch>          # trunk defaults to the repo default branch
+gh stack add <next-branch>             # each new layer sits on the one below
+gh stack submit                        # opens one PR per branch, bases wired, linked as a Stack
+gh stack sync                          # fetch → reconcile → rebase cascade → push → sync PR state
+```
+
+Two properties that directly remove Sprint 44's manual work:
+
+- **`gh stack rebase` handles a merged parent by itself** — "if a branch's PR has been merged, the rebase automatically switches to `--onto` mode to correctly replay commits on top of the merge target". That is exactly the manual recipe in Phase 4 §5 below, which had to be run by hand after every squash-merge.
+- **`gh stack init` enables `git rerere`**, so a conflict resolved once is replayed automatically on the next rebase. Sprint 44 rebased the same handful of files across four merge rounds and re-resolved the same hunks each time.
+
+Stack metadata lives in `.git/gh-stack` (not committed). If the extension is unavailable, fall back to the manual base + the `--onto` recipe in Phase 4 §5 — keep both paths in mind, the manual one is still correct.
 
 ## Step 6 — Phase 4: Drive each PR to READY
 
@@ -118,7 +162,7 @@ Each cycle:
    git rebase --onto origin/main <last-parent-commit> feature/<child>
    git push --force-with-lease
    ```
-   Verify afterwards that `git log origin/main..HEAD` lists **only** the child's commits. For a 3-deep stack (A→B→C), do this bottom-up as each parent merges.
+   Verify afterwards that `git log origin/main..HEAD` lists **only** the child's commits. For a 3-deep stack (A→B→C), do this bottom-up as each parent merges. **If the stack was created with `gh stack`, run `gh stack rebase` instead** — it detects the merged parent and switches to `--onto` mode on its own.
 
 **Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with **no new blocking comment** (Critical/High). Wait for that workflow to finish before evaluating its output — after a push it is triggered asynchronously and may still be `pending`/`in_progress`.
 
@@ -131,6 +175,8 @@ For each issue, update the TRACKING.md row:
 - NEEDS ATTENTION: set status to "En cours", add PR link, note the blocker
 - FAILED: set status to "Échoué"
 - BLOCKED: set status to "Bloqué"
+
+Also add a **"Ordre de merge et conflits attendus"** section built from the Step 2b overlap map: the required merge order (stacked PRs first), each shared file, and which side should win. This is the artifact the user reads while merging, and it is what makes the conflict resolutions reproducible days later — write the arbitration down, not just the file list.
 
 Commit and push the TRACKING.md update **on a dedicated branch** (e.g. `chore/sprint-<n>-tracking`) — never on a worktree branch and never directly to main. From the main repo (not a worktree): `git switch main && git pull --ff-only && git switch -c chore/sprint-<n>-tracking`, edit, commit, push, open PR.
 
