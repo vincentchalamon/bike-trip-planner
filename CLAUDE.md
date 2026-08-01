@@ -79,10 +79,12 @@ Run each leg so you actually see its output. Piping through `| tail` hides an `n
 
 **PHPUnit including the Functional and Integration suites** needs Postgres + Redis + a JWT keypair. Point a throwaway container at the *main* stack's network (`make start-dev` in the main checkout) rather than booting a second stack:
 
+Every command below runs **from the worktree root** — the `docker run` resolves `$PWD/api` and `$PWD/README.md`, so a stray `cd` into `api/` silently points the mounts at `api/api` and `api/README.md`. The keypair step is wrapped in a subshell for that reason.
+
 ```bash
 # One-time, inside the worktree: a test keypair with the passphrase CI uses
-cd api && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
-  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test
+(cd api && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
+  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test)
 
 docker run --rm --network bike-trip-planner_default -e APP_ENV=test -e XDEBUG_MODE=off -e JWT_PASSPHRASE=test \
   -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8" \
