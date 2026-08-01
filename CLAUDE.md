@@ -67,9 +67,15 @@ docker run --rm -v "$PWD/api:/app" -w /app -e PHP_CS_FIXER_IGNORE_ENV=1 --entryp
   bike-trip-planner-php:dev vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php
 
 # Frontend legs: run the binaries directly (needs a populated pwa/node_modules)
+# NB: the npm script is `i18n:check` with a COLON. The hyphen belongs to the Makefile
+# target (`make i18n-check`) and to the .mjs filename; `npm run i18n-check` fails with
+# `Missing script`. In a worktree the Make target is unusable anyway — it goes through
+# `docker compose run --no-deps pwa`, i.e. the empty node_modules volume.
 cd pwa && node_modules/.bin/tsc --noEmit && node_modules/.bin/eslint <files> \
-  && npx --yes prettier@3.9.6 --check <files> && npm run i18n-check
+  && npx --yes prettier@3.9.6 --check <files> && npm run i18n:check
 ```
+
+Run each leg so you actually see its output. Piping through `| tail` hides an `npm error Missing script` behind the pipe's zero exit status, which reads as a silent pass — that trap produced two unfounded "i18n green" claims during Sprint 44.
 
 **PHPUnit including the Functional and Integration suites** needs Postgres + Redis + a JWT keypair. Point a throwaway container at the *main* stack's network (`make start-dev` in the main checkout) rather than booting a second stack:
 

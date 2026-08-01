@@ -98,7 +98,7 @@ For each successfully coded branch, **in dependency order**:
 1. `cd` into the agent's worktree.
 2. If DEPS_CHANGED: `make install`.
 3. If DTO_CHANGED: `make typegen`. In a worktree this fails twice over — the php entrypoint waits on a `database` container that `--no-deps` never starts, and `npm run typegen` hits the empty node_modules volume. Fall back to `docker compose run --rm --no-deps --entrypoint php php bin/console api:openapi:export > pwa/openapi.json` then `pwa/node_modules/.bin/openapi-typescript openapi.json -o ./src/lib/api/schema.d.ts`, and commit the regenerated `schema.d.ts`.
-4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, i18n-check, markdownlint) per the CLAUDE.md recipes. Fix by hand, commit, retry — up to 3 attempts.
+4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the CLAUDE.md recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
 5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with the README mounted at `/README.md` (see CLAUDE.md — without it `AlertDocumentationTest` fails on a missing README and looks like a regression). Up to 3 attempts.
 6. If a leg still fails after 3 attempts, mark **FAILED** and move on.
 
