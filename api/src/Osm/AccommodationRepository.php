@@ -6,6 +6,7 @@ namespace App\Osm;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * Reads accommodations from the local-first Tier-1 index within a radius of the
@@ -14,12 +15,23 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class AccommodationRepository implements AccommodationRepositoryInterface
 {
+    /**
+     * Rows kept per stage end point. ScanAccommodationsHandler retains
+     * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
+     * the price ranking, so 30 leaves a 10x margin while bounding the scan: a
+     * 15 km radius over a dense area otherwise rapatriates every row — and its
+     * full `tags` jsonb — for three kept per stage.
+     */
+    private const int MAX_ROWS_PER_POINT = 30;
+
     public function __construct(private Connection $connection)
     {
     }
 
     /**
-     * Accommodations of the given categories within $radiusMeters of any point.
+     * Accommodations of the given categories within $radiusMeters of any point,
+     * grouped by the end point they belong to (nearest first within each group)
+     * and capped per end point.
      *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
@@ -34,27 +46,72 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
 
         // description / image_url / wikipedia_url are enriched from Wikidata at
         // provision time (ADR-041); website / opening_hours come from OSM tags.
+        //
+        // The cap is per end point, not global: a single `ORDER BY geom <-> multipoint
+        // LIMIT n` is a top-N over the *combined* multipoint, so one dense urban stage
+        // can consume the whole budget and evict a rural stage down to zero candidate.
+        // Each row is therefore assigned to its nearest end point (`nearest`) and
+        // ranked inside that partition, so every stage gets its own MAX_ROWS_PER_POINT.
+        // ROW_NUMBER over one pass, rather than a LATERAL sub-select per point: the
+        // radius filter costs a full scan (no index on `geom::geography`), so a
+        // per-point sub-select would repeat it once per stage.
+        //
+        // The assignment casts to `geography` on purpose: `<->` on `geometry` is a
+        // planar distance in raw WGS84 degrees, where a degree of longitude is
+        // cos(latitude) shorter than a degree of latitude, so near the bisector of two
+        // end points it can pick a different one than the metric
+        // GeometryBasedDistributor::distributeByEndpoint uses downstream — leaving the
+        // row ranked under a stage that will never receive it. `geography <->` is
+        // metres on the sphere, i.e. the same great circle as HaversineDistance
+        // (radii 6371008.8 m vs 6371000 m, a 1.4 ppm scale factor that cannot reorder
+        // two rows a human could tell apart).
+        //
+        // The order is fully specified — end point, then distance, then the
+        // (osm_type, osm_id) primary key — so two runs of the same scan return the
+        // same rows in the same order. `ranked.*` carries the ranking helper columns
+        // (point_index, distance, point_rank, primary key); the mapping below reads
+        // named keys and ignores them.
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT name, category, stars, capacity, fee, website, wikidata, opening_hours,
-                       description, image_url, wikipedia_url,
-                       ST_Y(geom) AS lat, ST_X(geom) AS lon, tags
-                FROM osm.accommodations
-                WHERE category IN (:categories)
-                  AND ST_DWithin(
-                      geom::geography,
-                      ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                      :radius
-                  )
+                SELECT ranked.*
+                FROM (
+                    SELECT a.osm_type, a.osm_id,
+                           a.name, a.category, a.stars, a.capacity, a.fee, a.website, a.wikidata,
+                           a.opening_hours, a.description, a.image_url, a.wikipedia_url,
+                           ST_Y(a.geom) AS lat, ST_X(a.geom) AS lon, a.tags,
+                           nearest.point_index, nearest.distance,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY nearest.point_index
+                               ORDER BY nearest.distance, a.osm_type, a.osm_id
+                           ) AS point_rank
+                    FROM osm.accommodations a
+                    CROSS JOIN LATERAL (
+                        SELECT pt.path[1] AS point_index,
+                               a.geom::geography <-> pt.geom::geography AS distance
+                        FROM ST_Dump(ST_SetSRID(ST_GeomFromText(:wkt), 4326)) AS pt
+                        ORDER BY a.geom::geography <-> pt.geom::geography, pt.path
+                        LIMIT 1
+                    ) AS nearest
+                    WHERE a.category IN (:categories)
+                      AND ST_DWithin(
+                          a.geom::geography,
+                          ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
+                          :radius
+                      )
+                ) AS ranked
+                WHERE ranked.point_rank <= :limit
+                ORDER BY ranked.point_index, ranked.distance, ranked.osm_type, ranked.osm_id
                 SQL,
             [
                 'wkt' => WktGeometry::multiPoint($points),
                 'radius' => $radiusMeters,
                 'categories' => $categories,
+                'limit' => self::MAX_ROWS_PER_POINT,
             ],
             [
                 'categories' => ArrayParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
             ],
         );
 

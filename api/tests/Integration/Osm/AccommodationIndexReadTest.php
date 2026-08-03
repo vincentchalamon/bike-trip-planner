@@ -111,6 +111,172 @@ final class AccommodationIndexReadTest extends KernelTestCase
         self::assertFalse($byType['camp_site']['hasWebsite']);
     }
 
+    #[Test]
+    public function findNearKeepsTheNearestRowsOnlyUpToTheLimit(): void
+    {
+        $this->seedFortyHotelsFarthestFirst();
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.5, 'lon' => 2.5]],
+            5000,
+            ['hotel'],
+        );
+
+        // MAX_ROWS_PER_POINT = 30 per end point, and the KNN order means the 30
+        // retained rows are the closest ones: Hotel 30..40 are dropped, not an
+        // arbitrary slice of the 41 in range.
+        $expected = array_merge(['Hotel du Centre'], array_map(
+            static fn (int $i): string => \sprintf('Hotel %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($rows, 'name'));
+    }
+
+    #[Test]
+    public function findNearReturnsTheSameRowsInTheSameOrderOnEveryRun(): void
+    {
+        $this->seedFortyHotelsFarthestFirst();
+
+        // Three rows share the end point geom (the setUp hotel and hostel plus
+        // this one, inserted last with the lowest osm_id): the distance tie is
+        // resolved on the primary key, not on the physical row order.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 7999, 'Hotel Zero', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+
+        $repository = new AccommodationRepository($this->connection);
+        $points = [['lat' => 48.5, 'lon' => 2.5]];
+
+        $first = $repository->findNear($points, 5000, ['hotel', 'hostel']);
+        $second = $repository->findNear($points, 5000, ['hotel', 'hostel']);
+
+        self::assertSame($first, $second, 'the same scan must return the same rows in the same order (ADR-040)');
+        self::assertCount(30, $first);
+        self::assertSame(
+            ['Hotel Zero', 'Hotel du Centre', 'Auberge de Jeunesse'],
+            \array_slice(array_column($first, 'name'), 0, 3),
+            'co-located rows are ordered by (osm_type, osm_id): 7999 < 8001 < 8004',
+        );
+    }
+
+    #[Test]
+    public function findNearGivesEveryEndPointItsOwnBudget(): void
+    {
+        // A dense end point (48.5 2.5): 80 hotels 22 m apart, so 60 of them sit
+        // closer than anything around the isolated end point below.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9000 + i, 'Hotel ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.5, 48.5 + i * 0.0002), 4326)
+            FROM generate_series(80, 1, -1) AS i
+            SQL);
+
+        // An isolated end point (49.52 3.5), ~110 km away: three hotels 2.2 to
+        // 3.9 km out, all inside the radius but all farther than the dense
+        // cluster. The setUp 'Auberge Lointaine' (3.5 49.5) is the nearest one.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 9500, 'Auberge Isolee 1', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.55), 4326)),
+              ('n', 9501, 'Auberge Isolee 2', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.555), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.5, 'lon' => 2.5], ['lat' => 49.52, 'lon' => 3.5]],
+            5000,
+            ['hotel'],
+        );
+
+        // A single top-N over the combined multipoint would spend the whole budget
+        // on the dense cluster and return nothing at all for the isolated stage.
+        // The cap is per end point, so both get served: 30 + 3.
+        self::assertCount(33, $rows);
+        self::assertSame(
+            ['Auberge Lointaine', 'Auberge Isolee 1', 'Auberge Isolee 2'],
+            \array_slice(array_column($rows, 'name'), 30),
+            'the isolated end point keeps its own candidates, nearest first',
+        );
+    }
+
+    #[Test]
+    public function findNearAssignsBisectorRowsWithTheSameMetricAsTheDistributor(): void
+    {
+        // At latitude 60 a degree of longitude is only cos(60) = half a degree of
+        // latitude. 'Hotel Bissectrice' (60.00 0.00) sits 0.10 deg south of end point
+        // A but 0.12 deg west of end point B, so a planar degree distance calls A
+        // nearer (0.10 < 0.12) while metres call B nearer (6.7 km < 11.1 km) — and
+        // metres are what GeometryBasedDistributor::distributeByEndpoint uses.
+        //
+        // A's own budget is filled with 30 hotels within 100 m, so a row assigned to
+        // A is ranked 31st and dropped. Surviving therefore proves the row went to B.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9600 + i, 'Hotel Dense ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(0.0, 60.10 + i * 0.00001), 4326)
+            FROM generate_series(1, 30) AS i
+            SQL);
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 9700, 'Hotel Bissectrice', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 60.10, 'lon' => 0.0], ['lat' => 60.00, 'lon' => 0.12]],
+            15000,
+            ['hotel'],
+        );
+
+        self::assertContains(
+            'Hotel Bissectrice',
+            array_column($rows, 'name'),
+            'a bisector row must be assigned to the end point the distributor will pick (metres), not the planar-degree one',
+        );
+        self::assertCount(31, $rows);
+    }
+
+    #[Test]
+    public function findNearHandlesTwoStagesSharingAnEndPoint(): void
+    {
+        // A rest day repeats the previous stage's end point. The two identical
+        // vertices survive into the MULTIPOINT (no dedup in WktGeometry::multiPoint),
+        // and the `pt.path` tie-break sends every row to the first of them — the same
+        // stage distributeByEndpoint would award them to, with its strict `<`. What
+        // matters is that the shared location still yields its full, ordered top-30
+        // rather than an arbitrary split across the two coincident partitions.
+        $this->seedFortyHotelsFarthestFirst();
+
+        $repository = new AccommodationRepository($this->connection);
+        $restDayPoints = [['lat' => 48.5, 'lon' => 2.5], ['lat' => 48.5, 'lon' => 2.5]];
+
+        $expected = array_merge(['Hotel du Centre'], array_map(
+            static fn (int $i): string => \sprintf('Hotel %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($repository->findNear($restDayPoints, 5000, ['hotel']), 'name'));
+        self::assertSame(
+            $repository->findNear([['lat' => 48.5, 'lon' => 2.5]], 5000, ['hotel']),
+            $repository->findNear($restDayPoints, 5000, ['hotel']),
+            'repeating an end point must not change what that location yields',
+        );
+    }
+
+    /**
+     * 40 extra hotels, 111 m apart along the meridian, all inside the 5 km radius
+     * (41 rows in range with the setUp hotel, for a 30-row cap). Inserted farthest
+     * first so the physical row order is the reverse of the expected KNN order.
+     */
+    private function seedFortyHotelsFarthestFirst(): void
+    {
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9000 + i, 'Hotel ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.5, 48.5 + i * 0.001), 4326)
+            FROM generate_series(40, 1, -1) AS i
+            SQL);
+    }
+
     private function source(): OsmAccommodationSource
     {
         return new OsmAccommodationSource(

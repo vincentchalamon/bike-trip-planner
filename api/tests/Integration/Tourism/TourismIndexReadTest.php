@@ -114,6 +114,145 @@ final class TourismIndexReadTest extends KernelTestCase
     }
 
     #[Test]
+    public function accommodationsKeepTheNearestRowsOnlyUpToTheLimit(): void
+    {
+        $this->seedFortyGitesFarthestFirst();
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.50, 'lon' => 2.50]],
+            5000,
+            ['apartment'],
+        );
+
+        // MAX_ROWS_PER_POINT = 30 per end point, and the KNN order means the cap
+        // keeps the closest rows: Gîte 30..40 are dropped, not an arbitrary slice
+        // of the 41 in range (what the flat `LIMIT 200` did on a real trip).
+        $expected = array_merge(['Gîte du Lac'], array_map(
+            static fn (int $i): string => \sprintf('Gîte %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($rows, 'name'));
+    }
+
+    #[Test]
+    public function accommodationsAreReturnedInTheSameOrderOnEveryRun(): void
+    {
+        $this->seedFortyGitesFarthestFirst();
+
+        // Three rows share the end point geom (the setUp gîte and hotel plus this
+        // one, inserted last with the lowest id): the distance tie is resolved on
+        // the DataTourisme id, not on the physical row order.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('a0', 'Auberge Zéro', 'hotel', NULL, NULL, NULL, '{}'::jsonb,
+                  ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
+            SQL);
+
+        $repository = new AccommodationRepository($this->connection);
+        $points = [['lat' => 48.50, 'lon' => 2.50]];
+
+        $first = $repository->findNear($points, 5000, ['apartment', 'hotel']);
+        $second = $repository->findNear($points, 5000, ['apartment', 'hotel']);
+
+        self::assertSame($first, $second, 'the same scan must return the same rows in the same order (ADR-040)');
+        self::assertCount(30, $first);
+        self::assertSame(
+            ['Auberge Zéro', 'Gîte du Lac', 'Grand Hôtel'],
+            \array_slice(array_column($first, 'name'), 0, 3),
+            'co-located rows are ordered by id: a0 < a1 < a2',
+        );
+    }
+
+    #[Test]
+    public function accommodationsGiveEveryEndPointItsOwnBudget(): void
+    {
+        // A dense end point (48.50 2.50): 80 gîtes 22 m apart, so 60 of them sit
+        // closer than anything around the isolated end point below.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.0002), 4326)
+            FROM generate_series(80, 1, -1) AS i
+            SQL);
+
+        // An isolated end point (49.52 3.50), ~110 km away: three gîtes 2.2 to
+        // 3.9 km out, all inside the radius but all farther than the dense cluster.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('i1', 'Gîte Isolé 1', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.50), 4326)),
+              ('i2', 'Gîte Isolé 2', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.55), 4326)),
+              ('i3', 'Gîte Isolé 3', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.555), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.50, 'lon' => 2.50], ['lat' => 49.52, 'lon' => 3.50]],
+            5000,
+            ['apartment'],
+        );
+
+        // A single top-N over the combined multipoint (the flat `LIMIT 200` on a
+        // long trip) would spend the whole budget on the dense cluster and return
+        // nothing for the isolated stage. The cap is per end point: 30 + 3.
+        self::assertCount(33, $rows);
+        self::assertSame(
+            ['Gîte Isolé 1', 'Gîte Isolé 2', 'Gîte Isolé 3'],
+            \array_slice(array_column($rows, 'name'), 30),
+            'the isolated end point keeps its own candidates, nearest first',
+        );
+    }
+
+    #[Test]
+    public function accommodationsAssignBisectorRowsWithTheSameMetricAsTheDistributor(): void
+    {
+        // At latitude 60 a degree of longitude is only cos(60) = half a degree of
+        // latitude. 'Gîte Bissectrice' (60.00 0.00) is 0.10 deg south of end point A
+        // but 0.12 deg west of end point B: planar degrees call A nearer
+        // (0.10 < 0.12), metres call B nearer (6.7 km < 11.1 km), and metres are what
+        // GeometryBasedDistributor::distributeByEndpoint uses. A's budget is filled
+        // with 30 gîtes within 100 m, so a row assigned to A is ranked 31st and
+        // dropped — surviving proves it went to B.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'd' || lpad(i::text, 2, '0'), 'Gîte Dense ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(0.0, 60.10 + i * 0.00001), 4326)
+            FROM generate_series(1, 30) AS i
+            SQL);
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('zz', 'Gîte Bissectrice', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 60.10, 'lon' => 0.0], ['lat' => 60.00, 'lon' => 0.12]],
+            15000,
+            ['apartment'],
+        );
+
+        self::assertContains(
+            'Gîte Bissectrice',
+            array_column($rows, 'name'),
+            'a bisector row must be assigned to the end point the distributor will pick (metres), not the planar-degree one',
+        );
+        self::assertCount(31, $rows);
+    }
+
+    /**
+     * 40 extra apartments, 111 m apart along the meridian, all inside the 5 km
+     * radius (41 rows in range with the setUp gîte, for a 30-row cap). Inserted
+     * farthest first so the physical row order reverses the expected KNN order.
+     */
+    private function seedFortyGitesFarthestFirst(): void
+    {
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.001), 4326)
+            FROM generate_series(40, 1, -1) AS i
+            SQL);
+    }
+
+    #[Test]
     public function eventsAreFilteredByDateAndRadius(): void
     {
         $repository = new EventRepository($this->connection);

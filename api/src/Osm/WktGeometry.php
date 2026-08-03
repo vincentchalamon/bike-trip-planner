@@ -37,16 +37,21 @@ final class WktGeometry
     }
 
     /**
+     * One vertex per input point, in input order and *without* deduplication: the
+     * accommodation repositories partition their per-end-point budget on the
+     * ST_Dump vertex index, so collapsing two stages that share an end point (a
+     * rest day) would collapse their two budget slots into one.
+     *
      * @param list<array{lat: float, lon: float}> $points non-empty
      *
      * @throws \InvalidArgumentException when $points is empty
      */
     public static function multiPoint(array $points): string
     {
-        $coords = array_values(array_unique(array_map(
+        $coords = array_map(
             static fn (array $p): string => \sprintf('(%F %F)', $p['lon'], $p['lat']),
             $points,
-        )));
+        );
 
         if ([] === $coords) {
             throw new \InvalidArgumentException('multiPoint() requires at least one point.');

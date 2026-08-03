@@ -7,7 +7,9 @@ namespace App\Osm;
 interface AccommodationRepositoryInterface
 {
     /**
-     * Accommodations of the given categories within $radiusMeters of any point.
+     * Accommodations of the given categories within $radiusMeters of any point,
+     * grouped by the end point they belong to (nearest first within each group) and
+     * capped per end point, so a dense end point cannot starve a sparse one.
      *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
