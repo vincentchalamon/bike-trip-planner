@@ -82,6 +82,9 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'capacity' => $accommodation['capacity'],
                 'fee' => null,
                 'tagCount' => \count($filledAttributes),
+                // Necessarily false today: `$url` above is null until #872 adds the
+                // website column. Derived from `$url` rather than written as `false`
+                // so it starts reporting the truth the moment that column lands.
                 'hasWebsite' => null !== $url,
                 'tags' => [],
                 'source' => 'datatourisme',
