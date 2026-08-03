@@ -22,12 +22,12 @@ final class PoiSourceRegistryTest extends TestCase
     }
 
     /**
-     * @param list<array{name: string, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois
      */
     private function source(array $pois): PoiSourceInterface
     {
         return new readonly class ($pois) implements PoiSourceInterface {
-            /** @param list<array{name: string, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois */
+            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois */
             public function __construct(private array $pois)
             {
             }
@@ -92,6 +92,23 @@ final class PoiSourceRegistryTest extends TestCase
         $result = $this->registry([$osm])->fetchAllInCorridor($this->route(), 2000);
 
         self::assertCount(2, $result);
+    }
+
+    #[Test]
+    public function keepsEveryAnonymousResupplyPoiWithinProximity(): void
+    {
+        // Three nameless cafes in the same village centre, all within 75 m of one
+        // another: the resupply count must not shrink because they share a
+        // category (issue #874).
+        $osm = $this->source([
+            ['name' => null, 'category' => 'cafe', 'lat' => 48.1000, 'lon' => 2.1000, 'wikidataId' => null, 'source' => 'osm'],
+            ['name' => null, 'category' => 'cafe', 'lat' => 48.1003, 'lon' => 2.1000, 'wikidataId' => null, 'source' => 'osm'],
+            ['name' => null, 'category' => 'cafe', 'lat' => 48.1005, 'lon' => 2.1000, 'wikidataId' => null, 'source' => 'osm'],
+        ]);
+
+        $result = $this->registry([$osm])->fetchAllInCorridor($this->route(), 2000);
+
+        self::assertCount(3, $result);
     }
 
     #[Test]

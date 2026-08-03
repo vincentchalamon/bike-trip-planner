@@ -32,8 +32,9 @@ final class DataTourismeCulturalPoiSourceTest extends TestCase
         self::assertSame('https://img.test/m.jpg', $pois[0]['imageUrl']);
         self::assertSame('https://fr.wikipedia.org/wiki/Musee', $pois[0]['wikipediaUrl']);
         self::assertNull($pois[0]['estimatedPrice']);
-        // A null name falls back to the category.
-        self::assertSame('monument', $pois[1]['name']);
+        // A null name stays null: the localised label is resolved downstream,
+        // after deduplication (issue #874).
+        self::assertNull($pois[1]['name']);
     }
 
     #[Test]

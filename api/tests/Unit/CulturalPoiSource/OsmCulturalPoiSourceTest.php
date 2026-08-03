@@ -89,13 +89,16 @@ final class OsmCulturalPoiSourceTest extends TestCase
     }
 
     #[Test]
-    public function nameFallsBackToTypeWhenNull(): void
+    public function nullNameIsNotReplacedByTheCategorySlug(): void
     {
+        // The category is an OSM tag value, never a name: keeping it null lets the
+        // deduplicator tell two anonymous viewpoints apart and lets the handler
+        // print a localised label (issue #874).
         $source = $this->makeSource($this->repository([
             ['name' => null, 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => null],
         ]));
 
-        self::assertSame('viewpoint', $source->fetchForStages($this->stageGeometries(), 500)[0]['name']);
+        self::assertNull($source->fetchForStages($this->stageGeometries(), 500)[0]['name']);
     }
 
     #[Test]

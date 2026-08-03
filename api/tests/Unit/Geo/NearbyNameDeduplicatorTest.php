@@ -99,6 +99,20 @@ final class NearbyNameDeduplicatorTest extends TestCase
     }
 
     #[Test]
+    public function keepsBothAnonymousPoisOfTheSameCategoryWithinProximity(): void
+    {
+        // Two nameless cafes 40 m apart are two businesses, not one: the
+        // deduplicator must never fall back to the category to name them
+        // (issue #874).
+        $result = $this->deduplicator(40.0)->dedupe([
+            ['name' => null, 'category' => 'cafe', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'osm'],
+            ['name' => null, 'category' => 'cafe', 'lat' => 48.0004, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'datatourisme'],
+        ]);
+
+        self::assertCount(2, $result);
+    }
+
+    #[Test]
     public function doesNotMergeItemsWithMissingCoordinates(): void
     {
         // Same name + colocated distance, but no lat/lon → coord() yields null and

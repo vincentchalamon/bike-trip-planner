@@ -20,6 +20,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
@@ -53,6 +54,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private SupplyTimelineBuilder $supplyTimelineBuilder,
+        private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
@@ -92,10 +94,14 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             // from every source (OSM + DataTourisme food), merged by proximity + name. The local
             // index returns deterministic results, so a long stage with genuinely no resupply
             // POI is no longer indistinguishable from an Overpass failure (lunch-nudge fix).
+            // A POI the index has no name for keeps its slot in the scan (the
+            // coordinates alone are actionable and the resupply count drives the
+            // lunch nudge), but it gets a localised category label rather than the
+            // raw OSM slug.
             $allPois = [];
             foreach ($this->poiSourceRegistry->fetchAllInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $poi) {
                 $allPois[] = [
-                    'name' => $poi['name'],
+                    'name' => $poi['name'] ?? $this->poiLabels->displayName($poi['category'], $locale),
                     'category' => $poi['category'],
                     'lat' => $poi['lat'],
                     'lon' => $poi['lon'],
