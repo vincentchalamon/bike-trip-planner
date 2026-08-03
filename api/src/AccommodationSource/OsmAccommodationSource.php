@@ -7,6 +7,8 @@ namespace App\AccommodationSource;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\Engine\PricingHeuristicEngine;
+use App\Format\OsmContactTags;
+use App\Format\WebsiteUrl;
 use App\Osm\AccommodationRepositoryInterface;
 
 final readonly class OsmAccommodationSource implements AccommodationSourceInterface
@@ -21,7 +23,7 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, osmType: ?string, osmId: ?int}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
@@ -53,6 +55,13 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
                 $accommodation['fee'],
             );
 
+            // The indexed `website` column is the projection of the same contact
+            // block, so it comes first; the tag cascade (website, contact:website,
+            // url, contact:url) covers the spellings the column misses and the rows
+            // indexed before it was widened. Both go through WebsiteUrl, so a
+            // schema-less "www.gite.fr" is served absolute and free text is dropped.
+            $url = WebsiteUrl::normalize($accommodation['website']) ?? OsmContactTags::website($tags);
+
             $candidates[] = [
                 'name' => $name,
                 'type' => $accommodation['category'],
@@ -61,12 +70,12 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
                 'priceMin' => $pricing['min'],
                 'priceMax' => $pricing['max'],
                 'isExact' => $pricing['isExact'],
-                'url' => $accommodation['website'] ?? ($tags['contact:website'] ?? null),
+                'url' => $url,
                 'stars' => $accommodation['stars'],
                 'capacity' => $accommodation['capacity'],
                 'fee' => $accommodation['fee'],
                 'tagCount' => \count($tags),
-                'hasWebsite' => null !== $accommodation['website'] || isset($tags['contact:website']),
+                'hasWebsite' => null !== $url,
                 'tags' => $tags,
                 'source' => 'osm',
                 'wikidataId' => $accommodation['wikidata'],
@@ -74,6 +83,9 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
                 'imageUrl' => $accommodation['imageUrl'],
                 'wikipediaUrl' => $accommodation['wikipediaUrl'],
                 'openingHours' => $accommodation['openingHours'],
+                'phone' => OsmContactTags::phone($tags),
+                'osmType' => $accommodation['osmType'],
+                'osmId' => $accommodation['osmId'],
             ];
         }
 

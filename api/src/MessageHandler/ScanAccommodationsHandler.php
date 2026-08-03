@@ -89,7 +89,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->registry->fetchAll($endPoints, $radiusMeters, $enabledAccommodationTypes);
 
             // Distribute candidates to their nearest stage endpoint (output keys match $stagesToProcess keys)
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>> $candidatesByStage */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, osmType?: ?string, osmId?: ?int}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
 
             // Deduplicate, then rank + limit per stage. Prices are already set by
@@ -133,6 +133,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                             'imageUrl' => $existing->imageUrl,
                             'wikipediaUrl' => $existing->wikipediaUrl,
                             'openingHours' => $existing->openingHours,
+                            'phone' => $existing->phone,
+                            'osmType' => $existing->osmType,
+                            'osmId' => $existing->osmId,
                         ];
                     }
                 } else {
@@ -176,6 +179,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         imageUrl: $raw['imageUrl'] ?? null,
                         wikipediaUrl: $raw['wikipediaUrl'] ?? null,
                         openingHours: $raw['openingHours'] ?? null,
+                        phone: $raw['phone'] ?? null,
+                        osmType: $raw['osmType'] ?? null,
+                        osmId: $raw['osmId'] ?? null,
                     );
 
                     $stage->addAccommodation($accommodation);
@@ -195,6 +201,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'imageUrl' => $accommodation->imageUrl,
                         'wikipediaUrl' => $accommodation->wikipediaUrl,
                         'openingHours' => $accommodation->openingHours,
+                        'phone' => $accommodation->phone,
+                        'osmType' => $accommodation->osmType,
+                        'osmId' => $accommodation->osmId,
                     ];
                 }
 
@@ -236,9 +245,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     }
 
     /**
-     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}> $accommodations
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, osmType?: ?string, osmId?: ?int}> $accommodations
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, osmType?: ?string, osmId?: ?int}>
      */
     private function deduplicate(array $accommodations): array
     {

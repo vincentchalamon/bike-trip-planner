@@ -806,7 +806,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float, source: string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string} */
+    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float, source: string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, osmType: ?string, osmId: ?int} */
     private function accommodationToArray(Accommodation $acc): array
     {
         return [
@@ -828,10 +828,16 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             'imageUrl' => $acc->imageUrl,
             'wikipediaUrl' => $acc->wikipediaUrl,
             'openingHours' => $acc->openingHours,
+            // Contact block and OSM identity (issue #873): same trap as the five
+            // keys above — omitting them here drops the tel: link and the "see on
+            // OSM" affordance on every reload and in the shared view.
+            'phone' => $acc->phone,
+            'osmType' => $acc->osmType,
+            'osmId' => $acc->osmId,
         ];
     }
 
-    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float, source?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string} $data */
+    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float, source?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, osmType?: ?string, osmId?: ?int} $data */
     private function arrayToAccommodation(array $data): Accommodation
     {
         return new Accommodation(
@@ -852,6 +858,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             imageUrl: $data['imageUrl'] ?? null,
             wikipediaUrl: $data['wikipediaUrl'] ?? null,
             openingHours: $data['openingHours'] ?? null,
+            phone: $data['phone'] ?? null,
+            osmType: $data['osmType'] ?? null,
+            osmId: $data['osmId'] ?? null,
         );
     }
 

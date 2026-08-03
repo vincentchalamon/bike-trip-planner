@@ -145,6 +145,61 @@ describe("AccommodationItem Wikipedia link", () => {
   });
 });
 
+describe("AccommodationItem contact and OSM affordances", () => {
+  it("renders a clickable tel: link for the phone number", () => {
+    renderItem(accommodation({ phone: "+33 4 66 37 82 00" }));
+
+    const link = screen.getByTestId("accommodation-phone-link");
+    expect(link).toHaveAttribute("href", "tel:+33 4 66 37 82 00");
+    expect(link).toHaveTextContent("+33 4 66 37 82 00");
+  });
+
+  it("renders no phone link without a phone number", () => {
+    renderItem(accommodation());
+
+    expect(
+      screen.queryByTestId("accommodation-phone-link"),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["node", 11] as const,
+    ["way", 22] as const,
+    ["relation", 33] as const,
+  ])("links a %s to its own object on OSM", (osmType, osmId) => {
+    renderItem(accommodation({ osmType, osmId }));
+
+    expect(screen.getByTestId("accommodation-osm-link")).toHaveAttribute(
+      "href",
+      `https://www.openstreetmap.org/${osmType}/${osmId}`,
+    );
+  });
+
+  it("uses the translated OSM label", () => {
+    renderItem(accommodation({ osmType: "node", osmId: 11 }));
+
+    expect(screen.getByTestId("accommodation-osm-link")).toHaveTextContent(
+      fr.accommodation.see_on_osm,
+    );
+  });
+
+  it("renders no OSM link for an entry without an OSM identity", () => {
+    renderItem(accommodation({ source: "datatourisme" }));
+
+    expect(
+      screen.queryByTestId("accommodation-osm-link"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders no OSM link when only half the key is known", () => {
+    renderItem(accommodation({ osmType: "node" }));
+
+    expect(
+      screen.queryByTestId("accommodation-osm-link"),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("AccommodationItem type rendering", () => {
   it.each(ACCOMMODATION_TYPES)("labels and illustrates a %s", (type) => {
     renderType(type);

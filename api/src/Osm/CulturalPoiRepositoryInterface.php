@@ -12,7 +12,7 @@ interface CulturalPoiRepositoryInterface
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string}>
+     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string}>
      */
     public function findInCorridor(array $route, int $radiusMeters): array;
 }

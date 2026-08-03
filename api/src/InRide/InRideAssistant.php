@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\InRide;
 
 use App\ApiResource\Model\GeoPosition;
+use App\Format\OsmContactTags;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeoPoint;
 use App\Llm\Exception\AiUnavailableException;
@@ -226,7 +227,7 @@ final readonly class InRideAssistant
                 detourMeters: $detourMeters,
                 openingHoursToday: $openingHoursTag,
                 closesAt: $closesAt,
-                phone: \is_string($tags['phone'] ?? null) ? $tags['phone'] : (\is_string($tags['contact:phone'] ?? null) ? $tags['contact:phone'] : null),
+                phone: OsmContactTags::phone($tags),
                 deeplink: $deeplink,
                 warning: $warning,
             );

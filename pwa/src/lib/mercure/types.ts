@@ -100,6 +100,9 @@ export interface AccommodationPayload {
   imageUrl?: string | null;
   wikipediaUrl?: string | null;
   openingHours?: string | null;
+  phone?: string | null;
+  osmType?: "node" | "way" | "relation" | null;
+  osmId?: number | null;
 }
 
 export interface EventPayload {

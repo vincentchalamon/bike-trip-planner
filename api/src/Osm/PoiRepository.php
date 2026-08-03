@@ -22,7 +22,7 @@ final readonly class PoiRepository implements PoiRepositoryInterface
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float}>
+     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float}>
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
@@ -33,7 +33,7 @@ final readonly class PoiRepository implements PoiRepositoryInterface
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
+                SELECT osm_type, osm_id, name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.pois
                 WHERE ST_DWithin(
                     geom::geography,
@@ -50,6 +50,10 @@ final readonly class PoiRepository implements PoiRepositoryInterface
         $pois = [];
         foreach ($rows as $row) {
             $pois[] = [
+                // Primary key of the index (ADR-040), carried so a reader can reach
+                // the object on openstreetmap.org instead of losing its identity here.
+                'osmType' => OsmObjectType::fromChar($row['osm_type']),
+                'osmId' => null !== $row['osm_id'] ? (int) $row['osm_id'] : null,
                 'name' => null !== $row['name'] ? (string) $row['name'] : null,
                 'category' => (string) $row['category'],
                 'lat' => (float) $row['lat'],

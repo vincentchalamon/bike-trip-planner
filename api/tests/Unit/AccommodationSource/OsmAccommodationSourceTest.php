@@ -125,6 +125,65 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
+    public function fetchFallsBackToUrlTagForUrl(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(tags: ['url' => 'https://url-tag.example'])]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://url-tag.example', $results[0]['url']);
+        $this->assertTrue($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchFallsBackToContactUrlTagForUrl(): void
+    {
+        // The fourth and last spelling of the contact block: an accommodation whose
+        // only site is under `contact:url` used to be served without any link.
+        $source = $this->createSource($this->repository([$this->row(tags: ['contact:url' => 'https://contact-url.example'])]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://contact-url.example', $results[0]['url']);
+        $this->assertTrue($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchNormalizesASchemelessWebsite(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(website: 'www.gite-du-pont.fr/chambres')]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://www.gite-du-pont.fr/chambres', $results[0]['url']);
+    }
+
+    #[Test]
+    public function fetchSkipsAnUnusableWebsiteAndKeepsLookingDownTheCascade(): void
+    {
+        // Free text in `website` must not shadow a usable `contact:url` further
+        // down: the cascade is by usability, not by mere presence.
+        $source = $this->createSource($this->repository([
+            $this->row(website: 'nous contacter', tags: ['website' => 'nous contacter', 'contact:url' => 'https://vrai-site.example']),
+        ]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://vrai-site.example', $results[0]['url']);
+    }
+
+    #[Test]
+    public function fetchRejectsANonHttpWebsite(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(website: 'mailto:contact@gite.fr')]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertNull($results[0]['url']);
+        $this->assertFalse($results[0]['hasWebsite']);
+    }
+
+    #[Test]
     public function fetchSetsNoUrlWhenNeitherWebsiteNorContactPresent(): void
     {
         $source = $this->createSource($this->repository([$this->row()]));
@@ -133,6 +192,47 @@ final class OsmAccommodationSourceTest extends TestCase
 
         $this->assertNull($results[0]['url']);
         $this->assertFalse($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchReadsThePhoneFromTheContactNamespace(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(tags: ['contact:phone' => '+33 4 66 00 00 00'])]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('+33 4 66 00 00 00', $results[0]['phone']);
+    }
+
+    #[Test]
+    public function fetchPrefersThePlainPhoneTagOverTheContactOne(): void
+    {
+        $source = $this->createSource($this->repository([
+            $this->row(tags: ['phone' => '+33 1 11 11 11 11', 'contact:phone' => '+33 2 22 22 22 22']),
+        ]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('+33 1 11 11 11 11', $results[0]['phone']);
+    }
+
+    #[Test]
+    public function fetchSetsNoPhoneWhenTheContactBlockIsEmpty(): void
+    {
+        $results = $this->createSource($this->repository([$this->row()]))->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertNull($results[0]['phone']);
+    }
+
+    #[Test]
+    public function fetchPropagatesTheOsmIdentity(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(osmType: 'way', osmId: 123456)]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('way', $results[0]['osmType']);
+        $this->assertSame(123456, $results[0]['osmId']);
     }
 
     #[Test]
@@ -217,7 +317,7 @@ final class OsmAccommodationSourceTest extends TestCase
     /**
      * @param array<string, string> $tags
      *
-     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
+     * @return array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
      */
     private function row(
         string $category = 'hotel',
@@ -228,8 +328,12 @@ final class OsmAccommodationSourceTest extends TestCase
         ?int $stars = null,
         ?int $capacity = null,
         ?string $fee = null,
+        ?string $osmType = 'node',
+        ?int $osmId = 8001,
     ): array {
         return [
+            'osmType' => $osmType,
+            'osmId' => $osmId,
             'name' => $name,
             'category' => $category,
             'lat' => 48.6,
@@ -248,7 +352,7 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}> $rows
+     * @param list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}> $rows
      */
     private function repository(array $rows): AccommodationRepositoryInterface
     {
