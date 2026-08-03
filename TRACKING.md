@@ -1322,14 +1322,53 @@ Le lien et le téléphone cessent d'être du confort : depuis la décision d'obs
 
 > **Prérequis :** #876 dépend de #861 (sprint 44) : la liste des codes d'alerte doit refléter les règles conservées. **Dépendance inter-sprint, invisible pour `/sprint` :** la colonne `Dépend de` ne référence que des issues de la même table. À respecter manuellement.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) | fix(datatourisme): stop truncating the flux tags to the type list | - | - | - |
-| 2 | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) | feat(datatourisme): add website, phone, wikidata and opening hours to tourism accommodations | - | - | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) |
-| 3 | [#873](https://github.com/vincentchalamon/bike-trip-planner/issues/873) | feat(api): expose accommodation url, phone and osm identity | - | - | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) |
-| 4 | [#874](https://github.com/vincentchalamon/bike-trip-planner/issues/874) | fix(poi): translated labels for unnamed pois and the dedup collision they cause | - | - | - |
-| 5 | [#875](https://github.com/vincentchalamon/bike-trip-planner/issues/875) | feat(poi): use real opening hours instead of hardcoded schedules | - | - | - |
-| 6 | [#876](https://github.com/vincentchalamon/bike-trip-planner/issues/876) | feat(alerts): stable alert code and hardened documentation test | - | - | - |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) | fix(datatourisme): stop truncating the flux tags to the type list | - | [#915](https://github.com/vincentchalamon/bike-trip-planner/pull/915) `feature/871` | En cours | - |
+| 2 | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) | feat(datatourisme): add website, phone, wikidata and opening hours to tourism accommodations | - | [#917](https://github.com/vincentchalamon/bike-trip-planner/pull/917) `feature/872` | En cours (empilée sur `feature/871`) | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) |
+| 3 | [#873](https://github.com/vincentchalamon/bike-trip-planner/issues/873) | feat(api): expose accommodation url, phone and osm identity | - | [#918](https://github.com/vincentchalamon/bike-trip-planner/pull/918) `feature/873` | En cours (empilée sur `feature/872`) | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) |
+| 4 | [#874](https://github.com/vincentchalamon/bike-trip-planner/issues/874) | fix(poi): translated labels for unnamed pois and the dedup collision they cause | - | [#913](https://github.com/vincentchalamon/bike-trip-planner/pull/913) `feature/874` | En cours | - |
+| 5 | [#875](https://github.com/vincentchalamon/bike-trip-planner/issues/875) | feat(poi): use real opening hours instead of hardcoded schedules | - | [#914](https://github.com/vincentchalamon/bike-trip-planner/pull/914) `feature/875` | En cours (1 tour de revue, vrai bug) | - |
+| 6 | [#876](https://github.com/vincentchalamon/bike-trip-planner/issues/876) | feat(alerts): stable alert code and hardened documentation test | - | [#916](https://github.com/vincentchalamon/bike-trip-planner/pull/916) `feature/876` | En cours (1 tour de revue) | - |
+
+> **#876 dépendait de #861 (sprint 44), dépendance inter-sprint que la table ne sait pas exprimer.** Le sprint 44 étant mergé sur `main`, la contrainte était satisfaite en branchant sur `main` : la liste des `AlertCode` reflète les règles réellement conservées après suppression des règles de présence de tag.
+
+### Ordre de merge et conflits attendus
+
+**Ordre imposé** (la pile d'abord, dans l'ordre) :
+
+1. **#915 (#871)** → **#917 (#872)** → **#918 (#873)** — pile de 3, chaque PR a pour base la précédente.
+2. **#913 (#874)** — indépendante, aucun conflit avec les autres. À merger **avant** #914.
+3. **#914 (#875)** — après #913, dont elle partage 14 fichiers.
+4. **#916 (#876)** — indépendante de la pile ; un seul conflit, avec #914.
+
+Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais la branche enfant porte encore le commit pré-squash du parent : ne **pas** faire un `git rebase origin/main` direct, utiliser `git rebase --onto origin/main <dernier-commit-du-parent> feature/<enfant>`, puis vérifier que `git log origin/main..HEAD` ne liste que les commits de l'enfant.
+
+**Fichiers partagés et arbitrages décidés avant le merge** (mesurés par `git merge-tree`, pas supposés) :
+
+| Fichier | PRs | Qui gagne |
+|---------|-----|-----------|
+| `api/src/Poi/PoiSourceInterface.php`, `PoiSourceRegistry.php` | #913, #914 | **Union des deux élargissements**, aucun arbitrage à rendre : #913 passe `name` à `string\|null`, #914 ajoute `openingHours` et `website` à la même forme `list<array{...}>`. Les deux modifications sont orthogonales, **conserver les deux**. |
+| `api/src/CulturalPoiSource/CulturalPoiSourceInterface.php`, `CulturalPoiSourceRegistry.php`, `OsmCulturalPoiSource.php`, `DataTourismeCulturalPoiSource.php`, `api/tests/Unit/Poi/PoiSourceRegistryTest.php` | #913, #914 | Même arbitrage : union. Ce sont les 5 autres fichiers en conflit des **7 mesurés** entre ces deux PRs — le docblock de la fixture de test conflicte lui aussi, sur le même motif. |
+| `api/src/Osm/PoiRepository.php`, `PoiRepositoryInterface.php`, `CulturalPoiRepository.php`, `CulturalPoiRepositoryInterface.php` | #914, #918 | **4 fichiers en conflit**, disjoints par construction : #914 ajoute `opening_hours` / `website` au `SELECT` **et au `@return` des interfaces**, #918 ajoute `osm_type` / `osm_id` au **même** `SELECT` et au **même** `@return`. Ni l'une ni l'autre ne réécrit la requête. **Conserver les deux.** |
+| `README.md` (tableau du moteur d'alertes) | #914, #916 | **La restructuration de #916 gagne** (une ligne par `AlertCode`, 36 insertions / 29 suppressions). Y **reporter** la reformulation de #914 sur la ligne devenue `resupply_closed_at_passage` : « …are **known to be** closed at estimated passage time (a POI whose OpenStreetMap `opening_hours` is missing or unparsable is treated as unknown and suppresses the warning) ». Seul conflit entre ces deux PRs. |
+| `api/src/MessageHandler/ScanPoisHandler.php` | #913, #914, #916 | Trois diffs disjoints, aucun conflit mesuré : #913 le libellé de POI, #914 la résolution des horaires, #916 la ligne `'code' => …`. **Conserver les trois.** |
+| `api/src/MessageHandler/CheckCulturalPoisHandler.php` | #913, #914, #916 | Idem, aucun conflit mesuré. |
+| `api/src/Repository/DoctrineTripRequestRepository.php` | #914, #916, #918 | Fichier partagé par **trois** PRs, mais trois méthodes différentes et **aucun conflit mesuré** : #914 dans l'aller-retour des POI (`poiToArray` / son pendant, ajout d'`openingHours` et `website`), #916 dans `alertToArray()` / `arrayToAlert()`, #918 dans `accommodationToArray()`. **Conserver l'union des trois.** |
+| `pwa/src/lib/validation/schemas.ts`, `pwa/src/lib/mercure/types.ts` | #916, #918 | Ajouts additifs (`code` sur l'alerte, `phone` / `osmType` / `osmId` sur l'hébergement). **Aucun conflit mesuré** : les deux paires de PRs partagent 9 fichiers et `git merge-tree` n'en signale aucun. Rien à arbitrer. |
+| `pwa/src/lib/api/schema.d.ts` | #916, #918 | **Aucun conflit mesuré** non plus. Mais **si** un conflit apparaît après un rebase, ne jamais le résoudre à la main : prendre n'importe quel côté puis régénérer (`make typegen`, ou le repli documenté dans CLAUDE.md en worktree). Régénérer après le merge du second reste prudent, un `@description` suffisant à faire dériver le fichier. |
+| `api/translations/alerts.{fr,en}.yaml` | #913 | Seule #913 y touche (17 clés `poi_type.*` plus `alert.cultural_poi.suggestion_unnamed`). Pas de conflit. |
+
+**Un point de sémantique que le merge ne signalera pas :** #913 introduit `alert.cultural_poi.suggestion_unnamed`, une **seconde clé de traduction pour la même règle**, tandis que #916 crée l'enum `AlertCode`. Les deux clés doivent partager le code `cultural_poi_suggestion` — le code identifie la **règle**, pas la clé i18n, et c'est précisément le découplage que porte #876. #916 a été écrite en tenant compte de ce cas (comme pour `alert.calendar.nudge` / `alert.calendar.unnamed_nudge`), donc le merge ne demande aucun cas d'enum supplémentaire. À vérifier tout de même : `AlertDocumentationTest` scanne les codes **émis**, pas les clés de traduction.
+
+**Deux retours de revue automatique qui étaient de vrais défauts, pas du bruit :**
+
+1. **#914 — fausse fermeture sur un franchissement de minuit partiel.** `OpeningHours` repliait la queue d'une plage `Fr 18:00-02:00` dans le **même** jour. Samedi ne recevait donc aucune règle et retombait sur le « pas de règle ⇒ fermé » : `isOpenAt(1.0, 6)` renvoyait `false`, une fermeture que rien n'établit — exactement la classe de faux positif que la PR se donnait pour but d'éliminer, et sur les heures de passage très matinales. Le repli n'est désormais appliqué que si les 7 jours portent la même règle, sinon le lecteur renvoie « inconnu ». La justification de sûreté du docblock (« ne fait qu'élargir la fenêtre ») n'était vraie que dans ce cas et a été réécrite.
+2. **#916 — la garantie centrale n'était pas testée.** La PR affirmait qu'une reformulation ne change pas la clé de rejet, mais `alertKey()` était privée au module et sans test. Exportée et couverte sur quatre cas, dont la stabilité à la reformulation et la distinction de deux variantes d'une même famille.
+
+**Faux rouge systémique à traiter séparément :** le job `claude-review` **échoue** sur #914 et #916 alors que les deux revues ont bien été publiées et sont **approuvées**. Cause : l'étape « Check for permission denials » sort en `exit 1` dès que le bot tente un outil hors allowlist — un `Edit` sur #914, une commande `Bash` d'expérimentation sur #916. Déjà observé au sprint 45 sur les PRs rebasées. Ce n'est pas un signal de qualité de code : soit élargir l'allowlist du workflow, soit ne pas faire échouer le job sur un refus de permission. Mérite son propre ticket.
+
+**Contention de base de données entre agents parallèles :** les six agents partageaient la stack de dev, et les `ResetDatabase` concurrents de Foundry ont laissé `app_test` à demi-migrée (`postgis` installée, migrations non enregistrées → salves de `ConnectionLost` et `schema "osm" does not exist` sans rapport avec les diffs). La parade retenue, à généraliser : chaque agent pointe `DATABASE_URL` sur une base dédiée (`app871`, `app872`…, auto-suffixée `_test`), que Foundry crée et migre seule — ce qui prouve au passage que la migration de la branche s'applique.
 
 ### Recette Sprint 46
 
