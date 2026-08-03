@@ -18,8 +18,8 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
 {
     /**
      * Rows kept per stage end point. ScanAccommodationsHandler retains
-     * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
-     * the price ranking, so 30 leaves a 10x margin. It replaces the flat
+     * MAX_CANDIDATES_PER_STAGE = 5 per stage after cross-source deduplication and
+     * the completeness ranking, so 30 leaves a 6x margin. It replaces the flat
      * `LIMIT 200`, which both starved long trips and truncated non
      * deterministically for lack of an ORDER BY.
      */

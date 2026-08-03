@@ -153,6 +153,43 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
+    public function propagatesStarsCapacityAndFeeToTheCandidate(): void
+    {
+        // The three columns were selected by the repository and dropped here before
+        // #869; the ranking scores them and the heuristic prices on stars.
+        $source = $this->createSource($this->repository([$this->row(stars: 4, capacity: 30, fee: 'yes')]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame(4, $results[0]['stars']);
+        $this->assertSame(30, $results[0]['capacity']);
+        $this->assertSame('yes', $results[0]['fee']);
+    }
+
+    #[Test]
+    public function fetchPricesAStarredHotelAboveAnUnratedOne(): void
+    {
+        $unrated = $this->createSource($this->repository([$this->row()]))
+            ->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+        $starred = $this->createSource($this->repository([$this->row(stars: 4)]))
+            ->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame(50.0, $unrated[0]['priceMin']);
+        $this->assertSame(85.0, $starred[0]['priceMin']);
+    }
+
+    #[Test]
+    public function fetchPricesAFeeFreeEntryAsFree(): void
+    {
+        $results = $this->createSource($this->repository([$this->row(category: 'camp_site', fee: 'no')]))
+            ->fetch([new Coordinate(48.5, 2.5)], 5000, ['camp_site']);
+
+        $this->assertSame(0.0, $results[0]['priceMin']);
+        $this->assertSame(0.0, $results[0]['priceMax']);
+        $this->assertTrue($results[0]['isExact']);
+    }
+
+    #[Test]
     public function fetchPassesPointsRadiusAndEnabledTypesToRepository(): void
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
@@ -188,15 +225,18 @@ final class OsmAccommodationSourceTest extends TestCase
         ?string $website = null,
         ?string $wikidata = null,
         array $tags = [],
+        ?int $stars = null,
+        ?int $capacity = null,
+        ?string $fee = null,
     ): array {
         return [
             'name' => $name,
             'category' => $category,
             'lat' => 48.6,
             'lon' => 2.6,
-            'stars' => null,
-            'capacity' => null,
-            'fee' => null,
+            'stars' => $stars,
+            'capacity' => $capacity,
+            'fee' => $fee,
             'website' => $website,
             'wikidata' => $wikidata,
             'openingHours' => null,

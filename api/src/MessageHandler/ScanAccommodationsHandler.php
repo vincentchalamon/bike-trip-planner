@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Accommodation\CandidateRanker;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Accommodation;
@@ -30,7 +31,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 {
     private const float DEDUP_DISTANCE_METERS = 200.0;
 
-    private const int MAX_CANDIDATES_PER_STAGE = 3;
+    /**
+     * Candidates retained per stage. Raised from 3 to 5 with the completeness
+     * ranking (#869): the per-family diversity guard spends one of the slots on
+     * the minority family, so three left the rider two real options for a whole
+     * night; and the pool is bounded upstream at 30 rows per end point (#868), so
+     * five still keeps a 6x margin. The panel renders the list (re-sorted by
+     * distance client-side) and has no fixed number of cards, so widening the
+     * choice costs two JSONB entries per stage and no layout change.
+     */
+    private const int MAX_CANDIDATES_PER_STAGE = 5;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -42,6 +52,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private GeoDistanceInterface $haversine,
         private GeometryDistributorInterface $distributor,
         private SeasonalityCheckerInterface $seasonalityChecker,
+        private CandidateRanker $ranker,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
     ) {
@@ -78,18 +89,18 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->registry->fetchAll($endPoints, $radiusMeters, $enabledAccommodationTypes);
 
             // Distribute candidates to their nearest stage endpoint (output keys match $stagesToProcess keys)
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>> $candidatesByStage */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
 
-            // Deduplicate + limit per stage. Prices are already set by each
-            // source at fetch time: structured open data (DataTourisme
-            // priceSpecification, OSM charge/fee) or the PricingHeuristicEngine
-            // fallback (type/region). No live HTML scraping (ADR-040).
+            // Deduplicate, then rank + limit per stage. Prices are already set by
+            // each source at fetch time: structured open data (DataTourisme
+            // priceSpecification, OSM charge/fee/stars) or the
+            // PricingHeuristicEngine fallback (type/region/stars). No live HTML
+            // scraping (ADR-040). Ranking is by completeness with price as the
+            // tiebreaker, plus a per-family diversity guard — see CandidateRanker.
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
-                $deduped = $this->deduplicate($candidates);
-                usort($deduped, static fn (array $a, array $b): int => $a['priceMin'] <=> $b['priceMin']);
-                $retainedByStage[$i] = \array_slice($deduped, 0, self::MAX_CANDIDATES_PER_STAGE);
+                $retainedByStage[$i] = $this->ranker->rank($this->deduplicate($candidates), self::MAX_CANDIDATES_PER_STAGE);
             }
 
             // Wikidata enrichment (description, image, Wikipedia URL) is baked into
@@ -225,9 +236,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     }
 
     /**
-     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}> $accommodations
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}> $accommodations
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string}>
      */
     private function deduplicate(array $accommodations): array
     {

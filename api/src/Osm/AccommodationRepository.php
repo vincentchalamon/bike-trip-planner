@@ -17,10 +17,10 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
 {
     /**
      * Rows kept per stage end point. ScanAccommodationsHandler retains
-     * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
-     * the price ranking, so 30 leaves a 10x margin while bounding the scan: a
+     * MAX_CANDIDATES_PER_STAGE = 5 per stage after cross-source deduplication and
+     * the completeness ranking, so 30 leaves a 6x margin while bounding the scan: a
      * 15 km radius over a dense area otherwise rapatriates every row — and its
-     * full `tags` jsonb — for three kept per stage.
+     * full `tags` jsonb — for five kept per stage.
      */
     private const int MAX_ROWS_PER_POINT = 30;
 

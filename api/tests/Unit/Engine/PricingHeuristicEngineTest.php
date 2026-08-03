@@ -165,4 +165,81 @@ final class PricingHeuristicEngineTest extends TestCase
         $this->assertSame(10.0, $result['max']);
         $this->assertFalse($result['isExact']);
     }
+
+    /**
+     * @return iterable<string, array{?int, float}>
+     */
+    public static function hotelStarsProvider(): iterable
+    {
+        // Bracket floor lifted by 25% of the €50–€120 span per star above 2,
+        // capped at 75% so a 5-star entry keeps a range (ADR-040 §45).
+        yield 'unrated' => [null, 50.0];
+        yield '1 star' => [1, 50.0];
+        yield '2 stars' => [2, 50.0];
+        yield '3 stars' => [3, 67.5];
+        yield '4 stars' => [4, 85.0];
+        yield '5 stars' => [5, 102.5];
+    }
+
+    #[DataProvider('hotelStarsProvider')]
+    #[Test]
+    public function estimatePriceLiftsTheBracketFloorWithTheStarRating(?int $stars, float $expectedMin): void
+    {
+        $result = $this->engine->estimatePrice('hotel', [], $stars);
+
+        $this->assertSame($expectedMin, $result['min']);
+        $this->assertSame(120.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceCombinesTheBikepackerCapWithTheStarRating(): void
+    {
+        // The lift applies within the capped span, not the full camp_site bracket.
+        $result = $this->engine->estimatePrice('camp_site', ['backpack' => 'yes'], 4);
+
+        $this->assertSame(11.5, $result['min']);
+        $this->assertSame(15.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceLeavesAStarRatingWithoutEffectOnAZeroWidthBracket(): void
+    {
+        $result = $this->engine->estimatePrice('shelter', [], 5);
+
+        $this->assertSame(0.0, $result['min']);
+        $this->assertSame(0.0, $result['max']);
+    }
+
+    #[Test]
+    public function estimatePricePricesAFeeFreeEntryAsFree(): void
+    {
+        $result = $this->engine->estimatePrice('camp_site', [], null, 'no');
+
+        $this->assertSame(0.0, $result['min']);
+        $this->assertSame(0.0, $result['max']);
+        $this->assertTrue($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceUsesANumericFeeColumnAsAnExactPrice(): void
+    {
+        // The provisioner fills `fee` with the OSM `fee` or `charge` tag.
+        $result = $this->engine->estimatePrice('camp_site', [], null, '18 EUR');
+
+        $this->assertSame(18.0, $result['min']);
+        $this->assertSame(18.0, $result['max']);
+        $this->assertTrue($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceKeepsTheBracketForAFeeYesEntry(): void
+    {
+        $result = $this->engine->estimatePrice('camp_site', [], null, 'yes');
+
+        $this->assertSame(8.0, $result['min']);
+        $this->assertSame(25.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
 }

@@ -84,6 +84,10 @@
 | `wilderness_hut` | `tourism=wilderness_hut` | free / donation (€0–€10) |
 | `shelter` | `amenity=shelter` + `shelter_type~basic_hut\|weather_shelter\|lean_to` | free (€0) |
 
+The bracket above is the *unrated* estimate. A `charge` tag or a numeric `fee` overrides it with an exact price, `fee=no` prices the entry as free, and a known `stars` rating lifts the bracket floor by 25% of its span per star above 2, capped at 75% (a 4-star hotel is estimated €85–€120, not €50–€120).
+
+Only a few candidates are kept per stage: they are ranked by **completeness** (website, description, opening hours, Wikidata Q-ID, stars, capacity, tag richness) with the price as tiebreaker, and a per-family cap reserves one slot for the camping/shelter family so a stage never returns hotels only.
+
 ---
 
 ## Quick start

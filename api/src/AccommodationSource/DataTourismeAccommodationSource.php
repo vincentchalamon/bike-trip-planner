@@ -27,7 +27,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
@@ -56,6 +56,17 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 $isExact = $pricing['isExact'];
             }
 
+            // The flux publishes fields, not OSM tags, and tourism.accommodations has
+            // no website column: `tagCount` counts the attributes actually filled for
+            // this entry and `hasWebsite` follows the URL we can expose, so neither is
+            // a hardcoded constant penalising the curated source (#869).
+            /** @var ?string $url tourism.accommodations exposes no website column yet */
+            $url = null;
+            $filledAttributes = array_filter(
+                [$name, $accommodation['category'], $accommodation['description'], $accommodation['capacity'], $accommodation['price']],
+                static fn (string|int|float|null $value): bool => null !== $value && '' !== $value,
+            );
+
             $candidates[] = [
                 'name' => $name,
                 'type' => $accommodation['category'],
@@ -64,9 +75,17 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'priceMin' => $priceMin,
                 'priceMax' => $priceMax,
                 'isExact' => $isExact,
-                'url' => null,
-                'tagCount' => 0,
-                'hasWebsite' => false,
+                'url' => $url,
+                // The flux carries no star rating and no fee flag; capacity
+                // (allowedPersons) is a real column and feeds the ranking.
+                'stars' => null,
+                'capacity' => $accommodation['capacity'],
+                'fee' => null,
+                'tagCount' => \count($filledAttributes),
+                // Necessarily false today: `$url` above is null until #872 adds the
+                // website column. Derived from `$url` rather than written as `false`
+                // so it starts reporting the truth the moment that column lands.
+                'hasWebsite' => null !== $url,
                 'tags' => [],
                 'source' => 'datatourisme',
                 'wikidataId' => null,

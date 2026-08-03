@@ -20,8 +20,19 @@ final readonly class GeometryBasedDistributor implements GeometryDistributorInte
     }
 
     /**
-     * Assigns each item to the stage whose endPoint is closest.
+     * Assigns each item to the stage whose endPoint is closest, and to *every*
+     * stage tied for that distance.
      * Output keys match the input $stages keys.
+     *
+     * Stages can share an end point: a rest day copies the previous stage's end
+     * point verbatim (RestDayInsertProcessor), and so does an out-and-back. Keeping
+     * a single winner starved the later stage of every candidate — the rider slept
+     * two nights at the same place but the second night showed no accommodation at
+     * all. Two nights at one location legitimately have the same candidates, so the
+     * item goes to both rather than being split: splitting would hand each night a
+     * disjoint, worse half of the same pool and nudge the rider into changing hotel
+     * without moving. Only an exact tie duplicates — the shared coordinate is the
+     * same value, so the two distances are the same double.
      *
      * @template T of array{lat: float, lon: float, ...}
      *
@@ -42,7 +53,7 @@ final readonly class GeometryBasedDistributor implements GeometryDistributorInte
         }
 
         foreach ($items as $item) {
-            $closestStage = 0;
+            $closestStages = [];
             $closestDistance = \PHP_FLOAT_MAX;
 
             foreach ($stages as $i => $stage) {
@@ -54,11 +65,19 @@ final readonly class GeometryBasedDistributor implements GeometryDistributorInte
                 );
                 if ($distance < $closestDistance) {
                     $closestDistance = $distance;
-                    $closestStage = $i;
+                    $closestStages = [$i];
+
+                    continue;
+                }
+
+                if ($distance === $closestDistance) {
+                    $closestStages[] = $i;
                 }
             }
 
-            $result[$closestStage][] = $item;
+            foreach ($closestStages as $i) {
+                $result[$i][] = $item;
+            }
         }
 
         return $result;
