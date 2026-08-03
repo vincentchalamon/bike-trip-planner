@@ -42,7 +42,7 @@ A green release is one where every line below is checked. If any line is unknown
 ### 5. Documentation
 
 - [ ] Updated ADR if architecture changed
-- [ ] Updated `README.md` alert-engine table and `ALERT_RULE_MAP` if an alert rule changed (per `CLAUDE.md`)
+- [ ] Updated `App\Enum\AlertCode` and the `README.md` alert-engine table if an alert rule changed (per `CLAUDE.md`)
 - [ ] Updated `TRACKING.md` via this PR (never directly on `main`)
 - [ ] Updated the relevant runbook if the operational behavior changed
 

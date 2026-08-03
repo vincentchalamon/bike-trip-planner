@@ -58,8 +58,10 @@ provisioner, which the API queries directly — no runtime Overpass dependency. 
 
 Stage analyzers implement `StageAnalyzerInterface` and are auto-discovered via a tagged iterator
 (`app.stage_analyzer`); priority integers order them. Heavier or POI-dependent checks run as
-dedicated async message handlers instead. New rules must also be reflected in the README alert
-table and in `ALERT_RULE_MAP` — this coupling is enforced by `AlertDocumentationTest`. See
+dedicated async message handlers instead. Every emitted alert carries a stable `App\Enum\AlertCode`
+naming its rule variant, and each code needs its own row in the README alert table — this coupling
+is enforced in both directions by `AlertDocumentationTest`, which scans the source for emitted
+codes rather than relying on a hand-maintained map. See
 [ADR-012](adr/adr-012-rule-based-nudge-and-contextual-alert-engine.md),
 [ADR-014](adr/adr-014-alert-extensibility.md) and
 [ADR-015](adr/adr-015-dynamic-engine-management-design-pattern.md).
