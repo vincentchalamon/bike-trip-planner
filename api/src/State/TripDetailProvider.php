@@ -243,6 +243,8 @@ final readonly class TripDetailProvider implements ProviderInterface
             'lat' => $poi->lat,
             'lon' => $poi->lon,
             'distanceFromStart' => $poi->distanceFromStart,
+            'osmType' => $poi->osmType,
+            'osmId' => $poi->osmId,
         ];
     }
 

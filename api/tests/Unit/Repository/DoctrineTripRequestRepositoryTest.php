@@ -165,6 +165,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             lat: 48.197,
             lon: 3.283,
             distanceFromStart: 85.2,
+            osmType: 'way',
+            osmId: 4242,
         );
 
         $accommodation = new Accommodation(
@@ -273,6 +275,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame(48.197, $result->pois[0]->lat);
         self::assertSame(3.283, $result->pois[0]->lon);
         self::assertSame(85.2, $result->pois[0]->distanceFromStart);
+        // Without these in poiToArray() the OSM link would vanish on reload and in
+        // the shared view, exactly as the accommodation enrichment did (#870).
+        self::assertSame('way', $result->pois[0]->osmType);
+        self::assertSame(4242, $result->pois[0]->osmId);
 
         // Accommodations
         self::assertCount(1, $result->accommodations);

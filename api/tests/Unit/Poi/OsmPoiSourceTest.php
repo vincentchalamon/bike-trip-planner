@@ -12,12 +12,16 @@ use PHPUnit\Framework\TestCase;
 final class OsmPoiSourceTest extends TestCase
 {
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $rows
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $rows
      */
     private function source(array $rows): OsmPoiSource
     {
         $repository = $this->createStub(PoiRepositoryInterface::class);
-        $repository->method('findInCorridor')->willReturn($rows);
+        // The repository always states the OSM identity; fixtures declare it only
+        // when the case is about it.
+        $repository->method('findInCorridor')->willReturn(
+            array_map(static fn (array $r): array => $r + ['osmType' => null, 'osmId' => null], $rows),
+        );
 
         return new OsmPoiSource($repository);
     }
@@ -34,7 +38,7 @@ final class OsmPoiSourceTest extends TestCase
     public function mapsRepositoryRowToCandidate(): void
     {
         $poi = $this->source([
-            ['name' => 'Boulangerie du Centre', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1],
+            ['name' => 'Boulangerie du Centre', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'osmType' => 'node', 'osmId' => 12],
         ])->fetchInCorridor($this->route(), 2000)[0];
 
         self::assertSame('Boulangerie du Centre', $poi['name']);
@@ -43,6 +47,9 @@ final class OsmPoiSourceTest extends TestCase
         self::assertSame(2.1, $poi['lon']);
         self::assertNull($poi['wikidataId']);
         self::assertSame('osm', $poi['source']);
+        // Tier-1 primary key: without it the "see on OSM" link cannot be built.
+        self::assertSame('node', $poi['osmType']);
+        self::assertSame(12, $poi['osmId']);
     }
 
     #[Test]

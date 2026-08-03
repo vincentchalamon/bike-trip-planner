@@ -124,6 +124,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         category: $raw['category'],
                         lat: $raw['lat'],
                         lon: $raw['lon'],
+                        osmType: $raw['osmType'] ?? null,
+                        osmId: $raw['osmId'] ?? null,
                     );
 
                     $stage->addPoi($poi);

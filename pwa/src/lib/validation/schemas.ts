@@ -31,6 +31,14 @@ export const AlertSchema = z.object({
   wikidataId: z.string().optional(),
   imageUrl: z.string().url().optional().catch(undefined),
   wikipediaUrl: z.string().url().optional().catch(undefined),
+  // OSM identity of the entry: `null` on a DataTourisme one, so the "see on OSM"
+  // link only renders when both are set.
+  osmType: z
+    .enum(["node", "way", "relation"])
+    .nullable()
+    .optional()
+    .catch(null),
+  osmId: z.number().int().nullable().optional().catch(null),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
 });
@@ -56,6 +64,14 @@ export const PointOfInterestSchema = z.object({
   lat: z.number(),
   lon: z.number(),
   distanceFromStart: z.number().nullable().optional(),
+  // OSM identity of the entry: `null` on a DataTourisme one, so the "see on OSM"
+  // link only renders when both are set.
+  osmType: z
+    .enum(["node", "way", "relation"])
+    .nullable()
+    .optional()
+    .catch(null),
+  osmId: z.number().int().nullable().optional().catch(null),
 });
 
 export const SupplyWaterPointSchema = z.object({

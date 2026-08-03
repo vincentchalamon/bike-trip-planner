@@ -134,6 +134,9 @@ final readonly class TripDetail
                         'lat' => ['type' => 'number'],
                         'lon' => ['type' => 'number'],
                         'distanceFromStart' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
+                        // Tier-1 primary key: the OSM link, null for a DataTourisme POI.
+                        'osmType' => ['oneOf' => [['type' => 'string', 'enum' => ['node', 'way', 'relation']], ['type' => 'null']]],
+                        'osmId' => ['oneOf' => [['type' => 'integer'], ['type' => 'null']]],
                     ]]],
                     'accommodations' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'name' => ['type' => 'string'],

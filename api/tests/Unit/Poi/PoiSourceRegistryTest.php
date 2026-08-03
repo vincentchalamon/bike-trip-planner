@@ -22,19 +22,21 @@ final class PoiSourceRegistryTest extends TestCase
     }
 
     /**
-     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois
      */
     private function source(array $pois): PoiSourceInterface
     {
         return new readonly class ($pois) implements PoiSourceInterface {
-            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois */
+            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois */
             public function __construct(private array $pois)
             {
             }
 
             public function fetchInCorridor(array $route, int $radiusMeters): array
             {
-                return $this->pois;
+                // Fixtures state only what a case is about; the OSM identity defaults
+                // to "not an OSM entry", which is what a curated source looks like.
+                return array_map(static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null], $this->pois);
             }
         };
     }

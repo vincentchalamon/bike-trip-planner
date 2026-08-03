@@ -30,7 +30,7 @@ readonly class CulturalPoiSourceRegistry
      *
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string|null, type: string, lat: float, lon: float, openingHours?: string|null, estimatedPrice?: float|null, description?: string|null, wikidataId?: string|null, source: string, imageUrl?: string|null, wikipediaUrl?: string|null}>
+     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType?: string|null, osmId?: int|null, openingHours?: string|null, estimatedPrice?: float|null, description?: string|null, wikidataId?: string|null, source: string, imageUrl?: string|null, wikipediaUrl?: string|null}>
      */
     public function fetchAllForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -46,7 +46,7 @@ readonly class CulturalPoiSourceRegistry
             }
         }
 
-        /** @var list<array{name: string|null, type: string, lat: float, lon: float, openingHours?: string|null, estimatedPrice?: float|null, description?: string|null, wikidataId?: string|null, source: string, imageUrl?: string|null, wikipediaUrl?: string|null}> $deduped */
+        /** @var list<array{name: string|null, type: string, lat: float, lon: float, osmType?: string|null, osmId?: int|null, openingHours?: string|null, estimatedPrice?: float|null, description?: string|null, wikidataId?: string|null, source: string, imageUrl?: string|null, wikipediaUrl?: string|null}> $deduped */
         $deduped = $this->deduplicator->dedupe($all);
 
         return $deduped;

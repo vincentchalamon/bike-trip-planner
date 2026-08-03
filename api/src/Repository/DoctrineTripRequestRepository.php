@@ -782,7 +782,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float} */
+    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float, osmType: ?string, osmId: ?int} */
     private function poiToArray(PointOfInterest $poi): array
     {
         return [
@@ -791,10 +791,14 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             'lat' => $poi->lat,
             'lon' => $poi->lon,
             'distanceFromStart' => $poi->distanceFromStart,
+            // Without these the OSM link vanishes on reload and in the shared view,
+            // exactly as the accommodation enrichment fields did before issue #870.
+            'osmType' => $poi->osmType,
+            'osmId' => $poi->osmId,
         ];
     }
 
-    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float} $data */
+    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int} $data */
     private function arrayToPoi(array $data): PointOfInterest
     {
         return new PointOfInterest(
@@ -803,6 +807,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             lat: $data['lat'],
             lon: $data['lon'],
             distanceFromStart: $data['distanceFromStart'] ?? null,
+            osmType: $data['osmType'] ?? null,
+            osmId: $data['osmId'] ?? null,
         );
     }
 

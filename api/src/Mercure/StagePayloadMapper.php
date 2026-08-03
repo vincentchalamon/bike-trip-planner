@@ -118,6 +118,8 @@ final readonly class StagePayloadMapper
             'lat' => $poi->lat,
             'lon' => $poi->lon,
             'distanceFromStart' => $poi->distanceFromStart,
+            'osmType' => $poi->osmType,
+            'osmId' => $poi->osmId,
         ];
     }
 

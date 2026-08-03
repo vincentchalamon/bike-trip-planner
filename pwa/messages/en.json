@@ -344,7 +344,8 @@
   "alertList": {
     "addToItinerary": "Add to itinerary",
     "free": "Free admission",
-    "see_on_wikipedia": "See on Wikipedia"
+    "see_on_wikipedia": "See on Wikipedia",
+    "see_on_osm": "See on OpenStreetMap"
   },
   "poiPopover": {
     "close": "Close",

@@ -157,15 +157,15 @@ final class ScanPoisHandlerTest extends TestCase
      * deduplicator (transparent here: every fixture has a distinct name). An
      * optional callback captures the corridor route the source receives.
      *
-     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
-     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null      $captureRoute
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $pois
+     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                       $captureRoute
      */
     private function poiSourceRegistry(array $pois, ?\Closure $captureRoute = null): PoiSourceRegistry
     {
         $source = new readonly class ($pois, $captureRoute) implements PoiSourceInterface {
             /**
-             * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
-             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null      $captureRoute
+             * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $pois
+             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                       $captureRoute
              */
             public function __construct(private array $pois, private ?\Closure $captureRoute)
             {
@@ -182,6 +182,8 @@ final class ScanPoisHandlerTest extends TestCase
                     'category' => $p['category'],
                     'lat' => $p['lat'],
                     'lon' => $p['lon'],
+                    'osmType' => $p['osmType'] ?? null,
+                    'osmId' => $p['osmId'] ?? null,
                     'wikidataId' => null,
                     'source' => 'osm',
                 ], $this->pois);

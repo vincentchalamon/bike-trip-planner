@@ -82,6 +82,8 @@ export interface PoiPayload {
   lat: number;
   lon: number;
   distanceFromStart: number | null;
+  osmType?: "node" | "way" | "relation" | null;
+  osmId?: number | null;
 }
 
 export interface AccommodationPayload {
@@ -283,6 +285,8 @@ export type MercureEvent =
           source?: string;
           imageUrl?: string;
           wikipediaUrl?: string;
+          osmType?: "node" | "way" | "relation";
+          osmId?: number;
         }[];
       };
     }
