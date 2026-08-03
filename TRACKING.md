@@ -1339,7 +1339,7 @@ Le lien et le téléphone cessent d'être du confort : depuis la décision d'obs
 
 1. **#915 (#871)** → **#917 (#872)** → **#918 (#873)** — pile de 3, chaque PR a pour base la précédente.
 2. **#913 (#874)** — indépendante, aucun conflit avec les autres. À merger **avant** #914.
-3. **#914 (#875)** — après #913, dont elle partage 13 fichiers.
+3. **#914 (#875)** — après #913, dont elle partage 14 fichiers.
 4. **#916 (#876)** — indépendante de la pile ; un seul conflit, avec #914.
 
 Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais la branche enfant porte encore le commit pré-squash du parent : ne **pas** faire un `git rebase origin/main` direct, utiliser `git rebase --onto origin/main <dernier-commit-du-parent> feature/<enfant>`, puis vérifier que `git log origin/main..HEAD` ne liste que les commits de l'enfant.
@@ -1349,12 +1349,12 @@ Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais l
 | Fichier | PRs | Qui gagne |
 |---------|-----|-----------|
 | `api/src/Poi/PoiSourceInterface.php`, `PoiSourceRegistry.php` | #913, #914 | **Union des deux élargissements**, aucun arbitrage à rendre : #913 passe `name` à `string\|null`, #914 ajoute `openingHours` et `website` à la même forme `list<array{...}>`. Les deux modifications sont orthogonales, **conserver les deux**. |
-| `api/src/CulturalPoiSource/CulturalPoiSourceInterface.php`, `CulturalPoiSourceRegistry.php`, `OsmCulturalPoiSource.php`, `DataTourismeCulturalPoiSource.php` | #913, #914 | Même arbitrage : union. Ce sont les 4 autres fichiers en conflit des 6 mesurés entre ces deux PRs. |
-| `api/src/Osm/PoiRepository.php`, `CulturalPoiRepository.php` | #914, #918 | Disjoint par construction : #914 ajoute `opening_hours` / `website` au `SELECT`, #918 ajoute `osm_type` / `osm_id` au **même** `SELECT`. Ni l'une ni l'autre ne réécrit la requête. **Conserver les deux.** |
+| `api/src/CulturalPoiSource/CulturalPoiSourceInterface.php`, `CulturalPoiSourceRegistry.php`, `OsmCulturalPoiSource.php`, `DataTourismeCulturalPoiSource.php`, `api/tests/Unit/Poi/PoiSourceRegistryTest.php` | #913, #914 | Même arbitrage : union. Ce sont les 5 autres fichiers en conflit des **7 mesurés** entre ces deux PRs — le docblock de la fixture de test conflicte lui aussi, sur le même motif. |
+| `api/src/Osm/PoiRepository.php`, `PoiRepositoryInterface.php`, `CulturalPoiRepository.php`, `CulturalPoiRepositoryInterface.php` | #914, #918 | **4 fichiers en conflit**, disjoints par construction : #914 ajoute `opening_hours` / `website` au `SELECT` **et au `@return` des interfaces**, #918 ajoute `osm_type` / `osm_id` au **même** `SELECT` et au **même** `@return`. Ni l'une ni l'autre ne réécrit la requête. **Conserver les deux.** |
 | `README.md` (tableau du moteur d'alertes) | #914, #916 | **La restructuration de #916 gagne** (une ligne par `AlertCode`, 36 insertions / 29 suppressions). Y **reporter** la reformulation de #914 sur la ligne devenue `resupply_closed_at_passage` : « …are **known to be** closed at estimated passage time (a POI whose OpenStreetMap `opening_hours` is missing or unparsable is treated as unknown and suppresses the warning) ». Seul conflit entre ces deux PRs. |
 | `api/src/MessageHandler/ScanPoisHandler.php` | #913, #914, #916 | Trois diffs disjoints, aucun conflit mesuré : #913 le libellé de POI, #914 la résolution des horaires, #916 la ligne `'code' => …`. **Conserver les trois.** |
 | `api/src/MessageHandler/CheckCulturalPoisHandler.php` | #913, #914, #916 | Idem, aucun conflit mesuré. |
-| `api/src/Repository/DoctrineTripRequestRepository.php` | #916, #918 | Méthodes différentes : #916 dans `alertToArray()` / `arrayToAlert()`, #918 dans `accommodationToArray()`. **Conserver les deux.** |
+| `api/src/Repository/DoctrineTripRequestRepository.php` | #914, #916, #918 | Fichier partagé par **trois** PRs, mais trois méthodes différentes et **aucun conflit mesuré** : #914 dans l'aller-retour des POI (`poiToArray` / son pendant, ajout d'`openingHours` et `website`), #916 dans `alertToArray()` / `arrayToAlert()`, #918 dans `accommodationToArray()`. **Conserver l'union des trois.** |
 | `pwa/src/lib/validation/schemas.ts`, `pwa/src/lib/mercure/types.ts` | #916, #918 | Ajouts additifs (`code` sur l'alerte, `phone` / `osmType` / `osmId` sur l'hébergement). Conflits triviaux, **conserver les deux**. |
 | `pwa/src/lib/api/schema.d.ts` | #916, #918 | **Ne jamais résoudre à la main.** Fichier généré : prendre n'importe quel côté, puis régénérer (`make typegen`, ou le repli documenté dans CLAUDE.md en worktree) après le merge du second. |
 | `api/translations/alerts.{fr,en}.yaml` | #913 | Seule #913 y touche (17 clés `poi_type.*` plus `alert.cultural_poi.suggestion_unnamed`). Pas de conflit. |
