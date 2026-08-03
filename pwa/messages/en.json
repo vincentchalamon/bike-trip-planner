@@ -155,7 +155,8 @@
     "select": "Select accommodation",
     "deselect": "Deselect accommodation",
     "selected": "Selected",
-    "selectTooltip": "Select this accommodation as your stopover for this stage"
+    "selectTooltip": "Select this accommodation as your stopover for this stage",
+    "see_on_wikipedia": "See on Wikipedia"
   },
   "addStage": {
     "add": "Add stage",
@@ -340,7 +341,8 @@
   },
   "alertList": {
     "addToItinerary": "Add to itinerary",
-    "free": "Free admission"
+    "free": "Free admission",
+    "see_on_wikipedia": "See on Wikipedia"
   },
   "poiPopover": {
     "close": "Close",
