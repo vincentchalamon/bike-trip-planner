@@ -43,6 +43,48 @@ final class GeometryBasedDistributorTest extends TestCase
     }
 
     #[Test]
+    public function distributeByEndpointGivesCoincidentStagesTheSameItems(): void
+    {
+        // A rest day copies the previous stage's end point verbatim
+        // (RestDayInsertProcessor), so two stages share the same location. Both
+        // sleep there, so both must receive the candidates found around it: a
+        // strictly-closer comparison gave them all to the first stage and starved
+        // the rest day (#869).
+        $sharedEnd = new Coordinate(45.5, 5.5);
+        $stages = [
+            new Stage('trip-1', 1, 80.0, 500.0, new Coordinate(45.0, 5.0), $sharedEnd),
+            new Stage('trip-1', 2, 0.0, 0.0, $sharedEnd, $sharedEnd, geometry: [$sharedEnd], isRestDay: true),
+            new Stage('trip-1', 3, 80.0, 500.0, $sharedEnd, new Coordinate(46.0, 6.0)),
+        ];
+
+        $shared = [['lat' => 45.51, 'lon' => 5.51], ['lat' => 45.49, 'lon' => 5.49]];
+        $far = ['lat' => 45.99, 'lon' => 5.99];
+        // Interleaved on purpose: no insertion order can produce the expected
+        // per-stage lists by accident.
+        $items = [$shared[0], $far, $shared[1]];
+
+        $result = $this->distributor->distributeByEndpoint($items, $stages);
+
+        $this->assertSame($shared, $result[0]);
+        $this->assertSame($shared, $result[1], 'the rest day shares the location, so it shares the candidates');
+        $this->assertSame([$far], $result[2]);
+    }
+
+    #[Test]
+    public function distributeByEndpointKeepsItemsExclusiveWhenOneStageIsStrictlyCloser(): void
+    {
+        $stages = [
+            new Stage('trip-1', 1, 80.0, 500.0, new Coordinate(45.0, 5.0), new Coordinate(45.5, 5.5)),
+            new Stage('trip-1', 2, 80.0, 500.0, new Coordinate(45.5, 5.5), new Coordinate(46.0, 6.0)),
+        ];
+
+        $result = $this->distributor->distributeByEndpoint([['lat' => 45.51, 'lon' => 5.51]], $stages);
+
+        $this->assertCount(1, $result[0]);
+        $this->assertCount(0, $result[1]);
+    }
+
+    #[Test]
     public function distributeByEndpointWithEmptyItems(): void
     {
         $stages = [

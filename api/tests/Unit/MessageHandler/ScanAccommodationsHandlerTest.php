@@ -13,7 +13,9 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryBasedDistributor;
 use App\Geo\GeometryDistributorInterface;
+use App\Geo\HaversineDistance;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
@@ -751,6 +753,67 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         self::assertSame($first, $second);
         self::assertSame(['Gîte 1', 'Gîte 2', 'Gîte 3', 'Gîte 4', 'Gîte 5'], $first);
+    }
+
+    #[Test]
+    public function aRestDayGetsTheSameRankedCandidatesAsTheNightBefore(): void
+    {
+        // Real distributor and real ranker: a rest day shares the previous stage's
+        // end point, so both nights must see the same ranked selection, diversity
+        // guard included — not an empty list on the second night (#869).
+        $sharedEnd = new Coordinate(48.5, 2.5);
+        $stage = new Stage('trip-rest', 1, 80.0, 500.0, new Coordinate(48.0, 2.0), $sharedEnd);
+        $restDay = new Stage('trip-rest', 2, 0.0, 0.0, $sharedEnd, $sharedEnd, geometry: [$sharedEnd], isRestDay: true);
+
+        $candidates = [];
+        foreach (range(1, 6) as $i) {
+            $candidates[] = $this->candidate(
+                \sprintf('Hotel %d', $i),
+                'hotel',
+                priceMin: 60.0 + $i,
+                url: 'https://hotel.example',
+                hasWebsite: true,
+                description: 'Chambres confortables',
+            );
+        }
+
+        $candidates[] = $this->candidate('Camping Municipal', 'camp_site', priceMin: 12.0);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage, $restDay]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $registry = $this->createStub(AccommodationSourceRegistry::class);
+        $registry->method('fetchAll')->willReturn($candidates);
+
+        $published = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')->willReturnCallback(
+            static function (string $id, MercureEventType $type, array $payload) use (&$published): void {
+                /** @var list<array{name: string}> $accommodations */
+                $accommodations = $payload['accommodations'];
+                /** @var int $stageIndex */
+                $stageIndex = $payload['stageIndex'];
+                $published[$stageIndex] = array_column($accommodations, 'name');
+            },
+        );
+
+        $haversine = new HaversineDistance();
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $registry,
+            $haversine,
+            new GeometryBasedDistributor($haversine),
+        );
+        $handler(new ScanAccommodations('trip-rest'));
+
+        self::assertArrayHasKey(1, $published);
+        self::assertSame($published[0], $published[1], 'both nights are spent at the same place');
+        self::assertCount(5, $published[1]);
+        self::assertContains('Camping Municipal', $published[1]);
+        self::assertCount(4, array_filter($published[1], static fn (string $name): bool => str_starts_with($name, 'Hotel ')));
     }
 
     /**
