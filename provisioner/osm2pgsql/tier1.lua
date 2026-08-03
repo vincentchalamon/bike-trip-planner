@@ -12,12 +12,17 @@
 local SCHEMA = 'osm_staging'
 local SRID = 4326
 
--- Accommodation tourism values the app supports (TripRequest::ALL_ACCOMMODATION_TYPES);
--- `shelter` is amenity=shelter and handled separately below.
+-- OSM tourism value → app accommodation category (TripRequest::ALL_ACCOMMODATION_TYPES);
+-- `shelter` is amenity=shelter and handled separately below. Categories outside
+-- that vocabulary can never be read back, since the accommodation repositories
+-- filter on `category IN (:categories)`.
 local ACCOMMODATION_TOURISM = {
-    hotel = true, hostel = true, guest_house = true, motel = true,
-    chalet = true, camp_site = true, alpine_hut = true, wilderness_hut = true,
-    apartment = true,
+    hotel = 'hotel', hostel = 'hostel', guest_house = 'guest_house', motel = 'motel',
+    chalet = 'chalet', camp_site = 'camp_site', alpine_hut = 'alpine_hut',
+    wilderness_hut = 'wilderness_hut',
+    -- tourism=apartment is the same product as the DataTourisme rental bucket
+    -- (meublé de tourisme), so both feed the single `rental` category.
+    apartment = 'rental',
 }
 
 -- Resupply / point-of-interest categories (food, shops, services, sights).
@@ -286,7 +291,7 @@ local function poi_category(tags)
 end
 
 local function accommodation_category(tags)
-    if tags.tourism and ACCOMMODATION_TOURISM[tags.tourism] then return tags.tourism end
+    if tags.tourism and ACCOMMODATION_TOURISM[tags.tourism] then return ACCOMMODATION_TOURISM[tags.tourism] end
     if tags.amenity == 'shelter' then return 'shelter' end
     return nil
 end

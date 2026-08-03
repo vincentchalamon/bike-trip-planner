@@ -126,6 +126,7 @@
     "type_alpine_hut": "Refuge",
     "type_wilderness_hut": "Bivouac",
     "type_shelter": "Abri",
+    "type_rental": "Meublé / location",
     "type_other": "Autre",
     "hotel": "Hôtel",
     "gite": "Gîte",

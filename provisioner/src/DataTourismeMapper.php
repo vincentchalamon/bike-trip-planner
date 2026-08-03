@@ -19,7 +19,16 @@ namespace Provisioner;
  */
 final class DataTourismeMapper
 {
-    /** Accommodation subtype (unprefixed ontology type) → app accommodation category. */
+    /**
+     * Accommodation subtype (unprefixed ontology type) → app accommodation
+     * category. Every category MUST exist in TripRequest::ALL_ACCOMMODATION_TYPES:
+     * the accommodation repositories filter on `category IN (:categories)`, so a
+     * category outside that vocabulary can never be read back.
+     *
+     * `AccommodationProduct` is deliberately absent: it is a commercial offer,
+     * not a place. In the flux it only ever co-occurs with a place subtype (which
+     * is what classifies the object), so it never needs a category of its own.
+     */
     private const array ACCOMMODATION_CATEGORY = [
         'Hotel' => 'hotel', 'HotelTrade' => 'hotel', 'HotelRestaurant' => 'hotel',
         'Guesthouse' => 'guest_house', 'TableHoteGuesthouse' => 'guest_house', 'BedAndBreakfast' => 'guest_house',
@@ -28,6 +37,12 @@ final class DataTourismeMapper
         'Chalet' => 'chalet', 'Hut' => 'wilderness_hut', 'TreeHouse' => 'chalet',
         'CollectiveAccommodation' => 'hostel', 'GroupLodging' => 'hostel', 'StopOverOrGroupLodge' => 'hostel',
         'ClubOrHolidayVillage' => 'hostel', 'HolidayResort' => 'hostel',
+        // French "meublé de tourisme": one filterable category for the whole
+        // self-catering rental market, matching OSM's tourism=apartment
+        // (provisioner/osm2pgsql/tier1.lua) so the two sources stay comparable.
+        'RentalAccommodation' => 'rental', 'SelfCateringAccommodation' => 'rental',
+        'House' => 'rental', 'Apartment' => 'rental', 'Bungalow' => 'rental',
+        'Yurt' => 'rental', 'CastleAndPrestigeMansion' => 'rental',
     ];
 
     /** Cultural/natural subtype (unprefixed ontology type) → app cultural-POI category. */
@@ -75,6 +90,18 @@ final class DataTourismeMapper
         'FairOrShow' => 'fair', 'SaleEvent' => 'fair', 'BusinessEvent' => 'fair', 'OpenDay' => 'fair',
         'TheaterEvent' => 'show', 'ShowEvent' => 'show', 'ScreeningEvent' => 'show', 'Cinema' => 'show',
     ];
+
+    private int $unmappedAccommodations = 0;
+
+    /**
+     * Accommodation objects dropped because no subtype of theirs is mapped to an
+     * app category. Surfaced by the provisioning command so the next unknown
+     * ontology type is a visible number instead of a silently polluted bucket.
+     */
+    public function unmappedAccommodationCount(): int
+    {
+        return $this->unmappedAccommodations;
+    }
 
     /**
      * @param array<string, mixed> $object
@@ -132,25 +159,35 @@ final class DataTourismeMapper
     {
         // Events first: an event venue can also carry place types.
         if (\in_array('EntertainmentAndEvent', $types, true)) {
-            return ['event', $this->resolve($types, self::EVENT_CATEGORY, 'event')];
+            return ['event', $this->resolve($types, self::EVENT_CATEGORY) ?? 'event'];
         }
 
         // Accommodation before food: a HotelRestaurant is primarily lodging.
         if (\in_array('Accommodation', $types, true)) {
-            return ['accommodation', $this->resolve($types, self::ACCOMMODATION_CATEGORY, 'apartment')];
+            // No default here: a fallback category outside the app vocabulary
+            // makes the row permanently unreadable (issue #865). An unmapped
+            // subtype is dropped and counted instead.
+            $category = $this->resolve($types, self::ACCOMMODATION_CATEGORY);
+            if (null === $category) {
+                ++$this->unmappedAccommodations;
+
+                return [null, ''];
+            }
+
+            return ['accommodation', $category];
         }
 
         if (\in_array('CulturalSite', $types, true) || \in_array('NaturalHeritage', $types, true)) {
-            return ['cultural', $this->resolve($types, self::CULTURAL_CATEGORY, 'attraction')];
+            return ['cultural', $this->resolve($types, self::CULTURAL_CATEGORY) ?? 'attraction'];
         }
 
         // Eateries (any FoodEstablishment) and food shops (Store with a food subtype).
         if (\in_array('FoodEstablishment', $types, true)) {
-            return ['food', $this->resolve($types, self::FOOD_CATEGORY, 'restaurant')];
+            return ['food', $this->resolve($types, self::FOOD_CATEGORY) ?? 'restaurant'];
         }
 
         if (\in_array('Store', $types, true) && [] !== array_intersect(self::FOOD_STORE_TYPES, $types)) {
-            return ['food', $this->resolve($types, self::FOOD_CATEGORY, 'general')];
+            return ['food', $this->resolve($types, self::FOOD_CATEGORY) ?? 'general'];
         }
 
         return [null, ''];
@@ -160,7 +197,7 @@ final class DataTourismeMapper
      * @param list<string>          $types
      * @param array<string, string> $map
      */
-    private function resolve(array $types, array $map, string $default): string
+    private function resolve(array $types, array $map): ?string
     {
         foreach ($types as $type) {
             if (isset($map[$type])) {
@@ -168,7 +205,7 @@ final class DataTourismeMapper
             }
         }
 
-        return $default;
+        return null;
     }
 
     /**

@@ -33,7 +33,7 @@ export interface Modification {
   label: string;
 }
 import type { AccommodationType } from "@/lib/accommodation-types";
-import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
+import { DEFAULT_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import { createTemporalStore } from "@/store/temporal-middleware";
 
 // Required for Immer to allow mutating Set/Map drafts (used by recomputingStages).
@@ -286,7 +286,7 @@ const initialState = {
   ebikeMode: false,
   departureHour: 8,
   enabledAccommodationTypes: [
-    ...FILTERABLE_ACCOMMODATION_TYPES,
+    ...DEFAULT_ACCOMMODATION_TYPES,
   ] as AccommodationType[],
   stages: [],
   computationStatus: {},

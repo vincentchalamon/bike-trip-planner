@@ -1537,7 +1537,7 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled OSM accommodation types for search (default: all 9 types)
+             * @description Enabled accommodation types for search (default: every type except `rental`, which is opt-in)
              * @default [
              *       "camp_site",
              *       "hostel",
@@ -1583,7 +1583,7 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled OSM accommodation types for search (default: all 9 types)
+             * @description Enabled accommodation types for search (default: every type except `rental`, which is opt-in)
              * @default [
              *       "camp_site",
              *       "hostel",

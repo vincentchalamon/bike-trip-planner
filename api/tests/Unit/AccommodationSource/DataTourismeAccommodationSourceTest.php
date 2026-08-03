@@ -6,6 +6,7 @@ namespace App\Tests\Unit\AccommodationSource;
 
 use App\AccommodationSource\DataTourismeAccommodationSource;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\TripRequest;
 use App\Engine\PricingHeuristicEngine;
 use App\Tourism\AccommodationRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,13 +19,13 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
-            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => 75.0, 'description' => 'Joli gîte'],
+            ['name' => 'Gîte du Lac', 'category' => 'rental', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => 75.0, 'description' => 'Joli gîte'],
         ]);
 
         // The heuristic engine is final and cannot be doubled, so we pass a real
         // one; with an exact flux price it is not consulted.
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['apartment']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
 
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
@@ -67,12 +68,12 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
             ['name' => null, 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
-            ['name' => '   ', 'category' => 'apartment', 'lat' => 48.1, 'lon' => 2.1, 'capacity' => null, 'price' => null, 'description' => null],
-            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.2, 'lon' => 2.2, 'capacity' => 4, 'price' => 75.0, 'description' => null],
+            ['name' => '   ', 'category' => 'rental', 'lat' => 48.1, 'lon' => 2.1, 'capacity' => null, 'price' => null, 'description' => null],
+            ['name' => 'Gîte du Lac', 'category' => 'rental', 'lat' => 48.2, 'lon' => 2.2, 'capacity' => 4, 'price' => 75.0, 'description' => null],
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'apartment']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'rental']);
 
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
@@ -119,14 +120,39 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
-            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => null, 'description' => null],
+            ['name' => 'Gîte du Lac', 'category' => 'rental', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => null, 'description' => null],
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['apartment']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
 
         self::assertSame(4, $result[0]['capacity']);
         self::assertNull($result[0]['stars']);
         self::assertNull($result[0]['fee']);
+    }
+
+    #[Test]
+    public function exposesTheRentalCategoryAsAFilterableType(): void
+    {
+        // `rental` (meublé de tourisme) must belong to the searchable vocabulary,
+        // otherwise the repositories' `category IN (:categories)` filter can never
+        // return the ~80k DataTourisme rentals (issue #865).
+        self::assertContains('rental', TripRequest::ALL_ACCOMMODATION_TYPES);
+
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn([
+            ['name' => 'Gîte des Prés', 'category' => 'rental', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => null, 'description' => null],
+        ]);
+
+        $engine = new PricingHeuristicEngine();
+        $expected = $engine->estimatePrice('rental', []);
+
+        $result = new DataTourismeAccommodationSource($repository, $engine)
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
+
+        self::assertCount(1, $result);
+        self::assertSame('rental', $result[0]['type']);
+        self::assertSame($expected['min'], $result[0]['priceMin']);
+        self::assertSame($expected['max'], $result[0]['priceMax']);
     }
 }

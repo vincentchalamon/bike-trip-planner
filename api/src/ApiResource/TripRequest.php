@@ -88,23 +88,36 @@ final class TripRequest
     #[Assert\Range(min: 5, max: 50)]
     public float $averageSpeed = 15.0;
 
-    /** @var list<string> Single source of truth for all supported OSM accommodation types (tourism= and logical types). */
-    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter'];
+    /** @var list<string> Single source of truth for the searchable accommodation vocabulary (OSM tourism= values, logical types and the `rental` meublé bucket). */
+    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter', 'rental'];
 
     /**
-     * Enabled accommodation types for Overpass filtering.
-     * All 9 accommodation types are enabled by default.
+     * Types enabled on a new trip: everything except `rental`.
+     *
+     * `rental` (gîte / meublé de tourisme) is searchable but opt-in — a large
+     * share of the French rental market is let by the week and neither OSM nor
+     * DataTourisme carries a reliable minimum-stay field, so offering it by
+     * default would suggest lodging the rider cannot book for a single night.
+     * Trips created before it existed keep their persisted list untouched.
+     *
+     * @var list<string>
+     */
+    public const array DEFAULT_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter'];
+
+    /**
+     * Enabled accommodation types for the reference-index search.
+     * Defaults to {@see DEFAULT_ACCOMMODATION_TYPES} (all types but `rental`).
      * At least one type must remain enabled.
      *
      * @var list<string>
      */
     #[ORM\Column(type: 'text[]')]
-    #[ApiProperty(description: 'Enabled OSM accommodation types for search (default: all 9 types)')]
+    #[ApiProperty(description: 'Enabled accommodation types for search (default: every type except `rental`, which is opt-in)')]
     #[Assert\Count(min: 1, minMessage: 'At least one accommodation type must be enabled.')]
     #[Assert\All([
         new Assert\Choice(choices: self::ALL_ACCOMMODATION_TYPES),
     ])]
-    public array $enabledAccommodationTypes = self::ALL_ACCOMMODATION_TYPES;
+    public array $enabledAccommodationTypes = self::DEFAULT_ACCOMMODATION_TYPES;
 
     // --- Persistence-only fields (not exposed in API input/output) ---
 
