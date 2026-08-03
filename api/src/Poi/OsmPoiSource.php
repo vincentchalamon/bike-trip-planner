@@ -28,6 +28,8 @@ final readonly class OsmPoiSource implements PoiSourceInterface
                 'lon' => $poi['lon'],
                 'osmType' => $poi['osmType'],
                 'osmId' => $poi['osmId'],
+                'openingHours' => $poi['openingHours'],
+                'website' => $poi['website'],
                 'wikidataId' => null,
                 'source' => 'osm',
             ];

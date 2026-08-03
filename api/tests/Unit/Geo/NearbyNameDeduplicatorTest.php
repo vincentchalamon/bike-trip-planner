@@ -124,4 +124,48 @@ final class NearbyNameDeduplicatorTest extends TestCase
 
         self::assertCount(2, $result);
     }
+
+    #[Test]
+    public function theCuratedWinnerInheritsWhatOnlyTheOtherSourceKnew(): void
+    {
+        // The flux carries no website for cultural and food POIs, so preferring the
+        // curated entry used to drop the OSM website for every place both sources
+        // describe. The winner keeps its own values and only fills its own gaps.
+        $result = $this->deduplicator(5.0)->dedupe([
+            ['name' => 'Musée', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'osm', 'website' => 'https://musee.test', 'openingHours' => 'Mo-Fr 09:00-17:00', 'description' => null],
+            ['name' => 'Musée', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'datatourisme', 'website' => null, 'openingHours' => null, 'description' => 'Collection permanente.'],
+        ]);
+
+        self::assertCount(1, $result);
+        self::assertSame('datatourisme', $result[0]['source'], 'The curated entry still wins.');
+        self::assertSame('Collection permanente.', $result[0]['description'], 'Its own values are untouched.');
+        self::assertSame('https://musee.test', $result[0]['website'], 'The OSM website must survive the merge.');
+        self::assertSame('Mo-Fr 09:00-17:00', $result[0]['openingHours']);
+    }
+
+    #[Test]
+    public function theCuratedWinnerNeverLosesItsOwnValueToTheOtherSource(): void
+    {
+        $result = $this->deduplicator(5.0)->dedupe([
+            ['name' => 'Musée', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'osm', 'website' => 'https://osm.test'],
+            ['name' => 'Musée', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'datatourisme', 'website' => 'https://curated.test'],
+        ]);
+
+        self::assertCount(1, $result);
+        self::assertSame('https://curated.test', $result[0]['website']);
+    }
+
+    #[Test]
+    public function theBackfillNeverAddsAKeyTheWinnerDoesNotDeclare(): void
+    {
+        // Sources do not all share the same shape: a food POI has no description.
+        // Filling gaps must not graft a foreign key onto the winner's contract.
+        $result = $this->deduplicator(5.0)->dedupe([
+            ['name' => 'Café', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'osm', 'description' => 'Texte OSM'],
+            ['name' => 'Café', 'lat' => 48.0, 'lon' => 2.0, 'wikidataId' => null, 'source' => 'datatourisme', 'website' => null],
+        ]);
+
+        self::assertCount(1, $result);
+        self::assertArrayNotHasKey('description', $result[0]);
+    }
 }

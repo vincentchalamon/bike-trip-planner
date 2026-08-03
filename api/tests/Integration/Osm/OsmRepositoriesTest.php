@@ -59,6 +59,32 @@ final class OsmRepositoriesTest extends KernelTestCase
     }
 
     #[Test]
+    public function poiRepositoryReadsOpeningHoursAndWebsite(): void
+    {
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.pois (osm_type, osm_id, name, category, opening_hours, website, tags, geom) VALUES
+              ('n', 8001, 'Boulangerie', 'bakery', 'Tu-Su 07:00-13:00', 'https://boulangerie.test', '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
+              ('n', 8002, 'Épicerie', 'convenience', NULL, '', '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.141, 49.611), 4326))
+            SQL);
+
+        $pois = new PoiRepository($this->connection)->findInCorridor([
+            ['lat' => 49.60, 'lon' => 6.13],
+            ['lat' => 49.62, 'lon' => 6.15],
+        ], 2000);
+
+        $byName = [];
+        foreach ($pois as $poi) {
+            $byName[(string) $poi['name']] = $poi;
+        }
+
+        self::assertSame('Tu-Su 07:00-13:00', $byName['Boulangerie']['openingHours']);
+        self::assertSame('https://boulangerie.test', $byName['Boulangerie']['website']);
+        // A missing tag and an empty string both mean "unknown", never "closed".
+        self::assertNull($byName['Épicerie']['openingHours']);
+        self::assertNull($byName['Épicerie']['website']);
+    }
+
+    #[Test]
     public function waterPointRepositoryReturnsPotablePointsWithinTheCorridor(): void
     {
         $this->seedWaterPoint('drinking_water', 49.61, 6.14);

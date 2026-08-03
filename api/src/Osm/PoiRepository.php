@@ -22,7 +22,7 @@ final readonly class PoiRepository implements PoiRepositoryInterface
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float}>
+     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, openingHours: ?string, website: ?string}>
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
@@ -33,7 +33,7 @@ final readonly class PoiRepository implements PoiRepositoryInterface
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT osm_type, osm_id, name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
+                SELECT osm_type, osm_id, name, category, opening_hours, website, ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.pois
                 WHERE ST_DWithin(
                     geom::geography,
@@ -58,6 +58,8 @@ final readonly class PoiRepository implements PoiRepositoryInterface
                 'category' => (string) $row['category'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
+                'openingHours' => null !== $row['opening_hours'] && '' !== $row['opening_hours'] ? (string) $row['opening_hours'] : null,
+                'website' => null !== $row['website'] && '' !== $row['website'] ? (string) $row['website'] : null,
             ];
         }
 

@@ -15,7 +15,8 @@ use App\Enum\AlertType;
  * via the RecalculateRouteSegment Messenger message — ADR-017).
  *
  * Optional enrichment fields (openingHours, estimatedPrice, description,
- * wikidataId, source) are populated when the POI comes from DataTourisme.
+ * wikidataId, source) are populated when the POI comes from DataTourisme;
+ * website comes from the OpenStreetMap `website` tag.
  */
 final readonly class CulturalPoiAlert extends Alert
 {
@@ -37,6 +38,8 @@ final readonly class CulturalPoiAlert extends Alert
         ?AlertAction $action = null,
         #[ApiProperty(description: 'Opening hours as a human-readable string (DataTourisme only).')]
         public ?string $openingHours = null,
+        #[ApiProperty(description: 'Official website of the POI, when OpenStreetMap knows one.')]
+        public ?string $website = null,
         #[ApiProperty(description: 'Estimated entrance price in euros (DataTourisme only).')]
         public ?float $estimatedPrice = null,
         #[ApiProperty(description: 'Short description of the POI (DataTourisme only).')]

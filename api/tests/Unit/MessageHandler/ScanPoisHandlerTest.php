@@ -46,8 +46,8 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage], 'fr');
 
         $registry = $this->poiSourceRegistry([
-            ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1],
-            ['name' => null, 'category' => 'bakery', 'lat' => 48.1003, 'lon' => 2.1],
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1003, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -153,19 +153,36 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     /**
+     * A raw corridor POI as the sources and the distributor hand it over.
+     *
+     * @return array{name: string, category: string, lat: float, lon: float, openingHours: string|null, website: string|null}
+     */
+    private function poi(string $name, string $category, float $lat, float $lon, ?string $openingHours = null): array
+    {
+        return [
+            'name' => $name,
+            'category' => $category,
+            'lat' => $lat,
+            'lon' => $lon,
+            'openingHours' => $openingHours,
+            'website' => null,
+        ];
+    }
+
+    /**
      * Real registry wrapping a single fake source returning $pois. Uses the real
      * deduplicator (transparent here: every fixture has a distinct name). An
      * optional callback captures the corridor route the source receives.
      *
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $pois
-     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                       $captureRoute
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
+     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                                                                            $captureRoute
      */
     private function poiSourceRegistry(array $pois, ?\Closure $captureRoute = null): PoiSourceRegistry
     {
         $source = new readonly class ($pois, $captureRoute) implements PoiSourceInterface {
             /**
-             * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $pois
-             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                       $captureRoute
+             * @param list<array{name: string|null, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
+             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null                                                                                            $captureRoute
              */
             public function __construct(private array $pois, private ?\Closure $captureRoute)
             {
@@ -184,6 +201,8 @@ final class ScanPoisHandlerTest extends TestCase
                     'lon' => $p['lon'],
                     'osmType' => $p['osmType'] ?? null,
                     'osmId' => $p['osmId'] ?? null,
+                    'openingHours' => $p['openingHours'],
+                    'website' => $p['website'],
                     'wikidataId' => null,
                     'source' => 'osm',
                 ], $this->pois);
@@ -226,23 +245,19 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-            ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
-        ]);
+        // Both carry real OSM hours, so the passage time can actually be judged.
+        $pois = [
+            $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00,19:00-22:00'),
+            $this->poi('Chez Paul', 'restaurant', 48.3, 2.3, '12:00-14:30'),
+        ];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        // 16:00 → both restaurants closed (restaurants: 12-14, 19-22)
+        // 16:00 → both restaurants closed according to their own opening_hours
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
 
         $publishedEvents = [];
@@ -271,19 +286,14 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-            ['name' => 'Carrefour', 'category' => 'supermarket', 'lat' => 48.3, 'lon' => 2.3],
-        ]);
+        $pois = [
+            $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00,19:00-22:00'),
+            $this->poi('Carrefour', 'supermarket', 48.3, 2.3, '09:00-20:00'),
+        ];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                ['name' => 'Carrefour', 'category' => 'supermarket', 'lat' => 48.3, 'lon' => 2.3],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -316,17 +326,11 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Belvedere', 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2],
-        ]);
+        $pois = [$this->poi('Belvedere', 'viewpoint', 48.2, 2.2)];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Belvedere', 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -455,23 +459,18 @@ final class ScanPoisHandlerTest extends TestCase
         );
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-            ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
-        ]);
+        $pois = [
+            $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00,19:00-22:00'),
+            $this->poi('Chez Paul', 'restaurant', 48.3, 2.3, '12:00-14:30'),
+        ];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        // 16:00 → both restaurants closed (restaurants: 12-14, 19-22), so without the
+        // 16:00 → both restaurants closed per their own opening_hours, so without the
         // rest-day guard this stage would emit the timing warning.
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
 
@@ -501,17 +500,12 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Boulangerie', 'category' => 'bakery', 'lat' => 48.2, 'lon' => 2.2],
-        ]);
+        // No OSM hours: the category fallback is still allowed to conclude "open".
+        $pois = [$this->poi('Boulangerie', 'bakery', 48.2, 2.2)];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Boulangerie', 'category' => 'bakery', 'lat' => 48.2, 'lon' => 2.2],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -538,27 +532,172 @@ final class ScanPoisHandlerTest extends TestCase
         );
     }
 
+    /**
+     * Runs the handler on an 80 km stage carrying $pois, the rider passing each of
+     * them at $passageTime, and returns the alerts published for that stage.
+     *
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, openingHours: string|null, website: string|null}> $pois
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function alertsForStage(array $pois, float $passageTime, ?TripRequest $tripRequest = null): array
+    {
+        $stage = $this->createStage('trip-1', 1, 80.0);
+        $tripStateManager = $this->createTripStateManager([$stage], 'en', $tripRequest);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
+
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn($passageTime);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry($pois), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+
+        /** @var list<array<string, mixed>> $alerts */
+        $alerts = array_first($poisScannedEvents)['payload']['alerts'] ?? [];
+
+        return $alerts;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $alerts
+     */
+    private function hasTimingWarning(array $alerts): bool
+    {
+        return array_any($alerts, static fn (array $alert): bool => 'warning' === $alert['type']);
+    }
+
+    #[Test]
+    public function poiWithoutOpeningHoursDoesNotTriggerTimingWarning(): void
+    {
+        // 16:00 is outside the generic restaurant slots (12-14, 19-22), which is
+        // exactly what used to raise the warning. OSM knows nothing about this
+        // restaurant's hours, so there is nothing to warn about.
+        $alerts = $this->alertsForStage([$this->poi('Le Bistrot', 'restaurant', 48.2, 2.2)], 16.0);
+
+        self::assertFalse(
+            $this->hasTimingWarning($alerts),
+            'A POI with unknown opening hours must never raise alert.resupply.timing_warning',
+        );
+    }
+
+    #[Test]
+    public function poiWithUnparsableOpeningHoursDoesNotTriggerTimingWarning(): void
+    {
+        // A shape the parser does not model is unknown, not closed.
+        $alerts = $this->alertsForStage([$this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, 'sunrise-sunset; by appointment')], 16.0);
+
+        self::assertFalse(
+            $this->hasTimingWarning($alerts),
+            'An opening_hours value that could not be read must be treated as unknown',
+        );
+    }
+
+    #[Test]
+    public function unknownHoursOnOnePoiSuppressTheWarningForTheWholeStage(): void
+    {
+        $alerts = $this->alertsForStage([
+            $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00'),
+            $this->poi('Chez Paul', 'restaurant', 48.3, 2.3),
+        ], 16.0);
+
+        self::assertFalse(
+            $this->hasTimingWarning($alerts),
+            'One POI whose hours are unknown makes the stage inconclusive',
+        );
+    }
+
+    #[Test]
+    public function realOpeningHoursTakePrecedenceOverTheCategoryFallback(): void
+    {
+        // The generic restaurant slots would call 16:00 closed; OSM says otherwise.
+        $alerts = $this->alertsForStage([$this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '15:00-18:00')], 16.0);
+
+        self::assertFalse(
+            $this->hasTimingWarning($alerts),
+            'The real opening_hours must win over the category-typical slots',
+        );
+    }
+
+    #[Test]
+    public function realOpeningHoursOutsideThePassageTimeEmitTheWarning(): void
+    {
+        // Conversely, a POI the generic slots would call open (a supermarket at
+        // 10:00) is warned about when its own hours say it is closed.
+        $alerts = $this->alertsForStage([$this->poi('Carrefour', 'supermarket', 48.2, 2.2, '14:00-19:00')], 10.0);
+
+        self::assertTrue(
+            $this->hasTimingWarning($alerts),
+            'A POI known to be closed at the passage time must raise the warning',
+        );
+    }
+
+    #[Test]
+    public function weekdayDependentHoursAreEvaluatedOnTheStageDate(): void
+    {
+        $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('2026-08-02'); // a Sunday
+
+        $pois = [$this->poi('Carrefour', 'supermarket', 48.2, 2.2, 'Mo-Sa 09:00-19:00')];
+
+        self::assertTrue(
+            $this->hasTimingWarning($this->alertsForStage($pois, 10.0, $request)),
+            'The shop is closed on Sundays, and day 1 of this trip is a Sunday',
+        );
+
+        $request->startDate = new \DateTimeImmutable('2026-08-03'); // a Monday
+
+        self::assertFalse(
+            $this->hasTimingWarning($this->alertsForStage($pois, 10.0, $request)),
+            'The same shop is open on Mondays',
+        );
+    }
+
+    #[Test]
+    public function weekdayDependentHoursAreInconclusiveWithoutAStartDate(): void
+    {
+        // No start date → the weekday is unknown, and "Mo-Sa" cannot be resolved.
+        $alerts = $this->alertsForStage([$this->poi('Carrefour', 'supermarket', 48.2, 2.2, 'Mo-Sa 09:00-19:00')], 21.0);
+
+        self::assertTrue(
+            $this->hasTimingWarning($alerts),
+            '21:00 is outside the slot on every weekday, so the answer holds without a date',
+        );
+
+        $alerts = $this->alertsForStage([$this->poi('Carrefour', 'supermarket', 48.2, 2.2, 'Mo-Sa 09:00-19:00')], 10.0);
+
+        self::assertFalse(
+            $this->hasTimingWarning($alerts),
+            '10:00 depends on the weekday, which is unknown here: nothing can be concluded',
+        );
+    }
+
     #[Test]
     public function poisWithin500mAreClusteredIntoSingleMarker(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-            ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
-            ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
-        ]);
+        $pois = [
+            $this->poi('Bistrot A', 'restaurant', 48.2, 2.2),
+            $this->poi('Bistrot B', 'restaurant', 48.2, 2.2001),
+            $this->poi('Remote Bistrot', 'restaurant', 48.5, 2.5),
+        ];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
-                ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
@@ -670,21 +809,15 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiSourceRegistry([
-            ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
-            ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
-            ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
-        ]);
+        $pois = [
+            $this->poi('POI A', 'restaurant', 48.0, 2.0),
+            $this->poi('POI B', 'restaurant', 48.0, 2.005),
+            $this->poi('POI C', 'restaurant', 48.0, 2.010),
+        ];
+        $poiRepository = $this->poiSourceRegistry($pois);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [0 => [
-                ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
-                ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
-                ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
-            ]],
-            [],
-        );
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);

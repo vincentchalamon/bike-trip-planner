@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Engine;
 
 /**
- * Immutable value object representing a set of fixed opening slots for a POI category.
+ * Category-typical opening slots, used **only as a fallback** when a POI carries
+ * no real `opening_hours` (OSM coverage is partial). These slots are an
+ * approximation, so callers must never let them conclude that a POI is closed —
+ * see {@see OpeningHours} for the real, parsed schedule which always takes
+ * precedence.
  *
  * Each slot is an [open, close] pair of decimal hours (e.g. 9.0 = 09:00, 13.5 = 13:30).
  * A null $slots value means "no filter" — the POI is always considered open.
@@ -18,6 +22,19 @@ final readonly class FixedSchedule
     private function __construct(
         private ?array $slots,
     ) {
+    }
+
+    /**
+     * Typical slots for a POI category, for the POIs OSM has no `opening_hours` for.
+     */
+    public static function forCategory(string $category): self
+    {
+        return match (true) {
+            \in_array($category, ['supermarket', 'convenience', 'general', 'farm', 'greengrocer', 'butcher', 'deli'], true) => self::supermarket(),
+            \in_array($category, ['restaurant', 'cafe', 'bar', 'fast_food'], true) => self::restaurant(),
+            \in_array($category, ['bakery', 'pastry'], true) => self::bakery(),
+            default => self::noFilter(),
+        };
     }
 
     /**

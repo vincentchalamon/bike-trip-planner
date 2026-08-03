@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\FixedSchedule;
+use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -76,8 +77,10 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $request = $this->tripStateManager->getRequest($tripId);
         $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
+        // Needed to evaluate weekday-dependent opening_hours rules ("Mo-Sa 08:00-19:00").
+        $startDate = $request instanceof TripRequest ? $request->startDate : null;
 
-        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
+        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed, $startDate): void {
             // Decode the route corridor from the decimated points (fallback: stage geometry).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $allPoints = null !== $decimatedData
@@ -105,10 +108,12 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     'category' => $poi['category'],
                     'lat' => $poi['lat'],
                     'lon' => $poi['lon'],
+                    'openingHours' => $poi['openingHours'],
+                    'website' => $poi['website'],
                 ];
             }
 
-            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
+            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float, openingHours: string|null, website: string|null}>> $poisByStage */
             $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
 
             $allWaterPoints = $this->waterPointRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS);
@@ -126,6 +131,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lon: $raw['lon'],
                         osmType: $raw['osmType'] ?? null,
                         osmId: $raw['osmId'] ?? null,
+                        openingHours: $raw['openingHours'],
+                        website: $raw['website'],
                     );
 
                     $stage->addPoi($poi);
@@ -147,9 +154,11 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $alerts[] = ['type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
-                // Resupply timing warning: warn when all resupply POIs on this stage
-                // would be closed at the estimated rider passage time
-                if (!$stage->isRestDay && $this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour, $averageSpeed)) {
+                // Resupply timing warning: warn when every resupply POI on this stage is
+                // *known* to be closed at the estimated rider passage time.
+                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
+
+                if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
                     $alert = new Alert(
                         type: AlertType::WARNING,
                         message: $this->translator->trans(
@@ -216,14 +225,21 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     }
 
     /**
-     * Returns true when at least one resupply POI on the stage is open
+     * Returns true only when every resupply POI on the stage is *known* to be closed
      * at the estimated rider passage time.
+     *
+     * A single POI that is open — or whose hours cannot be established — makes the
+     * stage inconclusive and suppresses the warning: it used to be raised from the
+     * category-typical slots alone, i.e. from schedules nobody had checked (#875).
+     *
+     * @param int|null $isoWeekday 1 (Monday) to 7 (Sunday), null when the trip has no start date
      */
-    private function hasAnyOpenResupplyPoi(Stage $stage, int $departureHour, float $averageSpeed): bool
+    private function allResupplyPoisAreClosed(Stage $stage, int $departureHour, float $averageSpeed, ?int $isoWeekday): bool
     {
         $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
         $cumulativeDistances = $this->supplyTimelineBuilder->buildCumulativeDistances($geometry);
         $totalDistance = $stage->distance;
+        $closed = 0;
 
         foreach ($stage->pois as $poi) {
             if (!\in_array($poi->category, self::RESUPPLY_CATEGORIES, true)) {
@@ -233,23 +249,31 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             $nearestIndex = $this->supplyTimelineBuilder->findNearestGeometryIndex($geometry, $poi->lat, $poi->lon);
             $distanceFromStart = $cumulativeDistances[$nearestIndex];
             $estimatedTime = $this->riderTimeEstimator->estimateTimeAtDistance($distanceFromStart, $totalDistance, $departureHour, $averageSpeed, $stage->elevation);
-            $schedule = $this->resolveSchedule($poi->category);
 
-            if ($schedule->isOpenAt($estimatedTime)) {
-                return true;
+            if (false !== $this->isOpenAt($poi, $estimatedTime, $isoWeekday)) {
+                return false;
             }
+
+            ++$closed;
         }
 
-        return false;
+        return $closed > 0;
     }
 
-    private function resolveSchedule(string $category): FixedSchedule
+    /**
+     * Tri-state openness of a POI: true = open, false = closed, null = unknown.
+     *
+     * The real OSM `opening_hours` wins whenever it is present and understood.
+     * Without it, the category-typical {@see FixedSchedule} is only allowed to
+     * answer "probably open" — never "closed", which would put an invented
+     * schedule behind a user-facing warning.
+     */
+    private function isOpenAt(PointOfInterest $poi, float $decimalHour, ?int $isoWeekday): ?bool
     {
-        return match (true) {
-            \in_array($category, ['supermarket', 'convenience', 'general', 'farm', 'greengrocer', 'butcher', 'deli'], true) => FixedSchedule::supermarket(),
-            \in_array($category, ['restaurant', 'cafe', 'bar', 'fast_food'], true) => FixedSchedule::restaurant(),
-            \in_array($category, ['bakery', 'pastry'], true) => FixedSchedule::bakery(),
-            default => FixedSchedule::noFilter(),
-        };
+        if (null !== $poi->openingHours) {
+            return OpeningHours::parse($poi->openingHours)?->isOpenAt($decimalHour, $isoWeekday);
+        }
+
+        return FixedSchedule::forCategory($poi->category)->isOpenAt($decimalHour) ? true : null;
     }
 }

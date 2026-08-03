@@ -22,6 +22,10 @@ final readonly class PointOfInterest
         public ?string $osmType = null,
         #[ApiProperty(description: 'OpenStreetMap object id. Null when the entry does not come from OSM.')]
         public ?int $osmId = null,
+        #[ApiProperty(description: 'Raw OpenStreetMap opening_hours value, when the POI carries one.')]
+        public ?string $openingHours = null,
+        #[ApiProperty(description: 'Official website of the POI, when OpenStreetMap knows one.')]
+        public ?string $website = null,
     ) {
     }
 }

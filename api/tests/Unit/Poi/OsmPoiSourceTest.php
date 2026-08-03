@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 final class OsmPoiSourceTest extends TestCase
 {
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int}> $rows
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: ?string, website: ?string}> $rows
      */
     private function source(array $rows): OsmPoiSource
     {
@@ -38,7 +38,7 @@ final class OsmPoiSourceTest extends TestCase
     public function mapsRepositoryRowToCandidate(): void
     {
         $poi = $this->source([
-            ['name' => 'Boulangerie du Centre', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'osmType' => 'node', 'osmId' => 12],
+            ['name' => 'Boulangerie du Centre', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'osmType' => 'node', 'osmId' => 12, 'openingHours' => null, 'website' => null],
         ])->fetchInCorridor($this->route(), 2000)[0];
 
         self::assertSame('Boulangerie du Centre', $poi['name']);
@@ -59,7 +59,7 @@ final class OsmPoiSourceTest extends TestCase
         // rider, and it must not make two anonymous shops look identical to the
         // deduplicator (issue #874).
         $poi = $this->source([
-            ['name' => null, 'category' => 'supermarket', 'lat' => 48.1, 'lon' => 2.1],
+            ['name' => null, 'category' => 'supermarket', 'lat' => 48.1, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
         ])->fetchInCorridor($this->route(), 2000)[0];
 
         self::assertNull($poi['name']);

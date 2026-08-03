@@ -22,7 +22,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
     /**
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
+     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, website: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
      */
     public function fetchForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -41,6 +41,8 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
                 'osmType' => null,
                 'osmId' => null,
                 'openingHours' => $poi['openingHours'],
+                // The flux mapping does not carry a website for cultural POIs.
+                'website' => null,
                 'estimatedPrice' => null,
                 'description' => $poi['description'],
                 'wikidataId' => $poi['wikidata'],

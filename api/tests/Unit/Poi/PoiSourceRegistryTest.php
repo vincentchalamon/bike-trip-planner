@@ -22,21 +22,33 @@ final class PoiSourceRegistryTest extends TestCase
     }
 
     /**
-     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois
+     * The dedupe pass reads name/coordinates/wikidataId/source only, so the fixtures
+     * leave the enrichment columns of the source shape defaulted.
+     *
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null, openingHours?: string|null, website?: string|null}> $pois
      */
     private function source(array $pois): PoiSourceInterface
     {
+        $pois = array_map(
+            static fn (array $poi): array => $poi + ['openingHours' => null, 'website' => null],
+            $pois,
+        );
+
         return new readonly class ($pois) implements PoiSourceInterface {
-            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois */
+            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null, openingHours?: string|null, website?: string|null}> $pois */
             public function __construct(private array $pois)
             {
             }
 
             public function fetchInCorridor(array $route, int $radiusMeters): array
             {
-                // Fixtures state only what a case is about; the OSM identity defaults
-                // to "not an OSM entry", which is what a curated source looks like.
-                return array_map(static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null], $this->pois);
+                // Fixtures state only what a case is about; the rest of the source
+                // shape defaults to "nothing known", which is what a curated entry
+                // without an OSM identity looks like.
+                return array_map(
+                    static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null, 'openingHours' => null, 'website' => null],
+                    $this->pois,
+                );
             }
         };
     }

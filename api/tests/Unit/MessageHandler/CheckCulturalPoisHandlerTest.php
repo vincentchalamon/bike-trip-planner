@@ -407,6 +407,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 'lat' => 48.8606,
                 'lon' => 2.3376,
                 'openingHours' => 'Mon–Sat 09:00–18:00',
+                'website' => 'https://www.louvre.fr',
                 'estimatedPrice' => 15.0,
                 'description' => 'World-famous art museum.',
                 'wikidataId' => 'Q19675',
@@ -441,6 +442,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
 
         self::assertCount(1, $alerts);
         self::assertSame('Mon–Sat 09:00–18:00', $alerts[0]['openingHours']);
+        self::assertSame('https://www.louvre.fr', $alerts[0]['website']);
         self::assertSame(15.0, $alerts[0]['estimatedPrice']);
         self::assertSame('World-famous art museum.', $alerts[0]['description']);
         self::assertSame('Q19675', $alerts[0]['wikidataId']);
@@ -460,6 +462,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 'lat' => 48.2,
                 'lon' => 2.2,
                 'openingHours' => null,
+                'website' => null,
                 'estimatedPrice' => null,
                 'description' => null,
                 'wikidataId' => null,
@@ -498,6 +501,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         self::assertSame('nudge', $alerts[0]['type']);
         self::assertSame(250, $alerts[0]['distanceFromRoute']);
         self::assertArrayNotHasKey('openingHours', $alerts[0]);
+        self::assertArrayNotHasKey('website', $alerts[0]);
         self::assertArrayNotHasKey('estimatedPrice', $alerts[0]);
         self::assertArrayNotHasKey('description', $alerts[0]);
         self::assertArrayNotHasKey('wikidataId', $alerts[0]);
