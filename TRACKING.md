@@ -1250,14 +1250,49 @@ Rendre exploitable ce qui est **déjà importé**. Le défaut dominant n'est pas
 
 > **Prérequis :** aucun. Aucune source nouvelle, aucun ré-import de schéma.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#865](https://github.com/vincentchalamon/bike-trip-planner/issues/865) | feat(datatourisme): map rental accommodations and drop the silent category default | - | - | - |
-| 2 | [#866](https://github.com/vincentchalamon/bike-trip-planner/issues/866) | fix(pwa): complete the accommodation label and icon maps | - | - | - |
-| 3 | [#867](https://github.com/vincentchalamon/bike-trip-planner/issues/867) | fix(pwa): guard malformed accommodation urls and translate the wikipedia link | - | - | - |
-| 4 | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) | fix(accommodations): deterministic ordering and bounded result sets | - | - | - |
-| 5 | [#869](https://github.com/vincentchalamon/bike-trip-planner/issues/869) | feat(accommodations): rank candidates by completeness, use stars and capacity | - | - | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) |
-| 6 | [#870](https://github.com/vincentchalamon/bike-trip-planner/issues/870) | fix(trips): stop dropping accommodation enrichment on persist | - | - | - |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#865](https://github.com/vincentchalamon/bike-trip-planner/issues/865) | feat(datatourisme): map rental accommodations and drop the silent category default | - | [#906](https://github.com/vincentchalamon/bike-trip-planner/pull/906) `feature/865` | En cours | - |
+| 2 | [#866](https://github.com/vincentchalamon/bike-trip-planner/issues/866) | fix(pwa): complete the accommodation label and icon maps | - | [#908](https://github.com/vincentchalamon/bike-trip-planner/pull/908) `feature/866` | En cours (empilée sur `feature/865`) | [#865](https://github.com/vincentchalamon/bike-trip-planner/issues/865) |
+| 3 | [#867](https://github.com/vincentchalamon/bike-trip-planner/issues/867) | fix(pwa): guard malformed accommodation urls and translate the wikipedia link | - | [#904](https://github.com/vincentchalamon/bike-trip-planner/pull/904) `feature/867` | En cours | - |
+| 4 | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) | fix(accommodations): deterministic ordering and bounded result sets | - | [#905](https://github.com/vincentchalamon/bike-trip-planner/pull/905) `feature/868` | En cours | - |
+| 5 | [#869](https://github.com/vincentchalamon/bike-trip-planner/issues/869) | feat(accommodations): rank candidates by completeness, use stars and capacity | - | [#909](https://github.com/vincentchalamon/bike-trip-planner/pull/909) `feature/869` | En cours (empilée sur `feature/868`) | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) |
+| 6 | [#870](https://github.com/vincentchalamon/bike-trip-planner/issues/870) | fix(trips): stop dropping accommodation enrichment on persist | - | [#907](https://github.com/vincentchalamon/bike-trip-planner/pull/907) `feature/870` | En cours | - |
+
+> **#866 a été empilée sur #865 alors que la table ne déclarait aucune dépendance.** L'issue disait « à livrer avec ou après l'issue `rental` », et les deux refont les mêmes maps de `accommodation-item.tsx` plus le contrat `accommodation-types.ts` : les traiter en parallèle aurait payé ce conflit au merge.
+
+### Ordre de merge et conflits attendus
+
+**Ordre imposé** (les deux piles d'abord, dans l'ordre) :
+
+1. **#906 (#865)** puis **#908 (#866)** — #908 a pour base `feature/865`.
+2. **#905 (#868)** puis **#909 (#869)** — #909 a pour base `feature/868`.
+3. **#904 (#867)**, **#907 (#870)** — indépendantes, dans n'importe quel ordre.
+
+Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais la branche enfant porte encore le commit pré-squash du parent : ne **pas** faire un `git rebase origin/main` direct, utiliser `git rebase --onto origin/main <dernier-commit-du-parent> feature/<enfant>`, puis vérifier que `git log origin/main..HEAD` ne liste que les commits de l'enfant.
+
+**Fichiers partagés et arbitrages décidés avant le merge :**
+
+| Fichier | PRs | Qui gagne |
+|---------|-----|-----------|
+| `pwa/src/components/accommodation-item.tsx` | #906, #908, #904 | **#908 gagne sur les maps libellés / icônes** (elle les supprime au profit d'une dérivation du contrat, donc l'entrée `rental` ajoutée par #906 devient sans objet). #904 ne touche que le bloc de rendu de l'URL, le lien Wikipédia et `commitEdits` : **conserver les deux côtés**, conflit probable sur les imports en tête de fichier. |
+| `pwa/src/lib/accommodation-types.ts` | #906, #908 | Pas de conflit : #908 est empilée sur #906. |
+| `pwa/messages/{fr,en}.json` | #906, #904 | Purement additif, clés disjointes (`type_rental` vs `see_on_wikipedia`) : **conserver les deux**. #908 ne touche pas ces fichiers. |
+| `pwa/tests/fixtures/mock-data.ts` | #904, #907 | Additif disjoint sur les **deux mêmes** hébergements : #904 ajoute `url`, #907 ajoute `description` / `imageUrl` / `source`. **Conserver les deux.** Ne pas ajouter de troisième entrée : `accommodation-hover.spec.ts` asserte `toHaveCount(2)`. |
+| `pwa/tests/mocked/accommodation.spec.ts` | #904, #907 | Les deux ajoutent un test en fin de fichier : **conserver les deux**. |
+| `api/src/{Osm,Tourism}/AccommodationRepository.php` | #905, #909 | **Le SQL de #905 gagne** (fenêtre partitionnée par point le plus proche). #909 ne change que le docblock de `MAX_ROWS_PER_POINT` (marge 10x → 6x, `MAX_CANDIDATES_PER_STAGE` 3 → 5) : reporter ce commentaire. Déjà résolu par rebase sur `feature/869`. |
+| `api/tests/Integration/Tourism/TourismIndexReadTest.php` | #906, #905 | Additif des deux côtés (#906 ajoute la catégorie `rental`, #905 deux tests de famine) : **conserver les deux**. |
+| `api/tests/Unit/AccommodationSource/DataTourismeAccommodationSourceTest.php` | #906, #909 | Cas ajoutés en fin de classe des deux côtés : **conserver les deux**. |
+
+**Deux régressions trouvées par la CI, pas par les agents** — à garder en tête pour les prochains sprints :
+
+- **#906 : le drift `schema.d.ts`.** Le `@description` d'un `ApiProperty` se propage dans les types générés. Un changement de description **seule** suffit à faire échouer le job « OpenAPI → TS drift » : `make typegen` est nécessaire même quand la forme du schéma ne bouge pas.
+- **#906 : le scénario BDD « Filtrage des types d'hébergement » codait en dur `toHaveCount(9)`** et ignorait la liste Gherkin. Ajouter un type au contrat le cassait sans dire lequel manquait. Le step asserte désormais le compte **et** chaque libellé depuis la chaîne de la feature. Au passage : **la feature `.en` fait tourner l'application en anglais**, alors que sa chaîne portait des libellés français jamais vérifiés — corrigé, les deux features listent maintenant les libellés de leur propre catalogue.
+
+**Deux corrections issues de la revue automatique, sur #905 :**
+
+- le premier jet bornait avec un `LIMIT` **global** sur le MULTIPOINT combiné : une étape dense pouvait affamer une étape rurale (reproduit : 60 lignes renvoyées, **0** pour le point isolé). Le LATERAL par point a été **écarté avec mesures** (7 passages sur la table, 1119 ms contre 154 ms) et surtout parce qu'il ne corrige pas complètement la famine, `distributeByEndpoint` attribuant au point le plus proche ;
+- second tour : la métrique `<->` sur `geometry` (degrés WGS84) ne correspond pas à la Haversine utilisée en aval, et `WktGeometry::multiPoint()` passe par `array_unique`, donc **deux points d'arrivée identiques — un jour de repos — partagent un seul budget**.
 
 ### Recette Sprint 45
 
