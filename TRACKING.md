@@ -1301,7 +1301,7 @@ Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais l
 
 ### Recette Sprint 45
 
-- **Tests E2E :** étendre `pwa/tests/mocked/accommodation.spec.ts` (rechargement après scan, badge de source, lien de site). Les hébergements de `pwa/tests/fixtures/mock-data.ts` n'ont aujourd'hui ni `url`, ni `imageUrl`, ni `description` : à enrichir.
+- **Tests E2E :** faits. `pwa/tests/mocked/accommodation.spec.ts` couvre le lien de site (#904) et le rechargement après scan avec badge de source et vignette (#907). Les deux hébergements de `pwa/tests/fixtures/mock-data.ts` portent désormais `url` (#904) et `description` / `imageUrl` / `source` (#907) — **ne pas en ajouter un troisième**, `accommodation-hover.spec.ts` asserte `toHaveCount(2)`.
 - **Checklist manuelle :**
   - [ ] `SELECT category, count(*) FROM tourism.accommodations GROUP BY 1` ne montre plus de bucket `apartment` fourre-tout.
   - [ ] Le type gîte / meublé est **décoché par défaut** sur un nouveau voyage ; le cocher fait apparaître des gîtes.
