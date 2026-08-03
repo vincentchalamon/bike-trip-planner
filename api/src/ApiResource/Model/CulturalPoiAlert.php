@@ -49,6 +49,14 @@ final readonly class CulturalPoiAlert extends Alert
         public ?string $imageUrl = null,
         #[ApiProperty(description: 'Wikipedia article URL.')]
         public ?string $wikipediaUrl = null,
+        // The (osmType, osmId) pair is the primary key of the Tier-1 index and the
+        // only stable identity an OSM entry has: it is what lets the rider open the
+        // object on openstreetmap.org to check it still exists — or fix it at the
+        // source. Null for a DataTourisme entry, which has no OSM identity.
+        #[ApiProperty(description: 'OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM.')]
+        public ?string $osmType = null,
+        #[ApiProperty(description: 'OpenStreetMap object id. Null when the entry does not come from OSM.')]
+        public ?int $osmId = null,
     ) {
         parent::__construct($type, $message, $lat, $lon, $action);
     }

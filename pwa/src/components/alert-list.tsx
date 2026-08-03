@@ -158,6 +158,12 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 );
 
               const wikipediaHref = normalizeExternalUrl(alert.wikipediaUrl);
+              // Tier-1 primary key: the rider can check the POI still exists, or
+              // fix it at the source. Absent on a curated DataTourisme entry.
+              const osmHref =
+                alert.osmType && alert.osmId
+                  ? `https://www.openstreetmap.org/${alert.osmType}/${alert.osmId}`
+                  : null;
 
               // Some action kinds are not wired yet; surface them as disabled.
               const isActionDisabled = Boolean(
@@ -245,6 +251,17 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                           data-testid="poi-wikipedia-link"
                         >
                           {t("see_on_wikipedia")}
+                        </a>
+                      )}
+                      {osmHref && (
+                        <a
+                          href={osmHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+                          data-testid="poi-osm-link"
+                        >
+                          {t("see_on_osm")}
                         </a>
                       )}
                     </div>

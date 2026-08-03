@@ -144,8 +144,9 @@ final class DataTourismeImporterTest extends TestCase
         $importer->run($this->workDir);
 
         // 1 staging DDL + 4 \copy + 4 GIST index + 1 events-date index + 1 metadata
-        // + 6 enrichment-pass psql calls (no Q-IDs to fetch in this fixture) + 1 swap.
-        self::assertCount(18, $this->captured);
+        // + 7 enrichment-pass psql calls (prepare, collect, export, one UPDATE per
+        // Wikidata table, drop; no Q-IDs to fetch in this fixture) + 1 swap.
+        self::assertCount(19, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
@@ -338,6 +339,15 @@ final class DataTourismeImporterTest extends TestCase
             'cultural_pois is enriched from the cache, keeping source-set fields',
         );
         self::assertTrue($has('UPDATE tourism_staging.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
+        // accommodations joined the enriched tables with its `wikidata` column (#872).
+        self::assertTrue(
+            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging.accommodations'),
+            'accommodation Q-IDs are collected too',
+        );
+        self::assertTrue(
+            $has('UPDATE tourism_staging.accommodations t SET', "image_url = c.payload->>'imageUrl'", "wikipedia_url = c.payload->>'wikipediaUrl'", 'FROM provisioner.wikidata_cache c'),
+            'accommodations receives the Wikidata description, image and Wikipedia URL',
+        );
         self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates_tourism_staging, provisioner.wikidata_fetch_tourism_staging'), 'scratch tables are dropped');
 
         $fetch = (string) file_get_contents($this->workDir.'/wikidata-fetch.copy');
@@ -444,6 +454,152 @@ final class DataTourismeImporterTest extends TestCase
 
         $event = explode("\t", rtrim((string) file_get_contents($this->workDir.'/tourism-events.copy'), "\n"));
         self::assertSame('https://festival.test', $event[5], 'events.url is populated instead of always null');
+    }
+
+    /**
+     * tourism.accommodations was the poorest table of the schema: no website, no
+     * phone, no opening_hours, no wikidata, so no curated lodging could ever expose
+     * a link and none of them could be Wikidata-enriched (#872).
+     */
+    #[Test]
+    public function loadsTheAccommodationContactColumns(): void
+    {
+        $zipPath = $this->workDir.'/lodging.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/camping.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/camping',
+            '@type' => ['Accommodation', 'Camping'],
+            'rdfs:label' => ['fr' => ['Camping du Lac']],
+            'owl:sameAs' => ['https://www.wikidata.org/entity/Q1234'],
+            // Schema-less on purpose: the stored value must be absolutised.
+            'foaf:homepage' => ['www.camping-du-lac.test'],
+            'hasContact' => [[
+                '@type' => ['Agent'],
+                'schema:telephone' => ['+33 3 88 00 00 00'],
+            ]],
+            'isLocatedAt' => [[
+                '@type' => ['PlaceOfInterest'],
+                'schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3'],
+                'schema:openingHoursSpecification' => [[
+                    '@type' => ['schema:OpeningHoursSpecification'],
+                    'schema:validFrom' => '2026-04-01',
+                    'schema:validThrough' => '2026-10-31',
+                ]],
+            ]],
+        ]));
+        // A homepage no browser can open must be stored NULL, not as is.
+        $zip->addFromString('objects/0/00/hotel.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/hotel',
+            '@type' => ['Accommodation', 'Hotel'],
+            'rdfs:label' => ['fr' => ['Hotel du Parc']],
+            'foaf:homepage' => ['nous contacter'],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.6', 'schema:longitude' => '2.4']]],
+        ]));
+        $zip->close();
+
+        $bytes = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse($bytes)),
+            processFactory: $this->capturingFactory(),
+        );
+        $importer->run($this->workDir);
+
+        $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains(
+                $c,
+                '\copy tourism_staging.accommodations (id, name, category, capacity, price, description, opening_hours, website, phone, wikidata, tags, geom)',
+            )),
+            'accommodations is copied with its contact columns',
+        );
+
+        $rows = array_map(
+            static fn (string $line): array => explode("\t", $line),
+            explode("\n", rtrim((string) file_get_contents($this->workDir.'/tourism-accommodations.copy'), "\n")),
+        );
+        self::assertCount(2, $rows);
+
+        [$camping, $hotel] = $rows;
+        self::assertSame('Apr-Oct', $camping[6]);
+        self::assertSame('https://www.camping-du-lac.test', $camping[7], 'a schema-less homepage is absolutised');
+        self::assertSame('+33 3 88 00 00 00', $camping[8]);
+        self::assertSame('Q1234', $camping[9], 'the Q-ID reaches the column the enrichment pass joins on');
+
+        self::assertSame('\N', $hotel[7], 'an unusable homepage is stored NULL rather than as is');
+    }
+
+    /**
+     * The staging DDL and the live-schema migrations must describe the same
+     * tourism.accommodations, or the atomic swap silently changes the table the API
+     * reads. Asserted rather than eyeballed (#872).
+     *
+     * The migrations live in the API package, which is not mounted in the
+     * provisioner container; CI runs this suite from the repository root, where it
+     * is the real gate.
+     */
+    #[Test]
+    public function theStagingDdlMatchesTheAccommodationMigrations(): void
+    {
+        $migrationsDir = __DIR__.'/../../api/migrations';
+        if (!is_dir($migrationsDir)) {
+            self::markTestSkipped('api/migrations is not reachable from here (provisioner container mounts ./provisioner alone)');
+        }
+
+        $reflection = new \ReflectionClass(DataTourismeImporter::class);
+        /** @var array<string, string> $stagingDdl */
+        $stagingDdl = $reflection->getConstant('STAGING_DDL');
+        $staging = $this->columnNames($stagingDdl['accommodations']);
+
+        $migrated = [];
+        foreach (glob($migrationsDir.'/Version*.php') ?: [] as $file) {
+            $source = (string) file_get_contents($file);
+            if (!str_contains($source, 'tourism.accommodations')) {
+                continue;
+            }
+
+            if (1 === preg_match('/CREATE TABLE IF NOT EXISTS tourism\.accommodations \((.*?)\n\s*\)/s', $source, $matches)) {
+                $migrated = array_merge($migrated, $this->columnNames($matches[1]));
+            }
+
+            if (!str_contains($source, 'ALTER TABLE tourism.accommodations ADD COLUMN')) {
+                continue;
+            }
+
+            // Contract with the migration: the added columns are declared in a
+            // `COLUMNS` constant so this test can read them back.
+            self::assertSame(1, preg_match('/const array COLUMNS = \[(.*?)\];/s', $source, $matches), \sprintf('%s alters tourism.accommodations but does not list its columns in a COLUMNS constant', basename($file)));
+            preg_match_all("/'([a-z_]+)'/", $matches[1], $names);
+            $migrated = array_merge($migrated, $names[1]);
+        }
+
+        sort($staging);
+        sort($migrated);
+        self::assertSame($migrated, $staging, 'the provisioner staging DDL and the Doctrine migrations describe a different tourism.accommodations');
+    }
+
+    /**
+     * Column names of a comma-separated column-definition list, parenthesised
+     * type arguments (`numeric(10, 2)`, `geometry(Point, 4326)`) removed first so
+     * their commas do not split a definition, and table constraints skipped.
+     *
+     * @return list<string>
+     */
+    private function columnNames(string $definitions): array
+    {
+        $flattened = (string) preg_replace('/\([^)]*\)/', '', $definitions);
+
+        $names = [];
+        foreach (explode(',', $flattened) as $definition) {
+            if (1 === preg_match('/^\s*([a-z_]+)\s/', $definition, $matches)) {
+                $names[] = $matches[1];
+            }
+        }
+
+        return $names;
     }
 
     #[Test]

@@ -218,6 +218,12 @@ export function accommodationsFoundEvent(
           description: "Hôtel familial à deux pas du pont.",
           // Unusable OSM `website` tag: renders no link at all, no error.
           url: "appeler le 06 12 34 56 78",
+          // Contact block and OSM identity (issue #873): the phone renders as a
+          // `tel:` link, and the (way, 42) pair as a link to that exact object —
+          // a hardcoded `node` would point at a different feature entirely.
+          phone: "+33 4 75 00 00 00",
+          osmType: "way",
+          osmId: 42,
         },
       ],
     },

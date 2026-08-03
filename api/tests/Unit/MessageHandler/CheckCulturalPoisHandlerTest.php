@@ -202,6 +202,65 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         return $registry;
     }
 
+    /**
+     * @return iterable<string, array{array<string, mixed>, ?string, ?int}>
+     */
+    public static function osmIdentityProvider(): iterable
+    {
+        yield 'osm way' => [['osmType' => 'way', 'osmId' => 4242], 'way', 4242];
+        yield 'osm relation' => [['osmType' => 'relation', 'osmId' => 7], 'relation', 7];
+        // A curated entry carries no OSM identity: the flux has no join key toward
+        // OSM, so the alert must not advertise a link it cannot build.
+        yield 'datatourisme entry' => [['osmType' => null, 'osmId' => null], null, null];
+    }
+
+    /**
+     * @param array<string, mixed> $identity
+     */
+    #[DataProvider('osmIdentityProvider')]
+    #[Test]
+    public function theOsmIdentityReachesTheAlert(array $identity, ?string $expectedType, ?int $expectedId): void
+    {
+        $tripStateManager = $this->createTripStateManager([$this->createStage(1)]);
+
+        $registry = $this->makeRegistryWithPois([
+            ['name' => 'Castle Rock', 'type' => 'castle', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'] + $identity,
+        ]);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(250.0);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler(new CheckCulturalPois('trip-1'));
+
+        $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
+        $event = array_first($alertEvents);
+        self::assertNotNull($event);
+        $alert = $event['payload']['alerts'][0];
+
+        if (null === $expectedType) {
+            self::assertArrayNotHasKey('osmType', $alert);
+            self::assertArrayNotHasKey('osmId', $alert);
+
+            return;
+        }
+
+        self::assertSame($expectedType, $alert['osmType']);
+        self::assertSame($expectedId, $alert['osmId']);
+    }
+
     #[Test]
     public function nullStagesYieldsNoPublish(): void
     {

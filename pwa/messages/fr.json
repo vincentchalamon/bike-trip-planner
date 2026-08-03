@@ -157,7 +157,8 @@
     "deselect": "Désélectionner l'hébergement",
     "selected": "Sélectionné",
     "selectTooltip": "Sélectionner cet hébergement comme étape de nuit",
-    "see_on_wikipedia": "Voir sur Wikipedia"
+    "see_on_wikipedia": "Voir sur Wikipedia",
+    "see_on_osm": "Voir sur OpenStreetMap"
   },
   "addStage": {
     "add": "Ajouter une étape",
@@ -343,7 +344,8 @@
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",
     "free": "Entrée gratuite",
-    "see_on_wikipedia": "Voir sur Wikipedia"
+    "see_on_wikipedia": "Voir sur Wikipedia",
+    "see_on_osm": "Voir sur OpenStreetMap"
   },
   "poiPopover": {
     "close": "Fermer",

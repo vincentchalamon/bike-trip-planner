@@ -28,6 +28,9 @@ final readonly class DataTourismeFoodPoiSource implements PoiSourceInterface
                 'category' => $poi['category'],
                 'lat' => $poi['lat'],
                 'lon' => $poi['lon'],
+                // A curated entry has no OSM identity: there is no join key from the flux.
+                'osmType' => null,
+                'osmId' => null,
                 'wikidataId' => $poi['wikidata'],
                 'source' => 'datatourisme',
             ];

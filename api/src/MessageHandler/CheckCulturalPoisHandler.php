@@ -188,6 +188,12 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         $alert['wikipediaUrl'] = $poi['wikipediaUrl'];
                     }
 
+                    // Only an OSM entry has one; a curated DataTourisme POI does not.
+                    if (null !== ($poi['osmType'] ?? null) && null !== ($poi['osmId'] ?? null)) {
+                        $alert['osmType'] = $poi['osmType'];
+                        $alert['osmId'] = $poi['osmId'];
+                    }
+
                     $alerts[] = $alert;
                 }
             }

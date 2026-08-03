@@ -433,4 +433,89 @@ final class DataTourismeMapperTest extends TestCase
         self::assertNull($row['openingHours']);
         self::assertArrayNotHasKey('opening_hours', $row['tags']);
     }
+
+    /**
+     * tourism.accommodations gained website / phone / opening_hours / wikidata
+     * columns (#872), so the row must carry each of them, not just the tags.
+     */
+    #[Test]
+    public function exposesTheAccommodationContactAndQidAsRowFields(): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', 'Camping'], [
+            'owl:sameAs' => ['https://www.wikidata.org/entity/Q1234'],
+            'hasContact' => [[
+                '@type' => ['Agent'],
+                'foaf:homepage' => ['https://camping.test'],
+                'schema:telephone' => ['+33 3 88 00 00 00'],
+            ]],
+            'takesPlaceAt' => [[
+                '@type' => ['OpeningHoursSpecification'],
+                'startDate' => '2026-04-01',
+                'endDate' => '2026-10-31',
+            ]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://camping.test', $row['website']);
+        self::assertSame('+33 3 88 00 00 00', $row['phone']);
+        self::assertSame('Apr-Oct', $row['openingHours']);
+        self::assertSame('Q1234', $row['wikidata']);
+    }
+
+    /**
+     * A schema-less homepage — what an office de tourisme types most often — is
+     * absolutised, otherwise the browser resolves it against the app origin.
+     */
+    #[Test]
+    public function absolutisesASchemaLessHomepage(): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', 'Hotel'], [
+            'foaf:homepage' => ['www.Hotel-Du-Parc.fr/chambres?ref=dt'],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://www.hotel-du-parc.fr/chambres?ref=dt', $row['website']);
+        self::assertSame('https://www.hotel-du-parc.fr/chambres?ref=dt', $row['tags']['website']);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unusableHomepages(): array
+    {
+        return [
+            'free text' => ['nous contacter'],
+            'e-mail address' => ['contact@gite.test'],
+            'mailto scheme' => ['mailto:contact@gite.test'],
+            'tel scheme' => ['tel:+33388000000'],
+            'script scheme' => ['javascript:alert(1)'],
+            'bare word' => ['gite'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('unusableHomepages')]
+    public function dropsAHomepageThatIsNotAUsableUrl(string $homepage): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', 'Hotel'], [
+            'foaf:homepage' => [$homepage],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertNull($row['website'], 'an unusable value is stored NULL rather than as is');
+        self::assertArrayNotHasKey('website', $row['tags']);
+    }
+
+    #[Test]
+    public function fallsBackToTheNextHomepageWhenTheFirstIsUnusable(): void
+    {
+        // A rejected top-level homepage must not shadow a usable contact one.
+        $row = $this->mapper->map($this->object(['Accommodation', 'Hotel'], [
+            'foaf:homepage' => ['nous contacter'],
+            'hasContact' => [['@type' => ['Agent'], 'foaf:homepage' => ['hotel-du-parc.fr']]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://hotel-du-parc.fr', $row['website']);
+    }
 }

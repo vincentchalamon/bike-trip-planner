@@ -27,7 +27,7 @@ final class OsmCulturalPoiSourceTest extends TestCase
     public function mapsRepositoryRowToCandidate(): void
     {
         $source = $this->makeSource($this->repository([
-            ['name' => 'Louvre', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => null],
+            ['name' => 'Louvre', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => null, 'osmType' => 'relation', 'osmId' => 99],
         ]));
 
         $result = $source->fetchForStages($this->stageGeometries(), 500);
@@ -38,6 +38,9 @@ final class OsmCulturalPoiSourceTest extends TestCase
         self::assertSame(48.2, $result[0]['lat']);
         self::assertSame(2.2, $result[0]['lon']);
         self::assertSame('osm', $result[0]['source']);
+        // Tier-1 primary key: without it the "see on OSM" link cannot be built.
+        self::assertSame('relation', $result[0]['osmType']);
+        self::assertSame(99, $result[0]['osmId']);
         self::assertNull($result[0]['openingHours']);
         self::assertNull($result[0]['estimatedPrice']);
         self::assertNull($result[0]['description']);
@@ -139,7 +142,7 @@ final class OsmCulturalPoiSourceTest extends TestCase
     {
         // Default the provisioner-enriched columns the read layer now returns.
         $rows = array_map(
-            static fn (array $row): array => $row + ['openingHours' => null, 'description' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
+            static fn (array $row): array => $row + ['osmType' => null, 'osmId' => null, 'openingHours' => null, 'description' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
             $rows,
         );
 

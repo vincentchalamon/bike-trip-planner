@@ -118,6 +118,8 @@ final readonly class StagePayloadMapper
             'lat' => $poi->lat,
             'lon' => $poi->lon,
             'distanceFromStart' => $poi->distanceFromStart,
+            'osmType' => $poi->osmType,
+            'osmId' => $poi->osmId,
         ];
     }
 
@@ -140,6 +142,9 @@ final readonly class StagePayloadMapper
             'imageUrl' => $accommodation->imageUrl,
             'wikipediaUrl' => $accommodation->wikipediaUrl,
             'openingHours' => $accommodation->openingHours,
+            'phone' => $accommodation->phone,
+            'osmType' => $accommodation->osmType,
+            'osmId' => $accommodation->osmId,
         ];
     }
 

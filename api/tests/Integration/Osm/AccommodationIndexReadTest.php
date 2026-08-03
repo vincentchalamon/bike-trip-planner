@@ -262,6 +262,45 @@ final class AccommodationIndexReadTest extends KernelTestCase
         );
     }
 
+    #[Test]
+    public function fetchPropagatesTheContactBlockAndTheOsmIdentity(): void
+    {
+        // Own fixtures: the OSM identity is a per-row property, so the three object
+        // types must be told apart, which the shared setUp rows (all nodes) cannot do.
+        $this->connection->executeStatement('TRUNCATE osm.accommodations');
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, website, tags, geom) VALUES
+              ('n', 11, 'Hotel Node', 'hotel', NULL, '{"contact:phone": "+33 4 66 00 00 01"}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
+              ('w', 22, 'Camping Way', 'camp_site', NULL, '{"contact:url": "gite-du-lac.example/reserver"}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
+              ('r', 33, 'Auberge Relation', 'hostel', NULL, '{"phone": "0466000003", "contact:phone": "ignored"}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+
+        $byName = [];
+        foreach ($this->source()->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel', 'camp_site', 'hostel']) as $candidate) {
+            $byName[$candidate['name']] = $candidate;
+        }
+
+        // osm_type is stored as the one-character osm2pgsql code; the candidate
+        // carries the word openstreetmap.org expects in an object URL.
+        self::assertSame('node', $byName['Hotel Node']['osmType']);
+        self::assertSame(11, $byName['Hotel Node']['osmId']);
+        self::assertSame('way', $byName['Camping Way']['osmType']);
+        self::assertSame(22, $byName['Camping Way']['osmId']);
+        self::assertSame('relation', $byName['Auberge Relation']['osmType']);
+        self::assertSame(33, $byName['Auberge Relation']['osmId']);
+
+        // The contact block: `contact:phone` alone is enough, `phone` wins a tie.
+        self::assertSame('+33 4 66 00 00 01', $byName['Hotel Node']['phone']);
+        self::assertSame('0466000003', $byName['Auberge Relation']['phone']);
+        self::assertNull($byName['Camping Way']['phone']);
+
+        // A `contact:url`-only entry gets a link, normalised to an absolute URL
+        // even though the flux value carried no scheme.
+        self::assertSame('https://gite-du-lac.example/reserver', $byName['Camping Way']['url']);
+        self::assertTrue($byName['Camping Way']['hasWebsite']);
+        self::assertNull($byName['Hotel Node']['url']);
+    }
+
     /**
      * 40 extra hotels, 111 m apart along the meridian, all inside the 5 km radius
      * (41 rows in range with the setUp hotel, for a 30-row cap). Inserted farthest

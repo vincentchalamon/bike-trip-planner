@@ -22,7 +22,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
     /**
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string|null, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
+     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
      */
     public function fetchForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -37,6 +37,9 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
                 'type' => $poi['category'],
                 'lat' => $poi['lat'],
                 'lon' => $poi['lon'],
+                // A curated entry has no OSM identity: there is no join key from the flux.
+                'osmType' => null,
+                'osmId' => null,
                 'openingHours' => $poi['openingHours'],
                 'estimatedPrice' => null,
                 'description' => $poi['description'],

@@ -26,6 +26,8 @@ final readonly class OsmPoiSource implements PoiSourceInterface
                 'category' => $poi['category'],
                 'lat' => $poi['lat'],
                 'lon' => $poi['lon'],
+                'osmType' => $poi['osmType'],
+                'osmId' => $poi['osmId'],
                 'wikidataId' => null,
                 'source' => 'osm',
             ];

@@ -29,7 +29,7 @@ readonly class PoiSourceRegistry
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}>
+     * @return list<array{name: string|null, category: string, lat: float, lon: float, osmType: string|null, osmId: int|null, wikidataId: string|null, source: string}>
      */
     public function fetchAllInCorridor(array $route, int $radiusMeters): array
     {
@@ -40,7 +40,7 @@ readonly class PoiSourceRegistry
             }
         }
 
-        /** @var list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $deduped */
+        /** @var list<array{name: string|null, category: string, lat: float, lon: float, osmType: string|null, osmId: int|null, wikidataId: string|null, source: string}> $deduped */
         $deduped = $this->deduplicator->dedupe($all);
 
         return $deduped;

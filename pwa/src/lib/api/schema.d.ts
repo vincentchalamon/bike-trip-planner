@@ -764,6 +764,12 @@ export interface components {
             wikipediaUrl?: string | null;
             /** @description Opening hours (Wikidata P8989 or DataTourisme). */
             openingHours?: string | null;
+            /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
+            phone?: string | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "Accommodation.gpx": {
             name?: string;
@@ -785,6 +791,12 @@ export interface components {
             wikipediaUrl?: string | null;
             /** @description Opening hours (Wikidata P8989 or DataTourisme). */
             openingHours?: string | null;
+            /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
+            phone?: string | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "Accommodation.jsonld": {
             name?: string;
@@ -806,6 +818,12 @@ export interface components {
             wikipediaUrl?: string | null;
             /** @description Opening hours (Wikidata P8989 or DataTourisme). */
             openingHours?: string | null;
+            /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
+            phone?: string | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "AccommodationScan.AccommodationScanRequest": {
             /**
@@ -1243,6 +1261,10 @@ export interface components {
             lat?: number;
             lon?: number;
             distanceFromStart?: number | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "PointOfInterest.gpx": {
             name?: string;
@@ -1250,6 +1272,10 @@ export interface components {
             lat?: number;
             lon?: number;
             distanceFromStart?: number | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "PointOfInterest.jsonld": {
             name?: string;
@@ -1257,6 +1283,10 @@ export interface components {
             lat?: number;
             lon?: number;
             distanceFromStart?: number | null;
+            /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
+            osmType?: string | null;
+            /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
+            osmId?: number | null;
         };
         "Stage.StagePoiWaypointRequest": {
             /** @description POI latitude to insert as waypoint. */
@@ -1793,6 +1823,8 @@ export interface components {
                     lat?: number;
                     lon?: number;
                     distanceFromStart?: number | null;
+                    osmType?: ("node" | "way" | "relation") | null;
+                    osmId?: number | null;
                 }[];
                 accommodations?: {
                     name?: string;
@@ -2038,6 +2070,8 @@ export interface components {
                     lat?: number;
                     lon?: number;
                     distanceFromStart?: number | null;
+                    osmType?: ("node" | "way" | "relation") | null;
+                    osmId?: number | null;
                 }[];
                 accommodations?: {
                     name?: string;
