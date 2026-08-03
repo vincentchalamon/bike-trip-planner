@@ -68,6 +68,11 @@ final class OpeningHoursTest extends TestCase
         yield 'plain prose' => ['summer only'];
         yield 'weekday selector without hours' => ['Mo-Fr'];
         yield 'out-of-range hour' => ['Mo-Fr 09:00-25:00'];
+        // The tail of a midnight-crossing span belongs to the next day, which this
+        // reader does not track. Folding it back would leave Saturday 01:00 with no
+        // rule, hence reported as known closed while the venue is actually open.
+        yield 'midnight crossing on a single day' => ['Fr 18:00-02:00'];
+        yield 'midnight crossing on a partial week' => ['Mo-Fr 18:00-02:00'];
     }
 
     #[Test]

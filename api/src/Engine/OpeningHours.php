@@ -153,9 +153,17 @@ final readonly class OpeningHours
             }
 
             if ($close < $open) {
-                // Crossing midnight: the tail really belongs to the next day, but
-                // folding it back into the same day only widens the open window,
-                // which is the safe direction here.
+                if (7 !== \count(array_unique($days))) {
+                    // The tail belongs to the *next* day, which this reader does not
+                    // track per day. Folding it back would leave that next day with no
+                    // rule at all, hence reported as known closed during the spillover —
+                    // a closure nothing established. Unknown is the honest answer.
+                    return null;
+                }
+
+                // Crossing midnight, but every day carries the same rule, so folding the
+                // tail into the same day cannot misattribute it: the next day owns an
+                // identical slot anyway. This only widens the open window.
                 $slots[] = ['open' => $open, 'close' => 24.0];
                 $slots[] = ['open' => 0.0, 'close' => $close];
 

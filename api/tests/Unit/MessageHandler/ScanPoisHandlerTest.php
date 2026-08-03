@@ -46,8 +46,8 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage], 'fr');
 
         $registry = $this->poiSourceRegistry([
-            ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1],
-            ['name' => null, 'category' => 'bakery', 'lat' => 48.1003, 'lon' => 2.1],
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1003, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -174,14 +174,14 @@ final class ScanPoisHandlerTest extends TestCase
      * deduplicator (transparent here: every fixture has a distinct name). An
      * optional callback captures the corridor route the source receives.
      *
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
      * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null $captureRoute
      */
     private function poiSourceRegistry(array $pois, ?\Closure $captureRoute = null): PoiSourceRegistry
     {
         $source = new readonly class ($pois, $captureRoute) implements PoiSourceInterface {
             /**
-             * @param list<array{name: ?string, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
+             * @param list<array{name: string|null, category: string, lat: float, lon: float, osmType?: ?string, osmId?: ?int, openingHours: string|null, website: string|null}> $pois
              * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null $captureRoute
              */
             public function __construct(private array $pois, private ?\Closure $captureRoute)
@@ -536,7 +536,7 @@ final class ScanPoisHandlerTest extends TestCase
      * Runs the handler on an 80 km stage carrying $pois, the rider passing each of
      * them at $passageTime, and returns the alerts published for that stage.
      *
-     * @param list<array{name: string, category: string, lat: float, lon: float, openingHours: string|null, website: string|null}> $pois
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, openingHours: string|null, website: string|null}> $pois
      *
      * @return list<array<string, mixed>>
      */
