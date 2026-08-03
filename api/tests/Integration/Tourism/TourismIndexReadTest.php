@@ -43,16 +43,17 @@ final class TourismIndexReadTest extends KernelTestCase
             SQL);
 
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO tourism.cultural_pois (id, name, category, opening_hours, description, wikidata, image_url, wikipedia_url, tags, geom) VALUES
-              ('c1', 'Musée du Lac', 'museum', 'Mo-Fr 09:00-17:00', 'Un musée.', 'Q42', 'https://img.test/musee.jpg', 'https://fr.wikipedia.org/wiki/Musee', '{}'::jsonb,
+            INSERT INTO tourism.cultural_pois (id, name, category, opening_hours, description, website, wikidata, image_url, wikipedia_url, tags, geom) VALUES
+              ('c1', 'Musée du Lac', 'museum', 'Mo-Fr 09:00-17:00', 'Un musée.', 'https://musee.test', 'Q42', 'https://img.test/musee.jpg', 'https://fr.wikipedia.org/wiki/Musee', '{"type": ["CulturalSite"], "city": "Nancy"}'::jsonb,
                   ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
-              ('c2', 'Far Museum', 'museum', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb,
+              ('c2', 'Far Museum', 'museum', NULL, NULL, NULL, NULL, NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(6.80, 50.90), 4326))
             SQL);
 
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
-              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL, '{}'::jsonb,
+              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL,
+                  '{"type": ["Accommodation", "RentalAccommodation"], "website": "https://gite.test", "opening_hours": "Apr-Oct", "labels": ["Accueil Vélo"]}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326)),
               ('a2', 'Grand Hôtel', 'hotel', NULL, NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
@@ -111,6 +112,12 @@ final class TourismIndexReadTest extends KernelTestCase
         self::assertSame('Gîte du Lac', $accommodations[0]['name']);
         self::assertSame(4, $accommodations[0]['capacity']);
         self::assertSame(75.0, $accommodations[0]['price']);
+        // The preserved flux keys reach the source flattened to the OSM-tag contract:
+        // scalars only, so the list-valued `type` / `labels` stay in the jsonb (#871).
+        self::assertSame(
+            ['website' => 'https://gite.test', 'opening_hours' => 'Apr-Oct'],
+            $accommodations[0]['tags'],
+        );
     }
 
     #[Test]

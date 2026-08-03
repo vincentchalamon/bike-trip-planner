@@ -277,4 +277,160 @@ final class DataTourismeMapperTest extends TestCase
         self::assertNotNull($row);
         self::assertSame('Q12345', $row['wikidata']);
     }
+
+    /**
+     * A full flux object: everything the source publishes and the row has no column
+     * for must survive in `tags`, or it is unrecoverable short of a re-import (#871).
+     */
+    #[Test]
+    public function preservesTheContactAddressMediaAndLabelsInTags(): void
+    {
+        $row = $this->mapper->map($this->object(['CulturalSite', 'Museum'], [
+            'hasContact' => [[
+                '@type' => ['Agent'],
+                'schema:telephone' => ['+33 3 88 00 00 00'],
+                'schema:email' => ['contact@musee.test'],
+                'foaf:homepage' => ['https://musee.test'],
+            ]],
+            'hasBookingContact' => [[
+                '@type' => ['Agent'],
+                'foaf:homepage' => ['https://booking.test/musee'],
+            ]],
+            'isLocatedAt' => [[
+                '@type' => ['PlaceOfInterest'],
+                'schema:geo' => ['schema:latitude' => '49.1', 'schema:longitude' => '7.13'],
+                'schema:address' => [[
+                    '@type' => ['schema:PostalAddress'],
+                    'schema:streetAddress' => ['1 place du Château'],
+                    'schema:postalCode' => '67000',
+                    'hasAddressCity' => ['@type' => ['City'], 'rdfs:label' => ['fr' => ['Strasbourg']]],
+                ]],
+            ]],
+            'hasMainRepresentation' => [[
+                '@type' => ['MediaRepresentation'],
+                'ebucore:hasRelatedResource' => [[
+                    '@type' => ['MediaResource'],
+                    'ebucore:locator' => ['https://cdn.test/musee.jpg'],
+                ]],
+            ]],
+            'hasClassification' => [['@type' => ['TouristicLabel'], 'rdfs:label' => ['fr' => ['Accueil Vélo']]]],
+            'hasFeature' => [['@type' => ['Equipment'], 'rdfs:label' => ['fr' => ['Parking à vélos']]]],
+            // Bulk free text and provenance are deliberately NOT kept.
+            'hasReview' => [['@type' => ['Review'], 'rdfs:comment' => ['fr' => ['Un très long avis.']]]],
+            'lastUpdateDatatourisme' => '2026-07-31',
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://musee.test', $row['website']);
+        self::assertSame([
+            'type' => ['CulturalSite', 'Museum'],
+            'website' => 'https://musee.test',
+            'phone' => '+33 3 88 00 00 00',
+            'email' => 'contact@musee.test',
+            'booking_url' => 'https://booking.test/musee',
+            'address' => '1 place du Château',
+            'postal_code' => '67000',
+            'city' => 'Strasbourg',
+            'image_url' => 'https://cdn.test/musee.jpg',
+            'labels' => ['Accueil Vélo', 'Parking à vélos'],
+        ], $row['tags']);
+    }
+
+    #[Test]
+    public function keepsOnlyTheTypeListWhenTheObjectCarriesNothingElse(): void
+    {
+        // The selection is opt-in: a bare object must not gain null-valued keys.
+        $row = $this->mapper->map($this->object(['CulturalSite', 'Museum']));
+
+        self::assertNotNull($row);
+        self::assertSame(['type' => ['CulturalSite', 'Museum']], $row['tags']);
+        self::assertNull($row['website']);
+        self::assertNull($row['openingHours']);
+    }
+
+    #[Test]
+    public function fallsBackToTheBookingContactForTheWebsite(): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', 'Hotel'], [
+            'hasBookingContact' => [['@type' => ['Agent'], 'foaf:homepage' => ['https://booking.test/hotel']]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://booking.test/hotel', $row['website']);
+    }
+
+    #[Test]
+    public function usesTheTopLevelHomepageAsTheOfficialWebsite(): void
+    {
+        $row = $this->mapper->map($this->object(['EntertainmentAndEvent', 'Festival'], [
+            'foaf:homepage' => ['https://festival.test'],
+            'hasContact' => [['@type' => ['Agent'], 'foaf:homepage' => ['https://organiser.test']]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('https://festival.test', $row['website']);
+    }
+
+    /**
+     * The flux publishes one OpeningHoursSpecification per period; the row keeps
+     * their envelope in the OSM-ish syntax SeasonalityChecker parses.
+     */
+    #[Test]
+    public function mapsTheOpeningSpecificationsToASeasonString(): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', 'Camping'], [
+            'isLocatedAt' => [[
+                '@type' => ['PlaceOfInterest'],
+                'schema:geo' => ['schema:latitude' => '49.1', 'schema:longitude' => '7.13'],
+                'schema:openingHoursSpecification' => [
+                    [
+                        '@type' => ['schema:OpeningHoursSpecification'],
+                        'schema:validFrom' => '2026-04-15',
+                        'schema:validThrough' => '2026-06-30',
+                        'schema:opens' => '09:00:00',
+                        'schema:closes' => '18:00:00',
+                    ],
+                    [
+                        '@type' => ['schema:OpeningHoursSpecification'],
+                        'schema:validFrom' => '2026-07-01',
+                        'schema:validThrough' => '2026-10-31',
+                        'schema:opens' => '08:00:00',
+                        'schema:closes' => '20:00:00',
+                    ],
+                ],
+            ]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('Apr-Oct 08:00-20:00', $row['openingHours']);
+        self::assertSame('Apr-Oct 08:00-20:00', $row['tags']['opening_hours']);
+    }
+
+    #[Test]
+    public function readsTheDataTourismeNamingOfTheOpeningSpecifications(): void
+    {
+        // takesPlaceAt uses startDate/endDate rather than schema:validFrom/Through.
+        $row = $this->mapper->map($this->object(['CulturalSite', 'Museum'], [
+            'takesPlaceAt' => [[
+                '@type' => ['OpeningHoursSpecification'],
+                'startDate' => '2026-05-01',
+                'endDate' => '2026-09-30',
+            ]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertSame('May-Sep', $row['openingHours']);
+    }
+
+    #[Test]
+    public function ignoresOpeningSpecificationsWithoutUsableDatesOrTimes(): void
+    {
+        $row = $this->mapper->map($this->object(['CulturalSite', 'Museum'], [
+            'takesPlaceAt' => [['@type' => ['OpeningHoursSpecification'], 'schema:dayOfWeek' => ['Monday']]],
+        ]));
+
+        self::assertNotNull($row);
+        self::assertNull($row['openingHours']);
+        self::assertArrayNotHasKey('opening_hours', $row['tags']);
+    }
 }

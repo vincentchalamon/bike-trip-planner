@@ -37,7 +37,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string}>
+     * @return list<array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array
     {
@@ -72,7 +72,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 SELECT ranked.*
                 FROM (
                     SELECT a.id,
-                           a.name, a.category, a.capacity, a.price, a.description,
+                           a.name, a.category, a.capacity, a.price, a.description, a.tags,
                            ST_Y(a.geom) AS lat, ST_X(a.geom) AS lon,
                            nearest.point_index, nearest.distance,
                            ROW_NUMBER() OVER (
@@ -119,9 +119,40 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 'capacity' => null !== $row['capacity'] ? (int) $row['capacity'] : null,
                 'price' => null !== $row['price'] ? (float) $row['price'] : null,
                 'description' => null !== $row['description'] && '' !== $row['description'] ? (string) $row['description'] : null,
+                'tags' => $this->decodeTags($row['tags']),
             ];
         }
 
         return $accommodations;
+    }
+
+    /**
+     * The flux keys the provisioner preserved (DataTourismeMapper::tags), flattened
+     * to the OSM-tag contract the consumers share: `opening_hours` is what
+     * SeasonalityChecker reads, `website` what the completeness ranking scores.
+     * List-valued keys (`type`, `labels`) stay in the jsonb and are not projected
+     * here, that contract being string → string.
+     *
+     * @return array<string, string>
+     */
+    private function decodeTags(mixed $raw): array
+    {
+        if (!\is_string($raw)) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!\is_array($decoded)) {
+            return [];
+        }
+
+        $tags = [];
+        foreach ($decoded as $key => $value) {
+            if (is_scalar($value)) {
+                $tags[(string) $key] = (string) $value;
+            }
+        }
+
+        return $tags;
     }
 }

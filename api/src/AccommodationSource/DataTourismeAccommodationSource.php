@@ -56,12 +56,17 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 $isExact = $pricing['isExact'];
             }
 
-            // The flux publishes fields, not OSM tags, and tourism.accommodations has
-            // no website column: `tagCount` counts the attributes actually filled for
-            // this entry and `hasWebsite` follows the URL we can expose, so neither is
-            // a hardcoded constant penalising the curated source (#869).
-            /** @var ?string $url tourism.accommodations exposes no website column yet */
-            $url = null;
+            // The contact block and the opening hours the flux carries are preserved
+            // in `tourism.accommodations.tags` by the provisioner (#871), pending the
+            // dedicated columns of #872. Reading them here is what lets the
+            // completeness ranking score this source and SeasonalityChecker decide
+            // `possibleClosed` on a DataTourisme entry at all.
+            $tags = $accommodation['tags'];
+            $url = $tags['website'] ?? $tags['booking_url'] ?? null;
+
+            // `tagCount` counts the attributes actually filled for this entry: the
+            // flux publishes fields, not OSM tags, so the OSM tag-richness proxy would
+            // read as 0 and penalise the curated source (#869).
             $filledAttributes = array_filter(
                 [$name, $accommodation['category'], $accommodation['description'], $accommodation['capacity'], $accommodation['price']],
                 static fn (string|int|float|null $value): bool => null !== $value && '' !== $value,
@@ -82,11 +87,8 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'capacity' => $accommodation['capacity'],
                 'fee' => null,
                 'tagCount' => \count($filledAttributes),
-                // Necessarily false today: `$url` above is null until #872 adds the
-                // website column. Derived from `$url` rather than written as `false`
-                // so it starts reporting the truth the moment that column lands.
                 'hasWebsite' => null !== $url,
-                'tags' => [],
+                'tags' => $tags,
                 'source' => 'datatourisme',
                 'wikidataId' => null,
                 'description' => $accommodation['description'],
@@ -95,7 +97,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 // tourism.cultural_pois / food_pois): these stay null by design.
                 'imageUrl' => null,
                 'wikipediaUrl' => null,
-                'openingHours' => null,
+                'openingHours' => $tags['opening_hours'] ?? null,
             ];
         }
 

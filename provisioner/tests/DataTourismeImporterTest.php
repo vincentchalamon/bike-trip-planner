@@ -363,6 +363,89 @@ final class DataTourismeImporterTest extends TestCase
         return -1;
     }
 
+    /**
+     * The `tags` jsonb used to carry the type list alone and `website` was missing
+     * from the COPY column list although the DDL creates it, so both the column and
+     * everything else the flux publishes were dropped at import time (#871).
+     */
+    #[Test]
+    public function loadsTheWebsiteColumnAndTheFullTagsPayload(): void
+    {
+        $zipPath = $this->workDir.'/rich.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/cultural.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/cultural',
+            '@type' => ['CulturalSite', 'Museum'],
+            'rdfs:label' => ['fr' => ['Musee test']],
+            'hasContact' => [[
+                '@type' => ['Agent'],
+                'foaf:homepage' => ['https://musee.test'],
+                'schema:telephone' => ['+33 3 88 00 00 00'],
+            ]],
+            'isLocatedAt' => [[
+                '@type' => ['PlaceOfInterest'],
+                'schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3'],
+                'schema:openingHoursSpecification' => [[
+                    '@type' => ['schema:OpeningHoursSpecification'],
+                    'schema:validFrom' => '2026-04-01',
+                    'schema:validThrough' => '2026-10-31',
+                ]],
+            ]],
+        ]));
+        $zip->addFromString('objects/0/00/event.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/event',
+            '@type' => ['EntertainmentAndEvent', 'Festival'],
+            'rdfs:label' => ['fr' => ['Festival test']],
+            'foaf:homepage' => ['https://festival.test'],
+            'schema:startDate' => ['2026-07-01'],
+            'schema:endDate' => ['2026-07-03'],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '45.0', 'schema:longitude' => '5.0']]],
+        ]));
+        $zip->close();
+
+        $bytes = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse($bytes)),
+            processFactory: $this->capturingFactory(),
+        );
+        $importer->run($this->workDir);
+
+        // The COPY column list must name `website`, otherwise the column the DDL
+        // creates stays NULL for every row.
+        $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains(
+                $c,
+                '\copy tourism_staging.cultural_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
+            )),
+            'cultural_pois is copied with its website column',
+        );
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains(
+                $c,
+                '\copy tourism_staging.food_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
+            )),
+            'food_pois is copied with its website column',
+        );
+
+        $cultural = explode("\t", rtrim((string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy'), "\n"));
+        self::assertSame('Apr-Oct', $cultural[3], 'opening_hours comes from the flux, not a hardcoded null');
+        self::assertSame('https://musee.test', $cultural[5], 'website is fed from the contact homepage');
+        self::assertSame([
+            'type' => ['CulturalSite', 'Museum'],
+            'opening_hours' => 'Apr-Oct',
+            'website' => 'https://musee.test',
+            'phone' => '+33 3 88 00 00 00',
+        ], json_decode($cultural[7], true), 'tags keeps more than the type list');
+
+        $event = explode("\t", rtrim((string) file_get_contents($this->workDir.'/tourism-events.copy'), "\n"));
+        self::assertSame('https://festival.test', $event[5], 'events.url is populated instead of always null');
+    }
+
     #[Test]
     public function downloadFailureRaisesImportFailedException(): void
     {
