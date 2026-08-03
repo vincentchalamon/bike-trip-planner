@@ -79,17 +79,42 @@ When(
   },
 );
 
+/**
+ * Assert the accommodation section shows exactly the switches named in the
+ * Gherkin list. The count used to be hardcoded, so adding a type to the
+ * contract broke this scenario without saying which label was missing; the
+ * feature file is now the single source of truth for both count and labels.
+ */
+async function expectAccommodationSwitches(
+  page: import("@playwright/test").Page,
+  typesStr: string,
+) {
+  const labels = typesStr
+    .split(",")
+    .map((label) => label.trim())
+    .filter((label) => label.length > 0);
+
+  const section = page
+    .getByRole("heading", { name: ACCOMMODATION_SECTION_HEADING })
+    .locator("xpath=ancestor::section[1]");
+
+  await expect(getAccommodationSwitches(page)).toHaveCount(labels.length);
+  for (const label of labels) {
+    await expect(section.getByText(label, { exact: true })).toBeVisible();
+  }
+}
+
 Then(
   "je vois les interrupteurs pour les types {string}",
-  async ({ mockedPage }, _typesStr: string) => {
-    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(9);
+  async ({ mockedPage }, typesStr: string) => {
+    await expectAccommodationSwitches(mockedPage, typesStr);
   },
 );
 
 Then(
   "I see switches for types {string}",
-  async ({ mockedPage }, _typesStr: string) => {
-    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(9);
+  async ({ mockedPage }, typesStr: string) => {
+    await expectAccommodationSwitches(mockedPage, typesStr);
   },
 );
 
