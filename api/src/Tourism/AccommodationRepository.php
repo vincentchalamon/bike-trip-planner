@@ -37,7 +37,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, tags: array<string, string>}>
+     * @return list<array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, website: ?string, phone: ?string, openingHours: ?string, wikidata: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array
     {
@@ -73,6 +73,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 FROM (
                     SELECT a.id,
                            a.name, a.category, a.capacity, a.price, a.description, a.tags,
+                           a.website, a.phone, a.opening_hours, a.wikidata, a.image_url, a.wikipedia_url,
                            ST_Y(a.geom) AS lat, ST_X(a.geom) AS lon,
                            nearest.point_index, nearest.distance,
                            ROW_NUMBER() OVER (
@@ -119,11 +120,24 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 'capacity' => null !== $row['capacity'] ? (int) $row['capacity'] : null,
                 'price' => null !== $row['price'] ? (float) $row['price'] : null,
                 'description' => null !== $row['description'] && '' !== $row['description'] ? (string) $row['description'] : null,
+                // Flux-set columns (#872); image_url / wikipedia_url come from the
+                // provisioner's Wikidata pass, which now covers this table too.
+                'website' => $this->text($row['website']),
+                'phone' => $this->text($row['phone']),
+                'openingHours' => $this->text($row['opening_hours']),
+                'wikidata' => $this->text($row['wikidata']),
+                'imageUrl' => $this->text($row['image_url']),
+                'wikipediaUrl' => $this->text($row['wikipedia_url']),
                 'tags' => $this->decodeTags($row['tags']),
             ];
         }
 
         return $accommodations;
+    }
+
+    private function text(string|int|float|bool|null $value): ?string
+    {
+        return null !== $value && '' !== $value ? (string) $value : null;
     }
 
     /**

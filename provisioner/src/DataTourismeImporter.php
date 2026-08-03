@@ -40,31 +40,37 @@ final readonly class DataTourismeImporter
     /**
      * Target tables and their COPY column order. `geom` always comes last and is
      * fed EWKT. Must match Version20260616120000 / Version20260616140000 (the
-     * live-schema bootstraps) plus Version20260617130000 (`website`).
+     * live-schema bootstraps) plus Version20260617130000 (`website` on the POI
+     * tables) and Version20260803120000 (the accommodation contact columns).
+     *
+     * `image_url` / `wikipedia_url` are absent on purpose: they exist in the DDL
+     * but are written by the Wikidata pass alone, never by the flux.
      *
      * @var array<string, list<string>>
      */
     private const array TABLE_COLUMNS = [
         'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
-        'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'tags', 'geom'],
+        'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'opening_hours', 'website', 'phone', 'wikidata', 'tags', 'geom'],
         'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'tags', 'geom'],
     ];
 
     private const array STAGING_DDL = [
         'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, opening_hours text, website text, phone text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'events' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
     ];
 
     /**
      * Tables carrying a `wikidata` Q-ID column, enriched from Wikidata via the
      * shared {@see WikidataEnrichmentPass} after load and before the swap.
+     * `accommodations` joined the list with its Q-ID column (#872), which is also
+     * what lets NearbyNameDeduplicator pair an OSM and a DataTourisme lodging.
      *
      * @var list<string>
      */
-    private const array WIKIDATA_TABLES = ['cultural_pois', 'food_pois'];
+    private const array WIKIDATA_TABLES = ['cultural_pois', 'food_pois', 'accommodations'];
 
     private HttpClientInterface $httpClient;
 
@@ -244,7 +250,7 @@ final readonly class DataTourismeImporter
 
         $values = match ($table) {
             'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['website'], $row['wikidata'], $tags, $geom],
-            'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $tags, $geom],
+            'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $row['openingHours'], $row['website'], $row['phone'], $row['wikidata'], $tags, $geom],
             'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['website'], $row['description'], $row['price'], $tags, $geom],
             default => [],
         };
