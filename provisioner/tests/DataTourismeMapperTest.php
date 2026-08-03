@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Provisioner\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\DataTourismeMapper;
@@ -66,7 +67,7 @@ final class DataTourismeMapperTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('accommodation', $row['head']);
-        self::assertSame('apartment', $row['category']);
+        self::assertSame('rental', $row['category']);
         self::assertSame(4, $row['capacity']);
         self::assertSame(75.0, $row['price']);
     }
@@ -81,6 +82,66 @@ final class DataTourismeMapperTest extends TestCase
         $camping = $this->mapper->map($this->object(['Accommodation', 'CampingAndCaravanning']));
         self::assertNotNull($camping);
         self::assertSame('camp_site', $camping['category']);
+    }
+
+    /**
+     * The whole French "meublé de tourisme" market collapses onto the single
+     * `rental` category, so it stays comparable with OSM's tourism=apartment.
+     */
+    #[Test]
+    #[DataProvider('rentalSubtypes')]
+    public function mapsEveryRentalSubtypeToTheSingleRentalCategory(string $subtype): void
+    {
+        $row = $this->mapper->map($this->object(['Accommodation', $subtype]));
+
+        self::assertNotNull($row);
+        self::assertSame('accommodation', $row['head']);
+        self::assertSame('rental', $row['category']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function rentalSubtypes(): iterable
+    {
+        yield 'RentalAccommodation' => ['RentalAccommodation'];
+        yield 'SelfCateringAccommodation' => ['SelfCateringAccommodation'];
+        yield 'House' => ['House'];
+        yield 'Apartment' => ['Apartment'];
+        yield 'Bungalow' => ['Bungalow'];
+        yield 'Yurt' => ['Yurt'];
+        yield 'CastleAndPrestigeMansion' => ['CastleAndPrestigeMansion'];
+    }
+
+    #[Test]
+    public function discardsAccommodationProductWhichIsAnOfferNotAPlace(): void
+    {
+        // AccommodationProduct is a commercial offer; on its own it describes no
+        // place, so it must not be mapped nor imported.
+        self::assertNull($this->mapper->map($this->object(['schema:Accommodation', 'Accommodation', 'AccommodationProduct'])));
+
+        // In the flux it always co-occurs with a place subtype, which is what
+        // classifies the object: those rows are still imported as rentals.
+        $row = $this->mapper->map($this->object(['Accommodation', 'AccommodationProduct', 'RentalAccommodation']));
+        self::assertNotNull($row);
+        self::assertSame('rental', $row['category']);
+    }
+
+    #[Test]
+    public function discardsAndCountsAccommodationsWithAnUnmappedSubtype(): void
+    {
+        self::assertSame(0, $this->mapper->unmappedAccommodationCount());
+
+        // No silent default: an unknown subtype must not land in a bucket outside
+        // TripRequest::ALL_ACCOMMODATION_TYPES, which would be unreachable.
+        self::assertNull($this->mapper->map($this->object(['schema:Accommodation', 'Accommodation', 'PlaceOfInterest'])));
+        self::assertNull($this->mapper->map($this->object(['Accommodation', 'SomeBrandNewOntologyType'])));
+
+        self::assertSame(2, $this->mapper->unmappedAccommodationCount());
+
+        // Mapped accommodations do not inflate the counter.
+        self::assertNotNull($this->mapper->map($this->object(['Accommodation', 'Hotel'])));
+        self::assertSame(2, $this->mapper->unmappedAccommodationCount());
     }
 
     #[Test]

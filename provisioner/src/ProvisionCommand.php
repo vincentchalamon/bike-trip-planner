@@ -225,7 +225,9 @@ final class ProvisionCommand extends Command
             return Command::FAILURE;
         }
 
-        $io->success('DataTourisme import complete.');
+        $unmapped = $importer->unmappedAccommodationCount();
+        $io->success(\sprintf('DataTourisme import complete (%d accommodations skipped: unmapped subtype).', $unmapped));
+        $this->logLine('INFO', \sprintf('datatourisme accommodations skipped (unmapped subtype) -> %d', $unmapped));
 
         return Command::SUCCESS;
     }

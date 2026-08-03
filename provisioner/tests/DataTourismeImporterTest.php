@@ -242,6 +242,46 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     #[Test]
+    public function importsRentalsAndPublishesTheUnmappedAccommodationCount(): void
+    {
+        // A meublé lands in the `rental` category; an Accommodation whose subtype
+        // maps to nothing is dropped rather than folded into a bucket the app
+        // cannot query back, and counted so it stays visible (issue #865).
+        $zipPath = $this->workDir.'/accommodations.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/rental.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/rental',
+            '@type' => ['schema:Accommodation', 'Accommodation', 'RentalAccommodation', 'SelfCateringAccommodation'],
+            'rdfs:label' => ['fr' => ['Gite du Lac']],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3']]],
+        ]));
+        $zip->addFromString('objects/0/00/unmapped.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/unmapped',
+            '@type' => ['schema:Accommodation', 'Accommodation', 'PlaceOfInterest'],
+            'rdfs:label' => ['fr' => ['Hebergement sans sous-type']],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.6', 'schema:longitude' => '2.4']]],
+        ]));
+        $zip->close();
+
+        $bytes = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse($bytes)),
+            processFactory: $this->capturingFactory(),
+        );
+        $importer->run($this->workDir);
+
+        $accommodations = (string) file_get_contents($this->workDir.'/tourism-accommodations.copy');
+        self::assertSame(1, substr_count($accommodations, "\n"), 'only the rental row is written');
+        self::assertStringContainsString('rental', $accommodations);
+        self::assertStringNotContainsString('unmapped', $accommodations);
+        self::assertSame(1, $importer->unmappedAccommodationCount());
+    }
+
+    #[Test]
     public function enrichesWikidataBearingRowsFromTheCacheBetweenLoadAndSwap(): void
     {
         // A cultural POI carrying a Wikidata Q-ID (owl:sameAs) triggers the

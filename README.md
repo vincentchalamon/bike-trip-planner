@@ -83,6 +83,9 @@
 | `camp_site` | `tourism=camp_site` | €8–€25 (€8–€15 if `backpack=yes` or `tents=yes`) |
 | `wilderness_hut` | `tourism=wilderness_hut` | free / donation (€0–€10) |
 | `shelter` | `amenity=shelter` + `shelter_type~basic_hut\|weather_shelter\|lean_to` | free (€0) |
+| `rental` | `tourism=apartment` + DataTourisme meublés (`RentalAccommodation`, `SelfCateringAccommodation`, …) | €40–€100 |
+
+`rental` (gîte / meublé de tourisme) is searchable but **disabled by default**: a large share of that market is let by the week, so it is opt-in per trip.
 
 The bracket above is the *unrated* estimate. A `charge` tag or a numeric `fee` overrides it with an exact price, `fee=no` prices the entry as free, and a known `stars` rating lifts the bracket floor by 25% of its span per star above 2, capped at 75% (a 4-star hotel is estimated €85–€120, not €50–€120).
 

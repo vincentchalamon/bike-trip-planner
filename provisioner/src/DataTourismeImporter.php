@@ -117,6 +117,17 @@ final readonly class DataTourismeImporter
     }
 
     /**
+     * Accommodation objects dropped during the last {@see run} because their
+     * DataTourisme subtype maps to no app category. Reported by the provisioning
+     * command: a new ontology type shows up as a number instead of being folded
+     * into an unreachable catch-all bucket (issue #865).
+     */
+    public function unmappedAccommodationCount(): int
+    {
+        return $this->mapper->unmappedAccommodationCount();
+    }
+
+    /**
      * @throws ImportFailedException
      */
     public function download(string $zipPath): void

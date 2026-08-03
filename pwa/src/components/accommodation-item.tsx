@@ -31,6 +31,7 @@ const typeIcons: Record<string, React.ElementType> = {
   motel: Hotel,
   camp_site: Tent,
   alpine_hut: MapPin,
+  rental: Home,
 };
 
 const typeLabelKeys = {
@@ -41,6 +42,7 @@ const typeLabelKeys = {
   guest_house: "type_guest_house",
   motel: "type_motel",
   alpine_hut: "type_alpine_hut",
+  rental: "type_rental",
   other: "type_other",
 } as const;
 
@@ -178,6 +180,7 @@ export function AccommodationItem({
             <option value="guest_house">{t("type_guest_house")}</option>
             <option value="motel">{t("type_motel")}</option>
             <option value="alpine_hut">{t("type_alpine_hut")}</option>
+            <option value="rental">{t("type_rental")}</option>
             <option value="other">{t("type_other")}</option>
           </select>
           <div className="flex items-center gap-1">

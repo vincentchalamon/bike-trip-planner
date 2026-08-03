@@ -52,7 +52,7 @@ final class TourismIndexReadTest extends KernelTestCase
 
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
-              ('a1', 'Gîte du Lac', 'apartment', 4, 75.00, NULL, '{}'::jsonb,
+              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326)),
               ('a2', 'Grand Hôtel', 'hotel', NULL, NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
@@ -104,7 +104,7 @@ final class TourismIndexReadTest extends KernelTestCase
         $accommodations = new AccommodationRepository($this->connection)->findNear(
             [['lat' => 48.50, 'lon' => 2.50]],
             5000,
-            ['apartment'],
+            ['rental'],
         );
 
         self::assertCount(1, $accommodations, 'only the requested category is returned');
