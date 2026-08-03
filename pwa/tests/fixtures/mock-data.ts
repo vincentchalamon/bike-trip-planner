@@ -193,6 +193,9 @@ export function accommodationsFoundEvent(
           possibleClosed: false,
           distanceToEndPoint: 1.2,
           source: "osm",
+          // Schemeless OSM `website` tag (issue #867): must render as an
+          // absolute link instead of throwing during render.
+          url: "www.camping-les-oliviers.fr",
         },
         {
           name: "Hotel du Pont",
@@ -205,6 +208,8 @@ export function accommodationsFoundEvent(
           possibleClosed: false,
           distanceToEndPoint: 0.5,
           source: "osm",
+          // Unusable OSM `website` tag: renders no link at all, no error.
+          url: "appeler le 06 12 34 56 78",
         },
       ],
     },

@@ -15,6 +15,7 @@ import {
 } from "@/components/Map/icons";
 import { cn } from "@/lib/utils";
 import type { AlertActionData, AlertData } from "@/lib/validation/schemas";
+import { normalizeExternalUrl } from "@/lib/validation/url";
 
 interface AlertListProps {
   alerts: AlertData[];
@@ -156,6 +157,8 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                   alert.estimatedPrice,
                 );
 
+              const wikipediaHref = normalizeExternalUrl(alert.wikipediaUrl);
+
               // Some action kinds are not wired yet; surface them as disabled.
               const isActionDisabled = Boolean(
                 action &&
@@ -233,15 +236,15 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                             : `${alert.estimatedPrice.toFixed(2)} €`}
                         </span>
                       )}
-                      {alert.wikipediaUrl && (
+                      {wikipediaHref && (
                         <a
-                          href={alert.wikipediaUrl}
+                          href={wikipediaHref}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-primary flex items-center gap-0.5 hover:underline"
                           data-testid="poi-wikipedia-link"
                         >
-                          Voir sur Wikipedia
+                          {t("see_on_wikipedia")}
                         </a>
                       )}
                     </div>

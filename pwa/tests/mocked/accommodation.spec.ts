@@ -31,6 +31,34 @@ test.describe("Accommodations", () => {
     await expect(stageCard).toContainText("0.5 km");
   });
 
+  test("normalizes malformed OSM website tags (issue #867)", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0),
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Camping Les Oliviers");
+
+    // Schemeless `www.camping-les-oliviers.fr` becomes an absolute link…
+    const links = stageCard.getByTestId("accommodation-website-link");
+    await expect(links).toHaveCount(1);
+    await expect(links).toHaveAttribute(
+      "href",
+      "https://www.camping-les-oliviers.fr",
+    );
+    await expect(links).toHaveText(/www\.camping-les-oliviers\.fr/);
+    // …while the unusable value on "Hotel du Pont" renders no link at all
+    // (and no error boundary: the card is still there).
+    await expect(stageCard).toContainText("Hotel du Pont");
+  });
+
   test("adds manual accommodation", async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");

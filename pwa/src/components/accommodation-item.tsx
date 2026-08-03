@@ -18,6 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AccommodationData } from "@/lib/validation/schemas";
 import { formatPrice, formatDistanceKm } from "@/lib/formatters";
+import {
+  externalUrlHostname,
+  normalizeExternalUrl,
+} from "@/lib/validation/url";
 
 const typeIcons: Record<string, React.ElementType> = {
   hotel: Hotel,
@@ -92,6 +96,11 @@ export function AccommodationItem({
     "type_other";
   const typeLabel = t(typeKey);
   const distLabel = formatDistanceKm(accommodation.distanceToEndPoint ?? 0);
+  // OSM `website` tags and user input are unvalidated: normalize before render,
+  // and drop the link entirely when the value is not a usable http(s) URL.
+  const websiteHref = normalizeExternalUrl(accommodation.url);
+  const websiteHostname = externalUrlHostname(accommodation.url);
+  const wikipediaHref = normalizeExternalUrl(accommodation.wikipediaUrl);
 
   function startEditing() {
     setEditUrl(accommodation.url ?? "");
@@ -108,7 +117,7 @@ export function AccommodationItem({
       type: editType,
       estimatedPriceMin: parseFloat(editPriceMin) || 0,
       estimatedPriceMax: parseFloat(editPriceMax) || 0,
-      url: editUrl || null,
+      url: normalizeExternalUrl(editUrl),
     });
     setEditing(false);
   }
@@ -283,14 +292,15 @@ export function AccommodationItem({
             {t("selected")}
           </span>
         )}
-        {accommodation.url && (
+        {websiteHref && (
           <a
-            href={accommodation.url}
+            href={websiteHref}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground font-normal flex items-center gap-0.5 hover:underline"
+            data-testid="accommodation-website-link"
           >
-            {new URL(accommodation.url).hostname}
+            {websiteHostname}
             <ExternalLink className="h-3 w-3" />
           </a>
         )}
@@ -336,16 +346,16 @@ export function AccommodationItem({
       </div>
 
       {/* Wikipedia link */}
-      {accommodation.wikipediaUrl && (
+      {wikipediaHref && (
         <div className="mt-1">
           <a
-            href={accommodation.wikipediaUrl}
+            href={wikipediaHref}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-primary flex items-center gap-0.5 hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
-            Voir sur Wikipedia
+            {t("see_on_wikipedia")}
           </a>
         </div>
       )}
