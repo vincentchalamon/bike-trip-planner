@@ -40,13 +40,13 @@ final readonly class DataTourismeImporter
     /**
      * Target tables and their COPY column order. `geom` always comes last and is
      * fed EWKT. Must match Version20260616120000 / Version20260616140000 (the
-     * live-schema bootstraps).
+     * live-schema bootstraps) plus Version20260617130000 (`website`).
      *
      * @var array<string, list<string>>
      */
     private const array TABLE_COLUMNS = [
-        'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'wikidata', 'tags', 'geom'],
-        'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'wikidata', 'tags', 'geom'],
+        'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
+        'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'tags', 'geom'],
         'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'tags', 'geom'],
     ];
@@ -238,12 +238,14 @@ final readonly class DataTourismeImporter
     private function copyLine(string $table, array $row): string
     {
         $geom = \sprintf('SRID=4326;POINT(%.7F %.7F)', $row['lon'], $row['lat']);
-        $tags = json_encode(['type' => $row['type']], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
+        // The mapper already narrowed the source object down to the keys worth
+        // keeping (see DataTourismeMapper::tags); this only serialises them.
+        $tags = json_encode($row['tags'], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
 
         $values = match ($table) {
-            'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['wikidata'], $tags, $geom],
+            'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['website'], $row['wikidata'], $tags, $geom],
             'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $tags, $geom],
-            'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], null, $row['description'], $row['price'], $tags, $geom],
+            'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['website'], $row['description'], $row['price'], $tags, $geom],
             default => [],
         };
 

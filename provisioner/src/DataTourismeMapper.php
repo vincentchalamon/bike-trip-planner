@@ -12,10 +12,11 @@ namespace Provisioner;
  * the JSON-LD type array (e.g. "CulturalSite", "Accommodation",
  * "EntertainmentAndEvent"), labels as language-maps ({"fr":["…"]}), and the
  * location under isLocatedAt[0]["schema:geo"] — none of which match the old
- * runtime REST API shape, so this is a flux-specific mapper. The raw type list
- * is preserved in the row's tags so nothing is lost.
+ * runtime REST API shape, so this is a flux-specific mapper. A curated subset of
+ * the source object is preserved in the row's tags (see {@see tags}), because
+ * whatever is dropped here is unrecoverable short of a full re-import (#871).
  *
- * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event'|'food', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, type: list<string>}
+ * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event'|'food', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, website: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, tags: array<string, mixed>}
  */
 final class DataTourismeMapper
 {
@@ -91,6 +92,12 @@ final class DataTourismeMapper
         'TheaterEvent' => 'show', 'ShowEvent' => 'show', 'ScreeningEvent' => 'show', 'Cinema' => 'show',
     ];
 
+    /** English 3-letter month abbreviations, the vocabulary SeasonalityChecker parses. */
+    private const array MONTH_ABBREVIATIONS = [
+        1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
+        7 => 'Jul', 8 => 'Aug', 9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
+    ];
+
     private int $unmappedAccommodations = 0;
 
     /**
@@ -131,6 +138,8 @@ final class DataTourismeMapper
         }
 
         [$startDate, $endDate] = 'event' === $head ? $this->dates($object) : [null, null];
+        $contact = $this->contact($object);
+        $openingHours = $this->openingHours($object);
 
         return [
             'head' => $head,
@@ -140,14 +149,65 @@ final class DataTourismeMapper
             'lat' => $coords['lat'],
             'lon' => $coords['lon'],
             'description' => $this->description($object),
-            'openingHours' => null,
+            'openingHours' => $openingHours,
+            'website' => $contact['website'] ?? $contact['bookingUrl'],
             'wikidata' => $this->wikidata($object),
             'capacity' => 'accommodation' === $head ? $this->intOrNull($object['allowedPersons'] ?? null) : null,
             'price' => 'accommodation' === $head || 'event' === $head ? $this->price($object['offers'] ?? null) : null,
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'type' => $types,
+            'tags' => $this->tags($object, $types, $openingHours, $contact),
         ];
+    }
+
+    /**
+     * Flux keys preserved in the row's `tags` jsonb.
+     *
+     * The flux object carries ~40 predicates; storing them wholesale would turn a
+     * 4-column index into an archive of the source dump. The selection below is
+     * explicit and each key has a named consumer:
+     *
+     * - `type`: the raw ontology type list, the only way to reclassify a row (a
+     *   new subtype, a category split) without re-importing the whole flux.
+     * - `opening_hours`: OSM tag key on purpose, so `App\Accommodation\SeasonalityChecker`
+     *   — which reads `$tags['opening_hours']` — works on DataTourisme rows too.
+     * - `website`, `phone`, `email`, `booking_url`: the contact block, feeding the
+     *   accommodation URL and the `hasWebsite` completeness signal (#869).
+     * - `address`, `postal_code`, `city`: the postal address, so a stage label or a
+     *   suggestion can be shown without a reverse-geocode round trip.
+     * - `image_url`: the main photo, promoted to a column by #872.
+     * - `labels`: classification / feature labels, where quality labels such as
+     *   "Accueil Vélo" live.
+     *
+     * Deliberately dropped: the long descriptions and reviews (kilobytes of free
+     * text per row across ~390k objects, no consumer), the themes and audiences,
+     * the media list beyond the main photo, and the publication metadata. Keys with
+     * no value are omitted rather than stored as null, so a bare object still
+     * weighs exactly its type list.
+     *
+     * @param array<string, mixed>                                                         $object
+     * @param list<string>                                                                 $types
+     * @param array{website: ?string, phone: ?string, email: ?string, bookingUrl: ?string} $contact
+     *
+     * @return array<string, mixed>
+     */
+    private function tags(array $object, array $types, ?string $openingHours, array $contact): array
+    {
+        $address = $this->address($object);
+
+        return array_filter([
+            'type' => $types,
+            'opening_hours' => $openingHours,
+            'website' => $contact['website'],
+            'phone' => $contact['phone'],
+            'email' => $contact['email'],
+            'booking_url' => $contact['bookingUrl'],
+            'address' => $address['address'],
+            'postal_code' => $address['postalCode'],
+            'city' => $address['city'],
+            'image_url' => $this->imageUrl($object),
+            'labels' => $this->labels($object),
+        ], static fn (mixed $value): bool => null !== $value && [] !== $value);
     }
 
     /**
@@ -288,6 +348,214 @@ final class DataTourismeMapper
         }
 
         return $this->label($object['rdfs:comment'] ?? null);
+    }
+
+    /**
+     * Contact block: the official homepage plus the phone/email of the first
+     * contact carrying them, and the booking contact's homepage. The flux splits
+     * them over `foaf:homepage` (top level), `hasContact` and `hasBookingContact`;
+     * the first non-empty value wins, contacts being published most-relevant first.
+     *
+     * @param array<string, mixed> $object
+     *
+     * @return array{website: ?string, phone: ?string, email: ?string, bookingUrl: ?string}
+     */
+    private function contact(array $object): array
+    {
+        $website = $this->firstString($object['foaf:homepage'] ?? null);
+        $phone = null;
+        $email = null;
+        foreach ($this->objectList($object['hasContact'] ?? null) as $contact) {
+            $website ??= $this->firstString($contact['foaf:homepage'] ?? null);
+            $phone ??= $this->firstString($contact['schema:telephone'] ?? null);
+            $email ??= $this->firstString($contact['schema:email'] ?? null);
+        }
+
+        $bookingUrl = null;
+        foreach ($this->objectList($object['hasBookingContact'] ?? null) as $contact) {
+            $bookingUrl ??= $this->firstString($contact['foaf:homepage'] ?? null);
+        }
+
+        return ['website' => $website, 'phone' => $phone, 'email' => $email, 'bookingUrl' => $bookingUrl];
+    }
+
+    /**
+     * Postal address of the located place. The city is published either inline
+     * (`schema:addressLocality`) or as a linked City resource (`hasAddressCity`).
+     *
+     * @param array<string, mixed> $object
+     *
+     * @return array{address: ?string, postalCode: ?string, city: ?string}
+     */
+    private function address(array $object): array
+    {
+        $located = $this->objectList($object['isLocatedAt'] ?? null)[0] ?? [];
+        $address = $this->objectList($located['schema:address'] ?? null)[0] ?? [];
+
+        $city = $this->firstString($address['schema:addressLocality'] ?? null);
+        if (null === $city) {
+            $linkedCity = $this->objectList($address['hasAddressCity'] ?? null)[0] ?? [];
+            $city = $this->label($linkedCity['rdfs:label'] ?? null);
+        }
+
+        return [
+            'address' => $this->firstString($address['schema:streetAddress'] ?? null),
+            'postalCode' => $this->firstString($address['schema:postalCode'] ?? null),
+            'city' => $city,
+        ];
+    }
+
+    /**
+     * Opening hours as a single OSM-flavoured string ("Apr-Oct 09:00-18:00").
+     *
+     * The flux publishes one `OpeningHoursSpecification` per period, under
+     * `takesPlaceAt` or under the place's `schema:openingHoursSpecification`, with
+     * either the schema.org (`schema:validFrom`) or the DataTourisme (`startDate`)
+     * naming. Nothing downstream can consume that list, so it is reduced to its
+     * envelope: earliest month → latest month, earliest opening → latest closing.
+     * That is the syntax {@see \App\Accommodation\SeasonalityChecker} parses, and
+     * the one already displayed for the OSM and Wikidata rows.
+     *
+     * @param array<string, mixed> $object
+     */
+    private function openingHours(array $object): ?string
+    {
+        $located = $this->objectList($object['isLocatedAt'] ?? null)[0] ?? [];
+        $specifications = array_merge(
+            $this->objectList($object['takesPlaceAt'] ?? null),
+            $this->objectList($object['schema:openingHoursSpecification'] ?? null),
+            $this->objectList($located['schema:openingHoursSpecification'] ?? null),
+        );
+
+        $firstMonth = null;
+        $lastMonth = null;
+        $opensAt = null;
+        $closesAt = null;
+        foreach ($specifications as $specification) {
+            $from = $this->month($specification['schema:validFrom'] ?? $specification['startDate'] ?? $specification['schema:startDate'] ?? null);
+            $through = $this->month($specification['schema:validThrough'] ?? $specification['endDate'] ?? $specification['schema:endDate'] ?? null);
+            if (null !== $from && null !== $through) {
+                $firstMonth = null === $firstMonth ? $from : min($firstMonth, $from);
+                $lastMonth = null === $lastMonth ? $through : max($lastMonth, $through);
+            }
+
+            $open = $this->time($specification['schema:opens'] ?? $specification['startTime'] ?? $specification['schema:startTime'] ?? null);
+            $close = $this->time($specification['schema:closes'] ?? $specification['endTime'] ?? $specification['schema:endTime'] ?? null);
+            if (null !== $open && null !== $close) {
+                $opensAt = null === $opensAt ? $open : min($opensAt, $open);
+                $closesAt = null === $closesAt ? $close : max($closesAt, $close);
+            }
+        }
+
+        $parts = [];
+        if (null !== $firstMonth && null !== $lastMonth) {
+            $parts[] = \sprintf('%s-%s', self::MONTH_ABBREVIATIONS[$firstMonth], self::MONTH_ABBREVIATIONS[$lastMonth]);
+        }
+
+        if (null !== $opensAt && null !== $closesAt) {
+            $parts[] = \sprintf('%s-%s', $opensAt, $closesAt);
+        }
+
+        return [] === $parts ? null : implode(' ', $parts);
+    }
+
+    /**
+     * Main photo URL (hasMainRepresentation → MediaResource → ebucore:locator).
+     *
+     * @param array<string, mixed> $object
+     */
+    private function imageUrl(array $object): ?string
+    {
+        foreach ($this->objectList($object['hasMainRepresentation'] ?? null) as $representation) {
+            foreach ($this->objectList($representation['ebucore:hasRelatedResource'] ?? null) as $resource) {
+                $locator = $this->firstString($resource['ebucore:locator'] ?? null);
+                if (null !== $locator) {
+                    return $locator;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Classification, feature and theme labels, deduplicated. Quality labels such
+     * as "Accueil Vélo" are published as classifications.
+     *
+     * @param array<string, mixed> $object
+     *
+     * @return list<string>
+     */
+    private function labels(array $object): array
+    {
+        $labels = [];
+        foreach (['hasClassification', 'hasFeature', 'hasTheme'] as $predicate) {
+            foreach ($this->objectList($object[$predicate] ?? null) as $entry) {
+                $label = $this->label($entry['rdfs:label'] ?? null);
+                if (null !== $label) {
+                    $labels[] = $label;
+                }
+            }
+        }
+
+        return array_values(array_unique($labels));
+    }
+
+    /**
+     * Nested JSON-LD resources, which the flux publishes either as a list or, when
+     * there is a single one, as the bare object.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function objectList(mixed $value): array
+    {
+        if (!\is_array($value)) {
+            return [];
+        }
+
+        if (isset($value['@id']) || isset($value['@type'])) {
+            return [$this->stringKeyed($value)];
+        }
+
+        $objects = [];
+        foreach ($value as $item) {
+            if (\is_array($item)) {
+                $objects[] = $this->stringKeyed($item);
+            }
+        }
+
+        return $objects;
+    }
+
+    /**
+     * @param array<mixed, mixed> $value
+     *
+     * @return array<string, mixed>
+     */
+    private function stringKeyed(array $value): array
+    {
+        $keyed = [];
+        foreach ($value as $key => $property) {
+            $keyed[(string) $key] = $property;
+        }
+
+        return $keyed;
+    }
+
+    /** Month number of an ISO date ("2026-04-01" → 4). */
+    private function month(mixed $value): ?int
+    {
+        $date = $this->firstString($value);
+
+        return null !== $date && 1 === preg_match('/^\d{4}-(0[1-9]|1[0-2])/', $date, $matches) ? (int) $matches[1] : null;
+    }
+
+    /** HH:MM of an ISO time ("09:00:00" → "09:00"). */
+    private function time(mixed $value): ?string
+    {
+        $time = $this->firstString($value);
+
+        return null !== $time && 1 === preg_match('/^([01]\d|2[0-3]):[0-5]\d/', $time) ? substr($time, 0, 5) : null;
     }
 
     /**
