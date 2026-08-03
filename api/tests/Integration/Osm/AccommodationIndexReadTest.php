@@ -199,6 +199,69 @@ final class AccommodationIndexReadTest extends KernelTestCase
         );
     }
 
+    #[Test]
+    public function findNearAssignsBisectorRowsWithTheSameMetricAsTheDistributor(): void
+    {
+        // At latitude 60 a degree of longitude is only cos(60) = half a degree of
+        // latitude. 'Hotel Bissectrice' (60.00 0.00) sits 0.10 deg south of end point
+        // A but 0.12 deg west of end point B, so a planar degree distance calls A
+        // nearer (0.10 < 0.12) while metres call B nearer (6.7 km < 11.1 km) — and
+        // metres are what GeometryBasedDistributor::distributeByEndpoint uses.
+        //
+        // A's own budget is filled with 30 hotels within 100 m, so a row assigned to
+        // A is ranked 31st and dropped. Surviving therefore proves the row went to B.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9600 + i, 'Hotel Dense ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(0.0, 60.10 + i * 0.00001), 4326)
+            FROM generate_series(1, 30) AS i
+            SQL);
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 9700, 'Hotel Bissectrice', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 60.10, 'lon' => 0.0], ['lat' => 60.00, 'lon' => 0.12]],
+            15000,
+            ['hotel'],
+        );
+
+        self::assertContains(
+            'Hotel Bissectrice',
+            array_column($rows, 'name'),
+            'a bisector row must be assigned to the end point the distributor will pick (metres), not the planar-degree one',
+        );
+        self::assertCount(31, $rows);
+    }
+
+    #[Test]
+    public function findNearHandlesTwoStagesSharingAnEndPoint(): void
+    {
+        // A rest day repeats the previous stage's end point. The two identical
+        // vertices survive into the MULTIPOINT (no dedup in WktGeometry::multiPoint),
+        // and the `pt.path` tie-break sends every row to the first of them — the same
+        // stage distributeByEndpoint would award them to, with its strict `<`. What
+        // matters is that the shared location still yields its full, ordered top-30
+        // rather than an arbitrary split across the two coincident partitions.
+        $this->seedFortyHotelsFarthestFirst();
+
+        $repository = new AccommodationRepository($this->connection);
+        $restDayPoints = [['lat' => 48.5, 'lon' => 2.5], ['lat' => 48.5, 'lon' => 2.5]];
+
+        $expected = array_merge(['Hotel du Centre'], array_map(
+            static fn (int $i): string => \sprintf('Hotel %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($repository->findNear($restDayPoints, 5000, ['hotel']), 'name'));
+        self::assertSame(
+            $repository->findNear([['lat' => 48.5, 'lon' => 2.5]], 5000, ['hotel']),
+            $repository->findNear($restDayPoints, 5000, ['hotel']),
+            'repeating an end point must not change what that location yields',
+        );
+    }
+
     /**
      * 40 extra hotels, 111 m apart along the meridian, all inside the 5 km radius
      * (41 rows in range with the setUp hotel, for a 30-row cap). Inserted farthest

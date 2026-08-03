@@ -48,11 +48,18 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
         // The cap is per end point, not global: the flat `LIMIT 200` (and any single
         // top-N over the combined multipoint) lets one dense urban stage consume the
         // whole budget and evict a rural stage down to zero candidate. Each row is
-        // therefore assigned to its nearest end point (`nearest`, the same rule
-        // GeometryBasedDistributor::distributeByEndpoint applies downstream) and
-        // ranked inside that partition. ROW_NUMBER over one pass, rather than a
-        // LATERAL sub-select per point: the radius filter costs a full scan (no index
-        // on `geom::geography`), so a per-point sub-select would repeat it per stage.
+        // therefore assigned to its nearest end point (`nearest`) and ranked inside
+        // that partition. ROW_NUMBER over one pass, rather than a LATERAL sub-select
+        // per point: the radius filter costs a full scan (no index on
+        // `geom::geography`), so a per-point sub-select would repeat it per stage.
+        //
+        // The assignment casts to `geography` on purpose: `<->` on `geometry` is a
+        // planar distance in raw WGS84 degrees, where a degree of longitude is
+        // cos(latitude) shorter than a degree of latitude, so near the bisector of two
+        // end points it can pick a different one than the metric
+        // GeometryBasedDistributor::distributeByEndpoint uses downstream — leaving the
+        // row ranked under a stage that will never receive it. `geography <->` is
+        // metres on the sphere, i.e. the same great circle as HaversineDistance.
         //
         // The order is fully specified — end point, then distance, then the `id`
         // primary key (the DataTourisme URI) — so two runs of the same scan return
@@ -74,9 +81,10 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                            ) AS point_rank
                     FROM tourism.accommodations a
                     CROSS JOIN LATERAL (
-                        SELECT pt.path[1] AS point_index, a.geom <-> pt.geom AS distance
+                        SELECT pt.path[1] AS point_index,
+                               a.geom::geography <-> pt.geom::geography AS distance
                         FROM ST_Dump(ST_SetSRID(ST_GeomFromText(:wkt), 4326)) AS pt
-                        ORDER BY a.geom <-> pt.geom, pt.path
+                        ORDER BY a.geom::geography <-> pt.geom::geography, pt.path
                         LIMIT 1
                     ) AS nearest
                     WHERE a.category IN (:categories)

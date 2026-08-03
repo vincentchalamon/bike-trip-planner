@@ -47,6 +47,22 @@ final class WktGeometryTest extends TestCase
     }
 
     #[Test]
+    public function multiPointKeepsRepeatedVertices(): void
+    {
+        // Two stages sharing an end point (a rest day) must stay two vertices: the
+        // accommodation repositories budget their per-end-point cap on the ST_Dump
+        // vertex index, so collapsing them would collapse their two budget slots.
+        // Unlike lineStringOrPoint(), which must collapse to keep a valid LINESTRING.
+        self::assertSame(
+            'MULTIPOINT((6.130000 49.600000),(6.130000 49.600000))',
+            WktGeometry::multiPoint([
+                ['lat' => 49.60, 'lon' => 6.13],
+                ['lat' => 49.60, 'lon' => 6.13],
+            ]),
+        );
+    }
+
+    #[Test]
     public function lineStringOrPointRejectsEmptyInput(): void
     {
         $this->expectException(\InvalidArgumentException::class);

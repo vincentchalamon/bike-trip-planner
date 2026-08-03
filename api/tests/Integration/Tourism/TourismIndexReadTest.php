@@ -202,6 +202,41 @@ final class TourismIndexReadTest extends KernelTestCase
         );
     }
 
+    #[Test]
+    public function accommodationsAssignBisectorRowsWithTheSameMetricAsTheDistributor(): void
+    {
+        // At latitude 60 a degree of longitude is only cos(60) = half a degree of
+        // latitude. 'Gîte Bissectrice' (60.00 0.00) is 0.10 deg south of end point A
+        // but 0.12 deg west of end point B: planar degrees call A nearer
+        // (0.10 < 0.12), metres call B nearer (6.7 km < 11.1 km), and metres are what
+        // GeometryBasedDistributor::distributeByEndpoint uses. A's budget is filled
+        // with 30 gîtes within 100 m, so a row assigned to A is ranked 31st and
+        // dropped — surviving proves it went to B.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'd' || lpad(i::text, 2, '0'), 'Gîte Dense ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(0.0, 60.10 + i * 0.00001), 4326)
+            FROM generate_series(1, 30) AS i
+            SQL);
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('zz', 'Gîte Bissectrice', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 60.10, 'lon' => 0.0], ['lat' => 60.00, 'lon' => 0.12]],
+            15000,
+            ['apartment'],
+        );
+
+        self::assertContains(
+            'Gîte Bissectrice',
+            array_column($rows, 'name'),
+            'a bisector row must be assigned to the end point the distributor will pick (metres), not the planar-degree one',
+        );
+        self::assertCount(31, $rows);
+    }
+
     /**
      * 40 extra apartments, 111 m apart along the meridian, all inside the 5 km
      * radius (41 rows in range with the setUp gîte, for a 30-row cap). Inserted
