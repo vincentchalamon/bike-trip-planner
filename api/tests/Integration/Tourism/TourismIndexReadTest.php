@@ -50,12 +50,15 @@ final class TourismIndexReadTest extends KernelTestCase
                   ST_SetSRID(ST_MakePoint(6.80, 50.90), 4326))
             SQL);
 
+        // The contact / Wikidata columns exist since #872; `tags` still carries the
+        // keys with no column of their own (booking_url, image_url, labels).
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
-              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL,
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, opening_hours, website, phone, wikidata, image_url, wikipedia_url, tags, geom) VALUES
+              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL, 'Apr-Oct', 'https://gite.test', '+33 3 88 00 00 00', 'Q1234',
+                  'https://img.test/gite.jpg', 'https://fr.wikipedia.org/wiki/Gite',
                   '{"type": ["Accommodation", "RentalAccommodation"], "website": "https://gite.test", "opening_hours": "Apr-Oct", "labels": ["Accueil Vélo"]}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326)),
-              ('a2', 'Grand Hôtel', 'hotel', NULL, NULL, NULL, '{}'::jsonb,
+              ('a2', 'Grand Hôtel', 'hotel', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
             SQL);
 
@@ -112,12 +115,29 @@ final class TourismIndexReadTest extends KernelTestCase
         self::assertSame('Gîte du Lac', $accommodations[0]['name']);
         self::assertSame(4, $accommodations[0]['capacity']);
         self::assertSame(75.0, $accommodations[0]['price']);
+        // The columns the migration added (#872): without them the read layer could
+        // expose neither a link nor a Q-ID for any of the 124k curated lodgings.
+        self::assertSame('https://gite.test', $accommodations[0]['website']);
+        self::assertSame('+33 3 88 00 00 00', $accommodations[0]['phone']);
+        self::assertSame('Apr-Oct', $accommodations[0]['openingHours']);
+        self::assertSame('Q1234', $accommodations[0]['wikidata']);
+        self::assertSame('https://img.test/gite.jpg', $accommodations[0]['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Gite', $accommodations[0]['wikipediaUrl']);
         // The preserved flux keys reach the source flattened to the OSM-tag contract:
         // scalars only, so the list-valued `type` / `labels` stay in the jsonb (#871).
         self::assertSame(
             ['website' => 'https://gite.test', 'opening_hours' => 'Apr-Oct'],
             $accommodations[0]['tags'],
         );
+
+        $bare = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.50, 'lon' => 2.50]],
+            5000,
+            ['hotel'],
+        );
+        self::assertSame('Grand Hôtel', $bare[0]['name']);
+        self::assertNull($bare[0]['website']);
+        self::assertNull($bare[0]['wikidata']);
     }
 
     #[Test]

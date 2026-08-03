@@ -16,7 +16,7 @@ namespace Provisioner;
  * the source object is preserved in the row's tags (see {@see tags}), because
  * whatever is dropped here is unrecoverable short of a full re-import (#871).
  *
- * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event'|'food', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, website: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, tags: array<string, mixed>}
+ * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event'|'food', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, website: string|null, phone: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, tags: array<string, mixed>}
  */
 final class DataTourismeMapper
 {
@@ -151,6 +151,7 @@ final class DataTourismeMapper
             'description' => $this->description($object),
             'openingHours' => $openingHours,
             'website' => $contact['website'] ?? $contact['bookingUrl'],
+            'phone' => $contact['phone'],
             'wikidata' => $this->wikidata($object),
             'capacity' => 'accommodation' === $head ? $this->intOrNull($object['allowedPersons'] ?? null) : null,
             'price' => 'accommodation' === $head || 'event' === $head ? $this->price($object['offers'] ?? null) : null,
@@ -172,10 +173,16 @@ final class DataTourismeMapper
      * - `opening_hours`: OSM tag key on purpose, so `App\Accommodation\SeasonalityChecker`
      *   — which reads `$tags['opening_hours']` — works on DataTourisme rows too.
      * - `website`, `phone`, `email`, `booking_url`: the contact block, feeding the
-     *   accommodation URL and the `hasWebsite` completeness signal (#869).
+     *   accommodation URL and the `hasWebsite` completeness signal (#869). `website`
+     *   and `phone` are also columns since #872; they stay here as the fallback the
+     *   read path uses for rows imported before that, and `booking_url` / `email`
+     *   have no column of their own.
      * - `address`, `postal_code`, `city`: the postal address, so a stage label or a
      *   suggestion can be shown without a reverse-geocode round trip.
-     * - `image_url`: the main photo, promoted to a column by #872.
+     * - `image_url`: the main photo. It stays a tag rather than becoming a column:
+     *   the `image_url` column is Wikidata-only across every table (the shared
+     *   {@see WikidataEnrichmentPass} overwrites it), so a flux photo written there
+     *   would be erased for any row carrying a Q-ID.
      * - `labels`: classification / feature labels, where quality labels such as
      *   "Accueil Vélo" live.
      *
@@ -356,24 +363,30 @@ final class DataTourismeMapper
      * them over `foaf:homepage` (top level), `hasContact` and `hasBookingContact`;
      * the first non-empty value wins, contacts being published most-relevant first.
      *
+     * The homepages go through {@see WebsiteUrl}: they are hand-typed, so a
+     * schema-less "www.gite.fr" is absolutised and an unusable value ("nous
+     * contacter", an e-mail address) becomes null rather than being stored as is
+     * (#872). A homepage rejected there does not disqualify the contact — the
+     * next one is still considered, exactly as an absent homepage would be.
+     *
      * @param array<string, mixed> $object
      *
      * @return array{website: ?string, phone: ?string, email: ?string, bookingUrl: ?string}
      */
     private function contact(array $object): array
     {
-        $website = $this->firstString($object['foaf:homepage'] ?? null);
+        $website = WebsiteUrl::normalize($this->firstString($object['foaf:homepage'] ?? null));
         $phone = null;
         $email = null;
         foreach ($this->objectList($object['hasContact'] ?? null) as $contact) {
-            $website ??= $this->firstString($contact['foaf:homepage'] ?? null);
+            $website ??= WebsiteUrl::normalize($this->firstString($contact['foaf:homepage'] ?? null));
             $phone ??= $this->firstString($contact['schema:telephone'] ?? null);
             $email ??= $this->firstString($contact['schema:email'] ?? null);
         }
 
         $bookingUrl = null;
         foreach ($this->objectList($object['hasBookingContact'] ?? null) as $contact) {
-            $bookingUrl ??= $this->firstString($contact['foaf:homepage'] ?? null);
+            $bookingUrl ??= WebsiteUrl::normalize($this->firstString($contact['foaf:homepage'] ?? null));
         }
 
         return ['website' => $website, 'phone' => $phone, 'email' => $email, 'bookingUrl' => $bookingUrl];
@@ -468,7 +481,7 @@ final class DataTourismeMapper
     {
         foreach ($this->objectList($object['hasMainRepresentation'] ?? null) as $representation) {
             foreach ($this->objectList($representation['ebucore:hasRelatedResource'] ?? null) as $resource) {
-                $locator = $this->firstString($resource['ebucore:locator'] ?? null);
+                $locator = WebsiteUrl::normalize($this->firstString($resource['ebucore:locator'] ?? null));
                 if (null !== $locator) {
                     return $locator;
                 }

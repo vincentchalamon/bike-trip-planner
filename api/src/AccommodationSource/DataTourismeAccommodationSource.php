@@ -7,6 +7,7 @@ namespace App\AccommodationSource;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\Engine\PricingHeuristicEngine;
+use App\Format\WebsiteUrl;
 use App\Tourism\AccommodationRepositoryInterface;
 
 /**
@@ -56,13 +57,15 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 $isExact = $pricing['isExact'];
             }
 
-            // The contact block and the opening hours the flux carries are preserved
-            // in `tourism.accommodations.tags` by the provisioner (#871), pending the
-            // dedicated columns of #872. Reading them here is what lets the
-            // completeness ranking score this source and SeasonalityChecker decide
-            // `possibleClosed` on a DataTourisme entry at all.
+            // The contact block and the opening hours now live in real columns
+            // (#872); `tags` remains the fallback for rows imported before them and
+            // the only home of `booking_url` / `image_url`, which have no column.
+            // Reading them is what lets the completeness ranking score this source
+            // and SeasonalityChecker decide `possibleClosed` on a DataTourisme entry.
             $tags = $accommodation['tags'];
-            $url = $tags['website'] ?? $tags['booking_url'] ?? null;
+            // Normalised even coming from the column: the fallbacks are raw flux
+            // text, and a database provisioned before #872 holds unnormalised values.
+            $url = WebsiteUrl::normalize($accommodation['website'] ?? $tags['website'] ?? $tags['booking_url'] ?? null);
 
             // `tagCount` counts the attributes actually filled for this entry: the
             // flux publishes fields, not OSM tags, so the OSM tag-richness proxy would
@@ -90,14 +93,17 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'hasWebsite' => null !== $url,
                 'tags' => $tags,
                 'source' => 'datatourisme',
-                'wikidataId' => null,
+                // The Q-ID the flux publishes as `owl:sameAs`, now a column: it is
+                // what lets NearbyNameDeduplicator pair this entry with its OSM twin
+                // instead of relying on the name + 75 m heuristic alone.
+                'wikidataId' => $accommodation['wikidata'],
                 'description' => $accommodation['description'],
-                // tourism.accommodations carries no `wikidata` Q-ID column, so it is
-                // not Wikidata-enriched at provision time (ADR-041 enriches only
-                // tourism.cultural_pois / food_pois): these stay null by design.
-                'imageUrl' => null,
-                'wikipediaUrl' => null,
-                'openingHours' => $tags['opening_hours'] ?? null,
+                // Wikidata-only columns, filled at provision time now that
+                // tourism.accommodations carries a Q-ID (ADR-041). The flux photo,
+                // which has no column, is the fallback.
+                'imageUrl' => $accommodation['imageUrl'] ?? WebsiteUrl::normalize($tags['image_url'] ?? null),
+                'wikipediaUrl' => $accommodation['wikipediaUrl'],
+                'openingHours' => $accommodation['openingHours'] ?? $tags['opening_hours'] ?? null,
             ];
         }
 
