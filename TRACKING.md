@@ -1324,27 +1324,34 @@ Le lien et le téléphone cessent d'être du confort : depuis la décision d'obs
 
 | Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
 |-------|----|-------|--------|-----|--------|-----------|
-| 1 | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) | fix(datatourisme): stop truncating the flux tags to the type list | - | [#915](https://github.com/vincentchalamon/bike-trip-planner/pull/915) `feature/871` | En cours | - |
-| 2 | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) | feat(datatourisme): add website, phone, wikidata and opening hours to tourism accommodations | - | [#917](https://github.com/vincentchalamon/bike-trip-planner/pull/917) `feature/872` | En cours (empilée sur `feature/871`) | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) |
-| 3 | [#873](https://github.com/vincentchalamon/bike-trip-planner/issues/873) | feat(api): expose accommodation url, phone and osm identity | - | [#918](https://github.com/vincentchalamon/bike-trip-planner/pull/918) `feature/873` | En cours (empilée sur `feature/872`) | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) |
-| 4 | [#874](https://github.com/vincentchalamon/bike-trip-planner/issues/874) | fix(poi): translated labels for unnamed pois and the dedup collision they cause | - | [#913](https://github.com/vincentchalamon/bike-trip-planner/pull/913) `feature/874` | En cours | - |
-| 5 | [#875](https://github.com/vincentchalamon/bike-trip-planner/issues/875) | feat(poi): use real opening hours instead of hardcoded schedules | - | [#914](https://github.com/vincentchalamon/bike-trip-planner/pull/914) `feature/875` | En cours (1 tour de revue, vrai bug) | - |
-| 6 | [#876](https://github.com/vincentchalamon/bike-trip-planner/issues/876) | feat(alerts): stable alert code and hardened documentation test | - | [#916](https://github.com/vincentchalamon/bike-trip-planner/pull/916) `feature/876` | En cours (1 tour de revue) | - |
+| 1 | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) | fix(datatourisme): stop truncating the flux tags to the type list | - | [#915](https://github.com/vincentchalamon/bike-trip-planner/pull/915) `feature/871` | ✅ Mergée | - |
+| 2 | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) | feat(datatourisme): add website, phone, wikidata and opening hours to tourism accommodations | - | [#917](https://github.com/vincentchalamon/bike-trip-planner/pull/917) `feature/872` | En cours (rebasée sur `main`, **porte aussi #873**) | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) ✅ |
+| 3 | [#873](https://github.com/vincentchalamon/bike-trip-planner/issues/873) | feat(api): expose accommodation url, phone and osm identity | - | [#918](https://github.com/vincentchalamon/bike-trip-planner/pull/918) `feature/873` | ✅ Mergée **dans `feature/872`**, pas dans `main` | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) |
+| 4 | [#874](https://github.com/vincentchalamon/bike-trip-planner/issues/874) | fix(poi): translated labels for unnamed pois and the dedup collision they cause | - | [#913](https://github.com/vincentchalamon/bike-trip-planner/pull/913) `feature/874` | ✅ Mergée | - |
+| 5 | [#875](https://github.com/vincentchalamon/bike-trip-planner/issues/875) | feat(poi): use real opening hours instead of hardcoded schedules | - | [#914](https://github.com/vincentchalamon/bike-trip-planner/pull/914) `feature/875` | En cours (rebasée sur `feature/872`, conflits résolus) | - |
+| 6 | [#876](https://github.com/vincentchalamon/bike-trip-planner/issues/876) | feat(alerts): stable alert code and hardened documentation test | - | [#916](https://github.com/vincentchalamon/bike-trip-planner/pull/916) `feature/876` | En cours (rebasée sur `feature/875`, conflit résolu) | - |
 
 > **#876 dépendait de #861 (sprint 44), dépendance inter-sprint que la table ne sait pas exprimer.** Le sprint 44 étant mergé sur `main`, la contrainte était satisfaite en branchant sur `main` : la liste des `AlertCode` reflète les règles réellement conservées après suppression des règles de présence de tag.
 
-### Ordre de merge et conflits attendus
+### Ordre de merge — conflits résolus, chaîne linéaire
 
-**Ordre imposé** (la pile d'abord, dans l'ordre) :
+> **Mis à jour après le premier tour de merges (03/08/2026, 15h12).** #915 (#871), #913 (#874) et #919 sont dans `main` ; #918 (#873) a été mergée **dans `feature/872`** et non dans `main`. Les trois PRs restantes ont été **rebasées** et **tous les conflits sont résolus** : `git merge-tree` ne signale plus rien entre aucune paire.
 
-1. **#915 (#871)** → **#917 (#872)** → **#918 (#873)** — pile de 3, chaque PR a pour base la précédente.
-2. **#913 (#874)** — indépendante, aucun conflit avec les autres. À merger **avant** #914.
-3. **#914 (#875)** — après #913, dont elle partage 14 fichiers.
-4. **#916 (#876)** — indépendante de la pile ; un seul conflit, avec #914.
+**Chaîne actuelle, à merger dans cet ordre :**
 
-Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais la branche enfant porte encore le commit pré-squash du parent : ne **pas** faire un `git rebase origin/main` direct, utiliser `git rebase --onto origin/main <dernier-commit-du-parent> feature/<enfant>`, puis vérifier que `git log origin/main..HEAD` ne liste que les commits de l'enfant.
+```text
+main ──▶ feature/872 (#917, porte #872 + #873) ──▶ feature/875 (#914) ──▶ feature/876 (#916)
+```
 
-**Fichiers partagés et arbitrages décidés avant le merge** (mesurés par `git merge-tree`, pas supposés) :
+1. **#917** — 2 commits au-dessus de `main`.
+2. **#914** — base `feature/872`, 2 commits propres.
+3. **#916** — base `feature/875`, 2 commits propres.
+
+Après chaque squash-merge, la branche enfant portera encore les commits pré-squash de son parent : ne **pas** faire un `git rebase origin/main` direct, utiliser `git rebase --onto origin/main <dernier-commit-du-parent> feature/<enfant>`, puis vérifier que `git log origin/main..HEAD` ne liste que les commits de l'enfant. C'est exactement ce qui a été fait pour `feature/872`, dont le commit `6aea40b3` de #871 doublonnait le squash de #915.
+
+**Activer `git rerere`** (`git config rerere.enabled true`) : les résolutions de cette chaîne y sont enregistrées et se rejouent seules à chaque rebase suivant. Elles l'ont fait sur les deux rebases successifs de #914 et #916.
+
+**Résolutions appliquées** (les 12 conflits mesurés ; conservées ici pour la reproductibilité) :
 
 | Fichier | PRs | Qui gagne |
 |---------|-----|-----------|
@@ -1359,7 +1366,14 @@ Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais l
 | `pwa/src/lib/api/schema.d.ts` | #916, #918 | **Aucun conflit mesuré** non plus. Mais **si** un conflit apparaît après un rebase, ne jamais le résoudre à la main : prendre n'importe quel côté puis régénérer (`make typegen`, ou le repli documenté dans CLAUDE.md en worktree). Régénérer après le merge du second reste prudent, un `@description` suffisant à faire dériver le fichier. |
 | `api/translations/alerts.{fr,en}.yaml` | #913 | Seule #913 y touche (17 clés `poi_type.*` plus `alert.cultural_poi.suggestion_unnamed`). Pas de conflit. |
 
-**Un point de sémantique que le merge ne signalera pas :** #913 introduit `alert.cultural_poi.suggestion_unnamed`, une **seconde clé de traduction pour la même règle**, tandis que #916 crée l'enum `AlertCode`. Les deux clés doivent partager le code `cultural_poi_suggestion` — le code identifie la **règle**, pas la clé i18n, et c'est précisément le découplage que porte #876. #916 a été écrite en tenant compte de ce cas (comme pour `alert.calendar.nudge` / `alert.calendar.unnamed_nudge`), donc le merge ne demande aucun cas d'enum supplémentaire. À vérifier tout de même : `AlertDocumentationTest` scanne les codes **émis**, pas les clés de traduction.
+**Un point de sémantique que le merge ne signalait pas — vérifié au rebase, il tient.** #913 introduit `alert.cultural_poi.suggestion_unnamed`, une **seconde clé de traduction pour la même règle**, tandis que #916 crée l'enum `AlertCode`. Les deux clés devaient partager le code `cultural_poi_suggestion`, le code identifiant la **règle** et non la clé i18n. Après rebase, `CheckCulturalPoisHandler` a bien la forme voulue — la clé bifurque sur le nom, le code reste unique et hors de la branche — et `AlertDocumentationTest` passe. Aucun cas d'enum supplémentaire n'a été nécessaire.
+
+**Deux conflits sémantiques que git a fusionnés proprement**, invisibles à `merge-tree` et rattrapés seulement par PHPStan puis PHPUnit lors du rebase de #914 :
+
+1. `api/tests/Unit/MessageHandler/ScanPoisHandlerTest.php` — une signature de helper restée en `name: string` alors que #913 y passe `null`, et une fixture privée des clés `openingHours` / `website` que le handler de #914 lit désormais. PHPStan : `Array does not have offset 'openingHours'`.
+2. `api/tests/Unit/Poi/OsmPoiSourceTest.php` — même omission, qui **ne faisait pas rougir la suite** : elle sortait en `Warnings: 2` (`Undefined array key "website"`) sous un `OK` vert. Corrigé en complétant les fixtures et non en assouplissant le type, le contrat de source exigeant bien ces clés.
+
+C'est la confirmation de la leçon du sprint 45 : la carte de recoupement attrape les conflits de **fichier**, pas les conflits de **valeur**. Le garde-fou utile n'est pas `merge-tree` mais **PHPStan puis PHPUnit relancés après chaque rebase** — et lire les avertissements PHPUnit, pas seulement le statut final.
 
 **Deux retours de revue automatique qui étaient de vrais défauts, pas du bruit :**
 
