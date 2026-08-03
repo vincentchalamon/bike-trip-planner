@@ -11,6 +11,10 @@
  * `motel`) all map onto the relevant category through {@link resolveCategory}.
  */
 import type { ComponentType, SVGProps } from "react";
+import {
+  FILTERABLE_ACCOMMODATION_TYPES,
+  type FilterableAccommodationType,
+} from "@/lib/accommodation-types";
 
 export type MarkerCategory =
   | "accommodation"
@@ -281,20 +285,15 @@ export const MarkerIcon: Record<
 
 // ── Sub-type → category mapping ──────────────────────────────────────────────
 
-/** Accommodation sub-types covered by the unified registry. */
-export const ACCOMMODATION_SUBTYPES = [
-  "hotel",
-  "motel",
-  "guest_house",
-  "chalet",
-  "hostel",
-  "alpine_hut",
-  "camp_site",
-  "wilderness_hut",
-  "shelter",
-] as const;
+/**
+ * Accommodation sub-types covered by the unified registry. Derived from the
+ * shared contract rather than duplicated, so a new type gets its marker
+ * category without a second edit here ("other" is the manual-entry bucket and
+ * never reaches a marker as a sub-type).
+ */
+export const ACCOMMODATION_SUBTYPES = FILTERABLE_ACCOMMODATION_TYPES;
 
-export type AccommodationSubtype = (typeof ACCOMMODATION_SUBTYPES)[number];
+export type AccommodationSubtype = FilterableAccommodationType;
 
 /** Returns true if `value` matches a known accommodation sub-type. */
 export function isAccommodationSubtype(

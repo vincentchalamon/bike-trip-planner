@@ -19,6 +19,10 @@ import { PoiPopover, isEnrichedPoi } from "./poi-popover";
 import { MapLegend } from "@/components/map-legend";
 import { TileLayerControl } from "./tile-layer-control";
 import { useTileMode, type TileMode } from "@/hooks/use-tile-mode";
+import {
+  isAccommodationType,
+  type AccommodationType,
+} from "@/lib/accommodation-types";
 
 const LIGHT_TILES =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -143,27 +147,35 @@ function createMarkerElement(className: string, label: string): HTMLElement {
   return el;
 }
 
+const ACCOMMODATION_BUILDINGS = "#7c3aed"; // violet
+const ACCOMMODATION_CAMPING = "#059669"; // emerald
+const ACCOMMODATION_HUTS = "#b45309"; // amber-700
+const ACCOMMODATION_FALLBACK = "#6b7280"; // slate
+
 /**
  * Background colour applied behind the unified accommodation icon — kept
  * granular per sub-type so users still get a quick visual cue at a glance.
+ * Exhaustive over the shared contract: a new type without a colour is a
+ * TypeScript error instead of a silent slate marker.
  */
+const ACCOMMODATION_BACKGROUNDS: Record<AccommodationType, string> = {
+  hotel: ACCOMMODATION_BUILDINGS,
+  hostel: ACCOMMODATION_BUILDINGS,
+  guest_house: ACCOMMODATION_BUILDINGS,
+  motel: ACCOMMODATION_BUILDINGS,
+  chalet: ACCOMMODATION_BUILDINGS,
+  rental: ACCOMMODATION_BUILDINGS,
+  camp_site: ACCOMMODATION_CAMPING,
+  alpine_hut: ACCOMMODATION_HUTS,
+  wilderness_hut: ACCOMMODATION_HUTS,
+  shelter: ACCOMMODATION_HUTS,
+  other: ACCOMMODATION_FALLBACK,
+};
+
 function getAccommodationBackground(type: string): string {
-  switch (type) {
-    case "hotel":
-    case "hostel":
-    case "guest_house":
-    case "motel":
-    case "chalet":
-      return "#7c3aed"; // violet — buildings
-    case "camp_site":
-      return "#059669"; // emerald — camping
-    case "alpine_hut":
-    case "wilderness_hut":
-    case "shelter":
-      return "#b45309"; // amber-700 — huts
-    default:
-      return "#6b7280"; // slate — fallback
-  }
+  return isAccommodationType(type)
+    ? ACCOMMODATION_BACKGROUNDS[type]
+    : ACCOMMODATION_FALLBACK;
 }
 
 /**
