@@ -42,9 +42,13 @@ final class PoiSourceRegistryTest extends TestCase
 
             public function fetchInCorridor(array $route, int $radiusMeters): array
             {
-                // Fixtures state only what a case is about; the OSM identity defaults
-                // to "not an OSM entry", which is what a curated source looks like.
-                return array_map(static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null], $this->pois);
+                // Fixtures state only what a case is about; the rest of the source
+                // shape defaults to "nothing known", which is what a curated entry
+                // without an OSM identity looks like.
+                return array_map(
+                    static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null, 'openingHours' => null, 'website' => null],
+                    $this->pois,
+                );
             }
         };
     }

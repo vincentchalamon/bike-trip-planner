@@ -53,11 +53,36 @@ final readonly class NearbyNameDeduplicator
             // Same place from two sources, in its first-seen position: keep the
             // curated DataTourisme entry.
             if ('datatourisme' === ($item['source'] ?? null) && 'datatourisme' !== ($kept[$match]['source'] ?? null)) {
-                $kept[$match] = $item;
+                $kept[$match] = $this->withoutLosingKnownValues($item, $kept[$match]);
             }
         }
 
         return array_values($kept);
+    }
+
+    /**
+     * The curated entry wins, but preferring a source must not destroy what the
+     * other one knew: the flux carries no website for cultural and food POIs, so
+     * a plain overwrite dropped the OSM website for every place both sources
+     * describe — precisely the ones a rider is most likely to look up.
+     *
+     * Only keys the winner leaves null are backfilled, so the winner never loses
+     * a value, and no key it does not declare is invented.
+     *
+     * @param array<string, mixed> $winner
+     * @param array<string, mixed> $loser
+     *
+     * @return array<string, mixed>
+     */
+    private function withoutLosingKnownValues(array $winner, array $loser): array
+    {
+        foreach ($winner as $key => $value) {
+            if (null === $value && null !== ($loser[$key] ?? null)) {
+                $winner[$key] = $loser[$key];
+            }
+        }
+
+        return $winner;
     }
 
     /**

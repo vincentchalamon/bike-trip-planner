@@ -1265,6 +1265,10 @@ export interface components {
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
             osmId?: number | null;
+            /** @description Raw OpenStreetMap opening_hours value, when the POI carries one. */
+            openingHours?: string | null;
+            /** @description Official website of the POI, when OpenStreetMap knows one. */
+            website?: string | null;
         };
         "PointOfInterest.gpx": {
             name?: string;
@@ -1276,6 +1280,10 @@ export interface components {
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
             osmId?: number | null;
+            /** @description Raw OpenStreetMap opening_hours value, when the POI carries one. */
+            openingHours?: string | null;
+            /** @description Official website of the POI, when OpenStreetMap knows one. */
+            website?: string | null;
         };
         "PointOfInterest.jsonld": {
             name?: string;
@@ -1287,6 +1295,10 @@ export interface components {
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
             osmId?: number | null;
+            /** @description Raw OpenStreetMap opening_hours value, when the POI carries one. */
+            openingHours?: string | null;
+            /** @description Official website of the POI, when OpenStreetMap knows one. */
+            website?: string | null;
         };
         "Stage.StagePoiWaypointRequest": {
             /** @description POI latitude to insert as waypoint. */
