@@ -17,7 +17,7 @@ use Doctrine\DBAL\ParameterType;
 final readonly class AccommodationRepository implements AccommodationRepositoryInterface
 {
     /**
-     * Rows fetched per stage end point. ScanAccommodationsHandler retains
+     * Rows kept per stage end point. ScanAccommodationsHandler retains
      * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
      * the price ranking, so 30 leaves a 10x margin. It replaces the flat
      * `LIMIT 200`, which both starved long trips and truncated non
@@ -31,7 +31,8 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
 
     /**
      * DataTourisme accommodations of the given categories within $radiusMeters of
-     * any point, nearest first.
+     * any point, grouped by the end point they belong to (nearest first within each
+     * group) and capped per end point.
      *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
@@ -44,31 +45,55 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
             return [];
         }
 
-        // `ORDER BY geom <-> multipoint` is the GiST KNN order (like
-        // CulturalPoiRepository), so the LIMIT keeps the nearest rows; `id` (the
-        // DataTourisme URI, primary key) breaks distance ties so two runs of the
-        // same scan return the same rows in the same order — the reproducibility
-        // ADR-040 promises.
+        // The cap is per end point, not global: the flat `LIMIT 200` (and any single
+        // top-N over the combined multipoint) lets one dense urban stage consume the
+        // whole budget and evict a rural stage down to zero candidate. Each row is
+        // therefore assigned to its nearest end point (`nearest`, the same rule
+        // GeometryBasedDistributor::distributeByEndpoint applies downstream) and
+        // ranked inside that partition. ROW_NUMBER over one pass, rather than a
+        // LATERAL sub-select per point: the radius filter costs a full scan (no index
+        // on `geom::geography`), so a per-point sub-select would repeat it per stage.
+        //
+        // The order is fully specified — end point, then distance, then the `id`
+        // primary key (the DataTourisme URI) — so two runs of the same scan return
+        // the same rows in the same order, the reproducibility ADR-040 promises.
+        // `ranked.*` carries the ranking helper columns (point_index, distance,
+        // point_rank, id); the mapping below reads named keys and ignores them.
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT name, category, capacity, price, description,
-                       ST_Y(geom) AS lat, ST_X(geom) AS lon
-                FROM tourism.accommodations
-                WHERE category IN (:categories)
-                  AND ST_DWithin(
-                      geom::geography,
-                      ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                      :radius
-                  )
-                ORDER BY geom <-> ST_SetSRID(ST_GeomFromText(:wkt), 4326), id
-                LIMIT :limit
+                SELECT ranked.*
+                FROM (
+                    SELECT a.id,
+                           a.name, a.category, a.capacity, a.price, a.description,
+                           ST_Y(a.geom) AS lat, ST_X(a.geom) AS lon,
+                           nearest.point_index, nearest.distance,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY nearest.point_index
+                               ORDER BY nearest.distance, a.id
+                           ) AS point_rank
+                    FROM tourism.accommodations a
+                    CROSS JOIN LATERAL (
+                        SELECT pt.path[1] AS point_index, a.geom <-> pt.geom AS distance
+                        FROM ST_Dump(ST_SetSRID(ST_GeomFromText(:wkt), 4326)) AS pt
+                        ORDER BY a.geom <-> pt.geom, pt.path
+                        LIMIT 1
+                    ) AS nearest
+                    WHERE a.category IN (:categories)
+                      AND ST_DWithin(
+                          a.geom::geography,
+                          ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
+                          :radius
+                      )
+                ) AS ranked
+                WHERE ranked.point_rank <= :limit
+                ORDER BY ranked.point_index, ranked.distance, ranked.id
                 SQL,
             [
                 'wkt' => WktGeometry::multiPoint($points),
                 'radius' => $radiusMeters,
                 'categories' => $categories,
-                'limit' => \count($points) * self::MAX_ROWS_PER_POINT,
+                'limit' => self::MAX_ROWS_PER_POINT,
             ],
             [
                 'categories' => ArrayParameterType::STRING,

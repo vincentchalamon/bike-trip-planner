@@ -164,6 +164,44 @@ final class TourismIndexReadTest extends KernelTestCase
         );
     }
 
+    #[Test]
+    public function accommodationsGiveEveryEndPointItsOwnBudget(): void
+    {
+        // A dense end point (48.50 2.50): 80 gîtes 22 m apart, so 60 of them sit
+        // closer than anything around the isolated end point below.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.0002), 4326)
+            FROM generate_series(80, 1, -1) AS i
+            SQL);
+
+        // An isolated end point (49.52 3.50), ~110 km away: three gîtes 2.2 to
+        // 3.9 km out, all inside the radius but all farther than the dense cluster.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('i1', 'Gîte Isolé 1', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.50), 4326)),
+              ('i2', 'Gîte Isolé 2', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.55), 4326)),
+              ('i3', 'Gîte Isolé 3', 'apartment', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.555), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.50, 'lon' => 2.50], ['lat' => 49.52, 'lon' => 3.50]],
+            5000,
+            ['apartment'],
+        );
+
+        // A single top-N over the combined multipoint (the flat `LIMIT 200` on a
+        // long trip) would spend the whole budget on the dense cluster and return
+        // nothing for the isolated stage. The cap is per end point: 30 + 3.
+        self::assertCount(33, $rows);
+        self::assertSame(
+            ['Gîte Isolé 1', 'Gîte Isolé 2', 'Gîte Isolé 3'],
+            \array_slice(array_column($rows, 'name'), 30),
+            'the isolated end point keeps its own candidates, nearest first',
+        );
+    }
+
     /**
      * 40 extra apartments, 111 m apart along the meridian, all inside the 5 km
      * radius (41 rows in range with the setUp gîte, for a 30-row cap). Inserted

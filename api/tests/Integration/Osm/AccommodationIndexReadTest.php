@@ -161,6 +161,44 @@ final class AccommodationIndexReadTest extends KernelTestCase
         );
     }
 
+    #[Test]
+    public function findNearGivesEveryEndPointItsOwnBudget(): void
+    {
+        // A dense end point (48.5 2.5): 80 hotels 22 m apart, so 60 of them sit
+        // closer than anything around the isolated end point below.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9000 + i, 'Hotel ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.5, 48.5 + i * 0.0002), 4326)
+            FROM generate_series(80, 1, -1) AS i
+            SQL);
+
+        // An isolated end point (49.52 3.5), ~110 km away: three hotels 2.2 to
+        // 3.9 km out, all inside the radius but all farther than the dense
+        // cluster. The setUp 'Auberge Lointaine' (3.5 49.5) is the nearest one.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 9500, 'Auberge Isolee 1', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.55), 4326)),
+              ('n', 9501, 'Auberge Isolee 2', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.555), 4326))
+            SQL);
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.5, 'lon' => 2.5], ['lat' => 49.52, 'lon' => 3.5]],
+            5000,
+            ['hotel'],
+        );
+
+        // A single top-N over the combined multipoint would spend the whole budget
+        // on the dense cluster and return nothing at all for the isolated stage.
+        // The cap is per end point, so both get served: 30 + 3.
+        self::assertCount(33, $rows);
+        self::assertSame(
+            ['Auberge Lointaine', 'Auberge Isolee 1', 'Auberge Isolee 2'],
+            \array_slice(array_column($rows, 'name'), 30),
+            'the isolated end point keeps its own candidates, nearest first',
+        );
+    }
+
     /**
      * 40 extra hotels, 111 m apart along the meridian, all inside the 5 km radius
      * (41 rows in range with the setUp hotel, for a 30-row cap). Inserted farthest
