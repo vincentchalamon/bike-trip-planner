@@ -114,6 +114,72 @@ final class TourismIndexReadTest extends KernelTestCase
     }
 
     #[Test]
+    public function accommodationsKeepTheNearestRowsOnlyUpToTheLimit(): void
+    {
+        $this->seedFortyGitesFarthestFirst();
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.50, 'lon' => 2.50]],
+            5000,
+            ['apartment'],
+        );
+
+        // MAX_ROWS_PER_POINT = 30 per end point, and the KNN order means the cap
+        // keeps the closest rows: Gîte 30..40 are dropped, not an arbitrary slice
+        // of the 41 in range (what the flat `LIMIT 200` did on a real trip).
+        $expected = array_merge(['Gîte du Lac'], array_map(
+            static fn (int $i): string => \sprintf('Gîte %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($rows, 'name'));
+    }
+
+    #[Test]
+    public function accommodationsAreReturnedInTheSameOrderOnEveryRun(): void
+    {
+        $this->seedFortyGitesFarthestFirst();
+
+        // Three rows share the end point geom (the setUp gîte and hotel plus this
+        // one, inserted last with the lowest id): the distance tie is resolved on
+        // the DataTourisme id, not on the physical row order.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
+              ('a0', 'Auberge Zéro', 'hotel', NULL, NULL, NULL, '{}'::jsonb,
+                  ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
+            SQL);
+
+        $repository = new AccommodationRepository($this->connection);
+        $points = [['lat' => 48.50, 'lon' => 2.50]];
+
+        $first = $repository->findNear($points, 5000, ['apartment', 'hotel']);
+        $second = $repository->findNear($points, 5000, ['apartment', 'hotel']);
+
+        self::assertSame($first, $second, 'the same scan must return the same rows in the same order (ADR-040)');
+        self::assertCount(30, $first);
+        self::assertSame(
+            ['Auberge Zéro', 'Gîte du Lac', 'Grand Hôtel'],
+            \array_slice(array_column($first, 'name'), 0, 3),
+            'co-located rows are ordered by id: a0 < a1 < a2',
+        );
+    }
+
+    /**
+     * 40 extra apartments, 111 m apart along the meridian, all inside the 5 km
+     * radius (41 rows in range with the setUp gîte, for a 30-row cap). Inserted
+     * farthest first so the physical row order reverses the expected KNN order.
+     */
+    private function seedFortyGitesFarthestFirst(): void
+    {
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'apartment', NULL, NULL, NULL, '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.001), 4326)
+            FROM generate_series(40, 1, -1) AS i
+            SQL);
+    }
+
+    #[Test]
     public function eventsAreFilteredByDateAndRadius(): void
     {
         $repository = new EventRepository($this->connection);

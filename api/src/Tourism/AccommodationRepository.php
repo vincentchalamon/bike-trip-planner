@@ -7,6 +7,7 @@ namespace App\Tourism;
 use App\Osm\WktGeometry;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * Reads DataTourisme accommodations from the local-first `tourism` schema within
@@ -15,11 +16,23 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class AccommodationRepository implements AccommodationRepositoryInterface
 {
+    /**
+     * Rows fetched per stage end point. ScanAccommodationsHandler retains
+     * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
+     * the price ranking, so 30 leaves a 10x margin. It replaces the flat
+     * `LIMIT 200`, which both starved long trips and truncated non
+     * deterministically for lack of an ORDER BY.
+     */
+    private const int MAX_ROWS_PER_POINT = 30;
+
     public function __construct(private Connection $connection)
     {
     }
 
     /**
+     * DataTourisme accommodations of the given categories within $radiusMeters of
+     * any point, nearest first.
+     *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
@@ -31,6 +44,11 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
             return [];
         }
 
+        // `ORDER BY geom <-> multipoint` is the GiST KNN order (like
+        // CulturalPoiRepository), so the LIMIT keeps the nearest rows; `id` (the
+        // DataTourisme URI, primary key) breaks distance ties so two runs of the
+        // same scan return the same rows in the same order — the reproducibility
+        // ADR-040 promises.
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
@@ -43,15 +61,18 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                       ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
                       :radius
                   )
-                LIMIT 200
+                ORDER BY geom <-> ST_SetSRID(ST_GeomFromText(:wkt), 4326), id
+                LIMIT :limit
                 SQL,
             [
                 'wkt' => WktGeometry::multiPoint($points),
                 'radius' => $radiusMeters,
                 'categories' => $categories,
+                'limit' => \count($points) * self::MAX_ROWS_PER_POINT,
             ],
             [
                 'categories' => ArrayParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
             ],
         );
 

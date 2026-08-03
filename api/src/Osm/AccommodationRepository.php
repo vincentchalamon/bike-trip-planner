@@ -6,6 +6,7 @@ namespace App\Osm;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * Reads accommodations from the local-first Tier-1 index within a radius of the
@@ -14,12 +15,22 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class AccommodationRepository implements AccommodationRepositoryInterface
 {
+    /**
+     * Rows fetched per stage end point. ScanAccommodationsHandler retains
+     * MAX_CANDIDATES_PER_STAGE = 3 per stage after cross-source deduplication and
+     * the price ranking, so 30 leaves a 10x margin while bounding the scan: a
+     * 15 km radius over a dense area otherwise rapatriates every row — and its
+     * full `tags` jsonb — for three kept per stage.
+     */
+    private const int MAX_ROWS_PER_POINT = 30;
+
     public function __construct(private Connection $connection)
     {
     }
 
     /**
-     * Accommodations of the given categories within $radiusMeters of any point.
+     * Accommodations of the given categories within $radiusMeters of any point,
+     * nearest first.
      *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
@@ -34,6 +45,10 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
 
         // description / image_url / wikipedia_url are enriched from Wikidata at
         // provision time (ADR-041); website / opening_hours come from OSM tags.
+        // `ORDER BY geom <-> multipoint` is the GiST KNN order (like
+        // CulturalPoiRepository), so the LIMIT keeps the nearest rows instead of an
+        // arbitrary slice; (osm_type, osm_id) breaks distance ties on the primary
+        // key so two runs of the same scan return the same rows in the same order.
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
@@ -47,14 +62,18 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                       ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
                       :radius
                   )
+                ORDER BY geom <-> ST_SetSRID(ST_GeomFromText(:wkt), 4326), osm_type, osm_id
+                LIMIT :limit
                 SQL,
             [
                 'wkt' => WktGeometry::multiPoint($points),
                 'radius' => $radiusMeters,
                 'categories' => $categories,
+                'limit' => \count($points) * self::MAX_ROWS_PER_POINT,
             ],
             [
                 'categories' => ArrayParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
             ],
         );
 

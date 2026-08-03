@@ -111,6 +111,71 @@ final class AccommodationIndexReadTest extends KernelTestCase
         self::assertFalse($byType['camp_site']['hasWebsite']);
     }
 
+    #[Test]
+    public function findNearKeepsTheNearestRowsOnlyUpToTheLimit(): void
+    {
+        $this->seedFortyHotelsFarthestFirst();
+
+        $rows = new AccommodationRepository($this->connection)->findNear(
+            [['lat' => 48.5, 'lon' => 2.5]],
+            5000,
+            ['hotel'],
+        );
+
+        // MAX_ROWS_PER_POINT = 30 per end point, and the KNN order means the 30
+        // retained rows are the closest ones: Hotel 30..40 are dropped, not an
+        // arbitrary slice of the 41 in range.
+        $expected = array_merge(['Hotel du Centre'], array_map(
+            static fn (int $i): string => \sprintf('Hotel %02d', $i),
+            range(1, 29),
+        ));
+
+        self::assertSame($expected, array_column($rows, 'name'));
+    }
+
+    #[Test]
+    public function findNearReturnsTheSameRowsInTheSameOrderOnEveryRun(): void
+    {
+        $this->seedFortyHotelsFarthestFirst();
+
+        // Three rows share the end point geom (the setUp hotel and hostel plus
+        // this one, inserted last with the lowest osm_id): the distance tie is
+        // resolved on the primary key, not on the physical row order.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom) VALUES
+              ('n', 7999, 'Hotel Zero', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+
+        $repository = new AccommodationRepository($this->connection);
+        $points = [['lat' => 48.5, 'lon' => 2.5]];
+
+        $first = $repository->findNear($points, 5000, ['hotel', 'hostel']);
+        $second = $repository->findNear($points, 5000, ['hotel', 'hostel']);
+
+        self::assertSame($first, $second, 'the same scan must return the same rows in the same order (ADR-040)');
+        self::assertCount(30, $first);
+        self::assertSame(
+            ['Hotel Zero', 'Hotel du Centre', 'Auberge de Jeunesse'],
+            \array_slice(array_column($first, 'name'), 0, 3),
+            'co-located rows are ordered by (osm_type, osm_id): 7999 < 8001 < 8004',
+        );
+    }
+
+    /**
+     * 40 extra hotels, 111 m apart along the meridian, all inside the 5 km radius
+     * (41 rows in range with the setUp hotel, for a 30-row cap). Inserted farthest
+     * first so the physical row order is the reverse of the expected KNN order.
+     */
+    private function seedFortyHotelsFarthestFirst(): void
+    {
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            SELECT 'n', 9000 + i, 'Hotel ' || lpad(i::text, 2, '0'), 'hotel', '{}'::jsonb,
+                   ST_SetSRID(ST_MakePoint(2.5, 48.5 + i * 0.001), 4326)
+            FROM generate_series(40, 1, -1) AS i
+            SQL);
+    }
+
     private function source(): OsmAccommodationSource
     {
         return new OsmAccommodationSource(

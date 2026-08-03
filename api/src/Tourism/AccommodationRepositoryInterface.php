@@ -8,8 +8,9 @@ interface AccommodationRepositoryInterface
 {
     /**
      * DataTourisme accommodations of the given categories within $radiusMeters of
-     * any point. `price` is the structured offer price when DataTourisme provided
-     * one (exact), null otherwise (the caller falls back to a heuristic).
+     * any point, nearest first and capped so the result set stays bounded.
+     * `price` is the structured offer price when DataTourisme provided one
+     * (exact), null otherwise (the caller falls back to a heuristic).
      *
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
