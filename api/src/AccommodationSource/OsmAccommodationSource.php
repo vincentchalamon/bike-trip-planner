@@ -21,7 +21,7 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
@@ -44,7 +44,14 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
             }
 
             $tags = $accommodation['tags'];
-            $pricing = $this->pricingEngine->estimatePrice($accommodation['category'], $tags);
+            // stars / fee are indexed columns, not just raw tags: the heuristic
+            // uses them (ADR-040 §45), the ranking scores them (#869).
+            $pricing = $this->pricingEngine->estimatePrice(
+                $accommodation['category'],
+                $tags,
+                $accommodation['stars'],
+                $accommodation['fee'],
+            );
 
             $candidates[] = [
                 'name' => $name,
@@ -55,6 +62,9 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
                 'priceMax' => $pricing['max'],
                 'isExact' => $pricing['isExact'],
                 'url' => $accommodation['website'] ?? ($tags['contact:website'] ?? null),
+                'stars' => $accommodation['stars'],
+                'capacity' => $accommodation['capacity'],
+                'fee' => $accommodation['fee'],
                 'tagCount' => \count($tags),
                 'hasWebsite' => null !== $accommodation['website'] || isset($tags['contact:website']),
                 'tags' => $tags,

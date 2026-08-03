@@ -77,4 +77,56 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
     }
+
+    #[Test]
+    public function countsTheAttributesTheFluxActuallyFilled(): void
+    {
+        // `tagCount` used to be hardcoded to 0, which penalised the curated source on
+        // the only quality signals available (#869). It now counts the filled fields:
+        // name + category for the bare entry, plus description/capacity/price.
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn([
+            ['name' => 'Fiche complète', 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 12, 'price' => 75.0, 'description' => 'Décrit'],
+            ['name' => 'Fiche nue', 'category' => 'hotel', 'lat' => 48.1, 'lon' => 2.1, 'capacity' => null, 'price' => null, 'description' => null],
+        ]);
+
+        $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
+
+        self::assertSame(5, $result[0]['tagCount']);
+        self::assertSame(2, $result[1]['tagCount']);
+    }
+
+    #[Test]
+    public function derivesHasWebsiteFromTheExposedUrl(): void
+    {
+        // tourism.accommodations has no website column, so there is no URL to expose
+        // and `hasWebsite` follows it instead of being asserted.
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn([
+            ['name' => 'Hôtel du Parc', 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
+        ]);
+
+        $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
+
+        self::assertNull($result[0]['url']);
+        self::assertFalse($result[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function propagatesCapacityAndLeavesStarsAndFeeUnknown(): void
+    {
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn([
+            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => null, 'description' => null],
+        ]);
+
+        $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['apartment']);
+
+        self::assertSame(4, $result[0]['capacity']);
+        self::assertNull($result[0]['stars']);
+        self::assertNull($result[0]['fee']);
+    }
 }
