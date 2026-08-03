@@ -15,6 +15,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
@@ -137,6 +138,7 @@ final class TripDetailTest extends ApiTestCase
         );
         $stage->alerts = [
             new Alert(
+                code: AlertCode::CONTINUITY_GAP_CRITICAL,
                 type: AlertType::CRITICAL,
                 message: 'Discontinuity',
                 lat: 48.1,
@@ -148,11 +150,13 @@ final class TripDetailTest extends ApiTestCase
                 ),
             ),
             new Alert(
+                code: AlertCode::ELEVATION_GAIN,
                 type: AlertType::WARNING,
                 message: 'Elevation',
                 action: new AlertAction(kind: AlertActionKind::AUTO_FIX, label: 'Couper l\'étape en deux'),
             ),
-            new Alert(type: AlertType::NUDGE, message: 'No action at all'),
+            // Persisted before issue #876: no code at all, must still serialise.
+            new Alert(code: null, type: AlertType::NUDGE, message: 'No action at all'),
         ];
         $repo->storeStages(self::TRIP_ID, [$stage]);
         $repo->storeStatus(self::TRIP_ID, 'ready');

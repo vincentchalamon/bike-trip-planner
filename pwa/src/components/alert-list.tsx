@@ -38,18 +38,26 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
 }
 
 /**
- * Stable identifier for an alert across renders. Uses the geographic
- * coordinate as discriminator when available so dismissals survive SSE
- * updates that change the number of alerts in a severity bucket (which
- * would otherwise shift indices and resurface dismissed entries).
+ * Stable identifier for an alert across renders. Built on the backend `code`
+ * (`App\Enum\AlertCode`), which names the rule variant and never changes when a
+ * message is rephrased — the previous key embedded `alert.message`, so any
+ * copy edit invalidated dismissals and broke deduplication (issue #876).
+ *
+ * The geographic coordinate stays as discriminator when available so dismissals
+ * survive SSE updates that change the number of alerts in a severity bucket
+ * (which would otherwise shift indices and resurface dismissed entries).
  * Falls back to the index for coordinate-less alerts.
+ *
+ * Alerts persisted before the code existed carry none: those keep the message
+ * as identity, which is exactly the old — degraded but working — behaviour.
  */
 function alertKey(alert: AlertData, index: number): string {
   const disambiguator =
     alert.lat != null && alert.lon != null
       ? `${alert.lat},${alert.lon}`
       : String(index);
-  return `${alert.type}-${alert.source ?? ""}-${alert.message}-${disambiguator}`;
+  const identity = alert.code ?? alert.message;
+  return `${alert.type}-${alert.source ?? ""}-${identity}-${disambiguator}`;
 }
 
 /**

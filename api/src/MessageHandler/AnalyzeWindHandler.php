@@ -11,6 +11,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Format\DecimalFormatter;
@@ -104,8 +105,9 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message);
+                $alert = new Alert(code: AlertCode::WIND_HEADWIND, type: AlertType::WARNING, message: $message);
                 $alerts[] = [
+                    'code' => $alert->code?->value,
                     'type' => $alert->type->value,
                     'message' => $alert->message,
                     'action' => [
@@ -123,8 +125,9 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message);
+                $alert = new Alert(code: AlertCode::COMFORT_POOR_CONDITIONS, type: AlertType::WARNING, message: $message);
                 $alerts[] = [
+                    'code' => $alert->code?->value,
                     'type' => $alert->type->value,
                     'message' => $alert->message,
                     'action' => [

@@ -15,6 +15,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Osm\CoverageRepositoryInterface;
@@ -631,7 +632,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         // Alerts
-        /** @var list<array{type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
+        /** @var list<array{code?: ?string, type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
         $alertsData = $entity->getAlerts();
         foreach ($alertsData as $alertData) {
             $dto->addAlert($this->arrayToAlert($alertData));
@@ -703,10 +704,11 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{type: string, message: string, lat: ?float, lon: ?float, action?: array{kind: string, label: string, payload: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
+    /** @return array{code: ?string, type: string, message: string, lat: ?float, lon: ?float, action?: array{kind: string, label: string, payload: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
     private function alertToArray(Alert $alert): array
     {
         $data = [
+            'code' => $alert->code?->value,
             'type' => $alert->type->value,
             'message' => $alert->message,
             'lat' => $alert->lat,
@@ -737,9 +739,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $data;
     }
 
-    /** @param array{type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
+    /** @param array{code?: ?string, type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
     private function arrayToAlert(array $data): Alert
     {
+        // Alerts persisted before issue #876 carry no code, and a code retired since
+        // then no longer resolves: both degrade to null rather than blowing up the read.
+        $code = AlertCode::tryFrom($data['code'] ?? '');
         $type = AlertType::from($data['type']);
         $message = $data['message'];
         $lat = $data['lat'] ?? null;
@@ -756,6 +761,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
         if (($data['_class'] ?? null) === 'CulturalPoiAlert') {
             return new CulturalPoiAlert(
+                code: $code,
                 type: $type,
                 message: $message,
                 lat: $lat,
@@ -774,6 +780,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         return new Alert(
+            code: $code,
             type: $type,
             message: $message,
             lat: $lat,

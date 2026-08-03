@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -92,6 +93,7 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
                     $alerts[] = [
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
+                        'code' => ($raining ? AlertCode::FORD_CROSSING_WET : AlertCode::FORD_CROSSING_DRY)->value,
                         'type' => ($raining ? AlertType::WARNING : AlertType::NUDGE)->value,
                         'message' => $this->translator->trans(
                             $raining ? 'alert.ford.warning' : 'alert.ford.nudge',

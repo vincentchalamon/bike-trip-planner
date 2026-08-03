@@ -256,6 +256,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type as AlertData["type"],
             message: a.message,
             lat: null,
@@ -282,6 +283,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type as "nudge",
             message: a.message,
             lat: null,
@@ -305,6 +307,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type as "nudge",
             message: a.message,
             lat: null,
@@ -328,6 +331,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type as "nudge",
             message: a.message,
           })),
@@ -348,6 +352,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: "nudge" as const,
             message: a.message,
             lat: a.lat,
@@ -384,6 +389,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: "nudge" as const,
             message: a.message,
             lat: a.lat ?? null,
@@ -409,6 +415,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type,
             message: a.message,
             lat: a.lat,
@@ -434,6 +441,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type,
             message: a.message,
             lat: a.lat,
@@ -462,6 +470,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
+            code: a.code,
             type: a.type,
             message: a.message,
             lat: a.lat,

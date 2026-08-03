@@ -7,6 +7,7 @@ namespace App\Tests\Unit\ApiResource;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -66,6 +67,7 @@ final class AlertActionTest extends TestCase
         );
 
         $alert = new Alert(
+            code: AlertCode::STEEP_GRADIENT,
             type: AlertType::WARNING,
             message: 'Steep gradient detected',
             lat: 44.6,
@@ -85,6 +87,7 @@ final class AlertActionTest extends TestCase
     public function alertWithoutAction(): void
     {
         $alert = new Alert(
+            code: AlertCode::SURFACE_ROUGH,
             type: AlertType::WARNING,
             message: 'Route non goudronnée sur 3km',
         );

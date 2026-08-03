@@ -14,6 +14,9 @@ export const AlertActionSchema = z.object({
 });
 
 export const AlertSchema = z.object({
+  // Stable rule-variant identifier (backend `App\Enum\AlertCode`). Absent/null on
+  // alerts persisted before it existed, hence the fallback in `alertKey`.
+  code: z.string().nullable().optional(),
   type: z.enum(["critical", "warning", "nudge"]),
   message: z.string(),
   lat: z.number().nullable().optional(),

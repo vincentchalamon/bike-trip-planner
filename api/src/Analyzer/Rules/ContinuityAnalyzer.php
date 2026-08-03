@@ -10,6 +10,7 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -49,6 +50,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
 
         if ($gapMeters > self::CRITICAL_THRESHOLD_METERS) {
             return [new Alert(
+                code: AlertCode::CONTINUITY_GAP_CRITICAL,
                 type: AlertType::CRITICAL,
                 message: $this->translator->trans(
                     'alert.continuity.critical',
@@ -72,6 +74,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
 
         if ($gapMeters > self::WARNING_THRESHOLD_METERS) {
             return [new Alert(
+                code: AlertCode::CONTINUITY_GAP_WARNING,
                 type: AlertType::WARNING,
                 message: $this->translator->trans(
                     'alert.continuity.warning',

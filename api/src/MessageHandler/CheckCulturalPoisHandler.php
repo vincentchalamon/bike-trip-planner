@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -149,6 +150,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     $alert = [
                         'stageIndex' => $originalIndex,
                         'dayNumber' => $stage->dayNumber,
+                        'code' => AlertCode::CULTURAL_POI_SUGGESTION->value,
                         'type' => AlertType::NUDGE->value,
                         'message' => $alertMessage,
                         'lat' => $poi['lat'],

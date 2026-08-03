@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ApiResource\Model;
 
 use ApiPlatform\Metadata\ApiProperty;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 
 /**
@@ -21,6 +22,7 @@ use App\Enum\AlertType;
 final readonly class CulturalPoiAlert extends Alert
 {
     public function __construct(
+        ?AlertCode $code,
         AlertType $type,
         string $message,
         ?float $lat = null,
@@ -61,6 +63,6 @@ final readonly class CulturalPoiAlert extends Alert
         #[ApiProperty(description: 'OpenStreetMap object id. Null when the entry does not come from OSM.')]
         public ?int $osmId = null,
     ) {
-        parent::__construct($type, $message, $lat, $lon, $action);
+        parent::__construct($code, $type, $message, $lat, $lon, $action);
     }
 }

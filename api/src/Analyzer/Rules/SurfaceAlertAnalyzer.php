@@ -9,6 +9,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -111,6 +112,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         ));
 
         return [new Alert(
+            code: AlertCode::SURFACE_ROUGH,
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.surface.warning',

@@ -223,6 +223,7 @@ final readonly class TripDetailProvider implements ProviderInterface
     private function serializeAlert(Alert $alert): array
     {
         return [
+            'code' => $alert->code?->value,
             'type' => $alert->type->value,
             'message' => $alert->message,
             'lat' => $alert->lat,

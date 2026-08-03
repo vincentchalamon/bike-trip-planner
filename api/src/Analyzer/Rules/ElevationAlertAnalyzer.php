@@ -9,6 +9,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -38,6 +39,7 @@ final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
         $splitAtKm = round($stage->distance / 2, 1);
 
         return [new Alert(
+            code: AlertCode::ELEVATION_GAIN,
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.elevation.warning',

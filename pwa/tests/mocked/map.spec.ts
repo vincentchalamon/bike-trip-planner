@@ -331,6 +331,7 @@ function enrichedCulturalPoiAlertsEvent(): MercureEvent {
         {
           stageIndex: 0,
           dayNumber: 1,
+          code: "cultural_poi_suggestion",
           type: "nudge",
           message: "Cultural POI nearby: Château de Ventadour",
           lat: 44.71,

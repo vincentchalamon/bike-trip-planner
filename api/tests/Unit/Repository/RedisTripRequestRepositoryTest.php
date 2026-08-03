@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Repository\RedisTripRequestRepository;
@@ -206,7 +207,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
         );
 
-        $alert = new Alert(type: AlertType::WARNING, message: 'steep gradient');
+        $alert = new Alert(code: AlertCode::STEEP_GRADIENT, type: AlertType::WARNING, message: 'steep gradient');
 
         $lock = $this->createMock(SharedLockInterface::class);
         $lock->expects(self::once())->method('acquire')->with(true)->willReturn(true);

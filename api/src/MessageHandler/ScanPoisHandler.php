@@ -14,6 +14,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\FixedSchedule;
 use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
@@ -145,13 +146,14 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $alerts = [];
                 if (!$stage->isRestDay && $stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($stage)) {
                     $alert = new Alert(
+                        code: AlertCode::RESUPPLY_NONE_ON_STAGE,
                         type: AlertType::NUDGE,
                         message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
                         lat: $stage->startPoint->lat,
                         lon: $stage->startPoint->lon,
                     );
                     $stage->addAlert($alert);
-                    $alerts[] = ['type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alerts[] = ['code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value, 'type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
                 // Resupply timing warning: warn when every resupply POI on this stage is
@@ -160,6 +162,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
                     $alert = new Alert(
+                        code: AlertCode::RESUPPLY_CLOSED_AT_PASSAGE,
                         type: AlertType::WARNING,
                         message: $this->translator->trans(
                             'alert.resupply.timing_warning',
@@ -171,7 +174,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lon: $stage->startPoint->lon,
                     );
                     $stage->addAlert($alert);
-                    $alerts[] = ['type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alerts[] = ['code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value, 'type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
                 $payload = [

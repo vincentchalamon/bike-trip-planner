@@ -9,6 +9,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -88,6 +89,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
+                code: AlertCode::TRAFFIC_MAIN_ROAD,
                 type: AlertType::CRITICAL,
                 message: $this->translator->trans(
                     'alert.traffic.critical',
@@ -111,6 +113,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
+                code: AlertCode::TRAFFIC_SECONDARY_ROAD_FAST,
                 type: AlertType::WARNING,
                 message: $this->translator->trans(
                     'alert.traffic.warning',
@@ -139,6 +142,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
+                code: AlertCode::TRAFFIC_SECONDARY_ROAD_SLOW,
                 type: AlertType::NUDGE,
                 message: $this->translator->trans(
                     'alert.traffic.nudge',

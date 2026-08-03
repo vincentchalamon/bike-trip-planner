@@ -117,6 +117,8 @@ final readonly class TripDetail
                         'relativeWindDirection' => ['type' => 'string'],
                     ]], ['type' => 'null']]],
                     'alerts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        // Stable rule-variant identifier; null on alerts persisted before issue #876.
+                        'code' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                         'type' => ['type' => 'string', 'enum' => ['critical', 'warning', 'nudge']],
                         'message' => ['type' => 'string'],
                         'lat' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],

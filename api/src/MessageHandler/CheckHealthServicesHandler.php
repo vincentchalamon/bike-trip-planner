@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Format\DistanceFormatter;
@@ -106,6 +107,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                 $alerts[] = [
                     'stageIndex' => $i,
                     'dayNumber' => $stage->dayNumber,
+                    'code' => AlertCode::HEALTH_SERVICE_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
                     'message' => $this->translator->trans(
                         'alert.health_service.nudge',

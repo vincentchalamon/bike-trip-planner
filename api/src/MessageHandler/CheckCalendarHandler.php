@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -87,10 +88,12 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
 
                 if ($holiday instanceof Holiday) {
                     $holidayName = $this->resolveHolidayName($holiday);
+                    // Named and unnamed phrasings are the same rule, hence the same code.
                     $alerts[] = $this->buildAlert(
                         $i,
                         $stage,
                         $stageDate,
+                        AlertCode::CALENDAR_PUBLIC_HOLIDAY,
                         null !== $holidayName ? 'alert.calendar.nudge' : 'alert.calendar.unnamed_nudge',
                         null !== $holidayName
                             ? ['%stage%' => $stage->dayNumber, '%holiday%' => $holidayName]
@@ -102,6 +105,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                         $i,
                         $stage,
                         $stageDate,
+                        AlertCode::CALENDAR_SUNDAY,
                         'alert.calendar.sunday_nudge',
                         ['%stage%' => $stage->dayNumber],
                         $locale,
@@ -118,13 +122,14 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     /**
      * @param array<string, int|string> $parameters
      *
-     * @return array{stageIndex: int, dayNumber: int, type: string, date: string, message: string, action: array{kind: string, label: string, payload: array<string, mixed>}}
+     * @return array{stageIndex: int, dayNumber: int, code: string, type: string, date: string, message: string, action: array{kind: string, label: string, payload: array<string, mixed>}}
      */
-    private function buildAlert(int $stageIndex, Stage $stage, \DateTimeImmutable $stageDate, string $translationKey, array $parameters, string $locale): array
+    private function buildAlert(int $stageIndex, Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters, string $locale): array
     {
         return [
             'stageIndex' => $stageIndex,
             'dayNumber' => $stage->dayNumber,
+            'code' => $code->value,
             'type' => AlertType::NUDGE->value,
             'date' => $stageDate->format('Y-m-d'),
             'message' => $this->translator->trans($translationKey, $parameters, 'alerts', $locale),
