@@ -1830,7 +1830,7 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
-                    code?: string | null;
+                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;
@@ -2078,7 +2078,7 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
-                    code?: string | null;
+                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;

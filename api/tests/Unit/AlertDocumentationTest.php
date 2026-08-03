@@ -34,6 +34,15 @@ final class AlertDocumentationTest extends TestCase
     /** Matches `AlertCode::SOME_CASE` anywhere in the production sources. */
     private const string EMISSION_PATTERN = '/\bAlertCode::([A-Z][A-Z0-9_]*)\b/';
 
+    /**
+     * Members of the enum that are constants, not cases: referencing them is not
+     * an emission. Listed explicitly rather than filtered loosely, so a typo in a
+     * real case name still trips the "referenced but not declared" guard.
+     *
+     * @var list<string>
+     */
+    private const array NON_CASE_MEMBERS = ['VALUES'];
+
     #[Test]
     public function everyEmittedAlertCodeIsDocumentedInReadme(): void
     {
@@ -69,6 +78,21 @@ final class AlertDocumentationTest extends TestCase
                 'Remove the stale row(s) from README.md (and the case from App\Enum\AlertCode).',
                 implode(', ', $stale),
             ),
+        );
+    }
+
+    #[Test]
+    public function theValuesConstantMirrorsTheCases(): void
+    {
+        // AlertCode::VALUES exists only because `#[ApiProperty(openapiContext: ...)]`
+        // accepts constant expressions alone, so the OpenAPI enum cannot be computed
+        // from cases(). Removing or renaming a case breaks compilation; adding one
+        // silently would not, which is exactly what this asserts.
+        self::assertSame(
+            array_map(static fn (AlertCode $c): string => $c->value, AlertCode::cases()),
+            AlertCode::VALUES,
+            'AlertCode::VALUES drifted from the enum cases: the /trips/{id}/detail OpenAPI schema '.
+            'would advertise a code list that no longer matches what the backend emits.',
         );
     }
 
@@ -121,6 +145,10 @@ final class AlertDocumentationTest extends TestCase
 
             preg_match_all(self::EMISSION_PATTERN, (string) file_get_contents($file->getPathname()), $matches);
             foreach ($matches[1] as $name) {
+                if (\in_array($name, self::NON_CASE_MEMBERS, true)) {
+                    continue;
+                }
+
                 self::assertArrayHasKey($name, $valueByCaseName, \sprintf('AlertCode::%s is referenced by api/src but not declared.', $name));
                 $names[] = $valueByCaseName[$name];
             }
