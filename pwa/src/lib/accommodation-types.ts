@@ -20,6 +20,22 @@ export const ACCOMMODATION_TYPES = [
 
 export type AccommodationType = (typeof ACCOMMODATION_TYPES)[number];
 
+export function isAccommodationType(value: string): value is AccommodationType {
+  return (ACCOMMODATION_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * Translation key (namespace `accommodation`) for a type coming from the API.
+ * Derived from the contract instead of a hand-maintained map, so a new type can
+ * never silently render as "Autre": adding it to ACCOMMODATION_TYPES without
+ * its catalog entry fails accommodation-types.test.ts.
+ */
+export function accommodationTypeLabelKey(
+  type: string,
+): `type_${AccommodationType}` {
+  return isAccommodationType(type) ? `type_${type}` : "type_other";
+}
+
 /**
  * The accommodation types that can be used for backend filtering.
  * "other" is excluded as it is reserved for manually-added accommodations.

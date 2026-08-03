@@ -13,38 +13,47 @@ import {
   ExternalLink,
   CheckCircle2,
   Circle,
+  BedDouble,
+  KeyRound,
+  Mountain,
+  TreePine,
+  Umbrella,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AccommodationData } from "@/lib/validation/schemas";
 import { formatPrice, formatDistanceKm } from "@/lib/formatters";
 import {
+  ACCOMMODATION_TYPES,
+  accommodationTypeLabelKey,
+  isAccommodationType,
+  type AccommodationType,
+} from "@/lib/accommodation-types";
+import {
   externalUrlHostname,
   normalizeExternalUrl,
 } from "@/lib/validation/url";
 
-const typeIcons: Record<string, React.ElementType> = {
+/**
+ * One icon per accommodation family (roof, bed, tent, hut, shelter, key).
+ * `Record<AccommodationType, …>` is exhaustive on purpose: adding a type to
+ * ACCOMMODATION_TYPES without an icon here is a TypeScript error, instead of a
+ * silent fallback to the generic MapPin.
+ */
+export const ACCOMMODATION_TYPE_ICONS: Record<AccommodationType, LucideIcon> = {
   hotel: Hotel,
-  hostel: Home,
-  chalet: Home,
-  guest_house: Home,
-  motel: Hotel,
+  hostel: BedDouble,
   camp_site: Tent,
-  alpine_hut: MapPin,
-  rental: Home,
+  chalet: Home,
+  guest_house: BedDouble,
+  motel: Hotel,
+  alpine_hut: Mountain,
+  wilderness_hut: TreePine,
+  shelter: Umbrella,
+  rental: KeyRound,
+  other: MapPin,
 };
-
-const typeLabelKeys = {
-  hotel: "type_hotel",
-  hostel: "type_hostel",
-  camp_site: "type_camp_site",
-  chalet: "type_chalet",
-  guest_house: "type_guest_house",
-  motel: "type_motel",
-  alpine_hut: "type_alpine_hut",
-  rental: "type_rental",
-  other: "type_other",
-} as const;
 
 interface AccommodationItemProps {
   accommodation: AccommodationData;
@@ -92,11 +101,10 @@ export function AccommodationItem({
     }
   }, [initialEditing]);
 
-  const TypeIcon = typeIcons[accommodation.type] ?? MapPin;
-  const typeKey =
-    typeLabelKeys[accommodation.type as keyof typeof typeLabelKeys] ??
-    "type_other";
-  const typeLabel = t(typeKey);
+  const TypeIcon = isAccommodationType(accommodation.type)
+    ? ACCOMMODATION_TYPE_ICONS[accommodation.type]
+    : ACCOMMODATION_TYPE_ICONS.other;
+  const typeLabel = t(accommodationTypeLabelKey(accommodation.type));
   const distLabel = formatDistanceKm(accommodation.distanceToEndPoint ?? 0);
   // OSM `website` tags and user input are unvalidated: normalize before render,
   // and drop the link entirely when the value is not a usable http(s) URL.
@@ -173,15 +181,11 @@ export function AccommodationItem({
             className="h-7 text-sm rounded-md border border-input bg-transparent px-2"
             aria-label={t("typeLabel")}
           >
-            <option value="hotel">{t("type_hotel")}</option>
-            <option value="hostel">{t("type_hostel")}</option>
-            <option value="camp_site">{t("type_camp_site")}</option>
-            <option value="chalet">{t("type_chalet")}</option>
-            <option value="guest_house">{t("type_guest_house")}</option>
-            <option value="motel">{t("type_motel")}</option>
-            <option value="alpine_hut">{t("type_alpine_hut")}</option>
-            <option value="rental">{t("type_rental")}</option>
-            <option value="other">{t("type_other")}</option>
+            {ACCOMMODATION_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(accommodationTypeLabelKey(type))}
+              </option>
+            ))}
           </select>
           <div className="flex items-center gap-1">
             <Euro className="h-3.5 w-3.5 text-muted-icon" />
@@ -324,7 +328,10 @@ export function AccommodationItem({
       {/* Type icon + label + price + distance to end point */}
       <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
         <div className="flex items-center gap-1.5">
-          <TypeIcon className="h-3.5 w-3.5" />
+          <TypeIcon
+            className="h-3.5 w-3.5"
+            data-testid="accommodation-type-icon"
+          />
           <span>{typeLabel}</span>
         </div>
         {formatPrice(accommodation) && (

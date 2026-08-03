@@ -1,12 +1,26 @@
 import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { AccommodationItem } from "./accommodation-item";
+import { MapPin } from "lucide-react";
+import {
+  AccommodationItem,
+  ACCOMMODATION_TYPE_ICONS,
+} from "./accommodation-item";
+import { ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import type { AccommodationData } from "@/lib/validation/schemas";
+import fr from "../../messages/fr.json";
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
-}));
+// The real French catalogue rather than an identity stub: the completeness
+// tests below assert that every contract type resolves to a real label, which
+// an identity stub could not detect.
+vi.mock("next-intl", async () => {
+  const messages = (await import("../../messages/fr.json")).default;
+  return {
+    useTranslations: (namespace: keyof typeof messages) => (key: string) =>
+      (messages[namespace] as Record<string, string>)[key] ??
+      `MISSING:${namespace}.${key}`,
+  };
+});
 
 function accommodation(
   overrides: Partial<AccommodationData> = {},
@@ -37,6 +51,17 @@ function renderItem(data: AccommodationData, onUpdate = vi.fn()) {
       />,
     ),
   };
+}
+
+function renderType(type: string) {
+  return renderItem(accommodation({ name: "Chez Bernard", type }));
+}
+
+/** lucide tags its svg with `lucide-<kebab-name>`, e.g. BedDouble -> bed-double. */
+function lucideClass(icon: { displayName?: string }) {
+  return `lucide-${icon
+    .displayName!.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()}`;
 }
 
 describe("AccommodationItem website link", () => {
@@ -80,10 +105,10 @@ describe("AccommodationItem edits", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("urlLabel"), {
+    fireEvent.change(screen.getByLabelText(fr.accommodation.urlLabel), {
       target: { value: typed },
     });
-    fireEvent.click(screen.getByText("save"));
+    fireEvent.click(screen.getByText(fr.accommodation.save));
 
     return onUpdate;
   }
@@ -107,13 +132,79 @@ describe("AccommodationItem Wikipedia link", () => {
       accommodation({ wikipediaUrl: "https://fr.wikipedia.org/wiki/Pont" }),
     );
 
-    const link = screen.getByText("see_on_wikipedia");
+    const link = screen.getByText(fr.accommodation.see_on_wikipedia);
     expect(link).toHaveAttribute("href", "https://fr.wikipedia.org/wiki/Pont");
   });
 
   it("renders no link for an unusable Wikipedia value", () => {
     renderItem(accommodation({ wikipediaUrl: "voir wikipedia" }));
 
-    expect(screen.queryByText("see_on_wikipedia")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(fr.accommodation.see_on_wikipedia),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("AccommodationItem type rendering", () => {
+  it.each(ACCOMMODATION_TYPES)("labels and illustrates a %s", (type) => {
+    renderType(type);
+
+    expect(
+      screen.getByText(fr.accommodation[`type_${type}`]),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("accommodation-type-icon")).toHaveClass(
+      lucideClass(ACCOMMODATION_TYPE_ICONS[type]),
+    );
+  });
+
+  it("renders shelter as Abri, not Autre", () => {
+    renderType("shelter");
+
+    expect(screen.getByText("Abri")).toBeInTheDocument();
+    expect(screen.queryByText("Autre")).not.toBeInTheDocument();
+  });
+
+  it("renders wilderness_hut as Bivouac, not Autre", () => {
+    renderType("wilderness_hut");
+
+    expect(screen.getByText("Bivouac")).toBeInTheDocument();
+    expect(screen.queryByText("Autre")).not.toBeInTheDocument();
+  });
+
+  it("falls back to Autre for a type outside the contract", () => {
+    renderType("igloo");
+
+    expect(screen.getByText("Autre")).toBeInTheDocument();
+  });
+
+  it("offers every contract type in the edit form", () => {
+    render(
+      <AccommodationItem
+        accommodation={accommodation()}
+        onUpdate={vi.fn()}
+        onRemove={vi.fn()}
+        initialEditing
+      />,
+    );
+
+    const select = screen.getByLabelText(fr.accommodation.typeLabel);
+    expect([...select.querySelectorAll("option")].map((o) => o.value)).toEqual([
+      ...ACCOMMODATION_TYPES,
+    ]);
+  });
+});
+
+describe("ACCOMMODATION_TYPE_ICONS", () => {
+  it.each(ACCOMMODATION_TYPES.filter((type) => type !== "other"))(
+    "gives %s an icon distinct from the generic fallback",
+    (type) => {
+      expect(ACCOMMODATION_TYPE_ICONS[type]).not.toBe(MapPin);
+    },
+  );
+
+  it("covers exactly the contract types", () => {
+    expect(Object.keys(ACCOMMODATION_TYPE_ICONS).sort()).toEqual(
+      [...ACCOMMODATION_TYPES].sort(),
+    );
   });
 });
