@@ -22,12 +22,20 @@ final class PoiSourceRegistryTest extends TestCase
     }
 
     /**
-     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois
+     * The dedupe pass reads name/coordinates/wikidataId/source only, so the fixtures
+     * leave the enrichment columns of the source shape defaulted.
+     *
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null, openingHours?: string|null, website?: string|null}> $pois
      */
     private function source(array $pois): PoiSourceInterface
     {
+        $pois = array_map(
+            static fn (array $poi): array => $poi + ['openingHours' => null, 'website' => null],
+            $pois,
+        );
+
         return new readonly class ($pois) implements PoiSourceInterface {
-            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null}> $pois */
+            /** @param list<array{name: string|null, category: string, lat: float, lon: float, wikidataId: string|null, source: string, osmType?: string|null, osmId?: int|null, openingHours?: string|null, website?: string|null}> $pois */
             public function __construct(private array $pois)
             {
             }

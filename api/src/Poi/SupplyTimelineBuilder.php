@@ -68,9 +68,9 @@ final readonly class SupplyTimelineBuilder
      * Computes the distance from stage start for each supply point and returns
      * them sorted by distance.
      *
-     * @param list<Coordinate>                                                         $geometry
-     * @param list<float>                                                              $cumulativeDistances
-     * @param list<array{name: string|null, category: string, lat: float, lon: float}> $items
+     * @param list<Coordinate>                                                              $geometry
+     * @param list<float>                                                                   $cumulativeDistances
+     * @param list<array{name: string|null, category: string, lat: float, lon: float, ...}> $items               only these four keys are read; callers may carry more
      *
      * @return list<array{name: string|null, category: string, lat: float, lon: float, distanceFromStart: float}>
      */

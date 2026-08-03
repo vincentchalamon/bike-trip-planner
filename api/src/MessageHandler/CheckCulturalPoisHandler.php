@@ -164,6 +164,10 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         $alert['openingHours'] = $poi['openingHours'];
                     }
 
+                    if (null !== ($poi['website'] ?? null)) {
+                        $alert['website'] = $poi['website'];
+                    }
+
                     if (null !== ($poi['estimatedPrice'] ?? null)) {
                         $alert['estimatedPrice'] = $poi['estimatedPrice'];
                     }

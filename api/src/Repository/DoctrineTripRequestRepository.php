@@ -782,7 +782,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float, osmType: ?string, osmId: ?int} */
+    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float, osmType: ?string, osmId: ?int, openingHours: ?string, website: ?string} */
     private function poiToArray(PointOfInterest $poi): array
     {
         return [
@@ -795,10 +795,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             // exactly as the accommodation enrichment fields did before issue #870.
             'osmType' => $poi->osmType,
             'osmId' => $poi->osmId,
+            'openingHours' => $poi->openingHours,
+            'website' => $poi->website,
         ];
     }
 
-    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int} $data */
+    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int, openingHours?: ?string, website?: ?string} $data */
     private function arrayToPoi(array $data): PointOfInterest
     {
         return new PointOfInterest(
@@ -809,6 +811,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             distanceFromStart: $data['distanceFromStart'] ?? null,
             osmType: $data['osmType'] ?? null,
             osmId: $data['osmId'] ?? null,
+            openingHours: $data['openingHours'] ?? null,
+            website: $data['website'] ?? null,
         );
     }
 

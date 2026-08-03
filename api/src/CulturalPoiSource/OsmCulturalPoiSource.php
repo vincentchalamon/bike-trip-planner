@@ -16,7 +16,7 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
     /**
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
+     * @return list<array{name: string|null, type: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, website: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
      */
     public function fetchForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -36,6 +36,7 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
                 'osmType' => $poi['osmType'],
                 'osmId' => $poi['osmId'],
                 'openingHours' => $poi['openingHours'],
+                'website' => $poi['website'],
                 'estimatedPrice' => null,
                 'description' => $poi['description'],
                 'wikidataId' => $poi['wikidata'],

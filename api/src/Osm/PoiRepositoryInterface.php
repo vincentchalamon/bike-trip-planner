@@ -11,7 +11,7 @@ interface PoiRepositoryInterface
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float}>
+     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, openingHours: ?string, website: ?string}>
      */
     public function findInCorridor(array $route, int $radiusMeters): array;
 }

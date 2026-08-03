@@ -31,6 +31,9 @@ final readonly class DataTourismeFoodPoiSource implements PoiSourceInterface
                 // A curated entry has no OSM identity: there is no join key from the flux.
                 'osmType' => null,
                 'osmId' => null,
+                'openingHours' => $poi['openingHours'],
+                // The flux mapping does not carry a website for food POIs.
+                'website' => null,
                 'wikidataId' => $poi['wikidata'],
                 'source' => 'datatourisme',
             ];

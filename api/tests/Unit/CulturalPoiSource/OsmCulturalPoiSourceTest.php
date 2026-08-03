@@ -80,12 +80,13 @@ final class OsmCulturalPoiSourceTest extends TestCase
     public function propagatesEnrichmentColumnsFromRepository(): void
     {
         $source = $this->makeSource($this->repository([
-            ['name' => 'Louvre', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => 'Q19675', 'openingHours' => '09:00-18:00', 'description' => 'Art museum', 'imageUrl' => 'https://img.test/louvre.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Louvre'],
+            ['name' => 'Louvre', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => 'Q19675', 'openingHours' => '09:00-18:00', 'website' => 'https://louvre.test', 'description' => 'Art museum', 'imageUrl' => 'https://img.test/louvre.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Louvre'],
         ]));
 
         $poi = $source->fetchForStages($this->stageGeometries(), 500)[0];
 
         self::assertSame('09:00-18:00', $poi['openingHours']);
+        self::assertSame('https://louvre.test', $poi['website']);
         self::assertSame('Art museum', $poi['description']);
         self::assertSame('https://img.test/louvre.jpg', $poi['imageUrl']);
         self::assertSame('https://fr.wikipedia.org/wiki/Louvre', $poi['wikipediaUrl']);
@@ -142,7 +143,7 @@ final class OsmCulturalPoiSourceTest extends TestCase
     {
         // Default the provisioner-enriched columns the read layer now returns.
         $rows = array_map(
-            static fn (array $row): array => $row + ['osmType' => null, 'osmId' => null, 'openingHours' => null, 'description' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
+            static fn (array $row): array => $row + ['osmType' => null, 'osmId' => null, 'openingHours' => null, 'website' => null, 'description' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
             $rows,
         );
 
