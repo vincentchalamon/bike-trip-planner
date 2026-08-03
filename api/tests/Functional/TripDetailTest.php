@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
@@ -412,6 +413,63 @@ final class TripDetailTest extends ApiTestCase
         $this->assertResponseIsSuccessful();
         $data = $response->toArray(false);
         self::assertGreaterThan(0.95, $data['stages'][0]['onCycleNetwork']);
+    }
+
+    /**
+     * #870: the enrichment paid for at provision time (Wikidata, ADR-041) used to be
+     * dropped both on write and on read, so a reload — and the anonymous shared view,
+     * which hydrates from the same payload — showed a bare OSM card.
+     */
+    #[Test]
+    public function detailExposesPersistedAccommodationEnrichment(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $accommodation = new Accommodation(
+            name: 'Gîte du Morvan',
+            type: 'guest_house',
+            lat: 47.212,
+            lon: 3.951,
+            estimatedPriceMin: 55.0,
+            estimatedPriceMax: 80.0,
+            isExactPrice: true,
+            url: 'https://example.com/gite',
+            distanceToEndPoint: 1.4,
+            source: 'datatourisme',
+            description: 'Maison de maître du XIXe siècle.',
+            imageUrl: 'https://commons.example.org/gite.jpg',
+            wikipediaUrl: 'https://fr.wikipedia.org/wiki/Gite',
+            openingHours: 'Mo-Su 08:00-20:00',
+        );
+
+        $stage = new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 60.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 3.0, 0.0),
+            endPoint: new Coordinate(48.2, 3.1, 0.0),
+        );
+        $stage->addAccommodation($accommodation);
+        $stage->selectedAccommodation = $accommodation;
+
+        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $stages = $this->fetchDetail()['stages'];
+        $this->assertIsArray($stages);
+        $this->assertIsArray($stages[0]);
+        $accommodations = $stages[0]['accommodations'];
+        $this->assertIsArray($accommodations);
+
+        foreach ([$accommodations[0], $stages[0]['selectedAccommodation']] as $payload) {
+            $this->assertIsArray($payload);
+            $this->assertSame('datatourisme', $payload['source']);
+            $this->assertSame('Maison de maître du XIXe siècle.', $payload['description']);
+            $this->assertSame('https://commons.example.org/gite.jpg', $payload['imageUrl']);
+            $this->assertSame('https://fr.wikipedia.org/wiki/Gite', $payload['wikipediaUrl']);
+            $this->assertSame('Mo-Su 08:00-20:00', $payload['openingHours']);
+        }
     }
 
     #[Test]

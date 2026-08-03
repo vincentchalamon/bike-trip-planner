@@ -6,6 +6,10 @@ import {
   emptyAccommodationsFoundEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
+import {
+  LOADED_TRIP_DETAIL_STAGES,
+  mockLoadedTripDetail,
+} from "../fixtures/api-mocks";
 
 test.describe("Accommodations", () => {
   test("shows accommodations from SSE events", async ({
@@ -248,5 +252,52 @@ test.describe("Accommodations", () => {
     await requestPromise;
 
     expect(scanRequestBody).toMatchObject({ radiusKm: 7 });
+  });
+
+  test("keeps the enrichment and the source badge after a reload", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    const scan = accommodationsFoundEvent(0);
+    // Narrowing keeps the reload payload in sync with the SSE fixture.
+    const persisted =
+      scan.type === "accommodations_found" ? scan.data.accommodations : [];
+
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      scan,
+      tripCompleteEvent(),
+    ]);
+
+    const liveCard = mockedPage.getByTestId("stage-card-1");
+    await expect(liveCard).toContainText("DataTourisme");
+    await expect(
+      liveCard.getByRole("link", { name: "Voir sur Wikipedia" }),
+    ).toBeVisible();
+
+    // The store is in-memory (no persist), so a reload re-hydrates the cards
+    // from GET /trips/{id}/detail. Before issue #870 neither the JSONB write nor
+    // that payload carried source / description / imageUrl / wikipediaUrl /
+    // openingHours, so the reloaded card came back as a bare OSM entry.
+    const tripUrl = mockedPage.url();
+    await mockLoadedTripDetail(mockedPage, {
+      stages: LOADED_TRIP_DETAIL_STAGES.map((stage, index) =>
+        index === 0 ? { ...stage, accommodations: persisted } : stage,
+      ),
+    });
+    await mockedPage.goto(tripUrl);
+
+    const reloadedCard = mockedPage.getByTestId("stage-card-1");
+    await expect(reloadedCard).toContainText("Camping Les Oliviers");
+    await expect(reloadedCard).toContainText("DataTourisme");
+    await expect(
+      reloadedCard.getByRole("link", { name: "Voir sur Wikipedia" }),
+    ).toHaveAttribute("href", "https://fr.wikipedia.org/wiki/Camping");
+    await expect(
+      reloadedCard.getByRole("img", { name: "Camping Les Oliviers" }),
+    ).toHaveAttribute("src", "https://example.com/oliviers.jpg");
   });
 });
