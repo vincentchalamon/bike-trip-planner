@@ -295,6 +295,120 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function accommodationEnrichmentSurvivesRoundtrip(): void
+    {
+        // #870: the five enrichment fields (source + Wikidata payload) were dropped
+        // at write time, so a reload downgraded every card to a bare OSM entry.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $enriched = new Accommodation(
+            name: 'Gîte du Morvan',
+            type: 'guest_house',
+            lat: 47.212,
+            lon: 3.951,
+            estimatedPriceMin: 55.0,
+            estimatedPriceMax: 80.0,
+            isExactPrice: true,
+            url: 'https://example.com/gite',
+            possibleClosed: true,
+            distanceToEndPoint: 1.4,
+            source: 'datatourisme',
+            description: 'Maison de maître du XIXe siècle.',
+            imageUrl: 'https://commons.example.org/gite.jpg',
+            wikipediaUrl: 'https://fr.wikipedia.org/wiki/Gîte',
+            openingHours: 'Mo-Su 08:00-20:00',
+        );
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 60.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(47.0, 3.8, 0.0),
+            endPoint: new Coordinate(47.2, 3.95, 0.0),
+        );
+        $stageDto->addAccommodation($enriched);
+        $stageDto->selectedAccommodation = $enriched;
+
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+
+        foreach ([$stages[0]->accommodations[0], $stages[0]->selectedAccommodation] as $result) {
+            self::assertNotNull($result);
+            self::assertSame('datatourisme', $result->source);
+            self::assertSame('Maison de maître du XIXe siècle.', $result->description);
+            self::assertSame('https://commons.example.org/gite.jpg', $result->imageUrl);
+            self::assertSame('https://fr.wikipedia.org/wiki/Gîte', $result->wikipediaUrl);
+            self::assertSame('Mo-Su 08:00-20:00', $result->openingHours);
+            // The ten pre-existing fields keep round-tripping unchanged.
+            self::assertSame('Gîte du Morvan', $result->name);
+            self::assertSame('guest_house', $result->type);
+            self::assertSame('https://example.com/gite', $result->url);
+            self::assertTrue($result->possibleClosed);
+            self::assertSame(1.4, $result->distanceToEndPoint);
+        }
+    }
+
+    #[Test]
+    public function accommodationPersistedWithoutEnrichmentKeysFallsBackToDefaults(): void
+    {
+        // Accommodations persisted before #870 carry only the ten legacy keys; they
+        // must rehydrate on the constructor defaults instead of raising.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $legacy = [
+            'name' => 'Camping Les Oliviers',
+            'type' => 'camp_site',
+            'lat' => 47.0,
+            'lon' => 3.0,
+            'estimatedPriceMin' => 12.0,
+            'estimatedPriceMax' => 18.0,
+            'isExactPrice' => false,
+            'url' => 'https://example.com/oliviers',
+            'possibleClosed' => false,
+            'distanceToEndPoint' => 0.8,
+        ];
+
+        $stageEntity = new \App\Entity\Stage($trip);
+        $stageEntity->setPosition(0);
+        $stageEntity->setDayNumber(1);
+        $stageEntity->setDistance(10.0);
+        $stageEntity->setElevation(100.0);
+        $stageEntity->setStartLat(48.0);
+        $stageEntity->setStartLon(2.0);
+        $stageEntity->setEndLat(48.1);
+        $stageEntity->setEndLon(2.1);
+        $stageEntity->setAccommodations([$legacy]);
+        $stageEntity->setSelectedAccommodation($legacy);
+
+        $trip->addStage($stageEntity);
+
+        $this->entityManager->method('find')->willReturn($trip);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+
+        foreach ([$stages[0]->accommodations[0], $stages[0]->selectedAccommodation] as $result) {
+            self::assertNotNull($result);
+            self::assertSame('Camping Les Oliviers', $result->name);
+            self::assertSame('osm', $result->source);
+            self::assertNull($result->description);
+            self::assertNull($result->imageUrl);
+            self::assertNull($result->wikipediaUrl);
+            self::assertNull($result->openingHours);
+        }
+    }
+
+    #[Test]
     public function getRequestReturnsNullForInvalidUuid(): void
     {
         $this->entityManager->expects(self::never())

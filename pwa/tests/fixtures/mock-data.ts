@@ -192,9 +192,16 @@ export function accommodationsFoundEvent(
           isExactPrice: false,
           possibleClosed: false,
           distanceToEndPoint: 1.2,
-          source: "osm",
-          // Schemeless OSM `website` tag (issue #867): must render as an
-          // absolute link instead of throwing during render.
+          // Provisioning-time enrichment (issue #870): a DataTourisme entry with
+          // its Wikidata payload, so specs can assert the source badge, the
+          // thumbnail and the Wikipedia link survive a reload.
+          source: "datatourisme",
+          description: "Camping ombragé au bord de l'Ardèche.",
+          imageUrl: "https://example.com/oliviers.jpg",
+          wikipediaUrl: "https://fr.wikipedia.org/wiki/Camping",
+          openingHours: "Apr-Oct 08:00-20:00",
+          // Schemeless `website` tag (issue #867): must render as an absolute
+          // link instead of throwing during render.
           url: "www.camping-les-oliviers.fr",
         },
         {
@@ -208,6 +215,7 @@ export function accommodationsFoundEvent(
           possibleClosed: false,
           distanceToEndPoint: 0.5,
           source: "osm",
+          description: "Hôtel familial à deux pas du pont.",
           // Unusable OSM `website` tag: renders no link at all, no error.
           url: "appeler le 06 12 34 56 78",
         },

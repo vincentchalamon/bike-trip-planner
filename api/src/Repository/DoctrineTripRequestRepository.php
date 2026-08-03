@@ -806,7 +806,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float} */
+    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float, source: string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string} */
     private function accommodationToArray(Accommodation $acc): array
     {
         return [
@@ -820,10 +820,18 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             'url' => $acc->url,
             'possibleClosed' => $acc->possibleClosed,
             'distanceToEndPoint' => $acc->distanceToEndPoint,
+            // Provisioning-time enrichment (Wikidata, ADR-041) and the source
+            // attribution badge: dropped before issue #870, which degraded every
+            // reload and the anonymous shared view.
+            'source' => $acc->source,
+            'description' => $acc->description,
+            'imageUrl' => $acc->imageUrl,
+            'wikipediaUrl' => $acc->wikipediaUrl,
+            'openingHours' => $acc->openingHours,
         ];
     }
 
-    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float} $data */
+    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float, source?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string} $data */
     private function arrayToAccommodation(array $data): Accommodation
     {
         return new Accommodation(
@@ -837,6 +845,13 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             url: $data['url'] ?? null,
             possibleClosed: $data['possibleClosed'] ?? false,
             distanceToEndPoint: $data['distanceToEndPoint'] ?? 0.0,
+            // Accommodations persisted before issue #870 carry none of the five
+            // enrichment keys: fall back on the constructor defaults.
+            source: $data['source'] ?? 'osm',
+            description: $data['description'] ?? null,
+            imageUrl: $data['imageUrl'] ?? null,
+            wikipediaUrl: $data['wikipediaUrl'] ?? null,
+            openingHours: $data['openingHours'] ?? null,
         );
     }
 
