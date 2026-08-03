@@ -13,6 +13,12 @@ namespace App\Geo;
  * Most flux objects carry no `owl:sameAs`, so the proximity+name pass is what
  * actually removes the OSM/DataTourisme doubles the wikidata key alone misses
  * (ADR-040). Each entry's full payload is preserved; callers re-pin the row shape.
+ *
+ * Only a name the source actually carries counts: callers MUST NOT pass a label
+ * derived from the category, otherwise every anonymous cafe of a village centre
+ * shares one name and all but the first are dropped (issue #874). An entry with
+ * no name is therefore never merged on the name pass, and its display label is
+ * resolved after deduplication ({@see \App\Poi\PoiLabelResolver}).
  */
 final readonly class NearbyNameDeduplicator
 {
@@ -82,6 +88,9 @@ final readonly class NearbyNameDeduplicator
     }
 
     /**
+     * Empty string for an entry carrying no proper name, which makes
+     * {@see isSamePlace()} bail: two anonymous entries are never collapsed.
+     *
      * @param array<string, mixed> $item
      */
     private function normalizeName(array $item): string

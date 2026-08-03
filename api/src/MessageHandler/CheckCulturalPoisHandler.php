@@ -16,6 +16,7 @@ use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
+use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -53,6 +54,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private CulturalPoiSourceRegistry $registry,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
+        private PoiLabelResolver $poiLabels,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
     ) {
@@ -126,12 +128,18 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 $stagePois = \array_slice($stagePois, 0, self::MAX_SUGGESTIONS_PER_STAGE);
 
                 foreach ($stagePois as $poi) {
+                    // A POI the index has no name for is still worth suggesting,
+                    // since the coordinates and the "add to itinerary" action are
+                    // what the rider acts on, but it is announced by its localised
+                    // category instead of repeating a raw slug as both name and type.
+                    $rawName = $poi['name'];
+                    $name = $rawName ?? $this->poiLabels->displayName($poi['type'], $locale);
                     $alertMessage = $this->translator->trans(
-                        'alert.cultural_poi.suggestion',
+                        null === $rawName ? 'alert.cultural_poi.suggestion_unnamed' : 'alert.cultural_poi.suggestion',
                         [
                             '%stage%' => $stage->dayNumber,
-                            '%name%' => $poi['name'],
-                            '%type%' => $this->translatePoiType($poi['type'], $locale),
+                            '%name%' => $name,
+                            '%type%' => $this->poiLabels->label($poi['type'], $locale),
                             '%distance%' => $poi['distanceFromRoute'],
                         ],
                         'alerts',
@@ -145,7 +153,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         'message' => $alertMessage,
                         'lat' => $poi['lat'],
                         'lon' => $poi['lon'],
-                        'poiName' => $poi['name'],
+                        'poiName' => $name,
                         'poiType' => $poi['type'],
                         'poiLat' => $poi['lat'],
                         'poiLon' => $poi['lon'],
@@ -188,19 +196,6 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 'alerts' => $alerts,
             ]);
         }, $generation);
-    }
-
-    /**
-     * Maps a raw POI category (OSM tag value or DataTourisme-derived) to its
-     * localised label. An unmapped value falls back to a generic wording
-     * rather than leaking the tag into a translated message.
-     */
-    private function translatePoiType(string $type, string $locale): string
-    {
-        $key = 'poi_type.'.$type;
-        $label = $this->translator->trans($key, [], 'alerts', $locale);
-
-        return $key === $label ? $this->translator->trans('poi_type.unknown', [], 'alerts', $locale) : $label;
     }
 
     /**

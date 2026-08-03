@@ -22,7 +22,9 @@ final readonly class DataTourismeFoodPoiSource implements PoiSourceInterface
         $pois = [];
         foreach ($this->foodPoiRepository->findInCorridor($route, $radiusMeters) as $poi) {
             $pois[] = [
-                'name' => $poi['name'] ?? $poi['category'],
+                // A nameless POI stays nameless: the display label is resolved
+                // downstream (PoiLabelResolver), after deduplication.
+                'name' => $poi['name'],
                 'category' => $poi['category'],
                 'lat' => $poi['lat'],
                 'lon' => $poi['lon'],

@@ -23,6 +23,7 @@ use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
 use App\Poi\DataTourismeFoodPoiSource;
 use App\Poi\OsmPoiSource;
+use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Tourism\FoodPoiRepository;
@@ -204,6 +205,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new WaterPointRepository($this->connection),
             new GeometryBasedDistributor($haversine),
             new SupplyTimelineBuilder($haversine),
+            new PoiLabelResolver($translator),
             $this->createStub(RiderTimeEstimatorInterface::class),
             $translator,
             $this->createStub(MessageBusInterface::class),

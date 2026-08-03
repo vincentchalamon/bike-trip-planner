@@ -15,6 +15,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
+use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -75,6 +76,54 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         self::assertSame($poiType, $event['payload']['alerts'][0]['poiType'], 'The machine-readable poiType field stays raw.');
     }
 
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function unnamedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', "Point d'intérêt culturel à proximité de l'étape 1 : monument (250m du tracé). L'ajouter à ton itinéraire ?", 'Monument'];
+        yield 'english' => ['en', 'Cultural POI nearby on stage 1: monument (250m from route). Add it to your itinerary?', 'Monument'];
+    }
+
+    #[DataProvider('unnamedMessageProvider')]
+    #[Test]
+    public function unnamedPoiIsAnnouncedByItsLocalisedCategory(string $locale, string $expected, string $expectedPoiName): void
+    {
+        // Issue #874: the message used to read ": monument (monument, 340m…)" and
+        // the raw OSM slug was surfaced as the POI name.
+        $tripStateManager = $this->createTripStateManager([$this->createStage(1)], $locale);
+
+        $registry = $this->makeRegistryWithPois([
+            ['name' => null, 'type' => 'monument', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'],
+        ]);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(250.0);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator());
+        $handler(new CheckCulturalPois('trip-1'));
+
+        $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
+        $event = array_first($alertEvents);
+        self::assertNotNull($event);
+
+        self::assertSame($expected, $event['payload']['alerts'][0]['message']);
+        self::assertSame($expectedPoiName, $event['payload']['alerts'][0]['poiName']);
+        self::assertSame('monument', $event['payload']['alerts'][0]['poiType'], 'The machine-readable poiType field stays raw.');
+    }
+
     private function createStage(int $dayNumber, bool $isRestDay = false): Stage
     {
         $coord = new Coordinate(lat: 48.0, lon: 2.0);
@@ -113,6 +162,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $distributor ??= $this->createStub(GeometryDistributorInterface::class);
+        $translator ??= $stubTranslator;
 
         return new CheckCulturalPoisHandler(
             $computationTracker,
@@ -123,7 +173,8 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $registry,
             $distributor,
             $haversine,
-            $translator ?? $stubTranslator,
+            new PoiLabelResolver($translator),
+            $translator,
             $this->createStub(MessageBusInterface::class),
         );
     }

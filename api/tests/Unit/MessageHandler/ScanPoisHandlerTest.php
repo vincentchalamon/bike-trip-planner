@@ -19,10 +19,12 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\MessageHandler\ScanPoisHandler;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceInterface;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -32,6 +34,46 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanPoisHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    #[Test]
+    public function anonymousResupplyPoisAreAllKeptWithALocalisedLabel(): void
+    {
+        // Two nameless bakeries 33 m apart in the same village centre: both are
+        // published, each labelled by its category in the trip locale rather than
+        // by the raw OSM slug (issue #874).
+        $stage = $this->createStage('trip-1', 1, 80.0);
+        $tripStateManager = $this->createTripStateManager([$stage], 'fr');
+
+        $registry = $this->poiSourceRegistry([
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1],
+            ['name' => null, 'category' => 'bakery', 'lat' => 48.1003, 'lon' => 2.1],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, $this->createAlertTranslator());
+        $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_first($poisScannedEvents)['payload'];
+
+        self::assertSame(['Boulangerie', 'Boulangerie'], array_column($data['pois'], 'name'));
+    }
+
     private function createStage(string $tripId, int $dayNumber, float $distance = 80.0): Stage
     {
         return new Stage(
@@ -60,14 +102,16 @@ final class ScanPoisHandlerTest extends TestCase
         GeometryDistributorInterface $distributor,
         GeoDistanceInterface $haversine,
         RiderTimeEstimatorInterface $riderTimeEstimator,
+        ?TranslatorInterface $translator = null,
     ): ScanPoisHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
+        $stubTranslator = $this->createStub(TranslatorInterface::class);
+        $stubTranslator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => $id.': '.json_encode($params),
         );
+        $translator ??= $stubTranslator;
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
@@ -81,6 +125,7 @@ final class ScanPoisHandlerTest extends TestCase
             $waterPointRepository,
             $distributor,
             new SupplyTimelineBuilder($haversine),
+            new PoiLabelResolver($translator),
             $riderTimeEstimator,
             $translator,
             $this->createStub(MessageBusInterface::class),
@@ -133,7 +178,7 @@ final class ScanPoisHandlerTest extends TestCase
                 }
 
                 return array_map(static fn (array $p): array => [
-                    'name' => $p['name'] ?? $p['category'],
+                    'name' => $p['name'],
                     'category' => $p['category'],
                     'lat' => $p['lat'],
                     'lon' => $p['lon'],

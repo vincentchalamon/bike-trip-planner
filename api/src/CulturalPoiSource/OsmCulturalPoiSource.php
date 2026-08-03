@@ -16,7 +16,7 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
     /**
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
+     * @return list<array{name: string|null, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
      */
     public function fetchForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -27,7 +27,9 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
         // at provision time (ADR-041); no runtime SPARQL call.
         foreach ($this->culturalPoiRepository->findInCorridor($route, $radiusMeters) as $poi) {
             $pois[] = [
-                'name' => $poi['name'] ?? $poi['category'],
+                // A nameless POI stays nameless: the display label is resolved
+                // downstream (PoiLabelResolver), after deduplication.
+                'name' => $poi['name'],
                 'type' => $poi['category'],
                 'lat' => $poi['lat'],
                 'lon' => $poi['lon'],
