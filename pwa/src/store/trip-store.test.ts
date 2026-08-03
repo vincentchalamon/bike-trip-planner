@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { getUndoableSlice, useTripStore } from "./trip-store";
+import {
+  DEFAULT_ACCOMMODATION_TYPES,
+  FILTERABLE_ACCOMMODATION_TYPES,
+} from "@/lib/accommodation-types";
 import type {
   AccommodationData,
   AlertData,
@@ -592,5 +596,26 @@ describe("date window stays in sync with stage count (recette #649)", () => {
     store.applyStageUpdate(2, newDay);
     // 3 stages → 3 days: 10–12 July.
     expect(useTripStore.getState().endDate).toBe("2026-07-12");
+  });
+});
+
+describe("default enabled accommodation types", () => {
+  it("mirrors DEFAULT_ACCOMMODATION_TYPES on a fresh store", () => {
+    useTripStore.getState().clearTrip();
+    expect(useTripStore.getState().enabledAccommodationTypes).toEqual([
+      ...DEFAULT_ACCOMMODATION_TYPES,
+    ]);
+  });
+
+  // Value-level contract: TS strict mode cannot catch a drift here, both
+  // arrays being structurally compatible AccommodationType[]. The backend
+  // pins the same contract in TripRequestTest.
+  it("leaves rental opt-in and keeps every other filterable type", () => {
+    useTripStore.getState().clearTrip();
+    const enabled = useTripStore.getState().enabledAccommodationTypes;
+    expect(enabled).not.toContain("rental");
+    expect(enabled).toEqual(
+      FILTERABLE_ACCOMMODATION_TYPES.filter((type) => type !== "rental"),
+    );
   });
 });
