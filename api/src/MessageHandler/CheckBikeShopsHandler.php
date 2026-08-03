@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -109,6 +110,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 $stagesWithoutBikeShop[] = [
                     'stageIndex' => $i,
                     'dayNumber' => $stage->dayNumber,
+                    'code' => AlertCode::BIKE_SHOP_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
                     'message' => $this->translator->trans(
                         'alert.bike_shop.nudge',

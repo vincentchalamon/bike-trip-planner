@@ -68,6 +68,8 @@ export interface AlertActionPayload {
 }
 
 export interface AlertPayload {
+  /** Stable rule-variant identifier (backend `App\Enum\AlertCode`); null on legacy persisted alerts. */
+  code?: string | null;
   type: "critical" | "warning" | "nudge";
   message: string;
   lat: number | null;
@@ -205,6 +207,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: string;
           message: string;
           date: string;
@@ -220,6 +223,7 @@ export type MercureEvent =
       data: {
         alerts: {
           stageIndex: number;
+          code: string;
           type: string;
           message: string;
           dayNumber: number;
@@ -231,6 +235,7 @@ export type MercureEvent =
       data: {
         alerts: {
           stageIndex: number;
+          code: string;
           type: string;
           message: string;
           dayNumber: number;
@@ -258,6 +263,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: string;
           message: string;
         }[];
@@ -269,6 +275,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: string;
           message: string;
           lat: number;
@@ -296,6 +303,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: string;
           message: string;
           // Absent when no station was found anywhere along the trip.
@@ -315,6 +323,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: "nudge";
           message: string;
           action: {
@@ -333,6 +342,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: "warning";
           message: string;
           action: {
@@ -351,6 +361,7 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
+          code: string;
           type: "nudge" | "warning";
           message: string;
           action: {

@@ -331,6 +331,7 @@ export function calendarAlertsEvent(): MercureEvent {
         {
           stageIndex: 0,
           dayNumber: 1,
+          code: "calendar_public_holiday",
           type: "nudge",
           message: "L'etape 1 coincide avec un jour ferie (La Fete nationale)",
           date: "2026-07-14",
@@ -338,6 +339,7 @@ export function calendarAlertsEvent(): MercureEvent {
         {
           stageIndex: 1,
           dayNumber: 2,
+          code: "calendar_sunday",
           type: "warning",
           message: "L'etape 2 tombe un dimanche",
           date: "2026-07-19",
@@ -415,6 +417,7 @@ export function culturalPoiAlertsEvent(): MercureEvent {
         {
           stageIndex: 0,
           dayNumber: 1,
+          code: "cultural_poi_suggestion",
           type: "nudge",
           message:
             "Point d'intérêt culturel à proximité de l'étape 1 : Château de Ventadour (castle, 320m du tracé). L'ajouter à votre itinéraire ?",

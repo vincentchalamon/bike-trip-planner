@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Format\DistanceFormatter;
@@ -98,6 +99,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                     $alerts[] = [
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
+                        'code' => AlertCode::WATER_POINT_GAP->value,
                         'type' => AlertType::NUDGE->value,
                         'message' => $this->translator->trans(
                             'alert.water.nudge',

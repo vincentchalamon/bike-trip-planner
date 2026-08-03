@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Format\DistanceFormatter;
@@ -98,6 +99,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                 $alert = [
                     'stageIndex' => $i,
                     'dayNumber' => $stage->dayNumber,
+                    'code' => AlertCode::RAILWAY_STATION_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
                     'message' => $this->translator->trans(
                         'alert.railway_station.nudge',

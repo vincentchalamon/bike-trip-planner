@@ -13,6 +13,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -182,7 +183,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $alert = new Alert(type: AlertType::WARNING, message: 'Unpaved road detected', lat: 48.0, lon: 2.0);
+        $alert = new Alert(code: AlertCode::SURFACE_ROUGH, type: AlertType::WARNING, message: 'Unpaved road detected', lat: 48.0, lon: 2.0);
         $analyzerRegistry = $this->createStub(AnalyzerRegistryInterface::class);
         $analyzerRegistry->method('analyze')->willReturn([$alert]);
 
@@ -231,6 +232,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $distributor->method('distributeByGeometry')->willReturn([]);
 
         $navigateAlert = new Alert(
+            code: AlertCode::CONTINUITY_GAP_CRITICAL,
             type: AlertType::CRITICAL,
             message: 'Discontinuité',
             lat: 48.1,
@@ -244,6 +246,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         // auto_fix is not wired in the frontend (#397): it must not be published,
         // otherwise a dead disabled button shows up.
         $autoFixAlert = new Alert(
+            code: AlertCode::ELEVATION_GAIN,
             type: AlertType::WARNING,
             message: 'Important dénivelé',
             lat: 48.3,

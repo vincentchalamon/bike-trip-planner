@@ -17,6 +17,7 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
@@ -153,6 +154,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         );
 
         $alert = new Alert(
+            code: AlertCode::WIND_HEADWIND,
             type: AlertType::WARNING,
             message: 'Strong wind expected',
             lat: 48.0,
@@ -505,6 +507,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->method('flush');
 
         $culturalAlert = new CulturalPoiAlert(
+            code: AlertCode::CULTURAL_POI_SUGGESTION,
             type: AlertType::NUDGE,
             message: 'Nearby: Château de Fontainebleau',
             lat: 48.4,
@@ -806,6 +809,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             endPoint: new Coordinate(48.1, 2.1, 0.0),
         );
         $stageDto->addAlert(new Alert(
+            code: AlertCode::CONTINUITY_GAP_CRITICAL,
             type: AlertType::CRITICAL,
             message: 'Discontinuity between stage 1 and 2',
             lat: 48.05,
@@ -861,6 +865,74 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function alertCodeSurvivesThePersistenceRoundTrip(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 42.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.0, 2.0, 0.0),
+            endPoint: new Coordinate(48.1, 2.1, 0.0),
+        );
+        $stageDto->addAlert(new Alert(
+            code: AlertCode::FORD_CROSSING_WET,
+            type: AlertType::WARNING,
+            message: 'Ford crossing with rain forecast',
+            lat: 48.05,
+            lon: 2.05,
+        ));
+
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        self::assertSame(AlertCode::FORD_CROSSING_WET, $stages[0]->alerts[0]->code);
+    }
+
+    #[Test]
+    public function alertPersistedWithoutCodeIsRestoredWithoutCode(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        // Alerts persisted before issue #876 carry no "code" key at all, and a code
+        // retired since then no longer resolves: both must degrade to null, not throw.
+        $stageEntity = new \App\Entity\Stage($trip);
+        $stageEntity->setPosition(0);
+        $stageEntity->setDayNumber(1);
+        $stageEntity->setDistance(10.0);
+        $stageEntity->setElevation(100.0);
+        $stageEntity->setStartLat(48.0);
+        $stageEntity->setStartLon(2.0);
+        $stageEntity->setEndLat(48.1);
+        $stageEntity->setEndLon(2.1);
+        $stageEntity->setAlerts([
+            ['type' => 'warning', 'message' => 'Alert with no code'],
+            ['code' => 'surface_missing_data', 'type' => 'nudge', 'message' => 'Alert with a retired code'],
+        ]);
+        $trip->addStage($stageEntity);
+
+        $this->entityManager->method('find')->willReturn($trip);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        self::assertCount(2, $stages[0]->alerts);
+        self::assertNull($stages[0]->alerts[0]->code);
+        self::assertSame('Alert with no code', $stages[0]->alerts[0]->message);
+        self::assertNull($stages[0]->alerts[1]->code);
+        self::assertSame('Alert with a retired code', $stages[0]->alerts[1]->message);
+    }
+
+    #[Test]
     public function arrayToAlertThrowsOnUnknownClassDiscriminator(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
@@ -899,7 +971,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         // Concrete readonly subclass not registered in alertToArray
-        $unknownAlert = new UnknownAlertStub(type: AlertType::WARNING, message: 'x');
+        $unknownAlert = new UnknownAlertStub(code: null, type: AlertType::WARNING, message: 'x');
 
         $stageDto = new StageDto(
             tripId: $tripId,

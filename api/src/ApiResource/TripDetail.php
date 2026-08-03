@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
+use App\Enum\AlertCode;
 use App\State\TripDetailProvider;
 
 /**
@@ -117,6 +118,10 @@ final readonly class TripDetail
                         'relativeWindDirection' => ['type' => 'string'],
                     ]], ['type' => 'null']]],
                     'alerts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        // Stable rule-variant identifier; null on alerts persisted before issue #876.
+                        // Enumerated so this endpoint gives consumers the same literal union as
+                        // the Alert resource, instead of a bare string.
+                        'code' => ['oneOf' => [['type' => 'string', 'enum' => AlertCode::VALUES], ['type' => 'null']]],
                         'type' => ['type' => 'string', 'enum' => ['critical', 'warning', 'nudge']],
                         'message' => ['type' => 'string'],
                         'lat' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],

@@ -171,7 +171,7 @@ Outputs land in `docs/assets/screenshots/` (README) and `pwa/public/images/` (la
 
 - State Providers and Processors, never controllers with repositories (stateless backend)
 - DTOs use `Request`/`Response` suffixes (`TripRequest`, `TripResponse`)
-- New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed. When you add, change, or remove a rule, also update the [README alert-engine table](../README.md#alert-engine) **and** `ALERT_RULE_MAP` in `api/tests/Unit/AlertDocumentationTest.php` — that test fails otherwise
+- New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed. When you add, change, or remove a rule, also add its case to `App\Enum\AlertCode` **and** its row to the [README alert-engine table](../README.md#alert-engine), one row per code — `AlertDocumentationTest` scans `api/src` for emitted codes and fails in both directions (a code without a row, a row without a code)
 - HTTP clients must be scoped to a base URI — never allow free-form URL fetching (SSRF prevention)
 
 ### TypeScript / Frontend

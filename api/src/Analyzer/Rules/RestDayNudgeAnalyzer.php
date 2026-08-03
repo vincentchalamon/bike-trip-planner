@@ -9,6 +9,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -91,6 +92,7 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
         }
 
         return [new Alert(
+            code: AlertCode::REST_DAY_SUGGESTED,
             type: AlertType::NUDGE,
             message: $this->translator->trans(
                 'alert.rest_day.nudge',

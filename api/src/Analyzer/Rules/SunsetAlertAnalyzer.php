@@ -10,6 +10,7 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Geo\TimezoneResolverInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -116,6 +117,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $suggestedDeparture = max(5, (int) floor($twilightDecimalHours - $ridingDuration));
 
         return [new Alert(
+            code: AlertCode::SUNSET_ARRIVAL_AFTER_TWILIGHT,
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.sunset.warning',

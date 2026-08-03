@@ -8,6 +8,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -85,6 +86,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
                     $alerts[] = [
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
+                        'code' => AlertCode::FERRY_CROSSING->value,
                         'type' => AlertType::WARNING->value,
                         'message' => $this->translator->trans(
                             'alert.ferry.warning',

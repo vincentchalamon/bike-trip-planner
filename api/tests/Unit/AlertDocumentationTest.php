@@ -4,102 +4,188 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\Enum\AlertCode;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Ensures every alert rule implemented in the codebase is documented in README.md.
+ * Pins the alert-engine contract: one README row per {@see AlertCode} case, and
+ * every case actually emitted by the production code.
  *
- * Source of truth: translations/alerts.en.yaml — every "alert.X.Y" key whose
- * second segment maps to an actual rule (not a fallback/label string) must have
- * a corresponding **Rule name** entry in the README alert-engine table.
+ * The old version of this test keyed on the *namespace* of a translation key
+ * ("alert.X.y" → X) and could only ever prove that a family of rules was
+ * documented — `alert.surface.missing_data` sailed through it because another
+ * `surface` variant was mapped. It now keys on the code, which is the rule's
+ * real identity, so the three sets below must coincide exactly:
  *
- * When you add a new alert key, add the namespace→README mapping to
- * ALERT_RULE_MAP below and add the corresponding row to README.md.
+ *   1. the cases declared by the AlertCode enum,
+ *   2. the cases referenced by src/ (i.e. actually emitted),
+ *   3. the codes documented in the README alert-engine table.
+ *
+ * When you add, change or remove an alert rule you must update BOTH
+ * `App\Enum\AlertCode` and the README alert-engine table; there is no
+ * hand-maintained map to keep in sync any more, and no ignore list.
  */
 final class AlertDocumentationTest extends TestCase
 {
-    /**
-     * Maps translation-key namespaces (second segment of "alert.X.Y") to the
-     * bold rule name used in the README alert-engine table.
-     *
-     * Keys without a user-visible alert row (fallback labels, weather codes…)
-     * are listed in IGNORED_NAMESPACES instead.
-     */
-    private const array ALERT_RULE_MAP = [
-        'elevation' => 'Elevation',
-        'lunch' => 'Resupply',
-        'continuity' => 'Continuity',
-        'surface' => 'Surface',
-        'traffic' => 'Traffic',
-        'bike_shop' => 'Bike shops',
-        'ebike_range' => 'E-bike range',
-        'water' => 'Water points',
-        'calendar' => 'Calendar',
-        'resupply' => 'Resupply',
-        'steep_gradient' => 'Steep gradient',
-        'wind' => 'Wind',
-        'comfort' => 'Comfort',
-        'accommodation' => 'Accommodation',
-        'rest_day' => 'Rest day',
-        'sunset' => 'Sunset',
-        'cultural_poi' => 'Cultural POI',
-        'railway_station' => 'Railway station',
-        'health_service' => 'Health services',
-        'border_crossing' => 'Border crossing',
-        'ferry' => 'Ferry',
-        'ford' => 'Ford',
-    ];
+    /** Matches the `Code` column of the README alert-engine table rows. */
+    private const string README_ROW_PATTERN = '/^\|\s*\*\*[^|]+\*\*\s*\|\s*`([a-z0-9_]+)`\s*\|/m';
+
+    /** Matches `AlertCode::SOME_CASE` anywhere in the production sources. */
+    private const string EMISSION_PATTERN = '/\bAlertCode::([A-Z][A-Z0-9_]*)\b/';
 
     /**
-     * Translation namespaces that are helper strings, not alert rows
-     * (fallback labels, stage labels, weather descriptions…).
+     * Members of the enum that are constants, not cases: referencing them is not
+     * an emission. Listed explicitly rather than filtered loosely, so a typo in a
+     * real case name still trips the "referenced but not declared" guard.
+     *
+     * @var list<string>
      */
-    private const array IGNORED_NAMESPACES = ['fallback', 'label', 'sunday_nudge'];
+    private const array NON_CASE_MEMBERS = ['VALUES'];
 
     #[Test]
-    public function everyAlertTranslationKeyIsDocumentedInReadme(): void
+    public function everyEmittedAlertCodeIsDocumentedInReadme(): void
     {
-        $readmePath = \dirname(__DIR__, 3).'/README.md';
-        $translationsPath = \dirname(__DIR__, 2).'/translations/alerts.en.yaml';
+        $emitted = $this->emittedCodes();
+        $documented = $this->documentedCodes();
 
-        self::assertFileExists($readmePath, 'README.md not found at project root.');
-        self::assertFileExists($translationsPath, 'Alert translation file not found.');
+        $missing = array_values(array_diff($emitted, $documented));
 
-        $readme = (string) file_get_contents($readmePath);
-        $yaml = (string) file_get_contents($translationsPath);
+        self::assertSame(
+            [],
+            $missing,
+            \sprintf(
+                'Alert code(s) %s are emitted by api/src but have no row in the README alert-engine table. '.
+                'Add one row per code to the table in README.md.',
+                implode(', ', $missing),
+            ),
+        );
+    }
 
-        // Extract all "alert.X.*" namespaces from the translation file
-        preg_match_all('/^alert\.(\w+)\./m', $yaml, $matches);
-        $namespaces = array_unique($matches[1]);
+    #[Test]
+    public function everyDocumentedAlertCodeIsStillEmitted(): void
+    {
+        $emitted = $this->emittedCodes();
+        $documented = $this->documentedCodes();
 
-        foreach ($namespaces as $namespace) {
-            if (\in_array($namespace, self::IGNORED_NAMESPACES, true)) {
+        $stale = array_values(array_diff($documented, $emitted));
+
+        self::assertSame(
+            [],
+            $stale,
+            \sprintf(
+                'Alert code(s) %s are documented in the README alert-engine table but no longer emitted by api/src. '.
+                'Remove the stale row(s) from README.md (and the case from App\Enum\AlertCode).',
+                implode(', ', $stale),
+            ),
+        );
+    }
+
+    #[Test]
+    public function theValuesConstantMirrorsTheCases(): void
+    {
+        // AlertCode::VALUES exists only because `#[ApiProperty(openapiContext: ...)]`
+        // accepts constant expressions alone, so the OpenAPI enum cannot be computed
+        // from cases(). Removing or renaming a case breaks compilation; adding one
+        // silently would not, which is exactly what this asserts.
+        self::assertSame(
+            array_map(static fn (AlertCode $c): string => $c->value, AlertCode::cases()),
+            AlertCode::VALUES,
+            'AlertCode::VALUES drifted from the enum cases: the /trips/{id}/detail OpenAPI schema '.
+            'would advertise a code list that no longer matches what the backend emits.',
+        );
+    }
+
+    #[Test]
+    public function everyAlertCodeCaseIsEmitted(): void
+    {
+        $declared = array_map(static fn (AlertCode $c): string => $c->value, AlertCode::cases());
+        $unused = array_values(array_diff($declared, $this->emittedCodes()));
+
+        self::assertSame(
+            [],
+            $unused,
+            \sprintf(
+                'AlertCode case(s) %s are declared but never emitted by api/src. Dead codes drift the documentation: '.
+                'either wire them to a rule or drop them.',
+                implode(', ', $unused),
+            ),
+        );
+    }
+
+    /**
+     * Codes actually emitted, read back from the production sources.
+     *
+     * @return list<string>
+     */
+    private function emittedCodes(): array
+    {
+        $srcDir = \dirname(__DIR__, 2).'/src';
+        $enumFile = $srcDir.'/Enum/AlertCode.php';
+
+        self::assertDirectoryExists($srcDir, 'api/src not found.');
+
+        $files = new \RegexIterator(
+            new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($srcDir)),
+            '/\.php$/',
+        );
+
+        $valueByCaseName = [];
+        foreach (AlertCode::cases() as $case) {
+            $valueByCaseName[$case->name] = $case->value;
+        }
+
+        $names = [];
+        foreach ($files as $file) {
+            \assert($file instanceof \SplFileInfo);
+            // The enum declares the cases; referencing them there is not an emission.
+            if ($file->getPathname() === $enumFile) {
                 continue;
             }
 
-            self::assertArrayHasKey(
-                $namespace,
-                self::ALERT_RULE_MAP,
-                \sprintf(
-                    'Alert namespace "alert.%s.*" is not mapped in ALERT_RULE_MAP. '.
-                    'Add an entry to ALERT_RULE_MAP and a row to the README.md alert-engine table.',
-                    $namespace,
-                ),
-            );
+            preg_match_all(self::EMISSION_PATTERN, (string) file_get_contents($file->getPathname()), $matches);
+            foreach ($matches[1] as $name) {
+                if (\in_array($name, self::NON_CASE_MEMBERS, true)) {
+                    continue;
+                }
 
-            $readmeBoldEntry = '**'.self::ALERT_RULE_MAP[$namespace].'**';
-
-            self::assertStringContainsString(
-                $readmeBoldEntry,
-                $readme,
-                \sprintf(
-                    'Alert rule "%s" (translation namespace: alert.%s) is missing from README.md. '.
-                    'Add a row to the alert-engine table.',
-                    self::ALERT_RULE_MAP[$namespace],
-                    $namespace,
-                ),
-            );
+                self::assertArrayHasKey($name, $valueByCaseName, \sprintf('AlertCode::%s is referenced by api/src but not declared.', $name));
+                $names[] = $valueByCaseName[$name];
+            }
         }
+
+        self::assertNotSame([], $names, 'No AlertCode reference found in api/src — the scan is broken, not the code.');
+
+        $names = array_values(array_unique($names));
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * Codes documented in the README alert-engine table.
+     *
+     * @return list<string>
+     */
+    private function documentedCodes(): array
+    {
+        $readmePath = \dirname(__DIR__, 3).'/README.md';
+
+        self::assertFileExists($readmePath, 'README.md not found at project root.');
+
+        preg_match_all(self::README_ROW_PATTERN, (string) file_get_contents($readmePath), $matches);
+
+        $codes = $matches[1];
+
+        self::assertNotSame([], $codes, 'No alert-engine row found in README.md — the table format changed.');
+        self::assertCount(
+            \count(array_unique($codes)),
+            $codes,
+            'The README alert-engine table documents the same code twice; there must be exactly one row per code.',
+        );
+
+        sort($codes);
+
+        return $codes;
     }
 }

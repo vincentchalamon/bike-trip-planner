@@ -89,6 +89,7 @@ final readonly class StagePayloadMapper
     public function alertToPayload(Alert $alert): array
     {
         $payload = [
+            'code' => $alert->code?->value,
             'type' => $alert->type->value,
             'message' => $alert->message,
             'lat' => $alert->lat,

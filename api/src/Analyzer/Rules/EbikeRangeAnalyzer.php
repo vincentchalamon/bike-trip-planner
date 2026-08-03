@@ -10,6 +10,7 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Osm\ChargingStationRepositoryInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -55,6 +56,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
 
         if (null !== $nearestCharger) {
             return [new Alert(
+                code: AlertCode::EBIKE_RANGE_EXCEEDED,
                 type: AlertType::WARNING,
                 message: $this->buildMessage($stage, $effectiveRange, $locale),
                 lat: $nearestCharger['lat'],
@@ -73,6 +75,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
 
         // No charger in range: keep the original distance-reduction nudge.
         return [new Alert(
+            code: AlertCode::EBIKE_RANGE_EXCEEDED,
             type: AlertType::WARNING,
             message: $this->buildMessage($stage, $effectiveRange, $locale),
             action: new AlertAction(

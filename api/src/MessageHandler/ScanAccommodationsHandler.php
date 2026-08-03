@@ -13,6 +13,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -211,6 +212,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 // Warn if all detected accommodations are likely closed during this period
                 if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => true === $a['possibleClosed'])) {
                     $alert = new Alert(
+                        code: AlertCode::ACCOMMODATION_SEASONAL_CLOSURE,
                         type: AlertType::WARNING,
                         message: $this->translator->trans(
                             'alert.accommodation.seasonal_warning',
@@ -220,7 +222,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         ),
                     );
                     $stage->addAlert($alert);
-                    $alertsToPublish[] = ['type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alertsToPublish[] = ['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
                 $payload = [

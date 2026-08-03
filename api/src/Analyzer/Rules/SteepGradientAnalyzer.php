@@ -11,6 +11,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
+use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Format\DecimalFormatter;
 use App\Format\DistanceFormatter;
@@ -104,6 +105,7 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
         $averageGradient = $distance > 0 ? ($elevationGain / $distance) * 100.0 : 0.0;
 
         return new Alert(
+            code: AlertCode::STEEP_GRADIENT,
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.steep_gradient.warning',

@@ -89,15 +89,15 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
     {
         $stage = $this->makeStage();
         for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::NUDGE, 'nudge-'.$i));
+            $stage->addAlert(new Alert(null, AlertType::NUDGE, 'nudge-'.$i));
         }
 
         for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::WARNING, 'warning-'.$i));
+            $stage->addAlert(new Alert(null, AlertType::WARNING, 'warning-'.$i));
         }
 
         for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::CRITICAL, 'critical-'.$i));
+            $stage->addAlert(new Alert(null, AlertType::CRITICAL, 'critical-'.$i));
         }
 
         $summary = new StageAnalysisSummaryBuilder()->build($stage);
@@ -218,7 +218,7 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_HEADWIND,
         );
         for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_ALERTS; ++$i) {
-            $stage->addAlert(new Alert(AlertType::WARNING, sprintf('alert message %d with some context', $i)));
+            $stage->addAlert(new Alert(null, AlertType::WARNING, sprintf('alert message %d with some context', $i)));
         }
 
         for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_LIST_ITEMS; ++$i) {
