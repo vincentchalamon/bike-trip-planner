@@ -157,7 +157,8 @@
     "deselect": "Deselect accommodation",
     "selected": "Selected",
     "selectTooltip": "Select this accommodation as your stopover for this stage",
-    "see_on_wikipedia": "See on Wikipedia"
+    "see_on_wikipedia": "See on Wikipedia",
+    "see_on_osm": "See on OpenStreetMap"
   },
   "addStage": {
     "add": "Add stage",

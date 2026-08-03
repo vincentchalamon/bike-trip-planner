@@ -36,7 +36,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
+     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array
     {
@@ -118,6 +118,10 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
         $accommodations = [];
         foreach ($rows as $row) {
             $accommodations[] = [
+                // Primary key of the index, kept so the rider can reach the object
+                // on openstreetmap.org: it used to be dropped at this very first hop.
+                'osmType' => OsmObjectType::fromChar($row['osm_type']),
+                'osmId' => null !== $row['osm_id'] ? (int) $row['osm_id'] : null,
                 'name' => null !== $row['name'] ? (string) $row['name'] : null,
                 'category' => (string) $row['category'],
                 'lat' => (float) $row['lat'],

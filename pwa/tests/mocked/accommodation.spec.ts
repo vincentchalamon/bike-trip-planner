@@ -63,6 +63,38 @@ test.describe("Accommodations", () => {
     await expect(stageCard).toContainText("Hotel du Pont");
   });
 
+  test("offers a tel: link and an OSM link on an OSM entry (issue #873)", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0),
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Hotel du Pont");
+
+    const phoneLink = stageCard.getByTestId("accommodation-phone-link");
+    await expect(phoneLink).toHaveCount(1);
+    await expect(phoneLink).toHaveAttribute("href", "tel:+33 4 75 00 00 00");
+
+    // The link addresses the object by its own type: the fixture is a `way`, so
+    // a hardcoded `node` would silently point at an unrelated feature.
+    const osmLink = stageCard.getByTestId("accommodation-osm-link");
+    await expect(osmLink).toHaveCount(1);
+    await expect(osmLink).toHaveAttribute(
+      "href",
+      "https://www.openstreetmap.org/way/42",
+    );
+
+    // The DataTourisme entry has no OSM identity and no phone: no stray links.
+    await expect(stageCard).toContainText("Camping Les Oliviers");
+  });
+
   test("adds manual accommodation", async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");

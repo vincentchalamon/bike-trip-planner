@@ -11,6 +11,7 @@ import {
   MapPin,
   Euro,
   ExternalLink,
+  Phone,
   CheckCircle2,
   Circle,
   BedDouble,
@@ -111,6 +112,12 @@ export function AccommodationItem({
   const websiteHref = normalizeExternalUrl(accommodation.url);
   const websiteHostname = externalUrlHostname(accommodation.url);
   const wikipediaHref = normalizeExternalUrl(accommodation.wikipediaUrl);
+  // Both halves of the OSM primary key are needed to address the object; an
+  // entry the rider typed in, or one coming from DataTourisme, has neither.
+  const osmHref =
+    accommodation.osmType && accommodation.osmId
+      ? `https://www.openstreetmap.org/${accommodation.osmType}/${accommodation.osmId}`
+      : null;
 
   function startEditing() {
     setEditUrl(accommodation.url ?? "");
@@ -346,6 +353,16 @@ export function AccommodationItem({
             <span>{distLabel}</span>
           </div>
         )}
+        {accommodation.phone && (
+          <a
+            href={`tel:${accommodation.phone}`}
+            className="flex items-center gap-1 hover:underline"
+            data-testid="accommodation-phone-link"
+          >
+            <Phone className="h-3.5 w-3.5" />
+            <span>{accommodation.phone}</span>
+          </a>
+        )}
         {accommodation.source && accommodation.source !== "osm" && (
           <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">
             {accommodation.source === "datatourisme"
@@ -355,18 +372,32 @@ export function AccommodationItem({
         )}
       </div>
 
-      {/* Wikipedia link */}
-      {wikipediaHref && (
-        <div className="mt-1">
-          <a
-            href={wikipediaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary flex items-center gap-0.5 hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            {t("see_on_wikipedia")}
-          </a>
+      {/* Wikipedia + OpenStreetMap links */}
+      {(wikipediaHref || osmHref) && (
+        <div className="mt-1 flex items-center gap-3 flex-wrap">
+          {wikipediaHref && (
+            <a
+              href={wikipediaHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              {t("see_on_wikipedia")}
+            </a>
+          )}
+          {osmHref && (
+            <a
+              href={osmHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+              data-testid="accommodation-osm-link"
+            >
+              <ExternalLink className="h-3 w-3" />
+              {t("see_on_osm")}
+            </a>
+          )}
         </div>
       )}
     </div>

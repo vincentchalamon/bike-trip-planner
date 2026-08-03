@@ -116,6 +116,15 @@ export const AccommodationSchema = z.object({
   imageUrl: z.string().url().nullable().optional().catch(null),
   wikipediaUrl: z.string().url().nullable().optional().catch(null),
   openingHours: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  // OSM identity of the entry: `null` on a DataTourisme one, and on anything the
+  // rider added by hand, so the "see on OSM" link only renders when both are set.
+  osmType: z
+    .enum(["node", "way", "relation"])
+    .nullable()
+    .optional()
+    .catch(null),
+  osmId: z.number().int().nullable().optional().catch(null),
 });
 
 /**

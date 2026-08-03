@@ -357,6 +357,56 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function accommodationContactBlockAndOsmIdentitySurviveARoundTrip(): void
+    {
+        // #873: exactly the trap #870 documented — omitting the three new keys from
+        // accommodationToArray() drops the tel: link and the "see on OSM" link on
+        // every reload and in the anonymous shared view, while the live SSE shows them.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $osmEntry = new Accommodation(
+            name: 'Camping du Pont',
+            type: 'camp_site',
+            lat: 43.947,
+            lon: 4.535,
+            estimatedPriceMin: 18.0,
+            estimatedPriceMax: 18.0,
+            isExactPrice: true,
+            phone: '+33 4 66 37 82 00',
+            osmType: 'way',
+            osmId: 987654321,
+        );
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 60.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(43.9, 4.5, 0.0),
+            endPoint: new Coordinate(43.95, 4.54, 0.0),
+        );
+        $stageDto->addAccommodation($osmEntry);
+        $stageDto->selectedAccommodation = $osmEntry;
+
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+
+        foreach ([$stages[0]->accommodations[0], $stages[0]->selectedAccommodation] as $result) {
+            self::assertNotNull($result);
+            self::assertSame('+33 4 66 37 82 00', $result->phone);
+            self::assertSame('way', $result->osmType);
+            self::assertSame(987654321, $result->osmId);
+        }
+    }
+
+    #[Test]
     public function accommodationPersistedWithoutEnrichmentKeysFallsBackToDefaults(): void
     {
         // Accommodations persisted before #870 carry only the ten legacy keys; they
@@ -405,6 +455,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             self::assertNull($result->imageUrl);
             self::assertNull($result->wikipediaUrl);
             self::assertNull($result->openingHours);
+            self::assertNull($result->phone);
+            self::assertNull($result->osmType);
+            self::assertNull($result->osmId);
         }
     }
 

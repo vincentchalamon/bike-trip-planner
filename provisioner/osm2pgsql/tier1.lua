@@ -391,6 +391,15 @@ local function to_int(v)
     return math.floor(n)
 end
 
+-- The website lives under four competing spellings in OSM: the bare `website`,
+-- the `contact:` namespace, and `url` in both forms. Projecting `tags.website`
+-- alone hid the site of every object mapped with one of the other three. The
+-- raw value is stored as-is; App\Format\WebsiteUrl normalises it on read, since
+-- rows indexed before this widening need the same treatment anyway.
+local function website_tag(tags)
+    return tags.website or tags['contact:website'] or tags.url or tags['contact:url']
+end
+
 local function insert_features(tags, geom)
     local cat = poi_category(tags)
     if cat then
@@ -398,7 +407,7 @@ local function insert_features(tags, geom)
             name = tags.name,
             category = cat,
             opening_hours = tags.opening_hours,
-            website = tags.website,
+            website = website_tag(tags),
             tags = tags,
             geom = geom,
         })
@@ -412,7 +421,7 @@ local function insert_features(tags, geom)
             stars = to_int(tags.stars),
             capacity = to_int(tags.capacity),
             fee = tags.fee or tags.charge,
-            website = tags.website,
+            website = website_tag(tags),
             wikidata = tags.wikidata,
             opening_hours = tags.opening_hours,
             tags = tags,

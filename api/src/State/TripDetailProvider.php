@@ -262,13 +262,16 @@ final readonly class TripDetailProvider implements ProviderInterface
             'url' => $acc->url,
             'possibleClosed' => $acc->possibleClosed,
             'distanceToEndPoint' => $acc->distanceToEndPoint,
-            // Same five enrichment fields as StagePayloadMapper (issue #870), so a
+            // Same enrichment fields as StagePayloadMapper (issues #870, #873), so a
             // reload and the anonymous shared view are as detailed as the live SSE.
             'source' => $acc->source,
             'description' => $acc->description,
             'imageUrl' => $acc->imageUrl,
             'wikipediaUrl' => $acc->wikipediaUrl,
             'openingHours' => $acc->openingHours,
+            'phone' => $acc->phone,
+            'osmType' => $acc->osmType,
+            'osmId' => $acc->osmId,
         ];
     }
 }

@@ -28,7 +28,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, osmType: ?string, osmId: ?int}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
@@ -104,6 +104,13 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'imageUrl' => $accommodation['imageUrl'] ?? WebsiteUrl::normalize($tags['image_url'] ?? null),
                 'wikipediaUrl' => $accommodation['wikipediaUrl'],
                 'openingHours' => $accommodation['openingHours'] ?? $tags['opening_hours'] ?? null,
+                // Column since #872, with the same pre-migration `tags` fallback as
+                // the fields above; it stopped at the repository until now.
+                'phone' => $accommodation['phone'] ?? $tags['phone'] ?? null,
+                // A flux entry is identified by its DataTourisme URI, not by an OSM
+                // object: there is nothing to link to on openstreetmap.org.
+                'osmType' => null,
+                'osmId' => null,
             ];
         }
 
