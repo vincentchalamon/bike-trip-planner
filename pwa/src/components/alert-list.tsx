@@ -51,7 +51,7 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
  * Alerts persisted before the code existed carry none: those keep the message
  * as identity, which is exactly the old — degraded but working — behaviour.
  */
-function alertKey(alert: AlertData, index: number): string {
+export function alertKey(alert: AlertData, index: number): string {
   const disambiguator =
     alert.lat != null && alert.lon != null
       ? `${alert.lat},${alert.lon}`
