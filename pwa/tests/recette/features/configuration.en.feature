@@ -32,7 +32,7 @@ Feature: Configuration and settings
   @desktop @critical
   Scenario: Accommodation type filter switches visible
     When I open the settings panel
-    Then I see switches for types "Hotel, Hostel, Campsite, Chalet, Guest house, Motel, Alpine hut, Wilderness hut, Shelter, Holiday rental"
+    Then I see switches for types "Hotel, Hostel, Campsite, Chalet, Guest house, Alpine hut, Wilderness hut"
 
   @desktop @critical
   Scenario: Last enabled accommodation type cannot be disabled

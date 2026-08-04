@@ -62,7 +62,6 @@ test.describe("No-dates banner", () => {
             "hostel",
             "chalet",
             "guest_house",
-            "motel",
             "alpine_hut",
           ],
           isLocked: false,
