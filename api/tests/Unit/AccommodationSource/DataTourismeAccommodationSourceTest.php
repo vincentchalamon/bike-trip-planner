@@ -24,7 +24,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
      */
     private function row(
         ?string $name = 'Gîte du Lac',
-        string $category = 'rental',
+        string $category = 'chalet',
         float $lat = 48.0,
         float $lon = 2.0,
         ?int $capacity = null,
@@ -67,7 +67,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         // The heuristic engine is final and cannot be doubled, so we pass a real
         // one; with an exact flux price it is not consulted.
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['chalet']);
 
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
@@ -115,7 +115,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'rental']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'chalet']);
 
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
@@ -164,7 +164,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         $repository->method('findNear')->willReturn([$this->row(capacity: 4)]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['chalet']);
 
         self::assertSame(4, $result[0]['capacity']);
         self::assertNull($result[0]['stars']);
@@ -228,7 +228,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['chalet']);
 
         self::assertSame('https://www.gite.test/chambres', $result[0]['url']);
         self::assertTrue($result[0]['hasWebsite']);
@@ -275,7 +275,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['chalet']);
 
         self::assertSame('https://booking.test/gite', $result[0]['url']);
         self::assertTrue($result[0]['hasWebsite']);

@@ -35,7 +35,7 @@ import {
 } from "@/lib/validation/url";
 
 /**
- * One icon per accommodation family (roof, bed, tent, hut, shelter, key).
+ * One icon per accommodation family (roof, bed, tent, hut).
  * `Record<AccommodationType, …>` is exhaustive on purpose: adding a type to
  * ACCOMMODATION_TYPES without an icon here is a TypeScript error, instead of a
  * silent fallback to the generic MapPin.
