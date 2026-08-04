@@ -33,7 +33,7 @@ final class TripFactory extends PersistentProxyObjectFactory
             'departureHour' => 8,
             'maxDistancePerDay' => 80.0,
             'averageSpeed' => 15.0,
-            'enabledAccommodationTypes' => ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'],
+            'enabledAccommodationTypes' => ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'hotel'],
             'sourceType' => 'komoot',
             'locale' => 'fr',
         ];

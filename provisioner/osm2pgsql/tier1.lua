@@ -16,13 +16,14 @@ local SRID = 4326
 -- `shelter` is amenity=shelter and handled separately below. Categories outside
 -- that vocabulary can never be read back, since the accommodation repositories
 -- filter on `category IN (:categories)`.
+--
+-- tourism=motel and tourism=apartment were dropped in #927: the first is empty in
+-- France (11 rows over two regions), the second is the meublé market, let by the
+-- week. See docs/audit/878-hebergements-osm-sans-nom.md.
 local ACCOMMODATION_TOURISM = {
-    hotel = 'hotel', hostel = 'hostel', guest_house = 'guest_house', motel = 'motel',
+    hotel = 'hotel', hostel = 'hostel', guest_house = 'guest_house',
     chalet = 'chalet', camp_site = 'camp_site', alpine_hut = 'alpine_hut',
     wilderness_hut = 'wilderness_hut',
-    -- tourism=apartment is the same product as the DataTourisme rental bucket
-    -- (meublé de tourisme), so both feed the single `rental` category.
-    apartment = 'rental',
 }
 
 -- Resupply / point-of-interest categories (food, shops, services, sights).
@@ -292,6 +293,11 @@ end
 
 local function accommodation_category(tags)
     if tags.tourism and ACCOMMODATION_TOURISM[tags.tourism] then return ACCOMMODATION_TOURISM[tags.tourism] end
+    -- amenity=shelter is NOT lodging any more (#927): 76% of it is street furniture,
+    -- bus shelters above all. The rows stay in this table for the single reader that
+    -- still wants them, the in-ride "where can I take cover" intent
+    -- (App\InRide\InRidePoiRepository); App\Osm\AccommodationRepository excludes the
+    -- category from lodging results, and it left TripRequest::ALL_ACCOMMODATION_TYPES.
     if tags.amenity == 'shelter' then return 'shelter' end
     return nil
 end

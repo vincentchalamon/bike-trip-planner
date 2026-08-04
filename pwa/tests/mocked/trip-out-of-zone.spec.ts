@@ -45,7 +45,6 @@ async function mockOutOfZoneTrip(page: Page, tripId: string): Promise<void> {
           "hostel",
           "chalet",
           "guest_house",
-          "motel",
           "alpine_hut",
         ],
         isLocked: false,

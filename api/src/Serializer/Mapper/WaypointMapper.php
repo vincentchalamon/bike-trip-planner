@@ -61,7 +61,6 @@ final readonly class WaypointMapper
         'alpine_hut' => 'Lodge',
         'chalet' => 'Lodge',
         'hotel' => 'Hotel',
-        'motel' => 'Hotel',
     ];
 
     private const string FALLBACK_SYMBOL = 'Flag, Blue';
@@ -103,7 +102,6 @@ final readonly class WaypointMapper
         'alpine_hut' => self::GENERIC,
         'chalet' => self::GENERIC,
         'hotel' => self::GENERIC,
-        'motel' => self::GENERIC,
     ];
 
     public static function gpxSymbol(string $category): string

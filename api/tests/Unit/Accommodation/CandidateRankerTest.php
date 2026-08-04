@@ -22,7 +22,7 @@ final class CandidateRankerTest extends TestCase
     public function ranksTheDocumentedCandidateAboveTheCheaperBareOne(): void
     {
         $ranked = $this->ranker->rank([
-            $this->candidate('Abri', 'shelter', priceMin: 0.0),
+            $this->candidate('Bivouac', 'wilderness_hut', priceMin: 0.0),
             $this->candidate(
                 'Hotel',
                 'hotel',
@@ -34,7 +34,7 @@ final class CandidateRankerTest extends TestCase
             ),
         ], 5);
 
-        self::assertSame(['Hotel', 'Abri'], array_column($ranked, 'name'));
+        self::assertSame(['Hotel', 'Bivouac'], array_column($ranked, 'name'));
     }
 
     #[Test]

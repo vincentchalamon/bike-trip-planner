@@ -1594,17 +1594,15 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled accommodation types for search (default: every type except `rental`, which is opt-in)
+             * @description Enabled accommodation types for search (default: every type)
              * @default [
              *       "camp_site",
              *       "hostel",
              *       "alpine_hut",
              *       "chalet",
              *       "guest_house",
-             *       "motel",
              *       "hotel",
-             *       "wilderness_hut",
-             *       "shelter"
+             *       "wilderness_hut"
              *     ]
              */
             enabledAccommodationTypes: string[];
@@ -1640,17 +1638,15 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled accommodation types for search (default: every type except `rental`, which is opt-in)
+             * @description Enabled accommodation types for search (default: every type)
              * @default [
              *       "camp_site",
              *       "hostel",
              *       "alpine_hut",
              *       "chalet",
              *       "guest_house",
-             *       "motel",
              *       "hotel",
-             *       "wilderness_hut",
-             *       "shelter"
+             *       "wilderness_hut"
              *     ]
              */
             enabledAccommodationTypes: string[];

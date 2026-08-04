@@ -47,7 +47,10 @@ final class AccommodationIndexReadTest extends KernelTestCase
               ('n', 8001, 'Hotel du Centre', 'hotel', 'https://hotel.example', 'Q42', 'Cosy hotel', 'https://img.test/hotel.jpg', 'https://fr.wikipedia.org/wiki/Hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
               ('n', 8002, 'Camping du Lac', 'camp_site', NULL, NULL, NULL, NULL, NULL, '{"charge": "18 EUR"}'::jsonb, ST_SetSRID(ST_MakePoint(2.51, 48.51), 4326)),
               ('n', 8003, 'Auberge Lointaine', 'hotel', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.5), 4326)),
-              ('n', 8004, 'Auberge de Jeunesse', 'hostel', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+              ('n', 8004, 'Auberge de Jeunesse', 'hostel', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
+              -- Named shelter right on the end point: still imported for the in-ride
+              -- "take cover" intent, never lodging (#927).
+              ('n', 8005, 'Abri de la Gare', 'shelter', NULL, NULL, NULL, NULL, NULL, '{"shelter_type": "public_transport"}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
             SQL);
     }
 
@@ -62,6 +65,27 @@ final class AccommodationIndexReadTest extends KernelTestCase
         // The near hotel and camp site are detected; the far hotel (out of radius)
         // and the near hostel (category not requested) are excluded.
         self::assertSame(['camp_site', 'hotel'], $types);
+    }
+
+    /**
+     * The rows stay in `osm.accommodations` to serve the in-ride shelter intent
+     * ({@see \App\InRide\InRidePoiRepository}), so the exclusion has to happen on
+     * the lodging read path — including when a caller explicitly asks for the
+     * category, as a trip persisted before #927 still does.
+     */
+    #[Test]
+    public function findNearNeverReturnsShelters(): void
+    {
+        $results = $this->repository()->findNear(
+            [['lat' => 48.5, 'lon' => 2.5]],
+            5000,
+            ['shelter', 'hotel'],
+        );
+
+        $names = array_map(static fn (array $row): ?string => $row['name'], $results);
+
+        self::assertNotContains('Abri de la Gare', $names);
+        self::assertContains('Hotel du Centre', $names);
     }
 
     #[Test]
@@ -319,8 +343,13 @@ final class AccommodationIndexReadTest extends KernelTestCase
     private function source(): OsmAccommodationSource
     {
         return new OsmAccommodationSource(
-            new AccommodationRepository($this->connection),
+            $this->repository(),
             new PricingHeuristicEngine(),
         );
+    }
+
+    private function repository(): AccommodationRepository
+    {
+        return new AccommodationRepository($this->connection);
     }
 }

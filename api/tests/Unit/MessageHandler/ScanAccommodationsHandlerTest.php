@@ -513,63 +513,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function amenityShelterElementIsMappedToTypeShelter(): void
-    {
-        $stage = $this->createStage('trip-shelter', 48.5, 2.5);
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn(null);
-
-        $registry = $this->createStub(AccommodationSourceRegistry::class);
-        $registry->method('fetchAll')->willReturn([]);
-
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [
-                [
-                    'name' => 'Lean-To Shelter',
-                    'type' => 'shelter',
-                    'lat' => 48.6,
-                    'lon' => 2.6,
-                    'priceMin' => 0.0,
-                    'priceMax' => 0.0,
-                    'isExact' => false,
-                    'url' => null,
-                    'tagCount' => 3,
-                    'hasWebsite' => false,
-                    'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To Shelter'],
-                    'source' => 'osm',
-                    'wikidataId' => null,
-                ],
-            ],
-        ]);
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(0.5);
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-shelter',
-                MercureEventType::ACCOMMODATIONS_FOUND,
-                $this->callback(static function (array $data): bool {
-                    $acc = $data['accommodations'][0] ?? null;
-
-                    return null !== $acc
-                        && 'shelter' === $acc['type']
-                        && 0.0 === $acc['estimatedPriceMin']
-                        && 0.0 === $acc['estimatedPriceMax'];
-                }),
-            );
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
-        $handler(new ScanAccommodations('trip-shelter'));
-    }
-
-    #[Test]
     public function campSiteWithBackpackYesReceivesBikepackerFriendlyPricing(): void
     {
         $stage = $this->createStage('trip-backpack', 48.5, 2.5);
@@ -683,13 +626,13 @@ final class ScanAccommodationsHandlerTest extends TestCase
     #[Test]
     public function retainsTheDocumentedHotelOverTheCheapestBareCandidates(): void
     {
-        // Six bare shelters at €0 and one hotel with website, description and stars:
-        // ranking on price alone filled every slot with the shelters and dropped the
-        // hotel. Completeness ranking retains it, and the family cap leaves the
-        // shelters four of the five slots (#869).
+        // Six bare wilderness huts at €0 and one hotel with website, description and
+        // stars: ranking on price alone filled every slot with the huts and dropped
+        // the hotel. Completeness ranking retains it, and the family cap leaves the
+        // huts four of the five slots (#869).
         $candidates = [];
         foreach (range(1, 6) as $i) {
-            $candidates[] = $this->candidate(\sprintf('Abri %d', $i), 'shelter', priceMin: 0.0);
+            $candidates[] = $this->candidate(\sprintf('Bivouac %d', $i), 'wilderness_hut', priceMin: 0.0);
         }
 
         $candidates[] = $this->candidate(
@@ -707,7 +650,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         self::assertSame('Hotel Documenté', $names[0], 'the documented hotel must be retained, and ranked first');
         self::assertCount(5, $names);
-        self::assertCount(4, array_filter($names, static fn (string $name): bool => str_starts_with($name, 'Abri ')));
+        self::assertCount(4, array_filter($names, static fn (string $name): bool => str_starts_with($name, 'Bivouac ')));
     }
 
     #[Test]

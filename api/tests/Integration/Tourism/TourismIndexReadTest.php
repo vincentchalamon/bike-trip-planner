@@ -54,7 +54,7 @@ final class TourismIndexReadTest extends KernelTestCase
         // keys with no column of their own (booking_url, image_url, labels).
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, opening_hours, website, phone, wikidata, image_url, wikipedia_url, tags, geom) VALUES
-              ('a1', 'Gîte du Lac', 'rental', 4, 75.00, NULL, 'Apr-Oct', 'https://gite.test', '+33 3 88 00 00 00', 'Q1234',
+              ('a1', 'Gîte du Lac', 'chalet', 4, 75.00, NULL, 'Apr-Oct', 'https://gite.test', '+33 3 88 00 00 00', 'Q1234',
                   'https://img.test/gite.jpg', 'https://fr.wikipedia.org/wiki/Gite',
                   '{"type": ["Accommodation", "RentalAccommodation"], "website": "https://gite.test", "opening_hours": "Apr-Oct", "labels": ["Accueil Vélo"]}'::jsonb,
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326)),
@@ -108,7 +108,7 @@ final class TourismIndexReadTest extends KernelTestCase
         $accommodations = new AccommodationRepository($this->connection)->findNear(
             [['lat' => 48.50, 'lon' => 2.50]],
             5000,
-            ['rental'],
+            ['chalet'],
         );
 
         self::assertCount(1, $accommodations, 'only the requested category is returned');
@@ -148,7 +148,7 @@ final class TourismIndexReadTest extends KernelTestCase
         $rows = new AccommodationRepository($this->connection)->findNear(
             [['lat' => 48.50, 'lon' => 2.50]],
             5000,
-            ['rental'],
+            ['chalet'],
         );
 
         // MAX_ROWS_PER_POINT = 30 per end point, and the KNN order means the cap
@@ -179,8 +179,8 @@ final class TourismIndexReadTest extends KernelTestCase
         $repository = new AccommodationRepository($this->connection);
         $points = [['lat' => 48.50, 'lon' => 2.50]];
 
-        $first = $repository->findNear($points, 5000, ['rental', 'hotel']);
-        $second = $repository->findNear($points, 5000, ['rental', 'hotel']);
+        $first = $repository->findNear($points, 5000, ['chalet', 'hotel']);
+        $second = $repository->findNear($points, 5000, ['chalet', 'hotel']);
 
         self::assertSame($first, $second, 'the same scan must return the same rows in the same order (ADR-040)');
         self::assertCount(30, $first);
@@ -198,7 +198,7 @@ final class TourismIndexReadTest extends KernelTestCase
         // closer than anything around the isolated end point below.
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
-            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'rental', NULL, NULL, NULL, '{}'::jsonb,
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'chalet', NULL, NULL, NULL, '{}'::jsonb,
                    ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.0002), 4326)
             FROM generate_series(80, 1, -1) AS i
             SQL);
@@ -207,15 +207,15 @@ final class TourismIndexReadTest extends KernelTestCase
         // 3.9 km out, all inside the radius but all farther than the dense cluster.
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
-              ('i1', 'Gîte Isolé 1', 'rental', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.50), 4326)),
-              ('i2', 'Gîte Isolé 2', 'rental', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.55), 4326)),
-              ('i3', 'Gîte Isolé 3', 'rental', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.555), 4326))
+              ('i1', 'Gîte Isolé 1', 'chalet', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.50), 4326)),
+              ('i2', 'Gîte Isolé 2', 'chalet', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.55), 4326)),
+              ('i3', 'Gîte Isolé 3', 'chalet', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.50, 49.555), 4326))
             SQL);
 
         $rows = new AccommodationRepository($this->connection)->findNear(
             [['lat' => 48.50, 'lon' => 2.50], ['lat' => 49.52, 'lon' => 3.50]],
             5000,
-            ['rental'],
+            ['chalet'],
         );
 
         // A single top-N over the combined multipoint (the flat `LIMIT 200` on a
@@ -241,19 +241,19 @@ final class TourismIndexReadTest extends KernelTestCase
         // dropped — surviving proves it went to B.
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
-            SELECT 'd' || lpad(i::text, 2, '0'), 'Gîte Dense ' || lpad(i::text, 2, '0'), 'rental', NULL, NULL, NULL, '{}'::jsonb,
+            SELECT 'd' || lpad(i::text, 2, '0'), 'Gîte Dense ' || lpad(i::text, 2, '0'), 'chalet', NULL, NULL, NULL, '{}'::jsonb,
                    ST_SetSRID(ST_MakePoint(0.0, 60.10 + i * 0.00001), 4326)
             FROM generate_series(1, 30) AS i
             SQL);
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom) VALUES
-              ('zz', 'Gîte Bissectrice', 'rental', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
+              ('zz', 'Gîte Bissectrice', 'chalet', NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(0.0, 60.00), 4326))
             SQL);
 
         $rows = new AccommodationRepository($this->connection)->findNear(
             [['lat' => 60.10, 'lon' => 0.0], ['lat' => 60.00, 'lon' => 0.12]],
             15000,
-            ['rental'],
+            ['chalet'],
         );
 
         self::assertContains(
@@ -265,7 +265,7 @@ final class TourismIndexReadTest extends KernelTestCase
     }
 
     /**
-     * 40 extra rentals, 111 m apart along the meridian, all inside the 5 km
+     * 40 extra gîtes, 111 m apart along the meridian, all inside the 5 km
      * radius (41 rows in range with the setUp gîte, for a 30-row cap). Inserted
      * farthest first so the physical row order reverses the expected KNN order.
      */
@@ -273,7 +273,7 @@ final class TourismIndexReadTest extends KernelTestCase
     {
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.accommodations (id, name, category, capacity, price, description, tags, geom)
-            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'rental', NULL, NULL, NULL, '{}'::jsonb,
+            SELECT 'g' || lpad(i::text, 2, '0'), 'Gîte ' || lpad(i::text, 2, '0'), 'chalet', NULL, NULL, NULL, '{}'::jsonb,
                    ST_SetSRID(ST_MakePoint(2.50, 48.50 + i * 0.001), 4326)
             FROM generate_series(40, 1, -1) AS i
             SQL);

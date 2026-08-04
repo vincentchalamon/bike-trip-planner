@@ -15,10 +15,8 @@ import {
   CheckCircle2,
   Circle,
   BedDouble,
-  KeyRound,
   Mountain,
   TreePine,
-  Umbrella,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +35,7 @@ import {
 } from "@/lib/validation/url";
 
 /**
- * One icon per accommodation family (roof, bed, tent, hut, shelter, key).
+ * One icon per accommodation family (roof, bed, tent, hut).
  * `Record<AccommodationType, …>` is exhaustive on purpose: adding a type to
  * ACCOMMODATION_TYPES without an icon here is a TypeScript error, instead of a
  * silent fallback to the generic MapPin.
@@ -48,11 +46,8 @@ export const ACCOMMODATION_TYPE_ICONS: Record<AccommodationType, LucideIcon> = {
   camp_site: Tent,
   chalet: Home,
   guest_house: BedDouble,
-  motel: Hotel,
   alpine_hut: Mountain,
   wilderness_hut: TreePine,
-  shelter: Umbrella,
-  rental: KeyRound,
   other: MapPin,
 };
 

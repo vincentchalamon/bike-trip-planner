@@ -14,11 +14,8 @@ final readonly class PricingHeuristicEngine
         'alpine_hut' => ['min' => 25.0, 'max' => 45.0],
         'chalet' => ['min' => 30.0, 'max' => 70.0],
         'guest_house' => ['min' => 40.0, 'max' => 80.0],
-        'rental' => ['min' => 40.0, 'max' => 100.0],
-        'motel' => ['min' => 45.0, 'max' => 90.0],
         'hotel' => ['min' => 50.0, 'max' => 120.0],
         'wilderness_hut' => ['min' => 0.0, 'max' => 10.0],
-        'shelter' => ['min' => 0.0, 'max' => 0.0],
     ];
 
     private const float BIKEPACKER_CAMP_SITE_MAX = 15.0;

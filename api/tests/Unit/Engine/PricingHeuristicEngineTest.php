@@ -29,10 +29,8 @@ final class PricingHeuristicEngineTest extends TestCase
         yield 'alpine_hut' => ['alpine_hut', 25.0, 45.0];
         yield 'chalet' => ['chalet', 30.0, 70.0];
         yield 'guest_house' => ['guest_house', 40.0, 80.0];
-        yield 'motel' => ['motel', 45.0, 90.0];
         yield 'hotel' => ['hotel', 50.0, 120.0];
         yield 'wilderness_hut' => ['wilderness_hut', 0.0, 10.0];
-        yield 'shelter' => ['shelter', 0.0, 0.0];
     }
 
     #[DataProvider('priceBracketProvider')]
@@ -147,16 +145,6 @@ final class PricingHeuristicEngineTest extends TestCase
     }
 
     #[Test]
-    public function estimatePriceReturnsFreeForShelter(): void
-    {
-        $result = $this->engine->estimatePrice('shelter');
-
-        $this->assertSame(0.0, $result['min']);
-        $this->assertSame(0.0, $result['max']);
-        $this->assertFalse($result['isExact']);
-    }
-
-    #[Test]
     public function estimatePriceReturnsFreeDonationRangeForWildernessHut(): void
     {
         $result = $this->engine->estimatePrice('wilderness_hut');
@@ -201,15 +189,6 @@ final class PricingHeuristicEngineTest extends TestCase
         $this->assertSame(11.5, $result['min']);
         $this->assertSame(15.0, $result['max']);
         $this->assertFalse($result['isExact']);
-    }
-
-    #[Test]
-    public function estimatePriceLeavesAStarRatingWithoutEffectOnAZeroWidthBracket(): void
-    {
-        $result = $this->engine->estimatePrice('shelter', [], 5);
-
-        $this->assertSame(0.0, $result['min']);
-        $this->assertSame(0.0, $result['max']);
     }
 
     #[Test]

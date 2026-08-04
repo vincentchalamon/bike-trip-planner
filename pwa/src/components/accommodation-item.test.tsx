@@ -212,13 +212,6 @@ describe("AccommodationItem type rendering", () => {
     );
   });
 
-  it("renders shelter as Abri, not Autre", () => {
-    renderType("shelter");
-
-    expect(screen.getByText("Abri")).toBeInTheDocument();
-    expect(screen.queryByText("Autre")).not.toBeInTheDocument();
-  });
-
   it("renders wilderness_hut as Bivouac, not Autre", () => {
     renderType("wilderness_hut");
 

@@ -45,12 +45,12 @@ final class OsmAccommodationSourceTest extends TestCase
     public function fetchSkipsUnnamedEntries(): void
     {
         $source = $this->createSource($this->repository([
-            $this->row(category: 'shelter', name: null),
-            $this->row(category: 'shelter', name: '  '),
+            $this->row(category: 'wilderness_hut', name: null),
+            $this->row(category: 'wilderness_hut', name: '  '),
             $this->row(category: 'hotel', name: 'Hotel du Nord'),
         ]));
 
-        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['shelter', 'hotel']);
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['wilderness_hut', 'hotel']);
 
         $this->assertCount(1, $results);
         $this->assertSame('Hotel du Nord', $results[0]['name']);
@@ -77,15 +77,15 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
-    public function fetchPricesShelterAtZero(): void
+    public function fetchPricesAWildernessHutAsFreeOrDonation(): void
     {
-        $source = $this->createSource($this->repository([$this->row(category: 'shelter')]));
+        $source = $this->createSource($this->repository([$this->row(category: 'wilderness_hut')]));
 
-        $results = $source->fetch([new Coordinate(46.0, 1.0)], 5000, ['shelter']);
+        $results = $source->fetch([new Coordinate(46.0, 1.0)], 5000, ['wilderness_hut']);
 
-        $this->assertSame('shelter', $results[0]['type']);
+        $this->assertSame('wilderness_hut', $results[0]['type']);
         $this->assertSame(0.0, $results[0]['priceMin']);
-        $this->assertSame(0.0, $results[0]['priceMax']);
+        $this->assertSame(10.0, $results[0]['priceMax']);
         $this->assertFalse($results[0]['isExact']);
     }
 
