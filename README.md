@@ -268,7 +268,7 @@ See [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for why the automated
 
 ### DataTourisme
 
-[DataTourisme](https://www.datatourisme.fr) provides enriched POI data (accommodations, cultural sites, dated events) for France. It is used as an optional supplementary source alongside OpenStreetMap.
+[DataTourisme](https://www.datatourisme.fr) provides enriched POI data (accommodations, cultural sites, dated events) for France. It is used as an optional supplementary source alongside OpenStreetMap. What the flux actually carries — fill rates per object type, Accueil Vélo coverage, pricing granularity — is measured in the [DataTourisme flux field audit](docs/datatourisme-flux-audit.md).
 
 **Licence:** [Licence Ouverte 2.0 Etalab](https://www.etalab.gouv.fr/licence-ouverte-open-licence) — commercial use and modification permitted; attribution required.
 

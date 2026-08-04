@@ -1415,7 +1415,7 @@ Sprint volontairement court : ce sont des mesures, et elles **arbitrent les spri
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#877](https://github.com/vincentchalamon/bike-trip-planner/issues/877) | feat(provisioner): per-table completeness metrics in metadata and health | - | - | - |
 | 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | - | - |
-| 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | - | - |
+| 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | [#925](https://github.com/vincentchalamon/bike-trip-planner/pull/925) | - |
 
 ### Recette Sprint 47
 
@@ -1425,7 +1425,7 @@ Sprint volontairement court : ce sont des mesures, et elles **arbitrent les spri
   - [ ] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu.
   - [ ] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom.
   - [ ] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut`.
-  - [ ] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879.
+  - [x] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879 — présent : `kb:LabelRating_AccueilVelo` sur 8 010 objets dont 6 006 hébergements, sous `hasReview[].hasReviewValue` ([rapport](docs/datatourisme-flux-audit.md)).
   - [ ] Les métriques n'allongent pas notablement la durée du provisionnement.
 
 </details>
