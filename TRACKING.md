@@ -1191,7 +1191,7 @@ Identité visuelle / palette « trop IA / lourde », identité forte, animations
 
 <details><summary>
 
-## Sprint 44 - Alertes : fondement, unités, contrat
+## ✅ Sprint 44 - Alertes : fondement, unités, contrat
 
 </summary>
 Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, ce qui n'est pas compréhensible. Indépendant de toute donnée nouvelle, donc lançable immédiatement, et c'est avec le sprint 45 ce qui porte l'essentiel de la valeur perçue.
@@ -1243,7 +1243,7 @@ Note outillage : GitHub sait désormais gérer les [PRs empilées](https://docs.
 
 <details><summary>
 
-## Sprint 45 - Hébergements : débloquer l'existant
+## ✅ Sprint 45 - Hébergements : débloquer l'existant
 
 </summary>
 Rendre exploitable ce qui est **déjà importé**. Le défaut dominant n'est pas l'absence de nom : **66,4 % des hébergements DataTourisme (82 523 sur 124 240) sont définitivement inatteignables** parce que `DataTourismeMapper::classify()` les rabat sur `apartment`, valeur absente de `TripRequest::ALL_ACCOMMODATION_TYPES`.
@@ -1315,7 +1315,7 @@ Après le squash-merge d'un parent, GitHub retargette l'enfant sur `main` mais l
 
 <details><summary>
 
-## Sprint 46 - Lien de vérification et données OSM
+## ✅ Sprint 46 - Lien de vérification et données OSM
 
 </summary>
 Le lien et le téléphone cessent d'être du confort : depuis la décision d'obsolescence assumée, c'est l'utilisateur qui réserve donc qui vérifie, et ce sont **ses outils de vérification**. Ce sprint récupère aussi ce que le flux DataTourisme jette au mappage.
