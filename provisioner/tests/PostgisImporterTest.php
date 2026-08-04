@@ -138,6 +138,45 @@ final class PostgisImporterTest extends TestCase
     }
 
     #[Test]
+    public function buildDerivedRecordsPerTableCompletenessRatios(): void
+    {
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->buildDerived();
+
+        $metadata = implode(' ', $this->captured[1]);
+        self::assertStringContainsString('AS completeness', $metadata);
+        // Everything after the counts: the completeness expression and nothing else
+        // of the counts, whose per-table subqueries share the same table names.
+        $completeness = substr($metadata, (int) strpos($metadata, 'AS feature_counts,'));
+
+        // Named share + link share + hours share, with their ratios.
+        self::assertStringContainsString(
+            "'pois', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4), 'with_link', count(nullif(btrim(website), '')), 'with_link_ratio', round(count(nullif(btrim(website), ''))::numeric / nullif(count(*), 0), 4), 'with_hours', count(nullif(btrim(opening_hours), ''))",
+            $completeness,
+        );
+
+        // Tables without a website column are measured on their name alone.
+        self::assertStringContainsString("'water_points', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4)) FROM osm_staging.water_points)", $completeness);
+
+        // Accommodations also break down per category: the condition for arbitrating
+        // the exclusion of unnamed entries category by category (#878).
+        self::assertStringContainsString("jsonb_build_object('by_category', coalesce((SELECT jsonb_object_agg(category, metrics) FROM (SELECT category, jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), ''))", $completeness);
+        self::assertStringContainsString('FROM osm_staging.accommodations GROUP BY category', $completeness);
+
+        // `ways` carries neither name, link nor hours, and is the largest table by an
+        // order of magnitude: measuring it would buy nothing but a scan.
+        self::assertStringNotContainsString('osm_staging.ways', $completeness);
+
+        // The quality gate lands in sprint 49; the column ships empty so it can fill
+        // its accepted/discarded counts in without a schema change.
+        self::assertStringContainsString("'{}'::jsonb AS rejections", $completeness);
+    }
+
+    #[Test]
     public function swapRenamesStagingOntoLiveInOneTransaction(): void
     {
         $importer = new PostgisImporter(

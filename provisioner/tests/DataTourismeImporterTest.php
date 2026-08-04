@@ -280,6 +280,57 @@ final class DataTourismeImporterTest extends TestCase
         self::assertStringContainsString('rental', $accommodations);
         self::assertStringNotContainsString('unmapped', $accommodations);
         self::assertSame(1, $importer->unmappedAccommodationCount());
+
+        // The only rejection measurable before the sprint-49 quality gate is
+        // recorded in the metadata, motive included (issue #877).
+        self::assertStringContainsString(
+            "jsonb_build_object('accommodation_unmapped_category', 1) AS rejections",
+            $this->capturedMetadataSql(),
+        );
+    }
+
+    #[Test]
+    public function metadataRecordsPerTableCompletenessRatios(): void
+    {
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://diffuseur.datatourisme.fr/webservice/flux/key',
+            httpClient: new MockHttpClient(new MockResponse($this->fluxZipBytes())),
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->run($this->workDir);
+
+        $metadata = $this->capturedMetadataSql();
+        self::assertStringContainsString('AS completeness', $metadata);
+        // Everything after the counts: the completeness expression and nothing else
+        // of the counts, whose per-table subqueries share the same table names.
+        $completeness = substr($metadata, (int) strpos($metadata, 'AS feature_counts,'));
+
+        self::assertStringContainsString(
+            "'cultural_pois', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4), 'with_link', count(nullif(btrim(website), ''))",
+            $completeness,
+        );
+        // Events carry their link in `url` and have a date range, not opening hours.
+        self::assertSame(1, preg_match("/'events', \\(SELECT (.*?) FROM tourism_staging\\.events\\)/s", $completeness, $matches));
+        self::assertStringContainsString("'with_link', count(nullif(btrim(url), ''))", $matches[1]);
+        self::assertStringNotContainsString('opening_hours', $matches[1]);
+
+        // Accommodations also break down per category: the condition for arbitrating
+        // the exclusion of unnamed entries category by category (#878).
+        self::assertStringContainsString('FROM tourism_staging.accommodations GROUP BY category', $completeness);
+        self::assertStringContainsString("'with_phone', count(nullif(btrim(phone), ''))", $completeness);
+    }
+
+    private function capturedMetadataSql(): string
+    {
+        foreach ($this->captured as $command) {
+            $sql = implode(' ', $command);
+            if (str_contains($sql, 'CREATE TABLE tourism_staging.metadata AS')) {
+                return $sql;
+            }
+        }
+
+        self::fail('no metadata command was captured');
     }
 
     #[Test]

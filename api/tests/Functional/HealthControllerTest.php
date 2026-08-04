@@ -214,14 +214,21 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
-    public function readinessReportsReferenceDataFreshnessAndCounts(): void
+    public function readinessReportsReferenceDataFreshnessCountsAndCompleteness(): void
     {
         $this->truncateProvisioningMetadata();
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');
         \assert($connection instanceof Connection);
         $connection->executeStatement(<<<'SQL'
-            INSERT INTO osm.metadata (refreshed_at, feature_counts)
-            VALUES (now(), '{"pois": 12, "admin_boundaries": 4}'::jsonb)
+            INSERT INTO osm.metadata (refreshed_at, feature_counts, completeness, rejections)
+            VALUES (
+                now(),
+                '{"pois": 12, "admin_boundaries": 4}'::jsonb,
+                '{"pois": {"rows": 12, "named": 9, "named_ratio": 0.75},
+                  "accommodations": {"rows": 4, "named": 1, "named_ratio": 0.25,
+                                     "by_category": {"shelter": {"rows": 3, "named": 0, "named_ratio": 0.0}}}}'::jsonb,
+                '{}'::jsonb
+            )
             SQL);
 
         $this->mockHealthHttpClients(
@@ -237,23 +244,29 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertSame('ok', $reference['status']);
         $this->assertNotNull($reference['osm']);
         $this->assertIsString($reference['osm']['refreshed_at']);
-        $this->assertFalse($reference['osm']['stale'], 'a just-refreshed index is fresh');
         $this->assertLessThan(60, $reference['osm']['age_seconds']);
         $this->assertSame(12, $reference['osm']['feature_counts']['pois']);
         $this->assertSame(4, $reference['osm']['feature_counts']['admin_boundaries']);
+        // Completeness ratios per table, plus the per-category breakdown that
+        // arbitrates excluding unnamed accommodations (#877).
+        $this->assertSame(0.75, $reference['osm']['completeness']['pois']['named_ratio']);
+        $this->assertSame(0, $reference['osm']['completeness']['accommodations']['by_category']['shelter']['named']);
+        $this->assertSame([], $reference['osm']['rejections']);
         $this->assertNull($reference['tourism'], 'tourism index still unprovisioned');
     }
 
     #[Test]
-    public function readinessFlagsAStaleReferenceIndexWithoutFailingReadiness(): void
+    public function readinessReportsTheReferenceIndexAgeWithoutAStalenessVerdict(): void
     {
         $this->truncateProvisioningMetadata();
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');
         \assert($connection instanceof Connection);
-        // OSM refreshed 10 days ago — past the 8-day weekly-cadence threshold.
+        // OSM refreshed 100 days ago. No scheduler refreshes these sources
+        // (ADR-036) and obsolescence is assumed, so age carries no verdict: any
+        // threshold would be permanently red, i.e. a dead signal.
         $connection->executeStatement(<<<'SQL'
             INSERT INTO osm.metadata (refreshed_at, feature_counts)
-            VALUES (now() - interval '10 days', '{"pois": 12}'::jsonb)
+            VALUES (now() - interval '100 days', '{"pois": 12}'::jsonb)
             SQL);
 
         $this->mockHealthHttpClients(
@@ -263,14 +276,41 @@ final class HealthControllerTest extends ApiTestCase
 
         $response = $this->client->request('GET', '/api/health');
 
-        // Stale data degrades features only — readiness stays 200 (ADR-040/041).
         $this->assertResponseStatusCodeSame(200);
         $data = $response->toArray();
         $this->assertSame('ok', $data['status'], 'reference_data is non-required');
         $reference = $data['deps']['reference_data'];
-        $this->assertSame('stale', $reference['status']);
-        $this->assertTrue($reference['osm']['stale']);
-        $this->assertGreaterThan(8 * 86400, $reference['osm']['age_seconds']);
+        $this->assertSame('ok', $reference['status'], 'a dated index is not a degraded one');
+        $this->assertGreaterThan(99 * 86400, $reference['osm']['age_seconds']);
+        $this->assertArrayNotHasKey('stale', $reference['osm']);
+        $this->assertArrayNotHasKey('stale', $reference);
+    }
+
+    #[Test]
+    public function readinessStillReportsAnIndexProvisionedBeforeTheCompletenessColumns(): void
+    {
+        // A metadata row written by the previous provisioner (counts only) must keep
+        // reporting its counts, not read as unprovisioned.
+        $this->truncateProvisioningMetadata();
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.metadata (refreshed_at, feature_counts)
+            VALUES (now(), '{"pois": 12}'::jsonb)
+            SQL);
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $reference = $response->toArray()['deps']['reference_data'];
+        $this->assertSame('ok', $reference['status']);
+        $this->assertSame(12, $reference['osm']['feature_counts']['pois']);
+        $this->assertSame([], $reference['osm']['completeness']);
     }
 
     private function truncateProvisioningMetadata(): void
