@@ -1402,7 +1402,7 @@ C'est la confirmation de la leçon du sprint 45 : la carte de recoupement attrap
 
 <details><summary>
 
-## Sprint 47 - Mesure et spikes
+## ✅ Sprint 47 - Mesure et spikes
 
 </summary>
 Sprint volontairement court : ce sont des mesures, et elles **arbitrent les sprints 49 et 50**. Sans chiffres, on supprime des règles et on choisit des sources à l'intuition, et c'est exactement ce qui a produit une inférence fausse pendant le diagnostic (« un rayon de 15 km sans pharmacie est un trou d'index » était une supposition, probablement démentie par la couverture OSM réelle).
@@ -1411,22 +1411,40 @@ Sprint volontairement court : ce sont des mesures, et elles **arbitrent les spri
 >
 > Ces deux spikes sont des **mesures à exécuter** sur un jeu de données provisionné, pas des développements. Ils supposent donc une zone déjà ouverte, en local suffit.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#877](https://github.com/vincentchalamon/bike-trip-planner/issues/877) | feat(provisioner): per-table completeness metrics in metadata and health | - | [#926](https://github.com/vincentchalamon/bike-trip-planner/pull/926) `feature/877` En cours | - |
-| 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | [#924](https://github.com/vincentchalamon/bike-trip-planner/pull/924) | - |
-| 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | [#925](https://github.com/vincentchalamon/bike-trip-planner/pull/925) | - |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#877](https://github.com/vincentchalamon/bike-trip-planner/issues/877) | feat(provisioner): per-table completeness metrics in metadata and health | - | [#926](https://github.com/vincentchalamon/bike-trip-planner/pull/926) `feature/877` | Mergée | - |
+| 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | [#924](https://github.com/vincentchalamon/bike-trip-planner/pull/924) | Mergée | - |
+| 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | [#925](https://github.com/vincentchalamon/bike-trip-planner/pull/925) | Mergée | - |
+| 4 | [#927](https://github.com/vincentchalamon/bike-trip-planner/issues/927) | feat(accommodations)!: retirer shelter, motel et rental du vocabulaire d'hébergement | - | [#928](https://github.com/vincentchalamon/bike-trip-planner/pull/928) | Mergée | dérive de [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) |
+
+> **#927 est née de la recette de ce sprint** : la mesure de #878 (6 129 des 8 062 `shelter` sont du mobilier urbain, `motel` = 11 lignes) a fait sortir `shelter` et `motel` du vocabulaire d'hébergement, `rental` suivant sur décision produit. Les lignes `category = 'shelter'` **restent importées** pour le seul lecteur in-ride (`InRidePoiRepository.php:33`) : seul l'appariement `AccommodationRepository::NON_LODGING_CATEGORIES` les écarte de la recherche d'hébergement.
 
 ### Recette Sprint 47
 
 - **Tests E2E :** aucun (métriques internes, non exposées à l'utilisateur).
 - **Checklist manuelle :**
-  - [ ] `/api/health` expose les ratios de complétude par table sous `reference_data`, en dépendance non requise.
-  - [ ] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu.
-  - [ ] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom.
+  - [x] `/api/health` expose les ratios de complétude par table sous `reference_data`, en dépendance non requise — `completeness` et `rejections` décodés dans le payload, `reference_data` absent de `$required` donc la sonde reste 200 index non provisionné ; `HealthControllerTest` vert (12 tests, 63 assertions) contre un vrai Postgres.
+  - [x] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu — introduite par #705, supprimée par #926 (`git log -S`), plus aucune occurrence dans `api/`, `provisioner/`, `pwa/` ; deux tests asseyent l'absence de la clé `stale` sur un index vieux de 100 jours.
+  - [x] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom — `COMPLETENESS_BY_CATEGORY = ['accommodations']` dans les deux importeurs ; l'expression générée, exécutée sur l'index local réel, sort bien le détail par catégorie (`shelter` 8 062 lignes / 36,45 % nommées, `wilderness_hut` 316 / 93,67 %, `hotel` 2 706, `motel` 11).
   - [x] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut` — contrainte de complétude partout sauf `shelter`, pas d'exemption pour `wilderness_hut` (6,3 % sans nom) ([rapport](docs/audit/878-hebergements-osm-sans-nom.md)).
   - [x] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879 — présent : `kb:LabelRating_AccueilVelo` sur 8 010 objets dont 6 006 hébergements, sous `hasReview[].hasReviewValue` ([rapport](docs/datatourisme-flux-audit.md)).
-  - [ ] Les métriques n'allongent pas notablement la durée du provisionnement.
+  - [x] Les métriques n'allongent pas notablement la durée du provisionnement — mesuré dans #926 sur l'index DataTourisme (**+150 ms** sur 324 128 lignes, décomptes seuls 49-61 ms contre 201-254 ms avec la complétude) et **confirmé sur le vrai index OSM** (l'auto-critique de #926 extrapolait, le schéma `osm` local étant vide au moment de la PR) : l'expression complète des 12 tables + le détail par catégorie coûte **133 ms à froid, 53 ms à chaud** contre un import `osm2pgsql` en minutes.
+
+### Vérification de complétude du 04/08/2026
+
+Les trois issues sont **closes**, les quatre PRs (#924, #925, #926, #928) **mergées** sur `main`, aucune issue `sprint-47` n'est restée ouverte. Preuves réexécutées sur `main` à `46c048a8` :
+
+- `HealthControllerTest` : `OK (12 tests, 63 assertions)`.
+- Provisionner : `Tests: 101, Assertions: 555, Skipped: 1` (le skip préexiste).
+- API `tests/Unit` + `tests/Integration` : `Tests: 1491, Assertions: 4130, Skipped: 1`.
+- Playwright reste la charge de la CI (le PWA du worktree n'est pas dans le bundle servi en local).
+
+Trois constats à reporter, aucun ne remet en cause la livraison :
+
+1. **L'index local précède le code.** `osm.metadata` / `tourism.metadata` ont été provisionnées avant #877, donc `/api/health` renvoie aujourd'hui `completeness: []` : c'est le repli `SELECT *` qui joue (un index d'avant les colonnes continue de publier ses décomptes au lieu de passer pour non provisionné, comportement épinglé par un test). Les vrais ratios n'apparaîtront qu'après le prochain provisionnement. Les deux migrations `Version20260804120000` et `Version20260805120000` n'étaient pas appliquées en local, elles l'ont été pendant cette vérification.
+2. **`admin_boundaries` compte 0 ligne** sur le jeu local : c'est exactement le défaut mis en tête de la recette du sprint 48 (#880), confirmé par la mesure. `osm.coverage` est donc vide et tout voyage est hors zone.
+3. **Deux tickets de suivi annoncés ne sont pas ouverts** : le nettoyage de la couche abri (liste blanche `shelter_type`, 6 129 lignes de bruit, annoncé par #927) et l'index GiST sur `(geom::geography)` du Tier-1 (constat du sprint 45). Par ailleurs les recommandations 3 et 5 de l'audit #879 (« ne pas ajouter de source de label vélo », « `nationalAddressId` est vide, une jointure BAN doit partir de l'adresse postale ») visent directement #887 et #888 sans y être reportées en commentaire, contrairement à ce qui a été fait pour #884 et #865.
 
 </details>
 
