@@ -1424,7 +1424,7 @@ Sprint volontairement court : ce sont des mesures, et elles **arbitrent les spri
   - [ ] `/api/health` expose les ratios de complétude par table sous `reference_data`, en dépendance non requise.
   - [ ] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu.
   - [ ] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom.
-  - [ ] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut`.
+  - [x] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut` — contrainte de complétude partout sauf `shelter`, pas d'exemption pour `wilderness_hut` (6,3 % sans nom) ([rapport](docs/audit/878-hebergements-osm-sans-nom.md)).
   - [x] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879 — présent : `kb:LabelRating_AccueilVelo` sur 8 010 objets dont 6 006 hébergements, sous `hasReview[].hasReviewValue` ([rapport](docs/datatourisme-flux-audit.md)).
   - [ ] Les métriques n'allongent pas notablement la durée du provisionnement.
 

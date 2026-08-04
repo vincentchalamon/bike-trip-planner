@@ -139,11 +139,22 @@ fréquentes, quantités à droite) :
 
 Le verdict se lit par catégorie, pas globalement :
 
-- **Sur `shelter`, `operator` est nuisible.** 175 des 199 valeurs sont des transporteurs ou
-  des afficheurs (`~* 'jcdecaux|transdev|keolis|sncf|stas|tcl|sytral|tac|cars|bus|mobilit'`).
-  Proposer « JCDecaux » comme hébergement à un bikepacker est pire que ne rien proposer :
-  c'est un abribus présenté comme un abri de bivouac. Restent une vingtaine de valeurs de
-  collectivités, exploitables mais qui décrivent le propriétaire, pas le lieu.
+- **Sur `shelter`, `operator` est nuisible.** **184 des 199 valeurs** sont des transporteurs
+  ou des afficheurs. Proposer « JCDecaux » comme hébergement à un bikepacker est pire que ne
+  rien proposer : c'est un abribus présenté comme un abri de bivouac. Les 15 valeurs
+  restantes sont énumérables : « Région Auvergne-Rhône-Alpes » (3), « Institution
+  Sainte-Marie » (2), puis une occurrence chacune de « Arc Vezerontin », « CD62 »,
+  « Commune de Jongieux », « Département de l'Isère », « Grenoble Alpes Métropole »,
+  « Ondea », « Privé », « Sogedo », « commune de Maisoncelle », « École primaire privée
+  Saint-Joseph ». **Deux** produisent un libellé exploitable (les deux communes) ; cinq
+  désignent une collectivité propriétaire et non le lieu ; le reste (régie des eaux, école,
+  « Privé ») n'a aucun rapport avec un abri.
+
+  > Le premier comptage donnait 175 : le motif utilisé
+  > (`~* 'jcdecaux|transdev|keolis|sncf|stas|tcl|sytral|tac|cars|bus|mobilit'`) rate la
+  > graphie pointée `S.N.C.F.`, présente 9 fois. Un motif insensible à la ponctuation
+  > (`regexp_replace(operator, '[^a-zA-Z]', '', 'g')`) donne 184, ce qui recoupe exactement
+  > l'échantillon ci-dessus. Le sens de la conclusion ne change pas, il se renforce.
 - **Hors `shelter`, `operator` est utile mais négligeable en volume.** Les 38 valeurs
   concernées sont presque toutes de vrais libellés (enseignes, campings, noms de
   propriétaires). Mais 38 lignes sur 8 824, cela ne justifie pas une chaîne de repli en
@@ -229,7 +240,7 @@ explicitement pertinents) et laisserait 2 516 abribus nommés. La bonne clé de 
   `InRideAssistant`, au lieu de les écarter dans `OsmAccommodationSource`.
 
 **3. Abandonner la chaîne de repli à cinq clés.** Mesure : 248 rattrapages sur 5 754 entrées
-sans nom (4,3 %), dont 175 sont des noms de transporteurs sur des abribus. `name:fr` et
+sans nom (4,3 %), dont 184 sont des noms de transporteurs sur des abribus. `name:fr` et
 `official_name` n'ont **aucune** occurrence, `alt_name` 11 (toutes « Salle hors-sac »),
 `brand` 1. Si un repli est conservé, le réduire à `operator` puis `brand` **hors `shelter`**,
 pour un gain de 38 lignes : à décider au regard du coût du résolveur, pas de son rendement
