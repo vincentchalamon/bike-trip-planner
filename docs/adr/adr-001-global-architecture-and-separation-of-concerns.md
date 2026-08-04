@@ -251,7 +251,7 @@ Husky).
 **Frontend Quality Tools:**
 
 * **TypeScript:** `strict: true` in `tsconfig.json`. Types will be generated automatically from API Platform's OpenAPI
-  specification using `@api-platform/api-doc-parser`.
+  specification using `openapi-typescript`.
 * **ESLint & Prettier:** Strict Next.js core web vitals and React recommended rules.
 * **Playwright:** End-to-end tests validating the full cycle (Input -> API Call -> Zustand State -> UI Render).
 
