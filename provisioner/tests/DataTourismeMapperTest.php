@@ -58,7 +58,7 @@ final class DataTourismeMapperTest extends TestCase
     public function mapsAccommodationWithCapacityAndPrice(): void
     {
         $row = $this->mapper->map($this->object(
-            ['schema:Accommodation', 'Accommodation', 'RentalAccommodation', 'SelfCateringAccommodation'],
+            ['schema:Accommodation', 'Accommodation', 'Chalet'],
             [
                 'allowedPersons' => 4,
                 'offers' => [['schema:priceSpecification' => [['schema:price' => '75']]]],
@@ -67,7 +67,7 @@ final class DataTourismeMapperTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('accommodation', $row['head']);
-        self::assertSame('rental', $row['category']);
+        self::assertSame('chalet', $row['category']);
         self::assertSame(4, $row['capacity']);
         self::assertSame(75.0, $row['price']);
     }
@@ -85,18 +85,18 @@ final class DataTourismeMapperTest extends TestCase
     }
 
     /**
-     * The whole French "meublé de tourisme" market collapses onto the single
-     * `rental` category, so it stays comparable with OSM's tourism=apartment.
+     * The French "meublé de tourisme" market left the vocabulary (#927): it is let
+     * by the week and the flux carries no minimum-stay predicate, so its subtypes
+     * must be discarded rather than mapped. Reverses the #865 contract.
      */
     #[Test]
     #[DataProvider('rentalSubtypes')]
-    public function mapsEveryRentalSubtypeToTheSingleRentalCategory(string $subtype): void
+    public function discardsEveryFormerRentalSubtype(string $subtype): void
     {
-        $row = $this->mapper->map($this->object(['Accommodation', $subtype]));
+        $before = $this->mapper->unmappedAccommodationCount();
 
-        self::assertNotNull($row);
-        self::assertSame('accommodation', $row['head']);
-        self::assertSame('rental', $row['category']);
+        self::assertNull($this->mapper->map($this->object(['Accommodation', $subtype])));
+        self::assertSame($before + 1, $this->mapper->unmappedAccommodationCount());
     }
 
     /**
@@ -121,10 +121,10 @@ final class DataTourismeMapperTest extends TestCase
         self::assertNull($this->mapper->map($this->object(['schema:Accommodation', 'Accommodation', 'AccommodationProduct'])));
 
         // In the flux it always co-occurs with a place subtype, which is what
-        // classifies the object: those rows are still imported as rentals.
-        $row = $this->mapper->map($this->object(['Accommodation', 'AccommodationProduct', 'RentalAccommodation']));
+        // classifies the object: those rows are still imported under that subtype.
+        $row = $this->mapper->map($this->object(['Accommodation', 'AccommodationProduct', 'Chalet']));
         self::assertNotNull($row);
-        self::assertSame('rental', $row['category']);
+        self::assertSame('chalet', $row['category']);
     }
 
     #[Test]

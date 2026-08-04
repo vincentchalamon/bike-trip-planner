@@ -172,28 +172,12 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     }
 
     #[Test]
-    public function exposesTheRentalCategoryAsAFilterableType(): void
+    public function doesNotExposeTheRemovedRentalCategory(): void
     {
-        // `rental` (meublé de tourisme) must belong to the searchable vocabulary,
-        // otherwise the repositories' `category IN (:categories)` filter can never
-        // return the ~80k DataTourisme rentals (issue #865).
-        self::assertContains('rental', TripRequest::ALL_ACCOMMODATION_TYPES);
-
-        $repository = $this->createStub(AccommodationRepositoryInterface::class);
-        $repository->method('findNear')->willReturn([
-            $this->row(name: 'Gîte des Prés', capacity: 4),
-        ]);
-
-        $engine = new PricingHeuristicEngine();
-        $expected = $engine->estimatePrice('rental', []);
-
-        $result = new DataTourismeAccommodationSource($repository, $engine)
-            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['rental']);
-
-        self::assertCount(1, $result);
-        self::assertSame('rental', $result[0]['type']);
-        self::assertSame($expected['min'], $result[0]['priceMin']);
-        self::assertSame($expected['max'], $result[0]['priceMax']);
+        // The meublé bucket left the vocabulary (#927): the DataTourisme mapper no
+        // longer maps its subtypes, so the repositories' `category IN (:categories)`
+        // filter can never name it. Reverses the #865 contract.
+        self::assertNotContains('rental', TripRequest::ALL_ACCOMMODATION_TYPES);
     }
 
     /**

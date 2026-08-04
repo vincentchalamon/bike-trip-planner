@@ -209,7 +209,7 @@ final class ComputationDependencyResolverTest extends TestCase
     {
         $old = $this->createRequest('https://www.komoot.com/tour/123');
         $new = $this->createRequest('https://www.komoot.com/tour/123');
-        $old->enabledAccommodationTypes = ['camp_site', 'hostel', 'hotel', 'motel', 'guest_house', 'chalet', 'alpine_hut'];
+        $old->enabledAccommodationTypes = ['camp_site', 'hostel', 'hotel', 'guest_house', 'chalet', 'alpine_hut'];
         $new->enabledAccommodationTypes = ['camp_site', 'hostel'];
 
         $result = $this->resolver->resolve($old, $new);

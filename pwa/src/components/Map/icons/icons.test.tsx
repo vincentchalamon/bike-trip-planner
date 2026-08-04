@@ -34,9 +34,8 @@ describe("resolveCategory — full identifier mapping", () => {
     ["hotel", "accommodation"],
     ["alpine_hut", "accommodation"],
     ["camp_site", "accommodation"],
-    ["shelter", "accommodation"],
     ["wilderness_hut", "accommodation"],
-    ["rental", "accommodation"],
+    ["guest_house", "accommodation"],
     // Water
     ["water", "water"],
     ["drinking_water", "water"],

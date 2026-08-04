@@ -37,11 +37,24 @@ describe("accommodation type catalog", () => {
   );
 
   it("maps each contract type to its own key", () => {
-    expect(accommodationTypeLabelKey("shelter")).toBe("type_shelter");
+    expect(accommodationTypeLabelKey("camp_site")).toBe("type_camp_site");
     expect(accommodationTypeLabelKey("wilderness_hut")).toBe(
       "type_wilderness_hut",
     );
   });
+
+  // #927: they left the vocabulary, so they must render as "Autre" rather than
+  // keep a label of their own — and no catalog entry may linger for them.
+  it.each(["shelter", "motel", "rental"])(
+    "treats the removed type %s as outside the contract",
+    (type) => {
+      expect(isAccommodationType(type)).toBe(false);
+      expect(accommodationTypeLabelKey(type)).toBe("type_other");
+      for (const catalog of Object.values(catalogs)) {
+        expect(catalog[`type_${type}`]).toBeUndefined();
+      }
+    },
+  );
 
   it("falls back to type_other for a type outside the contract", () => {
     expect(isAccommodationType("igloo")).toBe(false);

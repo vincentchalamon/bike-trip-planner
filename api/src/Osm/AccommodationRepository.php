@@ -24,6 +24,21 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      */
     private const int MAX_ROWS_PER_POINT = 30;
 
+    /**
+     * Categories present in `osm.accommodations` that are not lodging.
+     *
+     * `amenity=shelter` is still imported, but only to serve the in-ride "where
+     * can I take cover" intent ({@see \App\InRide\InRidePoiRepository}): the
+     * measurement in docs/audit/878-hebergements-osm-sans-nom.md found 76% of it
+     * to be street furniture, bus shelters above all. Excluding it here — rather
+     * than relying on it having left TripRequest::ALL_ACCOMMODATION_TYPES — keeps
+     * the guarantee independent of what a caller passes in `$categories`,
+     * including a trip persisted before #927 whose list still names it.
+     *
+     * @var list<string>
+     */
+    private const array NON_LODGING_CATEGORIES = ['shelter'];
+
     public function __construct(private Connection $connection)
     {
     }
@@ -94,6 +109,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                         LIMIT 1
                     ) AS nearest
                     WHERE a.category IN (:categories)
+                      AND a.category NOT IN (:nonLodgingCategories)
                       AND ST_DWithin(
                           a.geom::geography,
                           ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
@@ -107,10 +123,12 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 'wkt' => WktGeometry::multiPoint($points),
                 'radius' => $radiusMeters,
                 'categories' => $categories,
+                'nonLodgingCategories' => self::NON_LODGING_CATEGORIES,
                 'limit' => self::MAX_ROWS_PER_POINT,
             ],
             [
                 'categories' => ArrayParameterType::STRING,
+                'nonLodgingCategories' => ArrayParameterType::STRING,
                 'limit' => ParameterType::INTEGER,
             ],
         );

@@ -38,12 +38,13 @@ final class DataTourismeMapper
         'Chalet' => 'chalet', 'Hut' => 'wilderness_hut', 'TreeHouse' => 'chalet',
         'CollectiveAccommodation' => 'hostel', 'GroupLodging' => 'hostel', 'StopOverOrGroupLodge' => 'hostel',
         'ClubOrHolidayVillage' => 'hostel', 'HolidayResort' => 'hostel',
-        // French "meublé de tourisme": one filterable category for the whole
-        // self-catering rental market, matching OSM's tourism=apartment
-        // (provisioner/osm2pgsql/tier1.lua) so the two sources stay comparable.
-        'RentalAccommodation' => 'rental', 'SelfCateringAccommodation' => 'rental',
-        'House' => 'rental', 'Apartment' => 'rental', 'Bungalow' => 'rental',
-        'Yurt' => 'rental', 'CastleAndPrestigeMansion' => 'rental',
+        // The French "meublé de tourisme" subtypes (RentalAccommodation,
+        // SelfCateringAccommodation, House, Apartment, Bungalow, Yurt,
+        // CastleAndPrestigeMansion) are deliberately absent since #927: that market
+        // is let by the week and the flux carries no minimum-stay predicate
+        // (docs/datatourisme-flux-audit.md), so it cannot be offered for a single
+        // night. They now fall into unmappedAccommodationCount(), which is expected
+        // to be large — they are two thirds of the accommodation objects.
     ];
 
     /** Cultural/natural subtype (unprefixed ontology type) → app cultural-POI category. */

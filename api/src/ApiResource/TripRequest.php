@@ -88,36 +88,34 @@ final class TripRequest
     #[Assert\Range(min: 5, max: 50)]
     public float $averageSpeed = 15.0;
 
-    /** @var list<string> Single source of truth for the searchable accommodation vocabulary (OSM tourism= values, logical types and the `rental` meublé bucket). */
-    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter', 'rental'];
-
     /**
-     * Types enabled on a new trip: everything except `rental`.
+     * Single source of truth for the searchable accommodation vocabulary, and
+     * the list every new trip starts with — there is no opt-in type any more.
      *
-     * `rental` (gîte / meublé de tourisme) is searchable but opt-in — a large
-     * share of the French rental market is let by the week and neither OSM nor
-     * DataTourisme carries a reliable minimum-stay field, so offering it by
-     * default would suggest lodging the rider cannot book for a single night.
-     * Trips created before it existed keep their persisted list untouched.
+     * `shelter`, `motel` and `rental` were removed (#927): `amenity=shelter` is
+     * 76% street furniture (mostly bus shelters, see docs/audit/878-hebergements-osm-sans-nom.md),
+     * `tourism=motel` is empty in France (11 rows over two regions, 0 in
+     * DataTourisme), and the meublé market is let by the week. `shelter` rows are
+     * still imported, but for the in-ride "where can I take cover" intent only —
+     * {@see \App\Osm\AccommodationRepository} excludes them from lodging results.
      *
      * @var list<string>
      */
-    public const array DEFAULT_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter'];
+    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'hotel', 'wilderness_hut'];
 
     /**
      * Enabled accommodation types for the reference-index search.
-     * Defaults to {@see DEFAULT_ACCOMMODATION_TYPES} (all types but `rental`).
-     * At least one type must remain enabled.
+     * Defaults to the whole vocabulary; at least one type must remain enabled.
      *
      * @var list<string>
      */
     #[ORM\Column(type: 'text[]')]
-    #[ApiProperty(description: 'Enabled accommodation types for search (default: every type except `rental`, which is opt-in)')]
+    #[ApiProperty(description: 'Enabled accommodation types for search (default: every type)')]
     #[Assert\Count(min: 1, minMessage: 'At least one accommodation type must be enabled.')]
     #[Assert\All([
         new Assert\Choice(choices: self::ALL_ACCOMMODATION_TYPES),
     ])]
-    public array $enabledAccommodationTypes = self::DEFAULT_ACCOMMODATION_TYPES;
+    public array $enabledAccommodationTypes = self::ALL_ACCOMMODATION_TYPES;
 
     // --- Persistence-only fields (not exposed in API input/output) ---
 

@@ -8,7 +8,7 @@
  * or direct `style={{ color }}`.
  *
  * The registry exposes 12 high-level categories. Sub-types (e.g. `hotel` /
- * `motel`) all map onto the relevant category through {@link resolveCategory}.
+ * `guest_house`) all map onto the relevant category through {@link resolveCategory}.
  */
 import type { ComponentType, SVGProps } from "react";
 import {
@@ -71,7 +71,7 @@ function withSize({
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
-/** Hébergements — bed/roof shape (covers hotel, motel, hostel, guest_house, chalet…). */
+/** Hébergements — bed/roof shape (covers hotel, hostel, guest_house, chalet…). */
 export function AccommodationIcon(props: MarkerIconProps) {
   const svgProps = withSize(props);
   return (

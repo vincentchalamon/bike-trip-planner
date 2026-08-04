@@ -15,10 +15,8 @@ import {
   CheckCircle2,
   Circle,
   BedDouble,
-  KeyRound,
   Mountain,
   TreePine,
-  Umbrella,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,11 +46,8 @@ export const ACCOMMODATION_TYPE_ICONS: Record<AccommodationType, LucideIcon> = {
   camp_site: Tent,
   chalet: Home,
   guest_house: BedDouble,
-  motel: Hotel,
   alpine_hut: Mountain,
   wilderness_hut: TreePine,
-  shelter: Umbrella,
-  rental: KeyRound,
   other: MapPin,
 };
 

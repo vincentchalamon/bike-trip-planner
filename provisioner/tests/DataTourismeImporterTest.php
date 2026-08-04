@@ -243,19 +243,26 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     #[Test]
-    public function importsRentalsAndPublishesTheUnmappedAccommodationCount(): void
+    public function importsMappedAccommodationsAndPublishesTheUnmappedCount(): void
     {
-        // A meublé lands in the `rental` category; an Accommodation whose subtype
-        // maps to nothing is dropped rather than folded into a bucket the app
-        // cannot query back, and counted so it stays visible (issue #865).
+        // A chalet lands in its category; an Accommodation whose subtype maps to
+        // nothing is dropped rather than folded into a bucket the app cannot query
+        // back, and counted so it stays visible (issue #865). Since #927 the meublé
+        // subtypes are part of that unmapped bulk, on purpose.
         $zipPath = $this->workDir.'/accommodations.zip';
         $zip = new \ZipArchive();
         $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/chalet.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/chalet',
+            '@type' => ['schema:Accommodation', 'Accommodation', 'Chalet'],
+            'rdfs:label' => ['fr' => ['Gite du Lac']],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3']]],
+        ]));
         $zip->addFromString('objects/0/00/rental.json', (string) json_encode([
             '@id' => 'https://data.datatourisme.fr/10/rental',
             '@type' => ['schema:Accommodation', 'Accommodation', 'RentalAccommodation', 'SelfCateringAccommodation'],
-            'rdfs:label' => ['fr' => ['Gite du Lac']],
-            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3']]],
+            'rdfs:label' => ['fr' => ['Meuble de la Plage']],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.7', 'schema:longitude' => '2.5']]],
         ]));
         $zip->addFromString('objects/0/00/unmapped.json', (string) json_encode([
             '@id' => 'https://data.datatourisme.fr/10/unmapped',
@@ -276,15 +283,17 @@ final class DataTourismeImporterTest extends TestCase
         $importer->run($this->workDir);
 
         $accommodations = (string) file_get_contents($this->workDir.'/tourism-accommodations.copy');
-        self::assertSame(1, substr_count($accommodations, "\n"), 'only the rental row is written');
-        self::assertStringContainsString('rental', $accommodations);
+        self::assertSame(1, substr_count($accommodations, "\n"), 'only the chalet row is written');
+        self::assertStringContainsString('chalet', $accommodations);
         self::assertStringNotContainsString('unmapped', $accommodations);
-        self::assertSame(1, $importer->unmappedAccommodationCount());
+        // The meublé and the subtype-less object are both rejected (#927).
+        self::assertStringNotContainsString('Meuble de la Plage', $accommodations);
+        self::assertSame(2, $importer->unmappedAccommodationCount());
 
         // The only rejection measurable before the sprint-49 quality gate is
         // recorded in the metadata, motive included (issue #877).
         self::assertStringContainsString(
-            "jsonb_build_object('accommodation_unmapped_category', 1) AS rejections",
+            "jsonb_build_object('accommodation_unmapped_category', 2) AS rejections",
             $this->capturedMetadataSql(),
         );
     }

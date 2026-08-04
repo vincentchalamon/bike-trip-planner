@@ -60,7 +60,7 @@ final readonly class CandidateRanker
      * Minimal-facility types, poor in metadata by nature: they lose the
      * completeness ranking and are what the family cap protects.
      */
-    private const array OUTDOOR_TYPES = ['camp_site', 'shelter', 'wilderness_hut'];
+    private const array OUTDOOR_TYPES = ['camp_site', 'wilderness_hut'];
 
     /**
      * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, stars?: ?int, capacity?: ?int, fee?: ?string, source?: string, wikidataId?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, osmType?: ?string, osmId?: ?int}> $candidates

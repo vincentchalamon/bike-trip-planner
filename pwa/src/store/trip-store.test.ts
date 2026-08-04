@@ -610,12 +610,9 @@ describe("default enabled accommodation types", () => {
   // Value-level contract: TS strict mode cannot catch a drift here, both
   // arrays being structurally compatible AccommodationType[]. The backend
   // pins the same contract in TripRequestTest.
-  it("leaves rental opt-in and keeps every other filterable type", () => {
+  it("enables every filterable type, none being opt-in any more", () => {
     useTripStore.getState().clearTrip();
     const enabled = useTripStore.getState().enabledAccommodationTypes;
-    expect(enabled).not.toContain("rental");
-    expect(enabled).toEqual(
-      FILTERABLE_ACCOMMODATION_TYPES.filter((type) => type !== "rental"),
-    );
+    expect(enabled).toEqual([...FILTERABLE_ACCOMMODATION_TYPES]);
   });
 });
