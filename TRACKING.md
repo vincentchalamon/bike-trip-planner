@@ -1407,7 +1407,7 @@ C'est la confirmation de la leçon du sprint 45 : la carte de recoupement attrap
 </summary>
 Sprint volontairement court : ce sont des mesures, et elles **arbitrent les sprints 49 et 50**. Sans chiffres, on supprime des règles et on choisit des sources à l'intuition, et c'est exactement ce qui a produit une inférence fausse pendant le diagnostic (« un rayon de 15 km sans pharmacie est un trou d'index » était une supposition, probablement démentie par la couverture OSM réelle).
 
-> ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code. #878 a été traitée par cette seconde voie : le rapport est committé sous [`docs/audit/`](docs/audit/878-hebergements-osm-sans-nom.md).
+> ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code. #878 et #879 ont été traitées par cette seconde voie : leurs rapports sont committés sous [`docs/audit/`](docs/audit/878-hebergements-osm-sans-nom.md) et [`docs/`](docs/datatourisme-flux-audit.md).
 >
 > Ces deux spikes sont des **mesures à exécuter** sur un jeu de données provisionné, pas des développements. Ils supposent donc une zone déjà ouverte, en local suffit.
 
