@@ -1539,3 +1539,60 @@ Sprint **conditionnel**. La source la plus rentable n'est pas nouvelle : c'est c
   - [ ] ADR-050 tranche explicitement, y compris si la décision est de conserver l'option corridor déjà livrée.
 
 </details>
+
+<details><summary>
+
+## Sprint 51 - In-ride sans IA
+
+</summary>
+L'in-ride n'était pas une fonctionnalité : c'était une branche de `POST /trips/{id}/ai-chat` déclenchée par la présence d'un champ `position`. Elle faisait deux appels LLM — un classifieur d'intention et une narration — alors que tout le travail utile était déjà déterministe, et que ces deux appels avaient chacun un repli déterministe complet. Le sprint la remplace par une recherche guidée à 8 questions prédéfinies sur l'index Tier-1, supprime le chat de mutation et l'historique persisté, et sort l'in-ride du drapeau `NEXT_PUBLIC_ENABLE_AI`. À l'arrivée, la seule surface IA restante est **l'analyse du voyage** et **la création d'itinéraire**.
+
+Le sprint porte aussi le ticket de suivi demandé par #927 et par la PR #928 : le nettoyage de la couche abri. Décision produit à contre-courant de la liste blanche stricte que documentait le `README`, un abribus abrite réellement de la pluie en route — il est **conservé, étiqueté « Abribus »**, et c'est le mobilier inutile (`carport`, `gazebo`, `umbrella`, `shopping_cart`) qui est écarté.
+
+> ⚠️ **#929 et #934 doivent tourner seules.** Chacune régénère `pwa/src/lib/api/schema.d.ts` (~2 000 lignes générées) via `make typegen` : les lancer en worktrees parallèles garantit un conflit sur un fichier généré.
+>
+> ⚠️ **#938 ne passe pas par `/sprint`.** C'est une passe de recette manuelle sur téléphone, sans commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. Ce qui fait la valeur de cette fonctionnalité — passage de main vers l'application de cartes, position de départ après quelques centaines de mètres, cibles tactiles avec des gants, lisibilité en plein soleil — n'est pas testable par Playwright.
+>
+> **Suppression avant construction.** L'ordre « ajouter puis retirer » est infaisable : les issues de construction changent la signature de `InRidePoiRepository::findNearby()`, la forme de `PoiSuggestion` et l'API publique de `OpeningHoursParser`, que `InRideAssistant` consomme encore. Et l'argument « rester déployable » ne tient pas : la surface était déjà masquée en prod et en recette (ADR-046, défaut off). #929 laisse donc **douze briques transitoirement orphelines**, listées dans son corps, qui retrouvent un appelant en #935.
+>
+> **#937 est hors sprint** : ADR-032 interdit une migration destructive dans la release qui cesse d'écrire. Le `DROP TABLE trip_chat_message` attend la release suivant celle de #929.
+>
+> **Prérequis levé :** PR #928 mergée (`46c048a8`), elle touchait `schema.d.ts`, `messages/*.json`, `tier1.lua` et `TripRequest`.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#929](https://github.com/vincentchalamon/bike-trip-planner/issues/929) | refactor(in-ride)!: supprimer le chat IA de planification, l'in-ride IA et l'historique persisté | XL | - | PR #928 |
+| 2 | [#930](https://github.com/vincentchalamon/bike-trip-planner/issues/930) | feat(in-ride): enum de catégories et lecteur PostGIS 8 buckets | L | - | #929 |
+| 3 | [#931](https://github.com/vincentchalamon/bike-trip-planner/issues/931) | feat(in-ride): tri-état des horaires et libellés localisés des lieux sans nom | M | - | #929 |
+| 4 | [#932](https://github.com/vincentchalamon/bike-trip-planner/issues/932) | feat(in-ride): polyligne restante côté serveur pour le calcul de détour | M | - | #929 |
+| 5 | [#933](https://github.com/vincentchalamon/bike-trip-planner/issues/933) | feat(in-ride): orchestrateur de recherche de lieux sans IA | L | - | #930, #931, #932 |
+| 6 | [#934](https://github.com/vincentchalamon/bike-trip-planner/issues/934) | feat(api): endpoint POST /trips/{id}/nearby-pois | L | - | #933 |
+| 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | - | #934 |
+| 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | - | #934 |
+| 9 | [#938](https://github.com/vincentchalamon/bike-trip-planner/issues/938) | test(recette): recette sprint 51 - in-ride sans IA sur téléphone | M | - | #935, #936 |
+| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | - | #929 **livrée en prod** |
+
+Vagues `/sprint` : {#929} seule → {#930, #931, #932} → {#933} → {#934} seule → {#935, #936} → {#938} manuelle → release suivante {#937}.
+
+### Recette Sprint 51
+
+- **Tests E2E :** `pwa/tests/mocked/in-ride-search.spec.ts`, `pwa/tests/recette/features/in-ride.{en,fr}.feature`. La CI est le gate.
+- **Checklist manuelle, sur téléphone** (détail et compte rendu dans #938) :
+  - [ ] La bulle « en route » est visible **sans** `NEXT_PUBLIC_ENABLE_AI` et sans fournisseur IA configuré.
+  - [ ] Aucun champ de saisie libre ; les 8 questions sont atteignables au pouce, d'une main.
+  - [ ] Chaque question renvoie des résultats en zone couverte, et un message **distinct** hors zone couverte.
+  - [ ] Un lieu tapé ouvre l'application de cartes du téléphone en mode vélo, **depuis la position vive** : faire la recherche, marcher 200 m, puis taper.
+  - [ ] Rien n'est envoyé vers l'appareil GPS : aucun waypoint ajouté, aucun recalcul, le voyage est inchangé après la recherche.
+  - [ ] Un abribus ressort étiqueté « Abribus » et non « Abri » ; aucun abri à caddies ni carport dans les résultats.
+  - [ ] Aucune borne de recharge voiture proposée pour la recherche de recharge ; la recherche de courses ne renvoie ni station-service ni pharmacie.
+  - [ ] Un lieu sans horaires connus porte « horaires non vérifiés » et reste visible ; un lieu certainement fermé est absent.
+  - [ ] « Élargir la recherche » change réellement les résultats en centre-ville dense — garde-fou contre le no-op du plafond de candidats.
+  - [ ] Plafond atteint et tout écarté : le message dit « aucun résultat exploitable parmi les N plus proches », pas « rien dans ce rayon ».
+  - [ ] Le badge de détour n'apparaît que lorsqu'un détour est réellement calculé.
+  - [ ] Les résultats restent lisibles en plein soleil et toute la carte réagit au tap avec des gants.
+  - [ ] `/s/{shortCode}` (vue partagée anonyme) n'affiche pas la bulle.
+  - [ ] Avec une clé configurée : génération depuis un brief, chat de cadrage, analyse complète, briefing par étape et synthèse de voyage fonctionnent toujours.
+  - [ ] Les 12 orphelins transitoires de #929 ont tous retrouvé un appelant.
+  - [ ] La table `trip_chat_message` est encore présente en base à l'issue du sprint — sa suppression est #937, release suivante.
+
+</details>
