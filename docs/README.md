@@ -28,6 +28,7 @@ Looking for the product overview instead? See the [README](../README.md).
 | [Features](../README.md#features) | Product feature overview |
 | [Alert engine](../README.md#alert-engine) | Canonical alert-rule table (severity, priority, trigger) |
 | [External data sources](../README.md#external-data-sources) | OSM, DataTourisme, Wikidata, Open-Meteo |
+| [DataTourisme flux field audit](datatourisme-flux-audit.md) | What the national flux really carries: fill rates per object type, Accueil Vélo coverage, pricing granularity |
 | [Legal & Licensing](legal-and-licensing.md) | Project licence, data attribution, GDPR posture |
 
 ## Explanation — understanding the design
