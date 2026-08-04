@@ -72,6 +72,27 @@ final readonly class DataTourismeImporter
      */
     private const array WIKIDATA_TABLES = ['cultural_pois', 'food_pois', 'accommodations'];
 
+    /**
+     * Completeness metrics recorded per table (issue #877): metric key => the text
+     * column whose presence is measured. Events carry their link in `url` and have
+     * no opening hours (they have a date range instead).
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const array COMPLETENESS_METRICS = [
+        'cultural_pois' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours'],
+        'food_pois' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours'],
+        'accommodations' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours', 'with_phone' => 'phone'],
+        'events' => ['named' => 'name', 'with_link' => 'url'],
+    ];
+
+    /**
+     * Tables also broken down per `category`; see PostgisImporter for the rationale.
+     *
+     * @var list<string>
+     */
+    private const array COMPLETENESS_BY_CATEGORY = ['accommodations'];
+
     private HttpClientInterface $httpClient;
 
     /**
@@ -303,15 +324,31 @@ final readonly class DataTourismeImporter
             \sprintf('CREATE INDEX ON %s.events (start_date, end_date);', self::STAGING_SCHEMA),
         ], 'psql index events dates');
 
-        // Provisioning metadata (refresh timestamp + per-table counts), surfaced
-        // by /api/health so operators see the DataTourisme index freshness.
+        // Provisioning metadata (refresh timestamp, per-table counts, per-table
+        // completeness ratios and the discarded-row counts), surfaced by
+        // /api/health so operators see what the DataTourisme index is worth.
         $counts = implode(', ', array_map(
             static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
             array_keys(self::TABLE_COLUMNS),
         ));
+        $completeness = new CompletenessMetrics(self::STAGING_SCHEMA)
+            ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
+        // The only rejection measurable before the sprint-49 quality gate: flux
+        // accommodations whose subtype maps to no app category (see the mapper).
+        $rejections = \sprintf(
+            "jsonb_build_object('accommodation_unmapped_category', %d)",
+            $this->mapper->unmappedAccommodationCount(),
+        );
+
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts;', self::STAGING_SCHEMA, $counts),
+            \sprintf(
+                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts, %3$s AS completeness, %4$s AS rejections;',
+                self::STAGING_SCHEMA,
+                $counts,
+                $completeness,
+                $rejections,
+            ),
         ], 'psql build tourism metadata');
     }
 

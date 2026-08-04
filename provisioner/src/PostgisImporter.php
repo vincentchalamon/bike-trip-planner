@@ -82,6 +82,41 @@ final readonly class PostgisImporter
     private const array WIKIDATA_TABLES = ['cultural_pois', 'accommodations'];
 
     /**
+     * Completeness metrics recorded per table (issue #877): metric key => the text
+     * column whose presence is measured. `website` is the exploitable link — what
+     * the user opens to verify a place themselves — so a table without one simply
+     * has no `with_link` metric.
+     *
+     * `ways` is absent on purpose: it carries only `tags` + `geom`, so there is
+     * nothing to measure, and it is the largest table by an order of magnitude.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const array COMPLETENESS_METRICS = [
+        'pois' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours'],
+        'accommodations' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours'],
+        'cultural_pois' => ['named' => 'name', 'with_link' => 'website', 'with_hours' => 'opening_hours'],
+        'water_points' => ['named' => 'name'],
+        'bike_shops' => ['named' => 'name'],
+        'health_services' => ['named' => 'name'],
+        'railway_stations' => ['named' => 'name'],
+        'charging_stations' => ['named' => 'name'],
+        'admin_boundaries' => ['named' => 'name'],
+        'cycle_routes' => ['named' => 'name'],
+        'ferries' => ['named' => 'name'],
+        'fords' => ['named' => 'name'],
+    ];
+
+    /**
+     * Tables also broken down per `category`. Accommodations only: the per-category
+     * share of unnamed rows is what arbitrates excluding them (issue #878), and
+     * each breakdown costs one extra scan.
+     *
+     * @var list<string>
+     */
+    private const array COMPLETENESS_BY_CATEGORY = ['accommodations'];
+
+    /**
      * @var \Closure(list<string>): Process
      */
     private \Closure $processFactory;
@@ -159,8 +194,8 @@ final readonly class PostgisImporter
      * Builds the derived tables in the staging schema (so the atomic swap ships
      * them with the data): the coverage polygon (union of the admin_level=2
      * country boundaries, tested by the API via ST_Covers to flag out-of-zone
-     * trips) and the provisioning metadata (refresh timestamp + per-table feature
-     * counts, surfaced by /api/health).
+     * trips) and the provisioning metadata (refresh timestamp, per-table feature
+     * counts and per-table completeness ratios, surfaced by /api/health).
      *
      * @throws ImportFailedException
      */
@@ -178,12 +213,21 @@ final readonly class PostgisImporter
             static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
             self::FEATURE_TABLES,
         ));
+        $completeness = new CompletenessMetrics(self::STAGING_SCHEMA)
+            ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
+
+        // `rejections` stays empty here: nothing measurable is discarded on this
+        // side today (osmium filters the PBF before osm2pgsql ever sees it). The
+        // column exists so the quality gate can fill it with its accepted /
+        // discarded counts and motives without a schema change, and so
+        // /api/health reports the same shape for both sources.
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf(
-                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts;',
+                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts, %3$s AS completeness, \'{}\'::jsonb AS rejections;',
                 self::STAGING_SCHEMA,
                 $counts,
+                $completeness,
             ),
         ], 'psql build metadata');
     }

@@ -45,7 +45,7 @@ The existing `provisioner/` (already a Geofabrik PBF downloader/merger for Valha
 - **Accommodation pricing (no scraping):** `price = structured open data (DataTourisme priceSpecification, OSM charge/fee) ?? heuristic (type/region/stars)`. Live HTML price scraping has been removed (PR2b): all prices come from pre-loaded sources or the heuristic, set by each `AccommodationSource` at fetch time.
 - **Atomic versioned swap:** import into a staging schema, then switch in a single transaction; the previous dataset is kept until the new one is complete. Idempotent, never a partial state.
 - **Coverage polygon:** the provisioner materialises `osm.coverage` (union of the provisioned countries' `admin_boundaries`, admin_level = 2) inside the staging schema, so it ships atomically with the data; the API tests trip geometry against it via `ST_Covers`.
-- **Monitoring:** the provisioner records `osm.metadata` / `tourism.metadata` (last refresh timestamp + per-table feature counts) on each run; `/api/health` surfaces them under a non-required `reference_data` dependency. Cron cadence (OSM weekly, DataTourisme daily, Wikidata monthly).
+- **Monitoring:** the provisioner records `osm.metadata` / `tourism.metadata` on each run — last refresh timestamp, per-table feature counts, per-table completeness ratios and the discarded-row counts (issue #877); `/api/health` surfaces them under a non-required `reference_data` dependency, with no staleness verdict on the age (see [ADR-041 R5](adr-041-provisioner-resilience.md#r5--staleness-alerting-superseded-by-completeness-reporting)). Cron cadence (OSM weekly, DataTourisme daily, Wikidata monthly).
 
 ### API — local read only
 
