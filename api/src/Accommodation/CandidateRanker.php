@@ -10,8 +10,8 @@ namespace App\Accommodation;
  * Completeness first, price second. Ordering on price alone (the pre-#869
  * behaviour) systematically retained the cheapest categories, because the price
  * of most candidates comes from PricingHeuristicEngine (type + tags) and not from
- * a real offer: shelters and camp sites always won on their low heuristic floor,
- * and the rich, bookable entries never made the cut. Completeness ranks on
+ * a real offer: wilderness huts and camp sites always won on their low heuristic
+ * floor, and the rich, bookable entries never made the cut. Completeness ranks on
  * signals that are actually observed in the index — website, description, opening
  * hours, wikidata Q-ID, stars, capacity, and (for OSM) tag richness.
  *
@@ -23,7 +23,7 @@ namespace App\Accommodation;
  * the two. A per-*source* cap was rejected: DataTourisme is France-only, so it
  * would be a no-op outside France, where the eviction risk is identical (the
  * families come from both sources). A per-*type* cap was rejected too: hotel +
- * guest_house + motel are three distinct types but one family, and the camp site
+ * guest_house + hostel are three distinct types but one family, and the camp site
  * would still be evicted.
  *
  * Reproducibility: the comparator is a total order up to (score, priceMin) ties,

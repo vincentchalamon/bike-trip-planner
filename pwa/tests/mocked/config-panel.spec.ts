@@ -89,8 +89,8 @@ test.describe("ConfigPanel", () => {
       "Camping",
       "Gîte",
       "Chambre d'hôte",
-      "Motel",
       "Refuge",
+      "Bivouac",
     ];
     // Keep only the first type enabled — disable the rest
     for (const label of typeLabels.slice(1)) {
