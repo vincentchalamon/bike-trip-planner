@@ -1407,14 +1407,14 @@ C'est la confirmation de la leçon du sprint 45 : la carte de recoupement attrap
 </summary>
 Sprint volontairement court : ce sont des mesures, et elles **arbitrent les sprints 49 et 50**. Sans chiffres, on supprime des règles et on choisit des sources à l'intuition, et c'est exactement ce qui a produit une inférence fausse pendant le diagnostic (« un rayon de 15 km sans pharmacie est un trou d'index » était une supposition, probablement démentie par la couverture OSM réelle).
 
-> ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code.
+> ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code. #878 et #879 ont été traitées par cette seconde voie : leurs rapports sont committés sous [`docs/audit/`](docs/audit/878-hebergements-osm-sans-nom.md) et [`docs/`](docs/datatourisme-flux-audit.md).
 >
 > Ces deux spikes sont des **mesures à exécuter** sur un jeu de données provisionné, pas des développements. Ils supposent donc une zone déjà ouverte, en local suffit.
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#877](https://github.com/vincentchalamon/bike-trip-planner/issues/877) | feat(provisioner): per-table completeness metrics in metadata and health | - | [#926](https://github.com/vincentchalamon/bike-trip-planner/pull/926) `feature/877` En cours | - |
-| 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | - | - |
+| 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | [#924](https://github.com/vincentchalamon/bike-trip-planner/pull/924) | - |
 | 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | [#925](https://github.com/vincentchalamon/bike-trip-planner/pull/925) | - |
 
 ### Recette Sprint 47
@@ -1424,7 +1424,7 @@ Sprint volontairement court : ce sont des mesures, et elles **arbitrent les spri
   - [ ] `/api/health` expose les ratios de complétude par table sous `reference_data`, en dépendance non requise.
   - [ ] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu.
   - [ ] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom.
-  - [ ] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut`.
+  - [x] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut` — contrainte de complétude partout sauf `shelter`, pas d'exemption pour `wilderness_hut` (6,3 % sans nom) ([rapport](docs/audit/878-hebergements-osm-sans-nom.md)).
   - [x] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879 — présent : `kb:LabelRating_AccueilVelo` sur 8 010 objets dont 6 006 hébergements, sous `hasReview[].hasReviewValue` ([rapport](docs/datatourisme-flux-audit.md)).
   - [ ] Les métriques n'allongent pas notablement la durée du provisionnement.
 
