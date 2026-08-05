@@ -23,7 +23,7 @@ final class ProvisionCommandTest extends TestCase
 
     private string $regionsDir;
 
-    private string $mergedPbf;
+    private string $referencePbf;
 
     private string $selectionFile;
 
@@ -33,7 +33,7 @@ final class ProvisionCommandTest extends TestCase
         mkdir($this->tmpDir, 0o755, true);
 
         $this->regionsDir = $this->tmpDir.'/regions';
-        $this->mergedPbf = $this->tmpDir.'/default.osm.pbf';
+        $this->referencePbf = $this->tmpDir.'/reference-merged.osm.pbf';
         $this->selectionFile = $this->tmpDir.'/regions.json';
     }
 
@@ -69,7 +69,7 @@ final class ProvisionCommandTest extends TestCase
     ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
-            mergedPbf: $this->mergedPbf,
+            referencePbf: $this->referencePbf,
             selectionFile: $this->selectionFile,
             downloader: new OsmDataDownloader(
                 regionsDir: $this->regionsDir,
@@ -264,6 +264,71 @@ final class ProvisionCommandTest extends TestCase
         self::assertSame(0, $exitCode, $tester->getDisplay());
         self::assertStringContainsString('Importing Tier-1 features into PostGIS', $tester->getDisplay());
         self::assertGreaterThan(0, $calls, 'PostgisImporter::run() should have been invoked');
+    }
+
+    #[Test]
+    public function everyOsmiumMergeInTheFlowFeedsThePostgisImportAndNothingElse(): void
+    {
+        // #881: the routing graph no longer shares an artifact with the reference
+        // import. The merge is a private staging step of the PostGIS import, so
+        // there must be exactly one, its output must be the very file handed to
+        // the importer, and it must stay inside the provisioner's own /data.
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        /** @var list<list<string>> $mergeCommands */
+        $mergeCommands = [];
+        /** @var list<list<string>> $importCommands */
+        $importCommands = [];
+
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: function (array $command) use (&$importCommands): Process {
+                $importCommands[] = $command;
+
+                return new Process(['true']);
+            },
+        );
+
+        $tester = $this->buildTester(
+            runMerge: true,
+            downloaderProcessFactory: function (array $command) use (&$mergeCommands): Process {
+                $mergeCommands[] = $command;
+
+                return new Process(['true']);
+            },
+            postgisImporter: $importer,
+        );
+
+        self::assertSame(0, $tester->execute([], ['interactive' => false]), $tester->getDisplay());
+
+        $merges = array_values(array_filter(
+            $mergeCommands,
+            static fn (array $command): bool => 'merge' === ($command[1] ?? null),
+        ));
+        self::assertCount(1, $merges, 'exactly one osmium merge feeds the reference import');
+
+        $outputIndex = (int) array_search('-o', $merges[0], true) + 1;
+        $mergeOutput = $merges[0][$outputIndex];
+        self::assertSame($this->referencePbf, $mergeOutput, 'the merge writes the reference staging file');
+
+        $tagsFilter = array_values(array_filter(
+            $importCommands,
+            static fn (array $command): bool => 'tags-filter' === ($command[1] ?? null),
+        ));
+        self::assertCount(1, $tagsFilter);
+        self::assertContains(
+            $mergeOutput,
+            $tagsFilter[0],
+            'the merged file is consumed by the PostGIS import, so it has no other consumer',
+        );
+
+        // The production default must stay inside the provisioner's /data mount and
+        // must not be the neutral `default.osm.pbf` name Valhalla used to mount.
+        $default = new \ReflectionClass(ProvisionCommand::class)->getConstant('DEFAULT_REFERENCE_PBF');
+        self::assertIsString($default);
+        self::assertStringStartsWith('/data/', $default);
+        self::assertStringNotContainsString('default.osm.pbf', $default);
+        self::assertStringNotContainsString('custom_files', $default);
     }
 
     #[Test]

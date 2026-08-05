@@ -75,8 +75,34 @@ final class GeofabrikRegionRegistryTest extends TestCase
     }
 
     #[Test]
+    public function routingSlugsAreWholeCountriesServedFromTheEuropeLevel(): void
+    {
+        // #881: this list is the routing perimeter (Valhalla is country-grained).
+        // Every entry must be a known region whose extract lives at the europe/
+        // level, because that is what `make routing-build <slug>` downloads.
+        $slugs = GeofabrikRegionRegistry::routingSlugs();
+
+        // Pinned on purpose: extending the routing perimeter also means extending
+        // ROUTING_SLUGS in compose.yaml's `valhalla-builder`, and rebuilding the
+        // whole graph. Update this list in the same commit as compose.yaml.
+        self::assertSame(['france', 'belgium', 'netherlands', 'luxembourg'], $slugs);
+
+        $known = array_column(GeofabrikRegionRegistry::all(), 'slug');
+        foreach ($slugs as $slug) {
+            self::assertContains($slug, $known, \sprintf('routing slug "%s" is not a known region', $slug));
+            self::assertSame(
+                \sprintf('https://download.geofabrik.de/europe/%s-latest.osm.pbf', $slug),
+                GeofabrikRegionRegistry::downloadUrl($slug),
+                $slug,
+            );
+        }
+    }
+
+    #[Test]
     public function allSlugsProduceValidUrls(): void
     {
+        // Independent oracle: do not read routingSlugs() here, or the assertion
+        // would only ever confirm itself.
         $europeLevel = ['france', 'belgium', 'netherlands', 'luxembourg'];
 
         foreach (GeofabrikRegionRegistry::all() as $name => $data) {
