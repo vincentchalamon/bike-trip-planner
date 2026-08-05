@@ -246,9 +246,12 @@ local fords = osm2pgsql.define_table({
     },
 })
 
--- Country boundaries (admin_level=2), stored as multipolygons. The API resolves
--- the country at a point via ST_Covers, replacing the runtime Overpass is_in
--- query; their union also forms the coverage polygon.
+-- Administrative boundaries, stored as multipolygons: countries (admin_level=2)
+-- for the point-in-country resolution, regions/departments (4/6) for the ISO
+-- 3166-2 country fallback, and communes (8) for the offline locality labels
+-- (#880). The API resolves them at a point via ST_Covers, replacing the runtime
+-- Overpass is_in query and the Nominatim reverse lookup; their union forms the
+-- coverage polygon.
 local admin_boundaries = osm2pgsql.define_table({
     name = 'admin_boundaries',
     schema = SCHEMA,
@@ -357,9 +360,22 @@ local function way_highway(tags)
     return tags.highway ~= nil and WAY_HIGHWAY[tags.highway] == true
 end
 
--- True for country-level administrative boundary relations.
-local function is_country_boundary(tags)
-    return tags.boundary == 'administrative' and tags.admin_level == '2'
+-- Administrative levels imported into admin_boundaries: country (2), region (4),
+-- department (6) and commune (8) — the French hierarchy, whose values are the
+-- OSM convention across most of Europe.
+--
+-- Geofabrik regional extracts are clipped, so a relation whose boundary ways
+-- cross the extract border is incomplete and as_multipolygon() returns nil.
+-- Measured on nord-pas-de-calais + rhone-alpes: level 2 builds 0/12 relations,
+-- level 4 builds 0/23, level 6 builds 11/64 (exactly the departments wholly
+-- inside), level 8 builds 4308/4795. That is why the coverage polygon unions
+-- every imported level instead of admin_level=2 alone (PostgisImporter): on a
+-- regional extract the country relation never builds and coverage came out NULL.
+local ADMIN_LEVELS = { ['2'] = true, ['4'] = true, ['6'] = true, ['8'] = true }
+
+-- True for the administrative boundary relations imported as areas.
+local function is_admin_boundary(tags)
+    return tags.boundary == 'administrative' and ADMIN_LEVELS[tags.admin_level] == true
 end
 
 -- True for signed cycle route relations (EuroVelo / national / regional / local).
@@ -561,7 +577,7 @@ function osm2pgsql.process_way(object)
 end
 
 function osm2pgsql.process_relation(object)
-    if is_country_boundary(object.tags) then
+    if is_admin_boundary(object.tags) then
         -- as_multipolygon() builds the area from the boundary's member ways; a
         -- broken/incomplete relation yields nil and is skipped.
         local ok, geom = pcall(function() return object:as_multipolygon() end)

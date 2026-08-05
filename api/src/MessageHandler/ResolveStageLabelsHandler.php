@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Geo\ReverseGeocoder;
 use App\Message\ResolveStageLabels;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
- * Resolves and persists reverse-geocoded city labels for each stage endpoint
- * (recette #649, #3c/#9).
+ * Resolves and persists the locality labels of each stage endpoint (recette #649,
+ * #3c/#9), read from the local-first Tier-1 index (#880) rather than Nominatim:
+ * one ST_Covers lookup per endpoint against osm.admin_boundaries, so labelling no
+ * longer depends on an external service nor on its 1 req/s budget. Endpoints
+ * outside the provisioned zone stay unlabelled and keep rendering coordinates.
  *
  * Best-effort enrichment — not a tracked computation and not gated on: the
  * anonymous shared view and a reloaded trip read the persisted labels, while the
@@ -24,7 +27,7 @@ final readonly class ResolveStageLabelsHandler
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private ReverseGeocoder $reverseGeocoder,
+        private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
         private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
@@ -46,13 +49,15 @@ final readonly class ResolveStageLabelsHandler
             return;
         }
 
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
         foreach ($stages as $stage) {
-            $startLabel = $this->reverseGeocoder->cityName($stage->startPoint->lat, $stage->startPoint->lon);
+            $startLabel = $this->adminBoundaryRepository->findLocalityAt($stage->startPoint->lat, $stage->startPoint->lon, $locale);
             // A rest day shares its endpoint with the previous arrival, so reuse
             // the start label instead of a second identical lookup.
             $endLabel = $stage->isRestDay
                 ? $startLabel
-                : $this->reverseGeocoder->cityName($stage->endPoint->lat, $stage->endPoint->lon);
+                : $this->adminBoundaryRepository->findLocalityAt($stage->endPoint->lat, $stage->endPoint->lon, $locale);
 
             $this->tripStateManager->updateStageLabels($tripId, $stage->dayNumber, $startLabel, $endLabel);
         }

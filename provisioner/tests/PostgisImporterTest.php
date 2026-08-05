@@ -66,8 +66,11 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString('attraction,museum', $joined);
         self::assertStringContainsString('farm,bicycle', $joined);
         self::assertStringContainsString('w/highway=', $joined);
-        // Country boundaries (relations) for the admin_boundaries table.
-        self::assertContains('r/admin_level=2', $this->captured[0]);
+        // Administrative boundaries (relations) for the admin_boundaries table:
+        // countries, regions, departments and communes — the commune polygons back
+        // the offline locality labels (#880), so keeping only level 2 would leave
+        // stage endpoints unlabelled.
+        self::assertContains('r/admin_level=2,4,6,8', $this->captured[0]);
         // Signed cycle route relations for the cycle_routes table.
         self::assertContains('r/route=bicycle', $this->captured[0]);
         // Ferry crossings (ways + route relations) for the ferries table.
@@ -123,8 +126,12 @@ final class PostgisImporterTest extends TestCase
         $coverage = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE TABLE osm_staging.coverage AS', $coverage);
         self::assertStringContainsString('ST_Multi(ST_Union(geom))', $coverage);
-        self::assertStringContainsString('WHERE admin_level = 2', $coverage);
+        self::assertStringContainsString('FROM osm_staging.admin_boundaries;', $coverage);
         self::assertStringContainsString('USING gist (geom)', $coverage);
+        // The union must span every imported level: a clipped regional extract never
+        // yields the country relation, so filtering on admin_level = 2 produced a
+        // single NULL row and disabled the out-of-zone check altogether (#880).
+        self::assertStringNotContainsString('admin_level', $coverage);
 
         $metadata = implode(' ', $this->captured[1]);
         self::assertStringContainsString('CREATE TABLE osm_staging.metadata AS', $metadata);

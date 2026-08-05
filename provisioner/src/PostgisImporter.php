@@ -54,7 +54,14 @@ final readonly class PostgisImporter
         'nwr/man_made=water_tap',
         'nwr/natural=spring',
         'w/highway=primary,secondary,tertiary,unclassified,residential,living_street,service,track,path,cycleway,footway,bridleway',
-        'r/admin_level=2',
+        // Country (2), region (4), department (6) and commune (8) boundaries: the
+        // commune polygons back the offline locality labels (#880), the coarser
+        // levels the country resolution, and their union the coverage polygon.
+        // Measured on the merged nord-pas-de-calais + rhone-alpes extract (767 MB):
+        // widening `r/admin_level=2` to these four levels grows the filtered PBF
+        // from 184.6 MB to 191.6 MB (+3.8%) and the osm2pgsql import from 106s to
+        // 160s. See docs/audit/880-libelles-de-localite-hors-ligne.md.
+        'r/admin_level=2,4,6,8',
         'r/route=bicycle',
         'w/route=ferry',
         'r/route=ferry',
@@ -192,10 +199,19 @@ final readonly class PostgisImporter
 
     /**
      * Builds the derived tables in the staging schema (so the atomic swap ships
-     * them with the data): the coverage polygon (union of the admin_level=2
-     * country boundaries, tested by the API via ST_Covers to flag out-of-zone
-     * trips) and the provisioning metadata (refresh timestamp, per-table feature
-     * counts and per-table completeness ratios, surfaced by /api/health).
+     * them with the data): the coverage polygon (union of the imported
+     * administrative boundaries, tested by the API via ST_Covers to flag
+     * out-of-zone trips) and the provisioning metadata (refresh timestamp,
+     * per-table feature counts and per-table completeness ratios, surfaced by
+     * /api/health).
+     *
+     * The union spans every admin level rather than admin_level=2 alone (#880).
+     * Geofabrik regional extracts are clipped, so the country relation is
+     * incomplete and osm2pgsql skips it: on the local nord-pas-de-calais +
+     * rhone-alpes set the level-2 union produced a single NULL row, i.e. no
+     * coverage at all, which silently disabled the out-of-zone check. Unioning
+     * every level uses whatever did build (departments and communes here) and
+     * heals the holes left by a boundary that did not, since the levels nest.
      *
      * @throws ImportFailedException
      */
@@ -204,7 +220,7 @@ final readonly class PostgisImporter
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf(
-                'CREATE TABLE %1$s.coverage AS SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) AS geom FROM %1$s.admin_boundaries WHERE admin_level = 2; CREATE INDEX ON %1$s.coverage USING gist (geom);',
+                'CREATE TABLE %1$s.coverage AS SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) AS geom FROM %1$s.admin_boundaries; CREATE INDEX ON %1$s.coverage USING gist (geom);',
                 self::STAGING_SCHEMA,
             ),
         ], 'psql build coverage');
