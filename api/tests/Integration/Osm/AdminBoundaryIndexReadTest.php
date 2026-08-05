@@ -158,6 +158,7 @@ final class AdminBoundaryIndexReadTest extends KernelTestCase
                   ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((2 48, 3 48, 3 49, 2 49, 2 48)))'), 4326))
             SQL);
         $this->connection->executeStatement("UPDATE osm.admin_boundaries SET tags = tags || '{\"ISO3166-1\":\"FR\"}'::jsonb WHERE osm_id = 1");
+
         $repository = new AdminBoundaryRepository($this->connection);
 
         self::assertSame('France', $repository->findCountryAt(48.5, 2.5, 'fr'));

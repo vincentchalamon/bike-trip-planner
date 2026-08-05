@@ -64,7 +64,7 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
 
         $name = \Locale::getDisplayRegion('-'.$code, $locale);
 
-        return '' === $name ? null : $name;
+        return \is_string($name) && '' !== $name ? $name : null;
     }
 
     public function findCountryCodeAt(float $lat, float $lon): ?string
