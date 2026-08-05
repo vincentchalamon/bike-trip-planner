@@ -1461,11 +1461,27 @@ Prépare l'ouverture par zone. `default.osm.pbf` a aujourd'hui **deux consommate
 >
 > **Code contre exécution.** Les issues livrent le mécanisme ; les commandes de la checklist ci-dessous **vérifient** ce mécanisme, elles ne constituent pas le livrable. La procédure récurrente de construction du graphe est documentée par le runbook réécrit dans #881, et son pendant pour les données de référence par #891.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880) | feat(provisioner): import administrative levels for offline locality labels | - | - | - |
-| 2 | [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) | refactor(routing): decouple the valhalla dataset from the provisioner | - | - | - |
-| 3 | [#882](https://github.com/vincentchalamon/bike-trip-planner/issues/882) | docs(adr): add adr-049 zone opening and import-time completeness | - | - | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880), [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880) | feat(provisioner): import administrative levels for offline locality labels | - | [#941](https://github.com/vincentchalamon/bike-trip-planner/pull/941) `feature/880` | En cours | - |
+| 2 | [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) | refactor(routing): decouple the valhalla dataset from the provisioner | - | [#942](https://github.com/vincentchalamon/bike-trip-planner/pull/942) `feature/881` | En cours | - |
+| 3 | [#882](https://github.com/vincentchalamon/bike-trip-planner/issues/882) | docs(adr): add adr-049 zone opening and import-time completeness | - | [#943](https://github.com/vincentchalamon/bike-trip-planner/pull/943) `feature/882`, empilée sur `feature/881` | En cours | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880), [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) |
+
+### Ordre de merge et conflits attendus
+
+Ordre imposé : **#941, puis #942, puis #943**. #943 est une PR **empilée** dont la base est `feature/881` : GitHub la reciblera sur `main` au squash-merge de #942, mais la branche portera encore les commits pré-squash de #881, donc rejouer ses commits propres avec `git rebase --onto origin/main <dernier commit de 881> feature/882` plutôt qu'un rebase direct sur `main`.
+
+| Fichier | #941 (#880) | #942 (#881) | #943 (#882) | Arbitrage |
+|---|---|---|---|---|
+| `docs/adr/adr-040-*.md` | puce « Coverage polygon » (union de tous les niveaux) | — | ligne de statut (renvoi vers 049) | **Hunks disjoints** : ligne 3 contre puce en milieu de fichier. Aucun conflit attendu ; si git en signale un, garder les deux. |
+| `docs/adr/adr-017-*.md`, `adr-036-*.md` | — | amendement #881 (build/serve séparés) | renvoi vers ADR-049 §6 | #943 est empilée sur #942, donc déjà résolu dans l'ordre de merge. Ne pas merger #943 avant #942. |
+| `README.md` | — | section « OSM provisioning » (deux jeux de données) | renvoi ADR-049 dans la même section | Idem : la pile porte la résolution. |
+| `provisioner/src/PostgisImporter.php` | `TAGS_FILTER_EXPRESSIONS` + SQL de couverture | **non touché** (seul le nom de variable de l'appelant change) | — | #941 gagne. Recoupement évité par construction. |
+| `provisioner/src/ProvisionCommand.php` | non touché | `DEFAULT_REFERENCE_PBF`, messages | — | #942 gagne. |
+| `provisioner/tests/` | `PostgisImporterTest.php` | `ProvisionCommandTest.php`, `GeofabrikRegionRegistryTest.php` | — | Fichiers disjoints. |
+| `TRACKING.md` | — | 1 ligne (lien du runbook renommé) | — | Ce même fichier est modifié par la présente PR de tracking : **conflit attendu sur `TRACKING.md`**, garder les deux modifications (elles portent sur des sprints différents). |
+
+> ⚠️ **Ce sprint n'est pas passé par des agents worktree.** L'API a refusé les subagents en boucle (`529 Overloaded`, sept démarrages tués, dont trois avant tout commit). Le code a été terminé, vérifié et livré en direct, séquentiellement, dans les worktrees déjà créés. Aucune incidence sur le contenu ; la vérification est celle documentée dans chaque PR.
 
 ### Recette Sprint 48
 
@@ -1479,7 +1495,11 @@ Prépare l'ouverture par zone. `default.osm.pbf` a aujourd'hui **deux consommate
   - [ ] `make start-dev` **et** `make start` démarrent depuis un état propre, sans `default.osm.pbf` ni stub.
   - [ ] Le service `valhalla` ne construit plus rien et son `start_period` est de l'ordre de quelques secondes.
   - [ ] Un calcul d'itinéraire réel aboutit après `make routing-build`.
-  - [ ] ADR-049 est bien le prochain numéro libre (048 réservé par #527, Sprint 39).
+  - [x] ADR-049 est bien le prochain numéro libre (048 réservé par #527, Sprint 39) — vérifié dans #943 : `docs/adr/` s'arrêtait à 047, aucune occurrence de `ADR-048`/`adr-048` ni `049` dans `docs/`, `README.md`, `CLAUDE.md`.
+
+> **Ce qui reste manuel, et pourquoi.** Les six premières cases sont des exécutions, pas du code. La première (`count(*) WHERE admin_level = 2`) est déjà **mesurée** : le compte est nul sur le jeu local, et la correction est dans #941 ([mesure publiée dans l'issue](https://github.com/vincentchalamon/bike-trip-planner/issues/880#issuecomment-5192616478)) — la case ne se cochera qu'après un **nouveau provisionnement**, l'index local précédant le code. Les cases de démarrage propre (`make start-dev` / `make start` sans PBF ni stub) et de construction de graphe n'ont **pas** pu être vérifiées : un worktree obtient son propre projet compose et la stack principale occupe les ports. La procédure exacte à rejouer est écrite dans le corps de #942. Playwright reste la charge de la CI.
+>
+> **Conséquence à connaître avant de merger #942 :** `/api/health` compte `valhalla` parmi ses dépendances **requises** (`HealthController.php:87`) et `make start-dev` ne démarre plus le profil `routing`. Une stack de dev sans graphe répondra donc `degraded` — exact, mais c'est un changement d'état par défaut. Le stub Lille donnait un graphe minuscule en secondes ; un vrai graphe France coûte des heures (`make routing-build nord-pas-de-calais` pour un essai rapide).
 
 </details>
 
