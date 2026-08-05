@@ -344,6 +344,7 @@ services:
   # do." That is intended for a serve-only service: run `make routing-build
   # <slug>` first. This is why the routing profile is opt-in and is no longer
   # enabled by `make start-dev`.
+  # See docs/runbooks/valhalla-routing-graph.md and ADR-036.
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     restart: unless-stopped

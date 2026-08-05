@@ -16,9 +16,17 @@ The provisioner already auto-detects install vs update from `/data/regions.json`
 Drop `osm-cron`. OSM data is refreshed **manually**, on whatever cadence the operator chooses:
 
 ```bash
-make provision-update            # re-download configured regions (non-interactive)
-docker compose restart valhalla  # rebuild routing tiles from the new PBF
+make provision-update            # reference data: re-download the configured regions
+                                 # and re-import them into PostGIS (non-interactive)
+make routing-build france        # routing graph: rebuild the tiles for the perimeter
 ```
+
+> **Amended by #881.** The two commands above used to be one refresh, because the
+> provisioner produced the PBF that Valhalla built from. They are now two
+> datasets on two calendars: reference data is regional and refreshed often,
+> the routing graph is national and rebuilt per country opening. Restarting
+> `valhalla` no longer rebuilds anything — it only serves. See
+> [valhalla-routing-graph.md](../runbooks/valhalla-routing-graph.md).
 
 The `provisioner` service (Compose profile `provisioning`) remains the single mechanism for both first install (`make provision`) and update (`make provision-update`). Both targets load all reference sources in one shot (OSM/PostGIS + DataTourisme); there are no per-source flags.
 

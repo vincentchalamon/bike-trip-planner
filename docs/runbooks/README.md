@@ -21,8 +21,8 @@ Every runbook follows the same four sections:
 | [database-disk-full.md](database-disk-full.md) | PostgreSQL disk pressure |
 | [redis-out-of-memory.md](redis-out-of-memory.md) | Redis `OOM` evictions or refused writes |
 | [mercure-disconnected.md](mercure-disconnected.md) | SSE clients cannot reconnect |
-| [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) | Routing tiles or POI cache rebuild |
-| [osm-france-refresh.md](osm-france-refresh.md) | On-demand France-wide OSM build + tile upload |
+| [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) | Corrupted routing tiles / hot rebuild |
+| [valhalla-routing-graph.md](valhalla-routing-graph.md) | On-demand routing-graph build + tile upload (routing dataset) |
 | [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md) | Oracle Always Free instance reclaimed |
 | [incident-template.md](incident-template.md) | Post-mortem template |
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
