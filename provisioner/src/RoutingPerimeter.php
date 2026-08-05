@@ -89,10 +89,20 @@ final readonly class RoutingPerimeter
      * registry without reaching outside the database. Deletes what is no longer present:
      * a country removed from the volume is no longer in the graph either.
      *
+     * **An unobservable perimeter records nothing.** Not being able to look is not an
+     * observation of emptiness, and the two must not collapse here any more than they do
+     * in the refusal check: a run with the volume unmounted would otherwise wipe a
+     * perfectly valid perimeter, and /api/health would then report every open zone as
+     * unroutable while the graph was intact.
+     *
      * @throws ImportFailedException
      */
     public function record(): void
     {
+        if (!$this->isObservable()) {
+            return;
+        }
+
         $slugs = $this->slugs();
         $values = [] === $slugs
             ? ''

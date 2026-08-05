@@ -113,8 +113,10 @@ final class RoutingPerimeterTest extends TestCase
     }
 
     #[Test]
-    public function recordingAnEmptyPerimeterClearsTheTable(): void
+    public function recordingAnObservedEmptyPerimeterClearsTheTable(): void
     {
+        // The volume is there and holds no extract: the graph really is empty, so the
+        // recorded perimeter must say so.
         /** @var list<list<string>> $captured */
         $captured = [];
         new RoutingPerimeter($this->tilesDir, function (array $command) use (&$captured): Process {
@@ -128,6 +130,26 @@ final class RoutingPerimeterTest extends TestCase
         $sql = $this->sqlOf($captured[0]);
         self::assertStringContainsString('DELETE FROM osm.routing_perimeter;', $sql);
         self::assertStringNotContainsString('INSERT INTO osm.routing_perimeter', $sql);
+    }
+
+    #[Test]
+    public function recordingAnUnobservablePerimeterWritesNothingAtAll(): void
+    {
+        // Not being able to look is not an observation of emptiness. Collapsing the two
+        // would let a run with the volume unmounted wipe a valid perimeter, after which
+        // /api/health would report every open zone as unroutable while the graph was
+        // intact — and the provisioner does keep going in that case, only warning.
+        /** @var list<list<string>> $captured */
+        $captured = [];
+        new RoutingPerimeter($this->tilesDir.'/nope', function (array $command) use (&$captured): Process {
+            /** @var list<string> $cmd */
+            $cmd = $command;
+            $captured[] = $cmd;
+
+            return new Process(['true']);
+        })->record();
+
+        self::assertSame([], $captured, 'no statement at all, so nothing to delete');
     }
 
     /**
