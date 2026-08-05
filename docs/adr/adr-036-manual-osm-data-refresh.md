@@ -16,10 +16,16 @@ The provisioner already auto-detects install vs update from `/data/regions.json`
 Drop `osm-cron`. OSM data is refreshed **manually**, on whatever cadence the operator chooses:
 
 ```bash
-make provision-update            # reference data: re-download the configured regions
-                                 # and re-import them into PostGIS (non-interactive)
+make provision <zone>            # reference data: re-open one zone (see the amendment below)
 make routing-build france        # routing graph: rebuild the tiles for the perimeter
 ```
+
+> **Amended by #883.** The reference command above was `make provision-update`, which
+> re-downloaded and re-imported the whole cumulative selection held in
+> `/data/regions.json`. That target no longer exists: ADR-049 made the zone a mandatory
+> argument, so a refresh is `make provision <zone>` — one zone per run, inserting only
+> what that zone did not already hold. The decision itself (manual cadence, no scheduler)
+> is unchanged.
 
 > **Amended by #881.** The two commands above used to be one refresh, because the
 > provisioner produced the PBF that Valhalla built from. They are now two
@@ -28,7 +34,7 @@ make routing-build france        # routing graph: rebuild the tiles for the peri
 > `valhalla` no longer rebuilds anything — it only serves. See
 > [valhalla-routing-graph.md](../runbooks/valhalla-routing-graph.md).
 
-The `provisioner` service (Compose profile `provisioning`) remains the single mechanism for both first install (`make provision`) and update (`make provision-update`). Both targets load all reference sources in one shot (OSM/PostGIS + DataTourisme); there are no per-source flags.
+The `provisioner` service (Compose profile `provisioning`) remains the single mechanism for both opening a zone and refreshing it — since #883 they are the same command, `make provision <zone>`. It loads all reference sources in one shot (OSM/PostGIS + DataTourisme); there are no per-source flags.
 
 ## Rationale
 

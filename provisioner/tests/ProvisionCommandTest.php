@@ -9,8 +9,9 @@ use PHPUnit\Framework\TestCase;
 use Provisioner\DataTourismeImporter;
 use Provisioner\OsmDataDownloader;
 use Provisioner\PostgisImporter;
+use Provisioner\PromotionReport;
 use Provisioner\ProvisionCommand;
-use Provisioner\RegionSelectionStore;
+use Provisioner\RoutingPerimeter;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -23,9 +24,7 @@ final class ProvisionCommandTest extends TestCase
 
     private string $regionsDir;
 
-    private string $referencePbf;
-
-    private string $selectionFile;
+    private string $routingDir;
 
     protected function setUp(): void
     {
@@ -33,8 +32,11 @@ final class ProvisionCommandTest extends TestCase
         mkdir($this->tmpDir, 0o755, true);
 
         $this->regionsDir = $this->tmpDir.'/regions';
-        $this->referencePbf = $this->tmpDir.'/reference-merged.osm.pbf';
-        $this->selectionFile = $this->tmpDir.'/regions.json';
+        $this->routingDir = $this->tmpDir.'/routing';
+        mkdir($this->routingDir, 0o755, true);
+        // Default fixture: a routing graph covering France, so the containment check
+        // passes unless a test deliberately empties it.
+        file_put_contents($this->routingDir.'/france-latest.osm.pbf', 'graph');
     }
 
     protected function tearDown(): void
@@ -61,27 +63,28 @@ final class ProvisionCommandTest extends TestCase
 
     private function buildTester(
         ?MockHttpClient $httpClient = null,
-        bool $runMerge = false,
-        ?\Closure $downloaderProcessFactory = null,
         ?PostgisImporter $postgisImporter = null,
         ?DataTourismeImporter $dataTourismeImporter = null,
         ?string $lockFile = null,
+        ?string $routingDir = null,
     ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
-            referencePbf: $this->referencePbf,
-            selectionFile: $this->selectionFile,
             downloader: new OsmDataDownloader(
                 regionsDir: $this->regionsDir,
                 httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
-                processFactory: $downloaderProcessFactory,
             ),
-            runMerge: $runMerge,
+            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
             postgisImporter: $postgisImporter,
             dataTourismeDir: $this->tmpDir.'/datatourisme',
             dataTourismeImporter: $dataTourismeImporter,
             lockFile: $lockFile ?? $this->tmpDir.'/provision.lock',
             logFile: $this->tmpDir.'/provisioner.log',
+            routingPerimeter: new RoutingPerimeter(
+                $routingDir ?? $this->routingDir,
+                static fn (array $command): Process => new Process(['true']),
+            ),
+            promotionReport: new PromotionReport(static fn (array $command): Process => new Process(['true'])),
         );
 
         $app = new Application();
@@ -90,264 +93,240 @@ final class ProvisionCommandTest extends TestCase
         return new CommandTester($app->find('provision'));
     }
 
-    #[Test]
-    public function missingSelectionAndInteractiveRunsInstallFlowAndPersistsSelection(): void
+    private function capturingImporter(?\Closure $onCommand = null): PostgisImporter
     {
-        $tester = $this->buildTester();
-        $tester->setInputs([
-            'Nord-Pas-de-Calais (223 MB)',
-            '',
-            'yes',
-        ]);
+        return new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static function (array $command) use ($onCommand): Process {
+                if ($onCommand instanceof \Closure) {
+                    $onCommand($command);
+                }
 
-        $exitCode = $tester->execute([], ['interactive' => true]);
-
-        self::assertSame(0, $exitCode);
-        $output = $tester->getDisplay();
-        self::assertStringContainsString('Nord-Pas-de-Calais', $output);
-        self::assertStringContainsString('Done!', $output);
-
-        self::assertTrue(is_file($this->selectionFile));
-        self::assertSame(['nord-pas-de-calais'], new RegionSelectionStore($this->selectionFile)->load());
+                return new Process(['true']);
+            },
+        );
     }
 
     #[Test]
-    public function missingSelectionAndNonInteractiveFailsWithClearError(): void
+    public function withoutAZoneArgumentItFailsWithAnExplicitMessage(): void
     {
+        // ADR-049 §1: there is no default zone and no cumulative selection to fall back
+        // on, so a run with no argument must say what to pass rather than guess.
         $tester = $this->buildTester();
 
         $exitCode = $tester->execute([], ['interactive' => false]);
 
         self::assertSame(1, $exitCode);
-        self::assertStringContainsString('First run requires interactive setup', $tester->getDisplay());
-    }
-
-    #[Test]
-    public function existingSelectionAndNonInteractiveRunsSilentForcedUpdate(): void
-    {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
-        // Pre-existing PBF that should be re-downloaded (force = true).
-        mkdir($this->regionsDir, 0o755, true);
-        $pbfPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
-        file_put_contents($pbfPath, 'stale');
-
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('fresh-bytes'));
-        $tester = $this->buildTester($httpClient);
-
-        $exitCode = $tester->execute([], ['interactive' => false]);
-
-        self::assertSame(0, $exitCode, $tester->getDisplay());
-        self::assertSame('fresh-bytes', file_get_contents($pbfPath));
-        self::assertStringContainsString('Update complete', $tester->getDisplay());
-    }
-
-    #[Test]
-    public function existingSelectionAndInteractiveShowsMenuWithUpdateReconfigureCancel(): void
-    {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
-        $tester = $this->buildTester();
-        $tester->setInputs(['cancel']);
-
-        $exitCode = $tester->execute([], ['interactive' => true]);
-
-        self::assertSame(0, $exitCode);
         $output = $tester->getDisplay();
-        self::assertStringContainsString('Selection already exists', $output);
-        self::assertStringContainsString('update', $output);
-        self::assertStringContainsString('reconfigure', $output);
-        self::assertStringContainsString('cancel', $output);
+        self::assertStringContainsString('A zone is required', $output);
+        self::assertStringContainsString('bretagne', $output, 'the known zones are listed so the operator can act on the error');
     }
 
     #[Test]
-    public function existingSelectionInteractiveUpdateChoiceRunsForcedDownload(): void
-    {
-        new RegionSelectionStore($this->selectionFile)->save(['alsace']);
-
-        mkdir($this->regionsDir, 0o755, true);
-        $pbfPath = $this->regionsDir.'/alsace-latest.osm.pbf';
-        file_put_contents($pbfPath, 'stale');
-
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('refreshed'));
-        $tester = $this->buildTester($httpClient);
-        $tester->setInputs(['update']);
-
-        $exitCode = $tester->execute([], ['interactive' => true]);
-
-        self::assertSame(0, $exitCode, $tester->getDisplay());
-        self::assertSame('refreshed', file_get_contents($pbfPath));
-    }
-
-    #[Test]
-    public function dryRunDuringInstallFlowDoesNotPersistSelection(): void
+    public function anUnknownZoneFailsAndNamesWhatWasAsked(): void
     {
         $tester = $this->buildTester();
-        $tester->setInputs([
-            'Nord-Pas-de-Calais (223 MB)',
-            '',
-        ]);
 
-        $exitCode = $tester->execute(['--dry-run' => true], ['interactive' => true]);
+        $exitCode = $tester->execute(['zone' => '../../evil'], ['interactive' => false]);
 
-        self::assertSame(0, $exitCode);
-        self::assertStringContainsString('Dry run', $tester->getDisplay());
-        self::assertFalse(is_file($this->selectionFile));
+        self::assertSame(1, $exitCode);
+        self::assertStringContainsString('is not a known zone', $tester->getDisplay());
     }
 
     #[Test]
-    public function dryRunDuringUpdateFlowDoesNotDownload(): void
+    public function wholeFranceIsRefusedAsAReferenceZone(): void
     {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+        // It is the routing grain, not the reference grain: 4 400 MB re-imported to open
+        // one region would defeat "one zone per run" (ADR-049 §1).
+        $tester = $this->buildTester();
+
+        self::assertSame(1, $tester->execute(['zone' => 'france'], ['interactive' => false]));
+        self::assertStringContainsString('is not a known zone', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function aZoneTheRoutingGraphDoesNotCoverIsRefusedWithAnActionableMessage(): void
+    {
+        // The invariant of ADR-049 §6 is checked, never maintained, so the refusal message
+        // is the whole user experience of the check.
+        unlink($this->routingDir.'/france-latest.osm.pbf');
 
         $httpClient = new MockHttpClient(static function (): MockResponse {
-            self::fail('Dry run should not perform HTTP requests');
+            self::fail('a refused zone must not be downloaded');
         });
         $tester = $this->buildTester($httpClient);
 
-        $exitCode = $tester->execute(['--dry-run' => true], ['interactive' => false]);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
+
+        self::assertSame(1, $exitCode);
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('routing graph does not cover', $output);
+        // The SymfonyStyle error block word-wraps, so assert non-splittable tokens.
+        self::assertStringContainsString('routing-build', $output);
+        self::assertStringContainsString('currently built from', $output);
+        self::assertStringContainsString('nothing', $output);
+    }
+
+    #[Test]
+    public function anUnobservableRoutingPerimeterWarnsRatherThanBlocks(): void
+    {
+        // A missing volume mount must not become a provisioning outage; only an observed
+        // perimeter can refuse.
+        $tester = $this->buildTester(
+            postgisImporter: $this->capturingImporter(),
+            routingDir: $this->tmpDir.'/no-routing-volume',
+        );
+
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
-        self::assertStringContainsString('Dry run', $tester->getDisplay());
+        self::assertStringContainsString('not mounted', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function itDownloadsOnlyTheRequestedZoneAndImportsItIntoThatZoneStagingSchema(): void
+    {
+        /** @var list<list<string>> $commands */
+        $commands = [];
+        $importer = $this->capturingImporter(static function (array $command) use (&$commands): void {
+            /** @var list<string> $cmd */
+            $cmd = $command;
+            $commands[] = $cmd;
+        });
+
+        $tester = $this->buildTester(postgisImporter: $importer);
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+
+        // Exactly one extract, and it is the zone's own.
+        $downloaded = glob($this->regionsDir.'/*.osm.pbf') ?: [];
+        self::assertSame([$this->regionsDir.'/bretagne-latest.osm.pbf'], $downloaded);
+
+        $joined = array_map(static fn (array $c): string => implode(' ', $c), $commands);
+        $joinedAll = implode(' | ', $joined);
+
+        // No merge: one zone per run means one extract to filter, so `osmium merge` and
+        // the reference staging PBF it produced are gone.
+        self::assertStringNotContainsString('osmium merge', $joinedAll);
+        self::assertStringContainsString('osmium tags-filter', $joinedAll);
+        self::assertStringContainsString($this->regionsDir.'/bretagne-latest.osm.pbf', $joinedAll);
+        self::assertStringContainsString('CREATE SCHEMA osm_staging_bretagne', $joinedAll);
+        // And no live schema is ever dropped or renamed.
+        self::assertStringNotContainsString('DROP SCHEMA IF EXISTS osm CASCADE', $joinedAll);
+        self::assertStringNotContainsString('RENAME TO osm', $joinedAll);
+    }
+
+    #[Test]
+    public function itRecordsTheObservedRoutingPerimeter(): void
+    {
+        /** @var list<list<string>> $captured */
+        $captured = [];
+        $command = new ProvisionCommand(
+            regionsDir: $this->regionsDir,
+            downloader: new OsmDataDownloader(
+                regionsDir: $this->regionsDir,
+                httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+            ),
+            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
+            postgisImporter: $this->capturingImporter(),
+            dataTourismeDir: $this->tmpDir.'/datatourisme',
+            lockFile: $this->tmpDir.'/provision.lock',
+            logFile: $this->tmpDir.'/provisioner.log',
+            routingPerimeter: new RoutingPerimeter($this->routingDir, function (array $cmd) use (&$captured): Process {
+                /** @var list<string> $command */
+                $command = $cmd;
+                $captured[] = $command;
+
+                return new Process(['true']);
+            }),
+            promotionReport: new PromotionReport(static fn (array $command): Process => new Process(['true'])),
+        );
+
+        $app = new Application();
+        $app->addCommand($command);
+
+        $tester = new CommandTester($app->find('provision'));
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+
+        // Recorded so /api/health can assert containment from the database alone.
+        self::assertCount(1, $captured);
+        self::assertStringContainsString("('france', now())", implode(' ', $captured[0]));
+    }
+
+    #[Test]
+    public function dryRunDownloadsNothingAndImportsNothing(): void
+    {
+        $httpClient = new MockHttpClient(static function (): MockResponse {
+            self::fail('Dry run should not perform HTTP requests');
+        });
+        $importer = $this->capturingImporter(static function (array $command): never {
+            self::fail('Dry run should not run any import command');
+        });
+
+        $tester = $this->buildTester($httpClient, postgisImporter: $importer);
+
+        $exitCode = $tester->execute(['zone' => 'bretagne', '--dry-run' => true], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('Dry run', $output);
+        self::assertStringContainsString('osm_staging_bretagne', $output);
         self::assertFalse(is_file($this->regionsDir.'/bretagne-latest.osm.pbf'));
     }
 
     #[Test]
-    public function unknownSlugInSelectionFailsWithClearError(): void
+    public function itReportsWhatTheZoneOpeningActuallyAdded(): void
     {
-        // Write a tampered selection bypassing RegionSelectionStore::save() validation.
-        file_put_contents($this->selectionFile, json_encode(['slugs' => ['../../evil']]));
+        // "0 new entries" on a re-open is the evidence that the identity anti-join works,
+        // so the report states it instead of leaving it to be inferred from silence.
+        $report = new PromotionReport(function (array $command): Process {
+            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $command), $matches)) {
+                file_put_contents($matches[1], "osm\tpois\t120\t0\nosm\taccommodations\t8\t0\n");
+            }
 
-        $tester = $this->buildTester();
+            return new Process(['true']);
+        });
 
-        $exitCode = $tester->execute([], ['interactive' => false]);
-
-        self::assertSame(1, $exitCode);
-        self::assertStringContainsString('unknown slugs', $tester->getDisplay());
-    }
-
-    #[Test]
-    public function emptySelectionExitsGracefully(): void
-    {
-        $tester = $this->buildTester();
-        $tester->setInputs(['']);
-
-        $exitCode = $tester->execute([], ['interactive' => true]);
-
-        self::assertSame(0, $exitCode);
-        self::assertStringContainsString('No region selected', $tester->getDisplay());
-    }
-
-    #[Test]
-    public function postgisImportAlwaysRuns(): void
-    {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
-        $calls = 0;
-        $importer = new PostgisImporter(
-            flexStylePath: '/app/osm2pgsql/tier1.lua',
-            processFactory: function (array $command) use (&$calls): Process {
-                ++$calls;
-
-                return new Process(['true']);
-            },
+        $command = new ProvisionCommand(
+            regionsDir: $this->regionsDir,
+            downloader: new OsmDataDownloader(
+                regionsDir: $this->regionsDir,
+                httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+            ),
+            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
+            postgisImporter: $this->capturingImporter(),
+            dataTourismeDir: $this->tmpDir.'/datatourisme',
+            lockFile: $this->tmpDir.'/provision.lock',
+            logFile: $this->tmpDir.'/provisioner.log',
+            routingPerimeter: new RoutingPerimeter($this->routingDir, static fn (array $c): Process => new Process(['true'])),
+            promotionReport: $report,
         );
 
-        $tester = $this->buildTester(
-            runMerge: true,
-            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
-            postgisImporter: $importer,
-        );
+        $app = new Application();
+        $app->addCommand($command);
 
-        $exitCode = $tester->execute([], ['interactive' => false]);
+        $tester = new CommandTester($app->find('provision'));
 
-        self::assertSame(0, $exitCode, $tester->getDisplay());
-        self::assertStringContainsString('Importing Tier-1 features into PostGIS', $tester->getDisplay());
-        self::assertGreaterThan(0, $calls, 'PostgisImporter::run() should have been invoked');
-    }
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
 
-    #[Test]
-    public function everyOsmiumMergeInTheFlowFeedsThePostgisImportAndNothingElse(): void
-    {
-        // #881: the routing graph no longer shares an artifact with the reference
-        // import. The merge is a private staging step of the PostGIS import, so
-        // there must be exactly one, its output must be the very file handed to
-        // the importer, and it must stay inside the provisioner's own /data.
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
-        /** @var list<list<string>> $mergeCommands */
-        $mergeCommands = [];
-        /** @var list<list<string>> $importCommands */
-        $importCommands = [];
-
-        $importer = new PostgisImporter(
-            flexStylePath: '/app/osm2pgsql/tier1.lua',
-            processFactory: function (array $command) use (&$importCommands): Process {
-                $importCommands[] = $command;
-
-                return new Process(['true']);
-            },
-        );
-
-        $tester = $this->buildTester(
-            runMerge: true,
-            downloaderProcessFactory: function (array $command) use (&$mergeCommands): Process {
-                $mergeCommands[] = $command;
-
-                return new Process(['true']);
-            },
-            postgisImporter: $importer,
-        );
-
-        self::assertSame(0, $tester->execute([], ['interactive' => false]), $tester->getDisplay());
-
-        $merges = array_values(array_filter(
-            $mergeCommands,
-            static fn (array $command): bool => 'merge' === ($command[1] ?? null),
-        ));
-        self::assertCount(1, $merges, 'exactly one osmium merge feeds the reference import');
-
-        $outputIndex = (int) array_search('-o', $merges[0], true) + 1;
-        $mergeOutput = $merges[0][$outputIndex];
-        self::assertSame($this->referencePbf, $mergeOutput, 'the merge writes the reference staging file');
-
-        $tagsFilter = array_values(array_filter(
-            $importCommands,
-            static fn (array $command): bool => 'tags-filter' === ($command[1] ?? null),
-        ));
-        self::assertCount(1, $tagsFilter);
-        self::assertContains(
-            $mergeOutput,
-            $tagsFilter[0],
-            'the merged file is consumed by the PostGIS import, so it has no other consumer',
-        );
-
-        // The production default must stay inside the provisioner's /data mount and
-        // must not be the neutral `default.osm.pbf` name Valhalla used to mount.
-        $default = new \ReflectionClass(ProvisionCommand::class)->getConstant('DEFAULT_REFERENCE_PBF');
-        self::assertIsString($default);
-        self::assertStringStartsWith('/data/', $default);
-        self::assertStringNotContainsString('default.osm.pbf', $default);
-        self::assertStringNotContainsString('custom_files', $default);
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('Zone opening report', $output);
+        self::assertStringContainsString('already present', $output);
+        self::assertStringContainsString('0 new entries', $output);
     }
 
     #[Test]
     public function postgisImportFailureReturnsFailure(): void
     {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
         $importer = new PostgisImporter(
             flexStylePath: '/app/osm2pgsql/tier1.lua',
             processFactory: static fn (array $command): Process => new Process(['sh', '-c', 'echo "boom" 1>&2; exit 1']),
         );
 
-        $tester = $this->buildTester(
-            runMerge: true,
-            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
-            postgisImporter: $importer,
-        );
+        $tester = $this->buildTester(postgisImporter: $importer);
 
-        $exitCode = $tester->execute([], ['interactive' => false]);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(1, $exitCode);
         self::assertStringContainsString('tags-filter failed', $tester->getDisplay());
@@ -359,21 +338,22 @@ final class ProvisionCommandTest extends TestCase
         // Continue-on-error (ADR-041): OSM succeeds, DataTourisme fails; the run
         // attempts both, the summary records each, and the aggregate exit is a
         // failure without aborting the OSM source.
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
         $failingDataTourisme = new DataTourismeImporter(
             fluxUrl: 'https://example.test/flux',
             httpClient: new MockHttpClient(new MockResponse('nope', ['http_code' => 500])),
             processFactory: static fn (array $command): Process => new Process(['true']),
         );
 
-        $tester = $this->buildTester(dataTourismeImporter: $failingDataTourisme);
+        $tester = $this->buildTester(
+            postgisImporter: $this->capturingImporter(),
+            dataTourismeImporter: $failingDataTourisme,
+        );
 
-        $exitCode = $tester->execute([], ['interactive' => false]);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(1, $exitCode, $tester->getDisplay());
         $output = $tester->getDisplay();
-        self::assertStringContainsString('Update complete', $output, 'the OSM source still completed');
+        self::assertStringContainsString('is open', $output, 'the OSM source still completed');
         self::assertStringContainsString('Provisioning summary', $output);
         self::assertMatchesRegularExpression('/\x{2713}\s*osm/u', $output, 'osm reported as succeeded');
         self::assertMatchesRegularExpression('/\x{2717}\s*datatourisme/u', $output, 'datatourisme reported as failed');
@@ -384,11 +364,11 @@ final class ProvisionCommandTest extends TestCase
     {
         // /data not mounted (fopen returns false): the run proceeds with a warning
         // rather than blocking on an inability to lock (ADR-041 R1).
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
-        // A path under a non-directory makes fopen('…', 'c') fail.
-        $tester = $this->buildTester(lockFile: '/dev/null/no-such-path');
-        $exitCode = $tester->execute([], ['interactive' => false]);
+        $tester = $this->buildTester(
+            postgisImporter: $this->capturingImporter(),
+            lockFile: '/dev/null/no-such-path',
+        );
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
         // The warning block word-wraps, so assert a single non-splittable token.
@@ -398,8 +378,6 @@ final class ProvisionCommandTest extends TestCase
     #[Test]
     public function aConcurrentRunIsRefusedWhileTheLockIsHeld(): void
     {
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
         // Hold the lock the command tries to acquire.
         $lockFile = $this->tmpDir.'/provision.lock';
         $handle = fopen($lockFile, 'c');
@@ -407,7 +385,7 @@ final class ProvisionCommandTest extends TestCase
         self::assertTrue(flock($handle, \LOCK_EX | \LOCK_NB));
 
         $tester = $this->buildTester();
-        $exitCode = $tester->execute([], ['interactive' => false]);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(1, $exitCode);
         self::assertStringContainsString('Another provisioning run is already in progress', $tester->getDisplay());
@@ -422,19 +400,15 @@ final class ProvisionCommandTest extends TestCase
         // No DataTourisme importer injected and no DATATOURISME_* env: the step is
         // skipped with a warning and reported as a success, so a deployment without
         // DataTourisme credentials still provisions OSM (ADR-041 continue-on-error).
-        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
-
         $previousFluxId = getenv('DATATOURISME_FLUX_ID');
         $previousAppKey = getenv('DATATOURISME_APP_KEY');
         putenv('DATATOURISME_FLUX_ID');
         putenv('DATATOURISME_APP_KEY');
 
         try {
-            $tester = $this->buildTester(
-                downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
-            );
+            $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
 
-            $exitCode = $tester->execute([], ['interactive' => false]);
+            $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
         } finally {
             false === $previousFluxId ? putenv('DATATOURISME_FLUX_ID') : putenv('DATATOURISME_FLUX_ID='.$previousFluxId);
             false === $previousAppKey ? putenv('DATATOURISME_APP_KEY') : putenv('DATATOURISME_APP_KEY='.$previousAppKey);

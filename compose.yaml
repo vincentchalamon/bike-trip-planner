@@ -392,7 +392,8 @@ services:
   # + timezone from every extract present there, then exits.
   #
   # ROUTING_SLUGS is the perimeter of *this* build: whole countries, distinct from
-  # the provisioner's regional reference selection (.docker/osm/data/regions.json).
+  # the reference perimeter, which is the `osm.zones` registry (one row per opened
+  # zone, ADR-049).
   # It carries **no default list on purpose** — a second list here would be a
   # source of truth that nothing can check against the PHP registry, and a
   # forgotten country would silently build the wrong perimeter. Unset, the entry
@@ -498,6 +499,12 @@ services:
       target: prod
     volumes:
       - .docker/osm/data:/data
+      # Read-only view of the routing volume, so the provisioner can observe which
+      # national extracts the Valhalla graph was built from and refuse a zone the graph
+      # does not cover (ADR-049 §6, RoutingPerimeter). An observation of the graph's own
+      # input rather than a second list to keep in step — see the ROUTING_SLUGS note on
+      # valhalla-builder. Read-only: the provisioner must never write here.
+      - valhalla-tiles:/routing:ro
     restart: "no"
     profiles: ["provisioning"]
     depends_on:

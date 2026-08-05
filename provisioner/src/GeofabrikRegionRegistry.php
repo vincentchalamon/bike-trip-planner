@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace Provisioner;
 
+/**
+ * The zones that may be opened, at the finest grain Geofabrik publishes (ADR-049 §1).
+ *
+ * `France (entiere)` is deliberately absent: a whole-country entry defeats "one zone
+ * per run" — 4 400 MB re-imported to open one region — and it is the *routing* grain,
+ * fed to `make routing-build france`, not the reference grain. Belgium, the
+ * Netherlands and Luxembourg stay because Geofabrik publishes no finer extract for
+ * them; they are a documented exception to the rule, not a breach of it.
+ *
+ * Each entry carries the `country` it belongs to, which is what the routing
+ * containment check compares against the national slugs found in the routing volume
+ * (ADR-049 §6): two explicit lists, neither inferred from a geometry.
+ */
 final class GeofabrikRegionRegistry
 {
     /**
@@ -20,49 +33,78 @@ final class GeofabrikRegionRegistry
     private const array EUROPE_LEVEL_SLUGS = ['france', 'belgium', 'netherlands', 'luxembourg'];
 
     /**
-     * @return array<string, array{slug: string, size: string}>
+     * @return array<string, array{slug: string, size: string, country: string}>
      */
     public static function all(): array
     {
         return [
-            'France (entiere)' => ['slug' => 'france', 'size' => '4400 MB'],
-            'Belgique' => ['slug' => 'belgium', 'size' => '500 MB'],
-            'Pays-Bas' => ['slug' => 'netherlands', 'size' => '1600 MB'],
-            'Luxembourg' => ['slug' => 'luxembourg', 'size' => '40 MB'],
-            'Alsace' => ['slug' => 'alsace', 'size' => '122 MB'],
-            'Aquitaine' => ['slug' => 'aquitaine', 'size' => '276 MB'],
-            'Auvergne' => ['slug' => 'auvergne', 'size' => '141 MB'],
-            'Basse-Normandie' => ['slug' => 'basse-normandie', 'size' => '134 MB'],
-            'Bourgogne' => ['slug' => 'bourgogne', 'size' => '186 MB'],
-            'Bretagne' => ['slug' => 'bretagne', 'size' => '307 MB'],
-            'Centre' => ['slug' => 'centre', 'size' => '225 MB'],
-            'Champagne-Ardenne' => ['slug' => 'champagne-ardenne', 'size' => '98 MB'],
-            'Corse' => ['slug' => 'corse', 'size' => '32 MB'],
-            'Franche-Comte' => ['slug' => 'franche-comte', 'size' => '115 MB'],
-            'Guadeloupe' => ['slug' => 'guadeloupe', 'size' => '23 MB'],
-            'Guyane' => ['slug' => 'guyane', 'size' => '14 MB'],
-            'Haute-Normandie' => ['slug' => 'haute-normandie', 'size' => '99 MB'],
-            'Ile-de-France' => ['slug' => 'ile-de-france', 'size' => '314 MB'],
-            'Languedoc-Roussillon' => ['slug' => 'languedoc-roussillon', 'size' => '249 MB'],
-            'Limousin' => ['slug' => 'limousin', 'size' => '92 MB'],
-            'Lorraine' => ['slug' => 'lorraine', 'size' => '160 MB'],
-            'Martinique' => ['slug' => 'martinique', 'size' => '19 MB'],
-            'Mayotte' => ['slug' => 'mayotte', 'size' => '10 MB'],
-            'Midi-Pyrenees' => ['slug' => 'midi-pyrenees', 'size' => '336 MB'],
-            'Nord-Pas-de-Calais' => ['slug' => 'nord-pas-de-calais', 'size' => '223 MB'],
-            'Pays-de-la-Loire' => ['slug' => 'pays-de-la-loire', 'size' => '347 MB'],
-            'Picardie' => ['slug' => 'picardie', 'size' => '124 MB'],
-            'Poitou-Charentes' => ['slug' => 'poitou-charentes', 'size' => '217 MB'],
-            'Provence-Alpes-Cote-d-Azur' => ['slug' => 'provence-alpes-cote-d-azur', 'size' => '362 MB'],
-            'Reunion' => ['slug' => 'reunion', 'size' => '32 MB'],
-            'Rhone-Alpes' => ['slug' => 'rhone-alpes', 'size' => '491 MB'],
+            'Belgique' => ['slug' => 'belgium', 'size' => '500 MB', 'country' => 'belgium'],
+            'Pays-Bas' => ['slug' => 'netherlands', 'size' => '1600 MB', 'country' => 'netherlands'],
+            'Luxembourg' => ['slug' => 'luxembourg', 'size' => '40 MB', 'country' => 'luxembourg'],
+            'Alsace' => ['slug' => 'alsace', 'size' => '122 MB', 'country' => 'france'],
+            'Aquitaine' => ['slug' => 'aquitaine', 'size' => '276 MB', 'country' => 'france'],
+            'Auvergne' => ['slug' => 'auvergne', 'size' => '141 MB', 'country' => 'france'],
+            'Basse-Normandie' => ['slug' => 'basse-normandie', 'size' => '134 MB', 'country' => 'france'],
+            'Bourgogne' => ['slug' => 'bourgogne', 'size' => '186 MB', 'country' => 'france'],
+            'Bretagne' => ['slug' => 'bretagne', 'size' => '307 MB', 'country' => 'france'],
+            'Centre' => ['slug' => 'centre', 'size' => '225 MB', 'country' => 'france'],
+            'Champagne-Ardenne' => ['slug' => 'champagne-ardenne', 'size' => '98 MB', 'country' => 'france'],
+            'Corse' => ['slug' => 'corse', 'size' => '32 MB', 'country' => 'france'],
+            'Franche-Comte' => ['slug' => 'franche-comte', 'size' => '115 MB', 'country' => 'france'],
+            'Guadeloupe' => ['slug' => 'guadeloupe', 'size' => '23 MB', 'country' => 'france'],
+            'Guyane' => ['slug' => 'guyane', 'size' => '14 MB', 'country' => 'france'],
+            'Haute-Normandie' => ['slug' => 'haute-normandie', 'size' => '99 MB', 'country' => 'france'],
+            'Ile-de-France' => ['slug' => 'ile-de-france', 'size' => '314 MB', 'country' => 'france'],
+            'Languedoc-Roussillon' => ['slug' => 'languedoc-roussillon', 'size' => '249 MB', 'country' => 'france'],
+            'Limousin' => ['slug' => 'limousin', 'size' => '92 MB', 'country' => 'france'],
+            'Lorraine' => ['slug' => 'lorraine', 'size' => '160 MB', 'country' => 'france'],
+            'Martinique' => ['slug' => 'martinique', 'size' => '19 MB', 'country' => 'france'],
+            'Mayotte' => ['slug' => 'mayotte', 'size' => '10 MB', 'country' => 'france'],
+            'Midi-Pyrenees' => ['slug' => 'midi-pyrenees', 'size' => '336 MB', 'country' => 'france'],
+            'Nord-Pas-de-Calais' => ['slug' => 'nord-pas-de-calais', 'size' => '223 MB', 'country' => 'france'],
+            'Pays-de-la-Loire' => ['slug' => 'pays-de-la-loire', 'size' => '347 MB', 'country' => 'france'],
+            'Picardie' => ['slug' => 'picardie', 'size' => '124 MB', 'country' => 'france'],
+            'Poitou-Charentes' => ['slug' => 'poitou-charentes', 'size' => '217 MB', 'country' => 'france'],
+            'Provence-Alpes-Cote-d-Azur' => ['slug' => 'provence-alpes-cote-d-azur', 'size' => '362 MB', 'country' => 'france'],
+            'Reunion' => ['slug' => 'reunion', 'size' => '32 MB', 'country' => 'france'],
+            'Rhone-Alpes' => ['slug' => 'rhone-alpes', 'size' => '491 MB', 'country' => 'france'],
         ];
+    }
+
+    /**
+     * Resolves the zone argument of `make provision <zone>`, accepting either the
+     * Geofabrik slug (what an operator copies from a runbook) or the display name.
+     *
+     * @return array{name: string, slug: string, size: string, country: string}|null null when the argument names no known zone
+     */
+    public static function resolve(string $zone): ?array
+    {
+        $needle = trim($zone);
+        if ('' === $needle) {
+            return null;
+        }
+
+        foreach (self::all() as $name => $region) {
+            if ($needle === $region['slug'] || 0 === strcasecmp($needle, $name)) {
+                return ['name' => $name, ...$region];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function slugs(): array
+    {
+        return array_values(array_column(self::all(), 'slug'));
     }
 
     public static function downloadUrl(string $slug): string
     {
-        // Whole countries (France + Benelux) live at the europe/ level; French
-        // regions live one level down under europe/france/.
+        // Whole countries (Benelux) live at the europe/ level; French regions live
+        // one level down under europe/france/.
         if (\in_array($slug, self::EUROPE_LEVEL_SLUGS, true)) {
             return \sprintf('https://download.geofabrik.de/europe/%s-latest.osm.pbf', $slug);
         }

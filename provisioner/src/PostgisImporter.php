@@ -9,14 +9,21 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
- * Imports the Tier-1 reference features (POI, accommodations, water points) from
- * the merged PBF into PostGIS, behind an atomic schema swap (ADR-040).
+ * Imports the Tier-1 reference features (POI, accommodations, water points) of **one
+ * zone** into PostGIS, behind a transactional per-zone promotion (ADR-049 §1/§2).
  *
- * Flow: tags-filter the merged PBF down to the relevant features, import them
- * into a fresh staging schema via osm2pgsql (flex output, osm2pgsql/tier1.lua),
- * then rename the staging schema onto the live schema in one transaction. The
- * live schema keeps serving reads until the swap, so a failed import leaves the
- * previous dataset intact.
+ * Flow: tags-filter that zone's regional extract down to the relevant features, import
+ * them into a staging schema scoped to the zone via osm2pgsql (flex output,
+ * osm2pgsql/tier1.lua), enrich the Wikidata-bearing tables, then `INSERT ... SELECT`
+ * the keys the live tables do not already hold — registry row, coverage polygon and
+ * provisioning metadata included — in a single transaction.
+ *
+ * What replaced what: promotion used to be `DROP SCHEMA osm CASCADE; ALTER SCHEMA
+ * osm_staging RENAME TO osm`, which exposed every zone to every import and, on a
+ * staging-schema name out of step with tier1.lua, renamed an empty schema over the live
+ * one. That failure mode is gone: the staging schema is now *derived* from the zone and
+ * handed to the style through `TIER1_STAGING_SCHEMA`, so the two cannot diverge, and the
+ * worst outcome of a promotion bug is 0 rows or a raised exception.
  *
  * Database connection is taken from the standard libpq environment
  * (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE), inherited by osm2pgsql and psql.
@@ -24,16 +31,15 @@ use Symfony\Component\Process\Process;
 final readonly class PostgisImporter
 {
     /**
-     * Staging schema the flex tables are written into before the atomic swap.
+     * Environment variable through which the staging schema reaches
+     * osm2pgsql/tier1.lua (`os.getenv`), so the style writes its output tables exactly
+     * where the promotion reads them.
      *
-     * This MUST stay equal to the `SCHEMA` constant in osm2pgsql/tier1.lua:
-     * osm2pgsql creates the output tables in the schema the Lua style declares,
-     * while the DROP/CREATE and the swap here target this name. If the two ever
-     * diverge, osm2pgsql writes to one schema and the swap renames the other
-     * (empty) schema onto the live one — destroying the live data. Hence a fixed
-     * constant rather than a constructor parameter.
+     * This is what makes the schema per-zone without reintroducing the divergence risk
+     * the old fixed constant existed to prevent: there is one value, computed once in
+     * {@see stagingSchema()}, passed to both sides of the import.
      */
-    private const string STAGING_SCHEMA = 'osm_staging';
+    public const string STAGING_SCHEMA_ENV = 'TIER1_STAGING_SCHEMA';
 
     /**
      * Tag expressions for `osmium tags-filter`; together they keep every feature
@@ -56,7 +62,8 @@ final readonly class PostgisImporter
         'w/highway=primary,secondary,tertiary,unclassified,residential,living_street,service,track,path,cycleway,footway,bridleway',
         // Country (2), region (4), department (6) and commune (8) boundaries: the
         // commune polygons back the offline locality labels (#880), the coarser
-        // levels the country resolution, and their union the coverage polygon.
+        // levels the country resolution, and their union the zone's registry
+        // geometry — hence the coverage polygon.
         // Measured on the merged nord-pas-de-calais + rhone-alpes extract (767 MB):
         // widening `r/admin_level=2` to these four levels grows the filtered PBF
         // from 184.6 MB to 191.6 MB (+3.8%) and the osm2pgsql import from 106s to
@@ -69,20 +76,36 @@ final readonly class PostgisImporter
     ];
 
     /**
-     * Feature tables osm2pgsql/tier1.lua writes; their row counts go into the
-     * provisioning metadata surfaced by /api/health. Must stay in sync with the
-     * flex style's `define_table` calls.
+     * Feature tables osm2pgsql/tier1.lua writes, mapped to the predicate matching a live
+     * row `l` to a staging row `s`. Must stay in sync with the flex style's
+     * `define_table` calls, and with the live DDL the API migrations own — a staging
+     * column absent from the live table now aborts the promotion (see
+     * {@see ZonePromotion}).
      *
-     * @var list<string>
+     * `ways`, `admin_boundaries` and `cycle_routes` hold a single object type and
+     * therefore have no `osm_type` column, so their identity is the id alone.
+     *
+     * @var array<string, string>
      */
     private const array FEATURE_TABLES = [
-        'pois', 'accommodations', 'water_points', 'bike_shops', 'health_services',
-        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries', 'cycle_routes', 'ferries', 'fords',
+        'pois' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'accommodations' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'water_points' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'bike_shops' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'health_services' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'railway_stations' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'charging_stations' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'cultural_pois' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'ferries' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'fords' => 'l.osm_type = s.osm_type AND l.osm_id = s.osm_id',
+        'ways' => 'l.osm_id = s.osm_id',
+        'admin_boundaries' => 'l.osm_id = s.osm_id',
+        'cycle_routes' => 'l.osm_id = s.osm_id',
     ];
 
     /**
      * OSM tables carrying a `wikidata` Q-ID column, enriched from Wikidata via the
-     * shared {@see WikidataEnrichmentPass} after import and before the swap.
+     * shared {@see WikidataEnrichmentPass} after import and before promotion.
      *
      * @var list<string>
      */
@@ -130,6 +153,8 @@ final readonly class PostgisImporter
 
     private WikidataEnrichmentPass $enrichmentPass;
 
+    private ZonePromotion $promotion;
+
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the osmium/osm2pgsql/psql processes; defaults to a real {@see Process}
      */
@@ -145,30 +170,47 @@ final readonly class PostgisImporter
     ) {
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
+        $this->promotion = new ZonePromotion('osm', $this->liveSchema, self::FEATURE_TABLES);
     }
 
     /**
-     * @throws ImportFailedException
+     * Staging schema for a zone: derived, never configured, so it cannot drift from the
+     * value the flex style receives.
      */
-    public function run(string $mergedPbf, string $filteredPbf): void
+    public static function stagingSchema(string $zoneSlug): string
     {
-        $this->filter($mergedPbf, $filteredPbf);
-        $this->import($filteredPbf);
-        // Enrich the Wikidata-bearing tables before deriving coverage/metadata and
-        // swapping, so the enrichment ships with the dataset that goes live. The
-        // COPY scratch files go next to the filtered PBF (the /data work dir).
-        $this->enrichmentPass->run(\dirname($filteredPbf), self::STAGING_SCHEMA, self::WIKIDATA_TABLES);
-        $this->buildDerived();
-        $this->swap();
+        return 'osm_staging_'.preg_replace('/[^a-z0-9]+/', '_', strtolower($zoneSlug));
+    }
+
+    /**
+     * Opens (or re-opens) one zone.
+     *
+     * @param string $zoneName    display name recorded in the registry
+     * @param string $countrySlug country the zone belongs to, compared against the routing perimeter
+     *
+     * @throws ImportFailedException
+     */
+    public function run(string $zoneSlug, string $zoneName, string $countrySlug, string $regionPbf, string $filteredPbf): void
+    {
+        $staging = self::stagingSchema($zoneSlug);
+
+        $this->filter($regionPbf, $filteredPbf);
+        $this->import($staging, $filteredPbf);
+        // Enrich the Wikidata-bearing tables before promotion, so the enrichment ships
+        // with the rows that go live. The COPY scratch files go next to the filtered PBF
+        // (the /data work dir).
+        $this->enrichmentPass->run(\dirname($filteredPbf), $staging, self::WIKIDATA_TABLES);
+        $this->promote($zoneSlug, $zoneName, $countrySlug, $staging);
+        $this->dropStaging($staging);
     }
 
     /**
      * @throws ImportFailedException
      */
-    public function filter(string $mergedPbf, string $filteredPbf): void
+    public function filter(string $regionPbf, string $filteredPbf): void
     {
         $this->runProcess(
-            array_merge(['osmium', 'tags-filter', '--overwrite', '-o', $filteredPbf, $mergedPbf], self::TAGS_FILTER_EXPRESSIONS),
+            array_merge(['osmium', 'tags-filter', '--overwrite', '-o', $filteredPbf, $regionPbf], self::TAGS_FILTER_EXPRESSIONS),
             'osmium tags-filter',
         );
     }
@@ -176,12 +218,13 @@ final readonly class PostgisImporter
     /**
      * @throws ImportFailedException
      */
-    public function import(string $filteredPbf): void
+    public function import(string $stagingSchema, string $filteredPbf): void
     {
-        // Fresh staging schema (drop any half-written leftover from a prior crash).
+        // Fresh staging schema (drop any half-written leftover from a prior crash). Only
+        // ever this zone's staging schema: no live schema is named here.
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s;', self::STAGING_SCHEMA),
+            \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s;', $stagingSchema),
         ], 'psql create staging schema');
 
         $this->runProcess([
@@ -192,82 +235,103 @@ final readonly class PostgisImporter
             '--output=flex',
             '--style', $this->flexStylePath,
             '--cache', (string) $this->cacheMb,
-            '--middle-schema', self::STAGING_SCHEMA,
+            '--middle-schema', $stagingSchema,
             $filteredPbf,
-        ], 'osm2pgsql import');
+        ], 'osm2pgsql import', [self::STAGING_SCHEMA_ENV => $stagingSchema]);
     }
 
     /**
-     * Builds the derived tables in the staging schema (so the atomic swap ships
-     * them with the data): the coverage polygon (union of the imported
-     * administrative boundaries, tested by the API via ST_Covers to flag
-     * out-of-zone trips) and the provisioning metadata (refresh timestamp,
-     * per-table feature counts and per-table completeness ratios, surfaced by
-     * /api/health).
+     * Promotes the zone's staging tables into the live schema in one transaction, and
+     * with them everything derived from the live state: the registry row (its geometry
+     * being the union of the boundaries this extract actually yielded), the coverage
+     * polygon and the provisioning metadata.
      *
-     * The union spans every admin level rather than admin_level=2 alone (#880).
-     * Geofabrik regional extracts are clipped, so the country relation is
-     * incomplete and osm2pgsql skips it: on the local nord-pas-de-calais +
-     * rhone-alpes set the level-2 union produced a single NULL row, i.e. no
-     * coverage at all, which silently disabled the out-of-zone check. Unioning
-     * every level uses whatever did build (departments and communes here) and
-     * heals the holes left by a boundary that did not, since the levels nest.
+     * `osm.coverage` is now the union of the **opened zones** rather than of whatever
+     * boundaries happened to be in the extract, so "out of zone" finally means "zone not
+     * yet opened". Geofabrik extracts are clipped, so a zone whose coarse levels did not
+     * build contributes the levels that did (#880) — and a zone that yielded no boundary
+     * at all keeps whatever geometry a previous run recorded rather than losing it.
      *
      * @throws ImportFailedException
      */
-    public function buildDerived(): void
+    public function promote(string $zoneSlug, string $zoneName, string $countrySlug, string $stagingSchema): void
     {
-        $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                'CREATE TABLE %1$s.coverage AS SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) AS geom FROM %1$s.admin_boundaries; CREATE INDEX ON %1$s.coverage USING gist (geom);',
-                self::STAGING_SCHEMA,
-            ),
-        ], 'psql build coverage');
-
         $counts = implode(', ', array_map(
-            static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
-            self::FEATURE_TABLES,
+            fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, $this->liveSchema),
+            array_keys(self::FEATURE_TABLES),
         ));
-        $completeness = new CompletenessMetrics(self::STAGING_SCHEMA)
+        $completeness = new CompletenessMetrics($this->liveSchema)
             ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
 
-        // `rejections` stays empty here: nothing measurable is discarded on this
-        // side today (osmium filters the PBF before osm2pgsql ever sees it). The
-        // column exists so the quality gate can fill it with its accepted /
-        // discarded counts and motives without a schema change, and so
-        // /api/health reports the same shape for both sources.
+        // `rejections` stays empty here: nothing measurable is discarded on this side
+        // today (osmium filters the PBF before osm2pgsql ever sees it). The completeness
+        // gate of #884 is what fills it, without a schema change.
+        $registryUpsert = \sprintf(
+            <<<'SQL'
+                INSERT INTO %1$s.zones (slug, name, country, opened_at, refreshed_at, pipeline_version, feature_counts, new_entries, geom)
+                SELECT %2$s, %3$s, %4$s, now(), now(), %5$d, candidates, counts,
+                       (SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) FROM %6$s.admin_boundaries)
+                ON CONFLICT (slug) DO UPDATE
+                   SET name = excluded.name,
+                       country = excluded.country,
+                       refreshed_at = excluded.refreshed_at,
+                       pipeline_version = excluded.pipeline_version,
+                       feature_counts = excluded.feature_counts,
+                       new_entries = excluded.new_entries,
+                       geom = COALESCE(excluded.geom, %1$s.zones.geom);
+
+                DELETE FROM %1$s.coverage;
+                INSERT INTO %1$s.coverage (geom)
+                SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) FROM %1$s.zones WHERE geom IS NOT NULL;
+
+                DELETE FROM %1$s.metadata;
+                INSERT INTO %1$s.metadata (refreshed_at, feature_counts, completeness, rejections)
+                SELECT now(), jsonb_build_object(%7$s), %8$s, '{}'::jsonb;
+                SQL,
+            $this->liveSchema,
+            ZonePromotion::literal($zoneSlug),
+            ZonePromotion::literal($zoneName),
+            ZonePromotion::literal($countrySlug),
+            ZonePromotion::PIPELINE_VERSION,
+            $stagingSchema,
+            $counts,
+            $completeness,
+        );
+
         $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts, %3$s AS completeness, \'{}\'::jsonb AS rejections;',
-                self::STAGING_SCHEMA,
-                $counts,
-                $completeness,
-            ),
-        ], 'psql build metadata');
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
+        ], 'psql prepare promotion report');
+
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
+            $this->promotion->sql($zoneSlug, $stagingSchema, registryUpsert: $registryUpsert),
+        ], \sprintf('psql promote zone %s', $zoneSlug));
     }
 
     /**
      * @throws ImportFailedException
      */
-    public function swap(): void
+    public function dropStaging(string $stagingSchema): void
     {
         $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %s CASCADE; ALTER SCHEMA %s RENAME TO %s;', $this->liveSchema, self::STAGING_SCHEMA, $this->liveSchema),
-        ], 'psql schema swap');
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
+        ], 'psql drop staging schema');
     }
 
     /**
-     * @param list<string> $command
+     * @param list<string>          $command
+     * @param array<string, string> $env
      *
      * @throws ImportFailedException
      */
-    private function runProcess(array $command, string $label): void
+    private function runProcess(array $command, string $label, array $env = []): void
     {
         $process = ($this->processFactory)($command);
         $process->setTimeout($this->timeoutSeconds);
+        if ([] !== $env) {
+            $process->setEnv($env);
+        }
 
         try {
             $process->run();

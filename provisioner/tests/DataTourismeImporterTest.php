@@ -141,36 +141,39 @@ final class DataTourismeImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
-        // 1 staging DDL + 4 \copy + 4 GIST index + 1 events-date index + 1 metadata
+        // 1 staging DDL + 4 \copy + 4 GIST index
         // + 7 enrichment-pass psql calls (prepare, collect, export, one UPDATE per
-        // Wikidata table, drop; no Q-IDs to fetch in this fixture) + 1 swap.
+        // Wikidata table, drop; no Q-IDs to fetch in this fixture)
+        // + 1 report DDL + 1 promotion + 1 staging drop.
         self::assertCount(19, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
-        self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
-        self::assertStringContainsString('CREATE TABLE tourism_staging.cultural_pois', $ddl);
-        self::assertStringContainsString('CREATE TABLE tourism_staging.food_pois', $ddl);
-        self::assertStringContainsString('CREATE TABLE tourism_staging.events', $ddl);
-
-        $joinedAll = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
-        self::assertTrue(
-            (bool) array_filter($joinedAll, static fn (string $c): bool => str_contains($c, 'CREATE TABLE tourism_staging.metadata AS') && str_contains($c, "'events', (SELECT count(*) FROM tourism_staging.events)")),
-            'a metadata command records per-table counts before the swap',
-        );
+        self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);
+        self::assertStringContainsString('CREATE TABLE tourism_staging_bretagne.cultural_pois', $ddl);
+        self::assertStringContainsString('CREATE TABLE tourism_staging_bretagne.food_pois', $ddl);
+        self::assertStringContainsString('CREATE TABLE tourism_staging_bretagne.events', $ddl);
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
         self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, '\copy tourism_staging.cultural_pois')),
-            'a COPY command targets tourism_staging.cultural_pois',
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, '\copy tourism_staging_bretagne.cultural_pois')),
+            'a COPY command targets tourism_staging_bretagne.cultural_pois',
         );
 
+        // The metadata now describes the live tables: promotion is an INSERT, so what the
+        // zone staged and what the index holds are no longer the same thing.
+        self::assertStringContainsString("'events', (SELECT count(*) FROM tourism.events)", $this->capturedMetadataSql());
+
+        // The staging schema is dropped last; the live `tourism` schema is never dropped
+        // nor renamed, which is the whole point of ADR-049 §2.
         $last = end($this->captured);
         self::assertNotFalse($last);
-        $swap = implode(' ', $last);
-        self::assertStringContainsString('DROP SCHEMA IF EXISTS tourism CASCADE', $swap);
-        self::assertStringContainsString('ALTER SCHEMA tourism_staging RENAME TO tourism', $swap);
+        self::assertStringContainsString('DROP SCHEMA IF EXISTS tourism_staging_bretagne CASCADE', implode(' ', $last));
+        foreach ($joined as $command) {
+            self::assertStringNotContainsString('DROP SCHEMA IF EXISTS tourism CASCADE', $command);
+            self::assertStringNotContainsString('RENAME TO tourism', $command);
+        }
     }
 
     #[Test]
@@ -184,7 +187,7 @@ final class DataTourismeImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $cultural = (string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy');
         $food = (string) file_get_contents($this->workDir.'/tourism-food_pois.copy');
@@ -233,7 +236,7 @@ final class DataTourismeImporterTest extends TestCase
             httpClient: new MockHttpClient(new MockResponse($bytes)),
             processFactory: $this->capturingFactory(),
         );
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $cultural = (string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy');
         self::assertStringNotContainsString("\t\t", $cultural, 'a literal tab in the name would split into extra columns');
@@ -280,7 +283,7 @@ final class DataTourismeImporterTest extends TestCase
             httpClient: new MockHttpClient(new MockResponse($bytes)),
             processFactory: $this->capturingFactory(),
         );
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $accommodations = (string) file_get_contents($this->workDir.'/tourism-accommodations.copy');
         self::assertSame(1, substr_count($accommodations, "\n"), 'only the chalet row is written');
@@ -290,10 +293,10 @@ final class DataTourismeImporterTest extends TestCase
         self::assertStringNotContainsString('Meuble de la Plage', $accommodations);
         self::assertSame(2, $importer->unmappedAccommodationCount());
 
-        // The only rejection measurable before the sprint-49 quality gate is
+        // The only rejection measurable before the completeness gate of #884 is
         // recorded in the metadata, motive included (issue #877).
         self::assertStringContainsString(
-            "jsonb_build_object('accommodation_unmapped_category', 2) AS rejections",
+            "jsonb_build_object('accommodation_unmapped_category', 2);",
             $this->capturedMetadataSql(),
         );
     }
@@ -307,26 +310,27 @@ final class DataTourismeImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $metadata = $this->capturedMetadataSql();
-        self::assertStringContainsString('AS completeness', $metadata);
-        // Everything after the counts: the completeness expression and nothing else
-        // of the counts, whose per-table subqueries share the same table names.
-        $completeness = substr($metadata, (int) strpos($metadata, 'AS feature_counts,'));
+        // Everything from the completeness expression onwards, and nothing of the counts,
+        // whose per-table subqueries share the same table names.
+        $start = strpos($metadata, "'cultural_pois', (SELECT jsonb_build_object(");
+        self::assertIsInt($start);
+        $completeness = substr($metadata, $start);
 
         self::assertStringContainsString(
             "'cultural_pois', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4), 'with_link', count(nullif(btrim(website), ''))",
             $completeness,
         );
         // Events carry their link in `url` and have a date range, not opening hours.
-        self::assertSame(1, preg_match("/'events', \\(SELECT (.*?) FROM tourism_staging\\.events\\)/s", $completeness, $matches));
+        self::assertSame(1, preg_match("/'events', \\(SELECT (.*?) FROM tourism\\.events\\)/s", $completeness, $matches));
         self::assertStringContainsString("'with_link', count(nullif(btrim(url), ''))", $matches[1]);
         self::assertStringNotContainsString('opening_hours', $matches[1]);
 
         // Accommodations also break down per category: the condition for arbitrating
         // the exclusion of unnamed entries category by category (#878).
-        self::assertStringContainsString('FROM tourism_staging.accommodations GROUP BY category', $completeness);
+        self::assertStringContainsString('FROM tourism.accommodations GROUP BY category', $completeness);
         self::assertStringContainsString("'with_phone', count(nullif(btrim(phone), ''))", $completeness);
     }
 
@@ -334,7 +338,7 @@ final class DataTourismeImporterTest extends TestCase
     {
         foreach ($this->captured as $command) {
             $sql = implode(' ', $command);
-            if (str_contains($sql, 'CREATE TABLE tourism_staging.metadata AS')) {
+            if (str_contains($sql, 'INSERT INTO tourism.metadata (refreshed_at, feature_counts, completeness, rejections)')) {
                 return $sql;
             }
         }
@@ -377,7 +381,7 @@ final class DataTourismeImporterTest extends TestCase
             processFactory: $this->capturingFactory(['Q243']),
             enricher: new WikidataEnricher($sparql),
         );
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
         $has = static fn (string ...$needles): bool => (bool) array_filter(
@@ -388,38 +392,39 @@ final class DataTourismeImporterTest extends TestCase
         self::assertTrue($has('CREATE TABLE IF NOT EXISTS provisioner.wikidata_cache'), 'the persistent cache is ensured');
         self::assertTrue($has('CREATE TABLE provisioner.wikidata_candidates'), 'a candidates scratch table is created');
         self::assertTrue(
-            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging.cultural_pois', 'SELECT DISTINCT wikidata FROM tourism_staging.food_pois'),
+            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging_bretagne.cultural_pois', 'SELECT DISTINCT wikidata FROM tourism_staging_bretagne.food_pois'),
             'candidate Q-IDs are collected straight from the staging tables',
         );
         self::assertTrue($has('TO ', 'SELECT cand.qid', 'NOT EXISTS', 'make_interval'), 'missing/stale Q-IDs are selected against the TTL');
-        self::assertTrue($has('\copy provisioner.wikidata_fetch_tourism_staging (qid, payload) FROM'), 'fetched enrichments are staged');
+        self::assertTrue($has('\copy provisioner.wikidata_fetch_tourism_staging_bretagne (qid, payload) FROM'), 'fetched enrichments are staged');
         self::assertTrue($has('INSERT INTO provisioner.wikidata_cache', 'ON CONFLICT (qid) DO UPDATE'), 'fetched enrichments are upserted into the cache');
         self::assertTrue(
-            $has('UPDATE tourism_staging.cultural_pois t SET', "COALESCE(t.website, c.payload->>'website')", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
+            $has('UPDATE tourism_staging_bretagne.cultural_pois t SET', "COALESCE(t.website, c.payload->>'website')", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
             'cultural_pois is enriched from the cache, keeping source-set fields',
         );
-        self::assertTrue($has('UPDATE tourism_staging.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
+        self::assertTrue($has('UPDATE tourism_staging_bretagne.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
         // accommodations joined the enriched tables with its `wikidata` column (#872).
         self::assertTrue(
-            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging.accommodations'),
+            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging_bretagne.accommodations'),
             'accommodation Q-IDs are collected too',
         );
         self::assertTrue(
-            $has('UPDATE tourism_staging.accommodations t SET', "image_url = c.payload->>'imageUrl'", "wikipedia_url = c.payload->>'wikipediaUrl'", 'FROM provisioner.wikidata_cache c'),
+            $has('UPDATE tourism_staging_bretagne.accommodations t SET', "image_url = c.payload->>'imageUrl'", "wikipedia_url = c.payload->>'wikipediaUrl'", 'FROM provisioner.wikidata_cache c'),
             'accommodations receives the Wikidata description, image and Wikipedia URL',
         );
-        self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates_tourism_staging, provisioner.wikidata_fetch_tourism_staging'), 'scratch tables are dropped');
+        self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates_tourism_staging_bretagne, provisioner.wikidata_fetch_tourism_staging_bretagne'), 'scratch tables are dropped');
 
         $fetch = (string) file_get_contents($this->workDir.'/wikidata-fetch.copy');
         self::assertStringContainsString('Q243', $fetch);
         self::assertStringContainsString('https://museum.test', $fetch);
         self::assertStringContainsString('https://fr.wikipedia.org/wiki/Musee', $fetch);
 
-        // The scratch tables are dropped before the schema swap.
+        // The scratch tables are dropped before the promotion, so the enrichment ships
+        // with the rows that go live.
         $dropIndex = $this->commandIndex('DROP TABLE IF EXISTS provisioner.wikidata_candidates');
-        $swapIndex = $this->commandIndex('ALTER SCHEMA tourism_staging RENAME TO tourism');
+        $promoteIndex = $this->commandIndex('INSERT INTO tourism.metadata');
         self::assertGreaterThan(-1, $dropIndex);
-        self::assertGreaterThan($dropIndex, $swapIndex);
+        self::assertGreaterThan($dropIndex, $promoteIndex);
     }
 
     private function commandIndex(string $needle): int
@@ -482,7 +487,7 @@ final class DataTourismeImporterTest extends TestCase
             httpClient: new MockHttpClient(new MockResponse($bytes)),
             processFactory: $this->capturingFactory(),
         );
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         // The COPY column list must name `website`, otherwise the column the DDL
         // creates stays NULL for every row.
@@ -490,14 +495,14 @@ final class DataTourismeImporterTest extends TestCase
         self::assertTrue(
             (bool) array_filter($joined, static fn (string $c): bool => str_contains(
                 $c,
-                '\copy tourism_staging.cultural_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
+                '\copy tourism_staging_bretagne.cultural_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
             )),
             'cultural_pois is copied with its website column',
         );
         self::assertTrue(
             (bool) array_filter($joined, static fn (string $c): bool => str_contains(
                 $c,
-                '\copy tourism_staging.food_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
+                '\copy tourism_staging_bretagne.food_pois (id, name, category, opening_hours, description, website, wikidata, tags, geom)',
             )),
             'food_pois is copied with its website column',
         );
@@ -566,13 +571,13 @@ final class DataTourismeImporterTest extends TestCase
             httpClient: new MockHttpClient(new MockResponse($bytes)),
             processFactory: $this->capturingFactory(),
         );
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
         self::assertTrue(
             (bool) array_filter($joined, static fn (string $c): bool => str_contains(
                 $c,
-                '\copy tourism_staging.accommodations (id, name, category, capacity, price, description, opening_hours, website, phone, wikidata, tags, geom)',
+                '\copy tourism_staging_bretagne.accommodations (id, name, category, capacity, price, description, opening_hours, website, phone, wikidata, tags, geom)',
             )),
             'accommodations is copied with its contact columns',
         );
@@ -593,16 +598,22 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     /**
-     * The staging DDL and the live-schema migrations must describe the same
-     * tourism.accommodations, or the atomic swap silently changes the table the API
-     * reads. Asserted rather than eyeballed (#872).
+     * Every staged column must exist on the live tourism.accommodations, and the only
+     * live-only columns may be the provenance pair the promotion itself supplies.
+     * Asserted rather than eyeballed (#872).
+     *
+     * The check got sharper with ADR-049. It used to guard against an atomic swap
+     * silently changing the table the API reads; promotion is now an `INSERT ... SELECT`
+     * whose column list is read from `information_schema`, so a staged column with no
+     * live counterpart aborts the run — loudly, but only once someone provisions. This
+     * is the same invariant, caught in CI instead.
      *
      * The migrations live in the API package, which is not mounted in the
      * provisioner container; CI runs this suite from the repository root, where it
      * is the real gate.
      */
     #[Test]
-    public function theStagingDdlMatchesTheAccommodationMigrations(): void
+    public function theStagingDdlIsASubsetOfTheAccommodationMigrations(): void
     {
         $migrationsDir = __DIR__.'/../../api/migrations';
         if (!is_dir($migrationsDir)) {
@@ -617,28 +628,35 @@ final class DataTourismeImporterTest extends TestCase
         $migrated = [];
         foreach (glob($migrationsDir.'/Version*.php') ?: [] as $file) {
             $source = (string) file_get_contents($file);
-            if (!str_contains($source, 'tourism.accommodations')) {
-                continue;
-            }
 
             if (1 === preg_match('/CREATE TABLE IF NOT EXISTS tourism\.accommodations \((.*?)\n\s*\)/s', $source, $matches)) {
                 $migrated = array_merge($migrated, $this->columnNames($matches[1]));
             }
 
-            if (!str_contains($source, 'ALTER TABLE tourism.accommodations ADD COLUMN')) {
+            // Two shapes of ALTER: one naming the table, one applying the same columns to
+            // every reference table through sprintf. Both must declare what they add in a
+            // `COLUMNS` constant — the contract this test reads back.
+            $altersDirectly = str_contains($source, 'ALTER TABLE tourism.accommodations ADD COLUMN');
+            $altersEveryTable = str_contains($source, 'ALTER TABLE %s.%s ADD COLUMN') && str_contains($source, "'accommodations'");
+            if (!$altersDirectly && !$altersEveryTable) {
                 continue;
             }
 
-            // Contract with the migration: the added columns are declared in a
-            // `COLUMNS` constant so this test can read them back.
             self::assertSame(1, preg_match('/const array COLUMNS = \[(.*?)\];/s', $source, $matches), \sprintf('%s alters tourism.accommodations but does not list its columns in a COLUMNS constant', basename($file)));
             preg_match_all("/'([a-z_]+)'/", $matches[1], $names);
             $migrated = array_merge($migrated, $names[1]);
         }
 
         sort($staging);
-        sort($migrated);
-        self::assertSame($migrated, $staging, 'the provisioner staging DDL and the Doctrine migrations describe a different tourism.accommodations');
+        $liveOnly = array_values(array_diff($migrated, $staging));
+        sort($liveOnly);
+
+        self::assertSame([], array_values(array_diff($staging, $migrated)), 'the staging DDL carries columns the live tourism.accommodations does not have, which aborts the promotion');
+        self::assertSame(
+            ['last_seen_at', 'zone'],
+            $liveOnly,
+            'the only live-only columns are the provenance pair the promotion writes; anything else means a migration the staging DDL never caught up with',
+        );
     }
 
     /**
@@ -674,6 +692,6 @@ final class DataTourismeImporterTest extends TestCase
         );
 
         $this->expectException(ImportFailedException::class);
-        $importer->run($this->workDir);
+        $importer->run($this->workDir, 'bretagne');
     }
 }

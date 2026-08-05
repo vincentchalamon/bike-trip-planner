@@ -16,13 +16,19 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Imports the DataTourisme flux into the local-first `tourism` PostGIS schema
  * (ADR-040), replacing the runtime DataTourisme REST API.
  *
- * Flow, behind an atomic schema swap (same shape as {@see PostgisImporter}):
- * download the flux ZIP, stream its `objects/` JSON-LD files one by one,
- * {@see DataTourismeMapper map} each to a cultural-POI / accommodation / event
- * row, write the rows to per-table COPY files (constant memory regardless of the
- * ~390k objects), bulk-load them into a fresh `tourism_staging` schema via psql
- * COPY, then rename the staging schema onto the live `tourism` in one
- * transaction. A failed import leaves the previous dataset intact.
+ * Flow, behind a transactional per-zone promotion (same shape as
+ * {@see PostgisImporter}): download the flux ZIP, stream its `objects/` JSON-LD files
+ * one by one, {@see DataTourismeMapper map} each to a cultural-POI / accommodation /
+ * event row, write the rows to per-table COPY files (constant memory regardless of
+ * the ~390k objects), bulk-load them into a staging schema scoped to the zone via
+ * psql COPY, then `INSERT ... SELECT` the ids the live tables do not already hold. A
+ * failed import leaves the previous dataset intact.
+ *
+ * The flux is **national** while a run opens **one zone**, so the promotion is clipped
+ * to that zone's registry geometry (ADR-049 §1): without the clip, opening Brittany
+ * would import the whole country's places and label them Brittany. Places outside every
+ * opened zone are simply not promoted; the zone that covers them picks them up when it
+ * is opened.
  *
  * Rows are emitted in PostgreSQL text COPY format (`\N` = NULL, tab-separated,
  * backslash-escaped); the geometry column receives EWKT (`SRID=4326;POINT(lon
@@ -33,8 +39,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class DataTourismeImporter
 {
-    private const string STAGING_SCHEMA = 'tourism_staging';
-
     private const string LIVE_SCHEMA = 'tourism';
 
     /**
@@ -93,6 +97,19 @@ final readonly class DataTourismeImporter
      */
     private const array COMPLETENESS_BY_CATEGORY = ['accommodations'];
 
+    /**
+     * Live tables mapped to the predicate matching a live row `l` to a staging row `s`.
+     * The flux carries a stable `id` per object, so identity is that id alone.
+     *
+     * @var array<string, string>
+     */
+    private const array IDENTITY = [
+        'cultural_pois' => 'l.id = s.id',
+        'food_pois' => 'l.id = s.id',
+        'accommodations' => 'l.id = s.id',
+        'events' => 'l.id = s.id',
+    ];
+
     private HttpClientInterface $httpClient;
 
     /**
@@ -101,6 +118,8 @@ final readonly class DataTourismeImporter
     private \Closure $processFactory;
 
     private WikidataEnrichmentPass $enrichmentPass;
+
+    private ZonePromotion $promotion;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the psql processes; defaults to a real {@see Process}
@@ -128,19 +147,32 @@ final readonly class DataTourismeImporter
         );
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
+        $this->promotion = new ZonePromotion('datatourisme', self::LIVE_SCHEMA, self::IDENTITY);
+    }
+
+    /**
+     * Staging schema for a zone: derived, never configured, so two runs on different
+     * zones can never collide on a shared name.
+     */
+    public static function stagingSchema(string $zoneSlug): string
+    {
+        return 'tourism_staging_'.preg_replace('/[^a-z0-9]+/', '_', strtolower($zoneSlug));
     }
 
     /**
      * @throws ImportFailedException
      */
-    public function run(string $workDir): void
+    public function run(string $workDir, string $zoneSlug): void
     {
+        $staging = self::stagingSchema($zoneSlug);
+
         $zipPath = $workDir.'/datatourisme-flux.zip';
         $this->download($zipPath);
         $copyFiles = $this->extract($zipPath, $workDir);
-        $this->load($copyFiles);
-        $this->enrichmentPass->run($workDir, self::STAGING_SCHEMA, self::WIKIDATA_TABLES);
-        $this->swap();
+        $this->load($staging, $copyFiles);
+        $this->enrichmentPass->run($workDir, $staging, self::WIKIDATA_TABLES);
+        $this->promote($zoneSlug, $staging);
+        $this->dropStaging($staging);
     }
 
     /**
@@ -295,72 +327,86 @@ final readonly class DataTourismeImporter
      *
      * @throws ImportFailedException
      */
-    private function load(array $copyFiles): void
+    private function load(string $stagingSchema, array $copyFiles): void
     {
-        $ddl = \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s;', self::STAGING_SCHEMA);
+        $ddl = \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s;', $stagingSchema);
         foreach (self::STAGING_DDL as $table => $columns) {
-            $ddl .= \sprintf(' CREATE TABLE %s.%s (%s);', self::STAGING_SCHEMA, $table, $columns);
+            $ddl .= \sprintf(' CREATE TABLE %s.%s (%s);', $stagingSchema, $table, $columns);
         }
 
         $this->runProcess(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $ddl], 'psql create tourism staging');
 
         foreach ($copyFiles as $table => $path) {
             $columns = implode(', ', self::TABLE_COLUMNS[$table]);
-            $copy = \sprintf("\\copy %s.%s (%s) FROM '%s'", self::STAGING_SCHEMA, $table, $columns, $path);
+            $copy = \sprintf("\\copy %s.%s (%s) FROM '%s'", $stagingSchema, $table, $columns, $path);
             $this->runProcess(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $copy], \sprintf('psql copy %s', $table));
         }
 
         foreach (array_keys(self::TABLE_COLUMNS) as $table) {
+            // Not a mirror of the live index any more (promotion is an INSERT, so the
+            // live indexes stay): this one serves the zone clip, which tests every
+            // staged row against the zone polygon with ST_Covers.
             $this->runProcess([
                 'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-                \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', self::STAGING_SCHEMA, $table),
+                \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', $stagingSchema, $table),
             ], \sprintf('psql index %s', $table));
         }
+    }
 
-        // Date-range index for the events read path (matches Version20260616120000);
-        // recreated in staging so the atomic swap doesn't drop it.
-        $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('CREATE INDEX ON %s.events (start_date, end_date);', self::STAGING_SCHEMA),
-        ], 'psql index events dates');
-
-        // Provisioning metadata (refresh timestamp, per-table counts, per-table
-        // completeness ratios and the discarded-row counts), surfaced by
-        // /api/health so operators see what the DataTourisme index is worth.
+    /**
+     * Promotes the staged flux rows covered by the zone into the live schema in one
+     * transaction, then refreshes the provisioning metadata from the live tables
+     * (refresh timestamp, per-table counts, per-table completeness ratios and the
+     * discarded-row counts), which is what /api/health reports.
+     *
+     * @throws ImportFailedException
+     */
+    private function promote(string $zoneSlug, string $stagingSchema): void
+    {
         $counts = implode(', ', array_map(
-            static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
+            static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::LIVE_SCHEMA),
             array_keys(self::TABLE_COLUMNS),
         ));
-        $completeness = new CompletenessMetrics(self::STAGING_SCHEMA)
+        $completeness = new CompletenessMetrics(self::LIVE_SCHEMA)
             ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
-        // The only rejection measurable before the sprint-49 quality gate: flux
+        // The only rejection measurable before the completeness gate of #884: flux
         // accommodations whose subtype maps to no app category (see the mapper).
         $rejections = \sprintf(
             "jsonb_build_object('accommodation_unmapped_category', %d)",
             $this->mapper->unmappedAccommodationCount(),
         );
 
+        $metadataRefresh = \sprintf(
+            <<<'SQL'
+                DELETE FROM %1$s.metadata;
+                INSERT INTO %1$s.metadata (refreshed_at, feature_counts, completeness, rejections)
+                SELECT now(), jsonb_build_object(%2$s), %3$s, %4$s;
+                SQL,
+            self::LIVE_SCHEMA,
+            $counts,
+            $completeness,
+            $rejections,
+        );
+
         $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts, %3$s AS completeness, %4$s AS rejections;',
-                self::STAGING_SCHEMA,
-                $counts,
-                $completeness,
-                $rejections,
-            ),
-        ], 'psql build tourism metadata');
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
+        ], 'psql prepare promotion report');
+
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
+            $this->promotion->sql($zoneSlug, $stagingSchema, clipToZone: $zoneSlug, registryUpsert: $metadataRefresh),
+        ], \sprintf('psql promote datatourisme zone %s', $zoneSlug));
     }
 
     /**
      * @throws ImportFailedException
      */
-    private function swap(): void
+    private function dropStaging(string $stagingSchema): void
     {
         $this->runProcess([
-            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; ALTER SCHEMA %2$s RENAME TO %1$s;', self::LIVE_SCHEMA, self::STAGING_SCHEMA),
-        ], 'psql tourism swap');
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
+        ], 'psql drop tourism staging schema');
     }
 
     /**

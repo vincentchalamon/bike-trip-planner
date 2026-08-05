@@ -1,15 +1,20 @@
--- osm2pgsql flex style for the local-first Tier-1 reference index (ADR-040).
+-- osm2pgsql flex style for the local-first Tier-1 reference index (ADR-040/049).
 --
--- Imports the bikepacking-relevant OSM features into a dedicated staging schema
--- as PostGIS point geometries (SRID 4326), which the importer then swaps onto
--- the live `osm` schema atomically. The API reads these tables via ST_DWithin
--- corridor queries, replacing the runtime Overpass dependency.
+-- Imports the bikepacking-relevant OSM features of one zone into that zone's
+-- staging schema as PostGIS geometries (SRID 4326); the importer then promotes
+-- the keys the live `osm` schema does not already hold, in one transaction. The
+-- API reads the live tables via ST_DWithin corridor queries, replacing the
+-- runtime Overpass dependency.
 --
 -- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes, ferries, fords.
 
--- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
--- here, and the importer creates/swaps this exact schema onto the live `osm`.
-local SCHEMA = 'osm_staging'
+-- Staging schema, scoped to the zone being opened and passed in by
+-- PostgisImporter (PostgisImporter::STAGING_SCHEMA_ENV). One value computed once
+-- and handed to both sides, so the style and the importer cannot disagree on it
+-- — which is what the former fixed constant existed to prevent, back when the
+-- promotion was a schema rename that would have destroyed the live data on a
+-- mismatch (ADR-049 §2). The fallback keeps a manual osm2pgsql invocation usable.
+local SCHEMA = os.getenv('TIER1_STAGING_SCHEMA') or 'osm_staging'
 local SRID = 4326
 
 -- OSM tourism value → app accommodation category (TripRequest::ALL_ACCOMMODATION_TYPES);

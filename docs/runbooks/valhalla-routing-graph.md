@@ -12,9 +12,9 @@ Since #881 the two datasets share nothing — no file, no directory, no schedule
 | Question | what is near this track? | can we go from A to B? |
 | Grain | region (`nord-pas-de-calais`) | country (`france`) |
 | Store | `.docker/osm/data/regions/` + Postgres | `valhalla-tiles` Docker volume |
-| Perimeter | `.docker/osm/data/regions.json` | the extracts present in the `valhalla-tiles` volume, i.e. every slug ever passed to `make routing-build` |
+| Perimeter | the `osm.zones` registry, one row per opened zone | the extracts present in the `valhalla-tiles` volume, i.e. every slug ever passed to `make routing-build` |
 | Cadence | often, one zone at a time | rarely, per country opening (target: monthly refresh) |
-| Command | `make provision` | `make routing-build <slug>` |
+| Command | `make provision <zone>` | `make routing-build <slug>` |
 
 Opening a reference zone therefore **cannot** degrade routing, and a long or
 failed graph build **cannot** make routing unavailable. Before #881 both read

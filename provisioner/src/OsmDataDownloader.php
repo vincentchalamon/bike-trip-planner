@@ -5,30 +5,25 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\DownloadFailedException;
-use Provisioner\Exception\MergeFailedException;
 use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Fetches one zone's Geofabrik extract into the provisioner's regions directory.
+ *
+ * It used to also merge the downloaded extracts with `osmium merge`, back when a run
+ * re-imported the whole cumulative selection. One zone per run (ADR-049 §1) means one
+ * extract to tags-filter, so there is nothing left to merge and no subprocess left to
+ * run: this class now only speaks HTTP.
+ */
 final readonly class OsmDataDownloader
 {
     private HttpClientInterface $httpClient;
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
-
-    /**
-     * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the osmium process; defaults to a real {@see Process}
-     */
     public function __construct(
         private string $regionsDir,
         ?HttpClientInterface $httpClient = null,
-        ?\Closure $processFactory = null,
-        private float $mergeTimeoutSeconds = 600.0,
         float $idleTimeoutSeconds = 120.0,
         float $maxDurationSeconds = 7200.0,
     ) {
@@ -40,7 +35,6 @@ final readonly class OsmDataDownloader
             'timeout' => $idleTimeoutSeconds,
             'max_duration' => $maxDurationSeconds,
         ]);
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 
     public function targetPath(string $slug): string
@@ -106,37 +100,6 @@ final readonly class OsmDataDownloader
             @unlink($writePath);
 
             throw new DownloadFailedException(\sprintf('Atomic rename of "%s" to "%s" failed', $writePath, $targetPath));
-        }
-    }
-
-    /**
-     * Merge the given PBF files into $outputPath via `osmium merge --overwrite`.
-     *
-     * @param list<string> $pbfPaths
-     *
-     * @throws MergeFailedException
-     */
-    public function merge(array $pbfPaths, string $outputPath): void
-    {
-        if ([] === $pbfPaths) {
-            throw new MergeFailedException('Cannot run osmium merge with an empty list of PBF files');
-        }
-
-        $command = array_merge(
-            ['osmium', 'merge', '--overwrite', '-o', $outputPath],
-            $pbfPaths,
-        );
-
-        $process = ($this->processFactory)($command);
-        $process->setTimeout($this->mergeTimeoutSeconds);
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new MergeFailedException(\sprintf('osmium merge timed out after %.1fs', $this->mergeTimeoutSeconds), 0, $processTimedOutException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new MergeFailedException(\sprintf('osmium merge failed (exit %s): %s', (string) $process->getExitCode(), $process->getErrorOutput()));
         }
     }
 }

@@ -7,14 +7,21 @@ namespace App\Osm;
 use Doctrine\DBAL\Connection;
 
 /**
- * Tests a route against the local-first coverage polygon (ADR-040): the single-row
- * osm.coverage table holds the union of the provisioned countries' admin_level=2
- * boundaries, materialised by the provisioner. A route not fully covered cannot be
- * (re)routed by Valhalla (no tiles out of zone), so the frontend renders it
- * display-only.
+ * Tests a route against the local-first coverage polygon (ADR-040/049): the single-row
+ * osm.coverage table holds the union of the **opened zones'** geometries, materialised by
+ * the provisioner from the osm.zones registry inside the promotion transaction. A route
+ * not fully covered cannot be (re)routed by Valhalla (no tiles out of zone), so the
+ * frontend renders it display-only.
  *
- * Coverage is treated as "unknown" (never out of zone) when the polygon was never
- * provisioned (empty table or NULL geom), so a missing index never blocks the user.
+ * "Out of zone" therefore now means "zone not yet opened", which is a statement that can
+ * be true. It used to be the union of whatever administrative boundaries happened to
+ * survive in the imported extract — and since Geofabrik extracts are clipped, filtering
+ * that union on admin_level = 2 produced a single NULL row on a regional set, i.e. no
+ * coverage at all (#880). Each zone's registry geometry is the union of every level its
+ * own extract yielded, so a missing coarse boundary no longer erases the zone.
+ *
+ * Coverage is still treated as "unknown" (never out of zone) when no zone has been
+ * opened yet (empty table or NULL geom), so an unprovisioned index never blocks the user.
  */
 final readonly class CoverageRepository implements CoverageRepositoryInterface
 {
