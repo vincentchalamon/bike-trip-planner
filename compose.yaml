@@ -333,34 +333,89 @@ services:
       timeout: 3s
       retries: 5
 
+  # Routing engine — SERVES ONLY (#881). The graph is built out of band by
+  # `valhalla-builder` below (`make routing-build france`); this container never
+  # builds anything, so a long or failed build can no longer make routing
+  # unavailable nor flap the container. Its only input is the valhalla-tiles
+  # volume: it has no bind mount, so a clean checkout has nothing to seed.
+  #
+  # On a volume with no graph yet the gis-ops entrypoint exits with
+  # "No local PBF files, valhalla_tiles.tar and no tile URLs found. Nothing to
+  # do." That is intended for a serve-only service: run `make routing-build
+  # <slug>` first. This is why the routing profile is opt-in and is no longer
+  # enabled by `make start-dev`.
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     restart: unless-stopped
     profiles: ["routing"]
-    # Routing engine: tiles + elevation kept in memory (#566, ADR-019 ~1-2 GB).
+    # Requalified in #881. The former 2 GB covered one container doing two
+    # incompatible jobs (build + serve) and was far too small for a country-sized
+    # build (see valhalla-builder below, which is uncapped). For serving alone
+    # this is a page-cache budget, not an allocation: valhalla_service mmaps
+    # /custom_files/valhalla_tiles.tar, so the limit decides how much of the
+    # extract stays cached. Anonymous memory is only the config plus per-request
+    # A* search state (tens to a few hundred MB for a long bicycle route).
+    # 2 GB therefore holds a single-country extract entirely in cache with room
+    # for query state. Rule of thumb when the routing perimeter grows: size it at
+    # `valhalla_tiles.tar` + 512 MB — check the real size after a build with
+    #   docker compose exec valhalla ls -lh /custom_files/valhalla_tiles.tar
+    # Too low degrades latency (constant page-cache eviction), it does not OOM.
     deploy:
       resources:
         limits:
           memory: 2G
     volumes:
-      - .docker/osm/data/default.osm.pbf:/custom_files/default.osm.pbf
       - valhalla-tiles:/custom_files
     environment:
       serve_tiles: "True"
-      build_elevation: "True"
-      build_admins: "True"
-      build_time_zones: "True"
+      # Load the tiles as they are; never derive anything from a PBF. All three
+      # build_* switches must stay False: the entrypoint triggers a full graph
+      # build if it is asked for an admin/timezone/elevation artifact it cannot
+      # find, which is exactly the coupling #881 removes.
+      use_tiles_ignore_pbf: "True"
+      build_elevation: "False"
+      build_admins: "False"
+      build_time_zones: "False"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
-      # France-wide dataset: a cold tile build (no pre-populated valhalla-tiles
-      # volume) runs for hours. Pre-built monthly uploads make restarts fast
-      # (mmap of existing tiles), but the start_period must cover the worst case
-      # so the container is not flapped unhealthy mid-build.
-      # See docs/runbooks/osm-france-refresh.md and ADR-036.
-      start_period: 3600s
+      # Serving is an mmap of a pre-built extract, so seconds — not the former
+      # 3600s, which only existed because this container also ran the build.
+      start_period: 20s
+
+  # One-shot routing-graph builder (#881), on its own profile and its own
+  # calendar: `make routing-build france [belgium ...]`. Downloads the missing
+  # national extracts into the routing volume, rebuilds tiles + elevation + admin
+  # + timezone from every extract present there, then exits.
+  #
+  # ROUTING_SLUGS is the routing perimeter: whole countries, distinct from the
+  # provisioner's regional reference selection (.docker/osm/data/regions.json).
+  # It mirrors GeofabrikRegionRegistry::routingSlugs() — extend both, country by
+  # country. The default builds France only.
+  valhalla-builder:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    profiles: ["routing-build"]
+    restart: "no"
+    entrypoint: ["/bin/bash", "/routing/build-routing-graph.sh"]
+    # Deliberately uncapped. valhalla_build_tiles holds the graph of the whole
+    # perimeter in RAM: France peaks in the several-GB range, so any of the
+    # per-service limits used elsewhere in this file would OOM-kill the build
+    # halfway through. It runs alone, on demand, and exits — there is no
+    # steady-state footprint to protect the rest of the stack from. Host budget
+    # for France: ~8 GB free RAM and ~30 GB disk.
+    volumes:
+      - valhalla-tiles:/custom_files
+      - .docker/valhalla/build-routing-graph.sh:/routing/build-routing-graph.sh:ro
+    environment:
+      ROUTING_SLUGS: "${ROUTING_SLUGS:-france}"
+      build_elevation: "True"
+      # Force: the admin polygons are per-extract, so adding a country to the
+      # perimeter must rebuild them. The timezone db is worldwide and is only
+      # built when missing.
+      build_admins: "Force"
+      build_time_zones: "True"
 
   database:
     # PostGIS-enabled Postgres. The local-first Tier-1 reference index
