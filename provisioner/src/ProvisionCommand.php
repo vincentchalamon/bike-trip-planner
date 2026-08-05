@@ -17,13 +17,21 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'provision',
-    description: 'Download OSM regions and merge them into a single PBF file',
+    description: 'Download the selected OSM regions and import them into the PostGIS reference index',
 )]
 final class ProvisionCommand extends Command
 {
     private const string DEFAULT_REGIONS_DIR = '/data/regions';
 
-    private const string DEFAULT_MERGED_PBF = '/data/default.osm.pbf';
+    /**
+     * Staging file for the PostGIS import only: the selected regional extracts
+     * merged together, then tags-filtered into {@see DEFAULT_FILTERED_PBF}.
+     * Nothing outside this command reads it — in particular not Valhalla, whose
+     * graph is built from national extracts held in its own volume (#881). It
+     * replaces `default.osm.pbf`, whose neutral name is what let the routing
+     * engine bind-mount the reference dataset in the first place.
+     */
+    private const string DEFAULT_REFERENCE_PBF = '/data/reference-merged.osm.pbf';
 
     private const string DEFAULT_SELECTION_FILE = '/data/regions.json';
 
@@ -49,7 +57,7 @@ final class ProvisionCommand extends Command
 
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
-        private readonly string $mergedPbf = self::DEFAULT_MERGED_PBF,
+        private readonly string $referencePbf = self::DEFAULT_REFERENCE_PBF,
         string $selectionFile = self::DEFAULT_SELECTION_FILE,
         ?RegionSelectionStore $selectionStore = null,
         ?OsmDataDownloader $downloader = null,
@@ -321,7 +329,7 @@ final class ProvisionCommand extends Command
         }
 
         $this->selectionStore->save(array_values($slugs));
-        $io->success('Done! The merged PBF is ready at '.$this->mergedPbf);
+        $io->success('Done! The selected regions are imported into the PostGIS reference index.');
 
         return Command::SUCCESS;
     }
@@ -391,7 +399,7 @@ final class ProvisionCommand extends Command
             return $result;
         }
 
-        $io->success('Update complete. The merged PBF is ready at '.$this->mergedPbf);
+        $io->success('Update complete. The PostGIS reference index is up to date.');
 
         return Command::SUCCESS;
     }
@@ -438,7 +446,7 @@ final class ProvisionCommand extends Command
             $io->write('  Merging PBF files with osmium... ');
 
             try {
-                $this->downloader->merge($pbfFiles, $this->mergedPbf);
+                $this->downloader->merge($pbfFiles, $this->referencePbf);
             } catch (MergeFailedException $e) {
                 $io->newLine();
                 $this->fail($io, $e->getMessage());
@@ -452,7 +460,7 @@ final class ProvisionCommand extends Command
         $io->write('  Importing Tier-1 features into PostGIS... ');
 
         try {
-            $this->postgisImporter->run($this->mergedPbf, $this->filteredPbf);
+            $this->postgisImporter->run($this->referencePbf, $this->filteredPbf);
         } catch (ImportFailedException $importFailedException) {
             $io->newLine();
             $this->fail($io, $importFailedException->getMessage());

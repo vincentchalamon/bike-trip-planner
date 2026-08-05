@@ -1,12 +1,14 @@
 # Valhalla / Overpass Rebuild
 
-Valhalla provides routing (ADR-017); Overpass usage was moved off the self-hosted instance (ADR-025) — but Valhalla tiles still need periodic rebuild when the source PBF changes or when tiles are corrupted. The PBF/tile bootstrap is owned by the `provisioner` profile (ADR-020).
+Valhalla provides routing (ADR-017); Overpass usage was moved off the self-hosted instance (ADR-025) — but Valhalla tiles still need a rebuild when they are corrupted or when the national extracts change.
+
+**The routing graph is not provisioned by `make provision`** (#881). It is built out of band by the one-shot `valhalla-builder` (`make routing-build <slug>`) from national extracts held in the `valhalla-tiles` volume; `make provision` only fills the `osm` / `tourism` PostGIS reference schemas. Full build + upload procedure: [valhalla-routing-graph.md](valhalla-routing-graph.md). This runbook covers the incident path only.
 
 ## Symptômes
 
 - `/api/health` reports `valhalla: 503` or routing requests return 5xx
 - Valhalla logs: `tile not found`, `unable to load tile`, `corrupted`
-- New regions are missing routes after a fresh provision (Lille stub only)
+- Routes fail outside the built routing perimeter, or `valhalla` exits with `No local PBF files, valhalla_tiles.tar and no tile URLs found`
 - POI / accommodation / event results are empty because the `osm` / `tourism` PostGIS schemas were never provisioned
 
 ## Diagnostic
@@ -25,30 +27,29 @@ docker compose exec valhalla du -sh /custom_files
 docker compose exec valhalla ls /custom_files | head
 ```
 
-Check the source PBF expected by the provisioner:
+Check the national extracts the graph was built from (they live in the volume, not in the working tree):
 
 ```bash
-ls -lh .docker/default.osm.pbf
+docker compose exec valhalla ls -lh /custom_files
 ```
 
 ## Procédure
 
-1. **Re-run the provisioner** to download / build the requested regions:
+1. **Restart the service first.** It only mmaps `valhalla_tiles.tar`, so a bad load is often fixed without a rebuild:
 
    ```bash
-   make provision
+   docker compose restart valhalla
    ```
 
-   `make provision` first ensures a default PBF exists (Lille stub by default), then runs the provisioner interactively under the `provisioning` profile (`docker compose --profile provisioning run --rm provisioner`). Follow the prompts to select Geofabrik regions; tiles are written to the `valhalla-tiles` volume.
-
-2. **Force a full Valhalla rebuild** when tiles are corrupted (destructive — clears the volume):
+2. **Rebuild the graph** when the tiles are genuinely corrupted. On a workstation, not in production (hours, uncapped memory):
 
    ```bash
-   docker compose down valhalla
-   docker volume rm <project>_valhalla-tiles
-   make provision
-   docker compose up -d valhalla
+   docker volume rm <project>_valhalla-tiles   # destructive: drops tiles AND the extracts
+   make routing-build france                   # add every country of the perimeter
+   make routing-up
    ```
+
+   In production, do not rebuild: re-upload a known-good `valhalla_tiles.tar` per steps 4-6 of [valhalla-routing-graph.md](valhalla-routing-graph.md).
 
 3. **Re-warm caches** by issuing a known-good routing request:
 
@@ -63,13 +64,14 @@ ls -lh .docker/default.osm.pbf
 ## Post-action
 
 - `/api/health` reports `valhalla: ok`.
-- Trigger a trip computation through a freshly provisioned region; verify route + stage generation succeed.
-- Capture provisioner runtime in the incident issue (tile build can take 30+ min for a large region — note it as planned maintenance, not incident downtime).
-- Document any region additions in `TRACKING.md` per project conventions.
+- Trigger a trip computation inside the routing perimeter; verify route + stage generation succeed.
+- Capture the build runtime in the incident issue (hours for a country-sized extract — note it as planned maintenance, not incident downtime).
+- Document any perimeter change in `TRACKING.md` per project conventions. The perimeter is not listed anywhere in the repository on purpose — it is the set of extracts in the `valhalla-tiles` volume, which [valhalla-routing-graph.md](valhalla-routing-graph.md) shows how to read.
 
 ## References
 
 - ADR-017 — Valhalla routing engine and (former) Overpass integration
 - ADR-020 — Dynamic Overpass region provisioning
 - ADR-025 — Removal of self-hosted Overpass
-- `Makefile` target `provision` (ensures the default PBF, then provisions all reference sources)
+- [valhalla-routing-graph.md](valhalla-routing-graph.md) — build + upload the routing graph
+- `Makefile` targets `routing-build` / `routing-up` (routing graph) and `provision` (PostGIS reference sources)

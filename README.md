@@ -233,7 +233,16 @@ All geographic and infrastructure data is derived from [OpenStreetMap](https://w
 
 #### OSM provisioning and refresh
 
-The Valhalla routing engine consumes Geofabrik PBF extracts mounted at `/data` inside the `valhalla` container — see [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the full rationale.
+OSM feeds **two independent datasets**, on two grains and two calendars — they share no file and no command:
+
+| | Reference (PostGIS) | Routing (Valhalla) |
+|---|---|---|
+| Answers | what is near this track? | can we go from A to B? |
+| Grain | region (`nord-pas-de-calais`) | country (`france`) |
+| Command | `make provision` | `make routing-build france` |
+| Cadence | often, one zone at a time | rarely, per country opening |
+
+See [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the full rationale, and [the routing-graph runbook](docs/runbooks/valhalla-routing-graph.md) for the build + upload procedure.
 
 **Bootstrap (first install or adding regions):**
 
@@ -250,12 +259,15 @@ Re-running the same command later updates existing regions instead of re-install
 
 **Refresh (manual):**
 
-OSM data is refreshed manually — there is no scheduled job. Re-download the configured Geofabrik extracts and reload them into Valhalla on whatever cadence suits the deployment:
+Both datasets are refreshed manually — there is no scheduled job — and independently:
 
 ```bash
-make provision-update            # re-download the configured regions (non-interactive)
-docker compose restart valhalla  # rebuild routing tiles from the new PBF
+make provision-update            # reference: re-download the configured regions
+                                 # and re-import them into PostGIS (non-interactive)
+make routing-build france        # routing: rebuild the graph for the perimeter
 ```
+
+`make routing-build` runs the one-shot `valhalla-builder` (Compose profile `routing-build`): it downloads the national extracts into the `valhalla-tiles` volume, rebuilds tiles + elevation + admin + timezone data, then exits. The `valhalla` service only ever serves that result, so a long or failed build cannot take routing down. Because routing needs a graph that no clean checkout has, it is opt-in: `make start-dev` does not start it, `make routing-up` does.
 
 **Iso-prod recette stack:**
 

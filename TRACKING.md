@@ -769,7 +769,7 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
   - [ ] 5-10 imports rapprochés → API/SSR réactifs, pas d'OOM-kill (`dmesg`), files Messenger se vident
   - [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` vide → 0 requête analytics, 0 cookie
   - [ ] Erreur backend/front visible dans Sentry SaaS ; monitor UptimeRobot vert sur `/api/healthz`
-  - [ ] Tuiles OSM France servies (`/route` OK) ; runbook `docs/runbooks/osm-france-refresh.md` rejouable
+  - [ ] Tuiles OSM France servies (`/route` OK) ; runbook `docs/runbooks/valhalla-routing-graph.md` rejouable
   - [ ] `make qa` green
 
 </details>

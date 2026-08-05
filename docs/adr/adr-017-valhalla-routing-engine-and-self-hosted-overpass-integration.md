@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-03-03
 - **Supersedes:** ADR-016 Option F (Self-hosted Overpass — deferred)
-- **Partially superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed; sections §17.1 (Overpass Docker service), §17.4 (Overpass fallback strategy), and §17.5 (OSM data update strategy) are no longer in effect — and [ADR-040](adr-040-local-first-reference-data-postgis.md), which removed the runtime Overpass dependency entirely (OSM features now come from a local PostGIS index). Valhalla routing (§17.2, §17.3) remains active.
+- **Partially superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed; sections §17.1 (Overpass Docker service), §17.4 (Overpass fallback strategy), and §17.5 (OSM data update strategy) are no longer in effect — and [ADR-040](adr-040-local-first-reference-data-postgis.md), which removed the runtime Overpass dependency entirely (OSM features now come from a local PostGIS index). Valhalla routing (§17.2, §17.3) remains active, with one amendment: issue **#881** split building from serving. The `valhalla` service no longer builds anything and the shared `.docker/osm/lille-stub.osm.pbf` bind-mount described in §17.1 is gone — the graph is built by the one-shot `valhalla-builder` (`make routing-build <slug>`) from national extracts kept in the `valhalla-tiles` volume. See [valhalla-routing-graph.md](../runbooks/valhalla-routing-graph.md).
 
 ## Context and Problem Statement
 

@@ -76,7 +76,9 @@ This ADR designs a **dynamic region provisioning system** that allows adding OSM
 
 ### 20.0 — Empty PBF Stub for Instant Startup
 
-An **~18 KB PBF stub** with real Lille road data (~300m around Grand Place, 1074 nodes / 217 ways) is committed at `.docker/osm/lille-stub.osm.pbf`. It is shared by both Overpass and Valhalla via bind-mounts. Overpass converts PBF→BZ2 at startup via `OVERPASS_PLANET_PREPROCESS`; Valhalla builds 2 valid tiles from it.
+> **Removed by #881.** The stub and the `ensure-default-pbf` Make target no longer exist: Overpass is gone (ADR-025/ADR-040) and Valhalla no longer builds from a bind-mounted PBF, so nothing needs a placeholder file to boot. The rest of this section is kept as a historical record.
+
+An **~18 KB PBF stub** with real Lille road data (~300m around Grand Place, 1074 nodes / 217 ways) was committed at `.docker/osm/lille-stub.osm.pbf`. It was shared by both Overpass and Valhalla via bind-mounts. Overpass converts PBF→BZ2 at startup via `OVERPASS_PLANET_PREPROCESS`; Valhalla builds 2 valid tiles from it.
 
 ```yaml
 overpass:

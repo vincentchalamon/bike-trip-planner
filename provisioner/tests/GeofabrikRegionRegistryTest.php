@@ -77,6 +77,8 @@ final class GeofabrikRegionRegistryTest extends TestCase
     #[Test]
     public function allSlugsProduceValidUrls(): void
     {
+        // Independent oracle: do not read routingSlugs() here, or the assertion
+        // would only ever confirm itself.
         $europeLevel = ['france', 'belgium', 'netherlands', 'luxembourg'];
 
         foreach (GeofabrikRegionRegistry::all() as $name => $data) {

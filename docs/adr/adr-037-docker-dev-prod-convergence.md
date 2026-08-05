@@ -25,7 +25,7 @@ Run **the same FrankenPHP topology in dev and prod**, with a layered Compose set
 
 ### Invocation
 
-- **Dev:** `docker compose -f compose.yaml -f compose.dev.yaml …`, wired through the Makefile via `export COMPOSE_FILE=compose.yaml:compose.dev.yaml`. `make start-dev` adds `COMPOSE_PROFILES=routing` to bring up Valhalla as before.
+- **Dev:** `docker compose -f compose.yaml -f compose.dev.yaml …`, wired through the Makefile via `export COMPOSE_FILE=compose.yaml:compose.dev.yaml`. `make start-dev` used to add `COMPOSE_PROFILES=routing` to bring up Valhalla; since **#881** routing is opt-in (`make routing-up`), because the serve-only `valhalla` needs a graph built out of band by `make routing-build <slug>`.
 - **Prod:** `docker compose -f compose.yaml …` (CI sets `COMPOSE_FILE: compose.yaml`; Coolify points its "Docker Compose Location" at `compose.yaml`).
 
 ### Why `compose.dev.yaml` and not `compose.override.yaml`

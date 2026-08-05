@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-default-pbf ensure-jwt-recette provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-update provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -9,7 +9,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   $(eval $(ARGS):;@:)
@@ -24,15 +24,15 @@ install: ## Install dependencies
 	@docker compose run --rm --no-deps pwa npm install
 
 ## --- 🐳 Docker Infrastructure ---
-ensure-default-pbf:
-	@test -f .docker/osm/data/default.osm.pbf || cp .docker/osm/lille-stub.osm.pbf .docker/osm/data/default.osm.pbf
-
 ensure-jwt-recette:
 	@mkdir -p .docker/jwt-recette
 	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
 
-start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in development mode
-	@COMPOSE_PROFILES=routing docker compose up --wait
+# Routing is opt-in since #881: `valhalla` only serves a graph built out of band
+# by `make routing-build`, so booting it on a machine without a graph would fail.
+# Add it once you have one with `make routing-up` (or COMPOSE_PROFILES=routing).
+start-dev: ## Start the Docker environment (Detached) in development mode
+	@docker compose up --wait
 
 build: ## Build the Docker environment in production mode
 	@docker compose -f compose.yaml build
@@ -42,7 +42,7 @@ build: ## Build the Docker environment in production mode
 # AI token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
 # So `make start` supplies non-default local placeholders + the generated keypair to
 # boot, mirroring the CI env and the compose.recette.yaml overlay.
-start: ensure-default-pbf ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
+start: ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
 	@MERCURE_JWT_KEY=local-iso-prod-mercure-key \
 		AI_TOKEN_ENC_KEY=local-iso-prod-ai-enc-key \
 		JWT_PASSPHRASE=recette \
@@ -50,7 +50,7 @@ start: ensure-default-pbf ensure-jwt-recette ## Start the Docker environment (De
 		JWT_PUBLIC_KEY_PATH=.docker/jwt-recette/public.pem \
 		docker compose -f compose.yaml up --wait
 
-start-recette: ensure-default-pbf ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
+start-recette: ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
 	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
@@ -198,15 +198,31 @@ coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
 
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
-## --- 🗺️ OSM Provisioning ---
-provision: ensure-default-pbf ## Provision all reference sources (OSM/PostGIS + DataTourisme)
+## --- 🗺️ OSM Reference Provisioning (PostGIS) ---
+# Reference data only: regional extracts imported into the `osm` / `tourism`
+# PostGIS schemas. These targets never touch the Valhalla routing graph (#881) —
+# see the "Routing graph" section below.
+provision: ## Provision all reference sources (OSM/PostGIS + DataTourisme)
 	@docker compose --profile provisioning run --rm provisioner
 
 provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS + DataTourisme)
 	@docker compose --profile provisioning run --rm provisioner --no-interaction
 
-provision-recette: ensure-default-pbf ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
+provision-recette: ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
 	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner --no-interaction
+
+## --- 🧭 Routing graph (Valhalla) ---
+# Country-grained and on its own calendar, independent of reference provisioning
+# (#881). The graph cannot be built incrementally, so every run rebuilds it from
+# all the national extracts held in the `valhalla-tiles` volume: adding a country
+# is `make routing-build france belgium`. Hours for France, uncapped memory —
+# see docs/runbooks/valhalla-routing-graph.md.
+routing-build: ## Build the Valhalla routing graph for the given country slugs (e.g. make routing-build france)
+	@test -n "$(ARGS)" || { echo "Usage: make routing-build <slug> [slug...] (e.g. make routing-build france)"; exit 1; }
+	@ROUTING_SLUGS="$(ARGS)" docker compose --profile routing-build run --rm --no-deps valhalla-builder
+
+routing-up: ## Start the Valhalla routing service (requires a graph built by `make routing-build`)
+	@COMPOSE_PROFILES=routing docker compose up --wait valhalla
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration

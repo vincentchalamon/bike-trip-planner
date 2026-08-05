@@ -7,8 +7,15 @@ namespace Provisioner;
 final class GeofabrikRegionRegistry
 {
     /**
-     * Geofabrik slugs that live at the `europe/` level (whole countries) rather
-     * than under `europe/france/`. The Tier-1 beta perimeter is FR + Benelux.
+     * Whole countries: Geofabrik publishes them at the `europe/` level rather
+     * than under `europe/france/`. This list exists for **URL resolution only**
+     * (see {@see downloadUrl()}); it is not the routing perimeter.
+     *
+     * #881 briefly named it `ROUTING_SLUGS` to also mean "the countries the
+     * Valhalla graph covers". That claim could not be enforced from here — the
+     * perimeter of a build is the argument passed to `make routing-build <slug>`
+     * — so it would have been a second source of truth that nothing checks. The
+     * name is back to what the constant can actually guarantee.
      */
     private const array EUROPE_LEVEL_SLUGS = ['france', 'belgium', 'netherlands', 'luxembourg'];
 
