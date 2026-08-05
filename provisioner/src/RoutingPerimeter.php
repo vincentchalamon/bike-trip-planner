@@ -97,7 +97,7 @@ final readonly class RoutingPerimeter
         $values = [] === $slugs
             ? ''
             : implode(', ', array_map(
-                static fn (string $slug): string => \sprintf("('%s', now())", str_replace("'", "''", $slug)),
+                static fn (string $slug): string => \sprintf('(%s, now())', ZonePromotion::literal($slug)),
                 $slugs,
             ));
 
@@ -107,7 +107,7 @@ final readonly class RoutingPerimeter
             : \sprintf(
                 ' INSERT INTO osm.routing_perimeter (slug, observed_at) VALUES %s ON CONFLICT (slug) DO UPDATE SET observed_at = excluded.observed_at; DELETE FROM osm.routing_perimeter WHERE slug NOT IN (%s);',
                 $values,
-                implode(', ', array_map(static fn (string $slug): string => "'".str_replace("'", "''", $slug)."'", $slugs)),
+                implode(', ', array_map(ZonePromotion::literal(...), $slugs)),
             );
 
         $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c', $sql]);

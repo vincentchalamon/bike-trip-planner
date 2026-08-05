@@ -44,9 +44,9 @@ final readonly class PromotionReport
     {
         $path = $workDir.'/promotion-report.tsv';
         $sql = \sprintf(
-            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = '%s' ORDER BY source, table_name) TO '%s'",
+            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s ORDER BY source, table_name) TO '%s'",
             ZonePromotion::REPORT_TABLE,
-            str_replace("'", "''", $zoneSlug),
+            ZonePromotion::literal($zoneSlug),
             $path,
         );
 
