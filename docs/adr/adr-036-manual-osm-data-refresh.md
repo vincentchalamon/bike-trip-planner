@@ -1,6 +1,6 @@
 # ADR-036: Manual OSM Data Refresh — Supersedes ADR-033
 
-- **Status:** Accepted
+- **Status:** Accepted — manual refresh stands, and [ADR-049](adr-049-zone-opening-and-import-time-completeness.md) splits it in two: reference data is refreshed **one zone per run** (`make provision <zone>`), the routing graph on its own calendar (`make routing-build <slug>`). The two commands above are no longer one refresh.
 - **Date:** 2026-06-01
 - **Supersedes:** ADR-033 (OSM Data Refresh Strategy — Nightly Re-Download via `osm-cron`)
 - **Depends on:** ADR-017 (Valhalla Routing Engine), ADR-020 (Dynamic Overpass Region Provisioning)
