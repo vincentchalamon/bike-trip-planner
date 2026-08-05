@@ -313,6 +313,97 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertSame([], $reference['osm']['completeness']);
     }
 
+    #[Test]
+    public function readinessReportsTheOpenZonesAndTheRoutingContainmentInvariant(): void
+    {
+        // ADR-049 §6: nothing derives the routing slugs from the registry, so the
+        // invariant "the routing perimeter encompasses the reference perimeter" is
+        // checked rather than maintained — and this is where the check stays visible
+        // after the provisioner refused (or did not get the chance to refuse).
+        $this->seedZones(
+            zones: [['bretagne', 'Bretagne', 'france'], ['belgique', 'Belgique', 'belgium']],
+            perimeter: ['france'],
+        );
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $zones = $data['deps']['reference_data']['zones'];
+
+        // Ordered by slug, so Belgium comes first.
+        $this->assertSame(['belgique', 'bretagne'], array_column($zones['open'], 'slug'));
+        $this->assertFalse($zones['open'][0]['routable'], 'belgium is not in the graph');
+        $this->assertTrue($zones['open'][1]['routable'], 'france is');
+        $this->assertSame(['france'], $zones['routing_perimeter']);
+        $this->assertSame('violated', $zones['routing_containment']['status']);
+        $this->assertSame(['belgique'], $zones['routing_containment']['uncovered']);
+        // An unrouteable zone degrades that zone's trips; it never takes readiness down.
+        $this->assertSame('ok', $data['status']);
+    }
+
+    #[Test]
+    public function readinessReportsSatisfiedContainmentWhenEveryOpenZoneIsRoutable(): void
+    {
+        $this->seedZones(zones: [['bretagne', 'Bretagne', 'france']], perimeter: ['france', 'belgium']);
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $zones = $this->client->request('GET', '/api/health')->toArray()['deps']['reference_data']['zones'];
+
+        $this->assertSame('ok', $zones['routing_containment']['status']);
+        $this->assertSame([], $zones['routing_containment']['uncovered']);
+        // The inverse asymmetry is healthy: routing may cover a country with no
+        // reference data at all (ADR-049 §6).
+        $this->assertSame(['belgium', 'france'], $zones['routing_perimeter']);
+    }
+
+    #[Test]
+    public function readinessReportsNoOpenZoneBeforeAnythingIsProvisioned(): void
+    {
+        $this->seedZones(zones: [], perimeter: []);
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $zones = $this->client->request('GET', '/api/health')->toArray()['deps']['reference_data']['zones'];
+
+        $this->assertSame([], $zones['open']);
+        $this->assertSame('ok', $zones['routing_containment']['status'], 'nothing open is nothing to cover');
+    }
+
+    /**
+     * @param list<array{0: string, 1: string, 2: string}> $zones     slug, name, country
+     * @param list<string>                                 $perimeter country slugs the routing graph was built from
+     */
+    private function seedZones(array $zones, array $perimeter): void
+    {
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement('TRUNCATE osm.zones, osm.routing_perimeter');
+
+        foreach ($zones as $zone) {
+            $connection->executeStatement(
+                'INSERT INTO osm.zones (slug, name, country, opened_at, refreshed_at, pipeline_version) VALUES (?, ?, ?, now(), now(), 1)',
+                $zone,
+            );
+        }
+
+        foreach ($perimeter as $slug) {
+            $connection->executeStatement('INSERT INTO osm.routing_perimeter (slug, observed_at) VALUES (?, now())', [$slug]);
+        }
+    }
+
     private function truncateProvisioningMetadata(): void
     {
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');

@@ -7,11 +7,9 @@ namespace Provisioner\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\Exception\DownloadFailedException;
-use Provisioner\Exception\MergeFailedException;
 use Provisioner\OsmDataDownloader;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Component\Process\Process;
 
 final class OsmDataDownloaderTest extends TestCase
 {
@@ -149,83 +147,6 @@ final class OsmDataDownloaderTest extends TestCase
         self::assertFileExists($finalPath);
         self::assertSame('stale-but-valid', file_get_contents($finalPath));
         self::assertFileDoesNotExist($finalPath.'.tmp');
-    }
-
-    #[Test]
-    public function mergeBuildsOsmiumCommandAndSucceeds(): void
-    {
-        /** @var list<string>|null $capturedCommand */
-        $capturedCommand = null;
-        $factory = function (array $command) use (&$capturedCommand): Process {
-            $capturedCommand = $command;
-
-            // Trivial process that always succeeds.
-            return new Process(['true']);
-        };
-
-        $downloader = new OsmDataDownloader(
-            regionsDir: $this->regionsDir,
-            processFactory: $factory,
-        );
-
-        $output = $this->tmpDir.'/merged.osm.pbf';
-        $downloader->merge(['/a.osm.pbf', '/b.osm.pbf'], $output);
-
-        self::assertSame(
-            ['osmium', 'merge', '--overwrite', '-o', $output, '/a.osm.pbf', '/b.osm.pbf'],
-            $capturedCommand,
-        );
-    }
-
-    #[Test]
-    public function mergeFailureRaisesMergeFailedExceptionWithStderr(): void
-    {
-        $factory = static fn (array $command): Process => new Process([
-            'sh', '-c', 'echo "boom" 1>&2; exit 2',
-        ]);
-
-        $downloader = new OsmDataDownloader(
-            regionsDir: $this->regionsDir,
-            processFactory: $factory,
-        );
-
-        try {
-            $downloader->merge(['/a.osm.pbf'], $this->tmpDir.'/merged.osm.pbf');
-            self::fail('Expected MergeFailedException');
-        } catch (MergeFailedException $mergeFailedException) {
-            self::assertStringContainsString('osmium merge failed', $mergeFailedException->getMessage());
-            self::assertStringContainsString('boom', $mergeFailedException->getMessage());
-            self::assertStringContainsString('exit 2', $mergeFailedException->getMessage());
-        }
-    }
-
-    #[Test]
-    public function mergeTimeoutRaisesMergeFailedException(): void
-    {
-        $factory = static fn (array $command): Process => new Process(['sleep', '5']);
-
-        $downloader = new OsmDataDownloader(
-            regionsDir: $this->regionsDir,
-            processFactory: $factory,
-            mergeTimeoutSeconds: 0.05,
-        );
-
-        try {
-            $downloader->merge(['/a.osm.pbf'], $this->tmpDir.'/merged.osm.pbf');
-            self::fail('Expected MergeFailedException');
-        } catch (MergeFailedException $mergeFailedException) {
-            self::assertStringContainsString('timed out', $mergeFailedException->getMessage());
-        }
-    }
-
-    #[Test]
-    public function mergeWithEmptyListThrows(): void
-    {
-        $downloader = new OsmDataDownloader($this->regionsDir);
-
-        $this->expectException(MergeFailedException::class);
-
-        $downloader->merge([], $this->tmpDir.'/merged.osm.pbf');
     }
 
     #[Test]

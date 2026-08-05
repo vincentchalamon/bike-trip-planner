@@ -6,34 +6,40 @@ namespace Provisioner;
 
 use Provisioner\Exception\DownloadFailedException;
 use Provisioner\Exception\ImportFailedException;
-use Provisioner\Exception\MergeFailedException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * Opens one reference zone: `provision <zone>` (ADR-049 §1).
+ *
+ * There used to be no such operation. `RegionSelectionStore` kept a **cumulative** list
+ * of slugs in `regions.json` and every run re-downloaded, re-merged and re-imported all
+ * of them, so opening 13 regions one at a time cost 13 full re-imports of a growing
+ * dataset. The zone is now a mandatory argument, the selection file and the interactive
+ * selector are gone, and the source of truth for what is open is `osm.zones` in the
+ * database.
+ *
+ * Two consequences visible here:
+ *
+ * - **No merge.** One zone per run means one extract to filter, so `osmium merge`
+ *   disappeared along with the reference staging PBF it produced.
+ * - **The containment invariant is checked before anything is downloaded.** ADR-049 §6
+ *   requires the routing perimeter to encompass the reference perimeter; nothing
+ *   maintains that, so refusing a zone the graph does not cover — with an actionable
+ *   message — is the whole user experience of the invariant.
+ */
 #[AsCommand(
     name: 'provision',
-    description: 'Download the selected OSM regions and import them into the PostGIS reference index',
+    description: 'Open one OSM reference zone: download its extract and promote it into the PostGIS reference index',
 )]
 final class ProvisionCommand extends Command
 {
     private const string DEFAULT_REGIONS_DIR = '/data/regions';
-
-    /**
-     * Staging file for the PostGIS import only: the selected regional extracts
-     * merged together, then tags-filtered into {@see DEFAULT_FILTERED_PBF}.
-     * Nothing outside this command reads it — in particular not Valhalla, whose
-     * graph is built from national extracts held in its own volume (#881). It
-     * replaces `default.osm.pbf`, whose neutral name is what let the routing
-     * engine bind-mount the reference dataset in the first place.
-     */
-    private const string DEFAULT_REFERENCE_PBF = '/data/reference-merged.osm.pbf';
-
-    private const string DEFAULT_SELECTION_FILE = '/data/regions.json';
 
     private const string DEFAULT_FILTERED_PBF = '/data/tier1-filtered.osm.pbf';
 
@@ -49,19 +55,17 @@ final class ProvisionCommand extends Command
      */
     private $lockHandle;
 
-    private readonly RegionSelectionStore $selectionStore;
-
     private readonly OsmDataDownloader $downloader;
 
     private readonly PostgisImporter $postgisImporter;
 
+    private readonly RoutingPerimeter $routingPerimeter;
+
+    private readonly PromotionReport $promotionReport;
+
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
-        private readonly string $referencePbf = self::DEFAULT_REFERENCE_PBF,
-        string $selectionFile = self::DEFAULT_SELECTION_FILE,
-        ?RegionSelectionStore $selectionStore = null,
         ?OsmDataDownloader $downloader = null,
-        private readonly bool $runMerge = true,
         private readonly string $filteredPbf = self::DEFAULT_FILTERED_PBF,
         ?PostgisImporter $postgisImporter = null,
         private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
@@ -69,55 +73,70 @@ final class ProvisionCommand extends Command
         private readonly ?DataTourismeImporter $dataTourismeImporter = null,
         private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
         private readonly string $logFile = self::DEFAULT_LOG_FILE,
+        ?RoutingPerimeter $routingPerimeter = null,
+        ?PromotionReport $promotionReport = null,
     ) {
         parent::__construct();
 
-        $this->selectionStore = $selectionStore ?? new RegionSelectionStore($selectionFile);
         $this->downloader = $downloader ?? new OsmDataDownloader(regionsDir: $this->regionsDir);
         $this->postgisImporter = $postgisImporter ?? new PostgisImporter(
             flexStylePath: \dirname(__DIR__).'/osm2pgsql/tier1.lua',
         );
+        $this->routingPerimeter = $routingPerimeter ?? new RoutingPerimeter();
+        $this->promotionReport = $promotionReport ?? new PromotionReport();
     }
 
     protected function configure(): void
     {
-        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded without executing');
+        // Optional at the console level, required in fact: validating it here buys the
+        // list of zones and the routing hint in the error, which "Not enough arguments"
+        // cannot give.
+        $this->addArgument('zone', InputArgument::OPTIONAL, 'Geofabrik slug or name of the zone to open (e.g. bretagne)');
+        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded and imported without executing');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $io->title('OSM Region Provisioner');
+        $io->title('OSM Reference Zone Provisioner');
 
-        $dryRun = (bool) $input->getOption('dry-run');
-        $interactive = $input->isInteractive();
-        $hasSelection = $this->selectionStore->exists();
+        $zoneArgument = $input->getArgument('zone');
+        $zone = \is_string($zoneArgument) ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
 
-        if (!$hasSelection && !$interactive) {
-            $io->error('First run requires interactive setup. Run `make provision` once manually.');
+        if (null === $zone) {
+            $this->fail($io, \sprintf(
+                'A zone is required: `make provision <zone>` opens exactly one (e.g. `make provision bretagne`).%s%s',
+                \is_string($zoneArgument) && '' !== trim($zoneArgument) ? \sprintf(' "%s" is not a known zone.', $zoneArgument) : '',
+                \sprintf("\nKnown zones: %s", implode(', ', GeofabrikRegionRegistry::slugs())),
+            ));
 
             return Command::FAILURE;
         }
 
-        // Serialise concurrent runs (cron + manual overlap): two provisioners
-        // writing the same staging schema would race destructively (ADR-041).
+        $dryRun = (bool) $input->getOption('dry-run');
+
+        if (!$this->assertRoutingCovers($io, $zone['country'], $zone['name'])) {
+            return Command::FAILURE;
+        }
+
+        // Serialise concurrent runs (cron + manual overlap): two provisioners writing the
+        // same zone would race on its staging schema (ADR-041).
         if (!$this->acquireLock($io)) {
             return Command::FAILURE;
         }
 
         try {
-            // Each reference source runs as its own step (own download, schema and
-            // atomic swap) and is attempted independently: one source failing must
-            // not abort the others, so a single bad refresh degrades only its own
-            // dataset (ADR-041). Outcomes are aggregated into the final exit code.
+            // Each reference source runs as its own step (own download, staging schema and
+            // promotion) and is attempted independently: one source failing must not abort
+            // the others, so a single bad refresh degrades only its own dataset (ADR-041).
+            // Outcomes are aggregated into the final exit code.
             $outcomes = [];
 
-            $outcomes['osm'] = $hasSelection
-                ? $this->runUpdateFlow($io, $dryRun, $interactive)
-                : $this->runInstallFlow($io, $dryRun);
+            $outcomes['osm'] = $this->runOsm($io, $zone, $dryRun);
 
             if (!$dryRun) {
-                $outcomes['datatourisme'] = $this->runDataTourisme($io);
+                $outcomes['datatourisme'] = $this->runDataTourisme($io, $zone['slug']);
+                $this->reportPromotion($io, $zone['slug']);
             }
 
             $this->summarize($io, $outcomes);
@@ -126,6 +145,38 @@ final class ProvisionCommand extends Command
         } finally {
             $this->releaseLock();
         }
+    }
+
+    /**
+     * Refuses a zone the routing graph does not cover (ADR-049 §6). An *observed* empty
+     * perimeter refuses — that is a machine with no graph yet; a perimeter that cannot be
+     * observed at all only warns, since a missing volume mount must not become a
+     * provisioning outage.
+     *
+     * @param string $country Geofabrik country slug the zone belongs to
+     */
+    private function assertRoutingCovers(SymfonyStyle $io, string $country, string $zoneName): bool
+    {
+        if (!$this->routingPerimeter->isObservable()) {
+            $io->warning('The routing volume is not mounted, so the routing perimeter cannot be checked. Opening the zone anyway; verify that the graph covers it.');
+
+            return true;
+        }
+
+        if ($this->routingPerimeter->covers($country)) {
+            return true;
+        }
+
+        $built = $this->routingPerimeter->slugs();
+        $this->fail($io, \sprintf(
+            '%s is in "%s", which the routing graph does not cover, so a trip there could not be routed. Build it first with `make routing-build %s`, then provision again. Routing graph currently built from: %s.',
+            $zoneName,
+            $country,
+            $country,
+            [] === $built ? 'nothing' : implode(', ', $built),
+        ));
+
+        return false;
     }
 
     /**
@@ -181,6 +232,40 @@ final class ProvisionCommand extends Command
     }
 
     /**
+     * The zone-opening report: what each source offered and what was actually new. "0 new
+     * entries" on a re-open is the evidence that the identity anti-join works, so it is
+     * stated rather than left to be inferred from silence.
+     */
+    private function reportPromotion(SymfonyStyle $io, string $zoneSlug): void
+    {
+        $rows = $this->promotionReport->forZone($zoneSlug, \dirname($this->filteredPbf));
+        if ([] === $rows) {
+            return;
+        }
+
+        $io->section(\sprintf('Zone opening report — %s', $zoneSlug));
+        $io->table(
+            ['source', 'table', 'candidates', 'new entries', 'already present'],
+            array_map(
+                static fn (array $row): array => [
+                    $row['source'],
+                    $row['table'],
+                    (string) $row['candidates'],
+                    (string) $row['inserted'],
+                    (string) ($row['candidates'] - $row['inserted']),
+                ],
+                $rows,
+            ),
+        );
+
+        $added = array_sum(array_column($rows, 'inserted'));
+        $io->writeln(0 === $added
+            ? '  0 new entries: the sources carry nothing this zone did not already hold.'
+            : \sprintf('  %d new entries across %d tables.', $added, \count($rows)));
+        $this->logLine('INFO', \sprintf('zone %s -> %d new entries', $zoneSlug, $added));
+    }
+
+    /**
      * Reports a failure both to the console and to the persistent log file, so
      * the detailed cause (command + stderr) survives for later diagnosis even
      * when the container logs are gone (ADR-041).
@@ -198,7 +283,7 @@ final class ProvisionCommand extends Command
         @file_put_contents($this->logFile, $line, \FILE_APPEND);
     }
 
-    private function runDataTourisme(SymfonyStyle $io): int
+    private function runDataTourisme(SymfonyStyle $io, string $zoneSlug): int
     {
         $importer = $this->dataTourismeImporter;
         if (!$importer instanceof DataTourismeImporter) {
@@ -226,7 +311,7 @@ final class ProvisionCommand extends Command
         $io->section('Importing DataTourisme into PostGIS');
 
         try {
-            $importer->run($this->dataTourismeDir);
+            $importer->run($this->dataTourismeDir, $zoneSlug);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 
@@ -240,227 +325,50 @@ final class ProvisionCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function runInstallFlow(SymfonyStyle $io, bool $dryRun): int
+    /**
+     * @param array{name: string, slug: string, size: string, country: string} $zone
+     */
+    private function runOsm(SymfonyStyle $io, array $zone, bool $dryRun): int
     {
-        $allRegions = GeofabrikRegionRegistry::all();
-        $regionNames = array_keys($allRegions);
-        $existingPbfs = $this->detectExistingPbfs();
+        $io->section(\sprintf('Opening zone %s (%s, %s)', $zone['name'], $zone['slug'], $zone['size']));
 
-        $selected = [];
-        $isFirst = true;
-
-        while (true) {
-            $prompt = $isFirst
-                ? 'Which region do you want to add?'
-                : 'Which region do you want to add? (leave empty to finish)';
-            $isFirst = false;
-
-            $available = array_diff($regionNames, $selected);
-            $question = new Question($prompt);
-            $question->setAutocompleterValues(
-                array_map(
-                    static fn (string $name): string => \sprintf('%s (%s)', $name, $allRegions[$name]['size']),
-                    array_values($available),
-                ),
-            );
-
-            /** @var string|null $answer */
-            $answer = $io->askQuestion($question);
-
-            if (null === $answer || '' === trim($answer)) {
-                if ([] === $selected) {
-                    $io->warning('No region selected.');
-
-                    return Command::SUCCESS;
-                }
-
-                break;
-            }
-
-            $regionName = (string) preg_replace('/\s*\(.*\)$/', '', trim($answer));
-
-            if (!isset($allRegions[$regionName])) {
-                $io->error(\sprintf('Unknown region: "%s"', $answer));
-                continue;
-            }
-
-            if (\in_array($regionName, $selected, true)) {
-                $io->warning(\sprintf('"%s" is already selected.', $regionName));
-                continue;
-            }
-
-            $selected[] = $regionName;
-
-            $alreadyDownloaded = \in_array($allRegions[$regionName]['slug'], $existingPbfs, true);
-            $io->success(\sprintf(
-                'Added: %s%s',
-                $regionName,
-                $alreadyDownloaded ? ' (already downloaded)' : '',
-            ));
-        }
-
-        $io->section('Selected regions');
-        foreach ($selected as $name) {
-            $alreadyDownloaded = \in_array($allRegions[$name]['slug'], $existingPbfs, true);
-            $io->writeln(\sprintf(
-                '  %s %s (%s)%s',
-                $alreadyDownloaded ? "\u{2713}" : "\u{2022}",
-                $name,
-                $allRegions[$name]['size'],
-                $alreadyDownloaded ? ' [cached]' : '',
-            ));
-        }
+        $targetPath = $this->downloader->targetPath($zone['slug']);
 
         if ($dryRun) {
-            $io->note('Dry run — no downloads or merges will be performed.');
+            $io->writeln(\sprintf('  Would download %s', GeofabrikRegionRegistry::downloadUrl($zone['slug'])));
+            $io->writeln(\sprintf('  Would import %s into %s', $targetPath, PostgisImporter::stagingSchema($zone['slug'])));
+            $io->note('Dry run — nothing downloaded, nothing imported.');
 
             return Command::SUCCESS;
         }
 
-        if (!$io->confirm('Do you want to proceed?', true)) {
-            return Command::SUCCESS;
+        // Record the observed routing perimeter so /api/health can assert containment
+        // from the database alone. Best-effort by design: it is an observation, and
+        // failing to write it must not fail an otherwise valid import.
+        try {
+            $this->routingPerimeter->record();
+        } catch (ImportFailedException $importFailedException) {
+            $io->warning(\sprintf('Could not record the routing perimeter: %s', $importFailedException->getMessage()));
         }
 
-        $slugs = array_map(static fn (string $name): string => $allRegions[$name]['slug'], $selected);
+        // The extract is always re-downloaded: a zone is opened deliberately, and the
+        // point of opening it again is to pick up what OSM has since gained.
+        $io->write(\sprintf('  Downloading %s... ', $zone['slug']));
 
-        $result = $this->downloadAndMerge($io, $slugs, force: false);
-        if (Command::SUCCESS !== $result) {
-            return $result;
-        }
-
-        $this->selectionStore->save(array_values($slugs));
-        $io->success('Done! The selected regions are imported into the PostGIS reference index.');
-
-        return Command::SUCCESS;
-    }
-
-    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive): int
-    {
-        $slugs = $this->selectionStore->load();
-        $knownSlugs = array_column(GeofabrikRegionRegistry::all(), 'slug');
-        $unknown = array_values(array_diff($slugs, $knownSlugs));
-
-        if ([] !== $unknown) {
-            $io->error(\sprintf(
-                'Selection file contains unknown slugs: %s. Run `make provision` interactively to reconfigure.',
-                implode(', ', $unknown),
-            ));
+        try {
+            $this->downloader->download($zone['slug']);
+        } catch (DownloadFailedException $downloadFailedException) {
+            $io->newLine();
+            $this->fail($io, $downloadFailedException->getMessage());
 
             return Command::FAILURE;
         }
 
-        if ([] === $slugs) {
-            if (!$interactive) {
-                $io->error('Selection file exists but is empty or invalid. Run `make provision` interactively to recreate it.');
-
-                return Command::FAILURE;
-            }
-
-            $io->warning('Selection file exists but is empty or invalid. Falling back to install flow.');
-
-            return $this->runInstallFlow($io, $dryRun);
-        }
-
-        if (!$interactive) {
-            return $this->runSilentUpdate($io, $slugs, $dryRun);
-        }
-
-        $choice = $io->choice(
-            'Selection already exists. What do you want to do?',
-            ['update', 'reconfigure', 'cancel'],
-            'update',
-        );
-
-        return match ($choice) {
-            'update' => $this->runSilentUpdate($io, $slugs, $dryRun),
-            'reconfigure' => $this->runInstallFlow($io, $dryRun),
-            default => Command::SUCCESS,
-        };
-    }
-
-    /**
-     * @param list<string> $slugs
-     */
-    private function runSilentUpdate(SymfonyStyle $io, array $slugs, bool $dryRun): int
-    {
-        $io->section('Updating persisted regions');
-        foreach ($slugs as $slug) {
-            $io->writeln(\sprintf('  %s %s', "\u{2022}", $slug));
-        }
-
-        if ($dryRun) {
-            $io->note('Dry run — no downloads or merges will be performed.');
-
-            return Command::SUCCESS;
-        }
-
-        $result = $this->downloadAndMerge($io, $slugs, force: true);
-        if (Command::SUCCESS !== $result) {
-            return $result;
-        }
-
-        $io->success('Update complete. The PostGIS reference index is up to date.');
-
-        return Command::SUCCESS;
-    }
-
-    /**
-     * @param list<string> $slugs
-     */
-    private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force): int
-    {
-        $toDownload = [];
-        foreach ($slugs as $slug) {
-            $targetPath = $this->downloader->targetPath($slug);
-
-            if (!$force && file_exists($targetPath)) {
-                $io->writeln(\sprintf('  [skip] %s (already downloaded)', $slug));
-                continue;
-            }
-
-            $toDownload[] = $slug;
-        }
-
-        $total = \count($toDownload);
-        foreach ($toDownload as $i => $slug) {
-            $io->write(\sprintf('  [%d/%d] Downloading %s... ', $i + 1, $total, $slug));
-
-            try {
-                $this->downloader->download($slug);
-            } catch (DownloadFailedException $e) {
-                $io->newLine();
-                $this->fail($io, $e->getMessage());
-
-                return Command::FAILURE;
-            }
-
-            $io->writeln("\u{2713}");
-        }
-
-        if (!$this->runMerge) {
-            return Command::SUCCESS;
-        }
-
-        $pbfFiles = glob($this->regionsDir.'/*.osm.pbf') ?: [];
-        if ([] !== $pbfFiles) {
-            $io->write('  Merging PBF files with osmium... ');
-
-            try {
-                $this->downloader->merge($pbfFiles, $this->referencePbf);
-            } catch (MergeFailedException $e) {
-                $io->newLine();
-                $this->fail($io, $e->getMessage());
-
-                return Command::FAILURE;
-            }
-
-            $io->writeln("\u{2713}");
-        }
-
+        $io->writeln("\u{2713}");
         $io->write('  Importing Tier-1 features into PostGIS... ');
 
         try {
-            $this->postgisImporter->run($this->referencePbf, $this->filteredPbf);
+            $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf);
         } catch (ImportFailedException $importFailedException) {
             $io->newLine();
             $this->fail($io, $importFailedException->getMessage());
@@ -469,22 +377,8 @@ final class ProvisionCommand extends Command
         }
 
         $io->writeln("\u{2713}");
+        $io->success(\sprintf('Zone %s is open. Every other zone was left untouched.', $zone['name']));
 
         return Command::SUCCESS;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function detectExistingPbfs(): array
-    {
-        $existing = [];
-        if (is_dir($this->regionsDir)) {
-            foreach (glob($this->regionsDir.'/*.osm.pbf') ?: [] as $file) {
-                $existing[] = basename($file, '-latest.osm.pbf');
-            }
-        }
-
-        return $existing;
     }
 }

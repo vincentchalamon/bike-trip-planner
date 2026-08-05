@@ -244,26 +244,32 @@ OSM feeds **two independent datasets**, on two grains and two calendars — they
 
 See [ADR-049](docs/adr/adr-049-zone-opening-and-import-time-completeness.md) for the import model (zone opening, transactional promotion, import-time completeness gate, append-only storage), [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the refresh rationale, and [the routing-graph runbook](docs/runbooks/valhalla-routing-graph.md) for the build + upload procedure.
 
-**Bootstrap (first install or adding regions):**
+**Opening a zone (one zone per run):**
 
 ```bash
-make provision
+make provision bretagne
 ```
 
-This runs the unified `provision` command inside the `provisioner` container (Compose profile `provisioning`). It loads **all reference sources** in one shot:
+The zone is a **mandatory argument** — a Geofabrik slug or display name. The `provision` command runs inside the `provisioner` container (Compose profile `provisioning`) and loads **all reference sources** for that one zone:
 
-- **OSM + PostGIS** — downloads the configured Geofabrik regions, writes them atomically to the shared `/data` volume, updates `/data/regions.json`, then imports the bikepacking-relevant OSM features (POI, accommodations, water points) into the PostGIS `osm` schema via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`). The import builds a staging schema and swaps it onto the live `osm` schema in one transaction, so the previous dataset keeps serving until the new one is complete. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
-- **DataTourisme** — downloads the configured flux and imports it into the `tourism` schema. Skipped gracefully (with a warning) when `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` are absent, so OSM still provisions.
+- **OSM + PostGIS** — downloads that zone's Geofabrik extract into the shared `/data` volume, tags-filters it, imports the bikepacking-relevant OSM features (POI, accommodations, water points) into a staging schema scoped to the zone via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`), then promotes into the live `osm` schema the keys it does not already hold — registry row, coverage polygon and metadata included — in one transaction. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
+- **DataTourisme** — downloads the configured flux and promotes the places covered by that zone into the `tourism` schema. Skipped gracefully (with a warning) when `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` are absent, so OSM still provisions.
 
-Re-running the same command later updates existing regions instead of re-installing them — the install vs update mode is detected from the presence of `/data/regions.json` and the `--no-interaction` flag.
+Three properties of that model (ADR-049), all of them checkable from the command's own report:
+
+- **Opening a second zone keeps the first.** Promotion is an `INSERT ... SELECT` restricted to keys absent from the live tables, never a schema swap, so no other zone is exposed to the run.
+- **Re-opening an unchanged zone inserts 0 rows** and rewrites nothing. `last_seen_at` is the single exception, and it is metadata; the payload of an imported row is never overwritten.
+- **A zone the routing graph does not cover is refused**, before anything is downloaded, with the `make routing-build <country>` command to run first. The provisioner reads the routing volume read-only to observe that perimeter, and records it so `/api/health` reports the containment invariant.
+
+`osm.zones` is the source of truth for what is open; there is no selection file.
 
 **Refresh (manual):**
 
 Both datasets are refreshed manually — there is no scheduled job — and independently:
 
 ```bash
-make provision-update            # reference: re-download the configured regions
-                                 # and re-import them into PostGIS (non-interactive)
+make provision bretagne          # reference: re-open one zone, picking up what
+                                 # OSM has gained since (0 new rows if nothing did)
 make routing-build france        # routing: rebuild the graph for the perimeter
 ```
 
@@ -271,13 +277,13 @@ make routing-build france        # routing: rebuild the graph for the perimeter
 
 **Iso-prod recette stack:**
 
-`make provision` / `make provision-update` inherit the dev `COMPOSE_FILE` and target the dev provisioner overlay. To provision against the iso-prod recette stack started with `make start-recette`, use the dedicated target instead:
+`make provision <zone>` inherits the dev `COMPOSE_FILE` and targets the dev provisioner overlay. To provision against the iso-prod recette stack started with `make start-recette`, use the dedicated target instead:
 
 ```bash
-make provision-recette           # provision the recette PostGIS index (non-interactive)
+make provision-recette nord-pas-de-calais    # open one zone on the recette index
 ```
 
-It targets `-f compose.yaml -f compose.recette.yaml`. The recette JWT keys and passphrase are wired in `compose.recette.yaml` (no `JWT_*` passed on the command line), and the `prod` / `dev` provisioner images now carry distinct tags (`bike-trip-planner-provisioner:prod` vs `:dev`), so the previous forced `--build` is no longer needed. Like `make provision`, it loads OSM + DataTourisme. The first run needs a seeded region selection in `.docker/osm/data/regions.json` (e.g. `{"slugs":["nord-pas-de-calais"]}`) or a prior interactive `make provision`.
+It targets `-f compose.yaml -f compose.recette.yaml`. The recette JWT keys and passphrase are wired in `compose.recette.yaml` (no `JWT_*` passed on the command line), and the `prod` / `dev` provisioner images now carry distinct tags (`bike-trip-planner-provisioner:prod` vs `:dev`), so the previous forced `--build` is no longer needed. Like `make provision`, it loads OSM + DataTourisme and takes the zone as a mandatory argument — no seed file, and nothing to prepare beyond a routing graph covering the zone's country.
 
 See [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for why the automated nightly job (`osm-cron`) was dropped.
 

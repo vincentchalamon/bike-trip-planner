@@ -217,6 +217,7 @@ final readonly class HealthController
                 'latency_ms' => $this->elapsedMs($start),
                 'osm' => $osm,
                 'tourism' => $tourism,
+                'zones' => $this->fetchZones(),
             ];
         } catch (\Throwable $throwable) {
             return [
@@ -268,6 +269,76 @@ final readonly class HealthController
             'feature_counts' => $this->decodeJsonColumn($row['feature_counts'] ?? null),
             'completeness' => $this->decodeJsonColumn($row['completeness'] ?? null),
             'rejections' => $this->decodeJsonColumn($row['rejections'] ?? null),
+        ];
+    }
+
+    /**
+     * Reports the zone registry and the containment invariant of ADR-049 §6: **the
+     * routing perimeter encompasses the reference perimeter**. Nothing maintains that —
+     * the routing slugs are not derived from the registry — so the invariant is
+     * *checked*, and this is where the check is visible after the fact. The provisioner
+     * refuses to open a zone the graph does not cover; a violation here means the graph
+     * shrank (or the reference index was seeded some other way) since.
+     *
+     * The comparison is between two explicit lists, `osm.zones.country` against
+     * `osm.routing_perimeter.slug`, and cannot be geometric: a clipped Geofabrik regional
+     * extract yields no country polygon to compare (#880).
+     *
+     * Like the rest of `reference_data`, this never flips readiness (ADR-040): an
+     * unrouteable zone degrades that zone's trips, it does not take the instance down.
+     *
+     * @return array{open: list<array<string, mixed>>, routing_perimeter: list<string>, routing_containment: array{status: string, uncovered: list<string>}}
+     */
+    private function fetchZones(): array
+    {
+        $unknown = ['open' => [], 'routing_perimeter' => [], 'routing_containment' => ['status' => 'unknown', 'uncovered' => []]];
+
+        try {
+            $perimeter = $this->connection->fetchFirstColumn('SELECT slug FROM osm.routing_perimeter ORDER BY slug');
+            $zones = $this->connection->fetchAllAssociative(
+                <<<'SQL'
+                    SELECT z.slug, z.name, z.country, z.opened_at, z.refreshed_at, z.pipeline_version,
+                           (p.slug IS NOT NULL) AS routable
+                    FROM osm.zones z
+                    LEFT JOIN osm.routing_perimeter p ON p.slug = z.country
+                    ORDER BY z.slug
+                    SQL,
+            );
+        } catch (\Throwable) {
+            // Registry absent (migrations not run on this instance): unknown, not a fault.
+            return $unknown;
+        }
+
+        $open = array_map(
+            static fn (array $row): array => [
+                'slug' => \is_string($row['slug']) ? $row['slug'] : null,
+                'name' => \is_string($row['name']) ? $row['name'] : null,
+                'country' => \is_string($row['country']) ? $row['country'] : null,
+                'opened_at' => \is_string($row['opened_at']) ? $row['opened_at'] : null,
+                'refreshed_at' => \is_string($row['refreshed_at']) ? $row['refreshed_at'] : null,
+                'pipeline_version' => is_numeric($row['pipeline_version']) ? (int) $row['pipeline_version'] : null,
+                'routable' => \in_array($row['routable'], [true, 't', 1, '1'], true),
+            ],
+            $zones,
+        );
+
+        $uncovered = [];
+        foreach ($open as $zone) {
+            if (true !== $zone['routable'] && \is_string($zone['slug'])) {
+                $uncovered[] = $zone['slug'];
+            }
+        }
+
+        return [
+            'open' => $open,
+            'routing_perimeter' => array_values(array_map(
+                static fn (mixed $slug): string => \is_string($slug) ? $slug : '',
+                $perimeter,
+            )),
+            'routing_containment' => [
+                'status' => [] === $uncovered ? 'ok' : 'violated',
+                'uncovered' => $uncovered,
+            ],
         ];
     }
 

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-update provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -9,7 +9,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   $(eval $(ARGS):;@:)
@@ -199,17 +199,20 @@ coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
 ## --- 🗺️ OSM Reference Provisioning (PostGIS) ---
-# Reference data only: regional extracts imported into the `osm` / `tourism`
-# PostGIS schemas. These targets never touch the Valhalla routing graph (#881) —
-# see the "Routing graph" section below.
-provision: ## Provision all reference sources (OSM/PostGIS + DataTourisme)
-	@docker compose --profile provisioning run --rm provisioner
+# Reference data only: one zone per run, promoted into the `osm` / `tourism` PostGIS
+# schemas (ADR-049). These targets never touch the Valhalla routing graph (#881) —
+# see the "Routing graph" section below — but the provisioner does refuse a zone the
+# graph does not cover, so `make routing-build <country>` comes first.
+#
+# Opening a second zone keeps the first: promotion is an INSERT restricted to keys the
+# live tables do not already hold, so re-opening an unchanged zone inserts 0 rows.
+provision: ## Open one OSM reference zone (e.g. make provision bretagne)
+	@test -n "$(ARGS)" || { echo "Usage: make provision <zone> (e.g. make provision bretagne). Zones: see GeofabrikRegionRegistry"; exit 1; }
+	@docker compose --profile provisioning run --rm provisioner $(ARGS)
 
-provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS + DataTourisme)
-	@docker compose --profile provisioning run --rm provisioner --no-interaction
-
-provision-recette: ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
-	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner --no-interaction
+provision-recette: ensure-jwt-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
+	@test -n "$(ARGS)" || { echo "Usage: make provision-recette <zone> (e.g. make provision-recette nord-pas-de-calais)"; exit 1; }
+	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner $(ARGS)
 
 ## --- 🧭 Routing graph (Valhalla) ---
 # Country-grained and on its own calendar, independent of reference provisioning

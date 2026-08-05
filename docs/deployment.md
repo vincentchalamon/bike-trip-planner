@@ -37,7 +37,7 @@ When the Sentry/GlitchTip secrets are missing, the `upload-sourcemaps` job is sk
 - **Error tracking** — Sentry SDKs (`sentry/sentry-symfony`, `@sentry/nextjs`) capture backend and PWA errors. **Beta (Sprint 34.5):** the DSNs point at **Sentry SaaS free tier**; the self-hosted GlitchTip stack (`.docker/glitchtip/`) is kept in-repo but not deployed. Reversible by switching `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_URL` back to the GlitchTip instance. See [ADR-031](adr/adr-031-error-tracking-strategy.md) and [.docker/glitchtip](../.docker/glitchtip/README.md).
 - **Uptime** — **Beta (Sprint 34.5):** only the external **UptimeRobot** probe on `/api/healthz` is active; self-hosted Uptime Kuma (`.docker/uptime-kuma/`) is kept in-repo but not deployed. See [runbooks/uptime-monitoring.md](runbooks/uptime-monitoring.md) and [.docker/uptime-kuma](../.docker/uptime-kuma/README.md).
 - **Incidents** — uptime/error alerts raise a `repository_dispatch` consumed by `.github/workflows/incident-create.yml`, which opens a triaged incident issue. On-call playbooks live in [runbooks/](runbooks/).
-- **OSM data** — routing extracts are refreshed manually (`make provision-update` then restart Valhalla); there is no scheduled job. See [ADR-036](adr/adr-036-manual-osm-data-refresh.md).
+- **OSM data** — two datasets, two calendars, both manual; there is no scheduled job. Reference data is re-opened one zone at a time (`make provision <zone>`); the routing graph is rebuilt out of band (`make routing-build <country>`). See [ADR-049](adr/adr-049-zone-opening-and-import-time-completeness.md) and [ADR-036](adr/adr-036-manual-osm-data-refresh.md).
 
 ## Rollback
 

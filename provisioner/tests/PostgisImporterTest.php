@@ -22,6 +22,14 @@ final class PostgisImporterTest extends TestCase
     private array $captured = [];
 
     /**
+     * The Process instances handed back, in command order, so the env the importer sets
+     * on them can be asserted after the fact.
+     *
+     * @var list<Process>
+     */
+    private array $envProbes = [];
+
+    /**
      * Factory that records each built command and runs a trivial successful process.
      */
     private function capturingFactory(): \Closure
@@ -30,8 +38,10 @@ final class PostgisImporterTest extends TestCase
             /** @var list<string> $cmd */
             $cmd = $command;
             $this->captured[] = $cmd;
+            $process = new Process(['true']);
+            $this->envProbes[] = $process;
 
-            return new Process(['true']);
+            return $process;
         };
     }
 
@@ -43,11 +53,11 @@ final class PostgisImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->filter('/data/default.osm.pbf', '/data/tier1-filtered.osm.pbf');
+        $importer->filter('/data/regions/bretagne-latest.osm.pbf', '/data/tier1-filtered.osm.pbf');
 
         self::assertCount(1, $this->captured);
         self::assertSame(
-            ['osmium', 'tags-filter', '--overwrite', '-o', '/data/tier1-filtered.osm.pbf', '/data/default.osm.pbf'],
+            ['osmium', 'tags-filter', '--overwrite', '-o', '/data/tier1-filtered.osm.pbf', '/data/regions/bretagne-latest.osm.pbf'],
             \array_slice($this->captured[0], 0, 6),
         );
         self::assertContains('nwr/man_made=water_tap', $this->captured[0]);
@@ -81,7 +91,17 @@ final class PostgisImporterTest extends TestCase
     }
 
     #[Test]
-    public function importCreatesStagingSchemaThenRunsOsm2pgsqlFlex(): void
+    public function stagingSchemaIsDerivedFromTheZone(): void
+    {
+        // Derived, never configured: the value cannot drift from the one the flex style
+        // receives, which is what the former fixed constant existed to guarantee.
+        self::assertSame('osm_staging_bretagne', PostgisImporter::stagingSchema('bretagne'));
+        self::assertSame('osm_staging_nord_pas_de_calais', PostgisImporter::stagingSchema('nord-pas-de-calais'));
+        self::assertSame('osm_staging_provence_alpes_cote_d_azur', PostgisImporter::stagingSchema('provence-alpes-cote-d-azur'));
+    }
+
+    #[Test]
+    public function importCreatesTheZoneStagingSchemaAndHandsItToTheFlexStyle(): void
     {
         $importer = new PostgisImporter(
             flexStylePath: '/app/osm2pgsql/tier1.lua',
@@ -89,12 +109,17 @@ final class PostgisImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->import('/data/tier1-filtered.osm.pbf');
+        $importer->import('osm_staging_bretagne', '/data/tier1-filtered.osm.pbf');
 
         self::assertCount(2, $this->captured);
 
         self::assertSame('psql', $this->captured[0][0]);
-        self::assertStringContainsString('CREATE SCHEMA osm_staging', implode(' ', $this->captured[0]));
+        $create = implode(' ', $this->captured[0]);
+        self::assertStringContainsString('CREATE SCHEMA osm_staging_bretagne', $create);
+        // Only ever the zone's own staging schema: no live schema is named here, so a
+        // crashed run can never drop live data.
+        self::assertStringContainsString('DROP SCHEMA IF EXISTS osm_staging_bretagne CASCADE', $create);
+        self::assertStringNotContainsString('DROP SCHEMA IF EXISTS osm CASCADE', $create);
 
         $osm2pgsql = $this->captured[1];
         self::assertSame('osm2pgsql', $osm2pgsql[0]);
@@ -107,105 +132,117 @@ final class PostgisImporterTest extends TestCase
         $midIdx = array_search('--middle-schema', $osm2pgsql, true);
         self::assertNotFalse($midIdx, '--middle-schema flag must be present');
         self::assertArrayHasKey($midIdx + 1, $osm2pgsql, '--middle-schema must be followed by its value');
-        self::assertSame('osm_staging', $osm2pgsql[$midIdx + 1], '--middle-schema value must match STAGING_SCHEMA');
+        self::assertSame('osm_staging_bretagne', $osm2pgsql[$midIdx + 1], '--middle-schema value must match the zone staging schema');
         self::assertContains('/data/tier1-filtered.osm.pbf', $osm2pgsql);
+
+        // tier1.lua reads its output schema from this variable (os.getenv), so the style
+        // and the promotion cannot disagree on where the tables are.
+        self::assertSame(
+            ['TIER1_STAGING_SCHEMA' => 'osm_staging_bretagne'],
+            $this->envProbes[1]->getEnv(),
+        );
+        self::assertSame([], $this->envProbes[0]->getEnv(), 'psql needs no style env');
     }
 
     #[Test]
-    public function buildDerivedCreatesCoveragePolygonAndMetadataInStaging(): void
+    public function promoteReplacesTheGlobalSwapWithATransactionalInsert(): void
     {
         $importer = new PostgisImporter(
             flexStylePath: '/app/osm2pgsql/tier1.lua',
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->buildDerived();
+        $importer->promote('bretagne', 'Bretagne', 'france', 'osm_staging_bretagne');
 
         self::assertCount(2, $this->captured);
+        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS provisioner.promotion_report', implode(' ', $this->captured[0]));
 
-        $coverage = implode(' ', $this->captured[0]);
-        self::assertStringContainsString('CREATE TABLE osm_staging.coverage AS', $coverage);
-        self::assertStringContainsString('ST_Multi(ST_Union(geom))', $coverage);
-        self::assertStringContainsString('FROM osm_staging.admin_boundaries;', $coverage);
-        self::assertStringContainsString('USING gist (geom)', $coverage);
-        // The union must span every imported level: a clipped regional extract never
-        // yields the country relation, so filtering on admin_level = 2 produced a
-        // single NULL row and disabled the out-of-zone check altogether (#880).
-        self::assertStringNotContainsString('admin_level', $coverage);
-
-        $metadata = implode(' ', $this->captured[1]);
-        self::assertStringContainsString('CREATE TABLE osm_staging.metadata AS', $metadata);
-        self::assertStringContainsString('now() AS refreshed_at', $metadata);
-        // Counts cover every flex feature table so /health reports each one.
-        self::assertStringContainsString("'pois', (SELECT count(*) FROM osm_staging.pois)", $metadata);
-        self::assertStringContainsString("'admin_boundaries', (SELECT count(*) FROM osm_staging.admin_boundaries)", $metadata);
-        self::assertStringContainsString("'cycle_routes', (SELECT count(*) FROM osm_staging.cycle_routes)", $metadata);
-        self::assertStringContainsString("'ferries', (SELECT count(*) FROM osm_staging.ferries)", $metadata);
-        self::assertStringContainsString("'fords', (SELECT count(*) FROM osm_staging.fords)", $metadata);
-    }
-
-    #[Test]
-    public function buildDerivedRecordsPerTableCompletenessRatios(): void
-    {
-        $importer = new PostgisImporter(
-            flexStylePath: '/app/osm2pgsql/tier1.lua',
-            processFactory: $this->capturingFactory(),
-        );
-
-        $importer->buildDerived();
-
-        $metadata = implode(' ', $this->captured[1]);
-        self::assertStringContainsString('AS completeness', $metadata);
-        // Everything after the counts: the completeness expression and nothing else
-        // of the counts, whose per-table subqueries share the same table names.
-        $completeness = substr($metadata, (int) strpos($metadata, 'AS feature_counts,'));
-
-        // Named share + link share + hours share, with their ratios.
-        self::assertStringContainsString(
-            "'pois', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4), 'with_link', count(nullif(btrim(website), '')), 'with_link_ratio', round(count(nullif(btrim(website), ''))::numeric / nullif(count(*), 0), 4), 'with_hours', count(nullif(btrim(opening_hours), ''))",
-            $completeness,
-        );
-
-        // Tables without a website column are measured on their name alone.
-        self::assertStringContainsString("'water_points', (SELECT jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), '')), 'named_ratio', round(count(nullif(btrim(name), ''))::numeric / nullif(count(*), 0), 4)) FROM osm_staging.water_points)", $completeness);
-
-        // Accommodations also break down per category: the condition for arbitrating
-        // the exclusion of unnamed entries category by category (#878).
-        self::assertStringContainsString("jsonb_build_object('by_category', coalesce((SELECT jsonb_object_agg(category, metrics) FROM (SELECT category, jsonb_build_object('rows', count(*), 'named', count(nullif(btrim(name), ''))", $completeness);
-        self::assertStringContainsString('FROM osm_staging.accommodations GROUP BY category', $completeness);
-
-        // `ways` carries neither name, link nor hours, and is the largest table by an
-        // order of magnitude: measuring it would buy nothing but a scan.
-        self::assertStringNotContainsString('osm_staging.ways', $completeness);
-
-        // The quality gate lands in sprint 49; the column ships empty so it can fill
-        // its accepted/discarded counts in without a schema change.
-        self::assertStringContainsString("'{}'::jsonb AS rejections", $completeness);
-    }
-
-    #[Test]
-    public function swapRenamesStagingOntoLiveInOneTransaction(): void
-    {
-        $importer = new PostgisImporter(
-            flexStylePath: '/app/osm2pgsql/tier1.lua',
-            liveSchema: 'osm',
-            processFactory: $this->capturingFactory(),
-        );
-
-        $importer->swap();
-
-        self::assertCount(1, $this->captured);
-        $cmd = $this->captured[0];
+        $cmd = $this->captured[1];
         self::assertSame('psql', $cmd[0]);
         self::assertContains('--single-transaction', $cmd);
 
-        $sql = end($cmd);
-        self::assertStringContainsString('DROP SCHEMA IF EXISTS osm CASCADE', $sql);
-        self::assertStringContainsString('ALTER SCHEMA osm_staging RENAME TO osm', $sql);
+        $sql = $this->sqlOf($cmd);
+        // The destructive step of ADR-040 is gone for good.
+        self::assertStringNotContainsString('DROP SCHEMA', $sql);
+        self::assertStringNotContainsString('RENAME TO', $sql);
+        self::assertStringContainsString('INSERT INTO %1$I.%2$I (%3$s, zone, last_seen_at)', $sql);
     }
 
     #[Test]
-    public function runEnrichesWikidataBearingOsmTablesBeforeSwap(): void
+    public function promoteRecordsTheZoneInTheRegistryWithoutLosingItsGeometry(): void
+    {
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->promote('bretagne', 'Bretagne', 'france', 'osm_staging_bretagne');
+
+        $sql = $this->sqlOf($this->captured[1]);
+
+        self::assertStringContainsString('INSERT INTO osm.zones (slug, name, country, opened_at, refreshed_at, pipeline_version, feature_counts, new_entries, geom)', $sql);
+        self::assertStringContainsString("'bretagne', 'Bretagne', 'france'", $sql);
+        self::assertStringContainsString('ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) FROM osm_staging_bretagne.admin_boundaries', $sql);
+        // Re-opening must not lose a geometry a previous run recorded: Geofabrik extracts
+        // are clipped, so a re-import can legitimately yield no boundary at all (#880).
+        self::assertStringContainsString('geom = COALESCE(excluded.geom, osm.zones.geom)', $sql);
+        // opened_at is set once and never touched again by the upsert.
+        self::assertStringNotContainsString('opened_at = excluded.opened_at', $sql);
+    }
+
+    #[Test]
+    public function promoteRebuildsCoverageFromTheRegistryRatherThanFromTheExtract(): void
+    {
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->promote('bretagne', 'Bretagne', 'france', 'osm_staging_bretagne');
+
+        $sql = $this->sqlOf($this->captured[1]);
+
+        self::assertStringContainsString('DELETE FROM osm.coverage;', $sql);
+        self::assertStringContainsString('SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) FROM osm.zones WHERE geom IS NOT NULL', $sql);
+        // "Out of zone" must mean "zone not yet opened", so coverage is the union of the
+        // opened zones — never of the boundaries that happened to be in one extract.
+        self::assertStringNotContainsString('FROM osm_staging_bretagne.admin_boundaries;', $sql);
+    }
+
+    #[Test]
+    public function promoteRefreshesMetadataAndCompletenessFromTheLiveTables(): void
+    {
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->promote('bretagne', 'Bretagne', 'france', 'osm_staging_bretagne');
+
+        $sql = $this->sqlOf($this->captured[1]);
+
+        self::assertStringContainsString('DELETE FROM osm.metadata;', $sql);
+        self::assertStringContainsString('INSERT INTO osm.metadata (refreshed_at, feature_counts, completeness, rejections)', $sql);
+        // Counts and ratios describe the whole index, not just the zone that was opened:
+        // the swap used to make those two the same thing, promotion does not.
+        self::assertStringContainsString("'pois', (SELECT count(*) FROM osm.pois)", $sql);
+        self::assertStringContainsString("'fords', (SELECT count(*) FROM osm.fords)", $sql);
+        // Everything from the completeness expression onwards: the counts name the same
+        // tables, so asserting on the whole statement would prove nothing about either.
+        $start = strpos($sql, "'pois', (SELECT jsonb_build_object(");
+        self::assertIsInt($start);
+        $completeness = substr($sql, $start);
+        self::assertStringContainsString("count(nullif(btrim(name), ''))", $completeness);
+        self::assertStringContainsString('FROM osm.accommodations GROUP BY category', $completeness);
+        // `ways` carries neither name, link nor hours, and is the largest table by an
+        // order of magnitude: measuring it would buy nothing but a scan.
+        self::assertStringNotContainsString('FROM osm.ways)', $completeness);
+        // The completeness gate lands in #884; the column ships empty until then.
+        self::assertStringContainsString("'{}'::jsonb", $sql);
+    }
+
+    #[Test]
+    public function runEnrichesWikidataBearingOsmTablesBeforePromotion(): void
     {
         $workDir = sys_get_temp_dir().'/postgis-enrich-'.uniqid('', true);
         mkdir($workDir, 0o755, true);
@@ -237,7 +274,7 @@ final class PostgisImporterTest extends TestCase
         );
 
         try {
-            $importer->run($workDir.'/default.osm.pbf', $workDir.'/tier1-filtered.osm.pbf');
+            $importer->run('bretagne', 'Bretagne', 'france', $workDir.'/bretagne-latest.osm.pbf', $workDir.'/tier1-filtered.osm.pbf');
 
             $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
             $has = static fn (string ...$needles): bool => (bool) array_filter(
@@ -246,27 +283,33 @@ final class PostgisImporterTest extends TestCase
             );
 
             self::assertTrue(
-                $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM osm_staging.cultural_pois', 'SELECT DISTINCT wikidata FROM osm_staging.accommodations'),
-                'candidate Q-IDs are collected from the OSM staging tables',
+                $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM osm_staging_bretagne.cultural_pois', 'SELECT DISTINCT wikidata FROM osm_staging_bretagne.accommodations'),
+                'candidate Q-IDs are collected from the zone staging tables',
             );
             self::assertTrue(
-                $has('UPDATE osm_staging.cultural_pois t SET', 'FROM provisioner.wikidata_cache c'),
-                'osm.cultural_pois is enriched from the cache',
+                $has('UPDATE osm_staging_bretagne.cultural_pois t SET', 'FROM provisioner.wikidata_cache c'),
+                'cultural_pois is enriched from the cache before promotion',
             );
             self::assertTrue(
-                $has('UPDATE osm_staging.accommodations t SET', "COALESCE(t.website, c.payload->>'website')", 'FROM provisioner.wikidata_cache c'),
-                'osm.accommodations is enriched from the cache, keeping the OSM website',
+                $has('UPDATE osm_staging_bretagne.accommodations t SET', "COALESCE(t.website, c.payload->>'website')", 'FROM provisioner.wikidata_cache c'),
+                'accommodations is enriched from the cache, keeping the OSM website',
             );
 
             $fetch = (string) file_get_contents($workDir.'/wikidata-fetch.copy');
             self::assertStringContainsString('Q42', $fetch);
             self::assertStringContainsString('https://w.test', $fetch);
 
-            // Enrichment (scratch drop) precedes the schema swap.
-            $dropIndex = $this->commandIndex('DROP TABLE IF EXISTS provisioner.wikidata_candidates');
-            $swapIndex = $this->commandIndex('ALTER SCHEMA osm_staging RENAME TO osm');
-            self::assertGreaterThan(-1, $dropIndex);
-            self::assertGreaterThan($dropIndex, $swapIndex);
+            // Enrichment (scratch drop) precedes the promotion, which precedes dropping
+            // the staging schema: the enrichment must ship with the rows that go live.
+            $dropScratch = $this->commandIndex('DROP TABLE IF EXISTS provisioner.wikidata_candidates');
+            $promote = $this->commandIndex('INSERT INTO osm.zones');
+            self::assertGreaterThan(-1, $dropScratch);
+            self::assertGreaterThan($dropScratch, $promote);
+
+            // The staging schema is reclaimed last, and only ever the zone's own.
+            $last = end($this->captured);
+            self::assertNotFalse($last);
+            self::assertSame('DROP SCHEMA IF EXISTS osm_staging_bretagne CASCADE;', $this->sqlOf($last));
         } finally {
             foreach (glob($workDir.'/*') ?: [] as $file) {
                 unlink($file);
@@ -274,6 +317,19 @@ final class PostgisImporterTest extends TestCase
 
             rmdir($workDir);
         }
+    }
+
+    /**
+     * The SQL psql was handed, i.e. the last argument of a captured command.
+     *
+     * @param list<string> $command
+     */
+    private function sqlOf(array $command): string
+    {
+        $sql = end($command);
+        self::assertIsString($sql);
+
+        return $sql;
     }
 
     private function commandIndex(string $needle): int
@@ -310,9 +366,8 @@ final class PostgisImporterTest extends TestCase
     #[Test]
     public function timedOutProcessRaisesImportFailedException(): void
     {
-        // A real process that outlives the (tiny) timeout, mirroring the
-        // merge-timeout test in OsmDataDownloaderTest. Process::run() is @final,
-        // so it cannot be overridden to fake the timeout.
+        // A real process that outlives the (tiny) timeout. Process::run() is @final, so
+        // it cannot be overridden to fake the timeout.
         $importer = new PostgisImporter(
             flexStylePath: '/app/osm2pgsql/tier1.lua',
             processFactory: static fn (array $command): Process => new Process(['sleep', '5']),
