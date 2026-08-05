@@ -102,5 +102,5 @@ Rebuilding the graph stays O(routing perimeter), SRTM elevation included; the `g
 - [ADR-040](adr-040-local-first-reference-data-postgis.md) — Local-first reference data, single PostGIS source (import mechanics reformulated)
 - [ADR-041](adr-041-provisioner-resilience.md) — Provisioner resilience (R5 freshness reformulated)
 - [#878 audit](../audit/878-hebergements-osm-sans-nom.md) — unnamed OSM accommodations per category, which arbitrates the per-category constraint
-- [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880) and its audit (`docs/audit/880-libelles-de-localite-hors-ligne.md`, delivered by PR #941) — admin-level import, clipped-extract measurements and offline locality labels
+- [#880 audit](../audit/880-libelles-de-localite-hors-ligne.md) — admin-level import, clipped-extract measurements and offline locality labels
 - [valhalla-routing-graph.md](../runbooks/valhalla-routing-graph.md) — routing-graph build procedure
