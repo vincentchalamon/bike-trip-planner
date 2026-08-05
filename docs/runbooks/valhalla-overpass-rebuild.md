@@ -8,7 +8,7 @@ Valhalla provides routing (ADR-017); Overpass usage was moved off the self-hoste
 
 - `/api/health` reports `valhalla: 503` or routing requests return 5xx
 - Valhalla logs: `tile not found`, `unable to load tile`, `corrupted`
-- Routes fail outside the built routing perimeter (`ROUTING_SLUGS`), or `valhalla` exits with `No local PBF files, valhalla_tiles.tar and no tile URLs found`
+- Routes fail outside the built routing perimeter, or `valhalla` exits with `No local PBF files, valhalla_tiles.tar and no tile URLs found`
 - POI / accommodation / event results are empty because the `osm` / `tourism` PostGIS schemas were never provisioned
 
 ## Diagnostic
@@ -66,7 +66,7 @@ docker compose exec valhalla ls -lh /custom_files
 - `/api/health` reports `valhalla: ok`.
 - Trigger a trip computation inside the routing perimeter; verify route + stage generation succeed.
 - Capture the build runtime in the incident issue (hours for a country-sized extract — note it as planned maintenance, not incident downtime).
-- Document any perimeter change in `TRACKING.md` per project conventions, and keep `ROUTING_SLUGS` (`compose.yaml`) and `GeofabrikRegionRegistry::routingSlugs()` in step.
+- Document any perimeter change in `TRACKING.md` per project conventions. The perimeter is not listed anywhere in the repository on purpose — it is the set of extracts in the `valhalla-tiles` volume, which [valhalla-routing-graph.md](valhalla-routing-graph.md) shows how to read.
 
 ## References
 

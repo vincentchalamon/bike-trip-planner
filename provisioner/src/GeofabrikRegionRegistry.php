@@ -8,24 +8,16 @@ final class GeofabrikRegionRegistry
 {
     /**
      * Whole countries: Geofabrik publishes them at the `europe/` level rather
-     * than under `europe/france/`, and they are also the **routing perimeter**
-     * (#881) — the Valhalla graph is country-grained, built by
-     * `make routing-build <slug>` from this list and extended country by
-     * country. It is deliberately independent of the reference selection
-     * (`.docker/osm/data/regions.json`), which is regional and changes often.
+     * than under `europe/france/`. This list exists for **URL resolution only**
+     * (see {@see downloadUrl()}); it is not the routing perimeter.
      *
-     * `ROUTING_SLUGS` in compose.yaml's `valhalla-builder` mirrors this list:
-     * extend both together.
+     * #881 briefly named it `ROUTING_SLUGS` to also mean "the countries the
+     * Valhalla graph covers". That claim could not be enforced from here — the
+     * perimeter of a build is the argument passed to `make routing-build <slug>`
+     * — so it would have been a second source of truth that nothing checks. The
+     * name is back to what the constant can actually guarantee.
      */
-    private const array ROUTING_SLUGS = ['france', 'belgium', 'netherlands', 'luxembourg'];
-
-    /**
-     * @return list<string>
-     */
-    public static function routingSlugs(): array
-    {
-        return self::ROUTING_SLUGS;
-    }
+    private const array EUROPE_LEVEL_SLUGS = ['france', 'belgium', 'netherlands', 'luxembourg'];
 
     /**
      * @return array<string, array{slug: string, size: string}>
@@ -71,7 +63,7 @@ final class GeofabrikRegionRegistry
     {
         // Whole countries (France + Benelux) live at the europe/ level; French
         // regions live one level down under europe/france/.
-        if (\in_array($slug, self::ROUTING_SLUGS, true)) {
+        if (\in_array($slug, self::EUROPE_LEVEL_SLUGS, true)) {
             return \sprintf('https://download.geofabrik.de/europe/%s-latest.osm.pbf', $slug);
         }
 

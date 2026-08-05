@@ -12,7 +12,7 @@ Since #881 the two datasets share nothing — no file, no directory, no schedule
 | Question | what is near this track? | can we go from A to B? |
 | Grain | region (`nord-pas-de-calais`) | country (`france`) |
 | Store | `.docker/osm/data/regions/` + Postgres | `valhalla-tiles` Docker volume |
-| Perimeter | `.docker/osm/data/regions.json` | `ROUTING_SLUGS` (`compose.yaml`) / `GeofabrikRegionRegistry::routingSlugs()` |
+| Perimeter | `.docker/osm/data/regions.json` | the extracts present in the `valhalla-tiles` volume, i.e. every slug ever passed to `make routing-build` |
 | Cadence | often, one zone at a time | rarely, per country opening (target: monthly refresh) |
 | Command | `make provision` | `make routing-build <slug>` |
 
@@ -88,9 +88,17 @@ cannot extend an existing graph:
 make routing-build france belgium
 ```
 
-Keep `ROUTING_SLUGS` in `compose.yaml` and
-`GeofabrikRegionRegistry::routingSlugs()` in step with the perimeter you build —
-`GeofabrikRegionRegistryTest` fails if the list drifts.
+There is **no list of the routing perimeter anywhere in the repository**, and that
+is deliberate: a list in `compose.yaml` or in PHP could not be checked against
+what the volume actually holds, so a forgotten country would read as covered
+while the graph did not include it. The perimeter is whatever extracts sit in the
+volume — ask it directly:
+
+```bash
+docker compose --profile routing-build run --rm --no-deps --entrypoint ls valhalla-builder -lh /custom_files
+```
+
+Record any perimeter change in `TRACKING.md` per project conventions.
 
 The builder has **no memory limit** on purpose: `valhalla_build_tiles` holds the
 graph of the whole perimeter in RAM, so any of the per-service caps used

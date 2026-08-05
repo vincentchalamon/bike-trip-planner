@@ -391,10 +391,14 @@ services:
   # national extracts into the routing volume, rebuilds tiles + elevation + admin
   # + timezone from every extract present there, then exits.
   #
-  # ROUTING_SLUGS is the routing perimeter: whole countries, distinct from the
-  # provisioner's regional reference selection (.docker/osm/data/regions.json).
-  # It mirrors GeofabrikRegionRegistry::routingSlugs() — extend both, country by
-  # country. The default builds France only.
+  # ROUTING_SLUGS is the perimeter of *this* build: whole countries, distinct from
+  # the provisioner's regional reference selection (.docker/osm/data/regions.json).
+  # It carries **no default list on purpose** — a second list here would be a
+  # source of truth that nothing can check against the PHP registry, and a
+  # forgotten country would silently build the wrong perimeter. Unset, the entry
+  # point fails immediately on its own `${ROUTING_SLUGS:?}` guard. `make
+  # routing-build <slug> [slug...]` always passes it explicitly and refuses to run
+  # without an argument.
   valhalla-builder:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     profiles: ["routing-build"]
@@ -410,7 +414,7 @@ services:
       - valhalla-tiles:/custom_files
       - .docker/valhalla/build-routing-graph.sh:/routing/build-routing-graph.sh:ro
     environment:
-      ROUTING_SLUGS: "${ROUTING_SLUGS:-france}"
+      ROUTING_SLUGS: "${ROUTING_SLUGS:-}"
       build_elevation: "True"
       # Force: the admin polygons are per-extract, so adding a country to the
       # perimeter must rebuild them. The timezone db is worldwide and is only
