@@ -57,10 +57,10 @@ final readonly class PostgisImporter
         // Country (2), region (4), department (6) and commune (8) boundaries: the
         // commune polygons back the offline locality labels (#880), the coarser
         // levels the country resolution, and their union the coverage polygon.
-        // Measured on the merged nord-pas-de-calais + rhone-alpes extract
-        // (767 MB): widening `r/admin_level=2` to these four levels grows the
-        // filtered PBF from 184.7 MB to 193.1 MB (+4.5%) and the osm2pgsql import
-        // from 227s to 231s. See docs/audit/880-libelles-de-localite-hors-ligne.md.
+        // Measured on the merged nord-pas-de-calais + rhone-alpes extract (767 MB):
+        // widening `r/admin_level=2` to these four levels grows the filtered PBF
+        // from 184.6 MB to 191.6 MB (+3.8%) and the osm2pgsql import from 106s to
+        // 160s. See docs/audit/880-libelles-de-localite-hors-ligne.md.
         'r/admin_level=2,4,6,8',
         'r/route=bicycle',
         'w/route=ferry',
