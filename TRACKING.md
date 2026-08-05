@@ -1520,7 +1520,7 @@ Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement 
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) | feat(provisioner): zone registry, single-zone runs and transactional promotion | - | - | - |
+| 1 | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) | feat(provisioner): zone registry, single-zone runs and transactional promotion | - | [#946](https://github.com/vincentchalamon/bike-trip-planner/pull/946) | - |
 | 2 | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) | feat(provisioner): persistent enrichment cache, name resolver and completeness gate | - | - | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) |
 | 3 | [#885](https://github.com/vincentchalamon/bike-trip-planner/issues/885) | feat(provisioner): geometric matching between osm and datatourisme places | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
 | 4 | [#886](https://github.com/vincentchalamon/bike-trip-planner/issues/886) | feat(provisioner): zone opening report and manual override import | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
