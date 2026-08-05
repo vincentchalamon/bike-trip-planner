@@ -181,8 +181,13 @@ final readonly class ZonePromotion
      * Single-quoted SQL literal. Every value reaching this today is an internal constant
      * or a slug already resolved against {@see GeofabrikRegionRegistry}, so this guards
      * the boundary rather than sanitising untrusted input.
+     *
+     * Public because it is the single place that escaping lives: {@see PostgisImporter}
+     * builds the registry upsert spliced into this SQL and must quote the zone's name
+     * the same way. Two copies would let a future change to the quoting strategy be
+     * applied to one and forgotten in the other.
      */
-    private static function literal(string $value): string
+    public static function literal(string $value): string
     {
         return "'".str_replace("'", "''", $value)."'";
     }

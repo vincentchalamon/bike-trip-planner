@@ -289,9 +289,9 @@ final readonly class PostgisImporter
                 SELECT now(), jsonb_build_object(%7$s), %8$s, '{}'::jsonb;
                 SQL,
             $this->liveSchema,
-            $this->literal($zoneSlug),
-            $this->literal($zoneName),
-            $this->literal($countrySlug),
+            ZonePromotion::literal($zoneSlug),
+            ZonePromotion::literal($zoneName),
+            ZonePromotion::literal($countrySlug),
             ZonePromotion::PIPELINE_VERSION,
             $stagingSchema,
             $counts,
@@ -317,11 +317,6 @@ final readonly class PostgisImporter
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop staging schema');
-    }
-
-    private function literal(string $value): string
-    {
-        return "'".str_replace("'", "''", $value)."'";
     }
 
     /**
