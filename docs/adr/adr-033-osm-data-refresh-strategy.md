@@ -1,6 +1,6 @@
 # ADR-033: OSM Data Refresh Strategy — Nightly Re-Download via `osm-cron`
 
-- **Status:** Superseded by [ADR-036](adr-036-manual-osm-data-refresh.md) (OSM data is now refreshed manually; `osm-cron` removed)
+- **Status:** Superseded by [ADR-036](adr-036-manual-osm-data-refresh.md) (OSM data is now refreshed manually; `osm-cron` removed), then further reformulated by [ADR-049](adr-049-zone-opening-and-import-time-completeness.md), which splits "the OSM refresh" into two datasets on two calendars — regional reference data and the national routing graph. The premise of this ADR (one nightly re-download feeding routing tiles) no longer describes any part of the system.
 - **Date:** 2026-05-28
 - **Depends on:** ADR-017 (Valhalla Routing Engine), ADR-020 (Dynamic Overpass Region Provisioning), ADR-025 (Removal of Self-Hosted Overpass)
 - **Related:** Sprint 33, Issues #477 (unified `provision` command), #479 (`osm-cron` Compose service)

@@ -1,6 +1,6 @@
 # ADR-040: Local-First Reference Data — Single PostgreSQL/PostGIS Source
 
-- **Status:** Accepted — the API local-read cut-over has landed (runtime Overpass removed); provisioner enrichment (DataTourisme) and coverage/monitoring follow
+- **Status:** Accepted — the API local-read cut-over has landed (runtime Overpass removed); provisioner enrichment (DataTourisme) and coverage/monitoring follow. **Import mechanics reformulated by [ADR-049](adr-049-zone-opening-and-import-time-completeness.md)**: the global atomic swap becomes a per-zone transactional promotion, the cumulative region selection becomes one mandatory zone per run backed by a database registry, and completeness is decided by an import-time gate. The three-tier model and the local-read posture are unchanged.
 - **Date:** 2026-06-11
 - **Depends on:** ADR-022 (Persistent storage), ADR-033 (OSM data refresh), ADR-036 (Manual OSM refresh), ADR-039 (Beta right-sizing)
 - **Reformulates:** ADR-005 (external-API caching), ADR-013 (accommodation discovery), ADR-025 (removal of self-hosted Overpass), ADR-026 (multi-source integration)

@@ -242,7 +242,7 @@ OSM feeds **two independent datasets**, on two grains and two calendars — they
 | Command | `make provision` | `make routing-build france` |
 | Cadence | often, one zone at a time | rarely, per country opening |
 
-See [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the full rationale, and [the routing-graph runbook](docs/runbooks/valhalla-routing-graph.md) for the build + upload procedure.
+See [ADR-049](docs/adr/adr-049-zone-opening-and-import-time-completeness.md) for the import model (zone opening, transactional promotion, import-time completeness gate, append-only storage), [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the refresh rationale, and [the routing-graph runbook](docs/runbooks/valhalla-routing-graph.md) for the build + upload procedure.
 
 **Bootstrap (first install or adding regions):**
 

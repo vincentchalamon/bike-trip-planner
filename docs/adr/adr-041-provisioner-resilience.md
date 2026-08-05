@@ -1,6 +1,6 @@
 # ADR-041: Provisioner Resilience — Failure Isolation, Resumable Enrichment, Detailed Logging
 
-- **Status:** Accepted — all five workstreams (R1–R5) have landed: orchestration hardening, the resumable Wikidata cache, network timeouts/retries, the memory budget guard, and reference-data reporting. **R5 was superseded** (2026-08-04, issue #877): the staleness verdict it introduced is gone, replaced by raw age plus per-table completeness metrics — see [R5 (superseded)](#r5--staleness-alerting-superseded-by-completeness-reporting)
+- **Status:** Accepted — all five workstreams (R1–R5) have landed: orchestration hardening, the resumable Wikidata cache, network timeouts/retries, the memory budget guard, and reference-data reporting. **R5 was superseded** (2026-08-04, issue #877): the staleness verdict it introduced is gone, replaced by raw age plus per-table completeness metrics — see [R5 (superseded)](#r5--staleness-alerting-superseded-by-completeness-reporting). The absence of a staleness verdict is now a **decision** rather than a removal: [ADR-049 §5](adr-049-zone-opening-and-import-time-completeness.md) records append-only storage with assumed obsolescence, so age stays an internal metric and the verification link is the rider's tool.
 - **Date:** 2026-06-17
 - **Depends on:** ADR-040 (Local-first reference data — single PostGIS source), ADR-039 (Beta right-sizing)
 
