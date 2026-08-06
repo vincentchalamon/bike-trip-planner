@@ -21,7 +21,7 @@ export type ViewMode = "timeline" | "map" | "split";
  */
 export type BlockStatus = "pending" | "running" | "done" | "failed" | null;
 
-import type { PoiSuggestionDto } from "@/lib/api/client";
+import type { InRidePoiCategory, PoiSuggestionDto } from "@/lib/api/client";
 
 /**
  * POI shape carried by in-ride suggestions. Re-exported from the API client so
@@ -31,18 +31,27 @@ import type { PoiSuggestionDto } from "@/lib/api/client";
 export type PoiSuggestion = PoiSuggestionDto;
 
 /**
- * One turn of the floating assistant conversation.
+ * One turn of the guided in-ride thread (#935).
  *
- * Stored in-memory only — the conversation is intentionally not persisted
- * across page reloads.
+ * Stored in-memory only — the thread is intentionally not persisted across page
+ * reloads. Carries no `content`: every visible string is derived from
+ * `next-intl` at render time from the structured metadata below, so a reworded
+ * message never touches the store. The name disambiguates it from the brief
+ * chat's `AiChatMessage` (`ai-chat-card.tsx`) and the backend `AiChatTurn`.
  *
- * When the reply carries POI suggestions (in-ride mode), {@link pois} holds the
- * structured payload so the panel can render the POI cards beneath the text.
+ * - `question` — a user turn: which category chip was tapped.
+ * - `recap`    — an assistant turn: the search outcome (radius, counts, coverage
+ *   flags) plus the {@link pois} to render as cards.
  */
-export interface AiChatMessage {
+export interface InRideMessage {
   role: "user" | "assistant";
-  content: string;
   ts: number;
+  kind: "question" | "recap";
+  category?: InRidePoiCategory;
+  radiusMeters?: number;
+  totalFound?: number;
+  capReached?: boolean;
+  outOfCoverage?: boolean;
   pois?: PoiSuggestion[];
 }
 
@@ -86,16 +95,10 @@ interface UiState {
    */
   isBubbleOpen: boolean;
   /**
-   * Conversation history of the floating AI assistant, oldest first. Cleared
-   * when the user starts a new trip or invokes {@link clearHistory}. Not
-   * persisted across reloads.
+   * Guided in-ride thread, oldest first (#935). Cleared when the user starts a
+   * new trip or invokes {@link clearHistory}. Not persisted across reloads.
    */
-  chatHistory: AiChatMessage[];
-  /**
-   * `true` while a chat message is in flight — drives the typing indicator
-   * inside the chat panel and disables the send button.
-   */
-  isChatSending: boolean;
+  chatHistory: InRideMessage[];
   /**
    * Whether the user has ever opened the AI bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
@@ -138,11 +141,9 @@ interface UiState {
   /** Force the chat panel closed. */
   closeBubble: () => void;
   /** Append a turn to {@link chatHistory}. */
-  appendMessage: (message: AiChatMessage) => void;
-  /** Reset the chat history (Acte 1.5 → Acte 3 transition, manual clear). */
+  appendMessage: (message: InRideMessage) => void;
+  /** Reset the in-ride thread (wiped on trip switch). */
   clearHistory: () => void;
-  /** Flip the in-flight indicator that drives the typing dots. */
-  setChatSending: (value: boolean) => void;
   /** Update the runtime AI availability (from the `/api/health` probe, #304). */
   setAiAvailable: (value: boolean) => void;
   /** Update whether the account has a configured AI provider (ADR-042). */
@@ -217,7 +218,6 @@ export const useUiStore = create<UiState>()(
     blockStatus: { weather: null, ai: null },
     isBubbleOpen: false,
     chatHistory: [],
-    isChatSending: false,
     hasSeenBubble: readBubbleSeenFromStorage(),
     aiCapability: { available: true, configured: false },
 
@@ -315,12 +315,6 @@ export const useUiStore = create<UiState>()(
     clearHistory: () =>
       set((state) => {
         state.chatHistory = [];
-        state.isChatSending = false;
-      }),
-
-    setChatSending: (value) =>
-      set((state) => {
-        state.isChatSending = value;
       }),
 
     setAiAvailable: (value) =>

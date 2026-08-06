@@ -645,6 +645,44 @@
       "routeNotModified": "Ton itinéraire de base n'est pas modifié.",
       "osmDisclaimer": "Données OpenStreetMap — vérifier sur place en cas de doute.",
       "geolocPrompt": "Partager ma position pour des suggestions à proximité",
+      "title": "Besoin de quelque chose en route ?",
+      "subtitle": "Touche une question pour trouver à proximité.",
+      "openAria": "Ouvrir l'aide en route",
+      "closeAria": "Fermer l'aide en route",
+      "threadAria": "Résultats en route",
+      "chipsGroupAria": "Que cherches-tu ?",
+      "searching": "Recherche à proximité...",
+      "widenSearch": "Élargir la recherche",
+      "errorNetwork": "Pas de connexion. Vérifie ton réseau et réessaie.",
+      "errorRateLimit": "Trop de recherches. Patiente un instant et réessaie.",
+      "errorGeneric": "La recherche a échoué. Réessaie.",
+      "category": {
+        "water": "Eau",
+        "shelter": "Abri",
+        "food": "Manger",
+        "resupply": "Courses",
+        "mechanic": "Réparateur",
+        "health": "Pharmacie",
+        "train": "Train",
+        "charging": "Recharge"
+      },
+      "question": {
+        "water": "Trouver de l'eau",
+        "shelter": "M'abriter",
+        "food": "Manger maintenant",
+        "resupply": "Faire des courses",
+        "mechanic": "Réparer mon vélo",
+        "health": "Pharmacie, soins",
+        "train": "Rentrer en train",
+        "charging": "Recharger ma batterie"
+      },
+      "recap": {
+        "found": "{count} adresses à proximité.",
+        "foundTruncated": "Les {count} plus proches sur {total} à proximité.",
+        "none": "Rien d'exploitable à proximité.",
+        "capReached": "Aucun résultat exploitable parmi les {count} plus proches.",
+        "outOfCoverage": "Tu es en dehors de la zone couverte."
+      },
       "warning": {
         "closesSoon": "Ferme dans {minutes} min.",
         "farFromRoute": "Loin de ton itinéraire."

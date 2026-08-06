@@ -914,3 +914,94 @@ export function stageUpdatedEventWithSelectedAccommodation(
     },
   };
 }
+
+/**
+ * Wire shape of a single POI suggestion, matching `PoiSuggestionDto` (#934).
+ */
+export interface NearbyPoiWire {
+  name: string;
+  category: string;
+  lat: number;
+  lon: number;
+  distance_m: number;
+  detour_m: number | null;
+  opening_hours_today: string | null;
+  closes_at: string | null;
+  phone: string | null;
+  deeplink: string;
+  warning: "closes_soon" | "far_from_route" | "hours_unverified" | null;
+  warning_minutes: number | null;
+}
+
+/** Build a single in-ride POI suggestion; override any field. */
+export function nearbyPoiSuggestion(
+  overrides: Partial<NearbyPoiWire> = {},
+): NearbyPoiWire {
+  return {
+    name: "Fontaine du Village",
+    category: "water",
+    lat: 44.7,
+    lon: 4.6,
+    distance_m: 320,
+    detour_m: 150,
+    opening_hours_today: null,
+    closes_at: null,
+    phone: null,
+    deeplink: "https://www.google.com/maps/search/?api=1&query=44.7,4.6",
+    warning: null,
+    warning_minutes: null,
+    ...overrides,
+  };
+}
+
+/** Wire shape of the guided in-ride search response (#934/#935). */
+export interface NearbyPoiSearchWire {
+  "@id": string;
+  "@type": string;
+  tripId: string;
+  category: string;
+  radiusMeters: number;
+  totalFound: number;
+  capReached: boolean;
+  outOfCoverage: boolean;
+  pois: NearbyPoiWire[];
+}
+
+/**
+ * Build a `POST /trips/{id}/nearby-pois` response (#935). Defaults to three
+ * water POIs within a 3 km radius; override to exercise the truncated, empty,
+ * cap-reached and out-of-coverage recap states.
+ */
+export function nearbyPoiSearchResponse(
+  overrides: Partial<NearbyPoiSearchWire> = {},
+): NearbyPoiSearchWire {
+  const category = overrides.category ?? "water";
+  return {
+    "@id": "/trips/test-trip-abc-123/nearby-pois",
+    "@type": "Trip.NearbyPoiSearchResponse",
+    tripId: "test-trip-abc-123",
+    category,
+    radiusMeters: 3000,
+    totalFound: 3,
+    capReached: false,
+    outOfCoverage: false,
+    pois: [
+      nearbyPoiSuggestion({
+        category,
+        name: "Fontaine du Village",
+        distance_m: 320,
+      }),
+      nearbyPoiSuggestion({
+        category,
+        name: "Fontaine de la Place",
+        distance_m: 540,
+      }),
+      nearbyPoiSuggestion({
+        category,
+        name: "Source du Pont",
+        distance_m: 780,
+      }),
+    ],
+    ...overrides,
+  };
+}

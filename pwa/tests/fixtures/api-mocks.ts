@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { nearbyPoiSearchResponse, type NearbyPoiSearchWire } from "./mock-data";
 
 export interface MockApiOptions {
   postTripStatus?: number;
@@ -30,6 +31,14 @@ export interface MockApiOptions {
     collected?: Record<string, string | number | boolean | null>;
     status?: number;
   }>;
+  /**
+   * Scripted results for the guided in-ride search (`POST /trips/{id}/nearby-pois`,
+   * #935). Either a single response served for every category, a record keyed by
+   * category, or a numeric HTTP status to exercise the failure modes (429, 5xx).
+   * When omitted, a default non-empty water result is served for any category.
+   */
+  nearbyPoiResults?:
+    NearbyPoiSearchWire | Record<string, NearbyPoiSearchWire> | number;
 }
 
 const TRIP_ID = "test-trip-abc-123";
@@ -196,6 +205,7 @@ export async function mockAllApis(
     addStageFail = false,
     aiConfigured = true,
     aiChatTurns,
+    nearbyPoiResults,
   } = options;
 
   // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
@@ -528,6 +538,43 @@ export async function mockAllApis(
       status: 202,
       contentType: "application/ld+json",
       body: JSON.stringify({ "@type": "StageResponse" }),
+    });
+  });
+
+  // POST /trips/{id}/nearby-pois — guided in-ride search (#935). Serves the
+  // scripted `nearbyPoiResults` (single body, per-category record, or a bare
+  // error status), defaulting to a non-empty result echoing the requested
+  // category.
+  await page.route("**/trips/*/nearby-pois", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    if (typeof nearbyPoiResults === "number") {
+      return route.fulfill({
+        status: nearbyPoiResults,
+        contentType: "application/ld+json",
+        body: JSON.stringify({}),
+      });
+    }
+    const body = request.postDataJSON() as { category?: string } | null;
+    const category = body?.category ?? "water";
+    let payload: NearbyPoiSearchWire;
+    if (
+      nearbyPoiResults &&
+      "pois" in (nearbyPoiResults as NearbyPoiSearchWire)
+    ) {
+      payload = nearbyPoiResults as NearbyPoiSearchWire;
+    } else if (nearbyPoiResults) {
+      const byCategory = nearbyPoiResults as Record<
+        string,
+        NearbyPoiSearchWire
+      >;
+      payload = byCategory[category] ?? nearbyPoiSearchResponse({ category });
+    } else {
+      payload = nearbyPoiSearchResponse({ category });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify(payload),
     });
   });
 }

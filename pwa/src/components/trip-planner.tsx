@@ -22,6 +22,7 @@ import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { ModificationQueue } from "@/components/modification-queue";
 import { RecentTrips } from "@/components/recent-trips";
 import { OfflineBanner } from "@/components/offline-banner";
+import { InRideBubble } from "@/components/in-ride/InRideBubble";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -712,6 +713,11 @@ export function TripPlanner() {
           onShare={handleShareTrip}
           onDelete={handleDeleteTrip}
         />
+
+        {/* Guided in-ride help bubble (#935) — open to every rider, no AI gate.
+            Visible as soon as the trip view renders; hidden on the welcome /
+            loader screens via its own `trip` guard. */}
+        <InRideBubble />
       </main>
     </GpxDropZone>
   );

@@ -645,6 +645,44 @@
       "routeNotModified": "Your planned route is not modified.",
       "osmDisclaimer": "OpenStreetMap data — verify on the ground when in doubt.",
       "geolocPrompt": "Share my location for nearby suggestions",
+      "title": "Need something on the road?",
+      "subtitle": "Tap a question to find what's nearby.",
+      "openAria": "Open in-ride help",
+      "closeAria": "Close in-ride help",
+      "threadAria": "In-ride results",
+      "chipsGroupAria": "What are you looking for?",
+      "searching": "Searching nearby...",
+      "widenSearch": "Widen the search",
+      "errorNetwork": "No connection. Check your network and try again.",
+      "errorRateLimit": "Too many searches. Wait a moment and try again.",
+      "errorGeneric": "Search failed. Try again.",
+      "category": {
+        "water": "Water",
+        "shelter": "Shelter",
+        "food": "Food",
+        "resupply": "Groceries",
+        "mechanic": "Bike shop",
+        "health": "Pharmacy",
+        "train": "Train",
+        "charging": "Charging"
+      },
+      "question": {
+        "water": "Find water",
+        "shelter": "Find shelter",
+        "food": "Eat now",
+        "resupply": "Buy groceries",
+        "mechanic": "Fix my bike",
+        "health": "Pharmacy, care",
+        "train": "Get a train home",
+        "charging": "Charge my battery"
+      },
+      "recap": {
+        "found": "{count} spots nearby.",
+        "foundTruncated": "The {count} closest of {total} nearby.",
+        "none": "Nothing usable nearby.",
+        "capReached": "Nothing usable among the {count} closest.",
+        "outOfCoverage": "You are outside the covered area."
+      },
       "warning": {
         "closesSoon": "Closes in {minutes} min.",
         "farFromRoute": "Far from your route."

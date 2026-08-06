@@ -4,13 +4,17 @@ import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Clock,
+  Cross,
   ExternalLink,
   MapPin,
   Phone,
+  ShoppingCart,
+  TrainFront,
   UtensilsCrossed,
   Tent,
   Droplet,
   Wrench,
+  Zap,
 } from "lucide-react";
 import type { PoiSuggestion } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
@@ -23,10 +27,14 @@ const CATEGORY_ICONS: Record<
   string,
   React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>
 > = {
-  food: UtensilsCrossed,
-  shelter: Tent,
   water: Droplet,
+  shelter: Tent,
+  food: UtensilsCrossed,
+  resupply: ShoppingCart,
   mechanic: Wrench,
+  health: Cross,
+  train: TrainFront,
+  charging: Zap,
 };
 
 /**
@@ -63,8 +71,10 @@ function formatClosingTime(iso: string | null): string {
  * Surfaces the essentials a rider needs in a glance: category icon, name,
  * distance from the current position, today's opening-hours raw string, a
  * "closes at HH:MM" badge when the venue is about to shut, and the optional
- * detour penalty. The "Open in Google Maps" button uses the backend-provided
- * deeplink so we never have to assemble lat/lon URLs client-side.
+ * detour penalty. The whole card is the primary tap target towards the
+ * backend-provided map deeplink (a stretched link, so gloved-hand taps land
+ * anywhere on it); the `tel:` link stays a separate, reachable control layered
+ * above it.
  */
 export function PoiCard({ poi }: PoiCardProps) {
   const t = useTranslations("chat.inRide");
@@ -88,7 +98,7 @@ export function PoiCard({ poi }: PoiCardProps) {
       data-testid="poi-card"
       data-category={poi.category}
       className={cn(
-        "flex flex-col gap-2 rounded-xl border border-border bg-background p-3 shadow-sm",
+        "relative flex flex-col gap-2 rounded-xl border border-border bg-background p-3 shadow-sm",
         hasWarning && "border-amber-300 bg-amber-50/40",
       )}
     >
@@ -153,7 +163,7 @@ export function PoiCard({ poi }: PoiCardProps) {
         {poi.phone && (
           <a
             href={`tel:${poi.phone}`}
-            className="flex items-center gap-1 text-brand hover:underline"
+            className="relative z-10 flex w-fit items-center gap-1 text-brand hover:underline"
           >
             <Phone className="h-3 w-3" aria-hidden="true" />
             <span>{poi.phone}</span>
@@ -174,6 +184,9 @@ export function PoiCard({ poi }: PoiCardProps) {
         )}
       </div>
 
+      {/* Stretched link: the visible button labels the action, its `after`
+          pseudo-element covers the whole card so any tap opens the map app.
+          Interactive siblings (the `tel:` link) sit above it via `z-10`. */}
       <a
         href={poi.deeplink}
         target="_blank"
@@ -183,6 +196,7 @@ export function PoiCard({ poi }: PoiCardProps) {
           "inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background",
           "px-3 py-1.5 text-xs font-medium text-foreground shadow-sm",
           "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "after:absolute after:inset-0 after:content-['']",
         )}
       >
         <ExternalLink className="h-3 w-3" aria-hidden="true" />
