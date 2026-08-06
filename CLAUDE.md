@@ -100,6 +100,22 @@ Two traps in that command:
 
 `make test-e2e` needs the PWA built and served on `https://localhost`; a worktree's changes are not in the main stack's bundle. **CI is the real gate for Playwright** — say so plainly rather than implying local coverage you did not have. Since the pre-commit hook replays `make qa`, commit with `git -c core.hooksPath=/dev/null commit` once the legs are individually green.
 
+### `make` swallows `--flags`
+
+A target that forwards `$(ARGS)` cannot receive an option: `make` claims anything starting
+with `--` for itself and dies before the recipe runs.
+
+```bash
+$ make provision corse --allow-unrouted-zone
+make : l'option « --allow-unrouted-zone » n'a pas été reconnue
+```
+
+Pass the flag to the container directly instead, keeping the target for the common case:
+
+```bash
+docker compose --profile provisioning run --rm provisioner corse --allow-unrouted-zone
+```
+
 ### Claude Code Skills
 
 ```bash

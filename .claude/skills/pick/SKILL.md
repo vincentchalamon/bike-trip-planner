@@ -17,7 +17,9 @@ Check that the issue number is a valid number. If not, ask the user for a valid 
 
 ## Step 2 -- Fetch and confirm
 
-Run `gh issue view <issue-number>` and display the issue title and body summary. Ask the user to confirm before proceeding. Also ask if they want to use a different base branch than the default.
+Run `gh issue view <issue-number> --comments` and display the issue title and body summary. Ask the user to confirm before proceeding. Also ask if they want to use a different base branch than the default.
+
+**Read the comments, not only the body — a comment can contradict the scope and then it is the comment that is authoritative.** Sprint 49, #884: the body sketched a five-key name-resolution cascade; a comment carried the measurement from #878 showing two of those keys had **0 occurrences** over 16 886 rows and a third only 11, all of them useless values. Implementing the body as written would have shipped code with no data behind it. `gh issue view` alone does **not** show comments, which is why the flag is not optional.
 
 ## Step 3 -- Create worktree
 
