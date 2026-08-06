@@ -168,6 +168,35 @@ final class ProvisionCommandTest extends TestCase
     }
 
     #[Test]
+    public function allowUnroutedZoneOpensAZoneTheGraphDoesNotCover(): void
+    {
+        // Local development escape hatch. Without it a dev machine cannot open any zone
+        // without first building the national routing graph — hours and ~30 GB — just to work
+        // on accommodations, because the routing volume exists but is empty, which the check
+        // reads as an observed empty perimeter and refuses.
+        unlink($this->routingDir.'/france-latest.osm.pbf');
+
+        $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
+        $exitCode = $tester->execute(['zone' => 'bretagne', '--allow-unrouted-zone' => true], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('without checking the routing graph', $output);
+        self::assertStringContainsString('local development only', $output);
+    }
+
+    #[Test]
+    public function allowUnroutedZoneStaysSilentWhenTheGraphDoesCoverTheZone(): void
+    {
+        // The flag is a bypass, not a mode: with a graph that covers the zone there is nothing
+        // to bypass and nothing to warn about.
+        $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne', '--allow-unrouted-zone' => true], ['interactive' => false]), $tester->getDisplay());
+        self::assertStringNotContainsString('without checking the routing graph', $tester->getDisplay());
+    }
+
+    #[Test]
     public function anUnobservableRoutingPerimeterWarnsRatherThanBlocks(): void
     {
         // A missing volume mount must not become a provisioning outage; only an observed

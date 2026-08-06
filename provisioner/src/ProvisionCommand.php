@@ -101,6 +101,13 @@ final class ProvisionCommand extends Command
         // cannot give.
         $this->addArgument('zone', InputArgument::OPTIONAL, 'Geofabrik slug or name of the zone to open (e.g. bretagne)');
         $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded and imported without executing');
+        // Local development only, and named so that using it in production reads as a
+        // mistake. Without it, a dev machine cannot open any zone without first building the
+        // national routing graph — hours and ~30 GB — just to work on accommodations. The
+        // alternative an operator would otherwise improvise, dropping a fake extract into the
+        // routing volume, is worse: `build-routing-graph.sh` skips downloading an extract that
+        // is already present, so the next real build would silently build from the fake one.
+        $this->addOption('allow-unrouted-zone', null, InputOption::VALUE_NONE, 'Open the zone even if the routing graph does not cover it (local development; trips there cannot be routed)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -123,7 +130,7 @@ final class ProvisionCommand extends Command
 
         $dryRun = (bool) $input->getOption('dry-run');
 
-        if (!$this->assertRoutingCovers($io, $zone['country'], $zone['name'])) {
+        if (!$this->assertRoutingCovers($io, $zone['country'], $zone['name'], (bool) $input->getOption('allow-unrouted-zone'))) {
             return Command::FAILURE;
         }
 
@@ -188,8 +195,17 @@ final class ProvisionCommand extends Command
      *
      * @param string $country Geofabrik country slug the zone belongs to
      */
-    private function assertRoutingCovers(SymfonyStyle $io, string $country, string $zoneName): bool
+    private function assertRoutingCovers(SymfonyStyle $io, string $country, string $zoneName, bool $allowUnrouted = false): bool
     {
+        if ($allowUnrouted && !$this->routingPerimeter->covers($country)) {
+            $io->warning(\sprintf(
+                'Opening %s without checking the routing graph (--allow-unrouted-zone). Trips in this zone will not be routable; this is for local development only.',
+                $zoneName,
+            ));
+
+            return true;
+        }
+
         if (!$this->routingPerimeter->isObservable()) {
             $io->warning('The routing volume is not mounted, so the routing perimeter cannot be checked. Opening the zone anyway; verify that the graph covers it.');
 
