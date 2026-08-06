@@ -146,7 +146,10 @@ test.describe("Guided in-ride search", () => {
     await openPanel(mockedPage);
     await mockedPage.getByTestId("in-ride-chip-mechanic").click();
 
-    const tel = mockedPage.locator('a[href^="tel:"]');
+    // Scope to the POI card: the trip page carries other `tel:` links (accommodation
+    // contacts), so an unscoped locator would match more than one element.
+    const card = mockedPage.getByTestId("poi-card").first();
+    const tel = card.locator('a[href^="tel:"]');
     await expect(tel).toBeVisible();
     await expect(tel).toHaveClass(/z-10/);
   });

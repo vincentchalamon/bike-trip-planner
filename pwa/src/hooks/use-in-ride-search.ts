@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   searchNearbyPois,
   type InRidePoiCategory,
@@ -8,7 +8,10 @@ import {
 } from "@/lib/api/client";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import {
+  useGeolocation,
+  type GeolocationCoords,
+} from "@/hooks/use-geolocation";
 
 /**
  * Hard ceiling on the search radius (mirrors
@@ -72,6 +75,12 @@ export function useInRideSearch(): UseInRideSearchResult {
   // The category awaiting a fresh geolocation fix before it can be searched.
   const [pendingCategory, setPendingCategory] =
     useState<InRidePoiCategory | null>(null);
+  // The position reference seen when the pending search was dispatched.
+  // `useGeolocation` builds a fresh object on every completed lookup (even a
+  // cache hit), so a reference change reliably marks "a new fix has landed" —
+  // which is what lets each tap search from the rider's current position
+  // instead of reusing the very first fix.
+  const dispatchedPositionRef = useRef<GeolocationCoords | null>(null);
   const [lastSearch, setLastSearch] = useState<LastSearch | null>(null);
 
   const runSearch = useCallback(
@@ -115,9 +124,11 @@ export function useInRideSearch(): UseInRideSearchResult {
     [tripId, activeDayNumber, appendMessage],
   );
 
-  // Once the pending geolocation fix lands, fire the deferred search.
+  // Fire the deferred search only once a *new* fix has landed since dispatch —
+  // never the stale position captured in `dispatchedPositionRef`.
   useEffect(() => {
     if (pendingCategory === null || !geo.position) return;
+    if (geo.position === dispatchedPositionRef.current) return;
     const category = pendingCategory;
     setPendingCategory(null);
     void runSearch(category, {
@@ -142,17 +153,15 @@ export function useInRideSearch(): UseInRideSearchResult {
         ts: Date.now(),
         category,
       });
-      if (geo.position) {
-        void runSearch(category, {
-          lat: geo.position.latitude,
-          lon: geo.position.longitude,
-        });
-        return;
-      }
+      // Always ask for a fresh fix: a moving rider taps again minutes and
+      // kilometres later, and reusing the first fix would search the wrong
+      // place. The effect above consumes the position only once the new lookup
+      // resolves.
+      dispatchedPositionRef.current = geo.position;
       setPendingCategory(category);
       geo.request();
     },
-    [appendMessage, geo, runSearch],
+    [appendMessage, geo],
   );
 
   const widen = useCallback(() => {
