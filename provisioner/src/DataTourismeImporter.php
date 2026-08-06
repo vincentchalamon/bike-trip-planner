@@ -441,6 +441,18 @@ final readonly class DataTourismeImporter
                 'psql', '-v', 'ON_ERROR_STOP=1', '-c',
                 \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', $stagingSchema, $table),
             ], \sprintf('psql index %s', $table));
+
+            // Separate index on the *geography* cast, for the geometric match of #885. A cast
+            // makes the plain `geom` index above unusable, so without this the correlated
+            // `ST_DWithin(t.geom::geography, …)` subquery scans all ~124 240 staged
+            // accommodations once per unnamed OSM row. Only that one table is ever matched
+            // against, so only it pays for the extra index.
+            if ('accommodations' === $table) {
+                $this->runProcess([
+                    'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+                    \sprintf('CREATE INDEX ON %s.%s USING gist ((geom::geography));', $stagingSchema, $table),
+                ], \sprintf('psql index %s geography', $table));
+            }
         }
     }
 
