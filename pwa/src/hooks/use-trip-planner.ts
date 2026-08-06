@@ -24,8 +24,6 @@ import {
   deleteTrip,
   launchTripAnalysis,
   applyBatchRecompute,
-  sendTripChat,
-  type TripChatResponseBody,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import { trackEvent, type PlausibleEvent } from "@/lib/plausible";
@@ -161,7 +159,6 @@ export function useTripPlanner() {
   const preDragPacingSnapshot = useRef<ReturnType<
     typeof getUndoableSlice
   > | null>(null);
-  const chatAbortRef = useRef<AbortController | null>(null);
   const recomputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tripId = trip?.id ?? null;
@@ -169,12 +166,9 @@ export function useTripPlanner() {
 
   // Chat history is scoped to a single trip session. Wipe it whenever the
   // user switches trip so messages from trip A don't bleed into trip B's
-  // panel after navigation. Also abort any chat request still in flight so
-  // the LLM server doesn't keep generating tokens for a panel that's gone.
+  // panel after navigation.
   useEffect(() => {
     if (!tripId) return;
-    chatAbortRef.current?.abort();
-    chatAbortRef.current = null;
     useUiStore.getState().clearHistory();
   }, [tripId]);
 
@@ -931,138 +925,9 @@ export function useTripPlanner() {
   }
 
   /**
-   * Dispatch a chat turn to `POST /trips/{id}/ai-chat`, append both the user
-   * message and the assistant reply to {@link useUiStore.chatHistory}, and
-   * — when the backend dispatched an inline recomputation — flag the impacted
-   * stages as `recomputing` so the timeline shows the shimmer skeleton until
-   * the matching `stage_updated` Mercure events land.
-   *
-   * Issue #311: actionable replies carry `impactedStageNumbers` (1-indexed)
-   * and a `requiresFullAnalysis` flag. The latter triggers a bounce back to
-   * Acte 2 because the rider asked for a tracé-wide modification.
-   */
-  async function sendChatMessage(
-    text: string,
-    position?: { lat: number; lon: number; bearing?: number | null } | null,
-  ): Promise<TripChatResponseBody | null> {
-    const trimmed = text.trim();
-    if (!trimmed) return null;
-    if (trimmed.length > 2000) return null;
-    if (!tripId) return null;
-
-    const uiStore = useUiStore.getState();
-    uiStore.appendMessage({
-      role: "user",
-      content: trimmed,
-      ts: Date.now(),
-    });
-    uiStore.setChatSending(true);
-
-    // Track the in-flight request so the tripId useEffect can abort it on a
-    // trip switch. Any previous controller belongs to a settled request — we
-    // overwrite it without aborting (the request already completed).
-    const controller = new AbortController();
-    chatAbortRef.current = controller;
-
-    try {
-      const { data, error, errorCode, status } = await sendTripChat(
-        tripId,
-        {
-          message: trimmed,
-          context: { currentStage: uiStore.currentContext.currentStage },
-          ...(position ? { position } : {}),
-        },
-        controller.signal,
-      );
-
-      // Drop the response if the user switched trips while it was in-flight —
-      // appending it would interleave trip A's reply into trip B's panel.
-      if (useTripStore.getState().trip?.id !== tripId) {
-        return null;
-      }
-
-      if (error || !data) {
-        // An actionable provider-config error (invalid token / exhausted quota,
-        // #761) is surfaced as a settings-CTA banner rather than a misleading
-        // "retry" bubble — mirrors the brief chat (ai-chat-card).
-        const configErrorKey =
-          status === 422 && errorCode === "ai_invalid_token"
-            ? "errorInvalidToken"
-            : status === 422 && errorCode === "ai_quota_exceeded"
-              ? "errorQuotaExceeded"
-              : null;
-        if (configErrorKey) {
-          useUiStore.getState().setChatConfigError(configErrorKey);
-          return null;
-        }
-
-        const message =
-          status === 429
-            ? t("aiBubble.errorRateLimit")
-            : status === 503
-              ? t("aiBubble.errorUnavailable")
-              : t("aiBubble.errorGeneric");
-        useUiStore.getState().appendMessage({
-          role: "assistant",
-          content: message,
-          ts: Date.now(),
-        });
-        return null;
-      }
-
-      // A successful turn clears any lingering config-error banner.
-      useUiStore.getState().setChatConfigError(null);
-      useUiStore.getState().appendMessage({
-        role: "assistant",
-        content: data.response,
-        ts: Date.now(),
-        ...(data.pois && data.pois.length > 0 ? { pois: data.pois } : {}),
-      });
-
-      // Inline recomputation: surface the shimmer skeleton on the impacted
-      // stage cards until the matching `stage_updated` SSE event clears it.
-      const impactedStages = data.impactedStageNumbers ?? [];
-      if (data.dispatched && impactedStages.length > 0) {
-        const indices = impactedStages
-          .filter((n): n is number => Number.isInteger(n) && n > 0)
-          .map((n) => n - 1);
-        if (indices.length > 0) {
-          actions.startStageRecomputation(indices);
-          setProcessing(true);
-        }
-      }
-
-      return data;
-    } catch (err) {
-      // Drop the error message if the user switched trips while the request
-      // was in flight — appending it would surface the previous trip's
-      // failure inside the new trip's panel.
-      if (useTripStore.getState().trip?.id !== tripId) {
-        return null;
-      }
-
-      const message = isNetworkError(err)
-        ? t("aiBubble.errorNetwork")
-        : t("aiBubble.errorGeneric");
-      useUiStore.getState().appendMessage({
-        role: "assistant",
-        content: message,
-        ts: Date.now(),
-      });
-      return null;
-    } finally {
-      // Only flip our own in-flight indicator off — a trip switch may have
-      // already started a fresh request whose flag we must not clobber.
-      if (useTripStore.getState().trip?.id === tripId) {
-        useUiStore.getState().setChatSending(false);
-      }
-    }
-  }
-
-  /**
-   * Bounce the rider back to Acte 2 (full re-analysis) on a `change_route`
-   * chat action. Mirrors {@link handleLaunchAnalysis} but is invoked from the
-   * chat panel "Relancer l'analyse" button.
+   * Bounce the rider back to Acte 2 (full re-analysis). Mirrors
+   * {@link handleLaunchAnalysis} but is invoked from the analysis card's
+   * "Relancer l'analyse" button.
    */
   async function relaunchFullAnalysis(): Promise<boolean> {
     return handleLaunchAnalysis();
@@ -1309,7 +1174,6 @@ export function useTripPlanner() {
     handleApplyBatch,
     handleCancelBatch,
     queueModification: actions.queueModification,
-    sendChatMessage,
     relaunchFullAnalysis,
   };
 }

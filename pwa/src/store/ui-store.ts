@@ -24,39 +24,26 @@ export type BlockStatus = "pending" | "running" | "done" | "failed" | null;
 import type { PoiSuggestionDto } from "@/lib/api/client";
 
 /**
- * POI shape carried by in-ride assistant replies. Re-exported from the API
- * client so both the history loader and the chat store share a single
- * derivation of `Trip.TripChatResponse.jsonld.pois[number]` — a future schema
- * refactor (e.g. moving `pois` onto a dedicated InRideResponse) can't leave
- * one copy out of sync.
+ * POI shape carried by in-ride suggestions. Re-exported from the API client so
+ * every consumer shares a single derivation of the POI wire shape and a schema
+ * change surfaces in one place.
  */
 export type PoiSuggestion = PoiSuggestionDto;
 
 /**
- * One turn of the floating AI assistant conversation.
+ * One turn of the floating assistant conversation.
  *
- * Stored in-memory only — the dialogue history is intentionally not persisted
- * across page reloads to mirror the backend-side {@link ChatHistoryStore} which
- * uses a short-TTL Redis store per (trip, user) pair.
+ * Stored in-memory only — the conversation is intentionally not persisted
+ * across page reloads.
  *
- * When the assistant returned POI suggestions (in-ride mode), {@link pois}
- * carries the structured payload so the chat panel can render the POI cards
- * beneath the conversational text.
+ * When the reply carries POI suggestions (in-ride mode), {@link pois} holds the
+ * structured payload so the panel can render the POI cards beneath the text.
  */
 export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
   ts: number;
   pois?: PoiSuggestion[];
-}
-
-/**
- * Conversational context propagated with every chat request so the dialogue
- * assistant can resolve referential phrases such as « cette étape » against
- * the stage the user is currently consulting.
- */
-export interface AiChatContext {
-  currentStage: number | null;
 }
 
 interface UiState {
@@ -101,26 +88,14 @@ interface UiState {
   /**
    * Conversation history of the floating AI assistant, oldest first. Cleared
    * when the user starts a new trip or invokes {@link clearHistory}. Not
-   * persisted across reloads — the backend keeps the canonical history.
+   * persisted across reloads.
    */
   chatHistory: AiChatMessage[];
-  /**
-   * Conversational context the chat panel sends along with every message.
-   * Mirrors `TripChatContext` on the backend.
-   */
-  currentContext: AiChatContext;
   /**
    * `true` while a chat message is in flight — drives the typing indicator
    * inside the chat panel and disables the send button.
    */
   isChatSending: boolean;
-  /**
-   * i18n key (under `aiBubble`) of the actionable provider-config error to show
-   * as a settings-CTA banner in the chat panel, or `null` when hidden. Set on a
-   * 422 from the chat endpoint (invalid token / exhausted quota, #761); cleared
-   * on the next successful turn.
-   */
-  chatConfigErrorKey: "errorInvalidToken" | "errorQuotaExceeded" | null;
   /**
    * Whether the user has ever opened the AI bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
@@ -164,16 +139,10 @@ interface UiState {
   closeBubble: () => void;
   /** Append a turn to {@link chatHistory}. */
   appendMessage: (message: AiChatMessage) => void;
-  /** Update the conversational context broadcast to the chat endpoint. */
-  setCurrentContext: (context: AiChatContext) => void;
   /** Reset the chat history (Acte 1.5 → Acte 3 transition, manual clear). */
   clearHistory: () => void;
   /** Flip the in-flight indicator that drives the typing dots. */
   setChatSending: (value: boolean) => void;
-  /** Show / hide the actionable provider-config error banner (#761). */
-  setChatConfigError: (
-    key: "errorInvalidToken" | "errorQuotaExceeded" | null,
-  ) => void;
   /** Update the runtime AI availability (from the `/api/health` probe, #304). */
   setAiAvailable: (value: boolean) => void;
   /** Update whether the account has a configured AI provider (ADR-042). */
@@ -185,7 +154,7 @@ interface UiState {
   }) => void;
 }
 
-const BUBBLE_SEEN_STORAGE_KEY = "btp.ai-bubble.seen";
+const BUBBLE_SEEN_STORAGE_KEY = "btp.in-ride-bubble.seen";
 
 function readBubbleSeenFromStorage(): boolean {
   if (typeof window === "undefined") return false;
@@ -248,9 +217,7 @@ export const useUiStore = create<UiState>()(
     blockStatus: { weather: null, ai: null },
     isBubbleOpen: false,
     chatHistory: [],
-    currentContext: { currentStage: null },
     isChatSending: false,
-    chatConfigErrorKey: null,
     hasSeenBubble: readBubbleSeenFromStorage(),
     aiCapability: { available: true, configured: false },
 
@@ -345,26 +312,15 @@ export const useUiStore = create<UiState>()(
         state.chatHistory.push(message);
       }),
 
-    setCurrentContext: (context) =>
-      set((state) => {
-        state.currentContext = context;
-      }),
-
     clearHistory: () =>
       set((state) => {
         state.chatHistory = [];
         state.isChatSending = false;
-        state.chatConfigErrorKey = null;
       }),
 
     setChatSending: (value) =>
       set((state) => {
         state.isChatSending = value;
-      }),
-
-    setChatConfigError: (key) =>
-      set((state) => {
-        state.chatConfigErrorKey = key;
       }),
 
     setAiAvailable: (value) =>

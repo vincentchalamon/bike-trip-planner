@@ -16,7 +16,6 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\TripAiChatProcessor;
 use App\State\TripBatchRecomputeProcessor;
-use App\State\TripChatProcessor;
 use App\State\TripAiGenerateProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
@@ -135,23 +134,6 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: AnalyzeTripProcessor::class,
-        ),
-        new Post(
-            uriTemplate: '/trips/{id}/ai-chat{._format}',
-            status: 200,
-            openapi: new Operation(
-                responses: [
-                    404 => new Response(description: 'Trip not found'),
-                    429 => new Response(description: 'Rate limit reached'),
-                    503 => new Response(description: 'AI assistant unavailable'),
-                ],
-                summary: 'Send a natural-language instruction to the LLaMA 3B dialogue assistant.',
-            ),
-            security: "is_granted('TRIP_EDIT', object)",
-            input: TripChatRequest::class,
-            output: TripChatResponse::class,
-            provider: TripRequestProvider::class,
-            processor: TripChatProcessor::class,
         ),
         new Post(
             uriTemplate: '/trips/{id}/recompute{._format}',

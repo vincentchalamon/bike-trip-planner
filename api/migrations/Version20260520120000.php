@@ -11,9 +11,10 @@ use Doctrine\Migrations\AbstractMigration;
  * Adds the in-ride payload columns to `trip_chat_message` (#465, sprint 32).
  *
  * The base table created in #458 only stored the conversational turn. The
- * in-ride pipeline (PR #474) also persists the rider's GPS position and the
- * structured POI suggestions so {@see \App\State\TripChatHistoryProvider} can
- * rehydrate the PoiCard rendering on a page reload.
+ * in-ride pipeline (PR #474) also persisted the rider's GPS position and the
+ * structured POI suggestions to rehydrate the PoiCard rendering on a page
+ * reload. That read path was removed in #929; the columns are kept until the
+ * table itself is dropped by a follow-up migration.
  */
 final class Version20260520120000 extends AbstractMigration
 {

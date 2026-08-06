@@ -482,175 +482,14 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
 }
 
 /**
- * Body of `POST /trips/{id}/ai-chat`. Hand-written mirror of
- * `App\ApiResource\TripChatRequest`: this route is called through
- * {@link apiFetch} rather than the generated typed client, so the shape is
- * maintained here instead of being sourced from the OpenAPI types.
+ * POI payload for a mid-ride suggestion. Inferred from {@link poiSuggestionSchema}
+ * below — the single runtime source of truth for the POI wire shape.
  */
-export interface TripChatRequestBody {
-  message: string;
-  context?: {
-    currentStage: number | null;
-  } | null;
-  /**
-   * Optional rider GPS position. When set, the backend switches the assistant
-   * to in-ride POI search mode (see `App\InRide\InRideAssistant`).
-   *
-   * Sourced from the generated OpenAPI schema so any future field addition on
-   * the backend `GeoPosition` model (e.g. accuracy) is picked up here without
-   * a manual edit.
-   */
-  position?: components["schemas"]["GeoPosition"] | null;
-}
+export type PoiSuggestionDto = z.infer<typeof poiSuggestionSchema>;
 
 /**
- * POI payload returned in-ride. Sourced directly from the generated OpenAPI
- * schema (`pois` items on `Trip.TripChatResponse.jsonld`) so the wire contract
- * stays in lockstep with `App\InRide\PoiSuggestion::toArray()`.
- */
-export type PoiSuggestionDto = NonNullable<
-  NonNullable<
-    components["schemas"]["Trip.TripChatResponse.jsonld"]["pois"]
-  >[number]
->;
-
-/**
- * Response of `POST /trips/{id}/ai-chat`. Mirrors `App\ApiResource\TripChatResponse`
- * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`,
- * `impactedStageNumbers`, `requiresFullAnalysis`).
- */
-export interface TripChatResponseBody {
-  tripId: string;
-  action: string;
-  params: Record<string, unknown>;
-  response: string;
-  dispatched: boolean;
-  /**
-   * 1-indexed day numbers whose recomputation was dispatched (chat-driven
-   * inline edits). Empty for `info` and `change_route` actions.
-   */
-  impactedStageNumbers?: number[];
-  /**
-   * True when the action requires a full trip re-analysis (Acte 2). The
-   * frontend should bounce the rider back to the analysis screen and offer
-   * a "Relancer l'analyse" button.
-   */
-  requiresFullAnalysis?: boolean;
-  /**
-   * Top POI suggestions returned in-ride. Only populated when the request
-   * carried a GPS `position`. Empty / undefined in planning mode.
-   */
-  pois?: PoiSuggestionDto[] | null;
-}
-
-/**
- * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
- *
- * Calls the server through {@link apiFetch} rather than the generated
- * `apiClient.POST`, using the hand-written {@link TripChatRequestBody} /
- * {@link TripChatResponseBody} shapes above. The OpenAPI schema does expose
- * this route, so this is a deliberate choice, not a typegen limitation.
- */
-export async function sendTripChat(
-  tripId: string,
-  body: TripChatRequestBody,
-  signal?: AbortSignal,
-): Promise<{
-  data: TripChatResponseBody | null;
-  error: string | null;
-  /**
-   * Discrete machine-readable error code from the backend body (`{ error }`),
-   * e.g. `ai_invalid_token` / `ai_quota_exceeded` (#761). Null on success or
-   * when the error body carries no code (non-JSON / network error).
-   */
-  errorCode: string | null;
-  status: number;
-}> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}/ai-chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/ld+json",
-      Accept: "application/ld+json",
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
-
-  if (!res.ok) {
-    // Surface the backend's discrete error code (#761) so the in-ride panel can
-    // tell an actionable config error (422 `ai_invalid_token` / `ai_quota_exceeded`)
-    // apart from a transient outage and show the matching settings CTA.
-    let errorCode: string | null = null;
-    try {
-      const errorBody: unknown = await res.json();
-      if (
-        errorBody !== null &&
-        typeof errorBody === "object" &&
-        "error" in errorBody &&
-        typeof errorBody.error === "string"
-      ) {
-        errorCode = errorBody.error;
-      }
-    } catch {
-      // Non-JSON error body (proxy / HTML page) — leave errorCode null.
-    }
-    return {
-      data: null,
-      error: `HTTP ${res.status}`,
-      errorCode,
-      status: res.status,
-    };
-  }
-
-  const raw: unknown = await res.json();
-  const parsed = tripChatResponseSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      data: null,
-      error: "Invalid response shape",
-      errorCode: null,
-      status: res.status,
-    };
-  }
-
-  return {
-    data: parsed.data,
-    error: null,
-    errorCode: null,
-    status: res.status,
-  };
-}
-
-/**
- * One persisted chat turn returned by `GET /trips/{id}/ai-chat-history`.
- *
- * Mirrors `App\ApiResource\TripChatMessageResource`. Messages are returned
- * most-recent first; consumers reverse the array for chronological rendering.
- *
- * We intentionally keep this interface manual rather than swapping it for
- * `components["schemas"]["TripChatMessage.jsonld"]`: API Platform marks every
- * field on the generated schema as optional, which weakens the consumer
- * contract (every property reads as `T | undefined`). The Zod schema below
- * still enforces the strict shape at runtime, so any backend drift would
- * surface as a parse failure in `fetchTripChatHistory`.
- */
-export interface TripChatMessageHistoryEntry {
-  id: string;
-  tripId: string;
-  role: "user" | "assistant";
-  content: string;
-  action: string | null;
-  geoLat: number | null;
-  geoLon: number | null;
-  pois: PoiSuggestionDto[];
-  createdAt: string;
-}
-
-/**
- * Single source of truth for the POI payload Zod shape — referenced by both
- * the chat-history entry schema and the trip-chat response schema below so a
- * future field addition or rename in `App\InRide\PoiSuggestion::toArray()`
- * only has to be reflected here.
+ * Single source of truth for the POI payload Zod shape and its inferred
+ * {@link PoiSuggestionDto} type. Kept for the guided in-ride search (#935).
  */
 // `deeplink` is rendered straight into `<a href={poi.deeplink}>` in PoiCard.
 // React 19 still emits a runtime warning for `javascript:`/`data:` URLs
@@ -677,70 +516,6 @@ const poiSuggestionSchema = z.object({
   phone: z.string().nullable(),
   deeplink: safeUrlSchema,
   warning: z.string().nullable(),
-});
-
-const chatHistoryEntrySchema = z.object({
-  id: z.string(),
-  tripId: z.string(),
-  role: z.enum(["user", "assistant"]),
-  content: z.string(),
-  action: z.string().nullable(),
-  geoLat: z.number().nullable(),
-  geoLon: z.number().nullable(),
-  pois: z.array(poiSuggestionSchema).catch([]).default([]),
-  createdAt: z.string(),
-});
-
-/**
- * Fetch the persisted chat history for a trip. Returns chronologically-ordered
- * turns (oldest first) ready to feed into the chat panel store.
- *
- * The backend serves a JSON-LD `member` collection sorted most-recent first;
- * this helper reverses it so callers can `push` each message in order.
- */
-export async function fetchTripChatHistory(
-  tripId: string,
-  options: { limit?: number; signal?: AbortSignal } = {},
-): Promise<TripChatMessageHistoryEntry[]> {
-  const params = new URLSearchParams();
-  if (options.limit !== undefined) params.set("limit", String(options.limit));
-  const query = params.toString();
-  const url = `${API_URL}/trips/${tripId}/ai-chat-history${query ? `?${query}` : ""}`;
-
-  const res = await apiFetch(url, {
-    method: "GET",
-    headers: { Accept: "application/ld+json" },
-    signal: options.signal,
-  });
-
-  if (!res.ok) {
-    return [];
-  }
-
-  const raw: unknown = await res.json();
-  const envelope = z
-    .object({ member: z.array(chatHistoryEntrySchema) })
-    .safeParse(raw);
-  if (!envelope.success) {
-    return [];
-  }
-  return [...envelope.data.member].reverse();
-}
-
-const tripChatResponseSchema = z.object({
-  tripId: z.string(),
-  action: z.string(),
-  // PHP serialises an empty params map as a JSON array (`[]`), which a bare
-  // `z.record` rejects (parsed type "array") — failing the WHOLE parse and
-  // surfacing a spurious "Une erreur est survenue" on every `info` reply
-  // (recette #649). `.catch({})` coerces that (and any malformed value) to an
-  // empty map, mirroring the brief-chat `collected` schema.
-  params: z.record(z.string(), z.unknown()).catch({}),
-  response: z.string(),
-  dispatched: z.boolean(),
-  impactedStageNumbers: z.array(z.number()).optional(),
-  requiresFullAnalysis: z.boolean().optional(),
-  pois: z.array(poiSuggestionSchema).nullable().optional(),
 });
 
 /**
@@ -815,9 +590,8 @@ function aiChatErrorCode(body: unknown): string | null {
  *
  * The endpoint is stateless — the client carries the full conversation on every
  * turn. Uses the typed {@link apiClient} (the route is fully described by the
- * generated schema, unlike `sendTripChat` which keeps a hand-written mirror for
- * legacy reasons), then classifies the discrete failure modes by HTTP status so
- * the caller can localize them.
+ * generated schema), then classifies the discrete failure modes by HTTP status
+ * so the caller can localize them.
  */
 export async function sendAiChat(
   messages: ReadonlyArray<AiChatTurn>,

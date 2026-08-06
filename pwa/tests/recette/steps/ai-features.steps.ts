@@ -1,6 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
-import { getTripId } from "../../fixtures/api-mocks";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -11,63 +10,11 @@ import {
 import type { MercureEvent } from "../../../src/lib/mercure/types";
 
 // ---------------------------------------------------------------------------
-// AI features — trip overview, stage summary, chat, refinement, diff highlight
-// FR + EN. Mirrors the mocked specs (trip-ai-overview, stage-ai-summary,
-// ai-bubble, chat-in-ride, diff-highlight) but drives the public recette
-// fixtures so the scenarios are executable end-to-end.
+// AI features — trip overview, stage summary, diff highlight. FR + EN. Mirrors
+// the mocked specs (trip-ai-overview, stage-ai-summary, diff-highlight) but
+// drives the public recette fixtures so the scenarios are executable
+// end-to-end.
 // ---------------------------------------------------------------------------
-
-function chatUrlPattern(): RegExp {
-  return new RegExp(
-    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/ai-chat$`,
-  );
-}
-
-const capturedChatRequests: { body: unknown }[] = [];
-
-/**
- * Stub the chat endpoint with a deterministic assistant reply. `delayMs`
- * keeps the request in flight long enough to observe the typing indicator.
- */
-async function mockChat(
-  page: Page,
-  body: {
-    response: string;
-    pois?: unknown[];
-    action?: string;
-  },
-  delayMs = 0,
-): Promise<void> {
-  // Reset the module-level capture: it persists across scenarios in the same
-  // worker, so a prior `mockChat` scenario would otherwise leave stale entries
-  // and make the "request sent" poll pass without a fresh POST.
-  capturedChatRequests.length = 0;
-  await page.route(chatUrlPattern(), async (route, request) => {
-    if (request.method() !== "POST") return route.fallback();
-    try {
-      capturedChatRequests.push({
-        body: JSON.parse(request.postData() ?? "{}"),
-      });
-    } catch {
-      capturedChatRequests.push({ body: null });
-    }
-    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        tripId: getTripId(),
-        action: body.action ?? (body.pois ? "find_poi" : "info"),
-        params: {},
-        response: body.response,
-        dispatched: false,
-        impactedStageNumbers: [],
-        requiresFullAnalysis: false,
-        pois: body.pois ?? [],
-      }),
-    });
-  });
-}
 
 /** A stage_updated event changing the distance (72.5 → 55.0 km). */
 function stageUpdatedWithDistanceChange(stageIndex: number): MercureEvent {
@@ -135,22 +82,6 @@ function stageUpdatedWithNewAlerts(stageIndex: number): MercureEvent {
     },
   };
 }
-
-const NEARBY_POIS = [
-  {
-    name: "Boulangerie du Marché",
-    category: "food",
-    lat: 48.857,
-    lon: 2.353,
-    distance_m: 450,
-    detour_m: 200,
-    opening_hours_today: "Mo-Sa 07:00-19:30",
-    closes_at: "2030-12-31T23:59:00+02:00",
-    phone: "+33123456789",
-    deeplink: "https://maps.google.com/?q=48.857,2.353",
-    warning: null,
-  },
-];
 
 // ===========================================================================
 // Given — trip AI overview (FR + EN)
@@ -242,113 +173,9 @@ Given(
   },
 );
 
-// ===========================================================================
-// Given — chat assistant mocks (FR + EN)
-// ===========================================================================
-
-Given(
-  "l'assistant IA répond {string}",
-  async ({ mockedPage }, reply: string) => {
-    await mockChat(mockedPage, { response: reply });
-  },
-);
-
-Given(
-  "the AI assistant replies {string}",
-  async ({ mockedPage }, reply: string) => {
-    await mockChat(mockedPage, { response: reply });
-  },
-);
-
-Given("l'assistant IA répond avec un délai", async ({ mockedPage }) => {
-  await mockChat(mockedPage, { response: "Réponse différée." }, 1500);
-});
-
-Given("the AI assistant replies with a delay", async ({ mockedPage }) => {
-  await mockChat(mockedPage, { response: "Delayed reply." }, 1500);
-});
-
-Given(
-  "ma position est partagée à {float}, {float}",
-  async ({ mockedPage }, lat: number, lon: number) => {
-    const ctx = mockedPage.context();
-    await ctx.grantPermissions(["geolocation"]);
-    await ctx.setGeolocation({ latitude: lat, longitude: lon });
-  },
-);
-
-Given(
-  "my position is shared at {float}, {float}",
-  async ({ mockedPage }, lat: number, lon: number) => {
-    const ctx = mockedPage.context();
-    await ctx.grantPermissions(["geolocation"]);
-    await ctx.setGeolocation({ latitude: lat, longitude: lon });
-  },
-);
-
-Given("l'assistant IA répond avec des POIs proches", async ({ mockedPage }) => {
-  await mockChat(mockedPage, {
-    response: "Voici des points proches.",
-    pois: NEARBY_POIS,
-  });
-});
-
-Given("the AI assistant replies with nearby POIs", async ({ mockedPage }) => {
-  await mockChat(mockedPage, {
-    response: "Here are nearby points.",
-    pois: NEARBY_POIS,
-  });
-});
-
 // ADR-043: the single-shot AI refinement card and the "Aperçu" wizard step it
 // lived on were removed (Saisie -> loader -> trip view). Its Given/When/Then
 // step definitions were deleted along with the scenarios.
-
-// ===========================================================================
-// When — chat interactions (FR + EN)
-// ===========================================================================
-
-When("j'ouvre la bulle d'assistance IA", async ({ mockedPage }) => {
-  const bubble = mockedPage.getByTestId("ai-bubble");
-  await expect(bubble).toBeVisible({ timeout: 10000 });
-  await bubble.click();
-});
-
-When("I open the AI assistant bubble", async ({ mockedPage }) => {
-  const bubble = mockedPage.getByTestId("ai-bubble");
-  await expect(bubble).toBeVisible({ timeout: 10000 });
-  await bubble.click();
-});
-
-When(
-  "j'envoie le message {string} dans le chat IA",
-  async ({ mockedPage }, message: string) => {
-    await mockedPage.getByTestId("ai-chat-panel-input").fill(message);
-    await mockedPage.getByTestId("ai-chat-panel-send").click();
-  },
-);
-
-When(
-  "I send the message {string} in the AI chat",
-  async ({ mockedPage }, message: string) => {
-    await mockedPage.getByTestId("ai-chat-panel-input").fill(message);
-    await mockedPage.getByTestId("ai-chat-panel-send").click();
-  },
-);
-
-When("j'active la géolocalisation dans le chat IA", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("ai-chat-panel-geoloc-prompt").click();
-  await expect(
-    mockedPage.getByTestId("ai-chat-panel-geoloc-prompt"),
-  ).toHaveCount(0, { timeout: 3000 });
-});
-
-When("I enable geolocation in the AI chat", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("ai-chat-panel-geoloc-prompt").click();
-  await expect(
-    mockedPage.getByTestId("ai-chat-panel-geoloc-prompt"),
-  ).toHaveCount(0, { timeout: 3000 });
-});
 
 // ===========================================================================
 // When — stage AI analysis interactions (FR + EN)
@@ -723,101 +550,6 @@ Then(
 
 Then("the modification queue is visible", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("modification-queue")).toBeVisible({
-    timeout: 5000,
-  });
-});
-
-// ===========================================================================
-// Then — chat panel (FR + EN)
-// ===========================================================================
-
-Then("le panneau de chat IA est visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-chat-panel")).toBeVisible({
-    timeout: 5000,
-  });
-});
-
-Then("the AI chat panel is visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-chat-panel")).toBeVisible({
-    timeout: 5000,
-  });
-});
-
-Then(/^une requête POST vers \/trips\/\*\/ai-chat est envoyée$/, async () => {
-  await expect
-    .poll(() => capturedChatRequests.length, { timeout: 5000 })
-    .toBeGreaterThan(0);
-});
-
-Then(/^a POST request to \/trips\/\*\/ai-chat is sent$/, async () => {
-  await expect
-    .poll(() => capturedChatRequests.length, { timeout: 5000 })
-    .toBeGreaterThan(0);
-});
-
-Then(
-  "la réponse {string} apparaît dans l'historique du chat",
-  async ({ mockedPage }, reply: string) => {
-    await expect(
-      mockedPage
-        .getByTestId("ai-chat-panel-message")
-        .filter({ hasText: reply }),
-    ).toBeVisible({ timeout: 5000 });
-  },
-);
-
-Then(
-  "the reply {string} appears in the chat history",
-  async ({ mockedPage }, reply: string) => {
-    await expect(
-      mockedPage
-        .getByTestId("ai-chat-panel-message")
-        .filter({ hasText: reply }),
-    ).toBeVisible({ timeout: 5000 });
-  },
-);
-
-Then(
-  "l'indicateur de saisie de l'assistant est visible",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-chat-panel-typing")).toBeVisible({
-      timeout: 3000,
-    });
-  },
-);
-
-Then("the assistant typing indicator is visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-chat-panel-typing")).toBeVisible({
-    timeout: 3000,
-  });
-});
-
-Then(
-  "une carte de POI est affichée dans le chat IA",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("poi-card").first()).toBeVisible({
-      timeout: 5000,
-    });
-  },
-);
-
-Then("a POI card is displayed in the AI chat", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("poi-card").first()).toBeVisible({
-    timeout: 5000,
-  });
-});
-
-Then(
-  "l'avertissement de sécurité en route est affiché",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("in-ride-disclaimer")).toBeVisible({
-      timeout: 5000,
-    });
-  },
-);
-
-Then("the in-ride safety disclaimer is shown", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("in-ride-disclaimer")).toBeVisible({
     timeout: 5000,
   });
 });
