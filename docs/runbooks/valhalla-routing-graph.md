@@ -15,6 +15,7 @@ Since #881 the two datasets share nothing — no file, no directory, no schedule
 | Perimeter | the `osm.zones` registry, one row per opened zone | the extracts present in the `valhalla-tiles` volume, i.e. every slug ever passed to `make routing-build` |
 | Cadence | often, one zone at a time | rarely, per country opening (target: monthly refresh) |
 | Command | `make provision <zone>` | `make routing-build <slug>` |
+| Runbook | [zone-opening.md](zone-opening.md) | this file |
 
 Opening a reference zone therefore **cannot** degrade routing, and a long or
 failed graph build **cannot** make routing unavailable. Before #881 both read

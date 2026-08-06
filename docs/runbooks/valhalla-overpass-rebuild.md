@@ -59,7 +59,7 @@ docker compose exec valhalla ls -lh /custom_files
      -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
    ```
 
-4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision`, which loads OSM + DataTourisme) rather than rebuilding tiles here.
+4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: open or re-open the zone concerned (`make provision <zone>`, which loads OSM + DataTourisme for that one zone) rather than rebuilding tiles here. See [zone-opening.md](zone-opening.md); the two datasets share nothing (ADR-049).
 
 ## Post-action
 
