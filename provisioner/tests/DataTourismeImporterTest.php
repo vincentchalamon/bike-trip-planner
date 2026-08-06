@@ -120,10 +120,15 @@ final class DataTourismeImporterTest extends TestCase
             $cmd = $command;
             $this->captured[] = $cmd;
 
-            // Emulate psql exporting the missing Q-IDs (the enrichment pass reads
-            // this file back); the no-op `true` process never writes it itself.
-            if ([] !== $missingQids && 1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
-                file_put_contents($matches[1], implode("\n", $missingQids)."\n");
+            // Emulate psql exporting files the passes read back; the no-op `true` process
+            // never writes them itself.
+            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
+                if (str_contains($matches[1], 'zone-geometry')) {
+                    // The zone is open, so the promotion has a geometry to clip against.
+                    file_put_contents($matches[1], "1\n");
+                } elseif ([] !== $missingQids) {
+                    file_put_contents($matches[1], implode("\n", $missingQids)."\n");
+                }
             }
 
             return new Process(['true']);
@@ -146,10 +151,11 @@ final class DataTourismeImporterTest extends TestCase
         // 1 staging DDL + 4 \copy + 4 GIST index
         // + 7 Wikidata-pass psql calls (prepare, collect, export, one UPDATE per Wikidata
         // table, drop; no Q-IDs to fetch in this fixture)
+        // + 1 zone-geometry precondition read (#885: no geometry, no promotion)
         // + 6 name-resolution psql calls (prepare, export candidates, apply, count gated,
         // gate, drop scratch; nothing to resolve in this fixture, so no cache write)
         // + 1 report DDL + 1 promotion + 1 staging drop.
-        self::assertCount(25, $this->captured);
+        self::assertCount(26, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);

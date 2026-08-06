@@ -151,6 +151,10 @@ final class ProvisionCommand extends Command
 
             $outcomes['osm'] = $this->runOsm($io, $zone, $dryRun, $curatedTable);
 
+            // Deliberately not gated on $outcomes['osm']: a failed OSM refresh must not block a
+            // DataTourisme refresh for a zone that is already open (ADR-041). The real
+            // precondition — a registry geometry to clip against — is checked by finish()
+            // itself, which skips rather than promoting nothing and calling it a success.
             if ($curated instanceof DataTourismeImporter && Command::SUCCESS === $curatedOutcome) {
                 $curatedOutcome = $this->finishDataTourisme($io, $curated, $zone['slug']);
             }
@@ -362,11 +366,22 @@ final class ProvisionCommand extends Command
         $io->section('Promoting DataTourisme into PostGIS');
 
         try {
-            $importer->finish($this->dataTourismeDir, $zoneSlug);
+            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
+        }
+
+        if (!$promoted) {
+            // No registry geometry to clip against, so there was nothing to promote into. A
+            // skip, not a failure: the flux is national and the next opening of this zone
+            // re-downloads it anyway.
+            $message = 'DataTourisme promotion skipped: the zone has no registry geometry to clip against, so the OSM step did not complete.';
+            $io->warning($message);
+            $this->logLine('INFO', $message);
+
+            return Command::SUCCESS;
         }
 
         $unmapped = $importer->unmappedAccommodationCount();

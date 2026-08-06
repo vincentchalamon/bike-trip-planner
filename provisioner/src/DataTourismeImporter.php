@@ -200,11 +200,28 @@ final readonly class DataTourismeImporter
     /**
      * Gates the staged flux and promotes what survives into the live schema.
      *
+     * @return bool false when the zone has no registry geometry to clip against, so nothing
+     *              was promoted — a skip, not a failure
+     *
      * @throws ImportFailedException
      */
-    public function finish(string $workDir, string $zoneSlug): void
+    public function finish(string $workDir, string $zoneSlug): bool
     {
         $staging = self::stagingSchema($zoneSlug);
+
+        // The promotion clips to the zone's registry geometry, so with no geometry it would
+        // promote exactly nothing and report success — silently, which is worse than
+        // refusing. That happens when the OSM step failed before writing the registry row,
+        // and also when it succeeded but its clipped extract yielded no boundary at all
+        // (#880). The precondition is therefore the geometry, not the sibling step's exit
+        // code: gating on the OSM outcome would make a failed OSM download also block a
+        // DataTourisme refresh for a zone that is already open, which is precisely the
+        // cross-source coupling ADR-041 forbids.
+        if (!$this->zoneHasGeometry($workDir, $zoneSlug)) {
+            $this->dropStaging($staging);
+
+            return false;
+        }
 
         // The gate runs before promotion here too. The flux names its places far more
         // reliably than OSM does, so this mostly refuses nothing — but the decision must
@@ -212,6 +229,30 @@ final readonly class DataTourismeImporter
         $gate = $this->placeEnrichmentPass->run($workDir, $staging, 'accommodations');
         $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
+
+        return true;
+    }
+
+    /**
+     * Whether the zone has a geometry in the registry to clip the promotion against.
+     *
+     * @throws ImportFailedException
+     */
+    private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
+    {
+        $path = $workDir.'/zone-geometry.tsv';
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf(
+                "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
+                ZonePromotion::literal($zoneSlug),
+                $path,
+            ),
+        ], 'psql check zone geometry');
+
+        $contents = is_file($path) ? file_get_contents($path) : false;
+
+        return \is_string($contents) && 0 < (int) trim($contents);
     }
 
     /**
