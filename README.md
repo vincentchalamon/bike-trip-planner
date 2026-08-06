@@ -281,6 +281,13 @@ Three properties of that model (ADR-049), all of them checkable from the command
 
 `osm.zones` is the source of truth for what is open; there is no selection file.
 
+Each opening also writes `.docker/osm/data/zones/<zone>/rejected.tsv`: what the completeness
+gate refused, **ranked by distance to the nearest signed cycle route**, so an operator works
+the thirty refusals that border a véloroute rather than the three thousand lost in open
+country. Corrections go back in as an `override.tsv` via `make provision-override <zone>` —
+no endpoint, no interface, no versioning, and nothing stores the file. See the
+[corrections runbook](docs/runbooks/zone-opening-corrections.md).
+
 **Refresh (manual):**
 
 Both datasets are refreshed manually — there is no scheduled job — and independently:

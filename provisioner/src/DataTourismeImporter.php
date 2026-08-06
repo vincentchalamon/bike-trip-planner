@@ -157,7 +157,8 @@ final readonly class DataTourismeImporter
             source: 'datatourisme',
             identity: 'a.id',
             exemptCategories: [],
-            boundariesSchema: 'osm',
+            osmSchema: 'osm',
+            liveSchema: self::LIVE_SCHEMA,
             processFactory: $this->processFactory,
             timeoutSeconds: $this->timeoutSeconds,
         );
@@ -205,7 +206,7 @@ final readonly class DataTourismeImporter
      *
      * @throws ImportFailedException
      */
-    public function finish(string $workDir, string $zoneSlug): bool
+    public function finish(string $workDir, string $zoneSlug, ?string $reportDir = null): bool
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -226,7 +227,12 @@ final readonly class DataTourismeImporter
         // The gate runs before promotion here too. The flux names its places far more
         // reliably than OSM does, so this mostly refuses nothing — but the decision must
         // live in one place for both sources, which is the whole point of #884.
-        $gate = $this->placeEnrichmentPass->run($workDir, $staging, 'accommodations');
+        $gate = $this->placeEnrichmentPass->run(
+            $workDir,
+            $staging,
+            'accommodations',
+            null === $reportDir ? null : \sprintf('%s/%s/rejected-datatourisme.tsv', $reportDir, $zoneSlug),
+        );
         $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
 

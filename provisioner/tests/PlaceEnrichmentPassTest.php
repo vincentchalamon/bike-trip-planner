@@ -246,7 +246,7 @@ final class PlaceEnrichmentPassTest extends TestCase
             source: 'datatourisme',
             identity: 'a.id',
             exemptCategories: [],
-            boundariesSchema: 'osm',
+            osmSchema: 'osm',
             processFactory: function (array $command): Process {
                 /** @var list<string> $cmd */
                 $cmd = $command;
@@ -380,6 +380,121 @@ final class PlaceEnrichmentPassTest extends TestCase
         foreach (['name', 'description', 'website', 'opening_hours'] as $column) {
             self::assertStringContainsString($column.' = COALESCE(a.'.$column.", c.payload->>'".$column."')", $apply);
         }
+    }
+
+    #[Test]
+    public function writesNoReportWhenNoPathIsGiven(): void
+    {
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertFalse($this->hasSqlContaining('/rejected.tsv'));
+    }
+
+    #[Test]
+    public function ranksTheRejectsByDistanceToTheNearestCycleRoute(): void
+    {
+        // The ordering is what makes the exercise finite: the operator works the thirty
+        // rejects that border a véloroute instead of the three thousand lost in open country.
+        // Signed cycle routes are already imported, so the ranking costs nothing.
+        $report = $this->workDir.'/zones/bretagne/rejected.tsv';
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations', $report);
+
+        $sql = $this->sqlContaining('/rejected.tsv');
+        self::assertStringContainsString('FROM osm_staging_bretagne.cycle_routes r', $sql);
+        // KNN, so the GiST index on cycle_routes.geom is one probe per reject rather than a
+        // full scan of every route.
+        self::assertStringContainsString('ORDER BY r.geom <-> a.geom LIMIT 1', $sql);
+        self::assertStringContainsString('NULLS LAST', $sql, 'a zone with no cycle route at all still produces a readable file');
+    }
+
+    #[Test]
+    public function theReportCarriesEverythingAHumanNeedsToDecide(): void
+    {
+        $report = $this->workDir.'/zones/bretagne/rejected.tsv';
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations', $report);
+
+        $sql = $this->sqlContaining('/rejected.tsv');
+        foreach (['AS source', 'AS source_id', 'a.category', 'AS lat', 'AS lon', 'AS commune', 'AS reason', 'AS cycle_route_m', 'AS tags'] as $column) {
+            self::assertStringContainsString($column, $sql);
+        }
+
+        // Tab-separated with a header, so the operator can edit it in place and feed it back.
+        self::assertStringContainsString("WITH (FORMAT csv, DELIMITER E'\\t', HEADER true)", $sql);
+    }
+
+    #[Test]
+    public function createsTheReportDirectory(): void
+    {
+        $report = $this->workDir.'/zones/bretagne/rejected.tsv';
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations', $report);
+
+        self::assertDirectoryExists($this->workDir.'/zones/bretagne');
+    }
+
+    #[Test]
+    public function writesTheReportBeforeTheGateDeletesTheRows(): void
+    {
+        $report = $this->workDir.'/zones/bretagne/rejected.tsv';
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations', $report);
+
+        $written = $this->commandIndex('/rejected.tsv');
+        $deleted = $this->commandIndex('DELETE FROM osm_staging_bretagne.accommodations');
+        self::assertGreaterThan(-1, $written);
+        self::assertLessThan($deleted, $written, 'otherwise there would be nothing left to report on');
+    }
+
+    #[Test]
+    public function neverReportsARowAnOperatorHasAlreadyCorrected(): void
+    {
+        // Once an override.tsv has inserted the row into live, re-opening the zone re-imports
+        // the same anonymous row into staging. Without this exclusion it would be counted and
+        // listed again every single time, asking to be fixed once more.
+        $pass = new PlaceEnrichmentPass(
+            source: 'osm',
+            identity: "a.osm_type || '/' || a.osm_id",
+            exemptCategories: ['shelter'],
+            liveSchema: 'osm',
+            processFactory: function (array $command): Process {
+                /** @var list<string> $cmd */
+                $cmd = $command;
+                $this->captured[] = $cmd;
+
+                if (1 === preg_match("/TO '([^']+)'/", end($cmd) ?: '', $matches)) {
+                    file_put_contents($matches[1], "0\n");
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $pass->run($this->workDir, 'osm_staging_bretagne', 'accommodations', $this->workDir.'/zones/bretagne/rejected.tsv');
+
+        $sql = $this->sqlContaining('/rejected.tsv');
+        self::assertStringContainsString('NOT EXISTS (SELECT 1 FROM osm.accommodations l WHERE l.osm_type = a.osm_type AND l.osm_id = a.osm_id)', $sql);
+        // Same predicate drives the count, so the numbers and the file agree.
+        self::assertStringContainsString('NOT EXISTS (SELECT 1 FROM osm.accommodations l', $this->sqlContaining('place-rejected.tsv'));
+    }
+
+    #[Test]
+    public function matchesTheLiveIdentityOnIdForACuratedSource(): void
+    {
+        $pass = new PlaceEnrichmentPass(
+            source: 'datatourisme',
+            identity: 'a.id',
+            osmSchema: 'osm',
+            liveSchema: 'tourism',
+            processFactory: function (array $command): Process {
+                /** @var list<string> $cmd */
+                $cmd = $command;
+                $this->captured[] = $cmd;
+
+                return new Process(['true']);
+            },
+        );
+
+        $pass->run($this->workDir, 'tourism_staging_bretagne', 'accommodations');
+
+        self::assertStringContainsString('NOT EXISTS (SELECT 1 FROM tourism.accommodations l WHERE l.id = a.id)', $this->sqlContaining('place-rejected.tsv'));
     }
 
     private function commandIndex(string $needle): int

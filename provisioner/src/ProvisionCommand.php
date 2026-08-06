@@ -45,6 +45,13 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_DATATOURISME_DIR = '/data/datatourisme';
 
+    /**
+     * Root of the per-zone report directory: `<zonesDir>/<zone>/rejected.tsv` (#886). Under
+     * `/data`, which is bind-mounted, so the operator picks the file up on the host — and
+     * `.docker/osm/data/*` is gitignored, so no data file can reach the repository.
+     */
+    private const string DEFAULT_ZONES_DIR = '/data/zones';
+
     private const string DEFAULT_LOCK_FILE = '/data/provision.lock';
 
     private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
@@ -71,6 +78,7 @@ final class ProvisionCommand extends Command
         private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
         // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
         private readonly ?DataTourismeImporter $dataTourismeImporter = null,
+        private readonly string $zonesDir = self::DEFAULT_ZONES_DIR,
         private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
         private readonly string $logFile = self::DEFAULT_LOG_FILE,
         ?RoutingPerimeter $routingPerimeter = null,
@@ -366,7 +374,7 @@ final class ProvisionCommand extends Command
         $io->section('Promoting DataTourisme into PostGIS');
 
         try {
-            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug);
+            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug, $this->zonesDir);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 
@@ -434,7 +442,7 @@ final class ProvisionCommand extends Command
         $io->write('  Importing Tier-1 features into PostGIS... ');
 
         try {
-            $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf, $curatedTable);
+            $gate = $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf, $curatedTable, $this->zonesDir);
         } catch (ImportFailedException $importFailedException) {
             $io->newLine();
             $this->fail($io, $importFailedException->getMessage());
@@ -443,8 +451,48 @@ final class ProvisionCommand extends Command
         }
 
         $io->writeln("\u{2713}");
+        $this->reportGate($io, $zone['slug'], $gate);
         $io->success(\sprintf('Zone %s is open. Every other zone was left untouched.', $zone['name']));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * What the completeness gate accepted and refused, and where to act on the refusals.
+     *
+     * The diagnostic line matters more than the numbers. A large `rejected.tsv` is **not** a
+     * signal that more human work is needed — it is a signal that the resolvers are bad, the
+     * tag projection first among them. Saying so here keeps that reading from being buried
+     * under a long file, which is exactly what #886 asks for.
+     *
+     * @param array{resolved?: int, rejected?: int, matched?: int, ambiguous?: int, reasons?: array<string, int>} $gate
+     */
+    private function reportGate(SymfonyStyle $io, string $zoneSlug, array $gate): void
+    {
+        $resolved = $gate['resolved'] ?? 0;
+        $rejected = $gate['rejected'] ?? 0;
+        $matched = $gate['matched'] ?? 0;
+        $ambiguous = $gate['ambiguous'] ?? 0;
+
+        if (0 === $resolved && 0 === $rejected) {
+            return;
+        }
+
+        $io->section('Completeness gate');
+        $io->writeln(\sprintf('  %d name(s) resolved, of which %d from the curated flux.', $resolved, $matched));
+        $io->writeln(\sprintf('  %d entry(ies) refused%s.', $rejected, $ambiguous > 0 ? \sprintf(', %d of them as ambiguous matches', $ambiguous) : ''));
+
+        foreach ($gate['reasons'] ?? [] as $reason => $count) {
+            $io->writeln(\sprintf('    - %s: %d', $reason, $count));
+        }
+
+        if ($rejected > 0) {
+            $io->writeln(\sprintf('  Ranked by distance to the nearest cycle route in %s/%s/rejected.tsv.', $this->zonesDir, $zoneSlug));
+            $this->logLine('INFO', \sprintf('zone %s gate -> %d resolved, %d refused', $zoneSlug, $resolved, $rejected));
+        }
+
+        if ($rejected > $resolved) {
+            $io->warning('More entries were refused than resolved. Read that as the resolvers being weak, not as a backlog of manual work: the tag projection should absorb most of the volume, and a long rejected.tsv means it did not.');
+        }
     }
 }

@@ -199,12 +199,15 @@ final readonly class PostgisImporter
     /**
      * Opens (or re-opens) one zone.
      *
-     * @param string $zoneName    display name recorded in the registry
-     * @param string $countrySlug country the zone belongs to, compared against the routing perimeter
+     * @param string      $zoneName    display name recorded in the registry
+     * @param string      $countrySlug country the zone belongs to, compared against the routing perimeter
+     * @param string|null $reportDir   root under which `<zone>/rejected.tsv` is written (#886); null skips it
+     *
+     * @return array{resolved: int, rejected: int, matched: int, ambiguous: int, reasons: array<string, int>} what the completeness gate resolved and refused
      *
      * @throws ImportFailedException
      */
-    public function run(string $zoneSlug, string $zoneName, string $countrySlug, string $regionPbf, string $filteredPbf, ?string $curatedTable = null): void
+    public function run(string $zoneSlug, string $zoneName, string $countrySlug, string $regionPbf, string $filteredPbf, ?string $curatedTable = null, ?string $reportDir = null): array
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -216,9 +219,16 @@ final readonly class PostgisImporter
         $this->enrichmentPass->run(\dirname($filteredPbf), $staging, self::WIKIDATA_TABLES);
         // Names are resolved and the completeness gate applied *before* promotion, so the
         // gate decides once and the live CHECK only ever fires on a bug here (#884).
-        $gate = $this->placeEnrichmentPass($curatedTable)->run(\dirname($filteredPbf), $staging, 'accommodations');
+        $gate = $this->placeEnrichmentPass($curatedTable)->run(
+            \dirname($filteredPbf),
+            $staging,
+            'accommodations',
+            null === $reportDir ? null : \sprintf('%s/%s/rejected.tsv', $reportDir, $zoneSlug),
+        );
         $this->promote($zoneSlug, $zoneName, $countrySlug, $staging, $gate);
         $this->dropStaging($staging);
+
+        return $gate;
     }
 
     /**
@@ -273,6 +283,7 @@ final readonly class PostgisImporter
             source: 'osm',
             identity: "a.osm_type || '/' || a.osm_id",
             exemptCategories: self::GATE_EXEMPT_CATEGORIES,
+            liveSchema: $this->liveSchema,
             processFactory: $this->processFactory,
             timeoutSeconds: $this->timeoutSeconds,
             matchTable: $curatedTable,
