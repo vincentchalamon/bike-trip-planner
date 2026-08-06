@@ -1450,7 +1450,7 @@ Trois constats à reporter, aucun ne remet en cause la livraison :
 
 <details><summary>
 
-## Sprint 48 - Découplage du routage, index administratif
+## ✅ Sprint 48 - Découplage du routage, index administratif
 
 </summary>
 Prépare l'ouverture par zone. `default.osm.pbf` a aujourd'hui **deux consommateurs** reliés par un simple chemin de fichier : la source de l'import PostGIS et l'**unique entrée de Valhalla** (`compose.yaml:346`). Avec une zone par exécution, ouvrir la Bretagne **casserait le routage** en Hauts-de-France.
@@ -1505,7 +1505,7 @@ Ordre imposé : **#941, puis #942, puis #943**. #943 est une PR **empilée** don
 
 <details><summary>
 
-## Sprint 49 - Ouverture par zone, cache et gate
+## ✅ Sprint 49 - Ouverture par zone, cache et gate
 
 </summary>
 Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement persistant, gate de complétude. Remplace le rebuild complet suivi d'un swap global de schéma, qui coûte aujourd'hui un ré-import de tout le jeu à chaque ajout de zone.
