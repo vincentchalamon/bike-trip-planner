@@ -22,7 +22,11 @@ interface AccommodationRepositoryInterface
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, website: ?string, phone: ?string, openingHours: ?string, wikidata: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
+     * `name` is non-nullable by construction since #884: completeness is decided at import
+     * time and a per-category CHECK enforces it, and this query excludes the one exempt
+     * category (`shelter`). A row without a name therefore cannot exist among these results.
+     *
+     * @return list<array{name: string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, website: ?string, phone: ?string, openingHours: ?string, wikidata: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array;
 }

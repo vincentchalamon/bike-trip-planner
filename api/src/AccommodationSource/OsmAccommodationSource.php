@@ -37,13 +37,17 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
 
         $candidates = [];
         foreach ($this->accommodationRepository->findNear($points, $radiusMeters, $enabledTypes) as $accommodation) {
-            // Skip unnamed entries: a nameless "shelter" surfaced as its raw OSM
-            // category ("shelter", labelled "Autre" in the UI) is meaningless to
-            // the rider, who cannot tell such candidates apart (recette).
+            // No name filter here any more (#884). Completeness is decided once, at
+            // import time, and enforced by a per-category CHECK on osm.accommodations: a
+            // bookable row without a name cannot be inserted, so it cannot be read. A read
+            // filter would duplicate that decision and, worse, mask a gate bug by quietly
+            // thinning the results instead of failing the import.
+            //
+            // The recette motive the old filter cited was misdiagnosed anyway: "Autre" came
+            // from a missing entry in the frontend's `typeLabelKeys`, fixed in sprint 45.
+            // The exempt category, `shelter`, never reaches lodging results — the repository
+            // excludes it separately (#927).
             $name = $accommodation['name'];
-            if (null === $name || '' === trim($name)) {
-                continue;
-            }
 
             $tags = $accommodation['tags'];
             // stars / fee are indexed columns, not just raw tags: the heuristic

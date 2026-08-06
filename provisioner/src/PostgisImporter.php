@@ -104,6 +104,20 @@ final readonly class PostgisImporter
     ];
 
     /**
+     * Accommodation categories the completeness gate does not apply to, and which are
+     * therefore not name-resolved either.
+     *
+     * `shelter` only, and the measurement in #878 is what arbitrates it: `shelter_type`, not
+     * the name, is what separates a mountain refuge from a bus shelter, so a constraint on
+     * `name` would drop 429 relevant shelters while keeping 2 516 named ones.
+     * `wilderness_hut` gets no exemption (20 unnamed of 316, the level of `guest_house`),
+     * nor does `alpine_hut`.
+     *
+     * @var list<string>
+     */
+    private const array GATE_EXEMPT_CATEGORIES = ['shelter'];
+
+    /**
      * OSM tables carrying a `wikidata` Q-ID column, enriched from Wikidata via the
      * shared {@see WikidataEnrichmentPass} after import and before promotion.
      *
@@ -153,6 +167,8 @@ final readonly class PostgisImporter
 
     private WikidataEnrichmentPass $enrichmentPass;
 
+    private PlaceEnrichmentPass $placeEnrichmentPass;
+
     private ZonePromotion $promotion;
 
     /**
@@ -170,6 +186,15 @@ final readonly class PostgisImporter
     ) {
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
+        // Boundaries come from the staging schema: the zone being opened has just imported
+        // its own, and they are the ones covering its places (#880).
+        $this->placeEnrichmentPass = new PlaceEnrichmentPass(
+            source: 'osm',
+            identity: "a.osm_type || '/' || a.osm_id",
+            exemptCategories: self::GATE_EXEMPT_CATEGORIES,
+            processFactory: $this->processFactory,
+            timeoutSeconds: $this->timeoutSeconds,
+        );
         $this->promotion = new ZonePromotion('osm', $this->liveSchema, self::FEATURE_TABLES);
     }
 
@@ -200,7 +225,10 @@ final readonly class PostgisImporter
         // with the rows that go live. The COPY scratch files go next to the filtered PBF
         // (the /data work dir).
         $this->enrichmentPass->run(\dirname($filteredPbf), $staging, self::WIKIDATA_TABLES);
-        $this->promote($zoneSlug, $zoneName, $countrySlug, $staging);
+        // Names are resolved and the completeness gate applied *before* promotion, so the
+        // gate decides once and the live CHECK only ever fires on a bug here (#884).
+        $gate = $this->placeEnrichmentPass->run(\dirname($filteredPbf), $staging, 'accommodations');
+        $this->promote($zoneSlug, $zoneName, $countrySlug, $staging, $gate);
         $this->dropStaging($staging);
     }
 
@@ -252,9 +280,11 @@ final readonly class PostgisImporter
      * build contributes the levels that did (#880) — and a zone that yielded no boundary
      * at all keeps whatever geometry a previous run recorded rather than losing it.
      *
+     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused, recorded in the metadata
+     *
      * @throws ImportFailedException
      */
-    public function promote(string $zoneSlug, string $zoneName, string $countrySlug, string $stagingSchema): void
+    public function promote(string $zoneSlug, string $zoneName, string $countrySlug, string $stagingSchema, array $gate = []): void
     {
         $counts = implode(', ', array_map(
             fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, $this->liveSchema),
@@ -263,9 +293,9 @@ final readonly class PostgisImporter
         $completeness = new CompletenessMetrics($this->liveSchema)
             ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
 
-        // `rejections` stays empty here: nothing measurable is discarded on this side
-        // today (osmium filters the PBF before osm2pgsql ever sees it). The completeness
-        // gate of #884 is what fills it, without a schema change.
+        // What the completeness gate refused, with its motive, so a gate that starts
+        // rejecting everything is visible in /api/health instead of showing up as a
+        // quietly thinner index (#884).
         $registryUpsert = \sprintf(
             <<<'SQL'
                 INSERT INTO %1$s.zones (slug, name, country, opened_at, refreshed_at, pipeline_version, feature_counts, new_entries, geom)
@@ -286,7 +316,7 @@ final readonly class PostgisImporter
 
                 DELETE FROM %1$s.metadata;
                 INSERT INTO %1$s.metadata (refreshed_at, feature_counts, completeness, rejections)
-                SELECT now(), jsonb_build_object(%7$s), %8$s, '{}'::jsonb;
+                SELECT now(), jsonb_build_object(%7$s), %8$s, %9$s;
                 SQL,
             $this->liveSchema,
             ZonePromotion::literal($zoneSlug),
@@ -296,6 +326,7 @@ final readonly class PostgisImporter
             $stagingSchema,
             $counts,
             $completeness,
+            $this->rejectionsExpression($gate),
         );
 
         $this->runProcess([
@@ -306,6 +337,31 @@ final readonly class PostgisImporter
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
             $this->promotion->sql($zoneSlug, $stagingSchema, registryUpsert: $registryUpsert),
         ], \sprintf('psql promote zone %s', $zoneSlug));
+    }
+
+    /**
+     * The gate's outcome as a jsonb literal for `osm.metadata.rejections`: how many rows the
+     * completeness gate refused and why. Empty when the gate did not run (a direct
+     * {@see promote()} call in a test), which reads the same as "nothing was refused".
+     *
+     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate
+     */
+    private function rejectionsExpression(array $gate): string
+    {
+        if ([] === $gate) {
+            return "'{}'::jsonb";
+        }
+
+        $payload = [
+            'accommodation_incomplete' => $gate['rejected'] ?? 0,
+            'accommodation_name_resolved' => $gate['resolved'] ?? 0,
+            'accommodation_incomplete_reasons' => $gate['reasons'] ?? [],
+        ];
+
+        return \sprintf(
+            '%s::jsonb',
+            ZonePromotion::literal(json_encode($payload, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}'),
+        );
     }
 
     /**

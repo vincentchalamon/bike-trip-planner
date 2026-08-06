@@ -42,21 +42,6 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
-    public function fetchSkipsUnnamedEntries(): void
-    {
-        $source = $this->createSource($this->repository([
-            $this->row(category: 'wilderness_hut', name: null),
-            $this->row(category: 'wilderness_hut', name: '  '),
-            $this->row(category: 'hotel', name: 'Hotel du Nord'),
-        ]));
-
-        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['wilderness_hut', 'hotel']);
-
-        $this->assertCount(1, $results);
-        $this->assertSame('Hotel du Nord', $results[0]['name']);
-    }
-
-    #[Test]
     public function fetchUsesWikidataFromRepositoryRow(): void
     {
         $source = $this->createSource($this->repository([$this->row(wikidata: 'Q12345')]));
@@ -314,14 +299,36 @@ final class OsmAccommodationSourceTest extends TestCase
         $this->assertSame([], $results);
     }
 
+    #[Test]
+    public function noLongerFiltersOnTheName(): void
+    {
+        // #884 moved completeness to import time, enforced by a per-category CHECK on
+        // osm.accommodations. This reader hands back everything the repository returns: a
+        // read filter would duplicate the decision and mask a gate bug by quietly thinning
+        // the results instead of failing the import.
+        //
+        // A blank name is what the old filter dropped, so serving it is the observable
+        // difference. The exempt category, `shelter`, cannot reach here anyway —
+        // AccommodationRepository excludes it from lodging results (#927).
+        $source = $this->createSource($this->repository([
+            $this->row(name: '   '),
+            $this->row(category: 'camp_site', name: 'Camping du Lac'),
+        ]));
+
+        $result = $source->fetch([new Coordinate(48.6, 2.6)], 5000, ['hotel', 'camp_site']);
+
+        self::assertCount(2, $result);
+        self::assertSame(['   ', 'Camping du Lac'], array_column($result, 'name'));
+    }
+
     /**
      * @param array<string, string> $tags
      *
-     * @return array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
+     * @return array{osmType: ?string, osmId: ?int, name: string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
      */
     private function row(
         string $category = 'hotel',
-        ?string $name = 'Hotel du Nord',
+        string $name = 'Hotel du Nord',
         ?string $website = null,
         ?string $wikidata = null,
         array $tags = [],

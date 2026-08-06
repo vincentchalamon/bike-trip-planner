@@ -90,6 +90,15 @@ because `tourism=motel` is a north-American concept, empty in France; and `renta
 (meublé de tourisme) because that market is let by the week and neither source
 carries a minimum-stay field.
 
+Since #884, a bookable accommodation that arrives without a name is **not imported**
+rather than filtered out when read. The provisioner first tries to complete it — the
+Wikidata label when the row carries a Q-ID, then `operator`, then `brand`, qualified by
+the commune resolved offline from the imported boundaries ("Camping municipal — Sarlat")
+— and a per-category `CHECK` refuses what is left. The one exemption is `shelter`, whose
+useful sorting key is `shelter_type`, not the name. Categories a rider can act on from
+coordinates alone (water points, fords, ferries) and generic POIs carry no such
+constraint. See [ADR-049](docs/adr/adr-049-zone-opening-and-import-time-completeness.md).
+
 The bracket above is the *unrated* estimate. A `charge` tag or a numeric `fee` overrides it with an exact price, `fee=no` prices the entry as free, and a known `stars` rating lifts the bracket floor by 25% of its span per star above 2, capped at 75% (a 4-star hotel is estimated €85–€120, not €50–€120).
 
 Only a few candidates are kept per stage: they are ranked by **completeness** (website, description, opening hours, Wikidata Q-ID, stars, capacity, tag richness) with the price as tiebreaker, and a per-family cap reserves one slot for the outdoor family (camping, wilderness hut) so a stage never returns hotels only.

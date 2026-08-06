@@ -144,10 +144,12 @@ final class DataTourismeImporterTest extends TestCase
         $importer->run($this->workDir, 'bretagne');
 
         // 1 staging DDL + 4 \copy + 4 GIST index
-        // + 7 enrichment-pass psql calls (prepare, collect, export, one UPDATE per
-        // Wikidata table, drop; no Q-IDs to fetch in this fixture)
+        // + 7 Wikidata-pass psql calls (prepare, collect, export, one UPDATE per Wikidata
+        // table, drop; no Q-IDs to fetch in this fixture)
+        // + 6 name-resolution psql calls (prepare, export candidates, apply, count gated,
+        // gate, drop scratch; nothing to resolve in this fixture, so no cache write)
         // + 1 report DDL + 1 promotion + 1 staging drop.
-        self::assertCount(19, $this->captured);
+        self::assertCount(25, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);
@@ -296,7 +298,7 @@ final class DataTourismeImporterTest extends TestCase
         // The only rejection measurable before the completeness gate of #884 is
         // recorded in the metadata, motive included (issue #877).
         self::assertStringContainsString(
-            "jsonb_build_object('accommodation_unmapped_category', 2);",
+            "jsonb_build_object('accommodation_unmapped_category', 2, 'accommodation_incomplete', 0, 'accommodation_name_resolved', 0);",
             $this->capturedMetadataSql(),
         );
     }
