@@ -1558,11 +1558,23 @@ Sprint **conditionnel**. La source la plus rentable n'est pas nouvelle : c'est c
 >
 > **Écartés après examen :** _Base Sirene_ (raisons sociales majoritairement inexploitables, position dérivée de l'adresse, appariement flou : donner un mauvais nom d'hébergement est pire que n'en donner aucun) et _OpenChargeMap_ (orienté voiture comme l'IRVE nationale, alors que la recharge VAE réelle est « un café avec une prise »).
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#887](https://github.com/vincentchalamon/bike-trip-planner/issues/887) | feat(provisioner): import refuges-info shelters and water points | - | - | - |
-| 2 | [#888](https://github.com/vincentchalamon/bike-trip-planner/issues/888) | feat(provisioner): import ban addresses for offline reverse geocoding | - | - | - |
-| 3 | [#889](https://github.com/vincentchalamon/bike-trip-planner/issues/889) | docs(adr): add adr-050 terrain attribution to the ridden route | - | - | - |
+| Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
+|-------|----|-------|--------|-----|--------|-----------|
+| 1 | [#887](https://github.com/vincentchalamon/bike-trip-planner/issues/887) | feat(provisioner): import refuges-info shelters and water points | - | - | Différée (fermée `not_planned`) | - |
+| 2 | [#888](https://github.com/vincentchalamon/bike-trip-planner/issues/888) | feat(provisioner): import ban addresses for offline reverse geocoding | - | - | Différée (fermée `not_planned`) | - |
+| 3 | [#889](https://github.com/vincentchalamon/bike-trip-planner/issues/889) | docs(adr): add adr-050 terrain attribution to the ridden route | - | [#957](https://github.com/vincentchalamon/bike-trip-planner/pull/957) `feature/889` | En cours (READY) | - |
+
+### Arbitrage du conditionnement (06/08/2026)
+
+Sprint conditionnel : les mesures du sprint 47 (déjà committées) arbitrent l'ouverture de chaque issue. Deux des trois issues sont **différées et fermées `not_planned`**, avec citation des métriques en commentaire d'issue.
+
+- **#887 — différée.** L'audit [`docs/audit/878-hebergements-osm-sans-nom.md`](docs/audit/878-hebergements-osm-sans-nom.md) infirme la condition : `wilderness_hut` est à 6,3 % sans nom (« hypothèse non confirmée »), `shelter` est un problème de catégorisation (`shelter_type`, traité par le suivi #927 au sprint 51) et non de source manquante, et les points d'eau ne sont pas mesurés. Refuges.info est de surcroît biaisé montagne. À rouvrir si une mesure future (points d'eau, France entière) établit un déficit réel.
+- **#888 — différée.** Aucune mesure n'établit l'insuffisance du libellé communal (`admin_level` #880), et DataTourisme porte déjà l'adresse postale sur 121 772 lignes ([`docs/datatourisme-flux-audit.md`](docs/datatourisme-flux-audit.md)). La recommandation 5 de l'audit #879 (`nationalAddressId` vide) est une réserve sur _comment_ joindre la BAN, pas une justification de l'importer. À rouvrir si le libellé communal se révèle insuffisant à la mesure.
+- **#889 — livrée (PR #957).** ADR-050 tranche : **conserver le corridor, ne pas adopter le map-matching Valhalla** (argument décisif = disponibilité, le corridor reste sur PostGIS seul quand le map-matching lierait toutes les alertes surface/trafic au graphe). Critères de réouverture consignés au §5 de l'ADR. ADR-017 volontairement inchangé.
+
+### Ordre de merge et conflits attendus
+
+Une seule PR à merger, **#957** (`feature/889` → `main`). Aucun conflit attendu : un seul fichier créé, `docs/adr/adr-050-terrain-attribution-to-the-ridden-route.md`, disjoint de tout le reste. #887 et #888 n'ont pas de branche (fermées). Rien à sérialiser.
 
 ### Recette Sprint 50
 
