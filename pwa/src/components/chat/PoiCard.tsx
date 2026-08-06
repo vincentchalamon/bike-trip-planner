@@ -100,7 +100,7 @@ export function PoiCard({ poi }: PoiCardProps) {
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formatDistance(poi.distance_m)}
-            {poi.detour_m > 0 && (
+            {poi.detour_m != null && poi.detour_m > 0 && (
               <span
                 data-testid="poi-card-detour"
                 className="ml-2 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
