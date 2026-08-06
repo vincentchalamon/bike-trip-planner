@@ -335,9 +335,6 @@ final readonly class PlaceEnrichmentPass
     }
 
     /**
-     * Rows the gate refuses: still without a name after the cascade, and not exempt.
-     */
-    /**
      * Rows the gate refuses: still without a name after the cascade, not exempt, and not
      * already present in the live table.
      *
