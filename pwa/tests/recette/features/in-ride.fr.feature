@@ -1,4 +1,5 @@
-Feature: Recherche guidée en route
+# language: fr
+Fonctionnalité: Recherche guidée en route
   En tant que cycliste sur la route,
   je veux toucher une question prédéfinie et lire quelques résultats à proximité,
   afin de trouver de l'eau, un abri ou un réparateur sans rien taper.
