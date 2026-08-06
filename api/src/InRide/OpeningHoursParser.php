@@ -62,22 +62,38 @@ final class OpeningHoursParser
     }
 
     /**
-     * Returns true if the POI is open at `$now`, false otherwise (including when parsing fails).
+     * Tri-state opening verdict at `$now`, derived caller-side from the private
+     * {@see self::intervalsForDate()} (never mutating it — its `null` vs `[]`
+     * distinction guards the night-overflow bleed).
+     *
+     * - intervals present and `$now` inside one  -> OPEN
+     * - intervals present and `$now` outside them -> CLOSED
+     * - no intervals (no rule applies for the date OR tag unreadable):
+     *     - at least one rule of the tag is parseable -> CLOSED, OSM omission
+     *       semantics: `Mo-Fr 09:00-17:00` on a Sunday is genuinely closed, the
+     *       tag simply omits the day;
+     *     - otherwise -> UNKNOWN, the tag says nothing (`garbage data here`,
+     *       empty), so the POI stays visible with a warning.
+     *
+     * Deliberate divergence from {@see \App\Engine\OpeningHours::isOpenAt()}:
+     * in-ride discards a line that is almost certainly closed, while planning
+     * keeps it with an uncertainty flag. Both agree that "no information" is
+     * never "closed".
      */
-    public function isOpenNow(string $tag, \DateTimeImmutable $now): bool
+    public function status(string $tag, \DateTimeImmutable $now): OpeningStatus
     {
         $intervals = $this->intervalsForDate($tag, $now);
-        if (null === $intervals) {
-            return false;
-        }
-
-        foreach ($intervals as [$start, $end]) {
-            if ($now >= $start && $now < $end) {
-                return true;
+        if (null !== $intervals) {
+            foreach ($intervals as [$start, $end]) {
+                if ($now >= $start && $now < $end) {
+                    return OpeningStatus::OPEN;
+                }
             }
+
+            return OpeningStatus::CLOSED;
         }
 
-        return false;
+        return $this->hasAnyParseableRule($tag, $now) ? OpeningStatus::CLOSED : OpeningStatus::UNKNOWN;
     }
 
     /**
@@ -102,18 +118,26 @@ final class OpeningHoursParser
     }
 
     /**
-     * Returns true if the POI is open continuously from `$now` until `$now + $duration`.
+     * Returns true if at least one rule of the tag is syntactically parseable,
+     * regardless of whether it applies to `$date`. Distinguishes a tag that is
+     * merely silent for the date (parseable -> closed) from one that is noise
+     * (`garbage data here`, empty -> unknown).
      */
-    public function isOpenForAtLeast(string $tag, \DateTimeImmutable $now, \DateInterval $duration): bool
+    private function hasAnyParseableRule(string $tag, \DateTimeImmutable $date): bool
     {
-        $closes = $this->closesAt($tag, $now);
-        if (!$closes instanceof \DateTimeImmutable) {
-            return false;
+        $rules = array_map(trim(...), explode(';', trim($tag)));
+
+        foreach ($rules as $rule) {
+            if ('' === $rule) {
+                continue;
+            }
+
+            if (null !== $this->parseRule($rule, $date)) {
+                return true;
+            }
         }
 
-        $deadline = $now->add($duration);
-
-        return $closes >= $deadline;
+        return false;
     }
 
     /**

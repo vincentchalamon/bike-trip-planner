@@ -25,6 +25,35 @@ final class PoiLabelResolverTest extends TestCase
         yield 'french underscored' => ['fr', 'archaeological_site', 'site archéologique', 'Site archéologique'];
         yield 'french unmapped falls back' => ['fr', 'obelisk', 'site remarquable', 'Site remarquable'];
         yield 'english unmapped falls back' => ['en', 'obelisk', 'point of interest', 'Point of interest'];
+
+        // In-ride vocabulary added with the opening-hours tri-state (#931):
+        // water, shelter, bike, health and transport categories in both locales.
+        yield 'fr drinking_water' => ['fr', 'drinking_water', 'eau potable', 'Eau potable'];
+        yield 'en drinking_water' => ['en', 'drinking_water', 'drinking water', 'Drinking water'];
+        yield 'fr water_point' => ['fr', 'water_point', "point d'eau", "Point d'eau"];
+        yield 'en water_point' => ['en', 'water_point', 'water point', 'Water point'];
+        yield 'fr water_tap' => ['fr', 'water_tap', 'robinet', 'Robinet'];
+        yield 'en water_tap' => ['en', 'water_tap', 'water tap', 'Water tap'];
+        yield 'fr fountain' => ['fr', 'fountain', 'fontaine', 'Fontaine'];
+        yield 'en fountain' => ['en', 'fountain', 'fountain', 'Fountain'];
+        yield 'fr spring' => ['fr', 'spring', 'source', 'Source'];
+        yield 'en spring' => ['en', 'spring', 'spring', 'Spring'];
+        yield 'fr shelter' => ['fr', 'shelter', 'abri', 'Abri'];
+        yield 'en shelter' => ['en', 'shelter', 'shelter', 'Shelter'];
+        yield 'fr shelter_bus' => ['fr', 'shelter_bus', 'abribus', 'Abribus'];
+        yield 'en shelter_bus' => ['en', 'shelter_bus', 'bus shelter', 'Bus shelter'];
+        yield 'fr bicycle' => ['fr', 'bicycle', 'vélociste', 'Vélociste'];
+        yield 'en bicycle' => ['en', 'bicycle', 'bike shop', 'Bike shop'];
+        yield 'fr repair_station' => ['fr', 'repair_station', 'station de réparation', 'Station de réparation'];
+        yield 'en repair_station' => ['en', 'repair_station', 'repair station', 'Repair station'];
+        yield 'fr hospital' => ['fr', 'hospital', 'hôpital', 'Hôpital'];
+        yield 'en hospital' => ['en', 'hospital', 'hospital', 'Hospital'];
+        yield 'fr clinic' => ['fr', 'clinic', 'clinique', 'Clinique'];
+        yield 'en clinic' => ['en', 'clinic', 'clinic', 'Clinic'];
+        yield 'fr station' => ['fr', 'station', 'gare', 'Gare'];
+        yield 'en station' => ['en', 'station', 'train station', 'Train station'];
+        yield 'fr charging_station' => ['fr', 'charging_station', 'borne de recharge', 'Borne de recharge'];
+        yield 'en charging_station' => ['en', 'charging_station', 'charging station', 'Charging station'];
     }
 
     #[DataProvider('labelProvider')]
