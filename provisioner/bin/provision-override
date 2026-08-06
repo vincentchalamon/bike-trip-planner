@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__.'/../vendor/autoload.php';
+
+use Provisioner\ImportOverrideCommand;
+use Symfony\Component\Console\Application;
+
+// A second binary rather than a sub-command: bin/provision runs in single-command mode, so
+// `provisioner bretagne` passes the zone as an argument. See ImportOverrideCommand.
+$app = new Application('Reference Override Importer');
+$app->addCommand(new ImportOverrideCommand());
+$app->setDefaultCommand('provision-override', true);
+$app->run();

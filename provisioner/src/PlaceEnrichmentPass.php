@@ -62,9 +62,6 @@ final readonly class PlaceEnrichmentPass
      * @param string       $identity          SQL expression identifying a row `a` of the target table
      * @param list<string> $exemptCategories  categories the gate does not apply to, and which are therefore
      *                                        not resolved either (`shelter`, arbitrated by #878)
-     * @param string|null  $boundariesSchema  schema holding `admin_boundaries` for the offline locality
-     *                                        lookup; null uses the staging schema, which is where the zone
-     *                                        being opened has its own freshly imported boundaries
      * @param string|null  $matchTable        qualified table of curated places to match unnamed rows against
      *                                        (`<tourism staging>.accommodations`); null disables matching
      * @param int          $matchRadiusMeters strictly under the runtime deduplicator's 75 m: this match has no
@@ -74,7 +71,8 @@ final readonly class PlaceEnrichmentPass
         private string $source,
         private string $identity,
         private array $exemptCategories = [],
-        private ?string $boundariesSchema = null,
+        private ?string $osmSchema = null,
+        private ?string $liveSchema = null,
         ?\Closure $processFactory = null,
         private NameResolver $resolver = new NameResolver(),
         private float $timeoutSeconds = 1800.0,
@@ -85,11 +83,13 @@ final readonly class PlaceEnrichmentPass
     }
 
     /**
+     * @param string|null $reportPath where to write the human-readable reject report; null skips it
+     *
      * @return array{resolved: int, rejected: int, matched: int, ambiguous: int, reasons: array<string, int>}
      *
      * @throws ImportFailedException
      */
-    public function run(string $workDir, string $stagingSchema, string $table): array
+    public function run(string $workDir, string $stagingSchema, string $table, ?string $reportPath = null): array
     {
         // The cache may predate the API migration on this database (same reason
         // WikidataEnrichmentPass creates its own), and the scratch table is scoped to the
@@ -156,10 +156,15 @@ final readonly class PlaceEnrichmentPass
             "\\copy (SELECT count(*) FROM %s.%s a WHERE %s) TO '%s'",
             $stagingSchema,
             $table,
-            $this->gatePredicate(),
+            $this->gatePredicate($table),
             $rejectedPath,
         ), 'psql count gated rows');
         $counts['rejected'] = (int) ($this->readLines($rejectedPath)[0] ?? '0');
+
+        // Written before the delete, or there would be nothing left to report on.
+        if (null !== $reportPath) {
+            $this->writeRejectReport($stagingSchema, $table, $reportPath);
+        }
 
         // The gate itself. Deleting from staging keeps the promotion's INSERT clean, so the
         // CHECK on the live table only ever fires on a bug here — which is the point.
@@ -167,7 +172,7 @@ final readonly class PlaceEnrichmentPass
             'DELETE FROM %s.%s a WHERE %s;',
             $stagingSchema,
             $table,
-            $this->gatePredicate(),
+            $this->gatePredicate($table),
         ), 'psql apply completeness gate');
 
         $this->psql(\sprintf('DROP TABLE IF EXISTS %s;', $scratch), 'psql drop place enrichment scratch');
@@ -202,7 +207,7 @@ final readonly class PlaceEnrichmentPass
      */
     private function exportCandidates(string $stagingSchema, string $table, string $path): string
     {
-        $boundaries = \sprintf('%s.admin_boundaries', $this->boundariesSchema ?? $stagingSchema);
+        $boundaries = \sprintf('%s.admin_boundaries', $this->osmSchema ?? $stagingSchema);
 
         return \sprintf(
             <<<'SQL'
@@ -229,6 +234,67 @@ final readonly class PlaceEnrichmentPass
             $path,
             $this->matchExpression(),
         );
+    }
+
+    /**
+     * Writes the rejects an operator can act on, **nearest to a signed cycle route first**.
+     *
+     * That ordering is what makes the exercise finite. The signed cycle routes are already
+     * imported (`tier1.lua`, relations `type=route, route=bicycle`), so ranking by distance to
+     * them is free — and it means an operator works the thirty rejects that border a
+     * véloroute instead of the three thousand lost in open country. The human effort is
+     * bounded by construction rather than by discipline.
+     *
+     * Columns: source, source id, category, latitude, longitude, resolved commune, the motive,
+     * the metres to the nearest cycle route, and the raw tags — everything a human needs to
+     * decide, and nothing that needs a second query to interpret.
+     *
+     * @throws ImportFailedException
+     */
+    private function writeRejectReport(string $stagingSchema, string $table, string $path): void
+    {
+        $directory = \dirname($path);
+        if (!is_dir($directory) && !mkdir($directory, 0o755, true) && !is_dir($directory)) {
+            throw new ImportFailedException(\sprintf('Cannot create the report directory "%s"', $directory));
+        }
+
+        $osmSchema = $this->osmSchema ?? $stagingSchema;
+        // KNN (`<->`) rather than min(ST_Distance(...)): the operator uses the GiST index on
+        // cycle_routes.geom, so this is one index probe per reject instead of a full scan of
+        // every route. Ordering happens in degrees and the reported distance in metres — good
+        // enough to rank, exact enough to read.
+        $distance = \sprintf(
+            '(SELECT round(ST_Distance(r.geom::geography, a.geom::geography)::numeric, 1) FROM %s.cycle_routes r ORDER BY r.geom <-> a.geom LIMIT 1)',
+            $osmSchema,
+        );
+
+        $this->psql(\sprintf(
+            <<<'SQL'
+                \copy (SELECT %10$s AS source,
+                              %1$s AS source_id,
+                              a.category,
+                              round(ST_Y(a.geom)::numeric, 6) AS lat,
+                              round(ST_X(a.geom)::numeric, 6) AS lon,
+                              coalesce((SELECT b.name FROM %2$s.admin_boundaries b WHERE b.admin_level = 8 AND ST_Covers(b.geom, a.geom) LIMIT 1), '') AS commune,
+                              coalesce(c.payload->>'reason', 'unknown') AS reason,
+                              %3$s AS cycle_route_m,
+                              coalesce(a.tags::text, '{}') AS tags
+                         FROM %4$s.%5$s a
+                         LEFT JOIN %6$s c ON c.source = %7$s AND c.source_id = %1$s
+                        WHERE %8$s
+                        ORDER BY %3$s NULLS LAST) TO '%9$s' WITH (FORMAT csv, DELIMITER E'\t', HEADER true)
+                SQL,
+            $this->identity,
+            $osmSchema,
+            $distance,
+            $stagingSchema,
+            $table,
+            self::CACHE_TABLE,
+            $this->literal($this->source),
+            $this->gatePredicate($table),
+            $path,
+            $this->literal($this->source),
+        ), \sprintf('psql write reject report for %s.%s', $stagingSchema, $table));
     }
 
     /**
@@ -269,11 +335,45 @@ final readonly class PlaceEnrichmentPass
     }
 
     /**
-     * Rows the gate refuses: still without a name after the cascade, and not exempt.
+     * Rows the gate refuses: still without a name after the cascade, not exempt, and not
+     * already present in the live table.
+     *
+     * That last clause is what stops an operator's manual correction from coming back
+     * (#886). Once an `override.tsv` has inserted the row into live, re-opening the zone
+     * re-imports the same anonymous row into staging — and without this it would be counted
+     * and listed in `rejected.tsv` again, every single time, asking to be fixed once more.
+     * The promotion's own anti-join would skip it regardless, so excluding it here changes
+     * only what is reported, which is exactly the point.
      */
-    private function gatePredicate(): string
+    private function gatePredicate(string $table): string
     {
-        return \sprintf("nullif(btrim(a.name), '') IS NULL AND %s", $this->notExempt());
+        $predicate = \sprintf("nullif(btrim(a.name), '') IS NULL AND %s", $this->notExempt());
+
+        if (null === $this->liveSchema) {
+            return $predicate;
+        }
+
+        return \sprintf(
+            '%s AND NOT EXISTS (SELECT 1 FROM %s.%s l WHERE %s)',
+            $predicate,
+            $this->liveSchema,
+            $table,
+            $this->liveIdentityMatch(),
+        );
+    }
+
+    /**
+     * The identity predicate against the live table, derived from the same expression the
+     * cache is keyed on so the two cannot disagree: `a.osm_type || '/' || a.osm_id` becomes
+     * the pair of column comparisons, `a.id` the single one.
+     */
+    private function liveIdentityMatch(): string
+    {
+        if (str_contains($this->identity, 'osm_type')) {
+            return 'l.osm_type = a.osm_type AND l.osm_id = a.osm_id';
+        }
+
+        return 'l.id = a.id';
     }
 
     private function notExempt(): string

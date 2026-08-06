@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -9,7 +9,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette provision-override
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   $(eval $(ARGS):;@:)
@@ -209,6 +209,14 @@ test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (R
 provision: ## Open one OSM reference zone (e.g. make provision bretagne)
 	@test -n "$(ARGS)" || { echo "Usage: make provision <zone> (e.g. make provision bretagne). Zones: see GeofabrikRegionRegistry"; exit 1; }
 	@docker compose --profile provisioning run --rm provisioner $(ARGS)
+
+# Opening a zone writes .docker/osm/data/zones/<zone>/rejected.tsv, ranked by distance to
+# the nearest signed cycle route. Correct the rows worth fixing into an override.tsv next to
+# it and import them with this target (#886). Nothing stores that file — keep it, or a
+# rebuilt database loses the corrections. See docs/runbooks/zone-opening-corrections.md.
+provision-override: ## Import operator corrections for a zone (e.g. make provision-override bretagne)
+	@test -n "$(ARGS)" || { echo "Usage: make provision-override <zone> [file] (defaults to /data/zones/<zone>/override.tsv)"; exit 1; }
+	@docker compose --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/provision-override $(ARGS)
 
 provision-recette: ensure-jwt-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
 	@test -n "$(ARGS)" || { echo "Usage: make provision-recette <zone> (e.g. make provision-recette nord-pas-de-calais)"; exit 1; }
