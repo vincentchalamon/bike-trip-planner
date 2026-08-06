@@ -23,7 +23,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
      * @return array{name: ?string, category: string, lat: float, lon: float, capacity: ?int, price: ?float, description: ?string, website: ?string, phone: ?string, openingHours: ?string, wikidata: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
      */
     private function row(
-        ?string $name = 'Gîte du Lac',
+        string $name = 'Gîte du Lac',
         string $category = 'chalet',
         float $lat = 48.0,
         float $lon = 2.0,
@@ -105,20 +105,26 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     }
 
     #[Test]
-    public function skipsUnnamedEntries(): void
+    public function noLongerFiltersOnTheName(): void
     {
+        // #884 moved completeness to import time, enforced by a CHECK on
+        // tourism.accommodations. This reader must therefore hand back everything the
+        // repository returns: a read filter would duplicate the decision and mask a gate bug
+        // by quietly thinning the results instead of failing the import.
+        //
+        // A blank name is what the old filter dropped, so serving it is the observable
+        // difference. The gate is what makes it unreachable in practice.
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
-            $this->row(name: null, category: 'hotel'),
-            $this->row(name: '   ', lat: 48.1, lon: 2.1),
-            $this->row(lat: 48.2, lon: 2.2, capacity: 4, price: 75.0),
+            $this->row(name: '   ', category: 'hotel'),
+            $this->row(lat: 48.1, lon: 2.1),
         ]);
 
         $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
             ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'chalet']);
 
-        self::assertCount(1, $result);
-        self::assertSame('Gîte du Lac', $result[0]['name']);
+        self::assertCount(2, $result);
+        self::assertSame(['   ', 'Gîte du Lac'], array_column($result, 'name'));
     }
 
     #[Test]

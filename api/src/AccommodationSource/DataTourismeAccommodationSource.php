@@ -39,12 +39,10 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
 
         $candidates = [];
         foreach ($this->accommodationRepository->findNear($points, $radiusMeters, $enabledTypes) as $accommodation) {
-            // Skip unnamed entries: an unnamed accommodation the rider cannot
-            // identify is not a usable suggestion (recette).
+            // No name filter here any more (#884): the completeness gate decides at import
+            // time and a CHECK on tourism.accommodations enforces it, so an unnamed row
+            // cannot reach this loop. See OsmAccommodationSource for the full rationale.
             $name = $accommodation['name'];
-            if (null === $name || '' === trim($name)) {
-                continue;
-            }
 
             if (null !== $accommodation['price']) {
                 $priceMin = $accommodation['price'];

@@ -62,6 +62,9 @@ final class ZonePromotionExecutionTest extends TestCase
             try {
                 $this->exec('SELECT 1');
             } catch (\RuntimeException $runtimeException) {
+                // Reset before skipping, or tearDown() would try to clean up through a
+                // connection that was just proven unusable and turn the skip into an error.
+                $this->psql = null;
                 self::markTestSkipped(\sprintf('no reachable PostgreSQL: %s', $runtimeException->getMessage()));
             }
         } else {

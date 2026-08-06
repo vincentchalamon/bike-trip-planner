@@ -121,6 +121,8 @@ final readonly class DataTourismeImporter
 
     private ZonePromotion $promotion;
 
+    private PlaceEnrichmentPass $placeEnrichmentPass;
+
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the psql processes; defaults to a real {@see Process}
      */
@@ -148,6 +150,17 @@ final readonly class DataTourismeImporter
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
         $this->promotion = new ZonePromotion('datatourisme', self::LIVE_SCHEMA, self::IDENTITY);
+        // Boundaries come from the live `osm` schema: the flux carries no administrative
+        // geometry of its own, and the zone's own boundaries were promoted by the OSM step
+        // that always runs first.
+        $this->placeEnrichmentPass = new PlaceEnrichmentPass(
+            source: 'datatourisme',
+            identity: 'a.id',
+            exemptCategories: [],
+            boundariesSchema: 'osm',
+            processFactory: $this->processFactory,
+            timeoutSeconds: $this->timeoutSeconds,
+        );
     }
 
     /**
@@ -171,7 +184,11 @@ final readonly class DataTourismeImporter
         $copyFiles = $this->extract($zipPath, $workDir);
         $this->load($staging, $copyFiles);
         $this->enrichmentPass->run($workDir, $staging, self::WIKIDATA_TABLES);
-        $this->promote($zoneSlug, $staging);
+        // The gate runs before promotion here too. The flux names its places far more
+        // reliably than OSM does, so this mostly refuses nothing — but the decision must
+        // live in one place for both sources, which is the whole point of #884.
+        $gate = $this->placeEnrichmentPass->run($workDir, $staging, 'accommodations');
+        $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
     }
 
@@ -359,9 +376,11 @@ final readonly class DataTourismeImporter
      * (refresh timestamp, per-table counts, per-table completeness ratios and the
      * discarded-row counts), which is what /api/health reports.
      *
+     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused
+     *
      * @throws ImportFailedException
      */
-    private function promote(string $zoneSlug, string $stagingSchema): void
+    private function promote(string $zoneSlug, string $stagingSchema, array $gate): void
     {
         $counts = implode(', ', array_map(
             static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::LIVE_SCHEMA),
@@ -372,8 +391,10 @@ final readonly class DataTourismeImporter
         // The only rejection measurable before the completeness gate of #884: flux
         // accommodations whose subtype maps to no app category (see the mapper).
         $rejections = \sprintf(
-            "jsonb_build_object('accommodation_unmapped_category', %d)",
+            "jsonb_build_object('accommodation_unmapped_category', %d, 'accommodation_incomplete', %d, 'accommodation_name_resolved', %d)",
             $this->mapper->unmappedAccommodationCount(),
+            $gate['rejected'] ?? 0,
+            $gate['resolved'] ?? 0,
         );
 
         $metadataRefresh = \sprintf(

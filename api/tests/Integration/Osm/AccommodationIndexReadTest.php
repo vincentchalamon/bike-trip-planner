@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Osm;
 
+use Doctrine\DBAL\Exception;
 use App\AccommodationSource\OsmAccommodationSource;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\PricingHeuristicEngine;
@@ -82,7 +83,7 @@ final class AccommodationIndexReadTest extends KernelTestCase
             ['shelter', 'hotel'],
         );
 
-        $names = array_map(static fn (array $row): ?string => $row['name'], $results);
+        $names = array_column($results, 'name');
 
         self::assertNotContains('Abri de la Gare', $names);
         self::assertContains('Hotel du Centre', $names);
@@ -323,6 +324,62 @@ final class AccommodationIndexReadTest extends KernelTestCase
         self::assertSame('https://gite-du-lac.example/reserver', $byName['Camping Way']['url']);
         self::assertTrue($byName['Camping Way']['hasWebsite']);
         self::assertNull($byName['Hotel Node']['url']);
+    }
+
+    #[Test]
+    public function theCheckConstraintRefusesABookableAccommodationWithoutAName(): void
+    {
+        // The invariant of #884 is carried by the schema, not by a read clause: a read filter
+        // would duplicate the decision and, worse, mask a bug in the import gate by quietly
+        // thinning results. Here it is the database that says no.
+        $this->expectException(Exception::class);
+
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            VALUES ('n', 7001, NULL, 'camp_site', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+    }
+
+    #[Test]
+    public function theCheckConstraintAlsoRefusesABlankName(): void
+    {
+        // Presence is `nullif(btrim(name), '') IS NOT NULL`: a blank string is a missing
+        // value, not a value, exactly as the completeness metrics already measure it.
+        $this->expectException(Exception::class);
+
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            VALUES ('n', 7002, '   ', 'hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+    }
+
+    #[Test]
+    public function theCheckConstraintExemptsSheltersAndLeavesWaterPointsAlone(): void
+    {
+        // Per category, because generalising would do damage. #878 measured that a constraint
+        // on `name` would drop 429 relevant shelters while keeping 2 516 named bus shelters —
+        // `shelter_type`, not the name, is what separates them. And a water point is
+        // actionable from its coordinates alone, so it carries no constraint at all.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, tags, geom)
+            VALUES ('n', 7003, NULL, 'shelter', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.water_points (osm_type, osm_id, name, category, tags, geom)
+            VALUES ('n', 7004, NULL, 'drinking_water', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            SQL);
+
+        self::assertSame(1, $this->countWhere('osm.accommodations', 7003));
+        self::assertSame(1, $this->countWhere('osm.water_points', 7004));
+
+        $this->connection->executeStatement('DELETE FROM osm.water_points WHERE osm_id = 7004');
+    }
+
+    private function countWhere(string $table, int $osmId): int
+    {
+        $count = $this->connection->fetchOne(\sprintf('SELECT count(*) FROM %s WHERE osm_id = %d', $table, $osmId));
+
+        return is_numeric($count) ? (int) $count : -1;
     }
 
     /**

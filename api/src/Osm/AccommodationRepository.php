@@ -51,7 +51,11 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{osmType: ?string, osmId: ?int, name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
+     * `name` is non-nullable by construction since #884: completeness is decided at import
+     * time and a per-category CHECK enforces it, and this query excludes the one exempt
+     * category (`shelter`). A row without a name therefore cannot exist among these results.
+     *
+     * @return list<array{osmType: ?string, osmId: ?int, name: string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array
     {
@@ -140,7 +144,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                 // on openstreetmap.org: it used to be dropped at this very first hop.
                 'osmType' => OsmObjectType::fromChar($row['osm_type']),
                 'osmId' => null !== $row['osm_id'] ? (int) $row['osm_id'] : null,
-                'name' => null !== $row['name'] ? (string) $row['name'] : null,
+                'name' => (string) $row['name'],
                 'category' => (string) $row['category'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
