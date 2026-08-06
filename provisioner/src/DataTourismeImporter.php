@@ -173,9 +173,18 @@ final readonly class DataTourismeImporter
     }
 
     /**
+     * Downloads and loads the flux into the zone's staging schema, without promoting it.
+     *
+     * Split from {@see promote()} for #885. The flux is the **curated** source — over
+     * 124 240 accommodations, not one has an empty name — so the OSM side must be able to
+     * borrow a name from it, and that means the flux has to be staged *before* the OSM
+     * gate decides what to reject. Promotion still comes last, because it clips to the
+     * zone geometry that only the OSM import produces: staging first, promoting last, is
+     * the only ordering that satisfies both.
+     *
      * @throws ImportFailedException
      */
-    public function run(string $workDir, string $zoneSlug): void
+    public function stage(string $workDir, string $zoneSlug): string
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -184,12 +193,36 @@ final readonly class DataTourismeImporter
         $copyFiles = $this->extract($zipPath, $workDir);
         $this->load($staging, $copyFiles);
         $this->enrichmentPass->run($workDir, $staging, self::WIKIDATA_TABLES);
+
+        return $staging;
+    }
+
+    /**
+     * Gates the staged flux and promotes what survives into the live schema.
+     *
+     * @throws ImportFailedException
+     */
+    public function finish(string $workDir, string $zoneSlug): void
+    {
+        $staging = self::stagingSchema($zoneSlug);
+
         // The gate runs before promotion here too. The flux names its places far more
         // reliably than OSM does, so this mostly refuses nothing — but the decision must
         // live in one place for both sources, which is the whole point of #884.
         $gate = $this->placeEnrichmentPass->run($workDir, $staging, 'accommodations');
         $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
+    }
+
+    /**
+     * Stages and promotes in one call, for a run with no OSM step to interleave.
+     *
+     * @throws ImportFailedException
+     */
+    public function run(string $workDir, string $zoneSlug): void
+    {
+        $this->stage($workDir, $zoneSlug);
+        $this->finish($workDir, $zoneSlug);
     }
 
     /**
@@ -376,7 +409,7 @@ final readonly class DataTourismeImporter
      * (refresh timestamp, per-table counts, per-table completeness ratios and the
      * discarded-row counts), which is what /api/health reports.
      *
-     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused
+     * @param array{resolved?: int, rejected?: int, matched?: int, ambiguous?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused
      *
      * @throws ImportFailedException
      */

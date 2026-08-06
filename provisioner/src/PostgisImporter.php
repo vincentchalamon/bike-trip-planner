@@ -167,8 +167,6 @@ final readonly class PostgisImporter
 
     private WikidataEnrichmentPass $enrichmentPass;
 
-    private PlaceEnrichmentPass $placeEnrichmentPass;
-
     private ZonePromotion $promotion;
 
     /**
@@ -186,15 +184,6 @@ final readonly class PostgisImporter
     ) {
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
-        // Boundaries come from the staging schema: the zone being opened has just imported
-        // its own, and they are the ones covering its places (#880).
-        $this->placeEnrichmentPass = new PlaceEnrichmentPass(
-            source: 'osm',
-            identity: "a.osm_type || '/' || a.osm_id",
-            exemptCategories: self::GATE_EXEMPT_CATEGORIES,
-            processFactory: $this->processFactory,
-            timeoutSeconds: $this->timeoutSeconds,
-        );
         $this->promotion = new ZonePromotion('osm', $this->liveSchema, self::FEATURE_TABLES);
     }
 
@@ -215,7 +204,7 @@ final readonly class PostgisImporter
      *
      * @throws ImportFailedException
      */
-    public function run(string $zoneSlug, string $zoneName, string $countrySlug, string $regionPbf, string $filteredPbf): void
+    public function run(string $zoneSlug, string $zoneName, string $countrySlug, string $regionPbf, string $filteredPbf, ?string $curatedTable = null): void
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -227,7 +216,7 @@ final readonly class PostgisImporter
         $this->enrichmentPass->run(\dirname($filteredPbf), $staging, self::WIKIDATA_TABLES);
         // Names are resolved and the completeness gate applied *before* promotion, so the
         // gate decides once and the live CHECK only ever fires on a bug here (#884).
-        $gate = $this->placeEnrichmentPass->run(\dirname($filteredPbf), $staging, 'accommodations');
+        $gate = $this->placeEnrichmentPass($curatedTable)->run(\dirname($filteredPbf), $staging, 'accommodations');
         $this->promote($zoneSlug, $zoneName, $countrySlug, $staging, $gate);
         $this->dropStaging($staging);
     }
@@ -269,6 +258,28 @@ final readonly class PostgisImporter
     }
 
     /**
+     * The name-resolution + gate pass, built per run because its curated match table depends
+     * on the zone being opened.
+     *
+     * Boundaries come from the staging schema: the zone has just imported its own, and they
+     * are the ones covering its places (#880). `$curatedTable` is the DataTourisme staging
+     * table when the flux was staged for this run, which is what lets an anonymous OSM
+     * accommodation borrow a name from the curated source (#885); null when DataTourisme is
+     * not configured, in which case the resolver simply has one fewer step.
+     */
+    private function placeEnrichmentPass(?string $curatedTable): PlaceEnrichmentPass
+    {
+        return new PlaceEnrichmentPass(
+            source: 'osm',
+            identity: "a.osm_type || '/' || a.osm_id",
+            exemptCategories: self::GATE_EXEMPT_CATEGORIES,
+            processFactory: $this->processFactory,
+            timeoutSeconds: $this->timeoutSeconds,
+            matchTable: $curatedTable,
+        );
+    }
+
+    /**
      * Promotes the zone's staging tables into the live schema in one transaction, and
      * with them everything derived from the live state: the registry row (its geometry
      * being the union of the boundaries this extract actually yielded), the coverage
@@ -280,7 +291,7 @@ final readonly class PostgisImporter
      * build contributes the levels that did (#880) — and a zone that yielded no boundary
      * at all keeps whatever geometry a previous run recorded rather than losing it.
      *
-     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused, recorded in the metadata
+     * @param array{resolved?: int, rejected?: int, matched?: int, ambiguous?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused, recorded in the metadata
      *
      * @throws ImportFailedException
      */
@@ -344,7 +355,7 @@ final readonly class PostgisImporter
      * completeness gate refused and why. Empty when the gate did not run (a direct
      * {@see promote()} call in a test), which reads the same as "nothing was refused".
      *
-     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate
+     * @param array{resolved?: int, rejected?: int, matched?: int, ambiguous?: int, reasons?: array<string, int>} $gate
      */
     private function rejectionsExpression(array $gate): string
     {
@@ -355,6 +366,11 @@ final readonly class PostgisImporter
         $payload = [
             'accommodation_incomplete' => $gate['rejected'] ?? 0,
             'accommodation_name_resolved' => $gate['resolved'] ?? 0,
+            // The measurement #885 asks for, emitted by every run rather than produced once:
+            // how many anonymous rows the curated source actually named, and how many matches
+            // were refused as ambiguous. Those two numbers are what justify or move the radius.
+            'accommodation_matched_from_datatourisme' => $gate['matched'] ?? 0,
+            'accommodation_ambiguous_matches' => $gate['ambiguous'] ?? 0,
             'accommodation_incomplete_reasons' => $gate['reasons'] ?? [],
         ];
 

@@ -92,9 +92,18 @@ carries a minimum-stay field.
 
 Since #884, a bookable accommodation that arrives without a name is **not imported**
 rather than filtered out when read. The provisioner first tries to complete it — the
-Wikidata label when the row carries a Q-ID, then `operator`, then `brand`, qualified by
-the commune resolved offline from the imported boundaries ("Camping municipal — Sarlat")
-— and a per-category `CHECK` refuses what is left. The one exemption is `shelter`, whose
+a geometric match against the curated DataTourisme flux (same category, within 50 m), then
+the Wikidata label when the row carries a Q-ID, then `operator`, then `brand`, the tag-based
+ones qualified by the commune resolved offline from the imported boundaries ("Camping
+municipal — Sarlat") — and a per-category `CHECK` refuses what is left.
+
+The geometric match is what the runtime deduplicator structurally cannot do: it pairs
+places **by name**, so the one thing it needs is the one thing missing. At import there is
+no such constraint, and DataTourisme names every one of its 124 240 accommodations. Two
+curated candidates in range produce a **rejection**, never a pick — attributing the wrong
+name is worse than attributing none — and each accepted match records the record it came
+from and its distance, for audit. The 50 m radius is a starting point; `/api/health` reports
+the match and ambiguity counts per run, which is what will confirm or move it. The one exemption is `shelter`, whose
 useful sorting key is `shelter_type`, not the name. Categories a rider can act on from
 coordinates alone (water points, fords, ferries) and generic POIs carry no such
 constraint. See [ADR-049](docs/adr/adr-049-zone-opening-and-import-time-completeness.md).

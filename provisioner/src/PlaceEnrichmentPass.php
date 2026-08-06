@@ -41,18 +41,34 @@ final readonly class PlaceEnrichmentPass
     private const string CACHE_TABLE = 'provisioner.place_enrichment';
 
     /**
+     * Radius for the geometric match, in metres.
+     *
+     * Deliberately stricter than the 75 m of `App\Geo\NearbyNameDeduplicator`, whose match
+     * is corroborated by equal names; this one has no name to corroborate it, so geometry is
+     * the only evidence and it has to be stronger. 50 m is the starting point #885 proposes
+     * and it is **not yet justified by a measurement** — the opening report now emits the
+     * match and ambiguity counts precisely so the first real provisioning run produces the
+     * numbers that will confirm or move it.
+     */
+    public const int DEFAULT_MATCH_RADIUS_METERS = 50;
+
+    /**
      * @var \Closure(list<string>): Process
      */
     private \Closure $processFactory;
 
     /**
-     * @param string       $source           cache partition, also the report label ('osm', 'datatourisme')
-     * @param string       $identity         SQL expression identifying a row `a` of the target table
-     * @param list<string> $exemptCategories categories the gate does not apply to, and which are therefore
-     *                                       not resolved either (`shelter`, arbitrated by #878)
-     * @param string|null  $boundariesSchema schema holding `admin_boundaries` for the offline locality
-     *                                       lookup; null uses the staging schema, which is where the zone
-     *                                       being opened has its own freshly imported boundaries
+     * @param string       $source            cache partition, also the report label ('osm', 'datatourisme')
+     * @param string       $identity          SQL expression identifying a row `a` of the target table
+     * @param list<string> $exemptCategories  categories the gate does not apply to, and which are therefore
+     *                                        not resolved either (`shelter`, arbitrated by #878)
+     * @param string|null  $boundariesSchema  schema holding `admin_boundaries` for the offline locality
+     *                                        lookup; null uses the staging schema, which is where the zone
+     *                                        being opened has its own freshly imported boundaries
+     * @param string|null  $matchTable        qualified table of curated places to match unnamed rows against
+     *                                        (`<tourism staging>.accommodations`); null disables matching
+     * @param int          $matchRadiusMeters strictly under the runtime deduplicator's 75 m: this match has no
+     *                                        name to corroborate it, so it must be geometrically tighter
      */
     public function __construct(
         private string $source,
@@ -62,12 +78,14 @@ final readonly class PlaceEnrichmentPass
         ?\Closure $processFactory = null,
         private NameResolver $resolver = new NameResolver(),
         private float $timeoutSeconds = 1800.0,
+        private ?string $matchTable = null,
+        private int $matchRadiusMeters = self::DEFAULT_MATCH_RADIUS_METERS,
     ) {
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 
     /**
-     * @return array{resolved: int, rejected: int, reasons: array<string, int>}
+     * @return array{resolved: int, rejected: int, matched: int, ambiguous: int, reasons: array<string, int>}
      *
      * @throws ImportFailedException
      */
@@ -88,7 +106,7 @@ final readonly class PlaceEnrichmentPass
         $this->psql($this->exportCandidates($stagingSchema, $table, $candidatesPath), 'psql export name candidates');
 
         $decisions = $this->resolveAll($candidatesPath);
-        $counts = ['resolved' => 0, 'rejected' => 0, 'reasons' => []];
+        $counts = ['resolved' => 0, 'rejected' => 0, 'matched' => 0, 'ambiguous' => 0, 'reasons' => []];
 
         if ([] !== $decisions) {
             $copyPath = $workDir.'/place-resolved.copy';
@@ -121,9 +139,11 @@ final readonly class PlaceEnrichmentPass
             ), 'psql upsert place enrichment cache');
         }
 
-        // COALESCE only: completion, never rewriting (ADR-049 §4).
+        // COALESCE only: completion, never rewriting (ADR-049 §4). A matched DataTourisme
+        // record brings its description, site and hours along with the name (#885), under the
+        // same rule — so an OSM value that exists always wins.
         $this->psql(\sprintf(
-            "UPDATE %1\$s.%2\$s a SET name = COALESCE(a.name, c.payload->>'name') FROM %3\$s c WHERE c.source = %4\$s AND c.source_id = %5\$s AND c.status = 'resolved';",
+            "UPDATE %1\$s.%2\$s a SET name = COALESCE(a.name, c.payload->>'name'), description = COALESCE(a.description, c.payload->>'description'), website = COALESCE(a.website, c.payload->>'website'), opening_hours = COALESCE(a.opening_hours, c.payload->>'opening_hours') FROM %3\$s c WHERE c.source = %4\$s AND c.source_id = %5\$s AND c.status = 'resolved';",
             $stagingSchema,
             $table,
             self::CACHE_TABLE,
@@ -155,10 +175,18 @@ final readonly class PlaceEnrichmentPass
         foreach ($decisions as $decision) {
             if ('resolved' === $decision['status']) {
                 ++$counts['resolved'];
+                if ('datatourisme' === $decision['via']) {
+                    ++$counts['matched'];
+                }
+
                 continue;
             }
 
             $reason = $decision['reason'];
+            if ('ambiguous_match' === $reason) {
+                ++$counts['ambiguous'];
+            }
+
             $counts['reasons'][$reason] = ($counts['reasons'][$reason] ?? 0) + 1;
         }
 
@@ -182,7 +210,8 @@ final readonly class PlaceEnrichmentPass
                               a.category,
                               coalesce(a.tags::text, '{}'),
                               coalesce(w.payload->>'label', ''),
-                              coalesce((SELECT b.name FROM %2$s b WHERE b.admin_level = 8 AND ST_Covers(b.geom, a.geom) LIMIT 1), '')
+                              coalesce((SELECT b.name FROM %2$s b WHERE b.admin_level = 8 AND ST_Covers(b.geom, a.geom) LIMIT 1), ''),
+                              %10$s
                          FROM %3$s.%4$s a
                          LEFT JOIN provisioner.wikidata_cache w ON w.qid = a.wikidata
                         WHERE nullif(btrim(a.name), '') IS NULL
@@ -198,6 +227,44 @@ final readonly class PlaceEnrichmentPass
             $this->literal($this->source),
             NameResolver::VERSION,
             $path,
+            $this->matchExpression(),
+        );
+    }
+
+    /**
+     * The curated candidates within the radius, as one jsonb: how many there are, and the
+     * single one's fields (`min()` over one row is that row).
+     *
+     * The count is what makes the conservative behaviour possible. Attributing the wrong name
+     * to an accommodation is worse than attributing none — the rider books elsewhere, or turns
+     * up at the wrong place — so two candidates produce a rejection rather than a pick, and the
+     * resolver is never handed a reason to choose between them.
+     *
+     * Category equality is the compatibility rule: both sides use the same vocabulary, and a
+     * looser rule is exactly how a hotel would inherit its restaurant's name.
+     */
+    private function matchExpression(): string
+    {
+        if (null === $this->matchTable) {
+            return "'{}'";
+        }
+
+        return \sprintf(
+            <<<'SQL'
+                coalesce((SELECT jsonb_build_object(
+                                   'n', count(*),
+                                   'id', min(t.id),
+                                   'name', min(t.name),
+                                   'description', min(t.description),
+                                   'website', min(t.website),
+                                   'opening_hours', min(t.opening_hours),
+                                   'distance_m', round(min(ST_Distance(t.geom::geography, a.geom::geography))::numeric, 1))
+                            FROM %1$s t
+                           WHERE t.category = a.category
+                             AND ST_DWithin(t.geom::geography, a.geom::geography, %2$d))::text, '{}')
+                SQL,
+            $this->matchTable,
+            $this->matchRadiusMeters,
         );
     }
 
@@ -222,39 +289,76 @@ final readonly class PlaceEnrichmentPass
     }
 
     /**
-     * @return list<array{source_id: string, payload: string, status: string, reason: string}>
+     * @return list<array{source_id: string, payload: string, status: string, via: string, reason: string}>
      */
     private function resolveAll(string $path): array
     {
         $decisions = [];
         foreach ($this->readLines($path) as $line) {
             $fields = explode("\t", $line);
-            if (5 !== \count($fields)) {
+            if (6 !== \count($fields)) {
                 continue;
             }
 
-            [$sourceId, $category, $tagsJson, $wikidataLabel, $locality] = $fields;
+            [$sourceId, $category, $tagsJson, $wikidataLabel, $locality, $matchJson] = $fields;
             $decision = $this->resolver->resolve(
                 $category,
                 $this->decodeTags($tagsJson),
                 '' === $wikidataLabel ? null : $wikidataLabel,
                 '' === $locality ? null : $locality,
+                $this->decodeMatch($matchJson),
             );
 
             $resolved = null !== $decision['name'];
+            // The payload is the audit trail #885 asks for: which step produced the name, and
+            // for a geometric match the record it came from and how far away it was. A
+            // rejection records how many candidates made it ambiguous.
             $payload = $resolved
-                ? ['name' => $decision['name'], 'via' => $decision['via']]
-                : ['reason' => $decision['reason'] ?? 'unknown'];
+                ? array_filter([
+                    'name' => $decision['name'],
+                    'via' => $decision['via'],
+                    'description' => $decision['description'] ?? null,
+                    'website' => $decision['website'] ?? null,
+                    'opening_hours' => $decision['opening_hours'] ?? null,
+                    'matched_id' => $decision['matched_id'] ?? null,
+                    'distance_m' => $decision['distance_m'] ?? null,
+                ], static fn (mixed $value): bool => null !== $value)
+                : array_filter([
+                    'reason' => $decision['reason'] ?? 'unknown',
+                    'candidates' => $decision['candidates'] ?? null,
+                ], static fn (mixed $value): bool => null !== $value);
 
             $decisions[] = [
                 'source_id' => $sourceId,
                 'payload' => json_encode($payload, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}',
                 'status' => $resolved ? 'resolved' : 'insufficient',
+                'via' => $resolved ? (string) $decision['via'] : '',
                 'reason' => $resolved ? '' : ($decision['reason'] ?? 'unknown'),
             ];
         }
 
         return $decisions;
+    }
+
+    /**
+     * @return array{n: int, id: ?string, name: ?string, description: ?string, website: ?string, opening_hours: ?string, distance_m: ?float}|null null when matching is off or nothing was in range
+     */
+    private function decodeMatch(string $json): ?array
+    {
+        $decoded = json_decode(str_replace(['\\t', '\\n', '\\r', '\\\\'], ["\t", "\n", "\r", '\\'], $json), true);
+        if (!\is_array($decoded) || !isset($decoded['n']) || !is_numeric($decoded['n']) || 0 === (int) $decoded['n']) {
+            return null;
+        }
+
+        return [
+            'n' => (int) $decoded['n'],
+            'id' => \is_string($decoded['id'] ?? null) ? $decoded['id'] : null,
+            'name' => \is_string($decoded['name'] ?? null) ? $decoded['name'] : null,
+            'description' => \is_string($decoded['description'] ?? null) ? $decoded['description'] : null,
+            'website' => \is_string($decoded['website'] ?? null) ? $decoded['website'] : null,
+            'opening_hours' => \is_string($decoded['opening_hours'] ?? null) ? $decoded['opening_hours'] : null,
+            'distance_m' => is_numeric($decoded['distance_m'] ?? null) ? (float) $decoded['distance_m'] : null,
+        ];
     }
 
     /**
