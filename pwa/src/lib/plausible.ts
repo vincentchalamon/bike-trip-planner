@@ -19,7 +19,7 @@ export type PlausibleEvent =
   | "trip_shared"
   | "accommodation_selected"
   | "alert_action_clicked"
-  | "ai_chat_opened";
+  | "in_ride_opened";
 
 /**
  * Send a custom event to Plausible. No-op when `window.plausible` is undefined

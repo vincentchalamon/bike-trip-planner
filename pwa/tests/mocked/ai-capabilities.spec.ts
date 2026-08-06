@@ -29,54 +29,36 @@ function setAiCapability(
 }
 
 test.describe("AI capabilities gating (#304)", () => {
-  test("tier reachable: the assistant is active and no unavailable notice shows", async ({
+  test("tier reachable: no unavailable notice shows in the analysis zone", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
     await setAiCapability(mockedPage, { available: true });
 
-    const bubble = mockedPage.getByTestId("ai-bubble");
-    await expect(bubble).toBeVisible();
     await expect(mockedPage.getByTestId("ai-unavailable-notice")).toHaveCount(
       0,
     );
-
-    // Active → clicking opens the chat panel.
-    await bubble.click();
-    await expect(mockedPage.getByTestId("ai-chat-panel")).toBeVisible();
   });
 
-  test("tier unreachable: the assistant is disabled and the notice shows", async ({
+  test("tier unreachable: the degraded-mode notice shows in Acte 3", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
     await setAiCapability(mockedPage, { available: false });
 
-    const bubble = mockedPage.getByTestId("ai-bubble");
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toHaveAttribute("aria-disabled", "true");
-    await expect(bubble).toHaveAttribute("data-ai-down", "true");
-
-    // Disabled → a forced click must not open the panel.
-    await bubble.click({ force: true });
-    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
-
     // Explicit degraded-mode notice in Acte 3 (Mon voyage).
     await expect(mockedPage.getByTestId("ai-unavailable-notice")).toBeVisible();
   });
 
-  test("not configured: the assistant is visible-but-disabled with a configure CTA", async ({
+  test("not configured: the analysis zone surfaces the configure CTA", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
     await setAiCapability(mockedPage, { available: true, configured: false });
 
-    const bubble = mockedPage.getByTestId("ai-bubble");
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toHaveAttribute("data-not-configured", "");
     await expect(
       mockedPage.getByTestId("ai-not-configured-notice"),
     ).toBeVisible();
@@ -166,15 +148,15 @@ test.describe("AI generation card gating (#304)", () => {
 
 /**
  * ADR-042 — disabled-but-visible AI surfaces in Acte 3 ("Mon voyage") when the
- * account has no AI provider configured. The capability is driven via the test
- * hook with `configured: false`.
+ * account has no AI provider configured. The capability is driven via the real
+ * `useAiSettings` fetch (mocked account GET) rather than the test hook.
  */
 test.describe("AI not-configured gating (ADR-042)", () => {
   // Drive the account GET so the `configured` capability resolves to false from
   // the real `useAiSettings` fetch (no race with the test-hook dispatch).
   test.use({ mockOptions: { aiConfigured: false } });
 
-  test("the chat bubble links to the settings instead of opening the panel", async ({
+  test("the Acte 3 analysis zone surfaces the configure CTA", async ({
     createFullTrip,
     mockedPage,
   }) => {
@@ -184,14 +166,6 @@ test.describe("AI not-configured gating (ADR-042)", () => {
       configured: false,
     });
 
-    const bubble = mockedPage.getByTestId("ai-bubble");
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toHaveAttribute("data-not-configured", "");
-    await expect(bubble).toHaveAttribute("href", "/account/settings#ai");
-    // It must not open the chat panel.
-    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
-
-    // The Acte 3 analysis zone surfaces the configure CTA.
     await expect(
       mockedPage.getByTestId("ai-not-configured-notice"),
     ).toBeVisible();

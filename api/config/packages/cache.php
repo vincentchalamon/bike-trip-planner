@@ -34,10 +34,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 86400, // 24 hours
                 ],
-                'cache.trip_chat' => [
-                    'adapter' => 'cache.adapter.redis',
-                    'default_lifetime' => 1800, // 30 minutes — short-lived dialogue history
-                ],
             ],
         ],
     ]);
@@ -58,9 +54,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'adapter' => 'cache.adapter.array',
                     ],
                     'cache.routing' => [
-                        'adapter' => 'cache.adapter.array',
-                    ],
-                    'cache.trip_chat' => [
                         'adapter' => 'cache.adapter.array',
                     ],
                 ],

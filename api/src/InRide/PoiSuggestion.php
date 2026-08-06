@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\InRide;
 
 /**
- * Single POI suggestion served by {@see InRideAssistant} to a cycling user mid-ride.
+ * Single POI suggestion served to a cycling user mid-ride.
  *
  * Distances are expressed in meters. Detour is the additional distance compared
  * to staying on the route (see {@see DetourCalculator}).

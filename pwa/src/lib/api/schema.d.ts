@@ -508,26 +508,6 @@ export interface paths {
         patch: operations["api_trips_id_patch"];
         trace?: never;
     };
-    "/trips/{id}/ai-chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
-         * @description Send a natural-language instruction to the LLaMA 3B dialogue assistant.
-         */
-        post: operations["api_trips_idai-chat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/trips/{id}/analyze": {
         parameters: {
             query?: never;
@@ -582,26 +562,6 @@ export interface paths {
          * @description Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.
          */
         post: operations["api_trips_idrecompute_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/{id}/ai-chat-history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the persisted chat history for a trip (most-recent first, cursor pagination).
-         * @description List the persisted chat history for a trip (most-recent first, cursor pagination).
-         */
-        get: operations["api_trips_idai-chat-history_get_collection"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1188,14 +1148,6 @@ export interface components {
             /** @description Opening hours (Wikidata P8989). */
             openingHours?: string | null;
         };
-        GeoPosition: {
-            /** @description Latitude in decimal degrees (WGS84). */
-            lat: number;
-            /** @description Longitude in decimal degrees (WGS84). */
-            lon: number;
-            /** @description Optional bearing (heading) in degrees clockwise from north. */
-            bearing?: number | null;
-        };
         HydraCollectionBaseSchema: components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
             /**
              * @example {
@@ -1245,30 +1197,6 @@ export interface components {
             });
             "@id": string;
             "@type": string;
-        };
-        "PoiSuggestionDto.jsonld": {
-            /** @description Display name of the POI. */
-            name: string;
-            /** @description POI category (food, water, shelter, mechanic). */
-            category: string;
-            /** @description POI latitude (WGS84). */
-            lat: number;
-            /** @description POI longitude (WGS84). */
-            lon: number;
-            /** @description Straight-line distance from the rider to the POI, in meters (rounded). */
-            distance_m: number;
-            /** @description Estimated additional meters if the rider detours to the POI (0 when no remaining route is known, rounded). */
-            detour_m: number;
-            /** @description Raw OSM `opening_hours` tag for the current day, when available. */
-            opening_hours_today?: string | null;
-            /** @description RFC 3339 closing time of the currently-open interval, or null when the POI never closes / is closed. */
-            closes_at?: string | null;
-            /** @description Optional phone number extracted from the OSM tag. */
-            phone?: string | null;
-            /** @description Pre-built deeplink the rider can tap to open the POI in their map app. */
-            deeplink: string;
-            /** @description Optional warning surfaced on the POI card (e.g. opening hours unreliable, POI far from route). */
-            warning?: string | null;
         };
         "PointOfInterest.fit": {
             name?: string;
@@ -1526,30 +1454,6 @@ export interface components {
         "Trip.TripBatchRecomputeRequest": {
             modifications: components["schemas"]["TripModification"][];
         };
-        "Trip.TripChatRequest": {
-            /** @description Natural language instruction or question from the rider. */
-            message: string;
-            context?: components["schemas"]["TripChatContext"] | null;
-            position?: components["schemas"]["GeoPosition"] | null;
-        };
-        "Trip.TripChatResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /** @description Trip identifier (UUID v7) the chat exchange belongs to. */
-            tripId: string;
-            /** @description Action interpreted by the dialogue assistant (split_stage, info, ...). */
-            action: string;
-            params: {
-                [key: string]: unknown;
-            };
-            /** @description Conversational reply to display to the rider. */
-            response: string;
-            /** @description True when this action will trigger a backend recomputation (Messenger dispatch wired in #311). */
-            dispatched: boolean;
-            /** @description Day numbers (1-indexed) whose recomputation has been dispatched. */
-            impactedStageNumbers?: number[];
-            /** @description True when the action requires a full trip re-analysis (Acte 2). */
-            requiresFullAnalysis?: boolean;
-            pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
-        };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             title?: string | null;
@@ -1692,44 +1596,6 @@ export interface components {
             promptVersion: number;
             /** @description RFC3339 timestamp when the overview was generated */
             generatedAt: string;
-        };
-        TripChatContext: {
-            /** @description 1-indexed day number of the stage currently consulted, when applicable. */
-            currentStage?: number | null;
-        };
-        /**
-         * @description Read-only DTO exposing a single persisted chat turn over the API.
-         *
-         *     Backs the `GET /trips/{id}/ai-chat-history` endpoint introduced in #459 so the
-         *     PWA can rehydrate the chat drawer after a refresh or a return visit. The
-         *     underlying Doctrine entity ({@see \App\Entity\TripChatMessage}) is kept
-         *     private to the backend; only the publicly safe fields are exposed here.
-         *
-         *     Messages are returned ordered by `createdAt` DESC (most recent first); the
-         *     frontend reverses them for chronological rendering. Cursor pagination is
-         *     available via the `before` query parameter (RFC 3339 datetime).
-         */
-        "TripChatMessage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /** @description Message identifier (UUID v7). */
-            id?: string;
-            /** @description Trip identifier (UUID v7) the message belongs to. */
-            tripId?: string;
-            /** @description Author role: `user` or `assistant`. */
-            role?: string;
-            /** @description Raw message content. For assistant turns this is the JSON envelope returned by the LLM. */
-            content?: string;
-            /** @description Structured action interpreted by the dialogue assistant (e.g. `split_stage`, `info`). */
-            action?: string | null;
-            /** @description Optional latitude captured when the rider sent the message. */
-            geoLat?: number | null;
-            /** @description Optional longitude captured when the rider sent the message. */
-            geoLon?: number | null;
-            pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
-            /**
-             * Format: date-time
-             * @description Server-side creation timestamp (RFC 3339).
-             */
-            createdAt?: string;
         };
         /**
          * @description Read-only trip detail resource for loading a persisted trip on the frontend.
@@ -3835,88 +3701,6 @@ export interface operations {
             };
         };
     };
-    "api_trips_idai-chat_post": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Trip identifier */
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** @description The new Trip resource */
-        requestBody: {
-            content: {
-                "application/ld+json": components["schemas"]["Trip.TripChatRequest"];
-            };
-        };
-        responses: {
-            /** @description Trip resource created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Trip.TripChatResponse.jsonld"];
-                };
-            };
-            /** @description Invalid input */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Trip not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description An error occurred */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
-                    "application/problem+json": components["schemas"]["ConstraintViolation"];
-                    "application/json": components["schemas"]["ConstraintViolation"];
-                };
-            };
-            /** @description Rate limit reached */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI assistant unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     api_trips_idanalyze_post: {
         parameters: {
             query?: never;
@@ -4115,54 +3899,6 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
-            };
-        };
-    };
-    "api_trips_idai-chat-history_get_collection": {
-        parameters: {
-            query?: {
-                /** @description Maximum number of messages to return (default 50, max 200). */
-                limit?: number;
-                /** @description Only return messages strictly older than this RFC 3339 timestamp (used as a cursor for "load older"). */
-                before?: string;
-            };
-            header?: never;
-            path: {
-                /** @description TripChatMessage identifier */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description TripChatMessage collection */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
-                        member: components["schemas"]["TripChatMessage.jsonld"][];
-                    };
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Trip not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

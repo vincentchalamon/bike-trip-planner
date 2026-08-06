@@ -56,49 +56,6 @@ Feature: AI features
     When I apply the AI suggestions of stage 1
     Then the modification queue is visible
 
-  @desktop @critical
-  Scenario: AI chat panel accessible after computation
-    Given I have created a full trip with 3 stages
-    When I open the AI assistant bubble
-    Then the AI chat panel is visible
-
-  @desktop @critical
-  Scenario: Message sent to the backend and reply shown in history
-    Given I have created a full trip with 3 stages
-    And the AI assistant replies "Here is my analysis of your stage."
-    When I open the AI assistant bubble
-    And I send the message "What do you think of this stage?" in the AI chat
-    Then a POST request to /trips/*/ai-chat is sent
-    And the reply "Here is my analysis of your stage." appears in the chat history
-
-  @desktop
-  Scenario: Loading indicator while the assistant replies
-    Given I have created a full trip with 3 stages
-    And the AI assistant replies with a delay
-    When I open the AI assistant bubble
-    And I send the message "Any suggestion?" in the AI chat
-    Then the assistant typing indicator is visible
-
-  @desktop
-  Scenario: "In-ride" mode with geolocation suggests nearby POIs
-    Given I have created a full trip with 3 stages
-    And my position is shared at 48.8566, 2.3522
-    And the AI assistant replies with nearby POIs
-    When I open the AI assistant bubble
-    And I enable geolocation in the AI chat
-    And I send the message "A bakery not too far?" in the AI chat
-    Then a POI card is displayed in the AI chat
-
-  @desktop
-  Scenario: Safety disclaimer shown below in-ride POIs
-    Given I have created a full trip with 3 stages
-    And my position is shared at 48.8566, 2.3522
-    And the AI assistant replies with nearby POIs
-    When I open the AI assistant bubble
-    And I enable geolocation in the AI chat
-    And I send the message "A water point?" in the AI chat
-    Then the in-ride safety disclaimer is shown
-
   # ADR-043: the "Preview" screen and the single-shot AI refinement card were
   # removed (Saisie -> loader -> trip view flow). Its scenarios were dropped.
 

@@ -11,7 +11,6 @@ import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
 import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { TripHeader } from "@/components/trip-header";
-import { AiBubble } from "@/components/ai-bubble";
 import { useAiSettings } from "@/hooks/use-ai-settings";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
@@ -713,11 +712,6 @@ export function TripPlanner() {
           onShare={handleShareTrip}
           onDelete={handleDeleteTrip}
         />
-
-        {/* Floating AI assistant — visible as soon as the trip view is rendered
-            (no longer gated by an analysis phase). Hidden on the welcome /
-            loader screens via its own `trip` guard. */}
-        {isAiFeatureEnabled() && <AiBubble />}
       </main>
     </GpxDropZone>
   );

@@ -57,49 +57,6 @@ Fonctionnalité: Fonctionnalités IA
     Quand j'applique les suggestions IA de l'étape 1
     Alors la file d'attente des modifications est visible
 
-  @desktop @critique
-  Scénario: Panneau chat IA accessible après le calcul
-    Étant donné que j'ai créé un voyage complet avec 3 étapes
-    Quand j'ouvre la bulle d'assistance IA
-    Alors le panneau de chat IA est visible
-
-  @desktop @critique
-  Scénario: Message envoyé au backend et réponse affichée dans l'historique
-    Étant donné que j'ai créé un voyage complet avec 3 étapes
-    Et que l'assistant IA répond "Voici mon analyse de votre étape."
-    Quand j'ouvre la bulle d'assistance IA
-    Et que j'envoie le message "Que penses-tu de cette étape ?" dans le chat IA
-    Alors une requête POST vers /trips/*/ai-chat est envoyée
-    Et la réponse "Voici mon analyse de votre étape." apparaît dans l'historique du chat
-
-  @desktop
-  Scénario: Indicateur de chargement pendant la réponse de l'assistant
-    Étant donné que j'ai créé un voyage complet avec 3 étapes
-    Et que l'assistant IA répond avec un délai
-    Quand j'ouvre la bulle d'assistance IA
-    Et que j'envoie le message "Une suggestion ?" dans le chat IA
-    Alors l'indicateur de saisie de l'assistant est visible
-
-  @desktop
-  Scénario: Mode "En route" avec géolocalisation propose des POIs proches
-    Étant donné que j'ai créé un voyage complet avec 3 étapes
-    Et que ma position est partagée à 48.8566, 2.3522
-    Et que l'assistant IA répond avec des POIs proches
-    Quand j'ouvre la bulle d'assistance IA
-    Et que j'active la géolocalisation dans le chat IA
-    Et que j'envoie le message "Une boulangerie pas trop loin ?" dans le chat IA
-    Alors une carte de POI est affichée dans le chat IA
-
-  @desktop
-  Scénario: Avertissement de sécurité affiché sous les POIs en route
-    Étant donné que j'ai créé un voyage complet avec 3 étapes
-    Et que ma position est partagée à 48.8566, 2.3522
-    Et que l'assistant IA répond avec des POIs proches
-    Quand j'ouvre la bulle d'assistance IA
-    Et que j'active la géolocalisation dans le chat IA
-    Et que j'envoie le message "Un point d'eau ?" dans le chat IA
-    Alors l'avertissement de sécurité en route est affiché
-
   # ADR-043 : l'ecran "Apercu" et la carte de raffinement IA mono-coup ont ete
   # retires (flux Saisie -> chargement -> voyage). Les scenarios de la carte de
   # raffinement IA ont ete supprimes en consequence.

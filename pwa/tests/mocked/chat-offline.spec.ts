@@ -1,21 +1,25 @@
 import { test, expect } from "../fixtures/base.fixture";
 
 /**
- * Issue #465 — Offline chat behaviour.
+ * Issue #465 — Offline in-ride behaviour.
  *
- * When the browser reports `navigator.onLine === false`, the floating bubble
- * should surface the offline badge and the button must be disabled so the
- * rider cannot fire a chat request that would never reach the backend.
+ * When the browser reports `navigator.onLine === false`, the floating in-ride
+ * bubble should surface the offline badge and the button must be disabled so
+ * the rider cannot fire a request that would never reach the backend.
+ *
+ * The AI chat bubble was removed in #929; the guided in-ride bubble that
+ * replaces it lands in #935. This spec keeps the offline coverage but is
+ * pending until that component (`in-ride-bubble`) exists.
  */
 
-test.describe("Chat offline", () => {
-  test("disables the bubble and surfaces the offline badge", async ({
+test.describe("In-ride offline", () => {
+  test.fixme("disables the bubble and surfaces the offline badge", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
 
-    const bubble = mockedPage.getByTestId("ai-bubble");
+    const bubble = mockedPage.getByTestId("in-ride-bubble");
     await expect(bubble).toBeVisible({ timeout: 10_000 });
 
     // Flip the browser into offline mode and dispatch the matching event so
@@ -39,6 +43,6 @@ test.describe("Chat offline", () => {
     // Force-click bypasses Playwright's actionability check; the panel must
     // still NOT open because the button is disabled.
     await bubble.click({ force: true });
-    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
+    await expect(mockedPage.getByTestId("in-ride-panel")).toHaveCount(0);
   });
 });

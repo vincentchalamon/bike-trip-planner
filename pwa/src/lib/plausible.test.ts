@@ -29,6 +29,6 @@ describe("trackEvent", () => {
 
   it("is a no-op when window.plausible is undefined (no consent / not loaded)", () => {
     expect(window.plausible).toBeUndefined();
-    expect(() => trackEvent("ai_chat_opened")).not.toThrow();
+    expect(() => trackEvent("in_ride_opened")).not.toThrow();
   });
 });

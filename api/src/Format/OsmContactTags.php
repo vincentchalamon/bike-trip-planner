@@ -11,9 +11,8 @@ namespace App\Format;
  * website. Both live side by side in the wild, so a mapper who only filled
  * `contact:phone` is invisible to a reader that looks up `phone` alone.
  *
- * Static, without DI, like {@see WebsiteUrl}: this is a pure tag lookup, and
- * both the in-ride assistant (raw Overpass tags) and the planned path (the
- * `tags` jsonb of the Tier-1 index) call it on plain arrays.
+ * Static, without DI, like {@see WebsiteUrl}: this is a pure tag lookup called
+ * on the `tags` jsonb of the Tier-1 index as a plain array.
  */
 final class OsmContactTags
 {

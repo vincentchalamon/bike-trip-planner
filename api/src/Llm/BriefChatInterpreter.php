@@ -11,9 +11,9 @@ use App\Llm\Dto\BriefChatReply;
  * {@see BriefChatReply} for the stateless trip-brief chat (ADR-045,
  * `POST /trips/ai-chat`).
  *
- * Mirrors {@see ChatActionInterpreter}'s lenient strategy — tolerant to Markdown
- * code fences and surrounding prose — but produces the brief-chat envelope
- * `{reply, readyToGenerate, collected}` instead of a planning action. On any
+ * Uses a lenient parsing strategy — tolerant to Markdown code fences and
+ * surrounding prose — producing the brief-chat envelope
+ * `{reply, readyToGenerate, collected}`. On any
  * parse failure it never throws: it falls back to a plain reply carrying the raw
  * model text with `readyToGenerate: false` and an empty `collected`, so the chat
  * endpoint always returns a usable turn.
