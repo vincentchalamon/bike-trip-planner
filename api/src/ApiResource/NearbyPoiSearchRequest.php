@@ -11,8 +11,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Input DTO for `POST /trips/{id}/nearby-pois`.
  *
- * An unknown `category` is rejected by the denormalizer (NotNormalizableValue ->
- * 400) before validation runs, so the enum type carries the whitelist. The
+ * An unknown `category` fails enum denormalization and surfaces as a validation
+ * violation (422), not a 400, so the enum type itself carries the whitelist. The
  * position is sent in the body, never the query string, so the rider's GPS
  * coordinates never land in logs, the `Referer` header or the browser history.
  *

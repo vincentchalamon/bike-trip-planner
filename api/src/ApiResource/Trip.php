@@ -124,8 +124,8 @@ use App\State\TripUpdateProcessor;
             status: 200,
             openapi: new Operation(
                 responses: [
-                    400 => new Response(description: 'Unknown POI category'),
                     404 => new Response(description: 'Trip not found'),
+                    422 => new Response(description: 'Unknown POI category or invalid request payload'),
                     429 => new Response(description: 'Rate limit reached'),
                 ],
                 summary: 'Search the nearest points of interest of one intent category around a rider mid-ride.',

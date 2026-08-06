@@ -80,7 +80,7 @@ final class NearbyPoiSearchTest extends ApiTestCase
     }
 
     #[Test]
-    public function rejectsRequestsFromANonOwnerWith403(): void
+    public function hidesANonOwnerTripAs404(): void
     {
         $other = new User('someone-else@example.com');
         $em = self::getContainer()->get('doctrine.orm.entity_manager');
@@ -94,7 +94,9 @@ final class NearbyPoiSearchTest extends ApiTestCase
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
         ]);
 
-        $this->assertResponseStatusCodeSame(403);
+        // Object-level authz denials are hidden as 404, not 403 (ADR-038), so a non-owner
+        // cannot tell an existing-but-forbidden trip apart from an unknown one.
+        $this->assertResponseStatusCodeSame(404);
     }
 
     #[Test]
@@ -109,7 +111,7 @@ final class NearbyPoiSearchTest extends ApiTestCase
     }
 
     #[Test]
-    public function returns400ForAnUnknownCategory(): void
+    public function returns422ForAnUnknownCategory(): void
     {
         $this->seedTrip(self::TRIP_ID, $this->testUser);
 
@@ -118,7 +120,9 @@ final class NearbyPoiSearchTest extends ApiTestCase
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
         ]);
 
-        $this->assertResponseStatusCodeSame(400);
+        // A value outside the backed enum fails denormalization; API Platform surfaces it as a
+        // validation violation (422), not a 400 malformed-request.
+        $this->assertResponseStatusCodeSame(422);
     }
 
     #[Test]

@@ -73,7 +73,15 @@ export function PoiCard({ poi }: PoiCardProps) {
   const closesAt = formatClosingTime(poi.closes_at ?? null);
   const hasOpeningHours =
     !!poi.opening_hours_today && poi.opening_hours_today.trim() !== "";
-  const hasWarning = !!poi.warning && poi.warning.trim() !== "";
+  const hasWarning = poi.warning != null && poi.warning !== "";
+  const warningText =
+    poi.warning === "closes_soon"
+      ? t("warning.closesSoon", { minutes: poi.warning_minutes ?? 0 })
+      : poi.warning === "far_from_route"
+        ? t("warning.farFromRoute")
+        : poi.warning === "hours_unverified"
+          ? t("noOpeningHours")
+          : null;
 
   return (
     <article
@@ -152,7 +160,7 @@ export function PoiCard({ poi }: PoiCardProps) {
           </a>
         )}
 
-        {hasWarning && (
+        {hasWarning && warningText && (
           <p
             data-testid="poi-card-warning"
             className="flex items-start gap-1 text-amber-700"
@@ -161,7 +169,7 @@ export function PoiCard({ poi }: PoiCardProps) {
               className="mt-0.5 h-3 w-3 shrink-0"
               aria-hidden="true"
             />
-            <span>{poi.warning}</span>
+            <span>{warningText}</span>
           </p>
         )}
       </div>

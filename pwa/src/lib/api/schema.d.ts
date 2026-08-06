@@ -3935,7 +3935,7 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Trip.NearbyPoiSearchResponse.jsonld"];
                 };
             };
-            /** @description Unknown POI category */
+            /** @description Invalid input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3964,7 +3964,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description An error occurred */
+            /** @description Unknown POI category or invalid request payload */
             422: {
                 headers: {
                     [name: string]: unknown;
