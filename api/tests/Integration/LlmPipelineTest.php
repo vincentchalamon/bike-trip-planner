@@ -386,6 +386,20 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
         );
     }
 
+    public function getStageGeometry(string $tripId, int $dayNumber): ?array
+    {
+        foreach ($this->stages as $stage) {
+            if ($stage->dayNumber === $dayNumber && [] !== $stage->geometry) {
+                return array_map(
+                    static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
+                    $stage->geometry,
+                );
+            }
+        }
+
+        return null;
+    }
+
     public function getRequest(string $tripId): TripRequest
     {
         return $this->request;

@@ -66,7 +66,7 @@ final readonly class DetourCalculator
             $a = $remainingRoute[$i];
             $b = $remainingRoute[$i + 1];
 
-            [$projection, $rawT] = $this->projectOnSegment($poi, $a, $b);
+            [$projection, $rawT] = self::projectOnSegment($poi, $a, $b);
             $perpendicular = $this->distance->inMeters(
                 $poi->lat,
                 $poi->lon,
@@ -113,9 +113,12 @@ final readonly class DetourCalculator
      * The resulting parameter t is clamped to [0, 1] so the projection always lies on
      * the segment (extremities included), which is what we want for a "rejoin point".
      *
+     * Static and stateless so {@see RouteTail} can reuse the exact same
+     * projection to truncate the polyline at the rider position (issue #932).
+     *
      * @return array{GeoPoint, float} the clamped projection point and the raw (unclamped) parameter t
      */
-    private function projectOnSegment(GeoPoint $poi, GeoPoint $a, GeoPoint $b): array
+    public static function projectOnSegment(GeoPoint $poi, GeoPoint $a, GeoPoint $b): array
     {
         if ($a->lat === $b->lat && $a->lon === $b->lon) {
             return [$a, 0.0];

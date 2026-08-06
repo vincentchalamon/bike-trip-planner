@@ -49,6 +49,19 @@ interface TripRequestRepositoryInterface
     public function getStages(string $tripId): ?array;
 
     /**
+     * Returns a single stage's route geometry, in travel order, projected to 2D.
+     *
+     * Feeds the in-ride detour calculation ({@see \App\InRide\DetourCalculator}),
+     * which is planar; `ele` is intentionally dropped. A read of only the geometry,
+     * not the whole aggregate ({@see self::getStages()} hydrates weather, POIs,
+     * accommodations…).
+     *
+     * @return list<array{lat: float, lon: float}>|null null when the trip, the day,
+     *                                                  or the geometry does not exist
+     */
+    public function getStageGeometry(string $tripId, int $dayNumber): ?array;
+
+    /**
      * Persists the LLaMA 8B pass-1 AI analysis for a single stage atomically.
      *
      * Targeted by `dayNumber` (1-indexed, matches {@see Stage::$dayNumber}). Required

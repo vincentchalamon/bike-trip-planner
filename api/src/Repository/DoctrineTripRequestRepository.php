@@ -21,6 +21,7 @@ use App\Llm\Dto\StageAiAnalysis;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsAlias;
@@ -324,6 +325,37 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         return $result;
+    }
+
+    /**
+     * Scalar read of the single `geometry` JSONB column — no join, no hydration of the
+     * stage collection (weather, POIs, accommodations…) that {@see self::getStages()}
+     * would pull in.
+     *
+     * @return list<array{lat: float, lon: float}>|null
+     */
+    public function getStageGeometry(string $tripId, int $dayNumber): ?array
+    {
+        if (!Uuid::isValid($tripId)) {
+            return null;
+        }
+
+        /** @var array{geometry: list<array{lat: float, lon: float, ele: float}>}|null $row */
+        $row = $this->getEntityManager()->createQuery(
+            'SELECT s.geometry FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
+
+        if (null === $row || [] === $row['geometry']) {
+            return null;
+        }
+
+        return array_map(
+            static fn (array $point): array => ['lat' => $point['lat'], 'lon' => $point['lon']],
+            $row['geometry'],
+        );
     }
 
     /**
