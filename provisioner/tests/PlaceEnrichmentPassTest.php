@@ -43,7 +43,7 @@ final class PlaceEnrichmentPassTest extends TestCase
      * @param list<string> $candidateLines rows the export hands back, tab-separated:
      *                                     source_id, category, tags json, wikidata label, locality
      */
-    private function pass(array $candidateLines = [], string $rejectedCount = '0'): PlaceEnrichmentPass
+    private function pass(array $candidateLines = [], string $rejectedCount = '0', ?string $matchTable = null): PlaceEnrichmentPass
     {
         return new PlaceEnrichmentPass(
             source: 'osm',
@@ -66,6 +66,7 @@ final class PlaceEnrichmentPassTest extends TestCase
 
                 return new Process(['true']);
             },
+            matchTable: $matchTable,
         );
     }
 
@@ -144,7 +145,7 @@ final class PlaceEnrichmentPassTest extends TestCase
     public function resolvesAnOperatorIntoANameAndCachesIt(): void
     {
         $counts = $this->pass([
-            "N/1\tcamp_site\t{\"operator\": \"Commune de Jongieux\"}\t\tJongieux",
+            "N/1\tcamp_site\t{\"operator\": \"Commune de Jongieux\"}\t\tJongieux\t{}",
         ])->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
 
         self::assertSame(1, $counts['resolved']);
@@ -164,7 +165,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         // The negative cache: without it a re-opening would re-resolve every hopeless row,
         // and a later resolver could never tell which rows to reconsider.
         $counts = $this->pass([
-            "N/2\tguest_house\t{\"building\": \"yes\"}\t\t",
+            "N/2\tguest_house\t{\"building\": \"yes\"}\t\t\t{}",
         ])->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
 
         self::assertSame(0, $counts['resolved']);
@@ -260,6 +261,125 @@ final class PlaceEnrichmentPassTest extends TestCase
         // No exemption on this side: every flux accommodation category is bookable.
         self::assertStringContainsString('AND true', $export);
         self::assertStringNotContainsString('NOT IN (', $export);
+    }
+
+    #[Test]
+    public function matchingIsOffUnlessACuratedTableIsGiven(): void
+    {
+        // DataTourisme may not be configured at all, and the OSM import must still run — with
+        // one fewer resolver step, not with a broken query.
+        $this->pass()->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        $export = $this->sqlContaining('place-candidates.tsv');
+        self::assertStringNotContainsString('ST_DWithin', $export);
+        // Six columns either way, the last a constant, so the reader's field count is stable.
+        self::assertSame(1, preg_match("/LIMIT 1\), ''\),\s+'\{\}'/", $export), 'a constant stands in for the match');
+    }
+
+    #[Test]
+    public function matchesOnCategoryAndProximityAlone(): void
+    {
+        // The loop #885 breaks: the runtime deduplicator pairs places *by name*, so it can
+        // never complete a row whose name is missing. At import, category plus proximity is
+        // enough — and the radius is tighter than the runtime's 75 m precisely because there
+        // is no name to corroborate the match.
+        $this->pass(matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        $export = $this->sqlContaining('place-candidates.tsv');
+        self::assertStringContainsString('FROM tourism_staging_bretagne.accommodations t', $export);
+        self::assertStringContainsString('WHERE t.category = a.category', $export);
+        self::assertStringContainsString(\sprintf('ST_DWithin(t.geom::geography, a.geom::geography, %d)', PlaceEnrichmentPass::DEFAULT_MATCH_RADIUS_METERS), $export);
+        self::assertLessThan(75, PlaceEnrichmentPass::DEFAULT_MATCH_RADIUS_METERS, 'stricter than NearbyNameDeduplicator, which has equal names to corroborate it');
+        // The count travels with the payload, which is what makes the ambiguity check possible
+        // without a second query.
+        self::assertStringContainsString("'n', count(*)", $export);
+    }
+
+    #[Test]
+    public function inheritsTheNameAndWhatComesWithItFromASingleCuratedCandidate(): void
+    {
+        $counts = $this->pass([
+            "N/1\tcamp_site\t{}\t\tSarlat\t".json_encode([
+                'n' => 1,
+                'id' => 'FR-123',
+                'name' => 'Camping du Moulin',
+                'description' => 'Au bord de la riviere',
+                'website' => 'https://moulin.test',
+                'opening_hours' => 'Apr-Oct',
+                'distance_m' => 12.4,
+            ], \JSON_THROW_ON_ERROR),
+        ], matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertSame(1, $counts['resolved']);
+        self::assertSame(1, $counts['matched']);
+
+        $copy = (string) file_get_contents($this->workDir.'/place-resolved.copy');
+        self::assertStringContainsString('Camping du Moulin', $copy);
+        self::assertStringContainsString('Au bord de la riviere', $copy);
+        self::assertStringContainsString('https://moulin.test', $copy);
+        // Traceable for audit: which record it came from, and how far away it was.
+        self::assertStringContainsString('FR-123', $copy);
+        self::assertStringContainsString('12.4', $copy);
+        self::assertStringContainsString('datatourisme', $copy);
+        // A curated record is already named the way the place presents itself, so the commune
+        // is not appended on top of it.
+        self::assertStringNotContainsString('Sarlat', $copy);
+    }
+
+    #[Test]
+    public function refusesRatherThanChoosingBetweenTwoCandidates(): void
+    {
+        // Two neighbouring campsites, or a hotel and its restaurant at one address. Nothing
+        // here can tell them apart, and a wrong name is worse than no name — the rider books
+        // elsewhere, or turns up at the wrong place.
+        $counts = $this->pass([
+            "N/1\tcamp_site\t{}\t\t\t".json_encode([
+                'n' => 2,
+                'id' => 'FR-123',
+                'name' => 'Camping du Moulin',
+                'distance_m' => 9.0,
+            ], \JSON_THROW_ON_ERROR),
+        ], matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertSame(0, $counts['resolved']);
+        self::assertSame(1, $counts['ambiguous']);
+        self::assertSame(['ambiguous_match' => 1], $counts['reasons']);
+
+        $copy = (string) file_get_contents($this->workDir.'/place-resolved.copy');
+        self::assertStringContainsString('ambiguous_match', $copy);
+        // How many candidates made it ambiguous, for audit.
+        self::assertStringContainsString('"candidates":2', $copy);
+        self::assertStringNotContainsString('Camping du Moulin', $copy, 'no name is borrowed from an ambiguous match');
+    }
+
+    #[Test]
+    public function fallsBackToTheTagsWhenNothingIsInRange(): void
+    {
+        // Out of range is not ambiguity: the cascade simply carries on to the next step.
+        $counts = $this->pass([
+            "N/1\tcamp_site\t{\"operator\": \"Commune de Jongieux\"}\t\t\t{}",
+        ], matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertSame(1, $counts['resolved']);
+        self::assertSame(0, $counts['matched'], 'resolved by the operator tag, not by a match');
+    }
+
+    #[Test]
+    public function carriesTheCuratedFieldsThroughTheSameCoalesceRule(): void
+    {
+        // An OSM value that exists always wins, description and site included: the match
+        // completes a row, it never rewrites one.
+        $this->pass(matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        $apply = $this->sqlContaining('UPDATE osm_staging_bretagne.accommodations a SET');
+        foreach (['name', 'description', 'website', 'opening_hours'] as $column) {
+            self::assertStringContainsString($column.' = COALESCE(a.'.$column.", c.payload->>'".$column."')", $apply);
+        }
     }
 
     private function commandIndex(string $needle): int

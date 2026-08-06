@@ -173,9 +173,18 @@ final readonly class DataTourismeImporter
     }
 
     /**
+     * Downloads and loads the flux into the zone's staging schema, without promoting it.
+     *
+     * Split from {@see promote()} for #885. The flux is the **curated** source — over
+     * 124 240 accommodations, not one has an empty name — so the OSM side must be able to
+     * borrow a name from it, and that means the flux has to be staged *before* the OSM
+     * gate decides what to reject. Promotion still comes last, because it clips to the
+     * zone geometry that only the OSM import produces: staging first, promoting last, is
+     * the only ordering that satisfies both.
+     *
      * @throws ImportFailedException
      */
-    public function run(string $workDir, string $zoneSlug): void
+    public function stage(string $workDir, string $zoneSlug): string
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -184,12 +193,77 @@ final readonly class DataTourismeImporter
         $copyFiles = $this->extract($zipPath, $workDir);
         $this->load($staging, $copyFiles);
         $this->enrichmentPass->run($workDir, $staging, self::WIKIDATA_TABLES);
+
+        return $staging;
+    }
+
+    /**
+     * Gates the staged flux and promotes what survives into the live schema.
+     *
+     * @return bool false when the zone has no registry geometry to clip against, so nothing
+     *              was promoted — a skip, not a failure
+     *
+     * @throws ImportFailedException
+     */
+    public function finish(string $workDir, string $zoneSlug): bool
+    {
+        $staging = self::stagingSchema($zoneSlug);
+
+        // The promotion clips to the zone's registry geometry, so with no geometry it would
+        // promote exactly nothing and report success — silently, which is worse than
+        // refusing. That happens when the OSM step failed before writing the registry row,
+        // and also when it succeeded but its clipped extract yielded no boundary at all
+        // (#880). The precondition is therefore the geometry, not the sibling step's exit
+        // code: gating on the OSM outcome would make a failed OSM download also block a
+        // DataTourisme refresh for a zone that is already open, which is precisely the
+        // cross-source coupling ADR-041 forbids.
+        if (!$this->zoneHasGeometry($workDir, $zoneSlug)) {
+            $this->dropStaging($staging);
+
+            return false;
+        }
+
         // The gate runs before promotion here too. The flux names its places far more
         // reliably than OSM does, so this mostly refuses nothing — but the decision must
         // live in one place for both sources, which is the whole point of #884.
         $gate = $this->placeEnrichmentPass->run($workDir, $staging, 'accommodations');
         $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
+
+        return true;
+    }
+
+    /**
+     * Whether the zone has a geometry in the registry to clip the promotion against.
+     *
+     * @throws ImportFailedException
+     */
+    private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
+    {
+        $path = $workDir.'/zone-geometry.tsv';
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf(
+                "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
+                ZonePromotion::literal($zoneSlug),
+                $path,
+            ),
+        ], 'psql check zone geometry');
+
+        $contents = is_file($path) ? file_get_contents($path) : false;
+
+        return \is_string($contents) && 0 < (int) trim($contents);
+    }
+
+    /**
+     * Stages and promotes in one call, for a run with no OSM step to interleave.
+     *
+     * @throws ImportFailedException
+     */
+    public function run(string $workDir, string $zoneSlug): void
+    {
+        $this->stage($workDir, $zoneSlug);
+        $this->finish($workDir, $zoneSlug);
     }
 
     /**
@@ -367,6 +441,18 @@ final readonly class DataTourismeImporter
                 'psql', '-v', 'ON_ERROR_STOP=1', '-c',
                 \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', $stagingSchema, $table),
             ], \sprintf('psql index %s', $table));
+
+            // Separate index on the *geography* cast, for the geometric match of #885. A cast
+            // makes the plain `geom` index above unusable, so without this the correlated
+            // `ST_DWithin(t.geom::geography, …)` subquery scans all ~124 240 staged
+            // accommodations once per unnamed OSM row. Only that one table is ever matched
+            // against, so only it pays for the extra index.
+            if ('accommodations' === $table) {
+                $this->runProcess([
+                    'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+                    \sprintf('CREATE INDEX ON %s.%s USING gist ((geom::geography));', $stagingSchema, $table),
+                ], \sprintf('psql index %s geography', $table));
+            }
         }
     }
 
@@ -376,7 +462,7 @@ final readonly class DataTourismeImporter
      * (refresh timestamp, per-table counts, per-table completeness ratios and the
      * discarded-row counts), which is what /api/health reports.
      *
-     * @param array{resolved?: int, rejected?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused
+     * @param array{resolved?: int, rejected?: int, matched?: int, ambiguous?: int, reasons?: array<string, int>} $gate what the completeness gate resolved and refused
      *
      * @throws ImportFailedException
      */

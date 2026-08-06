@@ -17,13 +17,18 @@ namespace Provisioner;
  * data behind it. What is left, and what this implements: `operator` then `brand`, never
  * on `shelter`.
  *
- * Order of the cascade. #884 lists the tag projection before the Wikidata label, ordered
- * "du moins coûteux au plus coûteux" — but by the time this runs, the Wikidata pass has
- * already populated its cache, so both steps cost zero network calls and the cost argument
- * no longer separates them. Quality does: a Wikidata label is the place's own name, while
- * `operator` is whoever runs it ("Commune de Jongieux"). The label therefore comes first.
- * The choice is nearly moot in practice — an unnamed row carrying a Q-ID is rare — which is
- * why it is a stated preference rather than a load-bearing decision.
+ * Order of the cascade, most specific first: a **geometric match against DataTourisme**
+ * (#885) names *this* place from a curated record; a Wikidata label names the entity; then
+ * `operator` and `brand`, which name whoever runs it. #884 ordered these by cost ("du moins
+ * coûteux au plus coûteux"), but by the time this runs both the Wikidata cache and the flux
+ * staging are already loaded, so every step costs zero network calls and the cost argument
+ * no longer separates them. Specificity does.
+ *
+ * The match is where the loop #885 describes gets broken. `App\Geo\NearbyNameDeduplicator`
+ * pairs places at runtime **by name**, so it can never complete a row whose name is missing:
+ * the only information lacking is the one it requires to find the correspondence. At import
+ * there is no such constraint — the full context of both datasets is in hand, and nobody is
+ * waiting — so category plus proximity is enough.
  *
  * `shelter` never reaches this class: it is exempt from the gate (#878 — `shelter_type`, not
  * the name, is what separates a mountain refuge from a bus shelter), so resolving it would
@@ -63,17 +68,33 @@ final readonly class NameResolver
     private const int MIN_LENGTH = 3;
 
     /**
-     * @param array<string, string> $tags          the row's OSM tags, complete as imported
-     * @param string|null           $wikidataLabel label already in provisioner.wikidata_cache for this row's Q-ID
-     * @param string|null           $locality      commune resolved offline from the imported admin_level=8 boundaries (#880)
+     * @param array<string, string>                                                                                                              $tags          the row's OSM tags, complete as imported
+     * @param string|null                                                                                                                        $wikidataLabel label already in provisioner.wikidata_cache for this row's Q-ID
+     * @param string|null                                                                                                                        $locality      commune resolved offline from the imported admin_level=8 boundaries (#880)
+     * @param array{n: int, id: ?string, name: ?string, description: ?string, website: ?string, opening_hours: ?string, distance_m: ?float}|null $match         curated candidates of a compatible category within the match radius (#885)
      *
-     * @return array{name: string, via: string}|array{name: null, via: null, reason: string} the resolved name and which step produced it, or the motive for giving up
+     * @return array{name: string, via: string, description?: string, website?: string, opening_hours?: string, matched_id?: string, distance_m?: float}|array{name: null, via: null, reason: string, candidates?: int} the resolved name plus what came with it, or the motive for giving up
      */
-    public function resolve(string $category, array $tags, ?string $wikidataLabel = null, ?string $locality = null): array
+    public function resolve(string $category, array $tags, ?string $wikidataLabel = null, ?string $locality = null, ?array $match = null): array
     {
         if ('shelter' === $category) {
             // Exempt from the gate, so nothing to resolve; see the class docblock.
             return ['name' => null, 'via' => null, 'reason' => 'shelter_exempt'];
+        }
+
+        if (null !== $match) {
+            $matched = $this->fromMatch($match);
+            if (null !== $matched) {
+                return $matched;
+            }
+
+            // More than one curated candidate in range: refuse rather than pick. Attributing
+            // the wrong name to an accommodation is worse than attributing none — the rider
+            // books elsewhere, or turns up at the wrong place — and nothing here can tell two
+            // neighbouring campsites apart. The gate decides what happens next.
+            if ($match['n'] > 1) {
+                return ['name' => null, 'via' => null, 'reason' => 'ambiguous_match', 'candidates' => $match['n']];
+            }
         }
 
         foreach (['wikidata' => $wikidataLabel, 'operator' => $tags['operator'] ?? null, 'brand' => $tags['brand'] ?? null] as $via => $candidate) {
@@ -86,6 +107,46 @@ final readonly class NameResolver
         }
 
         return ['name' => null, 'via' => null, 'reason' => 'no_usable_name_source'];
+    }
+
+    /**
+     * The single curated candidate's name, with what usefully comes with it, or null when
+     * there is not exactly one usable candidate.
+     *
+     * @param array{n: int, id: ?string, name: ?string, description: ?string, website: ?string, opening_hours: ?string, distance_m: ?float} $match
+     *
+     * @return array{name: string, via: string, description?: string, website?: string, opening_hours?: string, matched_id?: string, distance_m?: float}|null
+     */
+    private function fromMatch(array $match): ?array
+    {
+        if (1 !== $match['n']) {
+            return null;
+        }
+
+        $name = $this->usable($match['name']);
+        if (null === $name) {
+            return null;
+        }
+
+        // No locality qualifier here: a curated record is already named the way the place
+        // presents itself, so appending the commune would only add noise.
+        $resolved = ['name' => $name, 'via' => 'datatourisme'];
+        foreach (['description', 'website', 'opening_hours'] as $field) {
+            $value = $match[$field];
+            if (\is_string($value) && '' !== trim($value)) {
+                $resolved[$field] = trim($value);
+            }
+        }
+
+        if (\is_string($match['id'])) {
+            $resolved['matched_id'] = $match['id'];
+        }
+
+        if (null !== $match['distance_m']) {
+            $resolved['distance_m'] = $match['distance_m'];
+        }
+
+        return $resolved;
     }
 
     /**

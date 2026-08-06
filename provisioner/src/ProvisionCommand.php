@@ -132,10 +132,35 @@ final class ProvisionCommand extends Command
             // Outcomes are aggregated into the final exit code.
             $outcomes = [];
 
-            $outcomes['osm'] = $this->runOsm($io, $zone, $dryRun);
+            // DataTourisme is staged *before* the OSM import and promoted *after* it (#885).
+            // The flux is the curated source — not one of its 124 240 accommodations has an
+            // empty name — so the OSM gate must be able to borrow a name from it, which means
+            // having it in hand before deciding what to reject. Promotion still comes last,
+            // because it clips to the zone geometry only the OSM import produces. A staging
+            // failure degrades that source alone: OSM then runs with one fewer resolver step.
+            // Resolved once and reused for both halves: the unmapped-subtype count is
+            // accumulated by the mapper while staging and read after promoting, so a second
+            // instance would report zero.
+            $curated = $dryRun ? null : $this->resolveDataTourismeImporter($io);
+            $curatedTable = null;
+            $curatedOutcome = Command::SUCCESS;
+
+            if ($curated instanceof DataTourismeImporter) {
+                [$curatedOutcome, $curatedTable] = $this->stageDataTourisme($io, $curated, $zone['slug']);
+            }
+
+            $outcomes['osm'] = $this->runOsm($io, $zone, $dryRun, $curatedTable);
+
+            // Deliberately not gated on $outcomes['osm']: a failed OSM refresh must not block a
+            // DataTourisme refresh for a zone that is already open (ADR-041). The real
+            // precondition — a registry geometry to clip against — is checked by finish()
+            // itself, which skips rather than promoting nothing and calling it a success.
+            if ($curated instanceof DataTourismeImporter && Command::SUCCESS === $curatedOutcome) {
+                $curatedOutcome = $this->finishDataTourisme($io, $curated, $zone['slug']);
+            }
 
             if (!$dryRun) {
-                $outcomes['datatourisme'] = $this->runDataTourisme($io, $zone['slug']);
+                $outcomes['datatourisme'] = $curatedOutcome;
                 $this->reportPromotion($io, $zone['slug']);
             }
 
@@ -283,39 +308,80 @@ final class ProvisionCommand extends Command
         @file_put_contents($this->logFile, $line, \FILE_APPEND);
     }
 
-    private function runDataTourisme(SymfonyStyle $io, string $zoneSlug): int
+    /**
+     * Downloads and stages the flux, without promoting it.
+     *
+     * @return array{0: int, 1: string|null} exit code, and the staged accommodation table the
+     *                                       OSM gate can match against (null when there is none)
+     */
+    private function stageDataTourisme(SymfonyStyle $io, DataTourismeImporter $importer, string $zoneSlug): array
     {
-        $importer = $this->dataTourismeImporter;
-        if (!$importer instanceof DataTourismeImporter) {
-            $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
-            $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
-            if ('' === $fluxId || '' === $appKey) {
-                // Skip gracefully when DataTourisme is not configured: OSM is the
-                // primary source and must still provision (ADR-041 continue-on-error).
-                $io->warning('DataTourisme import skipped: DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY are not set.');
-
-                return Command::SUCCESS;
-            }
-
-            $importer = new DataTourismeImporter(
-                \sprintf('https://diffuseur.datatourisme.fr/webservice/%s/%s', $fluxId, $appKey),
-            );
-        }
-
         if (!is_dir($this->dataTourismeDir) && !mkdir($this->dataTourismeDir, 0o755, true) && !is_dir($this->dataTourismeDir)) {
             $io->error(\sprintf('Cannot create DataTourisme work directory "%s"', $this->dataTourismeDir));
 
-            return Command::FAILURE;
+            return [Command::FAILURE, null];
         }
 
-        $io->section('Importing DataTourisme into PostGIS');
+        $io->section('Staging the DataTourisme flux');
 
         try {
-            $importer->run($this->dataTourismeDir, $zoneSlug);
+            $staging = $importer->stage($this->dataTourismeDir, $zoneSlug);
+        } catch (ImportFailedException $importFailedException) {
+            $this->fail($io, $importFailedException->getMessage());
+
+            return [Command::FAILURE, null];
+        }
+
+        $io->writeln('  Staged; the OSM gate can now borrow names from it.');
+
+        return [Command::SUCCESS, $staging.'.accommodations'];
+    }
+
+    /**
+     * The configured importer, or null when DataTourisme is not set up — in which case OSM is
+     * the primary source and must still provision (ADR-041 continue-on-error), with one fewer
+     * resolver step.
+     */
+    private function resolveDataTourismeImporter(SymfonyStyle $io): ?DataTourismeImporter
+    {
+        if ($this->dataTourismeImporter instanceof DataTourismeImporter) {
+            return $this->dataTourismeImporter;
+        }
+
+        $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
+        $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
+        if ('' === $fluxId || '' === $appKey) {
+            $io->warning('DataTourisme import skipped: DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY are not set.');
+
+            return null;
+        }
+
+        return new DataTourismeImporter(
+            \sprintf('https://diffuseur.datatourisme.fr/webservice/%s/%s', $fluxId, $appKey),
+        );
+    }
+
+    private function finishDataTourisme(SymfonyStyle $io, DataTourismeImporter $importer, string $zoneSlug): int
+    {
+        $io->section('Promoting DataTourisme into PostGIS');
+
+        try {
+            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
+        }
+
+        if (!$promoted) {
+            // No registry geometry to clip against, so there was nothing to promote into. A
+            // skip, not a failure: the flux is national and the next opening of this zone
+            // re-downloads it anyway.
+            $message = 'DataTourisme promotion skipped: the zone has no registry geometry to clip against, so the OSM step did not complete.';
+            $io->warning($message);
+            $this->logLine('INFO', $message);
+
+            return Command::SUCCESS;
         }
 
         $unmapped = $importer->unmappedAccommodationCount();
@@ -328,7 +394,7 @@ final class ProvisionCommand extends Command
     /**
      * @param array{name: string, slug: string, size: string, country: string} $zone
      */
-    private function runOsm(SymfonyStyle $io, array $zone, bool $dryRun): int
+    private function runOsm(SymfonyStyle $io, array $zone, bool $dryRun, ?string $curatedTable = null): int
     {
         $io->section(\sprintf('Opening zone %s (%s, %s)', $zone['name'], $zone['slug'], $zone['size']));
 
@@ -368,7 +434,7 @@ final class ProvisionCommand extends Command
         $io->write('  Importing Tier-1 features into PostGIS... ');
 
         try {
-            $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf);
+            $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf, $curatedTable);
         } catch (ImportFailedException $importFailedException) {
             $io->newLine();
             $this->fail($io, $importFailedException->getMessage());

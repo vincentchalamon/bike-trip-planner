@@ -132,6 +132,111 @@ final class NameResolverTest extends TestCase
         self::assertSame('no_usable_name_source', $resolved['reason']);
     }
 
+    /**
+     * @return array{n: int, id: ?string, name: ?string, description: ?string, website: ?string, opening_hours: ?string, distance_m: ?float}
+     */
+    private function curated(int $n = 1, ?string $name = 'Camping du Moulin'): array
+    {
+        return [
+            'n' => $n,
+            'id' => 'FR-123',
+            'name' => $name,
+            'description' => 'Au bord de la riviere',
+            'website' => 'https://moulin.test',
+            'opening_hours' => 'Apr-Oct',
+            'distance_m' => 12.4,
+        ];
+    }
+
+    #[Test]
+    public function namesAnAnonymousEntryFromASingleCuratedMatch(): void
+    {
+        // The nominal case of #885, and the loop it breaks: the runtime deduplicator matches
+        // by name, so it can never complete a row whose name is missing.
+        $resolved = $this->resolver->resolve('camp_site', [], null, null, $this->curated());
+
+        self::assertSame('Camping du Moulin', $resolved['name']);
+        self::assertSame('datatourisme', $resolved['via']);
+        self::assertSame('Au bord de la riviere', $resolved['description'] ?? null);
+        self::assertSame('https://moulin.test', $resolved['website'] ?? null);
+        self::assertSame('Apr-Oct', $resolved['opening_hours'] ?? null);
+        // Traceable for audit: the record it came from and how far away it was.
+        self::assertSame('FR-123', $resolved['matched_id'] ?? null);
+        self::assertSame(12.4, $resolved['distance_m'] ?? null);
+    }
+
+    #[Test]
+    public function preferstheCuratedMatchOverEveryTagAndTheWikidataLabel(): void
+    {
+        // Most specific first: a curated record names *this* place, a Wikidata label names the
+        // entity, `operator` names whoever runs it.
+        $resolved = $this->resolver->resolve(
+            'camp_site',
+            ['operator' => 'Commune de Sarlat', 'brand' => 'Huttopia'],
+            'Camping de Sarlat',
+            null,
+            $this->curated(),
+        );
+
+        self::assertSame('Camping du Moulin', $resolved['name']);
+        self::assertSame('datatourisme', $resolved['via']);
+    }
+
+    #[Test]
+    public function refusesRatherThanChoosingBetweenTwoCuratedCandidates(): void
+    {
+        // Two neighbouring campsites, or a hotel and its restaurant at one address. A wrong
+        // name is worse than no name: the rider books elsewhere, or turns up at the wrong
+        // place. So the ambiguity is a rejection, not a pick — and it does *not* fall through
+        // to the tags either, because proximity already said this row is contested.
+        $resolved = $this->resolver->resolve('camp_site', ['operator' => 'Commune de Sarlat'], null, null, $this->curated(n: 2));
+
+        self::assertNull($resolved['name']);
+        self::assertSame('ambiguous_match', $resolved['reason']);
+        self::assertSame(2, $resolved['candidates'] ?? null);
+    }
+
+    #[Test]
+    public function fallsThroughToTheTagsWhenNothingWasInRange(): void
+    {
+        // Nothing in range is not ambiguity: the cascade carries on.
+        $resolved = $this->resolver->resolve('camp_site', ['operator' => 'Commune de Jongieux']);
+
+        self::assertSame('Commune de Jongieux', $resolved['name']);
+        self::assertSame('operator', $resolved['via']);
+    }
+
+    #[Test]
+    public function ignoresACuratedCandidateWhoseOwnNameIsNotUsable(): void
+    {
+        // The flux has no empty names today, but a value that is a tag rather than a name gets
+        // the same treatment here as anywhere else, and the cascade carries on.
+        $resolved = $this->resolver->resolve('camp_site', ['brand' => 'Huttopia'], null, null, $this->curated(name: 'yes'));
+
+        self::assertSame('Huttopia', $resolved['name']);
+        self::assertSame('brand', $resolved['via']);
+    }
+
+    #[Test]
+    public function doesNotQualifyACuratedNameWithTheLocality(): void
+    {
+        // A curated record is already named the way the place presents itself; appending the
+        // commune would only add noise.
+        $resolved = $this->resolver->resolve('camp_site', [], null, 'Sarlat', $this->curated());
+
+        self::assertSame('Camping du Moulin', $resolved['name']);
+    }
+
+    #[Test]
+    public function neverMatchesAShelter(): void
+    {
+        // Exempt from the gate, so it is never resolved — by a match no more than by a tag.
+        $resolved = $this->resolver->resolve('shelter', [], null, null, $this->curated());
+
+        self::assertNull($resolved['name']);
+        self::assertSame('shelter_exempt', $resolved['reason']);
+    }
+
     #[Test]
     public function versionIsAnIntegerCallersCanCompare(): void
     {

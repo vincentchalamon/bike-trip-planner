@@ -120,10 +120,15 @@ final class DataTourismeImporterTest extends TestCase
             $cmd = $command;
             $this->captured[] = $cmd;
 
-            // Emulate psql exporting the missing Q-IDs (the enrichment pass reads
-            // this file back); the no-op `true` process never writes it itself.
-            if ([] !== $missingQids && 1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
-                file_put_contents($matches[1], implode("\n", $missingQids)."\n");
+            // Emulate psql exporting files the passes read back; the no-op `true` process
+            // never writes them itself.
+            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
+                if (str_contains($matches[1], 'zone-geometry')) {
+                    // The zone is open, so the promotion has a geometry to clip against.
+                    file_put_contents($matches[1], "1\n");
+                } elseif ([] !== $missingQids) {
+                    file_put_contents($matches[1], implode("\n", $missingQids)."\n");
+                }
             }
 
             return new Process(['true']);
@@ -143,13 +148,14 @@ final class DataTourismeImporterTest extends TestCase
 
         $importer->run($this->workDir, 'bretagne');
 
-        // 1 staging DDL + 4 \copy + 4 GIST index
+        // 1 staging DDL + 4 \copy + 4 GIST index + 1 geography index on accommodations
         // + 7 Wikidata-pass psql calls (prepare, collect, export, one UPDATE per Wikidata
         // table, drop; no Q-IDs to fetch in this fixture)
+        // + 1 zone-geometry precondition read (#885: no geometry, no promotion)
         // + 6 name-resolution psql calls (prepare, export candidates, apply, count gated,
         // gate, drop scratch; nothing to resolve in this fixture, so no cache write)
         // + 1 report DDL + 1 promotion + 1 staging drop.
-        self::assertCount(25, $this->captured);
+        self::assertCount(27, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);
@@ -176,6 +182,28 @@ final class DataTourismeImporterTest extends TestCase
             self::assertStringNotContainsString('DROP SCHEMA IF EXISTS tourism CASCADE', $command);
             self::assertStringNotContainsString('RENAME TO tourism', $command);
         }
+    }
+
+    #[Test]
+    public function stagesAGeographyIndexForTheGeometricMatch(): void
+    {
+        // The match of #885 filters on `ST_DWithin(t.geom::geography, …)`, and a cast makes the
+        // plain `geom` GiST index unusable: measured on 40 000 rows, the plan is a Seq Scan
+        // without this index and an Index Scan with it. Without it the correlated subquery
+        // scans every staged accommodation once per unnamed OSM row.
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://diffuseur.datatourisme.fr/webservice/flux/key',
+            httpClient: new MockHttpClient(new MockResponse($this->fluxZipBytes())),
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->run($this->workDir, 'bretagne');
+
+        $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+        $geographyIndexes = array_values(array_filter($joined, static fn (string $c): bool => str_contains($c, 'USING gist ((geom::geography))')));
+
+        self::assertCount(1, $geographyIndexes, 'only the matched table pays for the extra index');
+        self::assertStringContainsString('tourism_staging_bretagne.accommodations', $geographyIndexes[0]);
     }
 
     #[Test]

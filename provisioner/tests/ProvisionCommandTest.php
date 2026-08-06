@@ -317,6 +317,201 @@ final class ProvisionCommandTest extends TestCase
     }
 
     #[Test]
+    public function stagesTheCuratedFluxBeforeTheOsmImportAndPromotesItAfter(): void
+    {
+        // The ordering #885 needs. The flux is the curated source — not one of its 124 240
+        // accommodations has an empty name — so the OSM gate must have it in hand before it
+        // decides what to reject. Promotion still comes last, because it clips to the zone
+        // geometry only the OSM import produces.
+        /** @var list<string> $log */
+        $log = [];
+        $record = static function (string $step) use (&$log): void {
+            $log[] = $step;
+        };
+
+        $fluxZip = $this->emptyFluxZip();
+        $dataTourisme = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse($fluxZip)),
+            processFactory: static function (array $command) use ($record): Process {
+                $sql = end($command);
+                if (\is_string($sql) && str_contains($sql, 'INSERT INTO tourism.metadata')) {
+                    $record('datatourisme:promote');
+                } elseif (\is_string($sql) && str_contains($sql, 'CREATE SCHEMA tourism_staging_bretagne')) {
+                    $record('datatourisme:stage');
+                }
+
+                // The zone has a geometry, so the promotion has something to clip against.
+                if (\is_string($sql) && 1 === preg_match("/TO '([^']+zone-geometry[^']*)'/", $sql, $matches)) {
+                    file_put_contents($matches[1], "1\n");
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        /** @var list<string> $osmCommands */
+        $osmCommands = [];
+        $osm = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static function (array $command) use ($record, &$osmCommands): Process {
+                $joined = implode(' ', $command);
+                $osmCommands[] = $joined;
+                if (str_contains($joined, 'osm2pgsql')) {
+                    $record('osm:import');
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $tester = $this->buildTester(postgisImporter: $osm, dataTourismeImporter: $dataTourisme);
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+
+        self::assertSame(['datatourisme:stage', 'osm:import', 'datatourisme:promote'], $log);
+
+        // And the staged table is the one the OSM gate matches against.
+        $export = array_values(array_filter($osmCommands, static fn (string $c): bool => str_contains($c, 'place-candidates.tsv')));
+        self::assertCount(1, $export);
+        self::assertStringContainsString('FROM tourism_staging_bretagne.accommodations t', $export[0]);
+    }
+
+    #[Test]
+    public function anUnconfiguredFluxLeavesTheOsmGateWithoutAMatchStep(): void
+    {
+        // DataTourisme is optional (ADR-041 continue-on-error): OSM must still provision, with
+        // one fewer resolver step rather than a broken query.
+        $previousFluxId = getenv('DATATOURISME_FLUX_ID');
+        $previousAppKey = getenv('DATATOURISME_APP_KEY');
+        putenv('DATATOURISME_FLUX_ID');
+        putenv('DATATOURISME_APP_KEY');
+
+        /** @var list<string> $osmCommands */
+        $osmCommands = [];
+        $osm = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static function (array $command) use (&$osmCommands): Process {
+                $osmCommands[] = implode(' ', $command);
+
+                return new Process(['true']);
+            },
+        );
+
+        try {
+            $tester = $this->buildTester(postgisImporter: $osm);
+            $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
+        } finally {
+            false === $previousFluxId ? putenv('DATATOURISME_FLUX_ID') : putenv('DATATOURISME_FLUX_ID='.$previousFluxId);
+            false === $previousAppKey ? putenv('DATATOURISME_APP_KEY') : putenv('DATATOURISME_APP_KEY='.$previousAppKey);
+        }
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        $export = array_values(array_filter($osmCommands, static fn (string $c): bool => str_contains($c, 'place-candidates.tsv')));
+        self::assertCount(1, $export);
+        self::assertStringNotContainsString('ST_DWithin', $export[0]);
+    }
+
+    /**
+     * A syntactically valid but empty flux ZIP, so `stage()` reaches its psql calls without
+     * needing a fixture of JSON-LD objects.
+     */
+    private function emptyFluxZip(): string
+    {
+        $path = $this->tmpDir.'/empty-flux.zip';
+        $zip = new \ZipArchive();
+        self::assertTrue(true === $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE));
+        $zip->addFromString('index.json', '{}');
+        $zip->close();
+
+        return (string) file_get_contents($path);
+    }
+
+    #[Test]
+    public function aFailedOsmImportLeavesTheStagedFluxUnpromotedRatherThanPromotingNothing(): void
+    {
+        // Staging succeeds, the OSM import fails, so the registry has no geometry for this
+        // zone. The promotion clips to that geometry, so running it would promote exactly
+        // nothing and report success — silently, which is worse than refusing.
+        $fluxZip = $this->emptyFluxZip();
+        /** @var list<string> $dtCommands */
+        $dtCommands = [];
+        $dataTourisme = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse($fluxZip)),
+            processFactory: static function (array $command) use (&$dtCommands): Process {
+                $sql = end($command);
+                $dtCommands[] = \is_string($sql) ? $sql : '';
+
+                // No zone geometry yet: the precondition read comes back 0.
+                if (\is_string($sql) && 1 === preg_match("/TO '([^']+zone-geometry[^']*)'/", $sql, $matches)) {
+                    file_put_contents($matches[1], "0\n");
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $failingOsm = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static fn (array $command): Process => new Process(['sh', '-c', 'echo "boom" 1>&2; exit 1']),
+        );
+
+        $tester = $this->buildTester(postgisImporter: $failingOsm, dataTourismeImporter: $dataTourisme);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
+
+        // OSM failed, so the aggregate fails; DataTourisme is a skip, not a failure.
+        self::assertSame(1, $exitCode, $tester->getDisplay());
+        self::assertStringContainsString('no registry geometry', $tester->getDisplay());
+        self::assertMatchesRegularExpression('/\x{2717}\s*osm/u', $tester->getDisplay());
+        self::assertMatchesRegularExpression('/\x{2713}\s*datatourisme/u', $tester->getDisplay());
+
+        // Nothing was promoted, and the staging schema was still reclaimed.
+        $promotions = array_filter($dtCommands, static fn (string $c): bool => str_contains($c, 'INSERT INTO tourism.metadata'));
+        self::assertSame([], $promotions, 'no promotion without a geometry to clip against');
+        self::assertNotSame([], array_filter($dtCommands, static fn (string $c): bool => str_contains($c, 'DROP SCHEMA IF EXISTS tourism_staging_bretagne')));
+    }
+
+    #[Test]
+    public function aFailedOsmRefreshStillPromotesTheFluxForAZoneAlreadyOpen(): void
+    {
+        // The other side of the same coin (ADR-041): once the zone has a geometry, a failed
+        // OSM refresh must not block the DataTourisme refresh. The precondition is the
+        // geometry, never the sibling step's exit code.
+        $fluxZip = $this->emptyFluxZip();
+        /** @var list<string> $dtCommands */
+        $dtCommands = [];
+        $dataTourisme = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse($fluxZip)),
+            processFactory: static function (array $command) use (&$dtCommands): Process {
+                $sql = end($command);
+                $dtCommands[] = \is_string($sql) ? $sql : '';
+
+                if (\is_string($sql) && 1 === preg_match("/TO '([^']+)'/", $sql, $matches)) {
+                    file_put_contents($matches[1], str_contains($matches[1], 'zone-geometry') ? "1\n" : "0\n");
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $failingOsm = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static fn (array $command): Process => new Process(['sh', '-c', 'echo "boom" 1>&2; exit 1']),
+        );
+
+        $tester = $this->buildTester(postgisImporter: $failingOsm, dataTourismeImporter: $dataTourisme);
+
+        self::assertSame(1, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+        self::assertNotSame(
+            [],
+            array_filter($dtCommands, static fn (string $c): bool => str_contains($c, 'INSERT INTO tourism.metadata')),
+            'an already-open zone still gets its flux refresh',
+        );
+    }
+
+    #[Test]
     public function postgisImportFailureReturnsFailure(): void
     {
         $importer = new PostgisImporter(
