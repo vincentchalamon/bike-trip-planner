@@ -4,10 +4,11 @@
 - **Date:** 2026-06-24
 - **Depends on:** ADR-042 (Optional Multi-Provider AI, BYO Token), ADR-045 (Conversational AI Trip-Brief Chat)
 - **Supersedes (in part):** ADR-042 — only its "AI features are always present in the build / no environment flag" stance. The per-user BYO-token activation model is unchanged.
+- **Superseded (in part) by:** [ADR-048](adr-048-in-ride-assistance-without-ai.md) — the in-ride surface is no longer AI and no longer masked by this flag; it has left this ADR's list of gated surfaces.
 
 ## Context and Problem Statement
 
-The AI surface (the generation-assistant chat, the in-ride chat bubble, the per-stage briefings + trip-level overview, and the account provider/token configuration) is being **put on hold** for the recette (#649). Two facts drive this:
+The AI surface (the generation-assistant chat, the per-stage briefings + trip-level overview, and the account provider/token configuration) is being **put on hold** for the recette (#649). Two facts drive this:
 
 1. **Provider-side reliability.** During the recette the only configured provider (Gemini) returned transient `503 "high demand"` and, on a free-tier key, `429` quota errors with `limit: 0`. #760 made the calls resilient (retry 5xx, bounded timeout, actionable error mapping), but the end-user experience still depends on a provider/quota the project does not control.
 2. **Feature maturity.** The conversational generation flow (ADR-045) and the in-ride error mapping (#761) still need work before they are good enough to ship to users.
@@ -47,7 +48,7 @@ Introduce a single front-end flag **`NEXT_PUBLIC_ENABLE_AI`** (default **`false`
 
 - `isAiFeatureEnabled()` (`pwa/src/lib/constants.ts`) returns `true` only when the value is exactly `"true"`. Every AI mount point is gated on it:
   - the **generation-assistant card** (`card-selection.tsx`);
-  - the **in-ride chat bubble**, the **trip-level AI overview**, and the **AI-unavailable notices** (`trip-planner.tsx`);
+  - the **trip-level AI overview** and the **AI-unavailable notices** (`trip-planner.tsx`);
   - the **per-stage briefing** (`stage-card.tsx` falls back to the rule-based alerts when off);
   - the **account provider/token section** (`account/settings/page.tsx`).
   - The AI availability/settings fetches (`use-ai-settings.ts`, the availability effect) are skipped when off, so no AI request is made.
@@ -61,5 +62,4 @@ Introduce a single front-end flag **`NEXT_PUBLIC_ENABLE_AI`** (default **`false`
 
 - In prod/recette, **no AI is visible anywhere**. The source-URL and GPX-upload paths are unchanged; `card-selection` shows two cards instead of three.
 - **To re-enable** (no code change required): set `NEXT_PUBLIC_ENABLE_AI=true` as a build arg/env for the target build — e.g. the Coolify prod build, or locally `NEXT_PUBLIC_ENABLE_AI=true make build`.
-- The in-ride error-mapping alignment (#761) stays deferred until re-enable.
 - This supersedes only ADR-042's "always present / no env flag" wording; the per-user BYO-token activation model is intact.

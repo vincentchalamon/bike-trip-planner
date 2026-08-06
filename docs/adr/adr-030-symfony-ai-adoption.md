@@ -7,6 +7,8 @@
 
 > **Superseded by [ADR-042](adr-042-optional-multi-provider-ai-byo-token.md) (2026-06-19):** the self-hosted Ollama/LLaMA tier was replaced by an optional, per-user, multi-provider bring-your-own-token model. The Ollama service, OLLAMA_* env and the bundled LLM resource have been removed. The `symfony/ai-platform` transport layer described below still holds, but the `symfony/ai-ollama-platform` bridge is dropped in favour of the Anthropic, Gemini and OpenAI bridges, and the client is built per user with the user's own key.
 
+> **In-ride superseded by [ADR-048](adr-048-in-ride-assistance-without-ai.md) (2026-08-06):** the in-ride assistant described here is now AI-free.
+
 ## Context and Problem Statement
 
 ADR-028 chose a **custom thin wrapper around Ollama's HTTP API** (`App\Llm\OllamaClient`) plus a **JSON envelope** strategy on top of the `format: "json"` decoding mode: the model is asked to emit `{ "action", "params", "response" }` and a tolerant `ChatActionInterpreter` parses the resulting blob, falling back to an `info` action on malformed output.

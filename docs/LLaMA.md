@@ -1,6 +1,8 @@
 # Architecture Project: Bike Trip Planner AI (2026)
 
 > **⚠️ Obsolète (2026-06-19) — voir [ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md).** L'IA auto-hébergée (Ollama/LLaMA) décrite ici a été remplacée par un modèle **optionnel, multi-fournisseur, à clé personnelle (BYO token)** : Anthropic (Claude), Google (Gemini), OpenAI. Ce document est conservé pour son raisonnement d'architecture historique ; le pipeline (analyse 2 passes, chat, in-ride) reste valable mais le transport est désormais le fournisseur cloud choisi par l'utilisateur avec sa propre clé.
+>
+> **In-ride sans IA (2026-08-06) — voir [ADR-048](adr/adr-048-in-ride-assistance-without-ai.md).** Le mode in-ride décrit ici n'est plus une surface IA : il a été reconstruit sans LLM au-dessus de l'index Tier-1 PostGIS (8 boutons d'intention, gabarit i18n).
 
 **Stack :** Next.js, Symfony/API Platform, `symfony/ai-platform` (Anthropic/Claude, Google/Gemini, OpenAI — BYO token), Valhalla, Photon.
 **Infra :** Oracle Cloud Free Tier (4 OCPUs ARM, 24GB RAM).

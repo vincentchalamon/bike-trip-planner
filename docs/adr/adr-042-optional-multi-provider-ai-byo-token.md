@@ -71,7 +71,9 @@ Account API:
 
 ### 4. Provider-neutral `PlatformLlmClient` + per-user factory
 
-The `LlmClientInterface` contract (`isEnabled`, `generate`, `chat`) is preserved so every caller — the analyze handlers, the in-ride assistant, the chat processor — is untouched. The implementation is a provider-neutral `PlatformLlmClient` built **per user at runtime** by a factory: given the user's decrypted token and provider, the factory wires the matching `symfony/ai-platform` bridge and returns a client. There is no process-global model: two concurrent requests from two users run against their own providers with their own keys.
+The `LlmClientInterface` contract (`isEnabled`, `generate`, `chat`) is preserved so every caller — the analyze handlers, the chat processor — is untouched.
+
+> **Superseded in part ([ADR-048](adr-048-in-ride-assistance-without-ai.md)):** the in-ride assistant is no longer an AI caller. It has been rebuilt AI-free over the Tier-1 PostGIS index and no longer resolves an `LlmClientInterface`. The implementation is a provider-neutral `PlatformLlmClient` built **per user at runtime** by a factory: given the user's decrypted token and provider, the factory wires the matching `symfony/ai-platform` bridge and returns a client. There is no process-global model: two concurrent requests from two users run against their own providers with their own keys.
 
 Each provider HTTP client is **SSRF-scoped to that provider's host** (per ADR-001 SSRF policy) with a **30 s timeout** — intentionally higher than the project's 10 s default for external clients (CLAUDE.md), because LLM inference (especially the async analysis pass) routinely takes 20-30 s on the provider backend; the lower default would abort legitimate calls.
 
@@ -110,8 +112,10 @@ Degraded behaviour:
 A configured key powers, per user:
 
 - per-stage and whole-trip **analysis** (async, ADR-027 Phase 2);
-- the **chat assistant** and its **in-ride POI** mode;
-- (**planned**) AI route generation from a free-text brief.
+- the **pre-trip generation chat** (ADR-045);
+- **route generation from a free-text brief** (`POST /trips/ai-generate`, B1 of this ADR).
+
+> **Superseded in part ([ADR-048](adr-048-in-ride-assistance-without-ai.md)):** the in-ride POI mode is no longer AI-powered and no longer requires a key. It reads the Tier-1 index directly, so it is out of this "what the key powers" list.
 
 ### 8. Privacy disclosure (mandatory)
 

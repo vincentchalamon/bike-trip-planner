@@ -7,6 +7,8 @@
 
 > **Superseded by [ADR-042](adr-042-optional-multi-provider-ai-byo-token.md) (2026-06-19):** the self-hosted Ollama/LLaMA tier was replaced by an optional, per-user, multi-provider bring-your-own-token model. The Ollama service, OLLAMA_* env and the bundled LLM resource have been removed. The pipeline shape (2-pass analysis, gate, graceful degradation) described below still holds, but the transport is now the user's chosen cloud provider.
 
+> **In-ride superseded by [ADR-048](adr-048-in-ride-assistance-without-ai.md) (2026-08-06):** the in-ride assistant described here is now AI-free.
+
 > **Note on numbering.** This ADR was originally tracked as "ADR-027" in the GitHub issue. ADR-027 was concurrently allocated to the gate mechanism and two-phase pipeline. To preserve numbering uniqueness, the Ollama/LLaMA integration was renumbered to ADR-028. The technical scope is unchanged.
 
 ## Context and Problem Statement

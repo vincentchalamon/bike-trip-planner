@@ -39,7 +39,7 @@ Les 15 sujets couvrent bien les **workflows cœur** (sprints 1-24). Les **trous 
 | Workflows cœur (création, étapes, météo, hébergements, alertes, export, partage, dates, carte, offline) | — | 13 sujets | **COUVERT** |
 | Synthèse IA voyage | `trip-ai-overview.tsx` | aucune | **MANQUANT** |
 | Synthèse IA étape | `stage-ai-summary.tsx` | aucune | **MANQUANT** |
-| Chat IA conversationnel | `ai-chat-panel.tsx` | aucune | **MANQUANT** |
+| Recherche in-ride sans IA | `POST /trips/{id}/nearby-pois` (ADR-048) | aucune | **MANQUANT** |
 | Raffinement IA (génération conversationnelle) | `ai-refinement-card.tsx` | aucune | **MANQUANT** |
 | Surlignage des diffs IA | `diff-highlight.tsx` | aucune | **MANQUANT** |
 | Page d'atterrissage | `landing-page.tsx`, `landing/` | aucune | **MANQUANT** |
@@ -70,14 +70,14 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Alertes cross-stage intégrées dans la carte.
 - Déploiement de l'analyse complète au clic.
 
-**Chat IA (`ai-chat-panel`)** — 6 scénarios :
+**Recherche in-ride sans IA (`POST /trips/{id}/nearby-pois`, ADR-048)** — 6 scénarios. Le chat IA sur voyage chargé (`ai-chat-panel`) est supprimé (ADR-048) ; l'in-ride est désormais sans IA :
 
-- Panneau chat visible après calcul.
-- Message envoyé au backend (`POST /trips/*/ai-chat`).
-- Réponse affichée dans l'historique.
-- Indicateur de chargement pendant la réponse.
-- Mode "En route" + géolocalisation -> POIs proches.
-- Carte POI (`PoiCard`) affichée depuis une réponse.
+- Panneau in-ride visible après calcul, sans clé IA ni provider configuré.
+- Choix d'une des 8 intentions + géolocalisation -> POIs proches (`POST /trips/{id}/nearby-pois`).
+- Carte POI (`PoiCard`) affichée avec distance, détour et statut d'horaires.
+- Avertissement "ferme bientôt" / "horaires non vérifiés" rendu.
+- Position hors couverture -> message distinct de "rien à proximité".
+- Lien de navigation (Google Maps vélo) ouvrant l'app de cartes.
 
 **Raffinement IA (`ai-refinement-card`)** — 7 scénarios :
 
