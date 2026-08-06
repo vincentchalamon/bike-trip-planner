@@ -1609,20 +1609,53 @@ Le sprint porte aussi le ticket de suivi demandé par #927 et par la PR #928 : l
 >
 > **Prérequis levé :** PR #928 mergée (`46c048a8`), elle touchait `schema.d.ts`, `messages/*.json`, `tier1.lua` et `TripRequest`.
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#929](https://github.com/vincentchalamon/bike-trip-planner/issues/929) | refactor(in-ride)!: supprimer le chat IA de planification, l'in-ride IA et l'historique persisté | XL | - | PR #928 |
-| 2 | [#930](https://github.com/vincentchalamon/bike-trip-planner/issues/930) | feat(in-ride): enum de catégories et lecteur PostGIS 8 buckets | L | - | #929 |
-| 3 | [#931](https://github.com/vincentchalamon/bike-trip-planner/issues/931) | feat(in-ride): tri-état des horaires et libellés localisés des lieux sans nom | M | - | #929 |
-| 4 | [#932](https://github.com/vincentchalamon/bike-trip-planner/issues/932) | feat(in-ride): polyligne restante côté serveur pour le calcul de détour | M | - | #929 |
-| 5 | [#933](https://github.com/vincentchalamon/bike-trip-planner/issues/933) | feat(in-ride): orchestrateur de recherche de lieux sans IA | L | - | #930, #931, #932 |
-| 6 | [#934](https://github.com/vincentchalamon/bike-trip-planner/issues/934) | feat(api): endpoint POST /trips/{id}/nearby-pois | L | - | #933 |
-| 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | - | #934 |
-| 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | - | #934 |
-| 9 | [#938](https://github.com/vincentchalamon/bike-trip-planner/issues/938) | test(recette): recette sprint 51 - in-ride sans IA sur téléphone | M | - | #935, #936 |
-| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | - | #929 **livrée en prod** |
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#929](https://github.com/vincentchalamon/bike-trip-planner/issues/929) | refactor(in-ride)!: supprimer le chat IA de planification, l'in-ride IA et l'historique persisté | XL | ✅ Mergée | [#959](https://github.com/vincentchalamon/bike-trip-planner/pull/959) | PR #928 |
+| 2 | [#930](https://github.com/vincentchalamon/bike-trip-planner/issues/930) | feat(in-ride): enum de catégories et lecteur PostGIS 8 buckets | L | ✅ Mergée | [#960](https://github.com/vincentchalamon/bike-trip-planner/pull/960) | #929 |
+| 3 | [#931](https://github.com/vincentchalamon/bike-trip-planner/issues/931) | feat(in-ride): tri-état des horaires et libellés localisés des lieux sans nom | M | ✅ Mergée | [#961](https://github.com/vincentchalamon/bike-trip-planner/pull/961) | #929 |
+| 4 | [#932](https://github.com/vincentchalamon/bike-trip-planner/issues/932) | feat(in-ride): polyligne restante côté serveur pour le calcul de détour | M | 🚧 En cours | [#962](https://github.com/vincentchalamon/bike-trip-planner/pull/962) `feature/932` | #929 |
+| 5 | [#933](https://github.com/vincentchalamon/bike-trip-planner/issues/933) | feat(in-ride): orchestrateur de recherche de lieux sans IA | L | 🚧 En cours | [#963](https://github.com/vincentchalamon/bike-trip-planner/pull/963) `feature/933` | #930, #931, #932 |
+| 6 | [#934](https://github.com/vincentchalamon/bike-trip-planner/issues/934) | feat(api): endpoint POST /trips/{id}/nearby-pois | L | 🚧 En cours | [#965](https://github.com/vincentchalamon/bike-trip-planner/pull/965) `feature/934` | #933 |
+| 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | 🚧 En cours | [#968](https://github.com/vincentchalamon/bike-trip-planner/pull/968) `feature/935` | #934 |
+| 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | 🚧 En cours | [#966](https://github.com/vincentchalamon/bike-trip-planner/pull/966) `feature/936` | #934 |
+| 9 | [#938](https://github.com/vincentchalamon/bike-trip-planner/issues/938) | test(recette): recette sprint 51 - in-ride sans IA sur téléphone | M | ⏳ Manuelle | - | #935, #936 |
+| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | ⏳ Release suivante | - | #929 **livrée en prod** |
 
 Vagues `/sprint` : {#929} seule → {#930, #931, #932} → {#933} → {#934} seule → {#935, #936} → {#938} manuelle → release suivante {#937}.
+
+### Ordre de merge et conflits attendus
+
+Les vagues 2 et 3 ont déjà été mergées pendant le sprint (#959, #960, #961). Les PRs restantes forment **un stack linéaire** — chacune part de la branche de sa dépendance, pas de `main` :
+
+```text
+main ← #962 (#932) ← #963 (#933) ← #965 (#934) ← ┬ #968 (#935)
+                                                 └ #966 (#936)
+```
+
+**Ordre de merge impératif : #962 → #963 → #965 → puis #966 et #968 (ordre libre entre elles).** À chaque merge squash d'un parent, GitHub retargette l'enfant sur `main` mais l'enfant garde les commits pré-squash du parent : un `git rebase origin/main` direct conflitera. Rejouer seulement les commits propres de l'enfant avec `git rebase --onto origin/main <dernier-commit-parent> feature/<enfant>` (recette Phase 4 §5 du skill `/sprint`), déjà appliquée en cours de sprint après le merge de #929/#930/#931.
+
+**Recoupements de fichiers (tous inter-vagues, donc sériels — aucun conflit sémantique attendu au sein d'une vague) :**
+
+| Fichier | Écrit par | Arbitrage |
+|---------|-----------|-----------|
+| `api/src/InRide/InRidePoiRepository.php` | #929 (orphelin) → #930 (réécrit) | #930 gagne : réécriture complète sur la base laissée par #929 |
+| `api/src/InRide/OpeningHoursParser.php` | #929 (orphelin) → #931 (tri-état) | #931 gagne |
+| `api/src/InRide/PoiSuggestion.php` | #929 → #933 (remodelé) → #934 (consommé) | remodelage #933 puis mapping DTO #934, empilés |
+| `api/src/InRide/DetourCalculator.php` | #932 (`projectOnSegment` public static) → #933 (consommé) | empilés, disjoints |
+| `pwa/src/lib/api/schema.d.ts` (généré) | #929 puis #934 (régénéré) | jamais édité à la main ; #929 et #934 tournent **seules** par construction |
+| `pwa/src/components/chat/PoiCard.tsx` | #929 (orphelin) → #934 (nullable) → #935 (8 catégories, carte cliquable) | empilés |
+
+### Écarts constatés en CI (corrigés dans les PRs)
+
+- **#934 — contrat d'erreur `nearby-pois`.** La CI a infirmé deux hypothèses de l'issue : un non-propriétaire reçoit **404** (masquage objet, ADR-038), pas 403 ; une catégorie inconnue échoue à la dénormalisation de l'enum et ressort en **422** (violation de validation), pas 400. Les deux attentes de test et l'`openapi` (400→422) ont été alignées sur le comportement réel du framework (commit `fix(in-ride): align nearby-pois error contract`).
+- **#933 — test sensible au fuseau.** `NearbyPoiFinderTest::flagsAVenueClosingWithinThirtyMinutes` figeait `+00:00` alors que `closesAt` hérite du fuseau de `$now` ; vert en local UTC, rouge en CI `Europe/Paris`. `$now` est désormais explicitement UTC.
+- **#934 — agent worktree stallé** (watchdog d'infra) avant commit : code intact, finalisation (commit + QA jambe par jambe + rebase du stack) reprise manuellement par l'orchestrateur, PHPUnit Unit+Integration `1509 tests` vert.
+
+### Reste manuel
+
+- **#938** : recette sur téléphone (checklist ci-dessous), hors `/sprint` — pas de branche, pas de commit.
+- **#937** : `DROP TABLE trip_chat_message`, release **suivant** celle de #929 (ADR-032).
 
 ### Recette Sprint 51
 
