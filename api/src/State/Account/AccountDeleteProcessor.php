@@ -56,8 +56,8 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
         $email = $user->getEmail();
 
         $this->entityManager->wrapInTransaction(function () use ($user, $email): void {
-            // Purge trips (cascades to stages, chat messages and shares via FK
-            // ON DELETE CASCADE) which also removes the per-trip preferences.
+            // Purge trips (cascades to stages and shares via FK ON DELETE
+            // CASCADE) which also removes the per-trip preferences.
             $this->entityManager->createQueryBuilder()
                 ->delete(TripRequest::class, 't')
                 ->where('t.user = :user')
