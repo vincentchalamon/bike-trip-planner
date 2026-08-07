@@ -42,10 +42,11 @@ ARG NEXT_PUBLIC_APP_RELEASE
 ARG NEXT_PUBLIC_APP_ENV=production
 ARG NEXT_PUBLIC_SENTRY_DSN
 # AI feature flag (recette #649): default-off so prod and the iso-prod recette
-# build mask the whole AI surface (generation assistant, in-ride chat, stage
-# briefings + trip overview, account provider config). Set to "true" only where
-# AI must stay visible (CI E2E in ci.yml, dev in compose.dev.yaml). The code and
-# endpoints are kept for a later re-enable; this is a single reversible switch.
+# build mask the whole AI surface (generation assistant, stage briefings + trip
+# overview, account provider config). The in-ride nearby search is AI-free
+# (ADR-048) and is NOT gated by this flag. Set to "true" only where AI must stay
+# visible (CI E2E in ci.yml, dev in compose.dev.yaml). The code and endpoints
+# are kept for a later re-enable; this is a single reversible switch.
 ARG NEXT_PUBLIC_ENABLE_AI=false
 # Test-only SSE injection hook (SEC-012): default-off so the real prod bundle
 # tree-shakes it out. Set to "true" only where the mocked E2E suite runs (CI in

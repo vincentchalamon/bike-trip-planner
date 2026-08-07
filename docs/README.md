@@ -39,6 +39,7 @@ Looking for the product overview instead? See the [README](../README.md).
 | [Architecture](architecture.md) | System overview: how the pieces fit together and why |
 | [Architecture Decision Records](adr/) | Every major technical choice, with context and alternatives |
 | [Optional AI (multi-provider, BYO token)](adr/adr-042-optional-multi-provider-ai-byo-token.md) | The opt-in, per-user AI model — choose a provider (Anthropic, Gemini, OpenAI) and bring your own key |
+| [In-ride assistance without AI](adr/adr-048-in-ride-assistance-without-ai.md) | The AI-free in-ride nearby-POI finder — eight intents over the Tier-1 index, and the fourteen arbitrations behind it |
 | [AI / LLaMA pipeline](LLaMA.md) | Historical self-hosted AI pipeline structure (obsolete — superseded by ADR-042) |
 
 ---
