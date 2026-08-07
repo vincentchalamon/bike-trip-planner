@@ -138,6 +138,8 @@ export function useInRideSearch(): UseInRideSearchResult {
   }, [pendingCategory, geo.position, runSearch]);
 
   // A geolocation failure clears the pending intent; the prompt takes over.
+  // This fires for *every* failed lookup, not just the first: since each tap
+  // re-requests a fix, a denial/timeout on a later search must surface again.
   useEffect(() => {
     if (geo.error && pendingCategory !== null) {
       setPendingCategory(null);
@@ -188,7 +190,12 @@ export function useInRideSearch(): UseInRideSearchResult {
     !lastSearch.capReached &&
     lastSearch.radiusMeters < MAX_RADIUS_METERS;
 
-  const geolocPromptVisible = !geo.position && geo.error !== null;
+  // `useGeolocation` resets `error` to null at the start of every `request()`
+  // and only sets it on failure, so a non-null error always means "the latest
+  // lookup failed" — regardless of a stale position lingering from an earlier
+  // success. Gating on `!geo.position` (the old condition) hid the retry prompt
+  // for every failure after the first fix; keying on the error alone fixes that.
+  const geolocPromptVisible = geo.error !== null;
 
   return {
     isSearching,
