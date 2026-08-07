@@ -78,3 +78,13 @@ A detailed playbook lives in `docs/runbooks/release-rollback.md` (created as par
 ### Neutral
 
 - Workers (`messenger:consume`) share the same image and the same `entrypoint.sh`; they skip migrations because `compose.yaml` sets `MIGRATIONS_ON_BOOT=false` on the worker service. Only the `php` service runs them, and workers wait for it to be healthy via `depends_on`.
+
+## Addendum — pre-launch exception (2026-08-07, #937)
+
+The two-release destructive rule protects a **rollback of a shipped release**: it guarantees that reverting release N+2 to N+1 never needs data restored. That protection only has an object once a release has actually been cut.
+
+**No `v*` tag has ever been pushed**, so `deploy.yml` has never shipped, the production database has never been created, and no release exists to roll back to. In this pre-launch window the grace period has nothing to protect: there is no prior release, and the table holds no production data.
+
+On that basis, `DROP TABLE trip_chat_message` (#937) is deployed in the **same** pre-launch window that stopped writing to it (#929), rather than one release later. This is a **one-time, pre-launch-only exception**, not a change to the policy.
+
+**The two-release rule applies unconditionally again the moment the first `v*` tag is cut** — from the first shipped release onward, every destructive migration must follow the additive → read-switch → destructive sequence above. Do not cite this addendum to justify a same-release `DROP` post-launch.
