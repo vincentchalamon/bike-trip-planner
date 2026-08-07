@@ -238,4 +238,99 @@ final class RedisTripRequestRepositoryTest extends TestCase
 
         $this->repository->updateStageAlerts($tripId, 1, [$alert]);
     }
+
+    #[Test]
+    public function getStageGeometryReturnsPointsInTravelOrder(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $stage = new Stage(
+            tripId: $tripId,
+            dayNumber: 2,
+            distance: 40.0,
+            elevation: 200.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.2, 2.2),
+            geometry: [
+                new Coordinate(48.0, 2.0, 100.0),
+                new Coordinate(48.1, 2.1, 110.0),
+                new Coordinate(48.2, 2.2, 120.0),
+            ],
+        );
+
+        $readItem = $this->createMock(CacheItemInterface::class);
+        $readItem->method('isHit')->willReturn(true);
+        $readItem->method('get')->willReturn([$stage]);
+        $readItem->method('expiresAfter')->willReturnSelf();
+        $this->cache->expects(self::atLeastOnce())
+            ->method('getItem')
+            ->with(\sprintf('trip.%s.stages', $tripId))
+            ->willReturn($readItem);
+
+        // ele is dropped: DetourCalculator works in 2D.
+        self::assertSame(
+            [
+                ['lat' => 48.0, 'lon' => 2.0],
+                ['lat' => 48.1, 'lon' => 2.1],
+                ['lat' => 48.2, 'lon' => 2.2],
+            ],
+            $this->repository->getStageGeometry($tripId, 2),
+        );
+    }
+
+    #[Test]
+    public function getStageGeometryReturnsNullForUnknownDay(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $stage = new Stage(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 40.0,
+            elevation: 200.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.2, 2.2),
+            geometry: [new Coordinate(48.0, 2.0, 100.0)],
+        );
+
+        $readItem = $this->createMock(CacheItemInterface::class);
+        $readItem->method('isHit')->willReturn(true);
+        $readItem->method('get')->willReturn([$stage]);
+        $readItem->method('expiresAfter')->willReturnSelf();
+        $this->cache->method('getItem')->willReturn($readItem);
+
+        self::assertNull($this->repository->getStageGeometry($tripId, 9));
+    }
+
+    #[Test]
+    public function getStageGeometryReturnsNullWhenTripMissing(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+
+        $missing = $this->createMock(CacheItemInterface::class);
+        $missing->method('isHit')->willReturn(false);
+        $this->cache->method('getItem')->willReturn($missing);
+
+        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+    }
+
+    #[Test]
+    public function getStageGeometryReturnsNullForEmptyGeometry(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $stage = new Stage(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 40.0,
+            elevation: 200.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.2, 2.2),
+        );
+
+        $readItem = $this->createMock(CacheItemInterface::class);
+        $readItem->method('isHit')->willReturn(true);
+        $readItem->method('get')->willReturn([$stage]);
+        $readItem->method('expiresAfter')->willReturnSelf();
+        $this->cache->method('getItem')->willReturn($readItem);
+
+        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+    }
 }

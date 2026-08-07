@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
@@ -100,6 +101,32 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         $value = $this->get($this->stagesKey($tripId));
 
         return $value;
+    }
+
+    /** @return list<array{lat: float, lon: float}>|null */
+    public function getStageGeometry(string $tripId, int $dayNumber): ?array
+    {
+        $stages = $this->getStages($tripId);
+        if (null === $stages) {
+            return null;
+        }
+
+        foreach ($stages as $stage) {
+            if ($stage->dayNumber !== $dayNumber) {
+                continue;
+            }
+
+            if ([] === $stage->geometry) {
+                return null;
+            }
+
+            return array_map(
+                static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
+                $stage->geometry,
+            );
+        }
+
+        return null;
     }
 
     /**
