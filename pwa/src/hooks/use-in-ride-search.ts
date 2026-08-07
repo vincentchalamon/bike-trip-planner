@@ -81,6 +81,9 @@ export function useInRideSearch(): UseInRideSearchResult {
   // which is what lets each tap search from the rider's current position
   // instead of reusing the very first fix.
   const dispatchedPositionRef = useRef<GeolocationCoords | null>(null);
+  // The category of the most recent tap, so the "share my location" retry
+  // prompt can resume the very search it was shown for once a fix finally lands.
+  const lastAttemptedCategoryRef = useRef<InRidePoiCategory | null>(null);
   const [lastSearch, setLastSearch] = useState<LastSearch | null>(null);
 
   const runSearch = useCallback(
@@ -159,6 +162,7 @@ export function useInRideSearch(): UseInRideSearchResult {
       // kilometres later, and reusing the first fix would search the wrong
       // place. The effect above consumes the position only once the new lookup
       // resolves.
+      lastAttemptedCategoryRef.current = category;
       dispatchedPositionRef.current = geo.position;
       setPendingCategory(category);
       geo.request();
@@ -178,6 +182,12 @@ export function useInRideSearch(): UseInRideSearchResult {
   }, [lastSearch, geo.position, runSearch]);
 
   const requestGeoloc = useCallback(() => {
+    // Re-arm the last tapped category so a successful retry resumes that search
+    // rather than only refreshing the position and waiting for another tap.
+    if (lastAttemptedCategoryRef.current !== null) {
+      dispatchedPositionRef.current = geo.position;
+      setPendingCategory(lastAttemptedCategoryRef.current);
+    }
     geo.request();
   }, [geo]);
 

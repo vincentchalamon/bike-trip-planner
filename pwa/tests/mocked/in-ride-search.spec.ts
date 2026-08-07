@@ -204,6 +204,65 @@ test.describe("Guided in-ride search", () => {
 
     await expect(mockedPage.getByTestId("poi-card-detour")).toHaveCount(1);
   });
+
+  test("a geolocation failure on a later search resurfaces the retry prompt, which resumes that search", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await openPanel(mockedPage);
+
+    // First search succeeds with the granted fix.
+    await mockedPage.getByTestId("in-ride-chip-water").click();
+    await expect(mockedPage.getByTestId("in-ride-recap")).toBeVisible();
+
+    // Wrap getCurrentPosition so a window flag can force it to reject on demand:
+    // clearPermissions() alone does not make the lookup fail in headless Chromium
+    // (the previously set position is still returned).
+    await mockedPage.evaluate(() => {
+      const geo = navigator.geolocation;
+      const original = geo.getCurrentPosition.bind(geo);
+      geo.getCurrentPosition = (success, error, options) => {
+        if (
+          (window as unknown as { __failGeolocation?: boolean })
+            .__failGeolocation
+        ) {
+          error?.({
+            code: 1,
+            message: "User denied Geolocation",
+            PERMISSION_DENIED: 1,
+            POSITION_UNAVAILABLE: 2,
+            TIMEOUT: 3,
+          } as GeolocationPositionError);
+          return;
+        }
+        original(success, error, options);
+      };
+    });
+
+    // Next tap cannot get a fresh fix → the retry prompt reappears despite the
+    // stale position lingering from the first search.
+    await mockedPage.evaluate(() => {
+      (window as unknown as { __failGeolocation?: boolean }).__failGeolocation =
+        true;
+    });
+    await mockedPage.getByTestId("in-ride-chip-food").click();
+    await expect(mockedPage.getByTestId("in-ride-geoloc-prompt")).toBeVisible();
+
+    // Recover the lookup and retry from the prompt → the food search resumes on
+    // its own, without a second chip tap.
+    await mockedPage.evaluate(() => {
+      (window as unknown as { __failGeolocation?: boolean }).__failGeolocation =
+        false;
+    });
+    const [request] = await Promise.all([
+      mockedPage.waitForRequest(
+        (r) => r.url().includes("/nearby-pois") && r.method() === "POST",
+      ),
+      mockedPage.getByTestId("in-ride-geoloc-prompt").click(),
+    ]);
+    expect(request.postDataJSON().category).toBe("food");
+  });
 });
 
 test.describe("Recap states", () => {
