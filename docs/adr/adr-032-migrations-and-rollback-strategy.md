@@ -88,3 +88,16 @@ The two-release destructive rule protects a **rollback of a shipped release**: i
 On that basis, `DROP TABLE trip_chat_message` (#937) is deployed in the **same** pre-launch window that stopped writing to it (#929), rather than one release later. This is a **one-time, pre-launch-only exception**, not a change to the policy.
 
 **The two-release rule applies unconditionally again the moment the first `v*` tag is cut** — from the first shipped release onward, every destructive migration must follow the additive → read-switch → destructive sequence above. Do not cite this addendum to justify a same-release `DROP` post-launch.
+
+## Addendum — pre-launch migration baseline reset (2026-08-07)
+
+For the same pre-launch reason (no `v*` tag shipped, no production database, no release to roll back to), the 43 incremental development migrations were collapsed into a single **baseline** migration (`Version20260807130000` + `migrations/schema/baseline_schema.sql`). It removes the accumulated create → alter → drop churn and gives one authoritative starting schema.
+
+How the baseline was produced, and why not `schema:create`/`diff`:
+
+- It is a `pg_dump --schema-only --no-owner --no-privileges` of a database with **every** pre-reset migration applied — so it carries the full DDL the ORM mappings do not describe (the PostGIS extension, the `osm` / `tourism` / `provisioner` schemas, GiST indexes, CHECK constraints). A baseline generated from the Doctrine entity mappings would have silently dropped all of that.
+- Faithfulness was verified two ways: a fresh database loaded from the SQL re-dumps **schema-identical** to the 43-migration schema, and the same holds when the baseline is applied through `doctrine:migrations:migrate`.
+
+**This is a one-time, pre-launch-only reset**, legitimate only because nothing has shipped. Once the first `v*` tag is cut, migrations are append-only again — never rewrite or squash a migration that has shipped, and regenerate a baseline only under the same "nothing in production" conditions.
+
+**Operational impact:** existing local dev databases still record the 43 old versions and cannot adopt the baseline incrementally — they must be recreated (`make start-dev` on a fresh `database` volume). Fresh databases (CI, new checkouts) run the single baseline and are correct.
