@@ -72,7 +72,10 @@ You are implementing GitHub issue #<number>: <title>
      [ -d "$MAIN/$p" ] && rsync -a --link-dest="$MAIN/$p/" "$MAIN/$p/" "$p/"
    done
    ```
-4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns)
+4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns). Two CLAUDE.md test-contract gotchas that cost Sprint 51 a CI round-trip each — honour them up front:
+   - **API error codes:** a non-owner on an item operation gets **404, not 403** (object-authz masking, ADR-038); an unknown backed-enum value in the body is **422, not 400** (denormalization → validation). Write the functional test and the `openapi` responses to 404 / 422, whatever the issue text guesses.
+   - **French `.feature` files** must begin with `# language: fr` (with `Fonctionnalité:`), else `bddgen` dies parsing `Scénario:`. Validate with `npx bddgen --config playwright.bdd.config.ts`.
+   - **Timezone:** CI runs `Europe/Paris`; pin any offset/ATOM assertion's `DateTimeImmutable` to explicit UTC (a hard-coded `+00:00` passes in a UTC dev container and fails in CI).
 5. **`make qa` will NOT complete — do not spend turns on it.** Read the "Local QA" section of CLAUDE.md and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
    - Report the per-leg output verbatim in your final message. Do not write "make qa passes" — it cannot; say which legs you ran and what they printed.
 6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
