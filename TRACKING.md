@@ -1605,7 +1605,7 @@ Le sprint porte aussi le ticket de suivi demandé par #927 et par la PR #928 : l
 >
 > **Suppression avant construction.** L'ordre « ajouter puis retirer » est infaisable : les issues de construction changent la signature de `InRidePoiRepository::findNearby()`, la forme de `PoiSuggestion` et l'API publique de `OpeningHoursParser`, que `InRideAssistant` consomme encore. Et l'argument « rester déployable » ne tient pas : la surface était déjà masquée en prod et en recette (ADR-046, défaut off). #929 laisse donc **douze briques transitoirement orphelines**, listées dans son corps, qui retrouvent un appelant en #935.
 >
-> **#937 est hors sprint** : ADR-032 interdit une migration destructive dans la release qui cesse d'écrire. Le `DROP TABLE trip_chat_message` attend la release suivant celle de #929.
+> **#937 était hors sprint** : ADR-032 interdit une migration destructive dans la release qui cesse d'écrire, donc le `DROP TABLE trip_chat_message` devait attendre la release suivant celle de #929. **Révisé après la clôture** : aucun tag `v*` n'ayant jamais été coupé (pas de release shippée, pas de base de prod), la fenêtre de grâce n'a rien à protéger ; #937 est donc livrée en pré-lancement (PR #971) au titre d'une **exception ponctuelle enregistrée dans l'addendum ADR-032**. La règle en deux temps redevient inconditionnelle au premier tag.
 >
 > **Prérequis levé :** PR #928 mergée (`46c048a8`), elle touchait `schema.d.ts`, `messages/*.json`, `tier1.lua` et `TripRequest`.
 
@@ -1620,7 +1620,7 @@ Le sprint porte aussi le ticket de suivi demandé par #927 et par la PR #928 : l
 | 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | 🚧 En cours | [#968](https://github.com/vincentchalamon/bike-trip-planner/pull/968) `feature/935` | #934 |
 | 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | 🚧 En cours | [#966](https://github.com/vincentchalamon/bike-trip-planner/pull/966) `feature/936` | #934 |
 | 9 | [#938](https://github.com/vincentchalamon/bike-trip-planner/issues/938) | test(recette): recette sprint 51 - in-ride sans IA sur téléphone | M | ⏳ Manuelle | - | #935, #936 |
-| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | ⏳ Release suivante | - | #929 **livrée en prod** |
+| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | 🚧 En cours | [#971](https://github.com/vincentchalamon/bike-trip-planner/pull/971) `feature/937` | #929 (exception pré-lancement, addendum ADR-032) |
 
 Vagues `/sprint` : {#929} seule → {#930, #931, #932} → {#933} → {#934} seule → {#935, #936} → {#938} manuelle → release suivante {#937}.
 
@@ -1675,6 +1675,6 @@ Fichiers à **écrivain unique** dans le sprint (pas des recoupements, mais des 
   - [ ] `/s/{shortCode}` (vue partagée anonyme) n'affiche pas la bulle.
   - [ ] Avec une clé configurée : génération depuis un brief, chat de cadrage, analyse complète, briefing par étape et synthèse de voyage fonctionnent toujours.
   - [ ] Les 12 orphelins transitoires de #929 ont tous retrouvé un appelant.
-  - [ ] La table `trip_chat_message` est encore présente en base à l'issue du sprint — sa suppression est #937, release suivante.
+  - [x] La table `trip_chat_message` était encore présente à la clôture du sprint ; sa suppression (#937, PR #971) a finalement été livrée en pré-lancement plutôt qu'à la release suivante — exception ponctuelle enregistrée dans l'addendum ADR-032 (aucun tag `v*` coupé, aucune donnée de prod à protéger).
 
 </details>
