@@ -644,7 +644,11 @@
       "noOpeningHours": "Opening hours unverified — confirm on site.",
       "routeNotModified": "Your planned route is not modified.",
       "osmDisclaimer": "OpenStreetMap data — verify on the ground when in doubt.",
-      "geolocPrompt": "Share my location for nearby suggestions"
+      "geolocPrompt": "Share my location for nearby suggestions",
+      "warning": {
+        "closesSoon": "Closes in {minutes} min.",
+        "farFromRoute": "Far from your route."
+      }
     }
   },
   "aiOverview": {

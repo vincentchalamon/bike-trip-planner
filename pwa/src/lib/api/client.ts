@@ -510,12 +510,16 @@ const poiSuggestionSchema = z.object({
   lat: z.number(),
   lon: z.number(),
   distance_m: z.number(),
-  detour_m: z.number(),
+  // null = no remaining route was available to measure the detour against.
+  detour_m: z.number().nullable(),
   opening_hours_today: z.string().nullable(),
   closes_at: z.string().nullable(),
   phone: z.string().nullable(),
   deeplink: safeUrlSchema,
+  // Typed backend warning code (closes_soon | far_from_route | hours_unverified).
   warning: z.string().nullable(),
+  // Minutes left before closing when `warning` is `closes_soon`.
+  warning_minutes: z.number().nullable(),
 });
 
 /**

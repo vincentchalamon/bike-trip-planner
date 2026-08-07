@@ -324,7 +324,8 @@ final class NearbyPoiFinderTest extends TestCase
         $result = $finder->find(InRidePoiCategory::WATER, $this->rider());
 
         self::assertStringContainsString('travelmode=bicycling', $result['pois'][0]->deeplink);
-        self::assertStringContainsString('origin=48,2', $result['pois'][0]->deeplink);
+        self::assertStringContainsString('destination=48,2', $result['pois'][0]->deeplink);
+        self::assertStringNotContainsString('origin=', $result['pois'][0]->deeplink);
     }
 
     // --- fixtures -----------------------------------------------------------

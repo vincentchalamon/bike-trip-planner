@@ -70,7 +70,7 @@
     "postcss": "^8.5.25",
     "playwright-core": "1.62.1",
     "sharp": "^0.35.3",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.1",
     "minimatch": "^10.1.1",
     "brace-expansion": "^5.0.9",
     "@hono/node-server": "^2.1.0",

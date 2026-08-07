@@ -548,6 +548,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/nearby-pois": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search the nearest points of interest of one intent category around a rider mid-ride.
+         * @description Search the nearest points of interest of one intent category around a rider mid-ride.
+         */
+        post: operations["api_trips_idnearby-pois_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}/recompute": {
         parameters: {
             query?: never;
@@ -1148,6 +1168,12 @@ export interface components {
             /** @description Opening hours (Wikidata P8989). */
             openingHours?: string | null;
         };
+        GeoPosition: {
+            /** @description Latitude in decimal degrees (WGS84). */
+            lat: number;
+            /** @description Longitude in decimal degrees (WGS84). */
+            lon: number;
+        };
         HydraCollectionBaseSchema: components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
             /**
              * @example {
@@ -1197,6 +1223,38 @@ export interface components {
             });
             "@id": string;
             "@type": string;
+        };
+        "PoiSuggestionDto.jsonld": {
+            /** @description Display name of the POI. */
+            name: string;
+            /**
+             * @description POI intent category.
+             * @enum {string}
+             */
+            category: "water" | "shelter" | "food" | "resupply" | "mechanic" | "health" | "train" | "charging";
+            /** @description POI latitude (WGS84). */
+            lat: number;
+            /** @description POI longitude (WGS84). */
+            lon: number;
+            /** @description Straight-line distance from the rider to the POI, in meters (rounded). */
+            distance_m: number;
+            /** @description Estimated additional meters if the rider detours to the POI (null when no remaining route is known, rounded). */
+            detour_m?: number | null;
+            /** @description Raw OSM `opening_hours` tag for the current day, when available. */
+            opening_hours_today?: string | null;
+            /** @description RFC 3339 closing time of the currently-open interval, or null when the POI never closes / is closed. */
+            closes_at?: string | null;
+            /** @description Optional phone number extracted from the OSM tag. */
+            phone?: string | null;
+            /** @description Pre-built deeplink the rider can tap to open the POI in their map app. */
+            deeplink: string;
+            /**
+             * @description Optional typed warning surfaced on the POI card (venue closes soon, POI far from route, opening hours unverified).
+             * @enum {string|null}
+             */
+            warning?: "closes_soon" | "far_from_route" | "hours_unverified" | null;
+            /** @description Minutes left before closing when `warning` is `closes_soon`, otherwise null. */
+            warning_minutes?: number | null;
         };
         "PointOfInterest.fit": {
             name?: string;
@@ -1446,6 +1504,23 @@ export interface components {
             collected: {
                 [key: string]: unknown;
             };
+        };
+        "Trip.NearbyPoiSearchRequest": {
+            /** @enum {string|null} */
+            category: "water" | "shelter" | "food" | "resupply" | "mechanic" | "health" | "train" | "charging" | null;
+            position: components["schemas"]["GeoPosition"] | null;
+            radiusMeters?: number | null;
+            stageDay?: number | null;
+        };
+        "Trip.NearbyPoiSearchResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            tripId?: string;
+            /** @enum {string} */
+            category?: "water" | "shelter" | "food" | "resupply" | "mechanic" | "health" | "train" | "charging";
+            radiusMeters?: number;
+            totalFound?: number;
+            capReached?: boolean;
+            outOfCoverage?: boolean;
+            pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
         };
         "Trip.TripAiGenerateRequest": {
             /** @description Free-form description of the desired trip (e.g. "boucle au départ de Lille, 2 jours, 80 km/jour, en tente"). */
@@ -3831,6 +3906,81 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+        };
+    };
+    "api_trips_idnearby-pois_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trip identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Trip resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Trip.NearbyPoiSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Trip resource created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Trip.NearbyPoiSearchResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Trip not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown POI category or invalid request payload */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

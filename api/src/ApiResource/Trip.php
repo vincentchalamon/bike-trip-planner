@@ -14,6 +14,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
+use App\State\NearbyPoiSearchProcessor;
 use App\State\TripAiChatProcessor;
 use App\State\TripBatchRecomputeProcessor;
 use App\State\TripAiGenerateProcessor;
@@ -117,6 +118,23 @@ use App\State\TripUpdateProcessor;
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{id}/nearby-pois{._format}',
+            status: 200,
+            openapi: new Operation(
+                responses: [
+                    404 => new Response(description: 'Trip not found'),
+                    422 => new Response(description: 'Unknown POI category or invalid request payload'),
+                    429 => new Response(description: 'Rate limit reached'),
+                ],
+                summary: 'Search the nearest points of interest of one intent category around a rider mid-ride.',
+            ),
+            security: "is_granted('TRIP_VIEW', object)",
+            input: NearbyPoiSearchRequest::class,
+            output: NearbyPoiSearchResponse::class,
+            provider: TripRequestProvider::class,
+            processor: NearbyPoiSearchProcessor::class,
         ),
         new Post(
             uriTemplate: '/trips/{id}/analyze{._format}',

@@ -90,7 +90,7 @@ final readonly class NearbyPoiFinder
         usort($candidates, fn (array $a, array $b): int => $this->score($a) <=> $this->score($b));
 
         $pois = array_map(
-            fn (array $candidate): PoiSuggestion => $this->toSuggestion($candidate, $category, $position),
+            fn (array $candidate): PoiSuggestion => $this->toSuggestion($candidate, $category),
             \array_slice($candidates, 0, self::MAX_SUGGESTIONS),
         );
 
@@ -234,7 +234,7 @@ final readonly class NearbyPoiFinder
     /**
      * @param Candidate $candidate
      */
-    private function toSuggestion(array $candidate, InRidePoiCategory $category, GeoPoint $position): PoiSuggestion
+    private function toSuggestion(array $candidate, InRidePoiCategory $category): PoiSuggestion
     {
         $poiPoint = new GeoPoint($candidate['lat'], $candidate['lon']);
 
@@ -250,7 +250,7 @@ final readonly class NearbyPoiFinder
             openingHoursToday: $candidate['openingHoursToday'],
             closesAt: $candidate['closesAt'],
             phone: $candidate['phone'],
-            deeplink: $this->deeplinkBuilder->googleMapsBicycling($position, $poiPoint),
+            deeplink: $this->deeplinkBuilder->googleMapsBicycling($poiPoint),
             warning: $candidate['warning'],
             warningMinutes: $candidate['warningMinutes'],
         );

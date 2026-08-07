@@ -75,9 +75,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '3600 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
-            'trip_chat' => [
+            // In-ride nearby-POI search (#934): a read-only PostGIS lookup a rider
+            // can fire repeatedly while moving, so it is capped more loosely than
+            // the LLM chats.
+            'nearby_pois' => [
                 'policy' => 'sliding_window',
-                'limit' => 20,
+                'limit' => 30,
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
