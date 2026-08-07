@@ -8,12 +8,11 @@ import { test, expect } from "../fixtures/base.fixture";
  * the rider cannot fire a request that would never reach the backend.
  *
  * The AI chat bubble was removed in #929; the guided in-ride bubble that
- * replaces it lands in #935. This spec keeps the offline coverage but is
- * pending until that component (`in-ride-bubble`) exists.
+ * replaces it landed in #935. This spec keeps the offline coverage.
  */
 
 test.describe("In-ride offline", () => {
-  test.fixme("disables the bubble and surfaces the offline badge", async ({
+  test("disables the bubble and surfaces the offline badge", async ({
     createFullTrip,
     mockedPage,
   }) => {

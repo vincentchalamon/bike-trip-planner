@@ -523,6 +523,96 @@ const poiSuggestionSchema = z.object({
 });
 
 /**
+ * The eight guided in-ride intent categories (#935). Derived from the generated
+ * OpenAPI schema so the union stays in lockstep with `App\InRide\InRidePoiCategory`.
+ */
+export type InRidePoiCategory =
+  components["schemas"]["PoiSuggestionDto.jsonld"]["category"];
+
+/**
+ * Runtime shape of the guided in-ride search response
+ * (`POST /trips/{id}/nearby-pois`, #934). Reuses {@link poiSuggestionSchema} for
+ * the POI array; every scalar carries a default so a partial body never throws.
+ */
+const nearbyPoiSearchResponseSchema = z.object({
+  tripId: z.string().default(""),
+  category: z.string(),
+  radiusMeters: z.number(),
+  totalFound: z.number().default(0),
+  capReached: z.boolean().default(false),
+  outOfCoverage: z.boolean().default(false),
+  pois: z.array(poiSuggestionSchema).default([]),
+});
+
+export type NearbyPoiSearchResponse = z.infer<
+  typeof nearbyPoiSearchResponseSchema
+>;
+
+/**
+ * Outcome of {@link searchNearbyPois}. Discriminated so the caller maps the
+ * backend's failure modes to localized messages without re-deriving them from a
+ * raw status code:
+ *
+ * - `ok`           — the search result (category, radius, POIs, coverage flags).
+ * - `rate_limited` — 429: per-user in-ride search rate limit reached (transient).
+ * - `network`      — the request never reached the backend (offline / DNS).
+ * - `error`        — any other failure (4xx/5xx, bad shape).
+ */
+export type NearbyPoiSearchResult =
+  | { status: "ok"; data: NearbyPoiSearchResponse }
+  | { status: "rate_limited" }
+  | { status: "network" }
+  | { status: "error" };
+
+/**
+ * Run a guided in-ride POI search (`POST /trips/{id}/nearby-pois`, #934/#935).
+ *
+ * `radiusMeters` is left null on the first search so the backend applies its
+ * per-category default; the "widen" affordance replays with a doubled radius.
+ * Uses the typed {@link apiClient} (the route is fully described by the
+ * generated schema) and classifies the transient 429 apart from other errors.
+ */
+export async function searchNearbyPois(
+  tripId: string,
+  params: {
+    category: InRidePoiCategory;
+    position: { lat: number; lon: number };
+    radiusMeters?: number | null;
+    stageDay?: number | null;
+  },
+  signal?: AbortSignal,
+): Promise<NearbyPoiSearchResult> {
+  let response: Response;
+  let data: unknown;
+  try {
+    const result = await apiClient.POST("/trips/{id}/nearby-pois", {
+      params: { path: { id: tripId } },
+      body: {
+        category: params.category,
+        position: params.position,
+        radiusMeters: params.radiusMeters ?? null,
+        stageDay: params.stageDay ?? null,
+      },
+      ...(signal ? { signal } : {}),
+    });
+    response = result.response;
+    data = result.data;
+  } catch {
+    // Network failure / aborted request — the openapi-fetch promise rejects.
+    return { status: "network" };
+  }
+
+  if (response.ok && data) {
+    const parsed = nearbyPoiSearchResponseSchema.safeParse(data);
+    if (!parsed.success) return { status: "error" };
+    return { status: "ok", data: parsed.data };
+  }
+
+  if (response.status === 429) return { status: "rate_limited" };
+  return { status: "error" };
+}
+
+/**
  * One turn of the pre-trip brief chat (`POST /trips/ai-chat`, ADR-045).
  * Sourced from the generated OpenAPI schema (`AiChatMessage`) so role/content
  * stay in lockstep with `App\ApiResource\Model\AiChatMessage`.
