@@ -1549,7 +1549,7 @@ Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement 
 
 <details><summary>
 
-## Sprint 50 - Sources complémentaires et map-matching
+## ✅ Sprint 50 - Sources complémentaires et map-matching
 
 </summary>
 Sprint **conditionnel**. La source la plus rentable n'est pas nouvelle : c'est celle déjà téléchargée. Rien ne s'ajoute avant que le sprint 46 ait récupéré les champs du flux DataTourisme et que le sprint 47 ait chiffré ce qui manque encore.
@@ -1592,7 +1592,7 @@ Une seule PR à merger, **#957** (`feature/889` → `main`). Aucun conflit atten
 
 <details><summary>
 
-## Sprint 51 - In-ride sans IA
+## ✅ Sprint 51 - In-ride sans IA
 
 </summary>
 L'in-ride n'était pas une fonctionnalité : c'était une branche de `POST /trips/{id}/ai-chat` déclenchée par la présence d'un champ `position`. Elle faisait deux appels LLM — un classifieur d'intention et une narration — alors que tout le travail utile était déjà déterministe, et que ces deux appels avaient chacun un repli déterministe complet. Le sprint la remplace par une recherche guidée à 8 questions prédéfinies sur l'index Tier-1, supprime le chat de mutation et l'historique persisté, et sort l'in-ride du drapeau `NEXT_PUBLIC_ENABLE_AI`. À l'arrivée, la seule surface IA restante est **l'analyse du voyage** et **la création d'itinéraire**.
