@@ -100,6 +100,16 @@ Two traps in that command:
 
 `make test-e2e` needs the PWA built and served on `https://localhost`; a worktree's changes are not in the main stack's bundle. **CI is the real gate for Playwright** — say so plainly rather than implying local coverage you did not have. Since the pre-commit hook replays `make qa`, commit with `git -c core.hooksPath=/dev/null commit` once the legs are individually green.
 
+### Test & CI gotchas that pass locally but fail in CI
+
+These bit Sprint 51 — each was green on a dev machine and red in CI, or vice-versa. Check them before writing the test, not after the round-trip.
+
+- **Timezone-fragile PHPUnit.** CI runs PHP in **`Europe/Paris`**; a throwaway local container defaults to **UTC**. Any test asserting a formatted offset or RFC 3339 / ATOM string (e.g. `closesAt?->format(DateTimeInterface::ATOM)`) must build its `DateTimeImmutable` with an **explicit `new \DateTimeZone('UTC')`**, or pass `-e TZ=Europe/Paris` + `php -d date.timezone=Europe/Paris` when reproducing locally. A hard-coded `+00:00` expectation is green in UTC and red in CI. `closesAt`/interval times inherit the timezone of the `$now` you pass in — pin `$now`.
+- **API error-contract codes are not what you'd guess.** Object-level authorization denials are **masked as 404, never 403** (ADR-038) — a non-owner hitting an item operation gets 404, so a test expecting 403 is wrong. A request body carrying an **unknown backed-enum value fails denormalization and surfaces as 422** (a validation violation), **not 400** — API Platform 4.3 collects the type error as a constraint violation. Assert 404 / 422 accordingly, and document 422 (not 400) in the operation's `openapi` responses.
+- **French Gherkin needs a language header.** A `.fr.feature` using `Fonctionnalité:` / `Contexte:` / `Scénario:` / `Étant donné` **must** start with `# language: fr`; without it `bddgen` parses in English mode and dies at the first `Scénario:`. Validate with `npx bddgen --config playwright.bdd.config.ts` before pushing — it parses every feature and exits non-zero on a syntax error, which no unit leg catches.
+- **Simulating a geolocation failure in Playwright.** `context().clearPermissions()` does **not** make `navigator.geolocation.getCurrentPosition()` reject in headless Chromium — the previously `setGeolocation()`'d fix is still returned, so `geo.error` never fires. To exercise a denial/timeout path, stub it in the page: `page.evaluate(() => { navigator.geolocation.getCurrentPosition = (_ok, err) => err?.({ code: 1, ... } as GeolocationPositionError); })` (toggle via a `window` flag to restore success for a retry assertion).
+- **A stacked PR whose base you retarget may not re-trigger CI.** After a squash-merge of a parent, retargeting the child's base to `main` **and** force-pushing sometimes fires no workflow run at all (the head shows "no checks reported"). **Close and reopen the PR** to re-trigger — no noise commit needed.
+
 ### `make` swallows `--flags`
 
 A target that forwards `$(ARGS)` cannot receive an option: `make` claims anything starting
