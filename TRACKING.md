@@ -1635,16 +1635,15 @@ main ← #962 (#932) ← #963 (#933) ← #965 (#934) ← ┬ #968 (#935)
 
 **Ordre de merge impératif : #962 → #963 → #965 → puis #966 et #968 (ordre libre entre elles).** À chaque merge squash d'un parent, GitHub retargette l'enfant sur `main` mais l'enfant garde les commits pré-squash du parent : un `git rebase origin/main` direct conflitera. Rejouer seulement les commits propres de l'enfant avec `git rebase --onto origin/main <dernier-commit-parent> feature/<enfant>` (recette Phase 4 §5 du skill `/sprint`), déjà appliquée en cours de sprint après le merge de #929/#930/#931.
 
-**Recoupements de fichiers (tous inter-vagues, donc sériels — aucun conflit sémantique attendu au sein d'une vague) :**
+**Recoupements de fichiers (≥ 2 écrivains dans le sprint, tous inter-vagues, donc sériels — aucun conflit sémantique attendu au sein d'une vague). Attributions vérifiées sur les listes de fichiers réelles des PRs (`gh api .../pulls/<n>/files`) :**
 
 | Fichier | Écrit par | Arbitrage |
 |---------|-----------|-----------|
-| `api/src/InRide/InRidePoiRepository.php` | #929 (orphelin) → #930 (réécrit) | #930 gagne : réécriture complète sur la base laissée par #929 |
-| `api/src/InRide/OpeningHoursParser.php` | #929 (orphelin) → #931 (tri-état) | #931 gagne |
-| `api/src/InRide/PoiSuggestion.php` | #929 → #933 (remodelé) → #934 (consommé) | remodelage #933 puis mapping DTO #934, empilés |
-| `api/src/InRide/DetourCalculator.php` | #932 (`projectOnSegment` public static) → #933 (consommé) | empilés, disjoints |
-| `pwa/src/lib/api/schema.d.ts` (généré) | #929 puis #934 (régénéré) | jamais édité à la main ; #929 et #934 tournent **seules** par construction |
-| `pwa/src/components/chat/PoiCard.tsx` | #929 (orphelin) → #934 (nullable) → #935 (8 catégories, carte cliquable) | empilés |
+| `api/src/InRide/PoiSuggestion.php` | #929 (docblock `@see`) → #933 (remodelé) | #933 gagne, empilé sur #929 |
+| `pwa/src/lib/api/schema.d.ts` (généré) | #929 (régénéré) → #934 (régénéré) | jamais édité à la main ; #929 et #934 tournent **seules** par construction |
+| `pwa/src/components/chat/PoiCard.tsx` | #934 (détour nullable + warning i18n) → #935 (8 catégories, carte cliquable) | empilés |
+
+Fichiers à **écrivain unique** dans le sprint (pas des recoupements, mais des dépendances de vague à noter) : `InRidePoiRepository.php` (#930 seul ; laissé orphelin par #929 sans être édité), `OpeningHoursParser.php` (#931 seul), `DetourCalculator.php` (#932 seul — `projectOnSegment` passée en `public static` ; #933 la **consomme** sans éditer le fichier), `PoiSuggestionDto.php` (#934 seul). #929 ne touche **ni** `InRidePoiRepository.php`, `OpeningHoursParser.php`, `DetourCalculator.php`, `PoiCard.tsx` — seulement `PoiSuggestion.php` et `schema.d.ts` parmi les fichiers ci-dessus.
 
 ### Écarts constatés en CI (corrigés dans les PRs)
 
