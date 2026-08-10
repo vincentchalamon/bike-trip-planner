@@ -20,9 +20,10 @@ on:
       - README.md
       - .github/workflows/docs.yml
 
-# Allow one concurrent deployment; do not cancel an in-progress Pages deploy.
+# One queue per ref: deploys (always on main) stay serialized among themselves,
+# while each PR build gets its own queue instead of blocking on the others.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 # Least-privilege default (matches deploy.yml): only the deploy job elevates.
@@ -41,7 +42,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install MkDocs Material
-        run: pip install mkdocs-material
+        run: pip install "mkdocs-material>=9,<10"
       - name: Build documentation (strict)
         run: mkdocs build --strict
       - name: Upload Pages artifact
