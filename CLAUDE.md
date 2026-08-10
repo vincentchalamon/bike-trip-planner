@@ -174,7 +174,7 @@ When a PR depends on another (a chain like `feature/a → feature/b → feature/
 - `gh stack rebase` detects a squash-merged parent and switches to `--onto` mode on its own, replaying only the child's commits — the manual cascade otherwise needed after every parent merge.
 - After pushing new commits to a parent, re-rebase every child onto it (the GitHub UI does not) so the stack stays consistent and no child hits a phantom conflict at merge time.
 
-If the extension is absent, fall back to the manual `feature/<dep>` base plus the `git rebase --onto origin/main <last-parent-commit> feature/<child>` recipe (see the `/sprint` skill, Phase 4). Sprint 52 ran the #987→#996→#999 stack this way and stayed consistent across a mid-sprint merge into the base.
+If the extension is absent, fall back to the manual `feature/<dep>` base plus the `git rebase --onto origin/main <last-parent-commit> feature/<child>` recipe (see the `/sprint` skill, Phase 4).
 
 ## Architecture
 
