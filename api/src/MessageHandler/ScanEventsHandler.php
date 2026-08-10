@@ -9,20 +9,21 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Geo\GeoDistanceInterface;
+use App\EventSource\EventSourceRegistry;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Tourism\EventRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
- * Attaches dated events to each stage: DataTourisme events read from the
- * local-first `tourism` schema (ADR-040, no longer the runtime REST API),
- * filtered to the stage's own date and a radius around its end point.
+ * Attaches dated events to each stage: multi-source events (DataTourisme today,
+ * OpenAgenda next — ADR-051) read from the local-first `tourism` schema (ADR-040,
+ * no longer the runtime REST API), filtered to the stage's own date and a radius
+ * around its end point, then deduplicated, relevance-filtered and distance-ranked
+ * by {@see EventSourceRegistry}.
  */
 #[AsMessageHandler]
 final readonly class ScanEventsHandler extends AbstractTripMessageHandler
@@ -35,8 +36,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private EventRepositoryInterface $eventRepository,
-        private GeoDistanceInterface $haversine,
+        private EventSourceRegistry $eventSources,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -77,8 +77,6 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     continue;
                 }
 
-                usort($events, static fn (Event $a, Event $b): int => $a->startDate <=> $b->startDate);
-
                 foreach ($events as $event) {
                     $stage->addEvent($event);
                 }
@@ -104,7 +102,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     {
         $events = [];
 
-        foreach ($this->eventRepository->findActiveNear(
+        foreach ($this->eventSources->findAllActiveNear(
             $stage->endPoint->lat,
             $stage->endPoint->lon,
             self::EVENT_RADIUS_METERS,
@@ -131,8 +129,8 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 url: $row['url'],
                 description: $row['description'],
                 priceMin: $row['priceMin'],
-                distanceToEndPoint: $this->haversine->inMeters($row['lat'], $row['lon'], $stage->endPoint->lat, $stage->endPoint->lon),
-                source: 'datatourisme',
+                distanceToEndPoint: $row['distanceToEndPoint'],
+                source: $row['source'],
             );
         }
 
