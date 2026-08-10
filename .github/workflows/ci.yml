@@ -51,10 +51,11 @@ jobs:
           # image/doc-only change runs at most the markdown jobs -- never the code/E2E jobs.
           # (.svg stays "code": it can be imported as a component via SVGR.)
           noncode='\.md$|\.(png|jpe?g|gif|webp|avif|ico)$'
-          # Recognised zones. Repo meta files (.git*, .github/** except workflows), the docs/ tree
-          # and the non-code assets above have no code impact. Fail-safe: run the full suite on
-          # non-PR events, on workflow changes, or when a file matches no zone.
-          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|'"$noncode"
+          # Recognised zones. Repo meta files (.git*, .github/** except workflows), the docs/ tree,
+          # the MkDocs config (mkdocs.yml, docs-only) and the non-code assets above have no code
+          # impact. Fail-safe: run the full suite on non-PR events, on workflow changes, or when a
+          # file matches no zone.
+          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|^mkdocs\.yml$|'"$noncode"
           run_all=false
           if [ "$EVENT_NAME" != "pull_request" ]; then run_all=true; fi
           if printf '%s\n' "$files" | grep -qE '^\.github/workflows/'; then run_all=true; fi
@@ -67,7 +68,7 @@ jobs:
           provisioner=$(flag '^provisioner/')
           pwa=$(flag '^pwa/')
           docker=$(flag '^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$')
-          if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE '\.md$'; then docs=true; else docs=false; fi
+          if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE '\.md$|^mkdocs\.yml$'; then docs=true; else docs=false; fi
           if [ "$api" = true ] || [ "$pwa" = true ] || [ "$docker" = true ]; then e2e=true; else e2e=false; fi
 
           {
