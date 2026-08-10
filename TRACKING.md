@@ -1688,7 +1688,7 @@ Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pur
 
 **Arbitrages produits :** le bouton « voir le segment » surligne le tracé complet sur la **carte MapLibre interne** (OSM externe ne sait pas surligner un multi-tronçon) ; la table du moteur d'alertes **quitte le README** pour `docs/alert-engine.md` (test `AlertDocumentationTest` adapté) ; `app:access-request:list` reste VERIFIED-only (le vrai bug est l'email, secret `ACCESS_REQUEST_HMAC_SECRET` vide → 500 masqué côté front) ; refresh des événements **hebdomadaire via tâche planifiée Coolify** (pas de service cron Compose, pas de Docker-socket — évite le piège ADR-033/036) avec **purge des événements passés centralisée dans l'upsert**.
 
-> ⚠️ **Lot événements = chaîne de dépendances.** #975 (colonne `source` + registry + dédup + filtrage/cap) est la fondation ; #984 (OpenAgenda) et #985 (events-refresh) en dépendent, #985 invoque l'importer de #984. #981 (front) est indépendante côté fichiers.
+> ⚠️ **Lot événements = chaîne linéaire #975 → #984 → #985.** #975 (colonne `source` + registry + dédup + filtrage/cap) est la fondation ; #984 (OpenAgenda) dépend de #975 ; #985 (events-refresh) dépend de #975 **et de #984** — son `EventsRefreshCommand` invoque `OpenAgendaImporter`, qui doit exister d'abord (dépendance d'implémentation, pas simple coordination). #981 (front) est indépendante côté fichiers.
 >
 > ⚠️ **`schema.d.ts` (généré).** #975 et #982 touchent des DTO (`Event`, `Alert`/`AlertAction`) → `make typegen` ; les faire tourner de façon à ne pas régénérer `schema.d.ts` en parallèle.
 >
@@ -1708,9 +1708,9 @@ Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pur
 | 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | 📋 Planifiée | - | — |
 | 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | 📋 Planifiée | - | — |
 | 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | 📋 Planifiée | - | #975 |
-| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 📋 Planifiée | - | #975 |
+| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 📋 Planifiée | - | #975, #984 |
 
-Vagues `/sprint` : {#976, #977, #978, #979, #980, #981, #982, #983, #975} en parallèle → {#984, #985} après le merge de #975.
+Vagues `/sprint` : {#976, #977, #978, #979, #980, #981, #982, #983, #975} en parallèle → {#984} après le merge de #975 → {#985} après le merge de #975 et #984.
 
 ### Recette Sprint 52
 
