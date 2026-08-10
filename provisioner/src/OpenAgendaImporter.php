@@ -20,11 +20,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * OpenAgenda feeds): stream-download the Opendatasoft JSONL export line by line,
  * {@see OpenAgendaMapper map} each record to an event row, write the rows to a COPY
  * file (constant memory regardless of the record count), bulk-load them into a
- * per-zone staging schema via psql COPY, then `INSERT ... SELECT` the ids the live
- * table does not already hold, clipped to the zone geometry. A failed import leaves
- * the previous dataset intact, and one source failing never touches the other's
- * rows (ADR-041): OpenAgenda writes `source='openagenda'`, the cross-source dedup
- * happening at read time in `App\EventSource\EventSourceRegistry`.
+ * per-zone staging schema via psql COPY, then upsert-and-purge the events clipped to
+ * the zone geometry ({@see EventsPromotion}: `ON CONFLICT (id) DO UPDATE` the mutable
+ * fields, then drop the events that have passed). Unlike the append-only place layers,
+ * events are perishable, so a refresh updates a moved date in place and purges what has
+ * ended (ADR-051 §4). A failed import leaves the previous dataset intact, and one source
+ * failing never touches the other's rows (ADR-041): OpenAgenda writes `source='openagenda'`,
+ * the cross-source dedup happening at read time in `App\EventSource\EventSourceRegistry`.
  *
  * The export is **national** while a run opens **one zone**, so the promotion is
  * clipped to that zone's registry geometry (ADR-049 §1), exactly as DataTourisme is.
@@ -38,11 +40,19 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * @phpstan-import-type Row from OpenAgendaMapper
  */
-final readonly class OpenAgendaImporter
+final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
 {
     private const string LIVE_SCHEMA = 'tourism';
 
     private const string SOURCE = 'openagenda';
+
+    /**
+     * Staging schema for the standalone events refresh (ADR-051 §4). Fixed, not per-zone:
+     * the refresh downloads the national export once and clips it to each open zone in
+     * turn, so one schema is loaded and reused. The provisioner lock serialises runs, and
+     * a `DROP ... IF EXISTS` at load time clears any schema a crashed run left behind.
+     */
+    private const string REFRESH_SCHEMA = 'openagenda_events_refresh';
 
     /**
      * COPY column order for the events table. `source` is written explicitly as
@@ -67,7 +77,7 @@ final readonly class OpenAgendaImporter
      */
     private \Closure $processFactory;
 
-    private ZonePromotion $promotion;
+    private EventsPromotion $promotion;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the psql processes; defaults to a real {@see Process}
@@ -91,7 +101,14 @@ final readonly class OpenAgendaImporter
             'https://public.opendatasoft.com/',
         );
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
-        $this->promotion = new ZonePromotion(self::SOURCE, self::LIVE_SCHEMA, ['events' => 'l.id = s.id']);
+        // Events are perishable, so promotion is upsert-and-purge, not the append-only
+        // anti-join {@see ZonePromotion} runs for places (ADR-051 §4).
+        $this->promotion = new EventsPromotion(self::SOURCE, self::LIVE_SCHEMA);
+    }
+
+    public function label(): string
+    {
+        return self::SOURCE;
     }
 
     /**
@@ -107,12 +124,15 @@ final readonly class OpenAgendaImporter
     /**
      * Downloads, stages and promotes the events covered by the zone.
      *
+     * @param string $today the purge boundary as `YYYY-MM-DD`, computed by the caller with
+     *                      an explicit timezone (see {@see EventsPromotion})
+     *
      * @return bool false when the zone has no registry geometry to clip against, so nothing
      *              was promoted — a skip, not a failure
      *
      * @throws ImportFailedException
      */
-    public function run(string $workDir, string $zoneSlug): bool
+    public function run(string $workDir, string $zoneSlug, string $today): bool
     {
         $staging = self::stagingSchema($zoneSlug);
 
@@ -130,10 +150,30 @@ final readonly class OpenAgendaImporter
             return false;
         }
 
-        $this->promote($zoneSlug, $staging);
+        $this->promote($zoneSlug, $staging, $today);
         $this->dropStaging($staging);
 
         return true;
+    }
+
+    public function stageEventsForRefresh(string $workDir): string
+    {
+        $jsonlPath = $workDir.'/openagenda-export.jsonl';
+        $this->download($jsonlPath);
+        $copyFile = $this->extract($jsonlPath, $workDir);
+        $this->load(self::REFRESH_SCHEMA, $copyFile);
+
+        return self::REFRESH_SCHEMA;
+    }
+
+    public function promoteEventsForZone(string $stagingSchema, string $zone, string $today): void
+    {
+        $this->promote($zone, $stagingSchema, $today);
+    }
+
+    public function dropRefreshStaging(string $stagingSchema): void
+    {
+        $this->dropStaging($stagingSchema);
     }
 
     /**
@@ -289,15 +329,16 @@ final readonly class OpenAgendaImporter
     }
 
     /**
-     * Promotes the staged events covered by the zone into the live schema in one
-     * transaction. Unlike DataTourisme, OpenAgenda does not refresh `tourism.metadata`:
-     * events feed a single table and DataTourisme owns that single-row snapshot. When
-     * both sources run, OpenAgenda is promoted before the DataTourisme finish, so the
-     * DataTourisme metadata refresh counts OpenAgenda's events in the live totals.
+     * Upserts the staged events covered by the zone into the live schema and purges past
+     * events, in one transaction (ADR-051 §4). Unlike DataTourisme, OpenAgenda does not
+     * refresh `tourism.metadata`: events feed a single table and DataTourisme owns that
+     * single-row snapshot. When both sources run, OpenAgenda is promoted before the
+     * DataTourisme finish, so the DataTourisme metadata refresh counts OpenAgenda's events
+     * in the live totals.
      *
      * @throws ImportFailedException
      */
-    private function promote(string $zoneSlug, string $stagingSchema): void
+    private function promote(string $zoneSlug, string $stagingSchema, string $today): void
     {
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
@@ -305,8 +346,8 @@ final readonly class OpenAgendaImporter
 
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
-            $this->promotion->sql($zoneSlug, $stagingSchema, clipToZone: $zoneSlug),
-        ], \sprintf('psql promote openagenda zone %s', $zoneSlug));
+            $this->promotion->sql($zoneSlug, $stagingSchema, $today),
+        ], \sprintf('psql upsert+purge openagenda events zone %s', $zoneSlug));
     }
 
     /**

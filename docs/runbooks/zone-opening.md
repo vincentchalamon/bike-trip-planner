@@ -157,6 +157,11 @@ Cheap, and worth understanding why:
 - **Completed, never replaced:** a row present with a NULL field can be filled by `COALESCE`.
   An existing value is never overwritten. The single exception is `last_seen_at`, which is
   metadata.
+- **Events are the exception to all of the above.** They are perishable, not append-only, so
+  they are **upsert-and-purged** (`ON CONFLICT (id) DO UPDATE`, then `DELETE … WHERE end_date <
+  today`), not anti-joined. An event whose dates moved is updated in place; a passed event is
+  dropped. Opening a zone refreshes its events this way, and the standalone weekly job does the
+  same for every open zone (ADR-051 §4 — see [events-refresh.md](events-refresh.md)).
 
 ### 6. Idempotence, as it actually is
 
@@ -170,8 +175,10 @@ The idempotence is that of the **PostGIS insertion step**, not of the whole run.
 - the DataTourisme flux is unchanged — and it is a **national ZIP re-downloaded in full on
   every run**, so this one is never free;
 - likewise the OpenAgenda export is a **national JSONL re-downloaded in full on every run**,
-  and events are perishable, so a re-open is how upcoming events reach the index (the weekly
-  refresh + purge is #985).
+  and events are perishable, so a re-open is how upcoming events reach the index. In
+  production you do not re-open a zone just to refresh its events: the weekly `events-refresh`
+  job (ADR-051 §4, [events-refresh.md](events-refresh.md)) does that for every open zone
+  without touching the append-only place tables.
 
 Do not describe a re-opening as a no-op. It re-downloads, re-filters and re-imports into
 staging; what it does not do is write to the live tables.

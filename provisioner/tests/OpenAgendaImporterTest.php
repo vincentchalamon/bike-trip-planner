@@ -99,7 +99,7 @@ final class OpenAgendaImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        self::assertTrue($importer->run($this->workDir, 'bretagne'));
+        self::assertTrue($importer->run($this->workDir, 'bretagne', '2026-07-15'));
 
         // 1 staging DDL + 1 \copy + 1 GiST index + 1 zone-geometry read
         // + 1 report DDL + 1 promotion + 1 staging drop.
@@ -145,7 +145,7 @@ final class OpenAgendaImporterTest extends TestCase
             processFactory: $this->capturingFactory(),
         );
 
-        $importer->run($this->workDir, 'bretagne');
+        $importer->run($this->workDir, 'bretagne', '2026-07-15');
 
         $events = (string) file_get_contents($this->workDir.'/openagenda-events.copy');
         self::assertSame(1, substr_count($events, "\n"), 'only the linked, dated festival is written');
@@ -173,7 +173,7 @@ final class OpenAgendaImporterTest extends TestCase
             processFactory: $this->capturingFactory(zoneOpen: false),
         );
 
-        self::assertFalse($importer->run($this->workDir, 'bretagne'));
+        self::assertFalse($importer->run($this->workDir, 'bretagne', '2026-07-15'));
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
         self::assertSame([], array_values(array_filter($joined, static fn (string $c): bool => str_contains($c, '--single-transaction'))), 'nothing is promoted');
@@ -202,7 +202,7 @@ final class OpenAgendaImporterTest extends TestCase
             httpClient: new MockHttpClient(new MockResponse($line."\n")),
             processFactory: $this->capturingFactory(),
         );
-        $importer->run($this->workDir, 'bretagne');
+        $importer->run($this->workDir, 'bretagne', '2026-07-15');
 
         $events = (string) file_get_contents($this->workDir.'/openagenda-events.copy');
         self::assertStringNotContainsString("\t\t", $events, 'a literal tab would split into extra columns');
@@ -221,6 +221,6 @@ final class OpenAgendaImporterTest extends TestCase
         );
 
         $this->expectException(ImportFailedException::class);
-        $importer->run($this->workDir, 'bretagne');
+        $importer->run($this->workDir, 'bretagne', '2026-07-15');
     }
 }

@@ -1,6 +1,6 @@
 # ADR-051: Multi-source Events, OpenAgenda, and the Temporal Lifecycle
 
-- **Status:** Accepted — events become a multi-source layer with a relevance-filtered, deduplicated, distance-ranked read. OpenAgenda is the second source (delivered separately, [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984)); the weekly temporal refresh is delivered separately ([#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985)). This ADR records the shared decision the three issues build on.
+- **Status:** Accepted — events become a multi-source layer with a relevance-filtered, deduplicated, distance-ranked read. OpenAgenda is the second source (delivered separately, [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984)); the weekly temporal refresh is delivered by [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) and its mechanism is recorded in §4 below. This ADR records the shared decision the three issues build on.
 - **Date:** 2026-08-10
 - **Depends on:** ADR-040 (Local-first reference data — single PostGIS source), ADR-026 (external data sources and attribution), ADR-049 (Zone opening and import-time completeness).
 - **Supersedes / relates to:** ADR-044 (removal of the data.gouv markets source) — the multi-source *shape* this ADR generalises is the one ADR-044 removed for markets; events reintroduce it deliberately, with the deduplication and relevance the markets experiment lacked.
@@ -41,7 +41,14 @@ The registry applies, after the merge and dedup, the rules that must hold identi
 
 ### 4. The temporal lifecycle is a periodic refresh, not the append-only place model
 
-Events are perishable, so the append-only / obsolescence-assumed storage of ADR-040 does not carry over unchanged. The events layer is refreshed on a schedule (weekly, orchestrated out of band — the detail is [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985)'s to fix), and a refresh **purges** events that have passed rather than accumulating them. This is the one place the reference-data storage model is intentionally *not* append-only, and it is scoped to events precisely because only events have an expiry. Places keep the ADR-040 model untouched.
+Events are perishable, so the append-only / obsolescence-assumed storage of ADR-040 does not carry over unchanged. This is the one place the reference-data storage model is intentionally *not* append-only, and it is scoped to events precisely because only events have an expiry. Places keep the ADR-040 model untouched.
+
+The refresh is delivered by [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) as a dedicated provisioner command, `events-refresh` (`provisioner/src/EventsRefreshCommand.php`, its own `bin/events-refresh` binary):
+
+- **Upsert, not append-only insert.** For every open zone (discovered from `osm.zones`, the same registry `provision` writes) the national feeds are re-downloaded once and each zone's events are promoted through `EventsPromotion`: `INSERT … ON CONFLICT (id) DO UPDATE` of the mutable fields (name, start/end date, url, description, price, category, tags, geom, source, `last_seen_at`). An event whose dates moved is updated in place, never duplicated. `zone` is *not* in the update set — it is provenance, recording which zone first imported the row. This replaces the append-only `ZonePromotion` path for events; places still go through it unchanged.
+- **Purge in the same transaction.** After the upsert, and in the same transaction, `DELETE FROM tourism.events WHERE end_date < :today` drops what has passed (a separate statement after the upsert, so it also removes a just-imported event that has already ended). The purge is global, not zone-scoped: a passed event is dead weight everywhere. `:today` is a calendar date computed once in the command with an explicit `Europe/Paris` timezone and spliced as a literal — never `now()` / `CURRENT_DATE` in SQL, whose day boundary would drift with the server timezone.
+- **Called both ways.** `provision <zone>` delegates its events promotion to the same `EventsPromotion` (the DataTourisme finish and the OpenAgenda run both upsert-and-purge instead of the old append-only events insert), so opening a zone and refreshing it agree byte-for-byte. `events-refresh` runs the same promotion for every open zone from one download per feed.
+- **Scheduling: a Coolify scheduled task, not a resurrected `osm-cron`.** The cron container of ADR-033 was removed (superseded by [ADR-036](adr-036-manual-osm-data-refresh.md)) for the Docker socket it needed and the Compose coupling it carried. `events-refresh` needs neither: it writes only `tourism.events` — no schema swap, no Valhalla restart, no socket — so it is scheduled out of band as a **weekly Coolify scheduled task** (default Sunday 03:00 UTC, configurable), running the provisioner image with the `events-refresh` entrypoint. This is a manual production-configuration step, documented in [docs/runbooks/events-refresh.md](../runbooks/events-refresh.md) and [docs/deployment.md](../deployment.md), not automated by this repository.
 
 ## Consequences
 
@@ -60,7 +67,7 @@ Events are perishable, so the append-only / obsolescence-assumed storage of ADR-
 ### Neutral
 
 - The 20 km radius and the 20-event cap are constants this ADR introduces but does not sanctify; they can be tuned without reopening the decision.
-- The temporal refresh mechanism (scheduler, purge SQL) is named here as a decision but specified and delivered in [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985); this ADR fixes only that events are refreshed-and-purged rather than accumulated.
+- The temporal refresh mechanism (the `events-refresh` command, the upsert + purge SQL, the weekly Coolify scheduled task) is specified in §4 and delivered by [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985). The scheduling itself is a manual production-configuration step, not automated by this repository.
 
 ## Sources
 

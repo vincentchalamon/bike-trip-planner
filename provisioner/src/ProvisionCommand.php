@@ -161,6 +161,11 @@ final class ProvisionCommand extends Command
             // Resolved once and reused for both halves: the unmapped-subtype count is
             // accumulated by the mapper while staging and read after promoting, so a second
             // instance would report zero.
+            // Pinned once for the whole run: the events purge boundary is a calendar date
+            // computed in Europe/Paris, never `now()` in SQL, so it does not drift with the
+            // server timezone (ADR-051 §4, EventsPromotion).
+            $today = DataTourismeImporter::today();
+
             $curated = $dryRun ? null : $this->resolveDataTourismeImporter($io);
             $curatedTable = null;
             $curatedOutcome = Command::SUCCESS;
@@ -177,7 +182,7 @@ final class ProvisionCommand extends Command
             // DataTourisme finish so the DataTourisme metadata refresh counts its events in the
             // live totals. Failing here degrades events alone.
             if (!$dryRun) {
-                $outcomes['openagenda'] = $this->runOpenAgenda($io, $zone['slug']);
+                $outcomes['openagenda'] = $this->runOpenAgenda($io, $zone['slug'], $today);
             }
 
             // Deliberately not gated on $outcomes['osm']: a failed OSM refresh must not block a
@@ -185,7 +190,7 @@ final class ProvisionCommand extends Command
             // precondition — a registry geometry to clip against — is checked by finish()
             // itself, which skips rather than promoting nothing and calling it a success.
             if ($curated instanceof DataTourismeImporter && Command::SUCCESS === $curatedOutcome) {
-                $curatedOutcome = $this->finishDataTourisme($io, $curated, $zone['slug']);
+                $curatedOutcome = $this->finishDataTourisme($io, $curated, $zone['slug'], $today);
             }
 
             if (!$dryRun) {
@@ -399,12 +404,12 @@ final class ProvisionCommand extends Command
         );
     }
 
-    private function finishDataTourisme(SymfonyStyle $io, DataTourismeImporter $importer, string $zoneSlug): int
+    private function finishDataTourisme(SymfonyStyle $io, DataTourismeImporter $importer, string $zoneSlug, string $today): int
     {
         $io->section('Promoting DataTourisme into PostGIS');
 
         try {
-            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug, $this->zonesDir);
+            $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug, $today, $this->zonesDir);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 
@@ -434,7 +439,7 @@ final class ProvisionCommand extends Command
      * gracefully when OpenAgenda is not configured — OSM and DataTourisme still
      * provision (ADR-041 continue-on-error).
      */
-    private function runOpenAgenda(SymfonyStyle $io, string $zoneSlug): int
+    private function runOpenAgenda(SymfonyStyle $io, string $zoneSlug, string $today): int
     {
         $importer = $this->resolveOpenAgendaImporter($io);
         if (!$importer instanceof OpenAgendaImporter) {
@@ -450,7 +455,7 @@ final class ProvisionCommand extends Command
         $io->section('Importing OpenAgenda events');
 
         try {
-            $promoted = $importer->run($this->openAgendaDir, $zoneSlug);
+            $promoted = $importer->run($this->openAgendaDir, $zoneSlug, $today);
         } catch (ImportFailedException $importFailedException) {
             $this->fail($io, $importFailedException->getMessage());
 

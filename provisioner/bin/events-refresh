@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__.'/../vendor/autoload.php';
+
+use Provisioner\EventsRefreshCommand;
+use Symfony\Component\Console\Application;
+
+// A separate binary, like bin/provision-override: bin/provision runs in single-command
+// mode, so `provisioner events-refresh` would pass "events-refresh" as the zone argument.
+// See EventsRefreshCommand.
+$app = new Application('Events Refresh');
+$app->addCommand(new EventsRefreshCommand());
+$app->setDefaultCommand('events-refresh', true);
+$app->run();

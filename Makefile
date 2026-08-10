@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -9,7 +9,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette provision-override
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette provision-override events-refresh
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   $(eval $(ARGS):;@:)
@@ -221,6 +221,14 @@ provision-override: ## Import operator corrections for a zone (e.g. make provisi
 provision-recette: ensure-jwt-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
 	@test -n "$(ARGS)" || { echo "Usage: make provision-recette <zone> (e.g. make provision-recette nord-pas-de-calais)"; exit 1; }
 	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner $(ARGS)
+
+# Events are perishable, so unlike reference data they are refreshed on a schedule: this
+# re-imports the feeds (DataTourisme + OpenAgenda) for every open zone and purges events
+# whose end_date has passed (ADR-051 §4). Writes only tourism.events — no schema swap, no
+# Valhalla restart. Runs weekly in prod as a Coolify scheduled task; see
+# docs/runbooks/events-refresh.md. Restrict to one zone with `make events-refresh -- --zone=bretagne`.
+events-refresh: ## Refresh events for every open zone and purge past ones (e.g. make events-refresh)
+	@docker compose --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/events-refresh $(ARGS)
 
 ## --- 🧭 Routing graph (Valhalla) ---
 # Country-grained and on its own calendar, independent of reference provisioning

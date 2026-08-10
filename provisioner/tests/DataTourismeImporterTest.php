@@ -154,8 +154,9 @@ final class DataTourismeImporterTest extends TestCase
         // + 1 zone-geometry precondition read (#885: no geometry, no promotion)
         // + 6 name-resolution psql calls (prepare, export candidates, apply, count gated,
         // gate, drop scratch; nothing to resolve in this fixture, so no cache write)
+        // + 1 events report DDL + 1 events upsert+purge (perishable, ADR-051 §4)
         // + 1 report DDL + 1 promotion + 1 staging drop.
-        self::assertCount(27, $this->captured);
+        self::assertCount(29, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);

@@ -26,6 +26,7 @@ Every runbook follows the same four sections:
 | [zone-opening.md](zone-opening.md) | Open or refresh a reference zone, in production and locally (reference dataset) |
 | [zone-opening-corrections.md](zone-opening-corrections.md) | Read what the completeness gate refused and correct it by hand |
 | [mobile-apk-local-testing.md](mobile-apk-local-testing.md) | Build + sideload the Android APK against a local API over ngrok |
+| [events-refresh.md](events-refresh.md) | Refresh the perishable events layer (upsert + purge) and set up the weekly scheduled task |
 | [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md) | Oracle Always Free instance reclaimed |
 | [incident-template.md](incident-template.md) | Post-mortem template |
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
