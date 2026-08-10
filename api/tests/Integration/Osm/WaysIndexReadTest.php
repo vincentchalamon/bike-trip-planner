@@ -83,18 +83,17 @@ final class WaysIndexReadTest extends KernelTestCase
     }
 
     /**
-     * The alert map highlight (issue #982) needs the way's osm_id and the ordered
-     * geometry of the clipped portion, projected as `[lat, lon]` polylines.
+     * The alert map highlight (issue #982) needs the ordered geometry of the
+     * clipped portion, projected as `[lat, lon]` polylines.
      */
     #[Test]
-    public function findInCorridorProjectsIdAndClippedGeometry(): void
+    public function findInCorridorProjectsTheClippedGeometry(): void
     {
         $ways = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
 
         self::assertCount(1, $ways);
         $way = $ways[0];
 
-        self::assertSame(1, $way['id']);
         // One clipped polyline, running end to end inside the corridor.
         self::assertCount(1, $way['geometry']);
         $polyline = $way['geometry'][0];
@@ -252,12 +251,11 @@ final class WaysIndexReadTest extends KernelTestCase
                     SELECT ST_Buffer(ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography, :radius)::geometry AS geom
                 ),
                 followed AS MATERIALIZED (
-                    SELECT w.osm_id AS osm_id, w.tags AS tags, ST_Intersection(w.geom, r.geom) AS geom
+                    SELECT w.tags AS tags, ST_Intersection(w.geom, r.geom) AS geom
                     FROM osm.ways AS w, ridden AS r
                     WHERE ST_Intersects(w.geom, r.geom)
                 )
-                SELECT f.osm_id AS id,
-                       ST_Y(_c.centroid) AS lat,
+                SELECT ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
                        ST_AsGeoJSON(f.geom) AS geometry,
@@ -285,7 +283,6 @@ final class WaysIndexReadTest extends KernelTestCase
         $ways = [];
         foreach ($rows as $row) {
             $ways[] = [
-                'id' => (int) $row['id'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),

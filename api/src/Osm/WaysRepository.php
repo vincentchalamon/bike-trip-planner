@@ -28,14 +28,13 @@ use Doctrine\DBAL\Connection;
  * superset and the result is identical to the unfiltered scan. See
  * WaysIndexReadTest for the behaviour guard.
  *
- * Besides the derived fields, each row carries its `osm_id` and the ordered
- * geometry of the *clipped* portion (`ST_AsGeoJSON`) so the terrain analyzers can
- * highlight the exact stretch of road an alert refers to on the internal map
- * (issue #982). The geometry is a list of polylines (a clip that enters and
- * leaves the corridor yields a MultiLineString), each a list of `[lat, lon]`
- * pairs.
+ * Besides the derived fields, each row carries the ordered geometry of the
+ * *clipped* portion (`ST_AsGeoJSON`) so the terrain analyzers can highlight the
+ * exact stretch of road an alert refers to on the internal map (issue #982). The
+ * geometry is a list of polylines (a clip that enters and leaves the corridor
+ * yields a MultiLineString), each a list of `[lat, lon]` pairs.
  *
- * @phpstan-type WayRow = array{id: int, lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float, geometry: list<list<array{0: float, 1: float}>>}
+ * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float, geometry: list<list<array{0: float, 1: float}>>}
  */
 final readonly class WaysRepository implements WaysRepositoryInterface
 {
@@ -97,8 +96,7 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                     -- Clip each candidate way to the corridor. Materialised so the
                     -- clip runs once per way and feeds the length, the centroid and
                     -- the highlight geometry below.
-                    SELECT w.osm_id AS osm_id,
-                           w.tags AS tags,
+                    SELECT w.tags AS tags,
                            ST_Intersection(w.geom, r.geom) AS geom
                     FROM osm.ways AS w,
                          bbox AS b,
@@ -106,8 +104,7 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                     WHERE w.geom && b.geom
                       AND ST_Intersects(w.geom, r.geom)
                 )
-                SELECT f.osm_id AS id,
-                       ST_Y(_c.centroid) AS lat,
+                SELECT ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
                        ST_AsGeoJSON(f.geom) AS geometry,
@@ -137,7 +134,6 @@ final readonly class WaysRepository implements WaysRepositoryInterface
         $ways = [];
         foreach ($rows as $row) {
             $ways[] = [
-                'id' => (int) $row['id'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),
