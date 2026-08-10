@@ -7,6 +7,7 @@ namespace Provisioner\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\DataTourismeImporter;
+use Provisioner\OpenAgendaImporter;
 use Provisioner\OsmDataDownloader;
 use Provisioner\PostgisImporter;
 use Provisioner\PromotionReport;
@@ -26,6 +27,8 @@ final class ProvisionCommandTest extends TestCase
 
     private string $routingDir;
 
+    private string|false $previousOpenAgendaDataset;
+
     protected function setUp(): void
     {
         $this->tmpDir = sys_get_temp_dir().'/provision-cmd-'.uniqid('', true);
@@ -37,10 +40,19 @@ final class ProvisionCommandTest extends TestCase
         // Default fixture: a routing graph covering France, so the containment check
         // passes unless a test deliberately empties it.
         file_put_contents($this->routingDir.'/france-latest.osm.pbf', 'graph');
+
+        // Keep the OpenAgenda step deterministic: unless a test injects an importer, it
+        // must resolve to "skipped", never to a live export driven by an ambient env var.
+        $this->previousOpenAgendaDataset = getenv('OPENAGENDA_DATASET');
+        putenv('OPENAGENDA_DATASET');
     }
 
     protected function tearDown(): void
     {
+        false === $this->previousOpenAgendaDataset
+            ? putenv('OPENAGENDA_DATASET')
+            : putenv('OPENAGENDA_DATASET='.$this->previousOpenAgendaDataset);
+
         $this->removeDir($this->tmpDir);
     }
 
@@ -67,6 +79,7 @@ final class ProvisionCommandTest extends TestCase
         ?DataTourismeImporter $dataTourismeImporter = null,
         ?string $lockFile = null,
         ?string $routingDir = null,
+        ?OpenAgendaImporter $openAgendaImporter = null,
     ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
@@ -78,6 +91,8 @@ final class ProvisionCommandTest extends TestCase
             postgisImporter: $postgisImporter,
             dataTourismeDir: $this->tmpDir.'/datatourisme',
             dataTourismeImporter: $dataTourismeImporter,
+            openAgendaDir: $this->tmpDir.'/openagenda',
+            openAgendaImporter: $openAgendaImporter,
             lockFile: $lockFile ?? $this->tmpDir.'/provision.lock',
             logFile: $this->tmpDir.'/provisioner.log',
             routingPerimeter: new RoutingPerimeter(
@@ -404,6 +419,90 @@ final class ProvisionCommandTest extends TestCase
         $export = array_values(array_filter($osmCommands, static fn (string $c): bool => str_contains($c, 'place-candidates.tsv')));
         self::assertCount(1, $export);
         self::assertStringContainsString('FROM tourism_staging_bretagne.accommodations t', $export[0]);
+    }
+
+    #[Test]
+    public function importsOpenAgendaEventsAfterOsmAndBeforeTheDatatourismeMetadataRefresh(): void
+    {
+        // OpenAgenda is events-only, so it runs entirely after the OSM step whose geometry it
+        // clips against, and before the DataTourisme finish so that finish's metadata refresh
+        // counts the OpenAgenda events in the live totals (ADR-051, #984).
+        /** @var list<string> $log */
+        $log = [];
+        $record = static function (string $step) use (&$log): void {
+            $log[] = $step;
+        };
+        $writeGeometry = static function (string $sql): void {
+            if (1 === preg_match("/TO '([^']+zone-geometry[^']*)'/", $sql, $matches)) {
+                file_put_contents($matches[1], "1\n");
+            }
+        };
+
+        $fluxZip = $this->emptyFluxZip();
+        $dataTourisme = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse($fluxZip)),
+            processFactory: static function (array $command) use ($record, $writeGeometry): Process {
+                $sql = end($command);
+                if (\is_string($sql) && str_contains($sql, 'INSERT INTO tourism.metadata')) {
+                    $record('datatourisme:promote');
+                } elseif (\is_string($sql) && str_contains($sql, 'CREATE SCHEMA tourism_staging_bretagne')) {
+                    $record('datatourisme:stage');
+                }
+
+                if (\is_string($sql)) {
+                    $writeGeometry($sql);
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $openAgenda = new OpenAgendaImporter(
+            exportUrl: 'https://public.opendatasoft.com/x',
+            httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse("\n")),
+            processFactory: static function (array $command) use ($record, $writeGeometry): Process {
+                if (\in_array('--single-transaction', $command, true)) {
+                    $record('openagenda:promote');
+                }
+
+                $sql = end($command);
+                if (\is_string($sql)) {
+                    $writeGeometry($sql);
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $osm = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static function (array $command) use ($record): Process {
+                if (str_contains(implode(' ', $command), 'osm2pgsql')) {
+                    $record('osm:import');
+                }
+
+                return new Process(['true']);
+            },
+        );
+
+        $tester = $this->buildTester(postgisImporter: $osm, dataTourismeImporter: $dataTourisme, openAgendaImporter: $openAgenda);
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+
+        self::assertSame(['datatourisme:stage', 'osm:import', 'openagenda:promote', 'datatourisme:promote'], $log);
+        self::assertMatchesRegularExpression('/\x{2713}\s*openagenda/u', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function anUnconfiguredOpenAgendaSourceIsSkippedGracefully(): void
+    {
+        // OPENAGENDA_DATASET is cleared in setUp(); with no importer injected the step must
+        // report a skip and leave the aggregate outcome successful (ADR-041 continue-on-error).
+        $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
+
+        self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
+        self::assertStringContainsString('OpenAgenda import skipped', $tester->getDisplay());
     }
 
     #[Test]

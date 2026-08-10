@@ -524,6 +524,13 @@ services:
       # skipped gracefully (OSM still provisions).
       DATATOURISME_FLUX_ID: "${DATATOURISME_FLUX_ID:-}"
       DATATOURISME_APP_KEY: "${DATATOURISME_APP_KEY:-}"
+      # OpenAgenda events source (ADR-051). The dataset slug of the Opendatasoft
+      # "evenements-publics-openagenda" export; when set, the provisioner streams the
+      # national JSONL export and promotes the zone's events with source='openagenda'.
+      # When absent the OpenAgenda step is skipped (OSM + DataTourisme still provision).
+      # OPENAGENDA_API_KEY is optional (the public export needs none).
+      OPENAGENDA_DATASET: "${OPENAGENDA_DATASET:-}"
+      OPENAGENDA_API_KEY: "${OPENAGENDA_API_KEY:-}"
     # One-shot OSM extract + PostGIS import; osm2pgsql needs more headroom than
     # the osmium merge (in-RAM node cache bounded via --cache). See ADR-040.
     deploy:

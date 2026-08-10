@@ -45,6 +45,8 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_DATATOURISME_DIR = '/data/datatourisme';
 
+    private const string DEFAULT_OPENAGENDA_DIR = '/data/openagenda';
+
     /**
      * Root of the per-zone report directory: `<zonesDir>/<zone>/rejected.tsv` (#886). Under
      * `/data`, which is bind-mounted, so the operator picks the file up on the host — and
@@ -78,6 +80,9 @@ final class ProvisionCommand extends Command
         private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
         // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
         private readonly ?DataTourismeImporter $dataTourismeImporter = null,
+        private readonly string $openAgendaDir = self::DEFAULT_OPENAGENDA_DIR,
+        // Built lazily in resolveOpenAgendaImporter() from OPENAGENDA_* env when not injected.
+        private readonly ?OpenAgendaImporter $openAgendaImporter = null,
         private readonly string $zonesDir = self::DEFAULT_ZONES_DIR,
         private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
         private readonly string $logFile = self::DEFAULT_LOG_FILE,
@@ -165,6 +170,15 @@ final class ProvisionCommand extends Command
             }
 
             $outcomes['osm'] = $this->runOsm($io, $zone, $dryRun, $curatedTable);
+
+            // OpenAgenda events (ADR-051, #984). Events-only, so it does not interleave with
+            // the OSM name gate: it runs entirely after OSM, whose geometry it clips against.
+            // Independent of the other sources' outcomes (ADR-041), and promoted *before* the
+            // DataTourisme finish so the DataTourisme metadata refresh counts its events in the
+            // live totals. Failing here degrades events alone.
+            if (!$dryRun) {
+                $outcomes['openagenda'] = $this->runOpenAgenda($io, $zone['slug']);
+            }
 
             // Deliberately not gated on $outcomes['osm']: a failed OSM refresh must not block a
             // DataTourisme refresh for a zone that is already open (ADR-041). The real
@@ -413,6 +427,77 @@ final class ProvisionCommand extends Command
         $this->logLine('INFO', \sprintf('datatourisme accommodations skipped (unmapped subtype) -> %d', $unmapped));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Downloads, stages and promotes the OpenAgenda events for the zone. Skipped
+     * gracefully when OpenAgenda is not configured — OSM and DataTourisme still
+     * provision (ADR-041 continue-on-error).
+     */
+    private function runOpenAgenda(SymfonyStyle $io, string $zoneSlug): int
+    {
+        $importer = $this->resolveOpenAgendaImporter($io);
+        if (!$importer instanceof OpenAgendaImporter) {
+            return Command::SUCCESS;
+        }
+
+        if (!is_dir($this->openAgendaDir) && !mkdir($this->openAgendaDir, 0o755, true) && !is_dir($this->openAgendaDir)) {
+            $io->error(\sprintf('Cannot create OpenAgenda work directory "%s"', $this->openAgendaDir));
+
+            return Command::FAILURE;
+        }
+
+        $io->section('Importing OpenAgenda events');
+
+        try {
+            $promoted = $importer->run($this->openAgendaDir, $zoneSlug);
+        } catch (ImportFailedException $importFailedException) {
+            $this->fail($io, $importFailedException->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        if (!$promoted) {
+            // No registry geometry to clip against: the OSM step did not complete. A skip,
+            // not a failure — the export is national and the next opening re-downloads it.
+            $message = 'OpenAgenda import skipped: the zone has no registry geometry to clip against, so the OSM step did not complete.';
+            $io->warning($message);
+            $this->logLine('INFO', $message);
+
+            return Command::SUCCESS;
+        }
+
+        $io->success('OpenAgenda events imported.');
+        $this->logLine('INFO', \sprintf('openagenda events imported for zone %s', $zoneSlug));
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * The configured importer, or null when OpenAgenda is not set up. Gated on the
+     * dataset (the "flux"): the Opendatasoft public export needs no key, but a private
+     * portal can supply one through OPENAGENDA_API_KEY.
+     */
+    private function resolveOpenAgendaImporter(SymfonyStyle $io): ?OpenAgendaImporter
+    {
+        if ($this->openAgendaImporter instanceof OpenAgendaImporter) {
+            return $this->openAgendaImporter;
+        }
+
+        $dataset = getenv('OPENAGENDA_DATASET') ?: '';
+        if ('' === $dataset) {
+            $io->warning('OpenAgenda import skipped: OPENAGENDA_DATASET is not set.');
+
+            return null;
+        }
+
+        $url = \sprintf('https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/%s/exports/jsonl', rawurlencode($dataset));
+        $apiKey = getenv('OPENAGENDA_API_KEY') ?: '';
+        if ('' !== $apiKey) {
+            $url .= '?apikey='.rawurlencode($apiKey);
+        }
+
+        return new OpenAgendaImporter($url);
     }
 
     /**

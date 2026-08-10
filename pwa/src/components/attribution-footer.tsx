@@ -63,6 +63,21 @@ export function AttributionFooter() {
               </p>
             </li>
             <li>
+              <p className="font-medium">OpenAgenda</p>
+              <p className="text-muted-foreground">
+                {t("openagendaCredit")}{" "}
+                <a
+                  href="https://www.etalab.gouv.fr/licence-ouverte-open-licence"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground"
+                  data-testid="attribution-openagenda-link"
+                >
+                  {t("licenceOuverte")}
+                </a>
+              </p>
+            </li>
+            <li>
               <p className="font-medium">Wikidata</p>
               <p className="text-muted-foreground">
                 {t("wikidataCredit")}{" "}

@@ -1115,6 +1115,7 @@
     "description": "Bike Trip Planner uses the following open data sources.",
     "osmCredit": "© OpenStreetMap contributors —",
     "datatourismeCredit": "© DataTourisme —",
+    "openagendaCredit": "© OpenAgenda contributors —",
     "wikidataCredit": "Data under",
     "licenceOuverte": "Licence Ouverte 2.0"
   },
@@ -1151,7 +1152,7 @@
         "title": "Intellectual property",
         "paragraphs": [
           "The Bike Trip Planner source code is distributed under an open-source license; the usage and redistribution terms are available in the GitHub repository.",
-          "Route and mapping data come from third-party sources (OpenStreetMap, DataTourisme, Wikidata) and remain subject to their respective licenses, credited within the application.",
+          "Route and mapping data come from third-party sources (OpenStreetMap, DataTourisme, OpenAgenda, Wikidata) and remain subject to their respective licenses, credited within the application.",
           "Third-party trademarks, logos and content (Komoot, Strava, RideWithGPS, Garmin, Wahoo) remain the property of their respective owners."
         ]
       }
