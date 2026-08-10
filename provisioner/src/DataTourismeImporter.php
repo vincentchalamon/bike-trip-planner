@@ -339,7 +339,9 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     {
         $zipPath = $workDir.'/datatourisme-flux.zip';
         $this->download($zipPath);
-        $copyFiles = $this->extract($zipPath, $workDir);
+        // Events only: the weekly refresh must not write the three place COPY files
+        // (the bulk of the national flux) to disk just to discard them (ADR-051 §4).
+        $copyFiles = $this->extract($zipPath, $workDir, ['events']);
         $this->loadEventsOnly(self::EVENTS_REFRESH_SCHEMA, $copyFiles['events']);
 
         return self::EVENTS_REFRESH_SCHEMA;
@@ -414,20 +416,29 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      * Wikidata enrichment collects its Q-IDs straight from the loaded staging
      * tables (see {@see WikidataEnrichmentPass}), so nothing is tracked here.
      *
+     * @param list<string>|null $onlyTables when set, only these tables get a COPY file;
+     *                                      rows mapped to any other table are parsed but
+     *                                      not written (the events refresh needs `events`
+     *                                      alone and must not spill the place tables to disk)
+     *
      * @return array<string, string> table name => COPY file path
      *
      * @throws ImportFailedException
      */
-    private function extract(string $zipPath, string $workDir): array
+    private function extract(string $zipPath, string $workDir, ?array $onlyTables = null): array
     {
         $zip = new \ZipArchive();
         if (true !== $zip->open($zipPath)) {
             throw new ImportFailedException(\sprintf('Cannot open the flux ZIP "%s"', $zipPath));
         }
 
+        $tables = null === $onlyTables
+            ? array_keys(self::TABLE_COLUMNS)
+            : array_values(array_intersect(array_keys(self::TABLE_COLUMNS), $onlyTables));
+
         $handles = [];
         $files = [];
-        foreach (array_keys(self::TABLE_COLUMNS) as $table) {
+        foreach ($tables as $table) {
             $path = \sprintf('%s/tourism-%s.copy', $workDir, $table);
             $handle = fopen($path, 'w');
             if (false === $handle) {
@@ -469,6 +480,11 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             }
 
             $table = $heads[$row['head']];
+            // A row for a table not requested (events-only refresh) is parsed but dropped.
+            if (!isset($handles[$table])) {
+                continue;
+            }
+
             fwrite($handles[$table], $this->copyLine($table, $row));
         }
 

@@ -186,6 +186,27 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     #[Test]
+    public function eventsRefreshExtractsEventsOnlyAndNeverSpillsThePlaceTables(): void
+    {
+        $httpClient = new MockHttpClient(new MockResponse($this->fluxZipBytes()));
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://diffuseur.datatourisme.fr/webservice/flux/key',
+            httpClient: $httpClient,
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->stageEventsForRefresh($this->workDir);
+
+        // Only the events COPY file is written; the three place tables — the bulk of the
+        // national flux — must not be spilled to disk by the weekly refresh (ADR-051 §4).
+        self::assertFileExists($this->workDir.'/tourism-events.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-cultural_pois.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-food_pois.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-accommodations.copy');
+    }
+
+    #[Test]
     public function stagesAGeographyIndexForTheGeometricMatch(): void
     {
         // The match of #885 filters on `ST_DWithin(t.geom::geography, …)`, and a cast makes the
