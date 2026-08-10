@@ -154,8 +154,9 @@ final class DataTourismeImporterTest extends TestCase
         // + 1 zone-geometry precondition read (#885: no geometry, no promotion)
         // + 6 name-resolution psql calls (prepare, export candidates, apply, count gated,
         // gate, drop scratch; nothing to resolve in this fixture, so no cache write)
+        // + 1 events report DDL + 1 events upsert+purge (perishable, ADR-051 §4)
         // + 1 report DDL + 1 promotion + 1 staging drop.
-        self::assertCount(27, $this->captured);
+        self::assertCount(29, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging_bretagne', $ddl);
@@ -182,6 +183,27 @@ final class DataTourismeImporterTest extends TestCase
             self::assertStringNotContainsString('DROP SCHEMA IF EXISTS tourism CASCADE', $command);
             self::assertStringNotContainsString('RENAME TO tourism', $command);
         }
+    }
+
+    #[Test]
+    public function eventsRefreshExtractsEventsOnlyAndNeverSpillsThePlaceTables(): void
+    {
+        $httpClient = new MockHttpClient(new MockResponse($this->fluxZipBytes()));
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://diffuseur.datatourisme.fr/webservice/flux/key',
+            httpClient: $httpClient,
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->stageEventsForRefresh($this->workDir);
+
+        // Only the events COPY file is written; the three place tables — the bulk of the
+        // national flux — must not be spilled to disk by the weekly refresh (ADR-051 §4).
+        self::assertFileExists($this->workDir.'/tourism-events.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-cultural_pois.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-food_pois.copy');
+        self::assertFileDoesNotExist($this->workDir.'/tourism-accommodations.copy');
     }
 
     #[Test]
