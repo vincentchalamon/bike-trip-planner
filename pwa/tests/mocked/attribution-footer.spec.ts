@@ -40,7 +40,7 @@ test.describe("attribution footer", () => {
     await expect(modal).toBeVisible();
   });
 
-  test("modal contains all three data sources", async ({ page }) => {
+  test("modal contains all four data sources", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -53,6 +53,7 @@ test.describe("attribution footer", () => {
     await expect(
       page.getByTestId("attribution-datatourisme-link"),
     ).toBeVisible();
+    await expect(page.getByTestId("attribution-openagenda-link")).toBeVisible();
     await expect(page.getByTestId("attribution-wikidata-link")).toBeVisible();
   });
 

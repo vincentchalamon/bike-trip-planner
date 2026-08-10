@@ -130,6 +130,9 @@ final class OpenAgendaMapperTest extends TestCase
         yield 'show' => [['Spectacle de danse'], 'show'];
         yield 'unmapped keyword falls back to the dropped generic' => [['Conférence'], 'event'];
         yield 'no keyword at all' => [[], 'event'];
+        // Word-boundary matching: a needle embedded in a larger word must not match.
+        yield 'transport does not embed-match sport' => [['Transport en commun'], 'event'];
+        yield 'demarche does not embed-match marche' => [['Démarche administrative'], 'event'];
     }
 
     #[Test]

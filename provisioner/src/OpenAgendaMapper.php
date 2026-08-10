@@ -122,7 +122,7 @@ final class OpenAgendaMapper
         $haystack = implode(' ', $keywords);
 
         foreach (self::YOUTH_KEYWORDS as $marker) {
-            if (str_contains($haystack, $marker)) {
+            if ($this->containsWord($haystack, $marker)) {
                 return 'youth';
             }
         }
@@ -134,12 +134,23 @@ final class OpenAgendaMapper
         }
 
         foreach (self::KEYWORD_CATEGORY as $needle => $category) {
-            if (str_contains($haystack, $needle)) {
+            if ($this->containsWord($haystack, $needle)) {
                 return $category;
             }
         }
 
         return 'event';
+    }
+
+    /**
+     * Whole-word match on the space-joined keyword haystack. A bare
+     * `str_contains` would misclassify words that merely embed a needle —
+     * "transport" contains "sport", "demarche" contains "marche" — so matching
+     * is anchored to word boundaries.
+     */
+    private function containsWord(string $haystack, string $needle): bool
+    {
+        return 1 === preg_match('/\b'.preg_quote($needle, '/').'\b/u', $haystack);
     }
 
     /**
