@@ -170,7 +170,7 @@ Commit messages **must** follow [Conventional Commits](https://www.conventionalc
 
 When a PR depends on another (a chain like `feature/a → feature/b → feature/c`), prefer GitHub's native stacks via the `gh stack` extension (`github/gh-stack`) when it is installed:
 
-- `gh stack link <bottom-pr> <next-pr> …` wires already-open PRs into a stack on GitHub (bottom-to-top), without adopting local tracking — ideal when the PRs already exist with the right `feature/<dep>` bases.
+- `gh stack link <bottom-pr> <next-pr> …` wires already-open PRs into a stack on GitHub (bottom-to-top), without adopting local tracking — ideal when the PRs already exist with the right `feature/<dep>` bases. (`link` is a real subcommand of the installed extension — `github/gh-stack` v0.1.0, verified via `gh stack --help`; the `/sprint` skill documents the from-scratch `init`/`add`/`submit` flow instead, which does not cover adopting pre-existing PRs.)
 - `gh stack rebase` detects a squash-merged parent and switches to `--onto` mode on its own, replaying only the child's commits — the manual cascade otherwise needed after every parent merge.
 - After pushing new commits to a parent, re-rebase every child onto it (the GitHub UI does not) so the stack stays consistent and no child hits a phantom conflict at merge time.
 
