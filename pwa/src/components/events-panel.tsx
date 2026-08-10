@@ -2,17 +2,22 @@
 
 import { useState } from "react";
 import { CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { EventItem } from "@/components/event-item";
 import type { EventData } from "@/lib/validation/schemas";
+
+const DEFAULT_VISIBLE = 3;
 
 interface EventsPanelProps {
   events: EventData[];
 }
 
 export function EventsPanel({ events }: EventsPanelProps) {
+  const t = useTranslations("events");
   const [expanded, setExpanded] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   if (events.length === 0) {
     return null;
@@ -21,6 +26,9 @@ export function EventsPanel({ events }: EventsPanelProps) {
   const sorted = [...events].sort(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
   );
+
+  const visible = showAll ? sorted : sorted.slice(0, DEFAULT_VISIBLE);
+  const hidden = sorted.length - visible.length;
 
   return (
     <div data-testid="events-panel">
@@ -44,13 +52,23 @@ export function EventsPanel({ events }: EventsPanelProps) {
       </Button>
 
       {expanded && (
-        <div
-          className="mt-2 divide-y divide-border"
-          data-testid="events-panel-content"
-        >
-          {sorted.map((event, i) => (
-            <EventItem key={`${event.name}-${i}`} event={event} />
-          ))}
+        <div className="mt-2 pl-[22px] pr-1" data-testid="events-panel-content">
+          <div className="divide-y divide-border">
+            {visible.map((event, i) => (
+              <EventItem key={`${event.name}-${i}`} event={event} />
+            ))}
+          </div>
+          {hidden > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-auto px-0 py-1 text-xs text-primary hover:bg-transparent hover:underline"
+              onClick={() => setShowAll(true)}
+              data-testid="events-panel-show-more"
+            >
+              {t("show_more", { count: hidden })}
+            </Button>
+          )}
         </div>
       )}
     </div>
