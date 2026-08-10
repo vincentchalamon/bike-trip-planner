@@ -71,8 +71,24 @@ make provision bretagne     # slug or display name
 One zone per run, and the argument is mandatory — there is no cumulative selection and no
 selection file. What happens, in order: the DataTourisme flux is staged, the zone's Geofabrik
 extract is downloaded and imported into a staging schema of its own, names are resolved, the
-completeness gate refuses what it cannot complete, and the survivors are promoted into the
-live tables in a single transaction.
+completeness gate refuses what it cannot complete, the OpenAgenda events export is imported
+(clipped to the zone), and the survivors of each source are promoted into the live tables in a
+single transaction.
+
+**Events come from two sources (ADR-051).** DataTourisme and OpenAgenda both feed
+`tourism.events`, each stamping its own `source` column; the runtime deduplicates the overlap
+at read time (`EventSourceRegistry`). Both are optional and skipped gracefully when their
+credentials are absent — OSM always provisions. The environment they read (mirrors the
+DataTourisme pattern, all set on the `provisioner` service in `compose.yaml`):
+
+| Source | Env | Notes |
+|---|---|---|
+| DataTourisme | `DATATOURISME_FLUX_ID`, `DATATOURISME_APP_KEY` | national flux ZIP; feeds POIs, accommodations and events |
+| OpenAgenda | `OPENAGENDA_DATASET` (+ optional `OPENAGENDA_API_KEY`) | Opendatasoft dataset slug of the national JSONL export (e.g. `evenements-publics-openagenda`); events only |
+
+OpenAgenda runs **after** the OSM step (it clips its national export to the zone geometry the
+OSM import produces) and **before** the DataTourisme promotion, so the DataTourisme metadata
+refresh counts its events in the live totals.
 
 **Opening a second zone keeps the first.** Promotion is an `INSERT ... SELECT` restricted to
 keys the live tables do not already hold — never a schema swap — so no other zone is exposed
@@ -152,7 +168,10 @@ The idempotence is that of the **PostGIS insertion step**, not of the whole run.
 - the 30-day TTL of the Wikidata cache has not expired, otherwise the enrichment queries
   Wikidata again for the expired Q-IDs;
 - the DataTourisme flux is unchanged — and it is a **national ZIP re-downloaded in full on
-  every run**, so this one is never free.
+  every run**, so this one is never free;
+- likewise the OpenAgenda export is a **national JSONL re-downloaded in full on every run**,
+  and events are perishable, so a re-open is how upcoming events reach the index (the weekly
+  refresh + purge is #985).
 
 Do not describe a re-opening as a no-op. It re-downloads, re-filters and re-imports into
 staging; what it does not do is write to the live tables.
