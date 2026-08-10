@@ -89,11 +89,11 @@ Tool calling is consistently ~3× faster (less output to generate — just the t
 
 1. **JSON-Schema leakage into argument values (5 / 20 cases).** The model emits the schema *fragment* in the place of the value:
 
-   ```json
-   {"name":"split_stage","args":{"stage":{"description":"The 1-based index of the stage to split","type":"integer"}}}
-   ```
+    ```json
+    {"name":"split_stage","args":{"stage":{"description":"The 1-based index of the stage to split","type":"integer"}}}
+    ```
 
-   Same prompt, run through the JSON envelope, gives the correct `{"action":"split_stage","params":{"stage":2}}`.
+    Same prompt, run through the JSON envelope, gives the correct `{"action":"split_stage","params":{"stage":2}}`.
 
 2. **Wrong tool selection on conversational prompts (2 / 3 "info" cases).** `Bonjour !` triggers `split_stage(stage=1)`; `Quelle est la différence entre gravel et bikepacking ?` triggers `split_stage(stage=2)`. The JSON envelope correctly returns `info` in all three "info" cases.
 
@@ -118,9 +118,9 @@ These observations are **specific to ~3B-parameter local models**. On a 70B+ mod
 1. `App\Llm\OllamaClient` is rewritten as a thin façade over `Symfony\AI\Platform\PlatformInterface` (Ollama bridge wired through the bundle, pointing to the existing scoped `ollama.client` HTTP client). The `LlmClientInterface` contract is preserved; every caller is untouched. Return shapes remain `['response' => string]` for `generate()` and `['message' => ['content' => string]]` for `chat()` so the existing JSON-envelope flow keeps working.
 2. The dialogue layer **keeps the JSON envelope** (`SystemPrompt/dialogue.txt` + `ChatActionInterpreter`). No `#[AsTool]` classes in production.
 3. **Not adopted (for now):**
-   - `symfony/ai-chat` — `ChatHistoryStore` (Redis hot window) and `TripChatMessage` (PostgreSQL audit with action / GPS / POIs) carry domain semantics that `MessageStoreInterface::save(MessageBag)` cannot express.
-   - `symfony/ai-store` — no current product need for embeddings / vector search; Overpass + regex-based `PoiIntentDetector` covers the in-ride flow.
-   - `symfony/ai-mcp` — no need yet to expose this app as an MCP server.
+    - `symfony/ai-chat` — `ChatHistoryStore` (Redis hot window) and `TripChatMessage` (PostgreSQL audit with action / GPS / POIs) carry domain semantics that `MessageStoreInterface::save(MessageBag)` cannot express.
+    - `symfony/ai-store` — no current product need for embeddings / vector search; Overpass + regex-based `PoiIntentDetector` covers the in-ride flow.
+    - `symfony/ai-mcp` — no need yet to expose this app as an MCP server.
 
 ### Implementation notes
 

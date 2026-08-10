@@ -35,8 +35,8 @@ Pour tout secret sauf cas spécifiques (cf. section suivante) :
 1. **Révoquer immédiatement** côté provider (Backblaze, Resend, Anthropic, GitHub PAT…). Couper l'accès en premier, regénérer ensuite.
 2. **Générer une nouvelle valeur** côté provider, scope minimal (ex. B2 : limiter au bucket `btp-backups`).
 3. **Mettre à jour** la localisation source listée dans [secrets-inventory.md](secrets-inventory.md) :
-   - Coolify env → UI ou `coolify env set`
-   - GitHub secret → `gh secret set <NAME>` ou UI repo settings
+    - Coolify env → UI ou `coolify env set`
+    - GitHub secret → `gh secret set <NAME>` ou UI repo settings
 4. **Redéployer** si runtime secret : tag `vX.Y.Z+1-rotation` ou re-trigger `deploy.yml` manuellement.
 5. **Vérifier** : `curl https://<host>/api/healthz` + `curl https://<host>/api/health` verts ; pour CI secret, déclencher le workflow concerné.
 6. **Tracer** dans un commentaire de l'issue d'incident liée (`incident-template.md`) : qui, quand, quel secret, raison.
@@ -49,9 +49,9 @@ La rotation **ne re-chiffre pas** l'historique des backups : trop coûteux, et l
 
 1. Sur un poste de confiance, hors-ligne si possible :
 
-   ```bash
-   age-keygen -o age-key-$(date +%Y%m%d).txt
-   ```
+    ```bash
+    age-keygen -o age-key-$(date +%Y%m%d).txt
+    ```
 
 2. Dans **Bitwarden vault** : **renommer l'item courant** `bike-trip-planner / age private key` en `bike-trip-planner / age private key legacy YYYYMMDD` (date de la dernière utilisation comme clé courante). **Créer un nouvel item** `bike-trip-planner / age private key` (nom canonique conservé) contenant la nouvelle clé privée. Le bootstrap DR cherche toujours le nom canonique ; les items `legacy *` ne servent qu'à restaurer les dumps antérieurs et doivent être conservés indéfiniment.
 3. Mettre à jour `AGE_RECIPIENT` dans Coolify (env du service `backup`) avec la nouvelle clé publique.
@@ -65,17 +65,17 @@ Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérific
 
 1. Sur la VM, dans le container `php` éphémère :
 
-   ```bash
-   docker compose exec php bin/console lexik:jwt:generate-keypair --overwrite
-   ```
+    ```bash
+    docker compose exec php bin/console lexik:jwt:generate-keypair --overwrite
+    ```
 
-   Cela écrit les PEM dans `/app/config/jwt/` (espace de travail du container). Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** ; extraire les fichiers générés :
+    Cela écrit les PEM dans `/app/config/jwt/` (espace de travail du container). Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** ; extraire les fichiers générés :
 
-   ```bash
-   docker cp php:/app/config/jwt/private.pem /etc/bike-trip-planner/jwt/private.pem
-   docker cp php:/app/config/jwt/public.pem  /etc/bike-trip-planner/jwt/public.pem
-   chmod 600 /etc/bike-trip-planner/jwt/private.pem
-   ```
+    ```bash
+    docker cp php:/app/config/jwt/private.pem /etc/bike-trip-planner/jwt/private.pem
+    docker cp php:/app/config/jwt/public.pem  /etc/bike-trip-planner/jwt/public.pem
+    chmod 600 /etc/bike-trip-planner/jwt/private.pem
+    ```
 
 2. Mettre à jour `JWT_PASSPHRASE` dans Coolify (utiliser la passphrase saisie lors de la regen).
 3. Redéployer la stack pour que `php` et `worker` rechargent les secrets Docker.
@@ -97,10 +97,10 @@ Downtime ~30 s acceptable. Faire en heure creuse.
 
 1. Sur la VM :
 
-   ```bash
-   docker compose exec database psql -U "$DATABASE_USERNAME" -d "$DATABASE_NAME" -c \
-     "ALTER USER \"$DATABASE_USERNAME\" WITH PASSWORD '<NEW_PASSWORD>';"
-   ```
+    ```bash
+    docker compose exec database psql -U "$DATABASE_USERNAME" -d "$DATABASE_NAME" -c \
+      "ALTER USER \"$DATABASE_USERNAME\" WITH PASSWORD '<NEW_PASSWORD>';"
+    ```
 
 2. Mettre à jour `DATABASE_PASSWORD` dans Coolify env.
 3. Redéployer (Coolify) — `php`, `worker`, `backup` reprennent la nouvelle valeur via le DSN.

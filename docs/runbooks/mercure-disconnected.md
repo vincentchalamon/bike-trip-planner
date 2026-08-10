@@ -39,26 +39,26 @@ new EventSource('/.well-known/mercure?topic=' + encodeURIComponent('https://exam
 
 1. **Restart the hub** — Mercure is embedded in the `php` edge, so restart `php` (idempotent):
 
-   ```bash
-   docker compose restart php
-   ```
+    ```bash
+    docker compose restart php
+    ```
 
 2. **If the JWT secret rotated**, regenerate it across services. The publisher key lives in the PHP container, the subscriber key in the PWA build. Both must share `MERCURE_JWT_SECRET`:
 
-   ```bash
-   docker compose exec php php -r 'echo bin2hex(random_bytes(32))."\n";'
-   ```
+    ```bash
+    docker compose exec php php -r 'echo bin2hex(random_bytes(32))."\n";'
+    ```
 
-   Update the Coolify environment for `php` and `pwa`, then redeploy. Mismatched keys produce silent 401s with no obvious symptom beyond reconnect loops.
+    Update the Coolify environment for `php` and `pwa`, then redeploy. Mismatched keys produce silent 401s with no obvious symptom beyond reconnect loops.
 
 3. **Reset reconnect state on the PWA** — the Mercure client (`pwa/src/lib/mercure/client.ts`) backs off exponentially. After a hub restart, ask users to refresh; the `use-mercure` hook will re-subscribe automatically.
 
 4. **Check the edge** — the Caddy reverse-proxy and the Mercure hub both run inside the `php` (FrankenPHP) container. If routing looks wrong:
 
-   ```bash
-   docker compose logs --tail=100 php | grep -i mercure
-   docker compose restart php
-   ```
+    ```bash
+    docker compose logs --tail=100 php | grep -i mercure
+    docker compose restart php
+    ```
 
 ## Post-action
 

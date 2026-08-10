@@ -43,30 +43,30 @@ docker compose logs --tail=200 php
 
 1. **Retry transient failures** — if the `failed` transport contains messages that should succeed (external API blip):
 
-   ```bash
-   docker compose exec php bin/console messenger:failed:retry --force
-   ```
+    ```bash
+    docker compose exec php bin/console messenger:failed:retry --force
+    ```
 
 2. **Restart workers gracefully** — sends `SIGTERM`, current message finishes, Redis visibility timeout prevents double-processing:
 
-   ```bash
-   docker compose exec php bin/console messenger:stop-workers
-   docker compose restart php
-   ```
+    ```bash
+    docker compose exec php bin/console messenger:stop-workers
+    docker compose restart php
+    ```
 
 3. **Drop poison messages** — only after copying the payload to the incident issue:
 
-   ```bash
-   docker compose exec php bin/console messenger:failed:remove <id>
-   ```
+    ```bash
+    docker compose exec php bin/console messenger:failed:remove <id>
+    ```
 
 4. **Last resort — full flush** (drops in-flight trip computations; users must retry from the PWA):
 
-   ```bash
-   make flush-queue
-   ```
+    ```bash
+    make flush-queue
+    ```
 
-   This stops workers, runs `app:messenger:clear --all`, and purges the `cache.trip_state` pool.
+    This stops workers, runs `app:messenger:clear --all`, and purges the `cache.trip_state` pool.
 
 ## Post-action
 
