@@ -48,8 +48,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private AccessRequestHmacService $hmacService,
         #[Autowire(service: 'limiter.access_request_ip')]
         private RateLimiterFactory $accessRequestIpLimiter,
-        #[Autowire(env: 'BACKEND_URL')]
-        private string $backendUrl = 'https://localhost',
+        #[Autowire(env: 'FRONTEND_URL')]
+        private string $frontendUrl = 'https://localhost',
         #[Autowire(env: 'MAILER_SENDER_EMAIL')]
         private string $senderEmail = 'noreply@bike-trip-planner.com',
     ) {
@@ -102,11 +102,15 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        // Generate HMAC-signed verification URL
+        // Generate HMAC-signed verification URL. It points at the FRONTEND route
+        // (like the magic-link and email-change emails): the /access-requests/verify
+        // page then calls the backend via fetch. Using FRONTEND_URL means the link
+        // uses the public origin (e.g. the ngrok host in mobile testing) instead of
+        // the internal https://localhost.
         $payload = $this->hmacService->generatePayload($email);
         $verifyUrl = \sprintf(
             '%s/access-requests/verify?email=%s&expires=%d&signature=%s',
-            rtrim($this->backendUrl, '/'),
+            rtrim($this->frontendUrl, '/'),
             urlencode($payload['email']),
             $payload['expires'],
             $payload['signature'],
