@@ -1678,3 +1678,53 @@ Fichiers à **écrivain unique** dans le sprint (pas des recoupements, mais des 
   - [x] La table `trip_chat_message` était encore présente à la clôture du sprint ; sa suppression (#937, PR #971) a finalement été livrée en pré-lancement plutôt qu'à la release suivante — exception ponctuelle enregistrée dans l'addendum ADR-032 (aucun tag `v*` coupé, aucune donnée de prod à protéger).
 
 </details>
+
+<details><summary>
+
+## Sprint 52 - Recette août 2026
+
+</summary>
+Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pure (#976-#983) et une feature qualité-données sur les événements (#975, #984, #985), ajoutée au sprint sur demande. Plan détaillé hors dépôt (`~/.claude/plans/`).
+
+**Arbitrages produits :** le bouton « voir le segment » surligne le tracé complet sur la **carte MapLibre interne** (OSM externe ne sait pas surligner un multi-tronçon) ; la table du moteur d'alertes **quitte le README** pour `docs/alert-engine.md` (test `AlertDocumentationTest` adapté) ; `app:access-request:list` reste VERIFIED-only (le vrai bug est l'email, secret `ACCESS_REQUEST_HMAC_SECRET` vide → 500 masqué côté front) ; refresh des événements **hebdomadaire via tâche planifiée Coolify** (pas de service cron Compose, pas de Docker-socket — évite le piège ADR-033/036) avec **purge des événements passés centralisée dans l'upsert**.
+
+> ⚠️ **Lot événements = chaîne de dépendances.** #975 (colonne `source` + registry + dédup + filtrage/cap) est la fondation ; #984 (OpenAgenda) et #985 (events-refresh) en dépendent, #985 invoque l'importer de #984. #981 (front) est indépendante côté fichiers.
+>
+> ⚠️ **`schema.d.ts` (généré).** #975 et #982 touchent des DTO (`Event`, `Alert`/`AlertAction`) → `make typegen` ; les faire tourner de façon à ne pas régénérer `schema.d.ts` en parallèle.
+>
+> **#983 — étape manuelle hors code :** activer GitHub Pages (source = GitHub Actions) dans les réglages du dépôt ; non automatisable par l'API.
+>
+> **ADR à écrire (~ADR-051, partagé #975/#985) :** les événements sont temporels → exemptés du modèle append-only d'ADR-049 (upsert + purge TTL + refresh périodique).
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#976](https://github.com/vincentchalamon/bike-trip-planner/issues/976) | fix(early-access): message de succès illisible + email de vérification jamais envoyé | M | 📋 Planifiée | - | — |
+| 2 | [#977](https://github.com/vincentchalamon/bike-trip-planner/issues/977) | fix(i18n): erreurs NextIntlClientProvider en rendu statique | S | 📋 Planifiée | - | — |
+| 3 | [#978](https://github.com/vincentchalamon/bike-trip-planner/issues/978) | fix(pwa): bouton d'aide présent sur tous les écrans du header | S | 📋 Planifiée | - | — |
+| 4 | [#979](https://github.com/vincentchalamon/bike-trip-planner/issues/979) | fix(pwa): bloc Assistant IA en opacité normale | S | 📋 Planifiée | - | — |
+| 5 | [#980](https://github.com/vincentchalamon/bike-trip-planner/issues/980) | fix(pwa): suppression d'un voyage possible même verrouillé | S | 📋 Planifiée | - | — |
+| 6 | [#981](https://github.com/vincentchalamon/bike-trip-planner/issues/981) | fix(events): affichage aligné comme les alertes + pagination | M | 📋 Planifiée | - | — |
+| 7 | [#982](https://github.com/vincentchalamon/bike-trip-planner/issues/982) | feat(alerts): surligner le segment concerné sur la carte interne | L | 📋 Planifiée | - | — |
+| 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | 📋 Planifiée | - | — |
+| 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | 📋 Planifiée | - | — |
+| 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | 📋 Planifiée | - | #975 |
+| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 📋 Planifiée | - | #975 |
+
+Vagues `/sprint` : {#976, #977, #978, #979, #980, #981, #982, #983, #975} en parallèle → {#984, #985} après le merge de #975.
+
+### Recette Sprint 52
+
+- **Tests :** à définir par issue (unit backend #975/#982/#985 ; e2e mockés front #977/#981/#982). La CI est le gate.
+- **Checklist manuelle :**
+  - [ ] Accès anticipé : message de succès lisible (light + dark) ; email reçu dans Mailcatcher ; clic lien → VERIFIED.
+  - [ ] Aucune overlay d'erreur next-intl sur `/auth/verify/*` et `/faq` (dev).
+  - [ ] Bouton d'aide présent sur Mes voyages, Mon compte, FAQ, Mentions légales, Confidentialité.
+  - [ ] Bloc Assistant IA à opacité pleine quand aucune IA n'est configurée.
+  - [ ] Suppression possible d'un voyage hors-zone / verrouillé depuis la vue trip.
+  - [ ] Événements alignés comme les alertes, sans description, avec lien, liste bornée (« voir plus »).
+  - [ ] « Voir le segment » recadre la carte interne et surligne le tracé complet.
+  - [ ] Documentation MkDocs générée et publiée sur GitHub Pages (sur modif doc uniquement).
+  - [ ] OpenAgenda importé sur une zone test, événements dédupliqués, attribution présente.
+  - [ ] `events-refresh` met à jour un événement modifié sans doublon et purge les événements passés.
+
+</details>
