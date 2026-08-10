@@ -414,6 +414,10 @@ function AiCard({
       ariaLabel={t("ariaSelectAi")}
       expanded={expanded}
       disabled={disabled || unavailable || notConfigured}
+      // `notConfigured` keeps the card non-interactive but must not dim it:
+      // the "Configurez une IA" invitation has to stay legible (#979). Only a
+      // real outage (`unavailable`) or a host-level `disabled` dims the shell.
+      dimmed={disabled || unavailable}
       onSelect={onSelect}
       icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
       title={t("aiTitle")}
@@ -440,6 +444,11 @@ interface CardShellProps {
   ariaLabel: string;
   expanded: boolean;
   disabled: boolean;
+  /**
+   * Visual dimming (`opacity-60` + muted icon). Defaults to `disabled`. Split
+   * out so a card can stay non-interactive without looking greyed out (#979).
+   */
+  dimmed?: boolean;
   onSelect?: () => void;
   /**
    * When `false`, the shell is never a clickable button: the interactive
@@ -459,6 +468,7 @@ function CardShell({
   ariaLabel,
   expanded,
   disabled,
+  dimmed = disabled,
   onSelect,
   selectable = true,
   icon,
@@ -494,14 +504,15 @@ function CardShell({
         interactive &&
           "cursor-pointer hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         expanded && "border-brand",
-        disabled && "opacity-60 cursor-not-allowed",
+        disabled && "cursor-not-allowed",
+        dimmed && "opacity-60",
       )}
     >
       <div className="flex items-start gap-3">
         <div
           className={cn(
             "flex items-center justify-center w-10 h-10 rounded-full bg-brand-light text-brand shrink-0",
-            disabled && "bg-muted text-muted-foreground",
+            dimmed && "bg-muted text-muted-foreground",
           )}
         >
           {icon}
