@@ -41,11 +41,9 @@ markdown_extensions:
   - tables
 
 # Documentation trees that are not part of the published site:
-#   - the repo-level docs index (README.md) conflicts with index.md as the home page;
 #   - recette/ carries design JSX exports and manual-test scripts, not reference docs;
 #   - audit/ holds one-off measurement reports linked contextually from the pages above.
 exclude_docs: |
-  /README.md
   recette/
   audit/
 
