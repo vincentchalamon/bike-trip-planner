@@ -19,7 +19,7 @@ To hit your local API you must **rebuild the APK yourself with the ngrok URL bak
 Reasons to run this:
 
 - You need to validate a native (WebView) behaviour that the web PWA over ngrok does not
-  reproduce (see [mobile browser testing over ngrok](../../pwa/scripts/ngrok-recette.sh)
+  reproduce (see [mobile browser testing over ngrok](../../scripts/ngrok-recette.sh)
   for the web-only, no-rebuild path).
 - You downloaded the Artifacts APK, installed it, and every screen is blank / every API
   call fails — expected, per above.
@@ -46,7 +46,7 @@ Reasons to run this:
    `TRUSTED_HOSTS`, `FRONTEND_URL`; re-run it whenever the ngrok URL rotates):
 
    ```bash
-   pwa/scripts/ngrok-recette.sh abcd-1234.ngrok-free.app
+   scripts/ngrok-recette.sh abcd-1234.ngrok-free.app
    ```
 
    No CORS change is needed: `CORS_ALLOW_ORIGIN` (`api/.env`) already allows the native
