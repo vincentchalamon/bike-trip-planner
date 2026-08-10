@@ -25,6 +25,10 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Least-privilege default (matches deploy.yml): only the deploy job elevates.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build

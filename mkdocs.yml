@@ -4,7 +4,7 @@ site_description: A bikepacking trip planner — smart pacing, safety alerts, an
 site_author: Vincent Chalamon
 repo_name: vincentchalamon/bike-trip-planner
 repo_url: https://github.com/vincentchalamon/bike-trip-planner
-edit_uri: blob/main/docs/
+edit_uri: edit/main/docs/
 
 docs_dir: docs
 site_dir: .mkdocs
