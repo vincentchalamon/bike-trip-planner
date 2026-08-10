@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { AlertActionData, AlertData } from "@/lib/validation/schemas";
 import { normalizeExternalUrl } from "@/lib/validation/url";
+import { useTripStore } from "@/store/trip-store";
 
 interface AlertListProps {
   alerts: AlertData[];
@@ -94,6 +95,7 @@ function groupBySeverity(
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
   const t = useTranslations("alertList");
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
+  const setFocusedAlertSegment = useTripStore((s) => s.setFocusedAlertSegment);
 
   const handleDismiss = useCallback((key: string) => {
     setDismissedKeys((prev) => {
@@ -110,16 +112,15 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
           handleDismiss(key);
           break;
         case "navigate": {
-          const payload = action.payload as { lat?: number; lon?: number };
-          if (
-            typeof payload?.lat === "number" &&
-            typeof payload?.lon === "number"
-          ) {
-            window.open(
-              `https://www.openstreetmap.org/?mlat=${payload.lat}&mlon=${payload.lon}&zoom=15`,
-              "_blank",
-              "noopener,noreferrer",
-            );
+          // Highlight the concerned road stretch on the internal map (issue
+          // #982) — no more OpenStreetMap external tab. Terrain rules ship the
+          // full geometry as `segments`; alerts carrying only a point (e.g. a
+          // stage discontinuity) recenter the map on that single coordinate.
+          const { lat, lon, segments } = action.payload;
+          if (segments && segments.length > 0) {
+            setFocusedAlertSegment(segments);
+          } else if (typeof lat === "number" && typeof lon === "number") {
+            setFocusedAlertSegment([[[lat, lon]]] as [number, number][][]);
           }
           break;
         }
@@ -131,7 +132,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
           break;
       }
     },
-    [handleDismiss],
+    [handleDismiss, setFocusedAlertSegment],
   );
 
   const groups = useMemo(() => groupBySeverity(alerts), [alerts]);
@@ -212,15 +213,18 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                       </span>
                     )}
                     <AlertBadge type={alert.type} message={alert.message} />
-                    {action && !isDismissed && (
-                      <AlertActionButton
-                        action={action}
-                        disabled={isActionDisabled}
-                        onClick={() => handleAction(key, action)}
-                        className="ml-auto"
-                      />
-                    )}
                   </div>
+
+                  {/* Below the alert text, not on the badge row (recette point
+                      5): the action reads as a follow-up to the message. */}
+                  {action && !isDismissed && (
+                    <AlertActionButton
+                      action={action}
+                      disabled={isActionDisabled}
+                      onClick={() => handleAction(key, action)}
+                      className="self-start"
+                    />
+                  )}
 
                   {isCulturalPoiAlert(alert) && (
                     <div className="ml-1 flex flex-col gap-0.5">

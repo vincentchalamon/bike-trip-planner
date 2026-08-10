@@ -7,10 +7,22 @@ export const CoordinateSchema = z.object({
   ele: z.number().default(0),
 });
 
+// A single highlighted road stretch: an ordered list of [lat, lon] points.
+export const AlertSegmentSchema = z.array(z.tuple([z.number(), z.number()]));
+
 export const AlertActionSchema = z.object({
   kind: z.enum(["auto_fix", "detour", "navigate", "dismiss"]),
   label: z.string(),
-  payload: z.record(z.string(), z.unknown()).optional().default({}),
+  // `segments` carries the geometry of the concerned road stretch for the
+  // internal-map highlight (issue #982); other keys (lat/lon) stay loose.
+  payload: z
+    .looseObject({
+      lat: z.number().optional(),
+      lon: z.number().optional(),
+      segments: z.array(AlertSegmentSchema).optional(),
+    })
+    .optional()
+    .default({}),
 });
 
 export const AlertSchema = z.object({

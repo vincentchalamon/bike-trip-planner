@@ -349,6 +349,45 @@ export function calendarAlertsEvent(): MercureEvent {
   };
 }
 
+/**
+ * A critical terrain alert whose `navigate` action carries the geometry of the
+ * concerned road stretch (`segments`), highlighted on the internal map — the
+ * post-#982 contract that replaces the old OSM external link.
+ */
+export function terrainAlertWithSegmentsEvent(): MercureEvent {
+  return {
+    type: "terrain_alerts",
+    data: {
+      alertsByStage: {
+        "0": [
+          {
+            type: "critical",
+            code: "traffic_main_road",
+            message: "1 segment on main road without bike lane (1.2 km)",
+            lat: 44.6,
+            lon: 4.5,
+            action: {
+              kind: "navigate",
+              label: "See the segment on the map",
+              payload: {
+                lat: 44.6,
+                lon: 4.5,
+                segments: [
+                  [
+                    [44.6, 4.5],
+                    [44.58, 4.48],
+                    [44.55, 4.45],
+                  ],
+                ],
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
 export function alertsWithActionsEvent(): MercureEvent {
   return {
     type: "terrain_alerts",

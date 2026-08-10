@@ -62,7 +62,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float}> $osmWays */
+        /** @var list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
 
         if ([] === $osmWays) {
@@ -81,7 +81,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
     }
 
     /**
-     * @param list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float}> $osmWays
+     * @param list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays
      *
      * @return list<Alert>
      */
@@ -89,6 +89,8 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
     {
         $roughLength = 0.0;
         $surfaces = [];
+        /** @var list<list<array{0: float, 1: float}>> $segments */
+        $segments = [];
 
         foreach ($osmWays as $way) {
             $matched = $this->roughSurfacesOf($way);
@@ -99,6 +101,10 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             $roughLength += $way['length'] ?? 0.0;
             foreach ($matched as $surface) {
                 $surfaces[$surface] = true;
+            }
+
+            foreach ($way['geometry'] ?? [] as $polyline) {
+                $segments[] = $polyline;
             }
         }
 
@@ -128,7 +134,11 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             action: new AlertAction(
                 kind: AlertActionKind::NAVIGATE,
                 label: $this->translator->trans('alert.surface.action', [], 'alerts', $locale),
-                payload: ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon],
+                payload: [
+                    'lat' => $stage->startPoint->lat,
+                    'lon' => $stage->startPoint->lon,
+                    'segments' => $segments,
+                ],
             ),
         )];
     }
@@ -140,7 +150,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
      * tested. `tracktype` / `smoothness` are only a fallback: an explicit
      * `surface` always wins, so `surface=asphalt` + `smoothness=bad` is smooth.
      *
-     * @param array{surface?: string, tracktype?: string, smoothness?: string, length?: float} $way
+     * @param array{surface?: string, tracktype?: string, smoothness?: string, length?: float, geometry?: list<list<array{0: float, 1: float}>>} $way
      *
      * @return list<string>
      */

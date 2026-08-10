@@ -39,7 +39,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var list<array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float}> $osmWays */
+        /** @var list<array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
 
         /** @var string $locale */
@@ -102,7 +102,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
                     label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
-                    payload: ['lat' => $lat, 'lon' => $lon],
+                    payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($criticalSegments)],
                 ),
             );
         }
@@ -126,7 +126,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
                     label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
-                    payload: ['lat' => $lat, 'lon' => $lon],
+                    payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($warningSegments)],
                 ),
             );
         }
@@ -155,7 +155,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
                     label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
-                    payload: ['lat' => $lat, 'lon' => $lon],
+                    payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($nudgeSegments)],
                 ),
             );
         }
@@ -164,7 +164,28 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
     }
 
     /**
-     * @param array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float} $way
+     * Flattens the clipped geometry of the ways in one severity bucket into a
+     * single list of `[lat, lon]` polylines — the highlight payload the internal
+     * map draws for the alert (issue #982).
+     *
+     * @param list<array{geometry?: list<list<array{0: float, 1: float}>>, ...}> $ways
+     *
+     * @return list<list<array{0: float, 1: float}>>
+     */
+    private function collectSegments(array $ways): array
+    {
+        $segments = [];
+        foreach ($ways as $way) {
+            foreach ($way['geometry'] ?? [] as $polyline) {
+                $segments[] = $polyline;
+            }
+        }
+
+        return $segments;
+    }
+
+    /**
+     * @param array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float, geometry?: list<list<array{0: float, 1: float}>>} $way
      */
     private function hasCycleInfrastructure(array $way): bool
     {

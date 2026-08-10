@@ -17,7 +17,7 @@ final readonly class AlertAction
         #[ApiProperty(description: 'Human-readable label for the action button.', required: true)]
         public string $label,
         #[ApiProperty(
-            description: 'Machine-readable payload for the action.',
+            description: 'Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982).',
             openapiContext: ['type' => 'object', 'additionalProperties' => true],
         )]
         public array $payload = [],
