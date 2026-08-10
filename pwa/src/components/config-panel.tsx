@@ -45,6 +45,8 @@ interface ConfigPanelProps {
   onAccommodationTypesChange: (types: AccommodationType[]) => void;
   /** When true, date/pacing/accommodation controls are disabled (trip is locked). */
   readOnly?: boolean;
+  /** Whether the client is online. Deletion is a server call, so it stays gated on this. */
+  isOnline?: boolean;
   hasTripLoaded?: boolean;
   /** Title of the loaded trip — surfaced in the delete confirmation dialog. */
   tripTitle?: string;
@@ -92,6 +94,7 @@ export function ConfigPanel({
   onDepartureHourChange,
   onAccommodationTypesChange,
   readOnly = false,
+  isOnline = true,
   hasTripLoaded = false,
   tripTitle,
   onDuplicate,
@@ -384,13 +387,16 @@ export function ConfigPanel({
               </Button>
 
               {/* Delete — destructive action, mirrors the "Mes voyages" list
-                  deletion but available from the trip itself (recette #649). */}
+                  deletion but available from the trip itself (recette #649).
+                  Not gated on readOnly (isLocked/outOfZone): a locked or
+                  out-of-zone trip must still be deletable (#980); only online
+                  status matters, since deletion is a server call. */}
               {onDelete && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full justify-start gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={!hasTripLoaded || readOnly}
+                  disabled={!hasTripLoaded || !isOnline}
                   aria-label={t("deleteLabel")}
                   onClick={() => setIsDeleteDialogOpen(true)}
                   data-testid="delete-trip-button"
