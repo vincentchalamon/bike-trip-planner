@@ -707,6 +707,7 @@ export function TripPlanner() {
           onDepartureHourChange={handleDepartureHourChange}
           onAccommodationTypesChange={handleAccommodationTypesChange}
           readOnly={isLocked || !isOnline || outOfZone}
+          isOnline={isOnline}
           hasTripLoaded={!!trip}
           tripTitle={trip?.title}
           onDuplicate={handleDuplicateTrip}
