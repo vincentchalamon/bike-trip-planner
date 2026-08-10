@@ -134,6 +134,32 @@ test.describe("Early access form", () => {
     await expect(page.getByTestId("early-access-form")).not.toBeVisible();
   });
 
+  test("shows error message on server failure (not a false 'thank you')", async ({
+    page,
+  }) => {
+    await mockUnauthenticated(page);
+
+    // Mock POST /access-requests -> 500 (e.g. mailer down). The bug was that any
+    // non-429 status was treated as success; a 5xx must now surface as an error.
+    await page.route("**/access-requests", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Internal error." }),
+      });
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("early-access-email-input").fill("test@example.com");
+    await page.getByTestId("early-access-submit").click();
+
+    await expect(page.getByTestId("early-access-error")).toBeVisible();
+    await expect(page.getByTestId("early-access-success")).toHaveCount(0);
+  });
+
   test("shows validation error for invalid email", async ({ page }) => {
     await mockUnauthenticated(page);
 
