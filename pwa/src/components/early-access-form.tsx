@@ -16,9 +16,9 @@ export function EarlyAccessForm() {
   const t = useTranslations("earlyAccess");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "throttled">(
-    "idle",
-  );
+  const [status, setStatus] = useState<
+    "idle" | "success" | "throttled" | "error"
+  >("idle");
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,12 +44,14 @@ export function EarlyAccessForm() {
 
       if (response.status === 429) {
         setStatus("throttled");
+      } else if (response.status >= 400) {
+        setStatus("error");
       } else {
         setStatus("success");
       }
     } catch {
-      // Network error — still show neutral confirmation
-      setStatus("success");
+      // Network error — surface a real failure, not a false confirmation.
+      setStatus("error");
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export function EarlyAccessForm() {
   if (status === "success") {
     return (
       <div
-        className="bg-muted rounded-lg p-4 text-center text-sm"
+        className="bg-muted text-muted-foreground rounded-lg p-4 text-center text-sm"
         role="status"
         data-testid="early-access-success"
       >
@@ -75,6 +77,18 @@ export function EarlyAccessForm() {
         data-testid="early-access-throttled"
       >
         {t("throttledMessage")}
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div
+        className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-center text-sm text-destructive"
+        role="alert"
+        data-testid="early-access-error"
+      >
+        {t("errorMessage")}
       </div>
     );
   }

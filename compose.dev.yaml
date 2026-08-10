@@ -24,6 +24,10 @@ services:
         cors_origins *
         demo
       MAILER_DSN: smtp://mailcatcher:1025
+      # Early-access email verification (ADR-029). Prod stays fail-closed on an
+      # empty secret; dev needs a non-empty value or AccessRequestHmacService
+      # throws at instantiation and the confirmation email is never sent.
+      ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
       LOCK_DSN: redis://redis:6379
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
@@ -57,6 +61,7 @@ services:
     environment:
       APP_ENV: dev
       MAILER_DSN: smtp://mailcatcher:1025
+      ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       JWT_SECRET_KEY: /app/config/jwt/private.pem
@@ -78,6 +83,7 @@ services:
     environment:
       APP_ENV: dev
       MAILER_DSN: smtp://mailcatcher:1025
+      ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       JWT_SECRET_KEY: /app/config/jwt/private.pem
