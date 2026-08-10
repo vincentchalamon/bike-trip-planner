@@ -236,7 +236,7 @@ two-pass pipeline, JSON-mode contract, and model roles above are unchanged.
 - [ADR-014: Alert Extensibility](adr-014-alert-extensibility.md)
 - [ADR-027: Gate Mechanism and Two-Phase Pipeline](adr-027-gate-mechanism-two-phase-pipeline.md)
 - [Ollama documentation — JSON mode](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion)
-- [Ollama documentation — `num_ctx` parameter](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#parameter)
+- [Ollama documentation — `num_ctx` parameter](https://docs.ollama.com/modelfile)
 - [Meta LLaMA 3 model card](https://github.com/meta-llama/llama-models)
 - Issue #297 — ADR-027 Ollama/LLaMA architecture (this ADR, renumbered to 028)
 - Issue #375 — v2 arbitration: AI always active (decision update)

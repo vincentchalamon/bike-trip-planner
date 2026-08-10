@@ -297,4 +297,4 @@ Husky).
 * [API Platform Documentation: State Providers & Processors](https://api-platform.com/docs/core/state-providers/)
 * [API Platform Documentation: Without Doctrine](https://www.google.com/search?q=https://api-platform.com/docs/core/data-providers/%23custom-state-provider)
 * [Caddy: The Ultimate Server](https://caddyserver.com/)
-* [Zustand Documentation - Persist Middleware](https://docs.pmnd.rs/zustand/integrations/persisting-store-data)
+* [Zustand Documentation - Persist Middleware](https://github.com/pmndrs/zustand#persist-middleware)

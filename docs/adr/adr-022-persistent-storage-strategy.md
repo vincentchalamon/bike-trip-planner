@@ -200,6 +200,6 @@ Redis remains fully operational throughout the migration for Messenger transport
 ## Sources
 
 - [PostgreSQL JSONB Documentation](https://www.postgresql.org/docs/18/datatype-json.html)
-- [Doctrine ORM 3.x Documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/3.4/index.html)
+- [Doctrine ORM 3.x Documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/current/index.html)
 - [Zenstruck Foundry](https://github.com/zenstruck/foundry)
 - [Pomm Project (archived)](https://github.com/pomm-project/Foundation) — last activity 2020

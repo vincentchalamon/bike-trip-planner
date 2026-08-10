@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/squidfunk/mkdocs-material/refs/heads/master/docs/schema.json
 site_name: Bike Trip Planner
+site_url: https://vincentchalamon.github.io/bike-trip-planner/
 site_description: A bikepacking trip planner — smart pacing, safety alerts, and accommodation suggestions from a Komoot URL or a GPX file.
 site_author: Vincent Chalamon
 repo_name: vincentchalamon/bike-trip-planner
