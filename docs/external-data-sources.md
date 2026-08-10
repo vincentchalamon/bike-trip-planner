@@ -3,7 +3,8 @@
 | Source | Role | Licence | Coverage | Prerequisite |
 |--------|------|---------|----------|-------------|
 | **OpenStreetMap** | Primary: roads, bike infra, water points, bike shops, resupply, base POIs & accommodations | [ODbL](https://opendatacommons.org/licenses/odbl/) | Global | None |
-| **DataTourisme** | Complementary: enriched accommodations and cultural POIs; exclusive: dated events | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `DATATOURISME_API_KEY` |
+| **DataTourisme** | Complementary: enriched accommodations and cultural POIs; dated events | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `DATATOURISME_API_KEY` |
+| **OpenAgenda** | Complementary: dated events (multi-source with DataTourisme), always link-bearing | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `OPENAGENDA_DATASET` |
 | **Wikidata** | Cross-cutting enricher: multilingual descriptions, images, Wikipedia links via Q-IDs | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | Europe | None |
 
 ## OpenStreetMap
@@ -35,6 +36,7 @@ The zone is a **mandatory argument** — a Geofabrik slug or display name. The `
 
 - **OSM + PostGIS** — downloads that zone's Geofabrik extract into the shared `/data` volume, tags-filters it, imports the bikepacking-relevant OSM features (POI, accommodations, water points) into a staging schema scoped to the zone via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`), then promotes into the live `osm` schema the keys it does not already hold — registry row, coverage polygon and metadata included — in one transaction. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](adr/adr-040-local-first-reference-data-postgis.md).
 - **DataTourisme** — downloads the configured flux and promotes the places covered by that zone into the `tourism` schema. Skipped gracefully (with a warning) when `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` are absent, so OSM still provisions.
+- **OpenAgenda** — downloads the national events export and promotes the events covered by that zone into `tourism.events`, deduplicated against DataTourisme. Skipped gracefully when `OPENAGENDA_DATASET` is absent. Unlike the append-only place tables, events are perishable: they are upserted and past events purged, on every `provision` and on the scheduled `events-refresh` (see [ADR-051](adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md) and [the events-refresh runbook](runbooks/events-refresh.md)).
 
 Three properties of that model (ADR-049), all of them checkable from the command's own report:
 
@@ -71,7 +73,7 @@ make routing-build france        # routing: rebuild the graph for the perimeter
 make provision-recette nord-pas-de-calais    # open one zone on the recette index
 ```
 
-It targets `-f compose.yaml -f compose.recette.yaml`. The recette JWT keys and passphrase are wired in `compose.recette.yaml` (no `JWT_*` passed on the command line), and the `prod` / `dev` provisioner images now carry distinct tags (`bike-trip-planner-provisioner:prod` vs `:dev`), so the previous forced `--build` is no longer needed. Like `make provision`, it loads OSM + DataTourisme and takes the zone as a mandatory argument — no seed file, and nothing to prepare beyond a routing graph covering the zone's country.
+It targets `-f compose.yaml -f compose.recette.yaml`. The recette JWT keys and passphrase are wired in `compose.recette.yaml` (no `JWT_*` passed on the command line), and the `prod` / `dev` provisioner images now carry distinct tags (`bike-trip-planner-provisioner:prod` vs `:dev`), so the previous forced `--build` is no longer needed. Like `make provision`, it loads OSM + DataTourisme + OpenAgenda and takes the zone as a mandatory argument — no seed file, and nothing to prepare beyond a routing graph covering the zone's country.
 
 See [ADR-036](adr/adr-036-manual-osm-data-refresh.md) for why the automated nightly job (`osm-cron`) was dropped.
 
@@ -93,6 +95,23 @@ DATATOURISME_ENABLED=true
 ```
 
 When `DATATOURISME_ENABLED=false` (the default) or the API key is absent, all DataTourisme calls are skipped and the application falls back to OpenStreetMap data exclusively.
+
+## OpenAgenda
+
+[OpenAgenda](https://openagenda.com) is a second, complementary source of **dated events** for France, imported from the national Opendatasoft export. It carries a canonical URL on every record — so an event a rider cannot open is never imported — and is deduplicated against DataTourisme events at read time (`NearbyNameDeduplicator`), with DataTourisme winning ties. Its keywords are mapped onto the same event vocabulary the app filters on (festival, concert, exhibition, sports, fair, show); young-audience records are dropped. See [ADR-051](adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md).
+
+**Licence:** [Licence Ouverte 2.0 Etalab](https://www.etalab.gouv.fr/licence-ouverte-open-licence) — attribution required (credited on `/legal`).
+
+**Temporal lifecycle:** unlike the append-only place tables, events are perishable. `provision <zone>` and the scheduled `events-refresh` command upsert the feeds and purge past events in the same transaction, so the layer stays current without ever swapping a schema. See [the events-refresh runbook](runbooks/events-refresh.md).
+
+To enable OpenAgenda integration, set the dataset (and, if the export requires it, an API key):
+
+```env
+OPENAGENDA_DATASET=evenements-publics-openagenda
+OPENAGENDA_API_KEY=your-api-key
+```
+
+When `OPENAGENDA_DATASET` is absent, OpenAgenda is skipped gracefully and events come from DataTourisme alone.
 
 ## Wikidata
 
