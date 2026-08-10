@@ -35,13 +35,6 @@ export function TopBar() {
   const email = useAuthStore((s) => s.user?.email ?? "");
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // The help "?" opens the roadbook help modal, which SiteChrome mounts on the
-  // app chrome. Show the button only on the planner routes (home dashboard, new
-  // trip, trip view) — not on the trips list or account settings — so it is
-  // never a dead button there (recette #649). The bar is shared via the layout
-  // now, so the visibility is decided here from the route rather than a prop.
-  const showHelp = pathname === "/" || pathname.startsWith("/trips/");
-
   const initial = email.trim().charAt(0).toUpperCase() || "?";
 
   function isActive(href: string) {
@@ -119,20 +112,18 @@ export function TopBar() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Help — only where the help modal is mounted (roadbook context) */}
-        {showHelp && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 cursor-pointer"
-            onClick={() => setHelpModalOpen(true)}
-            title={t("help.openButton")}
-            aria-label={t("help.openButton")}
-            data-testid="help-button"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-        )}
+        {/* 3. Help — always visible, like the language/theme switches */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 cursor-pointer"
+          onClick={() => setHelpModalOpen(true)}
+          title={t("help.openButton")}
+          aria-label={t("help.openButton")}
+          data-testid="help-button"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
 
         {/* 4-5. Language + theme (grouped for a consistent gap) */}
         <div className="flex items-center gap-1">
