@@ -45,6 +45,29 @@ function eventsFoundEvent(stageIndex: number): MercureEvent {
   };
 }
 
+function manyEventsFoundEvent(stageIndex: number, count: number): MercureEvent {
+  return {
+    type: "events_found",
+    data: {
+      stageIndex,
+      events: Array.from({ length: count }, (_, i) => ({
+        name: `Événement ${i + 1}`,
+        type: "schema:Festival",
+        lat: 44.5,
+        lon: 4.3,
+        startDate: `2025-07-${String(i + 1).padStart(2, "0")}T00:00:00+02:00`,
+        endDate: `2025-07-${String(i + 1).padStart(2, "0")}T00:00:00+02:00`,
+        url: `https://example.com/${i + 1}`,
+        description: null,
+        priceMin: null,
+        distanceToEndPoint: 100 * (i + 1),
+        source: "datatourisme",
+        wikidataId: null,
+      })),
+    },
+  };
+}
+
 test.describe("Events panel", () => {
   test("shows events panel toggle when events are present", async ({
     submitUrl,
@@ -157,6 +180,37 @@ test.describe("Events panel", () => {
 
     const stageCard = mockedPage.getByTestId("stage-card-1");
     await expect(stageCard.getByTestId("events-panel")).not.toBeAttached();
+  });
+
+  test("paginates events with a 'show more' button", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      manyEventsFoundEvent(0, 7),
+      tripCompleteEvent(),
+    ]);
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await stageCard.getByTestId("events-panel-toggle").click();
+
+    const content = stageCard.getByTestId("events-panel-content");
+    // Only the first 3 events are shown by default.
+    await expect(content.getByText("Événement 1")).toBeVisible();
+    await expect(content.getByText("Événement 3")).toBeVisible();
+    await expect(content.getByText("Événement 4")).toHaveCount(0);
+
+    const showMore = stageCard.getByTestId("events-panel-show-more");
+    await expect(showMore).toContainText("Voir plus (4)");
+    await showMore.click();
+
+    // All events revealed; the button is gone.
+    await expect(content.getByText("Événement 7")).toBeVisible();
+    await expect(showMore).toHaveCount(0);
   });
 
   test("events are grouped by stage index", async ({

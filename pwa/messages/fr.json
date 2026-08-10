@@ -1094,7 +1094,8 @@
     "see_on_wikipedia": "Voir sur Wikipedia",
     "see_on_wikipedia_label": "Voir {name} sur Wikipedia",
     "see_website": "Voir le site",
-    "see_website_label": "Voir le site de {name}"
+    "see_website_label": "Voir le site de {name}",
+    "show_more": "Voir plus ({count})"
   },
   "modificationQueue": {
     "panelLabel": "Modifications en attente",
