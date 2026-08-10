@@ -29,7 +29,7 @@ The app combines several open datasets; each keeps its own licence and attributi
 | Wikidata | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Public domain — no attribution required |
 | Open-Meteo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Credit Open-Meteo |
 
-How each source is used and cached: [External data sources](../README.md#external-data-sources).
+How each source is used and cached: [External data sources](external-data-sources.md).
 
 ## GDPR posture (summary)
 
