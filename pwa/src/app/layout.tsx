@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { unstable_rethrow } from "next/navigation";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
@@ -41,7 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const t = await getTranslations("layout");
     title = t("title");
     description = t("description");
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     // Static export prerendering: next-intl server context unavailable — keep
     // the English defaults above.
   }
@@ -92,7 +94,8 @@ export default async function RootLayout({
   try {
     locale = await getLocale();
     messages = await getMessages();
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     // Static export prerendering: next-intl server context unavailable
     locale = DEFAULT_LOCALE;
     messages = (await import(`../../messages/${DEFAULT_LOCALE}.json`)).default;
