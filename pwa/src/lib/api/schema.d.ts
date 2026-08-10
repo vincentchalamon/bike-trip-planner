@@ -944,7 +944,7 @@ export interface components {
             kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
             label: string;
-            /** @description Machine-readable payload for the action. */
+            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
             payload?: {
                 [key: string]: unknown;
             };
@@ -957,7 +957,7 @@ export interface components {
             kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
             label: string;
-            /** @description Machine-readable payload for the action. */
+            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
             payload?: {
                 [key: string]: unknown;
             };
@@ -970,7 +970,7 @@ export interface components {
             kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
             label: string;
-            /** @description Machine-readable payload for the action. */
+            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
             payload?: {
                 [key: string]: unknown;
             };

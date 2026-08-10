@@ -83,6 +83,31 @@ final class WaysIndexReadTest extends KernelTestCase
     }
 
     /**
+     * The alert map highlight (issue #982) needs the way's osm_id and the ordered
+     * geometry of the clipped portion, projected as `[lat, lon]` polylines.
+     */
+    #[Test]
+    public function findInCorridorProjectsIdAndClippedGeometry(): void
+    {
+        $ways = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
+
+        self::assertCount(1, $ways);
+        $way = $ways[0];
+
+        self::assertSame(1, $way['id']);
+        // One clipped polyline, running end to end inside the corridor.
+        self::assertCount(1, $way['geometry']);
+        $polyline = $way['geometry'][0];
+        self::assertGreaterThanOrEqual(2, \count($polyline));
+        // Coordinates are flipped from GeoJSON [lon, lat] to [lat, lon] and land
+        // on the seeded secondary road (~49.6, ~6.13-6.15).
+        foreach ($polyline as [$lat, $lon]) {
+            self::assertEqualsWithDelta(49.61, $lat, 0.02);
+            self::assertEqualsWithDelta(6.14, $lon, 0.02);
+        }
+    }
+
+    /**
      * The surface analyzer falls back on tracktype / smoothness when `surface` is
      * missing, so both tags must reach it from the jsonb column (issue #860).
      */
@@ -227,13 +252,15 @@ final class WaysIndexReadTest extends KernelTestCase
                     SELECT ST_Buffer(ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography, :radius)::geometry AS geom
                 ),
                 followed AS MATERIALIZED (
-                    SELECT w.tags AS tags, ST_Intersection(w.geom, r.geom) AS geom
+                    SELECT w.osm_id AS osm_id, w.tags AS tags, ST_Intersection(w.geom, r.geom) AS geom
                     FROM osm.ways AS w, ridden AS r
                     WHERE ST_Intersects(w.geom, r.geom)
                 )
-                SELECT ST_Y(_c.centroid) AS lat,
+                SELECT f.osm_id AS id,
+                       ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
+                       ST_AsGeoJSON(f.geom) AS geometry,
                        tags->>'surface' AS surface,
                        tags->>'tracktype' AS tracktype,
                        tags->>'smoothness' AS smoothness,
@@ -258,6 +285,7 @@ final class WaysIndexReadTest extends KernelTestCase
         $ways = [];
         foreach ($rows as $row) {
             $ways[] = [
+                'id' => (int) $row['id'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),
@@ -271,6 +299,7 @@ final class WaysIndexReadTest extends KernelTestCase
                 'bicycle' => (string) ($row['bicycle'] ?? ''),
                 'maxspeed' => (string) ($row['maxspeed'] ?? ''),
                 'length' => (float) $row['length'],
+                'geometry' => WaysRepository::parseGeometry(isset($row['geometry']) ? (string) $row['geometry'] : ''),
             ];
         }
 

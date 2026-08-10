@@ -118,6 +118,13 @@ interface TripState {
    */
   selectedStageIndex: number;
 
+  /**
+   * Road stretch highlighted on the internal map after clicking an alert's
+   * "see the segment on the map" action (issue #982). A list of polylines, each
+   * an ordered list of `[lat, lon]` points. `null` = nothing highlighted.
+   */
+  focusedAlertSegment: [number, number][][] | null;
+
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
     totalDistance: number;
@@ -266,6 +273,9 @@ interface TripState {
    */
   setSelectedStageIndex: (index: number) => void;
 
+  /** Highlight (or clear, with `null`) a road stretch on the internal map. */
+  setFocusedAlertSegment: (segments: [number, number][][] | null) => void;
+
   clearTrip: () => void;
 }
 
@@ -297,6 +307,7 @@ const initialState = {
   selectedStageIndex: 0,
   aiOverview: null as TripAiOverviewPayload | null,
   aiOverviewStale: false,
+  focusedAlertSegment: null as [number, number][][] | null,
 };
 
 /**
@@ -964,6 +975,11 @@ export const useTripStore = create<TripState>()(
           ? Math.min(Math.max(0, Math.floor(index)), max)
           : 0;
         state.selectedStageIndex = safe;
+      }),
+
+    setFocusedAlertSegment: (segments) =>
+      set((state) => {
+        state.focusedAlertSegment = segments;
       }),
 
     clearTrip: () => {

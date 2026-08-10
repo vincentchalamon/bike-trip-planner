@@ -99,6 +99,30 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
         $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->action->payload['lat'], 0.001);
         $this->assertEqualsWithDelta($stage->startPoint->lon, $alerts[0]->action->payload['lon'], 0.001);
+        // No geometry on the way → no highlight segment (issue #982).
+        $this->assertSame([], $alerts[0]->action->payload['segments']);
+    }
+
+    #[Test]
+    public function navigateActionCarriesTheConcernedRoughSegments(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['surface' => 'gravel', 'length' => 300.0, 'geometry' => [[[45.0, 5.0], [45.1, 5.1]]]],
+                // Smooth way: its geometry must NOT be highlighted.
+                ['surface' => 'asphalt', 'length' => 9000.0, 'geometry' => [[[45.5, 5.5], [45.6, 5.6]]]],
+                ['surface' => 'dirt', 'length' => 300.0, 'geometry' => [[[45.2, 5.2], [45.3, 5.3]]]],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(
+            [[[45.0, 5.0], [45.1, 5.1]], [[45.2, 5.2], [45.3, 5.3]]],
+            $alerts[0]->action->payload['segments'],
+        );
     }
 
     /**

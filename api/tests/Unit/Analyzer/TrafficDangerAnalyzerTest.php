@@ -330,6 +330,31 @@ final class TrafficDangerAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function navigateActionCarriesTheConcernedSegmentsPerSeverity(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'length' => 600.0, 'geometry' => [[[45.5, 5.5], [45.6, 5.6]]]],
+                ['highway' => 'primary', 'length' => 700.0, 'geometry' => [[[45.7, 5.7], [45.8, 5.8]]]],
+                ['highway' => 'secondary', 'maxspeed' => '90', 'length' => 800.0, 'geometry' => [[[46.0, 6.0], [46.1, 6.1]]]],
+            ],
+        ]);
+
+        $this->assertCount(2, $alerts);
+        // Critical bucket: both primary segments.
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(
+            [[[45.5, 5.5], [45.6, 5.6]], [[45.7, 5.7], [45.8, 5.8]]],
+            $alerts[0]->action->payload['segments'],
+        );
+        // Warning bucket: only the fast secondary segment.
+        $this->assertNotNull($alerts[1]->action);
+        $this->assertSame([[[46.0, 6.0], [46.1, 6.1]]], $alerts[1]->action->payload['segments']);
+    }
+
+    #[Test]
     public function fallsBackToStageStartPointWhenNoCoords(): void
     {
         $stage = $this->createStage();

@@ -4,6 +4,7 @@ import {
   stagesComputedEvent,
   alertsWithActionsEvent,
   terrainAlertsEvent,
+  terrainAlertWithSegmentsEvent,
   terrainAlertsWithServerFilteredActionsEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
@@ -138,6 +139,37 @@ test.describe("Alert actions", () => {
     await stage2.getByTestId("alert-group-toggle-warning").click();
     await expect(stage2).toContainText("Significant elevation gain (1200m)");
     await expect(stage2.getByTestId("alert-action-button")).toHaveCount(0);
+  });
+
+  test("navigate action highlights the concerned segment on the internal map", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      terrainAlertWithSegmentsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    // The critical group is expanded by default; the map starts with nothing
+    // highlighted.
+    const mapView = mockedPage.getByTestId("map-view");
+    await expect(mapView).toHaveAttribute("data-alert-segment", "");
+
+    const stage1 = mockedPage.getByTestId("stage-card-1");
+    await stage1.getByText("See the segment on the map").click();
+
+    // The clicked segment is now highlighted (one polyline) and the reset-view
+    // affordance appears — no external OSM tab is opened.
+    await expect(mapView).toHaveAttribute("data-alert-segment", "1");
+    await expect(mockedPage.getByTestId("map-reset-view")).toBeVisible();
+
+    // Resetting clears the highlight.
+    await mockedPage.getByTestId("map-reset-view").click();
+    await expect(mapView).toHaveAttribute("data-alert-segment", "");
   });
 
   test("detour action button is displayed and disabled", async ({

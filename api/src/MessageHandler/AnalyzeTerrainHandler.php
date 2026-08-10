@@ -124,7 +124,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
      *
      * @param list<Stage> $stages
      *
-     * @return array<int, list<array{lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}>>
+     * @return array<int, list<array{id: int, lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float, geometry: list<list<array{0: float, 1: float}>>}>>
      */
     private function fetchOsmWaysByStage(string $tripId, array $stages): array
     {

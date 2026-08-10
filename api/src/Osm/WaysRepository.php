@@ -28,7 +28,14 @@ use Doctrine\DBAL\Connection;
  * superset and the result is identical to the unfiltered scan. See
  * WaysIndexReadTest for the behaviour guard.
  *
- * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}
+ * Besides the derived fields, each row carries its `osm_id` and the ordered
+ * geometry of the *clipped* portion (`ST_AsGeoJSON`) so the terrain analyzers can
+ * highlight the exact stretch of road an alert refers to on the internal map
+ * (issue #982). The geometry is a list of polylines (a clip that enters and
+ * leaves the corridor yields a MultiLineString), each a list of `[lat, lon]`
+ * pairs.
+ *
+ * @phpstan-type WayRow = array{id: int, lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float, geometry: list<list<array{0: float, 1: float}>>}
  */
 final readonly class WaysRepository implements WaysRepositoryInterface
 {
@@ -88,9 +95,10 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                 ),
                 followed AS MATERIALIZED (
                     -- Clip each candidate way to the corridor. Materialised so the
-                    -- clip runs once per way and feeds both the length and the
-                    -- centroid below.
-                    SELECT w.tags AS tags,
+                    -- clip runs once per way and feeds the length, the centroid and
+                    -- the highlight geometry below.
+                    SELECT w.osm_id AS osm_id,
+                           w.tags AS tags,
                            ST_Intersection(w.geom, r.geom) AS geom
                     FROM osm.ways AS w,
                          bbox AS b,
@@ -98,9 +106,11 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                     WHERE w.geom && b.geom
                       AND ST_Intersects(w.geom, r.geom)
                 )
-                SELECT ST_Y(_c.centroid) AS lat,
+                SELECT f.osm_id AS id,
+                       ST_Y(_c.centroid) AS lat,
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
+                       ST_AsGeoJSON(f.geom) AS geometry,
                        f.tags->>'surface' AS surface,
                        f.tags->>'tracktype' AS tracktype,
                        f.tags->>'smoothness' AS smoothness,
@@ -127,6 +137,7 @@ final readonly class WaysRepository implements WaysRepositoryInterface
         $ways = [];
         foreach ($rows as $row) {
             $ways[] = [
+                'id' => (int) $row['id'],
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),
@@ -140,9 +151,56 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                 'bicycle' => (string) ($row['bicycle'] ?? ''),
                 'maxspeed' => (string) ($row['maxspeed'] ?? ''),
                 'length' => (float) $row['length'],
+                'geometry' => self::parseGeometry(isset($row['geometry']) ? (string) $row['geometry'] : ''),
             ];
         }
 
         return $ways;
+    }
+
+    /**
+     * Turns a GeoJSON LineString / MultiLineString (the clipped corridor portion)
+     * into a list of polylines of `[lat, lon]` pairs — the shape the frontend map
+     * highlight consumes. GeoJSON stores coordinates as `[lon, lat]`, so each pair
+     * is flipped. Anything else (empty, punctual) yields no polyline.
+     *
+     * @return list<list<array{0: float, 1: float}>>
+     */
+    public static function parseGeometry(string $geoJson): array
+    {
+        if ('' === $geoJson) {
+            return [];
+        }
+
+        /** @var array{type?: string, coordinates?: mixed} $decoded */
+        $decoded = json_decode($geoJson, true) ?: [];
+        $type = $decoded['type'] ?? '';
+        $coordinates = $decoded['coordinates'] ?? [];
+        if (!\is_array($coordinates)) {
+            return [];
+        }
+
+        // Normalise to a list of linestrings: a bare LineString is a single one.
+        $lineStrings = 'LineString' === $type ? [$coordinates] : $coordinates;
+
+        $polylines = [];
+        foreach ($lineStrings as $lineString) {
+            if (!\is_array($lineString)) {
+                continue;
+            }
+
+            $points = [];
+            foreach ($lineString as $point) {
+                if (\is_array($point) && isset($point[0], $point[1])) {
+                    $points[] = [(float) $point[1], (float) $point[0]];
+                }
+            }
+
+            if ([] !== $points) {
+                $polylines[] = $points;
+            }
+        }
+
+        return $polylines;
     }
 }

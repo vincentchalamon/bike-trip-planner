@@ -233,6 +233,8 @@ export const MapView = memo(function MapView({
 
   const storeStages = useTripStore((s) => s.stages);
   const stages = externalStages ?? storeStages;
+  const focusedAlertSegment = useTripStore((s) => s.focusedAlertSegment);
+  const setFocusedAlertSegment = useTripStore((s) => s.setFocusedAlertSegment);
   const hoveredAccommodation = useUiStore((s) => s.hoveredAccommodation);
   const setHoveredAccommodation = useUiStore((s) => s.setHoveredAccommodation);
   const { resolvedTheme } = useTheme();
@@ -298,6 +300,27 @@ export const MapView = memo(function MapView({
           source: "route",
           layout: { "line-join": "round", "line-cap": "round" },
           paint: { "line-color": "rgba(0,0,0,0)", "line-width": 16 },
+        });
+      }
+      // Highlight layer for the road stretch an alert refers to (issue #982),
+      // drawn on top of the route line. Empty until an alert action fires.
+      if (!map.getSource("alert-segment")) {
+        map.addSource("alert-segment", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+      }
+      if (!map.getLayer("alert-segment-line")) {
+        map.addLayer({
+          id: "alert-segment-line",
+          type: "line",
+          source: "alert-segment",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": "#ef4444",
+            "line-width": 7,
+            "line-opacity": 0.9,
+          },
         });
       }
     },
@@ -608,6 +631,64 @@ export const MapView = memo(function MapView({
     }
   }, [focusedStageIndex, activeStages, mapReady]);
 
+  // Highlight the road stretch an alert refers to and frame it (issue #982).
+  // A single-point "segment" (a coordinate-only navigate alert) draws no line
+  // but still recenters the map on it.
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+    const source = map.getSource("alert-segment") as
+      maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    if (!focusedAlertSegment || focusedAlertSegment.length === 0) {
+      source.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    source.setData({
+      type: "FeatureCollection",
+      features: focusedAlertSegment
+        .filter((seg) => seg.length >= 2)
+        .map((seg) => ({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: seg.map(([lat, lon]) => [lon, lat]),
+          },
+        })),
+    });
+
+    let minLng = Infinity,
+      maxLng = -Infinity,
+      minLat = Infinity,
+      maxLat = -Infinity;
+    for (const seg of focusedAlertSegment) {
+      for (const [lat, lon] of seg) {
+        if (lon < minLng) minLng = lon;
+        if (lon > maxLng) maxLng = lon;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+      }
+    }
+    if (minLng !== Infinity) {
+      map.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        { padding: 80, maxZoom: 15, duration: 600 },
+      );
+    }
+  }, [focusedAlertSegment, mapReady]);
+
+  // Focusing a stage supersedes an alert-segment highlight: clear it so the two
+  // camera framings never fight (issue #982).
+  useEffect(() => {
+    if (focusedStageIndex !== null) setFocusedAlertSegment(null);
+  }, [focusedStageIndex, setFocusedAlertSegment]);
+
   // Hover highlight — toggle CSS class on accommodation markers without rebuilding
   useEffect(() => {
     for (const el of accMarkerElementsRef.current.values()) {
@@ -694,7 +775,11 @@ export const MapView = memo(function MapView({
   }
 
   return (
-    <div className="relative w-full h-full" data-testid="map-view">
+    <div
+      className="relative w-full h-full"
+      data-testid="map-view"
+      data-alert-segment={focusedAlertSegment ? focusedAlertSegment.length : ""}
+    >
       <div
         ref={mapContainerRef}
         className="w-full h-full rounded-xl overflow-hidden"
@@ -707,10 +792,13 @@ export const MapView = memo(function MapView({
         className="absolute top-3 left-3 z-10"
       />
 
-      {focusedStageIndex !== null && (
+      {(focusedStageIndex !== null || focusedAlertSegment !== null) && (
         <button
           type="button"
-          onClick={onResetView}
+          onClick={() => {
+            setFocusedAlertSegment(null);
+            onResetView();
+          }}
           className="absolute top-14 left-3 z-10 bg-background/90 backdrop-blur-sm border border-border text-foreground text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm hover:bg-accent transition-colors cursor-pointer"
           aria-label={t("resetView")}
           data-testid="map-reset-view"

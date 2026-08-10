@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Shuffle, Compass, X, type LucideIcon } from "lucide-react";
+import { Sparkles, Shuffle, Map, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/plausible";
@@ -15,7 +15,9 @@ import type { AlertActionData } from "@/lib/validation/schemas";
 const ACTION_ICON: Record<AlertActionData["kind"], LucideIcon> = {
   auto_fix: Sparkles,
   detour: Shuffle,
-  navigate: Compass,
+  // `navigate` highlights the concerned road stretch on the internal map
+  // (issue #982): a map icon, not the old external-link compass.
+  navigate: Map,
   dismiss: X,
 };
 
@@ -65,8 +67,8 @@ export function AlertActionButton({
         className,
       )}
     >
-      <Icon className="h-3 w-3" aria-hidden="true" />
       <span>{action.label}</span>
+      <Icon className="h-3 w-3" aria-hidden="true" />
     </Button>
   );
 }
