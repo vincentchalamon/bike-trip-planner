@@ -57,33 +57,33 @@ LIMIT 10;
 
 1. **Free obvious wins on disk** (run on the VM, not in the container):
 
-   ```bash
-   docker image prune -af
-   docker container prune -f
-   journalctl --vacuum-size=200M
-   ```
+    ```bash
+    docker image prune -af
+    docker container prune -f
+    journalctl --vacuum-size=200M
+    ```
 
 2. **Reclaim PostgreSQL bloat** on the top offender(s). Prefer non-blocking first:
 
-   ```sql
-   VACUUM (VERBOSE, ANALYZE) stage;
-   VACUUM (VERBOSE, ANALYZE) trip_request;
-   ```
+    ```sql
+    VACUUM (VERBOSE, ANALYZE) stage;
+    VACUUM (VERBOSE, ANALYZE) trip_request;
+    ```
 
-   If bloat persists and a brief lock is acceptable (writes blocked on that table):
+    If bloat persists and a brief lock is acceptable (writes blocked on that table):
 
-   ```sql
-   VACUUM FULL VERBOSE stage;
-   ```
+    ```sql
+    VACUUM FULL VERBOSE stage;
+    ```
 
-   The Messenger transport is Redis-backed (`redis://.../messages`), not Doctrine,
-   so there is no `messenger_messages` table to truncate here — queue pressure is
-   handled in [`redis-out-of-memory.md`](./redis-out-of-memory.md).
+    The Messenger transport is Redis-backed (`redis://.../messages`), not Doctrine,
+    so there is no `messenger_messages` table to truncate here — queue pressure is
+    handled in [`redis-out-of-memory.md`](./redis-out-of-memory.md).
 
 3. **Resize the boot volume** on Oracle Cloud (last resort, requires VM reboot):
-   - OCI console → Compute → Instances → select VM → Boot volume → "Edit" → raise size (free tier ceiling: 200 GB total block storage across all volumes)
-   - SSH into VM and run `sudo /usr/libexec/oci-growfs -y` to extend the filesystem
-   - Coolify auto-restarts the stack after reboot
+    - OCI console → Compute → Instances → select VM → Boot volume → "Edit" → raise size (free tier ceiling: 200 GB total block storage across all volumes)
+    - SSH into VM and run `sudo /usr/libexec/oci-growfs -y` to extend the filesystem
+    - Coolify auto-restarts the stack after reboot
 
 ## Post-action
 

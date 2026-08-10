@@ -37,27 +37,27 @@ docker compose exec valhalla ls -lh /custom_files
 
 1. **Restart the service first.** It only mmaps `valhalla_tiles.tar`, so a bad load is often fixed without a rebuild:
 
-   ```bash
-   docker compose restart valhalla
-   ```
+    ```bash
+    docker compose restart valhalla
+    ```
 
 2. **Rebuild the graph** when the tiles are genuinely corrupted. On a workstation, not in production (hours, uncapped memory):
 
-   ```bash
-   docker volume rm <project>_valhalla-tiles   # destructive: drops tiles AND the extracts
-   make routing-build france                   # add every country of the perimeter
-   make routing-up
-   ```
+    ```bash
+    docker volume rm <project>_valhalla-tiles   # destructive: drops tiles AND the extracts
+    make routing-build france                   # add every country of the perimeter
+    make routing-up
+    ```
 
-   In production, do not rebuild: re-upload a known-good `valhalla_tiles.tar` per steps 4-6 of [valhalla-routing-graph.md](valhalla-routing-graph.md).
+    In production, do not rebuild: re-upload a known-good `valhalla_tiles.tar` per steps 4-6 of [valhalla-routing-graph.md](valhalla-routing-graph.md).
 
 3. **Re-warm caches** by issuing a known-good routing request:
 
-   ```bash
-   docker compose exec php curl -sS -X POST http://valhalla:8002/route \
-     -H 'Content-Type: application/json' \
-     -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
-   ```
+    ```bash
+    docker compose exec php curl -sS -X POST http://valhalla:8002/route \
+      -H 'Content-Type: application/json' \
+      -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
+    ```
 
 4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: open or re-open the zone concerned (`make provision <zone>`, which loads OSM + DataTourisme for that one zone) rather than rebuilding tiles here. See [zone-opening.md](zone-opening.md); the two datasets share nothing (ADR-049).
 

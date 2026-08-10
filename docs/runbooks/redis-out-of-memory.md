@@ -44,50 +44,50 @@ docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
 
 1. **Drain the failed transport** (often the largest unbounded queue):
 
-   ```bash
-   docker compose exec php bin/console messenger:failed:show
-   docker compose exec php bin/console messenger:failed:remove --all
-   ```
+    ```bash
+    docker compose exec php bin/console messenger:failed:show
+    docker compose exec php bin/console messenger:failed:remove --all
+    ```
 
 2. **Selective flush** of external API caches (preserves Messenger state):
 
-   ```bash
-   docker compose exec php bin/console cache:pool:clear \
-     cache.osm cache.weather cache.route_fetch cache.routing cache.trip_chat
-   ```
+    ```bash
+    docker compose exec php bin/console cache:pool:clear \
+      cache.osm cache.weather cache.route_fetch cache.routing cache.trip_chat
+    ```
 
-   Note: `cache.app` (Symfony default pool) does **not** include the project's
-   external API caches — clearing it would only purge framework metadata
-   (Doctrine result cache, etc.) and would not reclaim Redis memory.
+    Note: `cache.app` (Symfony default pool) does **not** include the project's
+    external API caches — clearing it would only purge framework metadata
+    (Doctrine result cache, etc.) and would not reclaim Redis memory.
 
-   Or targeted scan + delete from the Redis CLI:
+    Or targeted scan + delete from the Redis CLI:
 
-   ```bash
-   docker compose exec redis redis-cli --scan --pattern 'osm:*' | \
-     xargs -r docker compose exec -T redis redis-cli DEL
-   ```
+    ```bash
+    docker compose exec redis redis-cli --scan --pattern 'osm:*' | \
+      xargs -r docker compose exec -T redis redis-cli DEL
+    ```
 
 3. **Full reset** of Messenger transports + trip state (drops in-flight computations):
 
-   ```bash
-   make flush-queue
-   ```
+    ```bash
+    make flush-queue
+    ```
 
 4. **Verify eviction policy** (per ADR-022, transient caches should use `allkeys-lru`):
 
-   ```bash
-   docker compose exec redis redis-cli CONFIG SET maxmemory-policy allkeys-lru
-   ```
+    ```bash
+    docker compose exec redis redis-cli CONFIG SET maxmemory-policy allkeys-lru
+    ```
 
-   Persist the change in `compose.yaml` (Redis `command:`) — `CONFIG SET` does not survive a restart.
+    Persist the change in `compose.yaml` (Redis `command:`) — `CONFIG SET` does not survive a restart.
 
 5. **Raise `maxmemory`** as a stopgap if the VM has free RAM:
 
-   ```bash
-   docker compose exec redis redis-cli CONFIG SET maxmemory 512mb
-   ```
+    ```bash
+    docker compose exec redis redis-cli CONFIG SET maxmemory 512mb
+    ```
 
-   Then update `compose.yaml` and redeploy via Coolify so the change is persisted.
+    Then update `compose.yaml` and redeploy via Coolify so the change is persisted.
 
 ## Post-action
 

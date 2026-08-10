@@ -54,12 +54,12 @@ The workflow itself authenticates with the built-in `GITHUB_TOKEN` (scope
 ### Rotating `INCIDENT_DISPATCH_TOKEN`
 
 1. GitHub → Settings → Developer settings → Fine-grained tokens → generate new
-   token, same scopes, 90-day expiry.
+    token, same scopes, 90-day expiry.
 2. Update the secret in Settings → Secrets and variables → Actions.
 3. Update the bearer token in:
-   - GlitchTip → project Settings → Alerts → webhook integration
-   - Uptime Kuma → Settings → Notifications → Webhook
-   - UptimeRobot → My Settings → Integrations & API → Webhook
+    - GlitchTip → project Settings → Alerts → webhook integration
+    - Uptime Kuma → Settings → Notifications → Webhook
+    - UptimeRobot → My Settings → Integrations & API → Webhook
 4. Trigger a test dispatch (see below) and confirm an issue is opened.
 5. Revoke the old token.
 
@@ -159,32 +159,32 @@ command must comment on the existing issue (no duplicate).
 
 1. Open the GlitchTip project → **Settings** → **Alerts**.
 2. **Create alert** → trigger condition (e.g. "An event is seen", frequency
-   1 min, environment `production`).
+    1 min, environment `production`).
 3. Action type **Webhook**.
 4. URL: `https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches`.
 5. Method `POST`, headers:
-   - `Accept: application/vnd.github+json`
-   - `Authorization: Bearer <INCIDENT_DISPATCH_TOKEN>`
-   - `Content-Type: application/json`
+    - `Accept: application/vnd.github+json`
+    - `Authorization: Bearer <INCIDENT_DISPATCH_TOKEN>`
+    - `Content-Type: application/json`
 6. Body template (GlitchTip supports raw JSON; adjust placeholders to project
-   syntax):
+    syntax):
 
-   ```json
-   {
-     "event_type": "error_alert",
-     "client_payload": {
-       "issue": {
-         "title": "{{ issue.title }}",
-         "culprit": "{{ issue.culprit }}",
-         "level": "{{ issue.level }}",
-         "count": {{ issue.count }},
-         "web_url": "{{ issue.web_url }}"
-       },
-       "environment": "{{ environment }}",
-       "release": "{{ release }}"
-     }
-   }
-   ```
+    ```json
+    {
+      "event_type": "error_alert",
+      "client_payload": {
+        "issue": {
+          "title": "{{ issue.title }}",
+          "culprit": "{{ issue.culprit }}",
+          "level": "{{ issue.level }}",
+          "count": {{ issue.count }},
+          "web_url": "{{ issue.web_url }}"
+        },
+        "environment": "{{ environment }}",
+        "release": "{{ release }}"
+      }
+    }
+    ```
 
 ### Uptime Kuma
 
@@ -193,23 +193,23 @@ command must comment on the existing issue (no duplicate).
 3. POST URL: `https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches`.
 4. Request body: `Custom Body` with:
 
-   ```json
-   {
-     "event_type": "uptime_alert",
-     "client_payload": {
-       "monitor_name": "{{ monitorJSON.name }}",
-       "monitor_url": "{{ monitorJSON.url }}",
-       "status": "{{ status }}",
-       "message": "{{ msg }}",
-       "heartbeat": { "ping": {{ heartbeatJSON.ping }} }
-     }
-   }
-   ```
+    ```json
+    {
+      "event_type": "uptime_alert",
+      "client_payload": {
+        "monitor_name": "{{ monitorJSON.name }}",
+        "monitor_url": "{{ monitorJSON.url }}",
+        "status": "{{ status }}",
+        "message": "{{ msg }}",
+        "heartbeat": { "ping": {{ heartbeatJSON.ping }} }
+      }
+    }
+    ```
 
 5. Additional headers: `Authorization: Bearer <INCIDENT_DISPATCH_TOKEN>`,
-   `Accept: application/vnd.github+json`.
+    `Accept: application/vnd.github+json`.
 6. Attach the notification to every monitor (default behaviour when "Apply on
-   all existing monitors" is checked).
+    all existing monitors" is checked).
 
 ### UptimeRobot
 
@@ -218,22 +218,22 @@ command must comment on the existing issue (no duplicate).
 3. URL to notify: `https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches`.
 4. POST value (JSON):
 
-   ```json
-   {
-     "event_type": "uptime_alert",
-     "client_payload": {
-       "monitor_name": "*monitorFriendlyName*",
-       "monitor_url": "*monitorURL*",
-       "status": "*alertTypeFriendlyName*",
-       "message": "*alertDetails*",
-       "responseTime": *responseTime*
-     }
-   }
-   ```
+    ```json
+    {
+      "event_type": "uptime_alert",
+      "client_payload": {
+        "monitor_name": "*monitorFriendlyName*",
+        "monitor_url": "*monitorURL*",
+        "status": "*alertTypeFriendlyName*",
+        "message": "*alertDetails*",
+        "responseTime": *responseTime*
+      }
+    }
+    ```
 
 5. Send as JSON: **Yes**. Custom HTTP headers:
-   - `Authorization: Bearer <INCIDENT_DISPATCH_TOKEN>`
-   - `Accept: application/vnd.github+json`
+    - `Authorization: Bearer <INCIDENT_DISPATCH_TOKEN>`
+    - `Accept: application/vnd.github+json`
 6. Attach the integration to the `/api/healthz` external monitor.
 
 ## Troubleshooting

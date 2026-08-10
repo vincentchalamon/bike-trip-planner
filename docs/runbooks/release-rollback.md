@@ -32,28 +32,28 @@ Check GlitchTip releases page — confirm the new release SHA is associated with
 ## Procédure
 
 1. **Rollback containers via Coolify** (fast path, ~30 s):
-   - Application → Deployments → previous green deployment → "Redeploy"
-   - Coolify recreates containers from the cached image of that commit. No image rebuild needed.
+    - Application → Deployments → previous green deployment → "Redeploy"
+    - Coolify recreates containers from the cached image of that commit. No image rebuild needed.
 
 2. **Verify the smoke test**:
 
-   ```bash
-   curl -sS https://<prod-host>/api/healthz
-   curl -sS https://<prod-host>/api/health | jq
-   ```
+    ```bash
+    curl -sS https://<prod-host>/api/healthz
+    curl -sS https://<prod-host>/api/health | jq
+    ```
 
 3. **Handle migrations**. Doctrine migrations are forward-only by default. Three scenarios:
 
-   - **Additive migration only** (new column, new table) — leave the schema as-is. The old image ignores the new column; verify there is no NOT NULL without default that would break inserts.
-   - **Destructive migration shipped** (dropped column, renamed table) — the old image will crash. Revert the schema manually:
+    - **Additive migration only** (new column, new table) — leave the schema as-is. The old image ignores the new column; verify there is no NOT NULL without default that would break inserts.
+    - **Destructive migration shipped** (dropped column, renamed table) — the old image will crash. Revert the schema manually:
 
-     ```bash
-     docker compose exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
-     ```
+      ```bash
+      docker compose exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
+      ```
 
-     Only attempt this if a `down()` exists; otherwise restore from the most recent PostgreSQL backup.
+      Only attempt this if a `down()` exists; otherwise restore from the most recent PostgreSQL backup.
 
-   - **Data migration** (UPDATE rows) — generally non-reversible; assess data loss and decide whether to keep the new image patched-forward instead of rolling back.
+    - **Data migration** (UPDATE rows) — generally non-reversible; assess data loss and decide whether to keep the new image patched-forward instead of rolling back.
 
 4. **Inform users** via the status page if downtime exceeded 5 min.
 

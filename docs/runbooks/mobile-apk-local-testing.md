@@ -26,51 +26,65 @@ Reasons to run this:
 
 ## Prérequis
 
-- Android SDK + JDK 21 locally (Android Studio or the command-line tools), so
-  `./gradlew assembleDebug` runs. The repo does **not** commit `pwa/android/`;
+- **Node.js 26 + npm**, with the `pwa/` dependencies installed (`cd pwa && npm ci`). The
+  Capacitor CLI (`@capacitor/cli`, `@capacitor/android`) comes from the dev dependencies —
+  no separate global install.
+- **Android SDK + build-tools + JDK 21** locally (Android Studio or the command-line tools),
+  so `./gradlew assembleDebug` runs. The repo does **not** commit `pwa/android/`;
   `npm run build:android` creates it via `npx cap add android` on first run.
-- `adb` to sideload, or transfer the `.apk` to the phone and allow "unknown sources".
-- A running local stack and an ngrok tunnel.
+- **`adb`** on PATH to sideload, or transfer the `.apk` to the phone and allow "unknown
+  sources".
+- **A physical Android device** (ADR-024 targets the Samsung Galaxy S20 FE) **or an emulator**,
+  with **USB debugging** enabled for `adb install`.
+- **Docker + Docker Compose**, running the **recette** stack. `make start-recette` is the
+  equivalent of the raw `docker compose` command in step 1 and also provisions the JWT
+  keypair (`ensure-jwt-recette`).
+- **ngrok installed with an account/authtoken** configured. The free tier works but the
+  tunnel URL rotates on every restart and shows a one-time interstitial (see gotchas below).
+- **HTTPS end to end.** `capacitor.config.ts` sets `androidScheme: "https"` +
+  `allowMixedContent: false`, so the API URL must be `https://` (ngrok provides it). The
+  ngrok URL is frozen into the bundle at build time via `NEXT_PUBLIC_API_URL` /
+  `NEXT_PUBLIC_MERCURE_URL` (step 3) — rebuild the APK whenever it rotates.
 
 ## Procédure
 
 1. **Boot the stack and open the tunnel**, then note the ngrok host:
 
-   ```bash
-   docker compose -f compose.yaml -f compose.recette.yaml up --wait
-   ngrok http https://localhost          # e.g. abcd-1234.ngrok-free.app
-   ```
+    ```bash
+    docker compose -f compose.yaml -f compose.recette.yaml up --wait
+    ngrok http https://localhost          # e.g. abcd-1234.ngrok-free.app
+    ```
 
 2. **Point the backend at the ngrok host** (reuses the same script as the web path —
-   sets `SERVER_NAME` to serve both `localhost` and the ngrok domain, `local_certs`,
-   `TRUSTED_HOSTS`, `FRONTEND_URL`; re-run it whenever the ngrok URL rotates):
+    sets `SERVER_NAME` to serve both `localhost` and the ngrok domain, `local_certs`,
+    `TRUSTED_HOSTS`, `FRONTEND_URL`; re-run it whenever the ngrok URL rotates):
 
-   ```bash
-   scripts/ngrok-recette.sh abcd-1234.ngrok-free.app
-   ```
+    ```bash
+    scripts/ngrok-recette.sh abcd-1234.ngrok-free.app
+    ```
 
-   No CORS change is needed: `CORS_ALLOW_ORIGIN` (`api/.env`) already allows the native
-   WebView origin —
-   `^(https?|capacitor)://(localhost|127\.0\.0\.1)(:[0-9]+)?$` covers both
-   `https://localhost` and `capacitor://localhost`.
+    No CORS change is needed: `CORS_ALLOW_ORIGIN` (`api/.env`) already allows the native
+    WebView origin —
+    `^(https?|capacitor)://(localhost|127\.0\.0\.1)(:[0-9]+)?$` covers both
+    `https://localhost` and `capacitor://localhost`.
 
 3. **Build the APK with the ngrok URL frozen in** (Mercure gets an explicit URL because
-   the native WebView cannot resolve it same-origin):
+    the native WebView cannot resolve it same-origin):
 
-   ```bash
-   cd pwa
-   NEXT_PUBLIC_API_URL="https://abcd-1234.ngrok-free.app" \
-   NEXT_PUBLIC_MERCURE_URL="https://abcd-1234.ngrok-free.app/.well-known/mercure" \
-     npm run build:android        # build:mobile + cap add/sync android
-   cd android && ./gradlew assembleDebug
-   # APK: pwa/android/app/build/outputs/apk/debug/app-debug.apk
-   ```
+    ```bash
+    cd pwa
+    NEXT_PUBLIC_API_URL="https://abcd-1234.ngrok-free.app" \
+    NEXT_PUBLIC_MERCURE_URL="https://abcd-1234.ngrok-free.app/.well-known/mercure" \
+      npm run build:android        # build:mobile + cap add/sync android
+    cd android && ./gradlew assembleDebug
+    # APK: pwa/android/app/build/outputs/apk/debug/app-debug.apk
+    ```
 
 4. **Install on the phone** and open the app:
 
-   ```bash
-   adb install -r pwa/android/app/build/outputs/apk/debug/app-debug.apk
-   ```
+    ```bash
+    adb install -r pwa/android/app/build/outputs/apk/debug/app-debug.apk
+    ```
 
 ## Post-action / gotchas
 
