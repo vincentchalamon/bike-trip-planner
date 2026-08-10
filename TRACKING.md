@@ -1698,19 +1698,36 @@ Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pur
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#976](https://github.com/vincentchalamon/bike-trip-planner/issues/976) | fix(early-access): message de succès illisible + email de vérification jamais envoyé | M | 📋 Planifiée | - | — |
-| 2 | [#977](https://github.com/vincentchalamon/bike-trip-planner/issues/977) | fix(i18n): erreurs NextIntlClientProvider en rendu statique | S | 📋 Planifiée | - | — |
-| 3 | [#978](https://github.com/vincentchalamon/bike-trip-planner/issues/978) | fix(pwa): bouton d'aide présent sur tous les écrans du header | S | 📋 Planifiée | - | — |
-| 4 | [#979](https://github.com/vincentchalamon/bike-trip-planner/issues/979) | fix(pwa): bloc Assistant IA en opacité normale | S | 📋 Planifiée | - | — |
-| 5 | [#980](https://github.com/vincentchalamon/bike-trip-planner/issues/980) | fix(pwa): suppression d'un voyage possible même verrouillé | S | 📋 Planifiée | - | — |
-| 6 | [#981](https://github.com/vincentchalamon/bike-trip-planner/issues/981) | fix(events): affichage aligné comme les alertes + pagination | M | 📋 Planifiée | - | — |
-| 7 | [#982](https://github.com/vincentchalamon/bike-trip-planner/issues/982) | feat(alerts): surligner le segment concerné sur la carte interne | L | 📋 Planifiée | - | — |
-| 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | 📋 Planifiée | - | — |
-| 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | 📋 Planifiée | - | — |
-| 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | 📋 Planifiée | - | #975 |
-| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 📋 Planifiée | - | #975, #984 |
+| 1 | [#976](https://github.com/vincentchalamon/bike-trip-planner/issues/976) | fix(early-access): message de succès illisible + email de vérification jamais envoyé | M | 🚧 En cours | [#988](https://github.com/vincentchalamon/bike-trip-planner/pull/988) `feature/976` | — |
+| 2 | [#977](https://github.com/vincentchalamon/bike-trip-planner/issues/977) | fix(i18n): erreurs NextIntlClientProvider en rendu statique | S | ❌ Non implémentée | [#989](https://github.com/vincentchalamon/bike-trip-planner/pull/989) (fermée) | — |
+| 3 | [#978](https://github.com/vincentchalamon/bike-trip-planner/issues/978) | fix(pwa): bouton d'aide présent sur tous les écrans du header | S | 🚧 En cours | [#990](https://github.com/vincentchalamon/bike-trip-planner/pull/990) `feature/978` | — |
+| 4 | [#979](https://github.com/vincentchalamon/bike-trip-planner/issues/979) | fix(pwa): bloc Assistant IA en opacité normale | S | 🚧 En cours | [#991](https://github.com/vincentchalamon/bike-trip-planner/pull/991) `feature/979` | — |
+| 5 | [#980](https://github.com/vincentchalamon/bike-trip-planner/issues/980) | fix(pwa): suppression d'un voyage possible même verrouillé | S | 🚧 En cours | [#992](https://github.com/vincentchalamon/bike-trip-planner/pull/992) `feature/980` | — |
+| 6 | [#981](https://github.com/vincentchalamon/bike-trip-planner/issues/981) | fix(events): affichage aligné comme les alertes + pagination | M | 🚧 En cours | [#993](https://github.com/vincentchalamon/bike-trip-planner/pull/993) `feature/981` | — |
+| 7 | [#982](https://github.com/vincentchalamon/bike-trip-planner/issues/982) | feat(alerts): surligner le segment concerné sur la carte interne | L | 🚧 En cours | [#994](https://github.com/vincentchalamon/bike-trip-planner/pull/994) `feature/982` | — |
+| 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | 🚧 En cours | [#995](https://github.com/vincentchalamon/bike-trip-planner/pull/995) `feature/983` | — |
+| 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | 🚧 En cours | [#987](https://github.com/vincentchalamon/bike-trip-planner/pull/987) `feature/975` | — |
+| 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | 🚧 En cours | [#996](https://github.com/vincentchalamon/bike-trip-planner/pull/996) `feature/984` (stack, base `feature/975`) | #975 |
+| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 🚧 En cours | [#999](https://github.com/vincentchalamon/bike-trip-planner/pull/999) `feature/985` (stack, base `feature/984`) | #975, #984 |
 
 Vagues `/sprint` : {#976, #977, #978, #979, #980, #981, #982, #983, #975} en parallèle → {#984} après le merge de #975 → {#985} après le merge de #975 et #984.
+
+### Ordre de merge et conflits attendus (sprint 52)
+
+Toutes les PRs sont vertes (CI + `claude-review`) et mergeables au 10/08/2026, sauf #989 fermée. Ordre recommandé :
+
+1. **PRs indépendantes (wave 1)**, dans n'importe quel ordre : #988, #990, #991, #992, #993, #994, #995.
+2. **Stack GitHub #997** (empilée, à merger dans l'ordre) : **#987 (`feature/975`) → #996 (`feature/984`) → #999 (`feature/985`)**. Après chaque squash-merge du parent, GitHub retargette l'enfant sur `main` mais celui-ci porte encore les commits pré-squash → `gh stack rebase` (mode `--onto` auto) ou le recette manuel `git rebase --onto origin/main <tip-parent> feature/<enfant>`. `git rerere` est activé.
+
+**Conflits / arbitrages :**
+
+- **`pwa/src/lib/api/schema.d.ts`** (généré) — #987 (DTO `Event`) **n'a PAS régénéré** le fichier (`Event.source` déjà présent sur `main`) ; #994 (DTO `Alert`/`AlertAction`) l'a régénéré, **diff confiné à la section AlertAction**. Sections disjointes → **aucun conflit** entre #987 et #994.
+- **`pwa/messages/{fr,en}.json`** — clés disjointes ajoutées par #988 (`earlyAccess.errorMessage`), #993 (`events.show_more`) et #996 (attribution OpenAgenda) → merge trivial.
+- **ADR-051** — créé par #987, étendu par #999 (dans la stack, hérité) → pas de conflit.
+- **`provisioner/src/ProvisionCommand.php`, `DataTourismeImporter.php`, `docs/runbooks/zone-opening.md`** — touchés par #996 puis #999 (stack) → séquentiel, pas de conflit.
+- **`docs/runbooks/README.md`** — #999 déjà réconcilié avec #998 (runbook mobile-apk mergé sur `main`) au rebase (les deux lignes d'index conservées).
+- **`README.md` / `docs/alert-engine.md` / `AlertDocumentationTest.php` / `CLAUDE.md`** — restructurés uniquement par #995 ; #994 ne modifie aucun `AlertCode` → pas de conflit sur la table d'alertes. #995 mergeable à tout moment.
+- **#977 (PR #989) fermée sans merge** : approche non viable (routes verify SSG imposées par l'export mobile → `cookies()` du layout + `unstable_rethrow` = 500 prod). Revert au comportement `main` ; l'overlay dev next-intl (non bloquant) subsiste ; issue #977 rouverte pour un vrai correctif (rendre les routes verify dynamiques web + hors export mobile). Étape manuelle #983 : activer GitHub Pages (source = GitHub Actions) dans les réglages du dépôt.
 
 ### Recette Sprint 52
 
