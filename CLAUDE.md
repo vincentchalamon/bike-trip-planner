@@ -110,17 +110,25 @@ These bit Sprint 51 — each was green on a dev machine and red in CI, or vice-v
 - **Simulating a geolocation failure in Playwright.** `context().clearPermissions()` does **not** make `navigator.geolocation.getCurrentPosition()` reject in headless Chromium — the previously `setGeolocation()`'d fix is still returned, so `geo.error` never fires. To exercise a denial/timeout path, stub it in the page: `page.evaluate(() => { navigator.geolocation.getCurrentPosition = (_ok, err) => err?.({ code: 1, ... } as GeolocationPositionError); })` (toggle via a `window` flag to restore success for a retry assertion).
 - **A stacked PR whose base you retarget may not re-trigger CI.** After a squash-merge of a parent, retargeting the child's base to `main` **and** force-pushing sometimes fires no workflow run at all (the head shows "no checks reported"). **Close and reopen the PR** to re-trigger — no noise commit needed.
 
-### `make` swallows `--flags`
+### Passing `--flags` through a `make` target
 
-A target that forwards `$(ARGS)` cannot receive an option: `make` claims anything starting
-with `--` for itself and dies before the recipe runs.
+A bare option is claimed by `make` itself and dies before the recipe runs:
 
 ```bash
 $ make provision corse --allow-unrouted-zone
 make : l'option « --allow-unrouted-zone » n'a pas été reconnue
 ```
 
-Pass the flag to the container directly instead, keeping the target for the common case:
+Use a `--` separator: it stops `make`'s own option parsing, and the `$(ARGS)` targets
+strip the `--` (`filter-out --`, see the top of the Makefile) so the flag reaches the
+container intact. This is the intended mechanism for every `ARGS_TARGETS` entry (e.g.
+`make phpunit -- --filter=Foo`):
+
+```bash
+make provision corse -- --allow-unrouted-zone
+```
+
+Calling the container directly still works if you prefer:
 
 ```bash
 docker compose --profile provisioning run --rm provisioner corse --allow-unrouted-zone

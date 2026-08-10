@@ -194,12 +194,15 @@ observed empty perimeter and refuses. Building the national graph to work on acc
 is hours and ~30 GB, so there is an explicit way out:
 
 ```bash
-docker compose --profile provisioning run --rm provisioner corse --allow-unrouted-zone
+make provision corse -- --allow-unrouted-zone
 ```
 
-Not `make provision corse --allow-unrouted-zone`: `make` claims the flag as one of its own
-options and fails with `l'option « --allow-unrouted-zone » n'a pas été reconnue` before the
-target ever runs. Call the container directly for this one.
+The `--` separator is required: a bare `make provision corse --allow-unrouted-zone` lets
+`make` claim the flag as one of its own options and fails with
+`l'option « --allow-unrouted-zone » n'a pas été reconnue`. With `--`, `make` stops parsing
+options and the target forwards the flag to the container. Calling the container directly
+(`docker compose --profile provisioning run --rm provisioner corse --allow-unrouted-zone`)
+works too.
 
 Trips in that zone will not be routable — everything else works. **Do not** improvise the
 alternative of dropping a placeholder extract into the routing volume:
