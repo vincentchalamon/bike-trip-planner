@@ -536,6 +536,16 @@ final class DataTourismeImporterTest extends TestCase
             )),
             'food_pois is copied with its website column',
         );
+        // The events COPY column list must name `source`, otherwise the NOT NULL
+        // column stays at its DDL default and a positional shift in TABLE_COLUMNS /
+        // copyLine would go unnoticed.
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains(
+                $c,
+                '\copy tourism_staging_bretagne.events (id, name, category, start_date, end_date, url, description, price_min, source, tags, geom)',
+            )),
+            'events is copied with its source column',
+        );
 
         $cultural = explode("\t", rtrim((string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy'), "\n"));
         self::assertSame('Apr-Oct', $cultural[3], 'opening_hours comes from the flux, not a hardcoded null');
@@ -549,6 +559,7 @@ final class DataTourismeImporterTest extends TestCase
 
         $event = explode("\t", rtrim((string) file_get_contents($this->workDir.'/tourism-events.copy'), "\n"));
         self::assertSame('https://festival.test', $event[5], 'events.url is populated instead of always null');
+        self::assertSame('datatourisme', $event[8], 'events.source is stamped at the source column position');
     }
 
     /**

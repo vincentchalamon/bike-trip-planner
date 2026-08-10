@@ -50,20 +50,24 @@ final readonly class DataTourismeImporter
      * `image_url` / `wikipedia_url` are absent on purpose: they exist in the DDL
      * but are written by the Wikidata pass alone, never by the flux.
      *
+     * `events.source` is written explicitly as 'datatourisme' (Version20260810120000,
+     * ADR-051): the events table is now multi-source, so the origin is a per-row
+     * value a second source overrides rather than a runtime constant.
+     *
      * @var array<string, list<string>>
      */
     private const array TABLE_COLUMNS = [
         'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'opening_hours', 'website', 'phone', 'wikidata', 'tags', 'geom'],
-        'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'tags', 'geom'],
+        'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'],
     ];
 
     private const array STAGING_DDL = [
         'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, opening_hours text, website text, phone text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'events' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'events' => "id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), source text NOT NULL DEFAULT 'datatourisme', tags jsonb, geom geometry(Point, 4326) NOT NULL",
     ];
 
     /**
@@ -401,7 +405,7 @@ final readonly class DataTourismeImporter
         $values = match ($table) {
             'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['website'], $row['wikidata'], $tags, $geom],
             'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $row['openingHours'], $row['website'], $row['phone'], $row['wikidata'], $tags, $geom],
-            'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['website'], $row['description'], $row['price'], $tags, $geom],
+            'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['website'], $row['description'], $row['price'], 'datatourisme', $tags, $geom],
             default => [],
         };
 

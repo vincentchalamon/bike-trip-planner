@@ -62,11 +62,15 @@ final class TourismIndexReadTest extends KernelTestCase
                   ST_SetSRID(ST_MakePoint(2.50, 48.50), 4326))
             SQL);
 
+        // `source` is omitted on purpose: the column defaults to 'datatourisme'
+        // (Version20260810120000), which the read layer must surface.
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.events (id, name, category, start_date, end_date, url, description, price_min, tags, geom) VALUES
               ('e1', 'Festival', 'festival', '2026-07-01', '2026-07-05', 'https://ex.test', 'Desc', 12.5, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(5.00, 45.00), 4326)),
               ('e2', 'Past Event', 'concert', '2026-06-01', '2026-06-02', NULL, NULL, NULL, '{}'::jsonb,
+                  ST_SetSRID(ST_MakePoint(5.00, 45.00), 4326)),
+              ('e3', 'Linkless Event', 'festival', '2026-07-01', '2026-07-05', '', NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(5.00, 45.00), 4326))
             SQL);
     }
@@ -285,11 +289,15 @@ final class TourismIndexReadTest extends KernelTestCase
         $repository = new EventRepository($this->connection);
 
         $active = $repository->findActiveNear(45.00, 5.00, 20000, '2026-07-03');
-        self::assertCount(1, $active, 'only the event active on the date is returned');
+        // The linkless event (e3) is active on the date and in range but excluded:
+        // an event a rider cannot open is noise (issue #975).
+        self::assertCount(1, $active, 'only the active, linked event is returned');
         self::assertSame('Festival', $active[0]['name']);
         self::assertSame('2026-07-01', $active[0]['startDate']);
         self::assertSame('2026-07-05', $active[0]['endDate']);
         self::assertSame(12.5, $active[0]['priceMin']);
+        // The source column is populated (defaulted here) and surfaced.
+        self::assertSame('datatourisme', $active[0]['source']);
 
         // A date outside every event's range yields nothing.
         self::assertSame([], $repository->findActiveNear(45.00, 5.00, 20000, '2026-08-01'));

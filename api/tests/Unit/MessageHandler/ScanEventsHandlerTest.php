@@ -9,13 +9,15 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Geo\GeoDistanceInterface;
+use App\EventSource\EventSourceInterface;
+use App\EventSource\EventSourceRegistry;
+use App\Geo\HaversineDistance;
+use App\Geo\NearbyNameDeduplicator;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Tourism\EventRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -39,8 +41,7 @@ final class ScanEventsHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        EventRepositoryInterface $eventRepository,
-        GeoDistanceInterface $haversine,
+        EventSourceInterface $eventSource,
     ): ScanEventsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
@@ -53,8 +54,7 @@ final class ScanEventsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $eventRepository,
-            $haversine,
+            new EventSourceRegistry([$eventSource], new NearbyNameDeduplicator(new HaversineDistance()), new HaversineDistance()),
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -68,9 +68,9 @@ final class ScanEventsHandlerTest extends TestCase
     }
 
     /**
-     * @return array{name: string, category: string, lat: float, lon: float, startDate: string, endDate: string, url: ?string, description: ?string, priceMin: ?float}
+     * @return array{name: string, category: string, lat: float, lon: float, startDate: string, endDate: string, url: string, description: ?string, priceMin: ?float, source: string}
      */
-    private function eventRow(string $name, string $category, string $startDate, string $endDate, ?string $url = null, ?string $description = null): array
+    private function eventRow(string $name, string $category, string $startDate, string $endDate, string $url = 'https://event.example.com'): array
     {
         return [
             'name' => $name,
@@ -80,8 +80,9 @@ final class ScanEventsHandlerTest extends TestCase
             'startDate' => $startDate,
             'endDate' => $endDate,
             'url' => $url,
-            'description' => $description,
+            'description' => null,
             'priceMin' => null,
+            'source' => 'datatourisme',
         ];
     }
 
@@ -94,7 +95,7 @@ final class ScanEventsHandlerTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn(null);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventRepositoryInterface::class), $this->createStub(GeoDistanceInterface::class));
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventSourceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
@@ -108,15 +109,15 @@ final class ScanEventsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$this->createStage(1)]);
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventRepositoryInterface::class), $this->createStub(GeoDistanceInterface::class));
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventSourceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
     #[Test]
     public function restDayStageIsSkipped(): void
     {
-        $eventRepository = $this->createMock(EventRepositoryInterface::class);
-        $eventRepository->expects($this->never())->method('findActiveNear');
+        $eventSource = $this->createMock(EventSourceInterface::class);
+        $eventSource->expects($this->never())->method('findActiveNear');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
@@ -125,7 +126,7 @@ final class ScanEventsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$this->createStage(1, true)]);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest(new \DateTimeImmutable('2026-07-01')));
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $this->createStub(GeoDistanceInterface::class));
+        $handler = $this->createHandler($tripStateManager, $publisher, $eventSource);
         $handler(new ScanEvents('trip-1'));
     }
 
@@ -135,11 +136,11 @@ final class ScanEventsHandlerTest extends TestCase
         $startDate = new \DateTimeImmutable('2026-07-10');
         $stages = [$this->createStage(1), $this->createStage(2), $this->createStage(3)];
 
-        $eventRepository = $this->createStub(EventRepositoryInterface::class);
+        $eventSource = $this->createStub(EventSourceInterface::class);
         // Stage 0 → 2026-07-10, stage 1 → 2026-07-11, stage 2 → 2026-07-12.
-        $eventRepository->method('findActiveNear')->willReturnCallback(
+        $eventSource->method('findActiveNear')->willReturnCallback(
             fn (float $lat, float $lon, int $radius, string $date): array => match ($date) {
-                '2026-07-10' => [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14', 'https://festival.example.com', 'Grand festival')],
+                '2026-07-10' => [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14', 'https://festival.example.com')],
                 '2026-07-11' => [$this->eventRow('Expo Renoir', 'exhibition', '2026-07-11', '2026-07-30')],
                 default => [],
             },
@@ -157,10 +158,7 @@ final class ScanEventsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
 
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(500.0);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $eventSource);
         $handler(new ScanEvents('trip-1'));
 
         $events = array_values(array_filter($published, static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type']));
