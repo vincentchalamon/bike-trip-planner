@@ -130,6 +130,7 @@ nav:
       - adr/adr-048-in-ride-assistance-without-ai.md
       - adr/adr-049-zone-opening-and-import-time-completeness.md
       - adr/adr-050-terrain-attribution-to-the-ridden-route.md
+      - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md
@@ -151,3 +152,4 @@ nav:
       - runbooks/zone-opening.md
       - runbooks/zone-opening-corrections.md
       - runbooks/mobile-apk-local-testing.md
+      - runbooks/events-refresh.md
