@@ -1,0 +1,152 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/squidfunk/mkdocs-material/refs/heads/master/docs/schema.json
+site_name: Bike Trip Planner
+site_description: A bikepacking trip planner — smart pacing, safety alerts, and accommodation suggestions from a Komoot URL or a GPX file.
+site_author: Vincent Chalamon
+repo_name: vincentchalamon/bike-trip-planner
+repo_url: https://github.com/vincentchalamon/bike-trip-planner
+edit_uri: blob/main/docs/
+
+docs_dir: docs
+site_dir: .mkdocs
+strict: true
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+  features:
+    - navigation.top
+    - navigation.instant
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - tables
+
+# Documentation trees that are not part of the published site:
+#   - the repo-level docs index (README.md) conflicts with index.md as the home page;
+#   - recette/ carries design JSX exports and manual-test scripts, not reference docs;
+#   - audit/ holds one-off measurement reports linked contextually from the pages above.
+exclude_docs: |
+  /README.md
+  recette/
+  audit/
+
+# Internal links across the ADRs and runbooks point liberally at source files and at the
+# repo-root README, i.e. outside docs_dir; those cannot resolve inside the built site and
+# are intentionally not treated as build failures. Nav coherence stays strict.
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+    absolute_links: info
+  links:
+    not_found: ignore
+    anchors: ignore
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+nav:
+  - Home: index.md
+  - Features: features.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Reference:
+      - Supported route sources: route-sources.md
+      - Accommodation tags: accommodations.md
+      - Alert engine: alert-engine.md
+      - External data sources: external-data-sources.md
+      - DataTourisme flux audit: datatourisme-flux-audit.md
+  - Guides:
+      - Contributing: contributing.md
+      - Deployment: deployment.md
+      - Claude Code Tooling: claude-code-tooling.md
+      - Legal & Licensing: legal-and-licensing.md
+  - Architecture Decision Records:
+      - adr/adr-001-global-architecture-and-separation-of-concerns.md
+      - adr/adr-002-interface-contract-and-strict-typing.md
+      - adr/adr-003-local-first-data-persistence-versioning-and-migrations.md
+      - adr/adr-004-spatial-engineering-gpx-parsing-and-data-decimation.md
+      - adr/adr-005-orchestration-optimization-and-caching-of-external-apis.md
+      - adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
+      - adr/adr-007-frontend-local-state-management-and-reactivity.md
+      - adr/adr-008-high-fidelity-pdf-readbook-generation-strategy.md
+      - adr/adr-009-quality-assurance-and-automated-testing-strategy.md
+      - adr/adr-010-developer-experience-task-automation-and-local-infrastructure.md
+      - adr/adr-011-security-input-validation-and-ssrf-prevention-for-gpx-url-ingestion.md
+      - adr/adr-012-rule-based-nudge-and-contextual-alert-engine.md
+      - adr/adr-013-accomodation-discovery-and-heuristic-pricing-strategy.md
+      - adr/adr-014-alert-extensibility.md
+      - adr/adr-015-dynamic-engine-management-design-pattern.md
+      - adr/adr-016-performance-optimization-strategy.md
+      - adr/adr-017-valhalla-routing-engine-and-self-hosted-overpass-integration.md
+      - adr/adr-018-garmin-export-and-device-sync-strategy.md
+      - adr/adr-019-deployment-infrastructure-strategy.md
+      - adr/adr-020-dynamic-overpass-region-provisioning.md
+      - adr/adr-021-enriched-gpx-export-with-waypoints.md
+      - adr/adr-022-persistent-storage-strategy.md
+      - adr/adr-023-authentication-strategy.md
+      - adr/adr-024-mobile-strategy-capacitor.md
+      - adr/adr-025-removal-of-self-hosted-overpass.md
+      - adr/adr-026-multi-source-data-integration.md
+      - adr/adr-027-gate-mechanism-two-phase-pipeline.md
+      - adr/adr-028-ollama-llama-integration.md
+      - adr/adr-029-early-access-system.md
+      - adr/adr-030-symfony-ai-adoption.md
+      - adr/adr-031-error-tracking-strategy.md
+      - adr/adr-032-migrations-and-rollback-strategy.md
+      - adr/adr-033-osm-data-refresh-strategy.md
+      - adr/adr-034-usage-analytics-plausible.md
+      - adr/adr-035-rgpd-account-erasure.md
+      - adr/adr-036-manual-osm-data-refresh.md
+      - adr/adr-037-docker-dev-prod-convergence.md
+      - adr/adr-038-hide-forbidden-as-not-found.md
+      - adr/adr-039-beta-right-sizing-free-tier.md
+      - adr/adr-040-local-first-reference-data-postgis.md
+      - adr/adr-041-provisioner-resilience.md
+      - adr/adr-042-optional-multi-provider-ai-byo-token.md
+      - adr/adr-043-synchronous-structural-computation-async-enrichments.md
+      - adr/adr-044-removal-of-data-gouv-markets-source.md
+      - adr/adr-045-conversational-ai-trip-brief-chat.md
+      - adr/adr-046-temporary-ai-feature-flag.md
+      - adr/adr-047-server-side-web-auth-resolution.md
+      - adr/adr-048-in-ride-assistance-without-ai.md
+      - adr/adr-049-zone-opening-and-import-time-completeness.md
+      - adr/adr-050-terrain-attribution-to-the-ridden-route.md
+  - Runbooks:
+      - runbooks/README.md
+      - runbooks/severity-levels.md
+      - runbooks/incident-template.md
+      - runbooks/incident-alerting.md
+      - runbooks/worker-stuck.md
+      - runbooks/mercure-disconnected.md
+      - runbooks/redis-out-of-memory.md
+      - runbooks/database-disk-full.md
+      - runbooks/uptime-monitoring.md
+      - runbooks/base-image-cve-maintenance.md
+      - runbooks/oracle-vm-reclaimed.md
+      - runbooks/secrets-inventory.md
+      - runbooks/secrets-rotation.md
+      - runbooks/release-checklist.md
+      - runbooks/release-rollback.md
+      - runbooks/valhalla-routing-graph.md
+      - runbooks/valhalla-overpass-rebuild.md
+      - runbooks/zone-opening.md
+      - runbooks/zone-opening-corrections.md

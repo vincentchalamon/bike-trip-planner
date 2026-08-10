@@ -17,6 +17,7 @@ compose.override.yml
 
 coverage/
 .lighthouseci/
+.mkdocs/
 
 # Tracked on purpose: the single migration baseline schema. A developer's global
 # core.excludesFile may ignore *.sql; this negation keeps the baseline committed.
