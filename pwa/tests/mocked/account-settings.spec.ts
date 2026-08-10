@@ -77,9 +77,9 @@ test.describe("Account settings", () => {
       "test@example.com",
     );
     await expect(page.getByTestId("section-footer")).toBeVisible();
-    // SiteChrome mounts the help modal app-wide, but the top-bar help button
-    // is route-gated (only "/" and "/trips/*"), so it is suppressed here.
-    await expect(page.getByTestId("help-button")).toHaveCount(0);
+    // The help button is unconditional (like the locale/theme switches), so it
+    // is present on every screen, including account settings.
+    await expect(page.getByTestId("help-button")).toBeVisible();
   });
 
   test("unauthenticated user is redirected to login", async ({ page }) => {
