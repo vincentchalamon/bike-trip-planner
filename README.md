@@ -80,7 +80,7 @@ Full documentation is published with MkDocs Material at
 | [External data sources](docs/external-data-sources.md) | OpenStreetMap, DataTourisme, Wikidata |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
-| [Architecture Decisions](docs/adr/) | 50 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 51 ADRs explaining every major technical choice |
 | [Runbooks](docs/runbooks/) | On-call playbooks: workers, DB, Redis, Mercure, releases |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 | [Legal & Licensing](docs/legal-and-licensing.md) | Project licence, data attribution, and GDPR posture |

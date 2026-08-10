@@ -66,7 +66,7 @@ See [Architecture](architecture.md) for the full picture and the reasoning behin
 | [Supported route sources](route-sources.md) | Accepted Komoot / Strava / RideWithGPS / GPX inputs |
 | [Supported accommodation tags](accommodations.md) | OSM logical types and pricing heuristics |
 | [Alert engine](alert-engine.md) | Canonical alert-rule table (severity, priority, trigger) |
-| [External data sources](external-data-sources.md) | OSM, DataTourisme, Wikidata |
+| [External data sources](external-data-sources.md) | OSM, DataTourisme, OpenAgenda, Wikidata |
 | [Contributing](contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
 | [Architecture Decision Records](adr/adr-001-global-architecture-and-separation-of-concerns.md) | Every major technical choice, with context and alternatives |
