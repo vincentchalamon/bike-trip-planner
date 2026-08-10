@@ -172,6 +172,42 @@ test.describe("Alert actions", () => {
     await expect(mapView).toHaveAttribute("data-alert-segment", "");
   });
 
+  test("navigate on a point-only alert recenters the internal map (no OSM tab)", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      // The discontinuity alert carries only a point (lat/lon), no `segments`.
+      terrainAlertsWithServerFilteredActionsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    const mapView = mockedPage.getByTestId("map-view");
+    await expect(mapView).toHaveAttribute("data-alert-segment", "");
+
+    // A blank tab would open on window.open; assert none is created.
+    let openedExternally = false;
+    mockedPage.on("popup", () => {
+      openedExternally = true;
+    });
+
+    const stage1 = mockedPage.getByTestId("stage-card-1");
+    await stage1.getByText("Show the discontinuity on the map").click();
+
+    // The point recenters the internal map (a single one-coordinate focus) and the
+    // reset affordance appears — the OSM external tab is gone (#982).
+    await expect(mapView).toHaveAttribute("data-alert-segment", "1");
+    await expect(mockedPage.getByTestId("map-reset-view")).toBeVisible();
+    expect(openedExternally).toBe(false);
+
+    await mockedPage.getByTestId("map-reset-view").click();
+    await expect(mapView).toHaveAttribute("data-alert-segment", "");
+  });
+
   test("detour action button is displayed and disabled", async ({
     submitUrl,
     injectSequence,
