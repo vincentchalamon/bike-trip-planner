@@ -150,3 +150,4 @@ nav:
       - runbooks/valhalla-overpass-rebuild.md
       - runbooks/zone-opening.md
       - runbooks/zone-opening-corrections.md
+      - runbooks/mobile-apk-local-testing.md
