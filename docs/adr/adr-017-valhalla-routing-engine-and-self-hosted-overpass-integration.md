@@ -526,5 +526,5 @@ The gis-ops Docker image detects PBF changes on startup and rebuilds tiles autom
 - [ADR-015: Dynamic Engine Management Design Pattern](adr-015-dynamic-engine-management-design-pattern.md) — Registry/interface patterns
 - [Valhalla Documentation](https://valhalla.github.io/valhalla/)
 - [gis-ops/docker-valhalla](https://github.com/gis-ops/docker-valhalla) — Docker image used
-- [wiktorn/overpass-api](https://github.com/wiktorn/docker-overpass-api) — Docker image used
+- [wiktorn/Overpass-API](https://github.com/wiktorn/Overpass-API) — Docker image used
 - [Geofabrik Downloads — Nord-Pas-de-Calais](https://download.geofabrik.de/europe/france/nord-pas-de-calais.html)
