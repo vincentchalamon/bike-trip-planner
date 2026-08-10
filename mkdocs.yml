@@ -74,6 +74,7 @@ nav:
       - Alert engine: alert-engine.md
       - External data sources: external-data-sources.md
       - DataTourisme flux audit: datatourisme-flux-audit.md
+      - AI / LLaMA pipeline (historical): LLaMA.md
   - Guides:
       - Contributing: contributing.md
       - Deployment: deployment.md
