@@ -25,6 +25,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `DATABASE_PASSWORD` | Password Postgres | Coolify env | `php`, `worker`, `database` | Oui | Bi-annuel + on-compromise | ADR-022 |
 | `DATABASE_NAME` | Nom de base | Coolify env | `php`, `worker`, `database` | Oui | Statique | ADR-022 |
 | `MAILER_DSN` | DSN Resend (contient API key) | Coolify env | `php`, `worker` | Oui | On-compromise | ADR-029 |
+| `ACCESS_REQUEST_HMAC_SECRET` | Secret HMAC-SHA256 | Coolify env | `php`, `worker`, `worker-llm` | Oui | On-compromise (invalide les liens d'activation en attente) | ADR-029 |
 | `DATATOURISME_API_KEY` | API key | Coolify env | `worker` (multi-source) | Oui | On-compromise | ADR-026 |
 | `SENTRY_DSN` | DSN GlitchTip (public côté projet, technique côté ingestion) | Coolify env | `php`, `worker`, `pwa` (SSR) | Oui | On-compromise (projet GlitchTip recréé) | ADR-031 |
 | `NEXT_PUBLIC_SENTRY_DSN` | Idem, exposé au bundle client | Coolify env (build arg) | `pwa` (client) | Oui | Idem `SENTRY_DSN` | ADR-031 |

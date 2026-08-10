@@ -930,6 +930,7 @@
     "sending": "Sending...",
     "successMessage": "Thank you! You will receive a confirmation email shortly.",
     "throttledMessage": "Too many requests. Please wait a few minutes before trying again.",
+    "errorMessage": "Something went wrong. Please try again in a moment.",
     "verifying": "Verifying your email address...",
     "accessConfirmed": "Your email address has been confirmed! We will notify you when your access is granted.",
     "loginBoxTitle": "Don't have an account yet?",

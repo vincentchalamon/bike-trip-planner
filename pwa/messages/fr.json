@@ -930,6 +930,7 @@
     "sending": "Envoi en cours...",
     "successMessage": "Merci ! Tu vas recevoir un email de confirmation.",
     "throttledMessage": "Trop de requêtes. Patiente quelques minutes avant de réessayer.",
+    "errorMessage": "Une erreur est survenue. Merci de réessayer dans quelques instants.",
     "verifying": "Vérification de ton adresse email...",
     "accessConfirmed": "Ton adresse email a été confirmée ! Tu seras notifié lorsque ton accès sera accordé.",
     "loginBoxTitle": "Pas encore de compte ?",

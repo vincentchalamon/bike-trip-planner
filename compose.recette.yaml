@@ -37,6 +37,9 @@ x-recette-env: &recette-env
   # Non-default token-encryption key so the SEC-003 fail-closed boot guard passes
   # locally (encrypts AI provider tokens + refresh tokens at rest).
   AI_TOKEN_ENC_KEY: recette-ai-token-enc-key
+  # Non-empty secret so AccessRequestHmacService boots (ADR-029): the early-access
+  # confirmation email is signed with it. Prod stays fail-closed on the empty default.
+  ACCESS_REQUEST_HMAC_SECRET: recette-access-request-hmac-secret
 
 services:
   php:
