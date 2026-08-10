@@ -9,8 +9,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pins the alert-engine contract: one README row per {@see AlertCode} case, and
- * every case actually emitted by the production code.
+ * Pins the alert-engine contract: one docs/alert-engine.md row per {@see AlertCode}
+ * case, and every case actually emitted by the production code.
  *
  * The old version of this test keyed on the *namespace* of a translation key
  * ("alert.X.y" → X) and could only ever prove that a family of rules was
@@ -20,16 +20,16 @@ use PHPUnit\Framework\TestCase;
  *
  *   1. the cases declared by the AlertCode enum,
  *   2. the cases referenced by src/ (i.e. actually emitted),
- *   3. the codes documented in the README alert-engine table.
+ *   3. the codes documented in the docs/alert-engine.md table.
  *
  * When you add, change or remove an alert rule you must update BOTH
- * `App\Enum\AlertCode` and the README alert-engine table; there is no
+ * `App\Enum\AlertCode` and the docs/alert-engine.md table; there is no
  * hand-maintained map to keep in sync any more, and no ignore list.
  */
 final class AlertDocumentationTest extends TestCase
 {
-    /** Matches the `Code` column of the README alert-engine table rows. */
-    private const string README_ROW_PATTERN = '/^\|\s*\*\*[^|]+\*\*\s*\|\s*`([a-z0-9_]+)`\s*\|/m';
+    /** Matches the `Code` column of the docs/alert-engine.md table rows. */
+    private const string DOC_ROW_PATTERN = '/^\|\s*\*\*[^|]+\*\*\s*\|\s*`([a-z0-9_]+)`\s*\|/m';
 
     /** Matches `AlertCode::SOME_CASE` anywhere in the production sources. */
     private const string EMISSION_PATTERN = '/\bAlertCode::([A-Z][A-Z0-9_]*)\b/';
@@ -44,7 +44,7 @@ final class AlertDocumentationTest extends TestCase
     private const array NON_CASE_MEMBERS = ['VALUES'];
 
     #[Test]
-    public function everyEmittedAlertCodeIsDocumentedInReadme(): void
+    public function everyEmittedAlertCodeIsDocumented(): void
     {
         $emitted = $this->emittedCodes();
         $documented = $this->documentedCodes();
@@ -55,8 +55,8 @@ final class AlertDocumentationTest extends TestCase
             [],
             $missing,
             \sprintf(
-                'Alert code(s) %s are emitted by api/src but have no row in the README alert-engine table. '.
-                'Add one row per code to the table in README.md.',
+                'Alert code(s) %s are emitted by api/src but have no row in the alert-engine table. '.
+                'Add one row per code to the table in docs/alert-engine.md.',
                 implode(', ', $missing),
             ),
         );
@@ -74,8 +74,8 @@ final class AlertDocumentationTest extends TestCase
             [],
             $stale,
             \sprintf(
-                'Alert code(s) %s are documented in the README alert-engine table but no longer emitted by api/src. '.
-                'Remove the stale row(s) from README.md (and the case from App\Enum\AlertCode).',
+                'Alert code(s) %s are documented in the alert-engine table but no longer emitted by api/src. '.
+                'Remove the stale row(s) from docs/alert-engine.md (and the case from App\Enum\AlertCode).',
                 implode(', ', $stale),
             ),
         );
@@ -163,25 +163,25 @@ final class AlertDocumentationTest extends TestCase
     }
 
     /**
-     * Codes documented in the README alert-engine table.
+     * Codes documented in the docs/alert-engine.md table.
      *
      * @return list<string>
      */
     private function documentedCodes(): array
     {
-        $readmePath = \dirname(__DIR__, 3).'/README.md';
+        $docPath = \dirname(__DIR__, 3).'/docs/alert-engine.md';
 
-        self::assertFileExists($readmePath, 'README.md not found at project root.');
+        self::assertFileExists($docPath, 'docs/alert-engine.md not found at project root.');
 
-        preg_match_all(self::README_ROW_PATTERN, (string) file_get_contents($readmePath), $matches);
+        preg_match_all(self::DOC_ROW_PATTERN, (string) file_get_contents($docPath), $matches);
 
         $codes = $matches[1];
 
-        self::assertNotSame([], $codes, 'No alert-engine row found in README.md — the table format changed.');
+        self::assertNotSame([], $codes, 'No alert-engine row found in docs/alert-engine.md — the table format changed.');
         self::assertCount(
             \count(array_unique($codes)),
             $codes,
-            'The README alert-engine table documents the same code twice; there must be exactly one row per code.',
+            'The docs/alert-engine.md table documents the same code twice; there must be exactly one row per code.',
         );
 
         sort($codes);

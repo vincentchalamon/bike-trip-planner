@@ -1,0 +1,68 @@
+name: Documentation
+
+# Builds the MkDocs Material site and publishes it to GitHub Pages.
+# On a pull request it only builds (strict), so a broken doc fails the PR;
+# on push to main it also deploys the built site to Pages.
+# Triggered only when documentation-related files change.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - README.md
+      - .github/workflows/docs.yml
+  pull_request:
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - README.md
+      - .github/workflows/docs.yml
+
+# One queue per ref: deploys (always on main) stay serialized among themselves,
+# while each PR build gets its own queue instead of blocking on the others.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least-privilege default (matches deploy.yml): only the deploy job elevates.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install MkDocs Material
+        run: pip install "mkdocs-material>=9,<10"
+      - name: Build documentation (strict)
+        run: mkdocs build --strict
+      - name: Upload Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .mkdocs
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
