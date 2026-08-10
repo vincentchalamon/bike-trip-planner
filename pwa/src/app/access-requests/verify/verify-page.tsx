@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/constants";
@@ -12,9 +12,13 @@ import { API_URL } from "@/lib/constants";
  * When the user clicks the verification link in their email, they land here
  * at /access-requests/verify?email=...&expires=...&signature=...
  *
- * This page forwards the query params to the backend GET /access-requests/verify
- * endpoint, which validates the HMAC, marks the access request as verified, and
- * redirects to {FRONTEND_URL}?access=confirmed.
+ * This page `fetch`es the backend GET /access-requests/verify endpoint (which
+ * validates the HMAC and marks the access request as verified), then navigates
+ * client-side to /?access=confirmed. It uses `fetch` rather than a full-page
+ * navigation on purpose: the backend route shares this URL, and Caddy routes any
+ * `text/html` navigation back to the PWA — a browser redirect to the same path
+ * would loop forever. A `fetch` does not send an html Accept header, so it reaches
+ * the PHP controller instead.
  *
  * The landing page then reads the ?access=confirmed param and shows a
  * confirmation message.
@@ -22,26 +26,41 @@ import { API_URL } from "@/lib/constants";
 export default function VerifyPage() {
   const t = useTranslations("earlyAccess");
   const searchParams = useSearchParams();
-  const redirectStarted = useRef(false);
+  const router = useRouter();
+  const verifyStarted = useRef(false);
 
   useEffect(() => {
-    if (redirectStarted.current) return;
-    redirectStarted.current = true;
+    if (verifyStarted.current) return;
+    verifyStarted.current = true;
 
     const email = searchParams.get("email");
     const expires = searchParams.get("expires");
     const signature = searchParams.get("signature");
 
     if (!email || !expires || !signature) {
-      window.location.replace(`${window.location.origin}/`);
+      router.replace("/");
       return;
     }
 
     const params = new URLSearchParams({ email, expires, signature });
-    window.location.replace(
-      `${API_URL}/access-requests/verify?${params.toString()}`,
-    );
-  }, [searchParams]);
+    const verify = async () => {
+      try {
+        // Reach the PHP controller with a `fetch` (Accept: */*): it does NOT
+        // match Caddy's `@pwa` (text/html) route, so it hits the backend.
+        // A full-page navigation to this same-origin path would instead be
+        // routed back to this page by Caddy — an infinite loop.
+        await fetch(`${API_URL}/access-requests/verify?${params.toString()}`, {
+          credentials: "include",
+        });
+      } catch {
+        // Anti-enumeration: land on the same confirmation regardless of outcome.
+      } finally {
+        router.replace("/?access=confirmed");
+      }
+    };
+
+    void verify();
+  }, [searchParams, router]);
 
   return (
     <div
