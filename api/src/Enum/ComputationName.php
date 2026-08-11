@@ -35,7 +35,7 @@ enum ComputationName: string
     {
         return array_values(array_filter(
             self::cases(),
-            static fn (self $c): bool => $c !== self::ROUTE_SEGMENT,
+            static fn (self $c): bool => self::ROUTE_SEGMENT !== $c,
         ));
     }
 
