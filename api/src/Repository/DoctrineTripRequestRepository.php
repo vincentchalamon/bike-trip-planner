@@ -17,7 +17,6 @@ use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
-use App\Llm\Dto\StageAiAnalysis;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -358,75 +357,14 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    /**
-     * Atomic per-stage UPDATE on the JSONB column to avoid loading the full TripRequest +
-     * its entire stages collection on every parallel pass-1 message handler invocation.
-     *
-     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
-     */
-    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
-    {
-        if (!Uuid::isValid($tripId)) {
-            return;
-        }
-
-        $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.aiAnalysis = :aiAnalysis WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
-        )
-            ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
-            // Bind as a single JSONB value; without the explicit type Doctrine infers
-            // ArrayParameterType::STRING and expands the array into an IN list ($1, $2, ...).
-            ->setParameter('aiAnalysis', $aiAnalysis, 'jsonb')
-            ->execute();
-    }
-
-    /**
-     * Atomic UPDATE on the JSONB column to avoid loading the full TripRequest aggregate.
-     *
-     * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
-     */
-    public function updateTripAiOverview(string $tripId, ?array $aiOverview): void
-    {
-        if (!Uuid::isValid($tripId)) {
-            return;
-        }
-
-        $this->getEntityManager()->createQuery(
-            // Writing the overview clears the stale flag: the analysis is now
-            // in sync with the current trip data (recette AI lifecycle).
-            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewData = :aiOverview, t.aiOverviewStale = false WHERE t.id = :tripId',
-        )
-            ->setParameter('tripId', Uuid::fromString($tripId))
-            // Bind as a single JSONB value (see updateStageAiAnalysis): the explicit type
-            // prevents Doctrine from expanding the array into an IN list.
-            ->setParameter('aiOverview', $aiOverview, 'jsonb')
-            ->execute();
-    }
-
-    public function markAiOverviewStale(string $tripId): void
-    {
-        if (!Uuid::isValid($tripId)) {
-            return;
-        }
-
-        // Atomic flag flip, guarded so a trip that was never analysed stays
-        // clean (no "outdated" note without any analysis to regenerate).
-        $this->getEntityManager()->createQuery(
-            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewStale = true WHERE t.id = :tripId AND t.aiOverviewData IS NOT NULL',
-        )
-            ->setParameter('tripId', Uuid::fromString($tripId))
-            ->execute();
-    }
-
     // Atomic per-stage UPDATE of one JSONB column, keyed by dayNumber: lets parallel
     // enrichment handlers persist only their own column instead of the whole-collection
     // read-modify-write of storeStages() (which let a slow handler overwrite a sibling's
     // freshly-written column — recette #649). One literal DQL per column (a dynamic,
     // sprintf-built query string is not validated by phpstan-doctrine and avoids any
-    // column-name interpolation). Mirrors updateStageAiAnalysis(). The value is bound as a
-    // single 'jsonb' parameter — without the explicit type Doctrine infers
-    // ArrayParameterType and expands the list into $1, $2, … .
+    // column-name interpolation). The value is bound as a single 'jsonb' parameter —
+    // without the explicit type Doctrine infers ArrayParameterType and expands the list
+    // into $1, $2, … .
 
     public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
     {
@@ -625,9 +563,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $entity->setSelectedAccommodation($this->accommodationToArray($dto->selectedAccommodation));
         }
 
-        // AI analysis (LLaMA 8B pass-1 — issue #301)
-        $entity->setAiAnalysis($dto->aiAnalysis?->toArray());
-
         return $entity;
     }
 
@@ -689,12 +624,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $selectedData = $entity->getSelectedAccommodation();
         if (null !== $selectedData) {
             $dto->selectedAccommodation = $this->arrayToAccommodation($selectedData);
-        }
-
-        // AI analysis (LLaMA 8B pass-1 — issue #301)
-        $aiAnalysisData = $entity->getAiAnalysis();
-        if (null !== $aiAnalysisData) {
-            $dto->aiAnalysis = StageAiAnalysis::fromArray($aiAnalysisData);
         }
 
         return $dto;

@@ -62,38 +62,6 @@ interface TripRequestRepositoryInterface
     public function getStageGeometry(string $tripId, int $dayNumber): ?array;
 
     /**
-     * Persists the LLaMA 8B pass-1 AI analysis for a single stage atomically.
-     *
-     * Targeted by `dayNumber` (1-indexed, matches {@see Stage::$dayNumber}). Required
-     * because parallel `AnalyzeStageWithLlmHandler` workers each update one stage
-     * independently — using {@see self::storeStages()} would wipe stages still
-     * being processed by a sibling worker.
-     *
-     * Returns silently if the trip or matching stage does not exist anymore (e.g.
-     * the trip was deleted between dispatch and consumption).
-     *
-     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
-     */
-    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void;
-
-    /**
-     * Persists the LLaMA 8B pass-2 trip overview atomically (issue #302).
-     *
-     * Returns silently if the trip does not exist anymore (e.g. the trip was
-     * deleted between dispatch and consumption).
-     *
-     * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
-     */
-    public function updateTripAiOverview(string $tripId, ?array $aiOverview): void;
-
-    /**
-     * Flags the trip's AI overview as outdated after a data modification, but
-     * only when an overview already exists (a trip never analysed has nothing to
-     * mark stale). No-op otherwise. Reset by {@see self::updateTripAiOverview()}.
-     */
-    public function markAiOverviewStale(string $tripId): void;
-
-    /**
      * Persists a single stage's weather atomically, keyed by dayNumber.
      *
      * Parallel enrichment handlers each own one JSONB column; routing them through

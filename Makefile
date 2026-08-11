@@ -39,12 +39,12 @@ build: ## Build the Docker environment in production mode
 
 # compose.yaml keeps the iso-prod fail-closed defaults (read as-is by CI/Coolify):
 # the prod entrypoint refuses to boot on a default/unset Mercure key (SEC-004) or
-# AI token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
+# refresh-token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
 # So `make start` supplies non-default local placeholders + the generated keypair to
 # boot, mirroring the CI env and the compose.recette.yaml overlay.
 start: ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
 	@MERCURE_JWT_KEY=local-iso-prod-mercure-key \
-		AI_TOKEN_ENC_KEY=local-iso-prod-ai-enc-key \
+		REFRESH_TOKEN_ENC_KEY=local-iso-prod-refresh-enc-key \
 		JWT_PASSPHRASE=recette \
 		JWT_PRIVATE_KEY_PATH=.docker/jwt-recette/private.pem \
 		JWT_PUBLIC_KEY_PATH=.docker/jwt-recette/public.pem \

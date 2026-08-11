@@ -83,8 +83,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $generation = $this->generationTracker->increment($tripId);
-        // Trip data changed → flag any existing AI overview as outdated.
-        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));

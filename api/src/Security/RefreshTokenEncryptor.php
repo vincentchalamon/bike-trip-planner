@@ -18,21 +18,18 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * the token itself is stored encrypted.
  *
  * Uses libsodium's authenticated `crypto_secretbox` (XSalsa20-Poly1305) with a
- * fresh random nonce per value (prepended to the ciphertext). Reuses the app's
- * token-encryption key (`AI_TOKEN_ENC_KEY`) rather than introducing a new
- * mandatory prod secret; the prod entrypoint now refuses to boot when it is unset
- * or still the committed dev default (SEC-003 fail-closed guard), so the key can
- * never silently fall back to a public value. Rotating it invalidates both AI
- * tokens and refresh sessions (users simply re-login).
- * Kept separate from AiTokenEncryptor so the auth subsystem does not depend on
- * the AI module.
+ * fresh random nonce per value (prepended to the ciphertext). Keyed by the app's
+ * token-encryption key (`REFRESH_TOKEN_ENC_KEY`); the prod entrypoint refuses to
+ * boot when it is unset or still the committed dev default (SEC-003 fail-closed
+ * guard), so the key can never silently fall back to a public value. Rotating it
+ * invalidates existing refresh sessions (users simply re-login).
  */
 final readonly class RefreshTokenEncryptor
 {
     private string $key;
 
     public function __construct(
-        #[Autowire(param: 'app.ai_token_enc_key')]
+        #[Autowire(param: 'app.refresh_token_enc_key')]
         #[\SensitiveParameter]
         string $key,
     ) {

@@ -62,9 +62,6 @@ final readonly class StagePayloadMapper
                 $this->eventToPayload(...),
                 $stage->events,
             ),
-            // LLaMA 8B pass-1 narrative briefing (issues #301/#303). Forwarded as-is so
-            // the frontend can render it next to the per-stage data atomically.
-            'aiAnalysis' => $stage->aiAnalysis,
         ];
     }
 

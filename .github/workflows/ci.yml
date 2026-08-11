@@ -638,7 +638,7 @@ jobs:
       MERCURE_JWT_KEY: "ci-test-mercure-key"
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
-      AI_TOKEN_ENC_KEY: "ci-test-ai-enc-key"
+      REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -665,7 +665,6 @@ jobs:
             pwa.cache-from=type=gha,scope=pwa
             pwa.cache-from=type=gha,scope=pwa-main
             pwa.cache-to=type=gha,scope=pwa,mode=max
-            pwa.args.NEXT_PUBLIC_ENABLE_AI=true
             pwa.args.NEXT_PUBLIC_ENABLE_TEST_HOOKS=true
       - name: Start services
         run: docker compose up -d database php pwa worker redis --no-build --wait
@@ -711,7 +710,7 @@ jobs:
       MERCURE_JWT_KEY: "ci-test-mercure-key"
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
-      AI_TOKEN_ENC_KEY: "ci-test-ai-enc-key"
+      REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -736,7 +735,6 @@ jobs:
             php.cache-from=type=gha,scope=php-main
             pwa.cache-from=type=gha,scope=pwa
             pwa.cache-from=type=gha,scope=pwa-main
-            pwa.args.NEXT_PUBLIC_ENABLE_AI=true
             pwa.args.NEXT_PUBLIC_ENABLE_TEST_HOOKS=true
       - name: Start services
         run: docker compose up -d database php pwa worker redis --no-build --wait

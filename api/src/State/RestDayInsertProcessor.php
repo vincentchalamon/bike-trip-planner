@@ -86,8 +86,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $generation = $this->generationTracker->increment($tripId);
-        // Trip data changed → flag any existing AI overview as outdated.
-        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $insertedIndex = $index + 1;
         $affectedIndices = range($insertedIndex, count($stages) - 1);

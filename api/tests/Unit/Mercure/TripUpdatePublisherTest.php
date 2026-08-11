@@ -59,14 +59,13 @@ final class TripUpdatePublisherTest extends TestCase
         $hub->expects(self::once())
             ->method('publish')
             ->willReturnCallback(function (Update $update): string {
-                /** @var array{type: string, data: array{stages: list<array<string, mixed>>, computationStatus: array<string, string>, aiOverview?: ?string}} $decoded */
+                /** @var array{type: string, data: array{stages: list<array<string, mixed>>, computationStatus: array<string, string>}} $decoded */
                 $decoded = json_decode($update->getData(), true, flags: \JSON_THROW_ON_ERROR);
                 self::assertSame(MercureEventType::TRIP_READY->value, $decoded['type']);
                 self::assertCount(2, $decoded['data']['stages']);
                 self::assertSame(1, $decoded['data']['stages'][0]['dayNumber']);
                 self::assertSame(80.0, $decoded['data']['stages'][0]['distance']);
                 self::assertSame(['terrain' => 'done', 'weather' => 'failed'], $decoded['data']['computationStatus']);
-                self::assertArrayNotHasKey('aiOverview', $decoded['data']);
 
                 return 'id';
             });
@@ -77,38 +76,6 @@ final class TripUpdatePublisherTest extends TestCase
             $this->createStage(2),
         ], [
             'status' => ['terrain' => 'done', 'weather' => 'failed'],
-        ]);
-    }
-
-    #[Test]
-    public function publishesTripReadyWithOptionalAiOverview(): void
-    {
-        $aiOverview = [
-            'narrative' => 'Sunny ride with moderate climbs.',
-            'patterns' => [],
-            'recommendations' => [],
-            'crossStageAlerts' => [],
-            'model' => 'llama3.1:8b',
-            'promptVersion' => 1,
-            'generatedAt' => '2026-05-07T18:00:00+00:00',
-        ];
-
-        $hub = $this->createMock(HubInterface::class);
-        $hub->expects(self::once())
-            ->method('publish')
-            ->willReturnCallback(function (Update $update) use ($aiOverview): string {
-                /** @var array{type: string, data: array{aiOverview?: array<string, mixed>|null}} $decoded */
-                $decoded = json_decode($update->getData(), true, flags: \JSON_THROW_ON_ERROR);
-                self::assertArrayHasKey('aiOverview', $decoded['data']);
-                self::assertSame($aiOverview, $decoded['data']['aiOverview']);
-
-                return 'id';
-            });
-
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
-        $publisher->publishTripReady(self::TRIP_ID, [], [
-            'status' => [],
-            'aiOverview' => $aiOverview,
         ]);
     }
 
