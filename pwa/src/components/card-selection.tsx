@@ -8,41 +8,27 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Link2, FileUp, Sparkles, ArrowLeft } from "lucide-react";
-import { AiChatCard } from "@/components/ai-chat-card";
-import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
+import { Link2, FileUp, ArrowLeft } from "lucide-react";
 import { GpxDropZoneCard } from "@/components/gpx-drop-zone-card";
 import { SourceUrlChip } from "@/components/source-url-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { isAiFeatureEnabled } from "@/lib/constants";
 import { isSupportedSourceUrl, isValidUrl } from "@/lib/validation/url";
-import { useUiStore } from "@/store/ui-store";
 
 /**
  * Input mode selected by the user.
  *
- * - `null`: no selection yet, all three cards displayed side-by-side
+ * - `null`: no selection yet, all cards displayed side-by-side
  * - `link`: Komoot/Strava/RideWithGPS URL input
  * - `gpx`: GPX file drag & drop + file picker
- * - `ai`: free-form natural-language brief that drives AI route generation (ADR-042)
  */
-export type InputMode = "link" | "gpx" | "ai" | null;
+export type InputMode = "link" | "gpx" | null;
 
 interface CardSelectionProps {
   onSubmitUrl: (url: string) => Promise<void> | void;
   onUploadFile: (file: File) => Promise<void> | void;
-  /**
-   * Fired when the rider launches AI route generation from the chat card's
-   * "Lancer le calcul d'itinéraire" button. Receives the consolidated brief
-   * (structured `collected` parameters + the rider's turns as fallback). The
-   * trip-planner host forwards it to `POST /trips/ai-generate` (ADR-045). The
-   * chat card also dispatches an `ai-chat-launch` DOM event for test/legacy
-   * consumers.
-   */
-  onLaunchAiGeneration?: (brief: string) => void;
   disabled?: boolean;
 }
 
@@ -52,20 +38,16 @@ const MAX_GPX_SIZE_BYTES = 30 * 1024 * 1024;
 /**
  * Mutually-exclusive card selection for Act 1 "Préparation".
  *
- * Shows three active cards (Lien + GPX + Assistant IA). Selecting a card
- * expands it and collapses the others, revealing the appropriate input
- * (URL field, drop zone or chat composer). The AI assistant card forwards a
- * natural-language brief to AI route generation (ADR-042).
+ * Shows two active cards (Lien + GPX). Selecting the link card expands it and
+ * collapses the other, revealing the URL field; the GPX drop zone is rendered
+ * inline.
  */
 export function CardSelection({
   onSubmitUrl,
   onUploadFile,
-  onLaunchAiGeneration,
   disabled = false,
 }: CardSelectionProps) {
   const t = useTranslations("cardSelection");
-  const aiCapability = useUiStore((s) => s.aiCapability);
-  const aiEnabled = isAiFeatureEnabled();
   const [selected, setSelected] = useState<InputMode>(null);
 
   const handleSelect = useCallback(
@@ -93,12 +75,8 @@ export function CardSelection({
       <div
         className={cn(
           "grid w-full gap-4 transition-all",
-          // When one card is selected it takes the full width; otherwise 3-up grid
-          selected === null
-            ? aiEnabled
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              : "grid-cols-1 sm:grid-cols-2"
-            : "grid-cols-1",
+          // When one card is selected it takes the full width; otherwise 2-up grid
+          selected === null ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1",
         )}
       >
         {/* Card: Link */}
@@ -112,29 +90,11 @@ export function CardSelection({
         )}
 
         {/* Card: GPX — the drop zone / file input is rendered inline, so a
-            rider can drop or pick a GPX straight from the three-choice screen
+            rider can drop or pick a GPX straight from the two-choice screen
             without the extra "select the card" click (#834). It is only shown
-            in the default grid; picking Link or AI collapses the grid and hides
-            it. */}
+            in the default grid; picking Link collapses the grid and hides it. */}
         {selected === null && (
           <GpxCard disabled={disabled} onUpload={onUploadFile} />
-        )}
-
-        {/* Card: AI Assistant - natural-language brief to AI route generation
-            (ADR-042). Hidden entirely while the AI feature is on hold behind
-            `NEXT_PUBLIC_ENABLE_AI` (recette #649). When enabled it is always
-            visible: disabled with an inline notice when the LLM tier is
-            unreachable (#304), or disabled-but-visible with a "Configurez une
-            IA" CTA when no provider is set on the account. */}
-        {aiEnabled && (selected === null || selected === "ai") && (
-          <AiCard
-            expanded={selected === "ai"}
-            disabled={disabled}
-            unavailable={!aiCapability.available}
-            notConfigured={!aiCapability.configured}
-            onSelect={() => handleSelect("ai")}
-            onLaunchGeneration={onLaunchAiGeneration}
-          />
         )}
       </div>
 
@@ -385,56 +345,6 @@ function GpxCard({ disabled, onUpload }: GpxCardProps) {
           </div>
         )}
       </div>
-    </CardShell>
-  );
-}
-
-interface AiCardProps {
-  expanded: boolean;
-  disabled: boolean;
-  unavailable?: boolean;
-  notConfigured?: boolean;
-  onSelect: () => void;
-  onLaunchGeneration?: (brief: string) => void;
-}
-
-function AiCard({
-  expanded,
-  disabled,
-  unavailable = false,
-  notConfigured = false,
-  onSelect,
-  onLaunchGeneration,
-}: AiCardProps) {
-  const t = useTranslations("cardSelection");
-
-  return (
-    <CardShell
-      testId="card-ai"
-      ariaLabel={t("ariaSelectAi")}
-      expanded={expanded}
-      disabled={disabled || unavailable || notConfigured}
-      // `notConfigured` keeps the card non-interactive but must not dim it:
-      // the "Configurez une IA" invitation has to stay legible (#979). Only a
-      // real outage (`unavailable`) or a host-level `disabled` dims the shell.
-      dimmed={disabled || unavailable}
-      onSelect={onSelect}
-      icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
-      title={t("aiTitle")}
-      description={t("aiDescription")}
-    >
-      {notConfigured ? (
-        <AiUnavailableNotice variant="notConfigured" context="chat" />
-      ) : unavailable ? (
-        <AiUnavailableNotice context="chat" />
-      ) : (
-        expanded && (
-          <AiChatCard
-            onLaunchGeneration={onLaunchGeneration}
-            disabled={disabled}
-          />
-        )
-      )}
     </CardShell>
   );
 }

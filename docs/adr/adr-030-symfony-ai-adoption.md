@@ -1,5 +1,7 @@
 # ADR-030: symfony/ai Adoption — Platform Yes, Tool-Calling No (on llama3.2:3b)
 
+> **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
+
 - **Status:** Accepted
 - **Date:** 2026-05-22
 - **Depends on:** ADR-028 (Ollama/LLaMA Integration Architecture)

@@ -8,11 +8,11 @@ export type ViewMode = "timeline" | "map" | "split";
 /**
  * Per-block async enrichment status (ADR-043, PR4-front).
  *
- * Mirrors the backend `weatherStatus` / `aiStatus` fields exposed on
+ * Mirrors the backend `weatherStatus` field exposed on
  * `GET /trips/{id}/detail`. Structural computation now runs synchronously
- * (status `draft` → `ready`); weather and AI are the only remaining
- * asynchronous blocks, each rendered with its own spinner on top of the
- * already-displayed trip view.
+ * (status `draft` → `ready`); weather is the only remaining asynchronous
+ * block, rendered with its own spinner on top of the already-displayed trip
+ * view.
  *
  * - `null`              — block not applicable (TTL expired, never started)
  * - `pending`/`running` — enrichment in flight → spinner / skeleton
@@ -36,8 +36,7 @@ export type PoiSuggestion = PoiSuggestionDto;
  * Stored in-memory only — the thread is intentionally not persisted across page
  * reloads. Carries no `content`: every visible string is derived from
  * `next-intl` at render time from the structured metadata below, so a reworded
- * message never touches the store. The name disambiguates it from the brief
- * chat's `AiChatMessage` (`ai-chat-card.tsx`) and the backend `AiChatTurn`.
+ * message never touches the store.
  *
  * - `question` — a user turn: which category chip was tapped.
  * - `recap`    — an assistant turn: the search outcome (radius, counts, coverage
@@ -81,16 +80,15 @@ interface UiState {
   /**
    * Per-block async enrichment status (ADR-043, PR4-front).
    *
-   * `weather` and `ai` are the only remaining asynchronous blocks once
-   * structural computation runs synchronously. Each drives its own spinner /
-   * skeleton on top of the already-displayed trip view, hydrated from
-   * `GET /trips/{id}/detail` (`weatherStatus` / `aiStatus`) and kept live by
-   * the Mercure dispatcher (`weather_fetched`, `trip_ready`,
-   * `computation_error`).
+   * `weather` is the only remaining asynchronous block once structural
+   * computation runs synchronously. It drives its own spinner / skeleton on
+   * top of the already-displayed trip view, hydrated from
+   * `GET /trips/{id}/detail` (`weatherStatus`) and kept live by the Mercure
+   * dispatcher (`weather_fetched`, `trip_ready`, `computation_error`).
    */
-  blockStatus: { weather: BlockStatus; ai: BlockStatus };
+  blockStatus: { weather: BlockStatus };
   /**
-   * Whether the floating AI assistant chat panel is currently open.
+   * Whether the floating in-ride help panel is currently open.
    * Toggled by {@link toggleBubble} / {@link closeBubble}.
    */
   isBubbleOpen: boolean;
@@ -100,24 +98,11 @@ interface UiState {
    */
   chatHistory: InRideMessage[];
   /**
-   * Whether the user has ever opened the AI bubble. Stored in
+   * Whether the user has ever opened the in-ride bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
    * Persisted by {@link toggleBubble} the first time the panel opens.
    */
   hasSeenBubble: boolean;
-  /**
-   * AI tier availability driving the explicit gating (#304, ADR-042).
-   * - `available`: runtime reachability of the LLM tier. For the
-   *   bring-your-own-token cloud providers (ADR-042) there is no self-hosted tier
-   *   to probe, so this stays `true` (see `fetchAiAvailability`); a provider
-   *   outage surfaces reactively via the 503 the chat endpoint returns.
-   * - `configured`: whether the account has an AI provider + token set
-   *   (`GET /users/me/ai-settings`). When false, AI surfaces are shown
-   *   disabled-but-visible with a "Configurez une IA" CTA. Starts `false`
-   *   (fail-closed) so the controls stay disabled until the settings confirm
-   *   a provider.
-   */
-  aiCapability: { available: boolean; configured: boolean };
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -134,8 +119,8 @@ interface UiState {
   setViewMode: (mode: ViewMode) => void;
   setConfigPanelFocusSection: (section: "dates" | "pacing" | null) => void;
   openConfigPanelAt: (section: "dates" | "pacing") => void;
-  /** Set the async status of a single enrichment block (weather / ai). */
-  setBlockStatus: (block: "weather" | "ai", status: BlockStatus) => void;
+  /** Set the async status of the weather enrichment block. */
+  setBlockStatus: (block: "weather", status: BlockStatus) => void;
   /** Flip {@link isBubbleOpen}. Also marks the bubble as seen on first open. */
   toggleBubble: () => void;
   /** Force the chat panel closed. */
@@ -144,15 +129,6 @@ interface UiState {
   appendMessage: (message: InRideMessage) => void;
   /** Reset the in-ride thread (wiped on trip switch). */
   clearHistory: () => void;
-  /** Update the runtime AI availability (from the `/api/health` probe, #304). */
-  setAiAvailable: (value: boolean) => void;
-  /** Update whether the account has a configured AI provider (ADR-042). */
-  setAiConfigured: (value: boolean) => void;
-  /** Replace the whole AI capability — E2E override hook for the states. */
-  setAiCapability: (capability: {
-    available: boolean;
-    configured: boolean;
-  }) => void;
 }
 
 const BUBBLE_SEEN_STORAGE_KEY = "btp.in-ride-bubble.seen";
@@ -190,7 +166,7 @@ function writeBubbleSeenToStorage(): void {
  * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
  *   the map; `null` means global view (all stages visible)
  * - `viewMode` — current layout mode: "timeline", "map", or "split"
- * - `blockStatus` — per-block async enrichment status (weather / ai)
+ * - `blockStatus` — per-block async enrichment status (weather)
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -215,11 +191,10 @@ export const useUiStore = create<UiState>()(
     // on first render via a useEffect that detects the viewport width.
     viewMode: "split",
     configPanelFocusSection: null,
-    blockStatus: { weather: null, ai: null },
+    blockStatus: { weather: null },
     isBubbleOpen: false,
     chatHistory: [],
     hasSeenBubble: readBubbleSeenFromStorage(),
-    aiCapability: { available: true, configured: false },
 
     setProcessing: (value) =>
       set((state) => {
@@ -315,21 +290,6 @@ export const useUiStore = create<UiState>()(
     clearHistory: () =>
       set((state) => {
         state.chatHistory = [];
-      }),
-
-    setAiAvailable: (value) =>
-      set((state) => {
-        state.aiCapability.available = value;
-      }),
-
-    setAiConfigured: (value) =>
-      set((state) => {
-        state.aiCapability.configured = value;
-      }),
-
-    setAiCapability: (capability) =>
-      set((state) => {
-        state.aiCapability = capability;
       }),
   })),
 );

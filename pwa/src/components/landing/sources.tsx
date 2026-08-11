@@ -1,16 +1,14 @@
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles } from "lucide-react";
 import {
   KomootLogo,
   StravaLogo,
   RideWithGpsLogo,
   GpxLogo,
 } from "@/components/landing/source-logos";
-import { isAiFeatureEnabled } from "@/lib/constants";
 
 type Source = {
-  key: "komoot" | "strava" | "rwgps" | "gpx" | "ai";
+  key: "komoot" | "strava" | "rwgps" | "gpx";
   name: string;
   href: string | null;
   external: boolean;
@@ -54,14 +52,6 @@ const SOURCES: Source[] = [
     Logo: GpxLogo,
     tile: "bg-muted text-foreground",
   },
-  {
-    key: "ai",
-    name: "AI",
-    href: null,
-    external: false,
-    Logo: (props) => <Sparkles {...props} />,
-    tile: "bg-brand/10 text-brand",
-  },
 ];
 
 export function LandingSources() {
@@ -81,10 +71,7 @@ export function LandingSources() {
         </p>
 
         <ul className="flex flex-wrap items-stretch justify-center gap-4 md:gap-5">
-          {/* Hide the AI source while the AI feature is off (recette #649). */}
-          {SOURCES.filter(
-            (source) => source.key !== "ai" || isAiFeatureEnabled(),
-          ).map((source) => {
+          {SOURCES.map((source) => {
             const Logo = source.Logo;
             const content = (
               <span className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-border/60 bg-card px-6 py-5 min-w-[136px] transition-all hover:border-brand/40 hover:shadow-md">

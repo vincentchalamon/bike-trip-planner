@@ -7,7 +7,6 @@ import dayjs from "dayjs";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type {
   StageData,
-  StageAiAnalysisData,
   WeatherData,
   PoiData,
   AccommodationData,
@@ -15,7 +14,6 @@ import type {
   SupplyMarkerData,
   EventData,
 } from "@/lib/validation/schemas";
-import type { TripAiOverviewPayload } from "@/lib/mercure/types";
 
 /**
  * A single user modification accumulated in the batch queue before being applied
@@ -95,21 +93,6 @@ interface TripState {
    * `POST /trips/{id}/recompute` instead of N sequential recomputations.
    */
   pendingModifications: Modification[];
-
-  /**
-   * Trip-level narrative produced by the LLaMA pass 2 (issue #302 backend).
-   * Populated on `trip_ready` and rendered at the top of "Mon voyage" by
-   * {@link TripAiOverview}. Stays `null` when the AI pipeline is disabled or
-   * has not completed, in which case the overview component is suppressed.
-   */
-  aiOverview: TripAiOverviewPayload | null;
-
-  /**
-   * True when the trip was modified after its AI overview was generated
-   * (server-persisted flag, hydrated from `/detail`). Drives the "analysis
-   * outdated" note + manual regenerate button instead of auto-recomputing.
-   */
-  aiOverviewStale: boolean;
 
   /**
    * Index of the stage currently displayed in the master/detail roadbook view
@@ -210,14 +193,6 @@ interface TripState {
    */
   applyTripReady: (stages: StageData[]) => void;
   /**
-   * Store (or clear) the trip-level AI overview produced by the LLaMA pass 2
-   * (issue #302). Called from {@link useMercure} when `trip_ready` lands. The
-   * payload is null when the LLM pipeline is disabled, failed, or has not yet
-   * produced a result.
-   */
-  setAiOverview: (overview: TripAiOverviewPayload | null) => void;
-  setAiOverviewStale: (stale: boolean) => void;
-  /**
    * Mode 2 — Per-stage replacement when `stage_updated` arrives.
    *
    * Same preservation semantics as {@link applyTripReady} but for a single
@@ -305,8 +280,6 @@ const initialState = {
   stageDiffs: new Map<number, Set<string>>(),
   pendingModifications: [] as Modification[],
   selectedStageIndex: 0,
-  aiOverview: null as TripAiOverviewPayload | null,
-  aiOverviewStale: false,
   focusedAlertSegment: null as [number, number][][] | null,
 };
 
@@ -822,16 +795,6 @@ export const useTripStore = create<TripState>()(
         });
       }),
 
-    setAiOverview: (overview) =>
-      set((state) => {
-        state.aiOverview = overview;
-      }),
-
-    setAiOverviewStale: (stale) =>
-      set((state) => {
-        state.aiOverviewStale = stale;
-      }),
-
     applyStageUpdate: (stageIndex, stage) =>
       set((state) => {
         const prev = state.stages[stageIndex];
@@ -1034,32 +997,6 @@ export const useTripTemporalStore = createTemporalStore(
     );
   },
 );
-
-/**
- * Selector for the trip-level AI overview narrative (issue #305).
- *
- * Returns `null` when the LLM pipeline is disabled, has not completed, or has
- * failed — consumers should treat that case as "no overview to display" and
- * fall back silently rather than rendering a placeholder.
- */
-export const useTripAiOverview = (): TripAiOverviewPayload | null =>
-  useTripStore((state) => state.aiOverview);
-
-/** True when the persisted AI overview is outdated vs the current trip data. */
-export const useTripAiOverviewStale = (): boolean =>
-  useTripStore((state) => state.aiOverviewStale);
-
-/**
- * Selector for the LLaMA pass-1 per-stage AI analysis (issue #306).
- *
- * Returns `null` when the LLM pipeline is disabled, the analysis has not yet
- * completed, or the stage index is out of range. Consumers should treat this
- * as "no AI summary to display" and fall back to the rule-based alert list.
- */
-export const useStageAiAnalysis = (
-  stageIndex: number,
-): StageAiAnalysisData | null =>
-  useTripStore((state) => state.stages[stageIndex]?.aiAnalysis ?? null);
 
 // Expose the store for E2E tests so Playwright can manipulate trip state directly
 // without relying on user interactions.

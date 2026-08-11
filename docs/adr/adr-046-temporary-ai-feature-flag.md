@@ -1,5 +1,7 @@
 # ADR-046: Temporary Masking of the AI Feature Behind a Build Flag
 
+> **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
+
 - **Status:** Accepted
 - **Date:** 2026-06-24
 - **Depends on:** ADR-042 (Optional Multi-Provider AI, BYO Token), ADR-045 (Conversational AI Trip-Brief Chat)

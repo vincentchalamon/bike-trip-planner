@@ -12,10 +12,10 @@ import { useUiStore } from "@/store/ui-store";
  *
  * The 4-step creation wizard (Saisie → Aperçu → Analyse → Voyage) is gone.
  * This route now only hosts the data-entry step: {@link TripPlanner} renders
- * its welcome state (the {@link CardSelection} card — Lien / GPX / Assistant
- * IA). Submitting a source POSTs the trip and `router.push('/trips/{id}')`
- * (handled inside `useTripPlanner`), where the structural computation result
- * arrives synchronously and the per-block weather / AI enrichments stream in.
+ * its welcome state (the {@link CardSelection} card — Lien / GPX). Submitting a
+ * source POSTs the trip and `router.push('/trips/{id}')` (handled inside
+ * `useTripPlanner`), where the structural computation result arrives
+ * synchronously and the weather enrichment streams in.
  *
  * A bare `/trips/new` visit (e.g. the header "Nouveau voyage" link) clears any
  * stale trip so the Saisie screen always starts fresh and never bounces to a
@@ -30,7 +30,6 @@ function NewTripContent() {
     ui.setProcessing(false);
     ui.setAccommodationScanning(false);
     ui.setBlockStatus("weather", null);
-    ui.setBlockStatus("ai", null);
     ui.setConfigPanelOpen(false);
     // Run once on mount: arriving on `/trips/new` is an explicit fresh-start
     // intent. Subsequent in-page state changes must not re-clear the trip.

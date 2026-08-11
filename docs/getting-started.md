@@ -57,7 +57,7 @@ This boots multiple services:
 
 The application is ready when all services are healthy.
 
-> **Accounts & AI:** sign-in is passwordless — you receive a magic link by email. The optional AI features (per-stage and whole-trip summaries, chat assistant) are off by default and fully opt-in: enable them in your account settings by choosing a provider (Anthropic, Google Gemini, or OpenAI) and pasting your own API key (see [ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md)). Without a key, the AI summaries are simply hidden and all alerts remain available.
+> **Accounts:** sign-in is passwordless — you receive a magic link by email.
 
 ---
 

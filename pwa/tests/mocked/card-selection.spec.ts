@@ -10,77 +10,17 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("shows the three source-selection cards by default", async ({
-    page,
-  }) => {
+  test("shows the two source-selection cards by default", async ({ page }) => {
     await expect(page.getByTestId("card-selection")).toBeVisible();
     await expect(page.getByTestId("card-link")).toBeVisible();
     await expect(page.getByTestId("card-gpx")).toBeVisible();
-    await expect(page.getByTestId("card-ai")).toBeVisible();
 
-    // The link / AI inputs stay collapsed until their card is selected, but
-    // the GPX drop zone is rendered inline so a file can be dropped or picked
-    // straight from the three-choice screen (#834).
+    // The link input stays collapsed until its card is selected, but the GPX
+    // drop zone is rendered inline so a file can be dropped or picked straight
+    // from the choice screen (#834).
     await expect(page.getByTestId("magic-link-input")).toBeHidden();
     await expect(page.getByTestId("card-gpx-dropzone")).toBeVisible();
     await expect(page.getByTestId("gpx-file-input")).toBeAttached();
-    await expect(page.getByTestId("ai-chat-card")).toBeHidden();
-  });
-
-  test("selecting AI card reveals the chat shell and hides the others", async ({
-    page,
-  }) => {
-    await page.getByTestId("card-ai").click();
-
-    await expect(page.getByTestId("card-ai")).toHaveAttribute(
-      "data-expanded",
-      "true",
-    );
-    await expect(page.getByTestId("ai-chat-card")).toBeVisible();
-    await expect(page.getByTestId("ai-chat-textarea")).toBeVisible();
-    await expect(page.getByTestId("ai-chat-history")).toBeVisible();
-
-    await expect(page.getByTestId("card-link")).toBeHidden();
-    await expect(page.getByTestId("card-gpx")).toBeHidden();
-  });
-
-  test("AI chat appends user / assistant turns and launches on a collected start", async ({
-    page,
-  }) => {
-    await page.getByTestId("card-ai").click();
-
-    // The launch button is hard-gated off until a geocodable start is collected.
-    const launch = page.getByTestId("ai-chat-launch");
-    await expect(launch).toBeDisabled();
-
-    // Capture the launch event so we can assert on the consolidated brief.
-    await page.evaluate(() => {
-      (window as unknown as { __aiChatLaunches: unknown[] }).__aiChatLaunches =
-        [];
-      document.addEventListener("ai-chat-launch", (event) => {
-        (
-          window as unknown as { __aiChatLaunches: unknown[] }
-        ).__aiChatLaunches.push((event as CustomEvent).detail);
-      });
-    });
-
-    const textarea = page.getByTestId("ai-chat-textarea");
-    await textarea.fill("Tour de Corse en 10 jours en septembre");
-    await textarea.press("Enter");
-
-    const userMessages = page.locator(
-      '[data-testid="ai-chat-message"][data-role="user"]',
-    );
-    const assistantMessages = page.locator(
-      '[data-testid="ai-chat-message"][data-role="assistant"]',
-    );
-    await expect(userMessages).toHaveCount(1);
-    // The greeting + the real assistant reply from the mocked /trips/ai-chat.
-    await expect(assistantMessages).toHaveCount(2);
-    await expect(userMessages.first()).toContainText("Tour de Corse");
-
-    // The default mock collects no start, so launch stays disabled.
-    await expect(launch).toBeDisabled();
   });
 
   test("selecting Link card reveals URL input and hides GPX card", async ({
@@ -95,24 +35,21 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     );
     await expect(page.getByTestId("magic-link-input")).toBeVisible();
 
-    // GPX and AI cards are collapsed / hidden
+    // GPX card is collapsed / hidden
     await expect(page.getByTestId("card-gpx")).toBeHidden();
-    await expect(page.getByTestId("card-ai")).toBeHidden();
   });
 
   test("GPX drop zone is available inline without a select step (#834)", async ({
     page,
   }) => {
     // No click on the card: the drop zone and file input are rendered directly
-    // in the three-choice grid.
+    // in the choice grid.
     await expect(page.getByTestId("card-gpx-dropzone")).toBeVisible();
     await expect(page.getByTestId("gpx-file-input")).toBeAttached();
 
-    // The GPX card is not a mutually-exclusive selection: the Link and AI cards
-    // stay visible and no back button (the intermediate-screen affordance)
-    // appears.
+    // The GPX card is not a mutually-exclusive selection: the Link card stays
+    // visible and no back button (the intermediate-screen affordance) appears.
     await expect(page.getByTestId("card-link")).toBeVisible();
-    await expect(page.getByTestId("card-ai")).toBeVisible();
     await expect(page.getByTestId("card-selection-back")).toBeHidden();
   });
 
@@ -123,7 +60,6 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await page.getByTestId("card-selection-back").click();
     await expect(page.getByTestId("card-link")).toBeVisible();
     await expect(page.getByTestId("card-gpx")).toBeVisible();
-    await expect(page.getByTestId("card-ai")).toBeVisible();
     await expect(page.getByTestId("magic-link-input")).toBeHidden();
   });
 

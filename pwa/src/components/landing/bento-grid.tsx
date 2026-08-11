@@ -3,7 +3,6 @@ import {
   Mountain,
   CloudSun,
   ShoppingCart,
-  BrainCircuit,
   Home,
   Stethoscope,
   ShieldCheck,
@@ -11,13 +10,11 @@ import {
   Download,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { isAiFeatureEnabled } from "@/lib/constants";
 
 type CardKey =
   | "terrain"
   | "weather"
   | "supply"
-  | "ai"
   | "accommodation"
   | "services"
   | "safety"
@@ -38,17 +35,16 @@ type Card = {
 };
 
 /**
- * 9-card bento layout (issue #400 §3). Cards vary in size to break the
- * monotony of an even grid. The two "hero" cards (AI, Accommodation) span 2
- * columns to anchor the composition.
+ * 8-card bento layout (issue #400 §3). Cards vary in size to break the
+ * monotony of an even grid. The "hero" Accommodation card spans 2 columns to
+ * anchor the composition.
  */
 const CARDS: Card[] = [
   // Row 1 — terrain wide, weather, supply
   { key: "terrain", icon: Mountain, span: "lg:col-span-2", tone: "amber" },
   { key: "weather", icon: CloudSun, span: "", tone: "soft" },
   { key: "supply", icon: ShoppingCart, span: "", tone: "soft" },
-  // Row 2 — AI takes 2 cols, accommodation 2 cols
-  { key: "ai", icon: BrainCircuit, span: "lg:col-span-2", tone: "ink" },
+  // Row 2 — accommodation 2 cols
   { key: "accommodation", icon: Home, span: "lg:col-span-2", tone: "amber" },
   // Row 3 — services, safety, poi, export
   { key: "services", icon: Stethoscope, span: "", tone: "soft" },
@@ -101,10 +97,7 @@ export function LandingBentoGrid() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-4 md:gap-5"
           data-testid="bento-grid"
         >
-          {/* Hide the AI feature card while the AI feature is off (recette #649). */}
-          {CARDS.filter(
-            (card) => card.key !== "ai" || isAiFeatureEnabled(),
-          ).map((card) => {
+          {CARDS.map((card) => {
             const Icon = card.icon;
             return (
               <article

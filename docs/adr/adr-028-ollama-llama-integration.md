@@ -1,5 +1,7 @@
 # ADR-028: Ollama/LLaMA Integration Architecture (2-Pass Pipeline, Context Window, Graceful Degradation)
 
+> **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
+
 - **Status:** Accepted
 - **Date:** 2026-05-06
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-014 (Alert extensibility), ADR-027 (Gate mechanism and two-phase pipeline)

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
 import type { EnrichedStagePayload, MercureEvent } from "@/lib/mercure/types";
-import { TripAiOverviewSchema } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
@@ -503,11 +502,10 @@ function dispatchEvent(event: MercureEvent): void {
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
       // Terminal completion — settle the global processing/scanning overlays
-      // and the per-block enrichment spinners (ADR-043). Weather/AI are marked
-      // done here as a safety net in case their dedicated events (or the
-      // detail-status hydration) did not flip them.
+      // and the weather enrichment spinner (ADR-043). Weather is marked done
+      // here as a safety net in case its dedicated event (or the detail-status
+      // hydration) did not flip it.
       useUiStore.getState().setBlockStatus("weather", "done");
-      useUiStore.getState().setBlockStatus("ai", "done");
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
@@ -526,22 +524,9 @@ function dispatchEvent(event: MercureEvent): void {
       const incomingStages = event.data.stages.map(enrichedPayloadToStageData);
       store.applyTripReady(incomingStages);
       store.setComputationStatus(event.data.computationStatus);
-      // Trip-level AI overview (issue #305) — `aiOverview` is optional and
-      // arrives from an LLM pipeline, so partial / malformed payloads must
-      // not crash the renderer. Zod parses + coerces missing array fields to
-      // `[]`; any parse failure collapses to `null` so the component falls
-      // back silently rather than rendering a half-populated card.
-      const parsedOverview = TripAiOverviewSchema.safeParse(
-        event.data.aiOverview,
-      );
-      store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
-      // A fresh full analysis just landed → the overview is in sync again
-      // (clears the "outdated" banner without waiting for a reload).
-      store.setAiOverviewStale(false);
-      // The terminal enrichment payload landed — resolve both async block
-      // spinners (ADR-043). Weather rides along in the atomic swap, so mark it
-      // done too in case `weather_fetched` never fired separately.
-      useUiStore.getState().setBlockStatus("ai", "done");
+      // The terminal enrichment payload landed — resolve the weather block
+      // spinner (ADR-043). Weather rides along in the atomic swap, so mark it
+      // done in case `weather_fetched` never fired separately.
       useUiStore.getState().setBlockStatus("weather", "done");
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
@@ -624,16 +609,11 @@ function dispatchEvent(event: MercureEvent): void {
       toast.error(`Computation failed: ${event.data.message}`);
       // Map the failed computation onto its per-block spinner so the matching
       // block surfaces an error + retry affordance (ADR-043). Weather/wind →
-      // weather; the LLM passes → ai. Other computations have no dedicated
-      // block and only settle the global processing flag below.
+      // weather. Other computations have no dedicated block and only settle
+      // the global processing flag below.
       const computation = event.data.computation;
       if (computation === "weather" || computation === "wind") {
         useUiStore.getState().setBlockStatus("weather", "failed");
-      } else if (
-        computation === "stage_ai_analysis" ||
-        computation === "trip_ai_overview"
-      ) {
-        useUiStore.getState().setBlockStatus("ai", "failed");
       }
       if (!event.data.retryable) {
         store.clearRecomputingStages();
@@ -702,10 +682,6 @@ function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
     isRestDay: payload.isRestDay ?? false,
     supplyTimeline: [],
     events: payload.events ?? [],
-    // LLaMA pass-1 stage analysis (issue #306). Forwarded as-is so the
-    // {@link StageAiSummary} can render it atomically with the rest of the
-    // stage data. Null/undefined when the AI pipeline is off or pending.
-    aiAnalysis: payload.aiAnalysis ?? null,
   };
 }
 

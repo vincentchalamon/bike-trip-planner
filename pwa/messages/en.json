@@ -273,18 +273,6 @@
     "distanceEditHintLabel": "About distance re-splitting",
     "budgetTooltip": "Estimate based on the day's meals and accommodation (selected option or average of nearby options)."
   },
-  "stageAiSummary": {
-    "ariaLabel": "AI-generated stage summary",
-    "label": "AI summary",
-    "showMore": "Read more",
-    "showLess": "Show less",
-    "insightsHeading": "Insights",
-    "suggestionsHeading": "Recommendations",
-    "applyCta": "Recalculate pacing with AI guidance",
-    "applyQueueLabel": "Stage {dayNumber} — AI-guided pacing recalculation queued",
-    "alertsTitle": "{count, plural, one {Detailed alert (#)} other {Detailed alerts (#)}}",
-    "showMoreAlerts": "Show {count, plural, one {the other alert} other {the other # alerts}}"
-  },
   "difficultyComposed": {
     "ariaLabel": "Stage difficulty",
     "title": "Difficulty",
@@ -536,13 +524,6 @@
         "running": "Looking up local events…",
         "done": "Local events ready",
         "failed": "Local events unavailable"
-      },
-      "ai": {
-        "label": "AI summary",
-        "description": "Narrative trip summary",
-        "running": "Drafting the summary…",
-        "done": "Summary drafted",
-        "failed": "AI summary unavailable"
       }
     },
     "statusLabels": {
@@ -569,46 +550,9 @@
     "gpxFileTooLarge": "File too large (max 30 MB).",
     "gpxInvalidType": "Only .gpx files are accepted.",
     "gpxUploadGenericError": "Upload failed. Please try again.",
-    "aiTitle": "AI Assistant",
-    "aiDescription": "Build a custom route",
     "back": "Change method",
     "ariaSelectLink": "Choose link input",
-    "ariaSelectGpx": "Choose GPX file input",
-    "ariaSelectAi": "Chat with the AI assistant"
-  },
-  "aiChat": {
-    "subtitle": "Describe your project — the assistant refines the itinerary with you.",
-    "historyAriaLabel": "Conversation with the AI assistant",
-    "greeting": "Hi! Tell me about the adventure you have in mind (region, duration, dates, fitness level...) and I'll help you refine your itinerary.",
-    "thinking": "The assistant is thinking…",
-    "inputLabel": "Your request",
-    "inputPlaceholder": "E.g. \"I want to ride around Corsica for 10 days in September\"",
-    "inputHint": "Enter to send · Shift + Enter for a new line",
-    "sendAriaLabel": "Send message",
-    "capReached": "You've shared plenty of detail. Launch the route computation to continue.",
-    "recapAriaLabel": "Parameters understood by the assistant",
-    "recapTitle": "What I understood",
-    "recapEmpty": "Describe your project and I'll summarise the understood parameters here.",
-    "recap": {
-      "start": "Start",
-      "end": "Destination",
-      "loop": "Loop",
-      "durationDays": "Duration",
-      "profile": "Profile",
-      "elevation": "Elevation",
-      "startDate": "Dates",
-      "supply": "Resupply"
-    },
-    "launchLabel": "Launch route computation",
-    "launchRecommended": "Your project looks complete — you can launch the computation.",
-    "launchNeedsStart": "Provide at least a starting point to launch the computation.",
-    "errorNotConfigured": "Configure an AI provider to chat about your itinerary.",
-    "errorInvalidToken": "Your AI key looks invalid. Check it in your settings.",
-    "errorQuotaExceeded": "Your AI plan quota is exhausted. Check your provider account.",
-    "configureCta": "Configure an AI provider",
-    "errorRateLimit": "Too many messages in a row. Please wait a moment before retrying.",
-    "errorUnavailable": "AI assistant temporarily unavailable. Please try again shortly.",
-    "errorGeneric": "Something went wrong. Please try again."
+    "ariaSelectGpx": "Choose GPX file input"
   },
   "planner": {
     "computing": "Computing your route…",
@@ -688,42 +632,6 @@
         "farFromRoute": "Far from your route."
       }
     }
-  },
-  "aiOverview": {
-    "title": "AI analysis",
-    "subtitle": "Assistant-generated summary covering the whole trip",
-    "patternsHeading": "Detected patterns",
-    "recommendationsHeading": "Recommendations",
-    "crossStageAlertsHeading": "Points to watch",
-    "expand": "Show more",
-    "expandAria": "Expand the AI summary",
-    "collapse": "Show less",
-    "collapseAria": "Collapse the AI summary",
-    "loading": "The assistant is analysing your trip…",
-    "failed": "The AI analysis could not complete.",
-    "regenerate": "Regenerate",
-    "staleNotice": "Analysis outdated after recent trip changes."
-  },
-  "aiRefinement": {
-    "title": "Refine with the AI assistant",
-    "helper": "Describe the change you want in one sentence — for example \"Add a stop in Ajaccio\" or \"Avoid main roads on day 3\".",
-    "textareaLabel": "Suggestion to modify the route or the stages",
-    "placeholder": "E.g. Add a stop in Ajaccio then head north to Calvi along the west coast…",
-    "charactersRemaining": "{remaining, plural, =0 {0 characters left} one {# character left} other {# characters left}}",
-    "clear": "Clear",
-    "clearAria": "Clear the suggestion text",
-    "apply": "Apply",
-    "applyAria": "Apply the suggestion and regenerate the stages",
-    "applying": "Applying…",
-    "unavailable": "AI assistant coming soon.",
-    "applyFailed": "Failed to apply the suggestion. Please retry."
-  },
-  "aiUnavailable": {
-    "analysis": "AI analysis unavailable: the AI service is currently offline.",
-    "refinement": "AI assistant unavailable, try again later.",
-    "chat": "AI assistant unavailable.",
-    "notConfigured": "Configure an AI provider for a deeper analysis.",
-    "configureCta": "Configure an AI provider"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
@@ -843,10 +751,6 @@
         "title": "Resupply",
         "description": "Water points, grocery shops and restaurants detected close to your route."
       },
-      "ai": {
-        "title": "AI assistant",
-        "description": "Generate or optimise your itinerary by describing your constraints, refine it through multi-turn dialogue, and get contextual analysis for each stage."
-      },
       "accommodation": {
         "title": "Accommodation",
         "description": "Campsites, gîtes and hotels suggested at each stage end, with estimated budget and booking links."
@@ -874,8 +778,7 @@
       "komootType": "Tour or collection",
       "stravaType": "Public route",
       "rwgpsType": "Public route",
-      "gpxType": ".gpx file",
-      "aiType": "Assisted generation"
+      "gpxType": ".gpx file"
     },
     "availability": {
       "title": "Available everywhere",
@@ -1001,35 +904,6 @@
       "description": "You will be logged out of this device.",
       "button": "Log out",
       "logoutFailed": "Logout failed. Please try again."
-    },
-    "ai": {
-      "title": "AI assistant",
-      "description": "Enable AI features by setting a provider and your own API key.",
-      "providerLabel": "Provider",
-      "providerPlaceholder": "Choose a provider",
-      "providers": {
-        "anthropic": "Anthropic (Claude)",
-        "gemini": "Google (Gemini)",
-        "openai": "OpenAI"
-      },
-      "tokenLabel": "API key",
-      "tokenPlaceholder": "Paste your API key",
-      "tokenConfigured": "An API key is stored.",
-      "tokenNotConfigured": "No API key stored.",
-      "tokenConfiguredBadge": "Key configured",
-      "tokenConfiguredBadgeWithProvider": "Key configured · {provider}",
-      "tokenReplaceLabel": "Replace the API key",
-      "tokenReplacePlaceholder": "•••••••••••• — paste a new key to replace it",
-      "save": "Save",
-      "replace": "Replace key",
-      "saving": "Saving…",
-      "clear": "Clear configuration",
-      "clearing": "Clearing…",
-      "saved": "AI configuration saved.",
-      "saveFailed": "Could not save the AI configuration.",
-      "cleared": "AI configuration cleared.",
-      "clearFailed": "Could not clear the AI configuration.",
-      "rgpd": "Your trip data (route, towns, dates) is sent to the chosen provider with your API key. Review its privacy policy before enabling AI."
     }
   },
   "errorPages": {
@@ -1062,7 +936,6 @@
     "categoryProject": "The project",
     "categoryHowItWorks": "How it works",
     "categoryAccess": "Access",
-    "categoryAi": "AI assistant",
     "q1": "What sets Bike Trip Planner apart from Komoot or RideWithGPS?",
     "a1": "Komoot and RideWithGPS are GPS navigation platforms. Bike Trip Planner is a multi-day itinerary planning tool: it automatically splits your route into daily stages based on your cyclist profile (speed, accumulated fatigue, elevation), suggests accommodations at each stage endpoint, and generates contextual alerts (weather, resupply, health services, etc.). It complements your navigation apps rather than replacing them.",
     "q2": "Why use this tool instead of planning manually on a map?",
@@ -1080,11 +953,7 @@
     "q8": "How do I get access to the app?",
     "a8": "The app uses a magic link sign-in system: enter your email address on the sign-in page and you will receive a secure sign-in link. No password is required.",
     "q9": "Is the app free and open source?",
-    "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage.",
-    "q10": "How do I enable the AI assistant?",
-    "a10": "The AI assistant is enabled from your account settings: choose a provider (Anthropic/Claude, Google/Gemini, or OpenAI) and enter your own API key. As long as no key is provided, AI stays disabled and the related features are shown in a disabled state.",
-    "q11": "Is my data shared with the AI?",
-    "a11": "Only if you enable AI. In that case, your trip data is sent to the provider you chose, using your own API key (billed to your account). Your key is encrypted and is never shared in any other way. You can remove it at any time from your account settings."
+    "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage."
   },
   "events": {
     "type_festival": "Festival",

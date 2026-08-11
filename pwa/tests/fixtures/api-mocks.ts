@@ -13,25 +13,6 @@ export interface MockApiOptions {
    */
   assertNoRuntimeErrors?: boolean;
   /**
-   * Whether the account has a configured AI provider, surfaced by the mocked
-   * `GET /users/me/ai-settings` (ADR-042). Defaults to `true` so existing AI
-   * specs (bubble, chat, generation card) keep exercising the active path; set
-   * `false` to exercise the disabled-but-visible "not configured" affordances.
-   */
-  aiConfigured?: boolean;
-  /**
-   * Scripted replies for the brief chat (`POST /trips/ai-chat`, ADR-045). Each
-   * POST consumes the next entry (the last one repeats once exhausted). Set
-   * `status` to exercise the discrete failure modes (422 `ai_not_configured`,
-   * 429, 503). When omitted, the route serves a single generic reply.
-   */
-  aiChatTurns?: Array<{
-    reply?: string;
-    readyToGenerate?: boolean;
-    collected?: Record<string, string | number | boolean | null>;
-    status?: number;
-  }>;
-  /**
    * Scripted results for the guided in-ride search (`POST /trips/{id}/nearby-pois`,
    * #935). Either a single response served for every category, a record keyed by
    * category, or a numeric HTTP status to exercise the failure modes (429, 5xx).
@@ -179,7 +160,6 @@ export async function mockLoadedTripDetail(
         isLocked: false,
         status: "ready",
         weatherStatus: "done",
-        aiStatus: null,
         stages: LOADED_TRIP_DETAIL_STAGES,
         computationStatus: {
           route: "done",
@@ -203,8 +183,6 @@ export async function mockAllApis(
     postTripBody,
     deleteStageFail = false,
     addStageFail = false,
-    aiConfigured = true,
-    aiChatTurns,
     nearbyPoiResults,
   } = options;
 
@@ -219,10 +197,7 @@ export async function mockAllApis(
   });
 
   // GET /api/health - readiness probe (postgres/redis/mercure/valhalla +
-  // non-required reference_data). The AI tier is no longer a server dependency
-  // (ADR-042): it is a per-user cloud provider reached with the user's own
-  // token, so it is absent from this payload. AI availability is now driven by
-  // the account AI-settings, not by this probe.
+  // non-required reference_data).
   await page.route("**/api/health", (route, request) => {
     if (request.method() !== "GET") return route.fallback();
     return route.fulfill({
@@ -238,22 +213,6 @@ export async function mockAllApis(
           reference_data: { status: "ok" },
         },
       }),
-    });
-  });
-
-  // GET /users/me/ai-settings — per-user AI config the PWA reads to gate AI
-  // surfaces (ADR-042). `aiConfigured` toggles whether a provider is set; the
-  // token is never echoed back (write-only).
-  await page.route("**/users/me/ai-settings", (route, request) => {
-    if (request.method() !== "GET") return route.fallback();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify(
-        aiConfigured
-          ? { provider: "anthropic", tokenConfigured: true }
-          : { tokenConfigured: false },
-      ),
     });
   });
 
@@ -467,53 +426,8 @@ export async function mockAllApis(
         // start null (no spinner) — specs override them as needed.
         status: "draft",
         weatherStatus: null,
-        aiStatus: null,
         stages: [],
         computationStatus: {},
-      }),
-    });
-  });
-
-  // POST /trips/ai-generate — AI route generation (B2, ADR-042). Returns the
-  // same 202 envelope as POST /trips so the async preview lifecycle kicks in.
-  // Registered after the generic /trips/* routes so it wins for this exact path.
-  await page.route("**/trips/ai-generate", (route, request) => {
-    if (request.method() !== "POST") return route.fallback();
-    return route.fulfill({
-      status: postTripStatus,
-      contentType: "application/ld+json",
-      body: JSON.stringify(postTripBody ?? defaultTripResponse),
-    });
-  });
-
-  // POST /trips/ai-chat — stateless brief chat (ADR-045). Serves the scripted
-  // `aiChatTurns` in order (last entry repeats); a turn carrying `status`
-  // exercises the discrete failure modes. Registered after the generic
-  // /trips/* routes so this exact path wins.
-  let aiChatCallIndex = 0;
-  await page.route("**/trips/ai-chat", (route, request) => {
-    if (request.method() !== "POST") return route.fallback();
-    const turns = aiChatTurns ?? [
-      { reply: "Got it! Tell me more about your trip." },
-    ];
-    const turn = turns[Math.min(aiChatCallIndex, turns.length - 1)];
-    aiChatCallIndex += 1;
-    if (turn?.status && turn.status >= 400) {
-      return route.fulfill({
-        status: turn.status,
-        contentType: "application/ld+json",
-        body: JSON.stringify(
-          turn.status === 422 ? { error: "ai_not_configured" } : {},
-        ),
-      });
-    }
-    return route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        reply: turn?.reply ?? "Got it!",
-        readyToGenerate: turn?.readyToGenerate ?? false,
-        collected: turn?.collected ?? {},
       }),
     });
   });

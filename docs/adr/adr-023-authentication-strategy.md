@@ -172,7 +172,7 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 > The refresh token is **encrypted at rest** rather than hashed: the grace-window
 > rotation (recette #649) must re-serve the successor token value on a reload race,
 > which a one-way hash makes impossible. The `token` column holds a reversible
-> libsodium ciphertext (`RefreshTokenEncryptor`, reusing the app's `AI_TOKEN_ENC_KEY`)
+> libsodium ciphertext (`RefreshTokenEncryptor`, keyed by the app's `REFRESH_TOKEN_ENC_KEY`)
 > and rows are looked up by a deterministic `token_digest` (SHA-256) — so a database
 > read yields neither a usable token nor its plaintext. Rotating the encryption key
 > invalidates stored refresh tokens (users transparently re-login).

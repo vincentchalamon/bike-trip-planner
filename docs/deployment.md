@@ -11,10 +11,6 @@ Bike Trip Planner is deployed on Oracle Cloud Always Free (ARM A1) via Coolify (
 
 Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-and-rollback-strategy.md)). Coolify keeps the N most recent images, enabling 1-click rollback to any previous SHA; the `build-images` job also prunes GHCR to the 10 most recent versions per image.
 
-## AI (optional, bring-your-own token)
-
-There is no server-side AI tier to deploy. AI features are opt-in and per-user: each account configures its own provider (Anthropic, Google Gemini, or OpenAI) and API key, stored encrypted at rest. The API calls the chosen provider directly with the user's key; with no key or on a provider outage, AI features are hidden and the rule-based alerts stay fully available. See [ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md).
-
 ## Required GitHub Actions secrets
 
 | Secret | Required for | Purpose |

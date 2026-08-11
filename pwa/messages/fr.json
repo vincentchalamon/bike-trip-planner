@@ -273,18 +273,6 @@
     "distanceEditHintLabel": "À propos du redécoupage par distance",
     "budgetTooltip": "Estimation basée sur les repas de la journée et l'hébergement (sélectionné ou moyenne des options trouvées)."
   },
-  "stageAiSummary": {
-    "ariaLabel": "Résumé de l'étape généré par IA",
-    "label": "Résumé IA",
-    "showMore": "Lire la suite",
-    "showLess": "Réduire",
-    "insightsHeading": "À retenir",
-    "suggestionsHeading": "Recommandations",
-    "applyCta": "Recalculer l'allure avec les conseils IA",
-    "applyQueueLabel": "Étape {dayNumber} — recalcul de l'allure IA mis en file",
-    "alertsTitle": "{count, plural, one {Alerte détaillée (#)} other {Alertes détaillées (#)}}",
-    "showMoreAlerts": "Voir {count, plural, one {l'autre alerte} other {les # autres alertes}}"
-  },
   "difficultyComposed": {
     "ariaLabel": "Difficulté de l'étape",
     "title": "Difficulté",
@@ -536,13 +524,6 @@
         "running": "Recherche d'événements locaux…",
         "done": "Événements locaux récupérés",
         "failed": "Événements locaux indisponibles"
-      },
-      "ai": {
-        "label": "Synthèse IA",
-        "description": "Synthèse narrative du voyage",
-        "running": "Rédaction de la synthèse…",
-        "done": "Synthèse rédigée",
-        "failed": "Synthèse IA indisponible"
       }
     },
     "statusLabels": {
@@ -569,46 +550,9 @@
     "gpxFileTooLarge": "Fichier trop volumineux (max 30 Mo).",
     "gpxInvalidType": "Seuls les fichiers .gpx sont acceptés.",
     "gpxUploadGenericError": "L'import a échoué. Réessaie.",
-    "aiTitle": "Assistant IA",
-    "aiDescription": "Crée un itinéraire sur mesure",
     "back": "Changer de méthode",
     "ariaSelectLink": "Choisir l'entrée par lien",
-    "ariaSelectGpx": "Choisir l'entrée par fichier GPX",
-    "ariaSelectAi": "Discuter avec l'assistant IA"
-  },
-  "aiChat": {
-    "subtitle": "Décris ton projet, l'assistant affine l'itinéraire avec toi.",
-    "historyAriaLabel": "Conversation avec l'assistant IA",
-    "greeting": "Bonjour ! Décris l'aventure que tu imagines (région, durée, période, niveau...) et je t'aiderai à préciser ton itinéraire.",
-    "thinking": "L'assistant réfléchit…",
-    "inputLabel": "Ta demande",
-    "inputPlaceholder": "Ex : « Je veux faire le tour de Corse en 10 jours en septembre »",
-    "inputHint": "Entrée pour envoyer · Maj + Entrée pour un retour à la ligne",
-    "sendAriaLabel": "Envoyer le message",
-    "capReached": "Tu as donné beaucoup de détails. Lance le calcul de l'itinéraire pour continuer.",
-    "recapAriaLabel": "Paramètres compris par l'assistant",
-    "recapTitle": "Ce que j'ai compris",
-    "recapEmpty": "Décris ton projet, je résumerai ici les paramètres compris.",
-    "recap": {
-      "start": "Départ",
-      "end": "Destination",
-      "loop": "Boucle",
-      "durationDays": "Durée",
-      "profile": "Profil",
-      "elevation": "Dénivelé",
-      "startDate": "Dates",
-      "supply": "Ravitaillement"
-    },
-    "launchLabel": "Lancer le calcul d'itinéraire",
-    "launchRecommended": "Ton projet semble complet : tu peux lancer le calcul.",
-    "launchNeedsStart": "Indique au moins un point de départ pour lancer le calcul.",
-    "errorNotConfigured": "Configure un fournisseur IA pour discuter de ton itinéraire.",
-    "errorInvalidToken": "Ta clé IA semble invalide. Vérifie-la dans tes réglages.",
-    "errorQuotaExceeded": "Le quota de ton offre IA est épuisé. Vérifie ton compte chez le fournisseur.",
-    "configureCta": "Configurer une IA",
-    "errorRateLimit": "Trop de messages d'affilée. Patiente un instant avant de réessayer.",
-    "errorUnavailable": "Assistant IA temporairement indisponible. Réessaie dans un instant.",
-    "errorGeneric": "Une erreur est survenue. Réessaie."
+    "ariaSelectGpx": "Choisir l'entrée par fichier GPX"
   },
   "planner": {
     "computing": "Calcul de ton itinéraire en cours…",
@@ -688,42 +632,6 @@
         "farFromRoute": "Loin de ton itinéraire."
       }
     }
-  },
-  "aiOverview": {
-    "title": "Analyse IA",
-    "subtitle": "Synthèse générée par l'assistant à partir de l'ensemble du voyage",
-    "patternsHeading": "Tendances détectées",
-    "recommendationsHeading": "Recommandations",
-    "crossStageAlertsHeading": "Points d'attention",
-    "expand": "Voir plus",
-    "expandAria": "Déplier la synthèse IA",
-    "collapse": "Réduire",
-    "collapseAria": "Réduire la synthèse IA",
-    "loading": "L'assistant analyse ton voyage…",
-    "failed": "L'analyse IA n'a pas pu aboutir.",
-    "regenerate": "Régénérer",
-    "staleNotice": "Analyse obsolète suite aux dernières modifications du voyage."
-  },
-  "aiRefinement": {
-    "title": "Affiner avec l'assistant IA",
-    "helper": "Décris en une phrase la modification souhaitée — par exemple « Ajoute une étape à Ajaccio » ou « Évite les routes principales le jour 3 ».",
-    "textareaLabel": "Suggestion de modification du tracé ou des étapes",
-    "placeholder": "Ex : Ajoute une étape à Ajaccio puis remonte vers Calvi par la côte ouest…",
-    "charactersRemaining": "{remaining, plural, =0 {0 caractère restant} one {# caractère restant} other {# caractères restants}}",
-    "clear": "Effacer",
-    "clearAria": "Effacer la suggestion saisie",
-    "apply": "Appliquer",
-    "applyAria": "Appliquer la suggestion et régénérer les étapes",
-    "applying": "Application…",
-    "unavailable": "Assistant IA bientôt disponible.",
-    "applyFailed": "Impossible d'appliquer la suggestion. Réessaie."
-  },
-  "aiUnavailable": {
-    "analysis": "Analyse IA indisponible : le service IA est actuellement hors ligne.",
-    "refinement": "Assistant IA indisponible, réessaie plus tard.",
-    "chat": "Assistant IA indisponible.",
-    "notConfigured": "Configure une IA pour profiter d'une analyse plus approfondie.",
-    "configureCta": "Configurer une IA"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifie ta connexion.",
@@ -843,10 +751,6 @@
         "title": "Ravitaillement",
         "description": "Points d'eau, épiceries, restaurants détectés à proximité de ta route."
       },
-      "ai": {
-        "title": "Assistant IA",
-        "description": "Génère ou optimise ton itinéraire en décrivant tes contraintes, affine en dialogue multi-tours, et obtiens une analyse contextuelle de chaque étape."
-      },
       "accommodation": {
         "title": "Hébergements",
         "description": "Campings, gîtes, hôtels suggérés au point d'arrivée de chaque étape, avec budget estimé et liens de réservation."
@@ -874,8 +778,7 @@
       "komootType": "Tour ou collection",
       "stravaType": "Route publique",
       "rwgpsType": "Route publique",
-      "gpxType": "Fichier .gpx",
-      "aiType": "Génération assistée"
+      "gpxType": "Fichier .gpx"
     },
     "availability": {
       "title": "Disponible partout",
@@ -1001,35 +904,6 @@
       "description": "Tu seras déconnecté de cet appareil.",
       "button": "Se déconnecter",
       "logoutFailed": "Échec de la déconnexion. Réessaie."
-    },
-    "ai": {
-      "title": "Assistant IA",
-      "description": "Active les fonctionnalités d'IA en renseignant un fournisseur et ta propre clé API.",
-      "providerLabel": "Fournisseur",
-      "providerPlaceholder": "Choisis un fournisseur",
-      "providers": {
-        "anthropic": "Anthropic (Claude)",
-        "gemini": "Google (Gemini)",
-        "openai": "OpenAI"
-      },
-      "tokenLabel": "Clé API",
-      "tokenPlaceholder": "Colle ta clé API",
-      "tokenConfigured": "Une clé API est enregistrée.",
-      "tokenNotConfigured": "Aucune clé API enregistrée.",
-      "tokenConfiguredBadge": "Clé configurée",
-      "tokenConfiguredBadgeWithProvider": "Clé configurée · {provider}",
-      "tokenReplaceLabel": "Remplacer la clé API",
-      "tokenReplacePlaceholder": "•••••••••••• — colle une nouvelle clé pour la remplacer",
-      "save": "Enregistrer",
-      "replace": "Remplacer la clé",
-      "saving": "Enregistrement…",
-      "clear": "Supprimer la configuration",
-      "clearing": "Suppression…",
-      "saved": "Configuration IA enregistrée.",
-      "saveFailed": "Impossible d'enregistrer la configuration IA.",
-      "cleared": "Configuration IA supprimée.",
-      "clearFailed": "Impossible de supprimer la configuration IA.",
-      "rgpd": "Tes données de voyage (itinéraire, villes, dates) sont transmises au fournisseur choisi avec ta clé API. Consulte sa politique de confidentialité avant d'activer l'IA."
     }
   },
   "errorPages": {
@@ -1062,7 +936,6 @@
     "categoryProject": "Le projet",
     "categoryHowItWorks": "Fonctionnement",
     "categoryAccess": "Accès",
-    "categoryAi": "Assistant IA",
     "q1": "Qu'est-ce qui différencie Bike Trip Planner de Komoot ou RideWithGPS ?",
     "a1": "Komoot et RideWithGPS sont des plateformes de navigation GPS. Bike Trip Planner est un outil de planification d'itinéraire multi-étapes : il découpe automatiquement ton parcours en étapes journalières en tenant compte de ton profil cycliste (vitesse, fatigue accumulée, dénivelé), suggère des hébergements au point d'arrivée de chaque étape, et génère des alertes contextuelles (météo, ravitaillement, services de santé, etc.). Il complète tes outils de navigation plutôt qu'il ne les remplace.",
     "q2": "Pourquoi utiliser cet outil plutôt que de planifier manuellement sur une carte ?",
@@ -1080,11 +953,7 @@
     "q8": "Comment obtenir un accès à l'application ?",
     "a8": "L'application utilise un système de connexion par lien magique : entre ton adresse email sur la page de connexion et tu recevras un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
     "q9": "L'application est-elle gratuite et open source ?",
-    "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade.",
-    "q10": "Comment activer l'assistant IA ?",
-    "a10": "L'assistant IA s'active depuis les réglages de ton compte : choisis un fournisseur (Anthropic/Claude, Google/Gemini ou OpenAI) et renseigne ta propre clé API. Tant qu'aucune clé n'est fournie, l'IA reste désactivée et les fonctionnalités correspondantes s'affichent en mode désactivé.",
-    "q11": "Mes données sont-elles partagées avec l'IA ?",
-    "a11": "Uniquement si tu actives l'IA. Dans ce cas, tes données de voyage sont envoyées au fournisseur que tu as choisi, avec ta propre clé API (facturée sur ton compte). Ta clé est chiffrée et n'est jamais partagée d'aucune autre manière. Tu peux la retirer à tout moment depuis les réglages du compte."
+    "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade."
   },
   "events": {
     "type_festival": "Festival",
