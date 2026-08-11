@@ -15,14 +15,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Validates a magic link token, issues JWT + refresh token.
- *
- * For Capacitor clients (Origin: capacitor://), the refresh token is also included in the response body.
  *
  * @implements ProcessorInterface<Auth, JsonResponse>
  */
@@ -35,7 +32,6 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         private RefreshTokenRepository $refreshTokenRepository,
         private EntityManagerInterface $entityManager,
         private JWTTokenManagerInterface $jwtManager,
-        private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
     ) {
@@ -80,27 +76,15 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         });
         \assert($refreshToken instanceof RefreshToken);
 
-        $isCapacitor = $this->isCapacitorRequest();
-
         // Plaintext is available on the freshly minted token (stored encrypted).
         $plainToken = $refreshToken->getPlainToken();
         \assert(null !== $plainToken);
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
-        $responseData = ['token' => $jwt];
-        if ($isCapacitor) {
-            $responseData['refresh_token'] = $plainToken;
-        }
-
-        $response = new JsonResponse($responseData);
+        $response = new JsonResponse(['token' => $jwt]);
         $this->setRefreshTokenCookie($response, $plainToken, $refreshToken->getExpiresAt());
 
         return $response;
-    }
-
-    private function getRequestStack(): RequestStack
-    {
-        return $this->requestStack;
     }
 }

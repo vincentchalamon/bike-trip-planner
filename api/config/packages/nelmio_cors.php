@@ -23,12 +23,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'Content-Type',
                 'Authorization',
                 // Correlation ID the PWA resends on every request (#485); required
-                // so cross-origin clients (e.g. the Capacitor app) may send it.
+                // so cross-origin clients may send it.
                 'X-Request-Id',
             ],
             'expose_headers' => [
                 'Link',
-                'X-Mercure-Token',
                 'X-Request-Id',
             ],
             'max_age' => 3600,

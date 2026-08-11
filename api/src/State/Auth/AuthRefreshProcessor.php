@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
-use Symfony\Component\HttpFoundation\Request;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -24,7 +23,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Rotates a refresh token and issues a new JWT.
  *
- * Reads the refresh token from cookie or request body (Capacitor).
+ * Reads the refresh token from the cookie.
  *
  * @implements ProcessorInterface<Auth, JsonResponse>
  */
@@ -57,13 +56,6 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     {
         $request = $this->requestStack->getCurrentRequest();
         $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
-        $isCapacitor = $this->isCapacitorRequest();
-
-        // Capacitor sends refresh token in body
-        if (null === $token && $isCapacitor && $request instanceof Request) {
-            $body = $request->toArray();
-            $token = $body['refresh_token'] ?? null;
-        }
 
         if (null === $token || '' === $token) {
             return new JsonResponse(
@@ -121,12 +113,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $this->logger->debug('Auth refresh success', ['user' => $user->getEmail()]);
 
-        $responseData = ['token' => $jwt];
-        if ($isCapacitor) {
-            $responseData['refresh_token'] = $livePlain;
-        }
-
-        $response = new JsonResponse($responseData);
+        $response = new JsonResponse(['token' => $jwt]);
         $this->setRefreshTokenCookie($response, $livePlain, $live->getExpiresAt());
 
         return $response;
@@ -189,10 +176,5 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
         return $response;
-    }
-
-    private function getRequestStack(): RequestStack
-    {
-        return $this->requestStack;
     }
 }

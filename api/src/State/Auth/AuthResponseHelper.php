@@ -7,23 +7,12 @@ namespace App\State\Auth;
 use App\Security\AuthCookies;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Shared helpers for auth processors (Capacitor detection, refresh token cookie).
+ * Shared helpers for auth processors (refresh token cookie).
  */
 trait AuthResponseHelper
 {
-    abstract private function getRequestStack(): RequestStack;
-
-    private function isCapacitorRequest(): bool
-    {
-        $request = $this->getRequestStack()->getCurrentRequest();
-        $origin = $request?->headers->get('Origin', '') ?? '';
-
-        return str_starts_with($origin, 'capacitor://');
-    }
-
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
         // SameSite=Lax (not Strict) so the cookie is sent on top-level cross-site

@@ -42,7 +42,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
     #[Test]
     #[DataProvider('tripEndpointProvider')]
-    public function setsCookieAndHeaderForTripEndpoints(string $method, string $path): void
+    public function setsCookieForTripEndpoints(string $method, string $path): void
     {
         $request = Request::create($path, $method);
         $response = new Response('ok');
@@ -53,12 +53,11 @@ final class MercureSubscriberListenerTest extends TestCase
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
         self::assertSame('mercureAuthorization', $cookies[0]->getName());
-        self::assertNotEmpty($response->headers->get('X-Mercure-Token'));
-        self::assertSame($cookies[0]->getValue(), $response->headers->get('X-Mercure-Token'));
+        self::assertNotEmpty($cookies[0]->getValue());
     }
 
     #[Test]
-    public function setsCookieAndHeaderForPostTripsFromResponseBody(): void
+    public function setsCookieForPostTripsFromResponseBody(): void
     {
         $request = Request::create('/trips', 'POST');
         $response = new JsonResponse(['id' => self::TRIP_UUID, 'computationStatus' => []]);
@@ -69,11 +68,10 @@ final class MercureSubscriberListenerTest extends TestCase
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
         self::assertSame('mercureAuthorization', $cookies[0]->getName());
-        self::assertNotEmpty($response->headers->get('X-Mercure-Token'));
     }
 
     #[Test]
-    public function setsCookieAndHeaderForGpxUpload(): void
+    public function setsCookieForGpxUpload(): void
     {
         $request = Request::create('/trips/gpx-upload', 'POST');
         $response = new JsonResponse(['id' => self::TRIP_UUID]);
@@ -83,7 +81,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
-        self::assertNotEmpty($response->headers->get('X-Mercure-Token'));
+        self::assertSame('mercureAuthorization', $cookies[0]->getName());
     }
 
     #[Test]
@@ -96,7 +94,6 @@ final class MercureSubscriberListenerTest extends TestCase
         $this->listener->__invoke($event);
 
         self::assertEmpty($response->headers->getCookies());
-        self::assertNull($response->headers->get('X-Mercure-Token'));
     }
 
     #[Test]
@@ -110,7 +107,6 @@ final class MercureSubscriberListenerTest extends TestCase
         $this->listener->__invoke($event);
 
         self::assertEmpty($response->headers->getCookies());
-        self::assertNull($response->headers->get('X-Mercure-Token'));
     }
 
     #[Test]
@@ -123,7 +119,6 @@ final class MercureSubscriberListenerTest extends TestCase
         $this->listener->__invoke($event);
 
         self::assertEmpty($response->headers->getCookies());
-        self::assertNull($response->headers->get('X-Mercure-Token'));
     }
 
     private function createResponseEvent(Request $request, Response $response): ResponseEvent

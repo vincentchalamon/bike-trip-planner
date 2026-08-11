@@ -18,17 +18,6 @@ describe("generateMetadata (shared trip)", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.unstubAllGlobals());
 
-  it("returns the generic fallback for the static-export placeholder without fetching", async () => {
-    const fetchSpy = mockFetch(() => {
-      throw new Error("should not be called");
-    });
-
-    const meta = await generateMetadata(params("__placeholder"));
-
-    expect(meta).toEqual({ title: "Shared trip — Bike Trip Planner" });
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
   it("falls back to the generic title when the backend responds non-OK (revoked/unknown code)", async () => {
     const fetchSpy = mockFetch(() => Promise.resolve({ ok: false }));
 
