@@ -212,7 +212,9 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 
 ### Native Mobile Adaptation
 
-A native mobile client (see [ADR-053](adr-053-mobile-strategy-native-app.md)) does not carry a browser cookie jar, so HttpOnly cookies cannot be relied on. When the backend detects a native client, the refresh token is returned in the response body instead of a cookie, and the client stores it in the platform's secure storage.
+A native mobile client (see [ADR-053](adr-053-mobile-strategy-native-app.md)) does not carry a browser cookie jar, so HttpOnly cookies cannot be relied on: the refresh token must instead be returned in the response body and kept in the platform's secure storage.
+
+The backend already carries this mechanism, but its client detection is currently keyed to the **removed** Capacitor WebView's `capacitor://` Origin (`AuthResponseHelper::isCapacitorRequest()`, plus the `capacitor://` entry in the `CORS_ALLOW_ORIGIN` allow-list). With that client gone, the path is dead until the native app (ADR-053) is built and the detection is re-keyed to it. **Generalizing the detection to the native client is deferred to the native-app workstream** — it is not done in this iteration.
 
 ---
 
