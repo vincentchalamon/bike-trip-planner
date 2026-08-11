@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageAlerts } from "@/components/stage-alerts";
-import { StageAiSummary } from "@/components/stage-ai-summary";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
@@ -15,17 +14,15 @@ import { DiffHighlight } from "@/components/diff-highlight";
 import { StageCycleNetworkBadge } from "@/components/stage-cycle-network-badge";
 import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
 import {
-  StageAiSummary as StageAiSummaryLegacy,
   StageStatsRow,
   StageDifficultyComposed,
   StageWeatherCard,
   StageSurfaceBreakdown,
 } from "@/components/StageDetail";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
-import { useTripStore, useStageAiAnalysis } from "@/store/trip-store";
+import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
-import { isAiFeatureEnabled } from "@/lib/constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
@@ -65,7 +62,6 @@ interface StageCardProps {
  *
  * Block order:
  *   1. Locations (departure → arrival)
- *   2. AI summary (Fraunces italic, sparkle, collapsible if long)
  *   3. Stats 4-col (distance editable / D+ / duration / budget)
  *   4. Composed difficulty gauge (physical / technical / elevation)
  *   4b. Surface breakdown (conditional — see StageDataSchema.surfaceBreakdown)
@@ -108,10 +104,6 @@ export function StageCard({
   const startDate = useTripStore((s) => s.startDate);
   const viewMode = useUiStore((s) => s.viewMode);
 
-  const aiEnabled = isAiFeatureEnabled();
-  const aiSummary = stage.aiSummary?.trim();
-  const aiAnalysis = useStageAiAnalysis(stageIndex);
-  const hasAiAnalysis = aiEnabled && Boolean(aiAnalysis?.narrative.trim());
   const hasAlerts = stage.alerts.length > 0;
 
   // In the split (map + list) layout the card is narrow, so keep the legacy
@@ -169,13 +161,6 @@ export function StageCard({
           endLabel={stage.endLabel || formatCoords(stage.endPoint)}
         />
 
-        {/* 2. AI summary — legacy short string (sprint 26, forward-compat).
-            Suppressed when the richer pass-1 `aiAnalysis` is available so
-            the rider sees a single coach voice per stage. */}
-        {aiEnabled && !hasAiAnalysis && aiSummary && aiSummary.length > 0 && (
-          <StageAiSummaryLegacy summary={aiSummary} />
-        )}
-
         {/* 3. Stats 4-col — distance (editable), D+, duration, budget. In the
             full-width list layout, a compact difficulty cell is appended so it
             aligns with the other stats; in split mode it stays below as the
@@ -230,40 +215,22 @@ export function StageCard({
           endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
         />
 
-        {/* 6. Alerts — hybrid layout (issue #306):
-            - With AI analysis: render {@link StageAiSummary} which surfaces the
-              pass-1 briefing on top and collapses the alerts behind a top-3
-              preview so the rider scans the coach view first.
-            - Without AI analysis: fall back to the legacy fully-expanded
-              {@link StageAlerts} grouped by severity.
+        {/* 6. Alerts — grouped by severity, fully expanded.
             `pb-2` adds breathing room between the last alert and the horizontal
             separator below (recette #649). */}
-        {hasAiAnalysis ? (
-          // DiffHighlight lives inside StageAiSummary (issue #451) so the
-          // `alerts_added` flash scopes to the alerts sub-section instead of
-          // the whole briefing card.
+        {hasAlerts && (
           <div className="pb-2">
-            <StageAiSummary
+            <DiffHighlight
               stageIndex={stageIndex}
-              alerts={stage.alerts}
-              onAddPoiWaypoint={onAddPoiWaypoint}
-            />
+              field="alerts_added"
+              changeLabel={t("diffAlertsAdded")}
+            >
+              <StageAlerts
+                alerts={stage.alerts}
+                onAddPoiWaypoint={onAddPoiWaypoint}
+              />
+            </DiffHighlight>
           </div>
-        ) : (
-          hasAlerts && (
-            <div className="pb-2">
-              <DiffHighlight
-                stageIndex={stageIndex}
-                field="alerts_added"
-                changeLabel={t("diffAlertsAdded")}
-              >
-                <StageAlerts
-                  alerts={stage.alerts}
-                  onAddPoiWaypoint={onAddPoiWaypoint}
-                />
-              </DiffHighlight>
-            </div>
-          )
         )}
         {!hasAlerts && isProcessing && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

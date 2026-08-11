@@ -230,54 +230,6 @@ export function useTripPlanner() {
     }
   }
 
-  /**
-   * Create a trip from a free-form natural-language brief (B2, ADR-042). Mirrors
-   * {@link handleMagicLink} but POSTs to `/trips/ai-generate`: the LLM call,
-   * geocoding and Valhalla routing run on the worker, so the same async Mercure
-   * lifecycle (route_parsed → stages_computed → preview) drives the wizard.
-   * Generation-specific failures (out-of-zone, unparseable, unavailable, ...)
-   * surface as Mercure `validation_error` toasts via {@link useMercure}.
-   */
-  async function handleAiGeneration(brief: string) {
-    actions.clearTrip();
-    setMercureToken(null);
-    setProcessing(true);
-
-    try {
-      const { data, error, response } = await apiClient.POST(
-        "/trips/ai-generate",
-        { body: { brief } },
-      );
-
-      if (error || !data) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
-        setProcessing(false);
-        setAccommodationScanning(false);
-        return;
-      }
-
-      actions.setIsLocked(data.isLocked === true);
-      const token = response.headers.get("X-Mercure-Token");
-      if (token) setMercureToken(token);
-      actions.setTrip({
-        id: data.id ?? "",
-        title: getRandomTripName(),
-        sourceUrl: "",
-      });
-      trackEvent("trip_created", { source: "ai" });
-      router.push(`/trips/${data.id ?? ""}`);
-    } catch (err) {
-      if (isNetworkError(err)) {
-        toast.error(t("errors.networkError"));
-      } else {
-        toast.error(t("errors.unexpectedError"));
-      }
-      setProcessing(false);
-      setAccommodationScanning(false);
-    }
-  }
-
   async function handleGpxUpload(file: File) {
     actions.clearTrip();
     setMercureToken(null);
@@ -833,11 +785,10 @@ export function useTripPlanner() {
   }
 
   /**
-   * Re-run the full enrichment pipeline for the currently-loaded trip. Only
-   * reached from the chat `change_route` action (see {@link relaunchFullAnalysis}):
-   * the rider asked for a tracé-wide modification, so weather + AI are recomputed
-   * on top of the already-displayed trip view (ADR-043 — no wizard gate). The
-   * per-block spinners are flipped to `running` so the affected cards show their
+   * Re-run the full enrichment pipeline for the currently-loaded trip: the
+   * rider asked for a tracé-wide modification, so weather is recomputed on top
+   * of the already-displayed trip view (ADR-043 — no wizard gate). The weather
+   * block spinner is flipped to `running` so the affected cards show their
    * loading state until the matching Mercure events land. Errors surface as
    * toasts and the trip view stays put so the user can retry.
    */
@@ -851,13 +802,8 @@ export function useTripPlanner() {
         return false;
       }
       setProcessing(true);
-      // Clear stale AI overview so the card does not show outdated data
-      // while the new analysis is in flight, and drop the "outdated" banner.
-      useTripStore.getState().setAiOverview(null);
-      useTripStore.getState().setAiOverviewStale(false);
       setAccommodationScanning(true);
       useUiStore.getState().setBlockStatus("weather", "running");
-      useUiStore.getState().setBlockStatus("ai", "running");
       return true;
     } catch (err) {
       if (isNetworkError(err)) {
@@ -1147,7 +1093,6 @@ export function useTripPlanner() {
     removeLocalAccommodation: actions.removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
-    handleAiGeneration,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,

@@ -2,9 +2,6 @@
 #
 # Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY
 # adds a Mailcatcher service (capture magic-link emails for the real auth flow).
-# The AI tier is an optional, per-user cloud provider (ADR-042) — there is no local
-# AI service to wire here; AI is exercised in recette by configuring a provider +
-# token on a test account.
 #
 # Load EXPLICITLY (never auto-loaded): docker compose -f compose.yaml -f compose.recette.yaml ...
 # Named compose.recette.yaml (not compose.override.yaml) to avoid implicit auto-load.
@@ -23,8 +20,8 @@ secrets:
   jwt_public_key:
     file: .docker/jwt-recette/public.pem
 
-# Shared env for php/worker/worker-llm — extension field + YAML merge key to avoid
-# duplicating the block across the three services (review #612).
+# Shared env for php/worker — extension field + YAML merge key to avoid
+# duplicating the block across the services (review #612).
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
   JWT_PASSPHRASE: recette
@@ -35,8 +32,8 @@ x-recette-env: &recette-env
   MERCURE_SUBSCRIBER_JWT_KEY: recette-mercure-jwt-secret
   MERCURE_JWT_SECRET: recette-mercure-jwt-secret
   # Non-default token-encryption key so the SEC-003 fail-closed boot guard passes
-  # locally (encrypts AI provider tokens + refresh tokens at rest).
-  AI_TOKEN_ENC_KEY: recette-ai-token-enc-key
+  # locally (encrypts refresh tokens at rest).
+  REFRESH_TOKEN_ENC_KEY: recette-refresh-token-enc-key
   # Non-empty secret so AccessRequestHmacService boots (ADR-029): the early-access
   # confirmation email is signed with it. Prod stays fail-closed on the empty default.
   ACCESS_REQUEST_HMAC_SECRET: recette-access-request-hmac-secret
@@ -49,21 +46,6 @@ services:
   worker:
     environment:
       <<: *recette-env
-
-  worker-llm:
-    environment:
-      <<: *recette-env
-
-  # Recette re-enables the AI surface to be tested end-to-end (ADR-046's
-  # default-off is a prod fail-safe; recette is where AI is exercised — see the
-  # header note). NEXT_PUBLIC_ENABLE_AI is inlined into the PWA bundle at build
-  # time, so this only takes effect on a rebuild: after toggling, run
-  #   docker compose -f compose.yaml -f compose.recette.yaml build pwa
-  # (`make start-recette` uses `up --wait`, which does not rebuild on its own).
-  pwa:
-    build:
-      args:
-        NEXT_PUBLIC_ENABLE_AI: "true"
 
   mailcatcher:
     # Pinned by digest: schickling/mailcatcher has no versioned tags, and the

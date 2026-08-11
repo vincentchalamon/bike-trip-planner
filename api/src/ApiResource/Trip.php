@@ -15,9 +15,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\NearbyPoiSearchProcessor;
-use App\State\TripAiChatProcessor;
 use App\State\TripBatchRecomputeProcessor;
-use App\State\TripAiGenerateProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
@@ -73,37 +71,6 @@ use App\State\TripUpdateProcessor;
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
-        ),
-        new Post(
-            uriTemplate: '/trips/ai-generate{._format}',
-            status: 202,
-            openapi: new Operation(
-                responses: [
-                    422 => new Response(description: 'AI provider not configured'),
-                    429 => new Response(description: 'Rate limit reached'),
-                ],
-                summary: "Generate a trip from a natural-language brief using the user's configured AI provider.",
-            ),
-            security: "is_granted('ROLE_USER')",
-            input: TripAiGenerateRequest::class,
-            mercure: true,
-            processor: TripAiGenerateProcessor::class,
-        ),
-        new Post(
-            uriTemplate: '/trips/ai-chat{._format}',
-            status: 200,
-            openapi: new Operation(
-                responses: [
-                    422 => new Response(description: 'AI provider not configured, or invalid/oversized conversation payload'),
-                    429 => new Response(description: 'Rate limit reached'),
-                    503 => new Response(description: 'AI assistant unavailable'),
-                ],
-                summary: "Refine a trip brief through a stateless multi-turn chat with the user's configured AI provider.",
-            ),
-            security: "is_granted('ROLE_USER')",
-            input: AiChatRequest::class,
-            output: AiChatResponse::class,
-            processor: TripAiChatProcessor::class,
         ),
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',

@@ -78,11 +78,6 @@ final readonly class TripDetailProvider implements ProviderInterface
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
             weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
-            aiStatus: $this->deriveBlockStatus($this->computationsInCategory('ai_analysis'), $statuses),
-            // Persisted AI overview + per-stage analysis so the narrative survives
-            // a reload instead of only living in the one-shot Mercure trip_ready.
-            aiOverview: $request->aiOverviewData,
-            aiStale: $request->aiOverviewStale,
             stages: array_map($this->serializeStage(...), $stages),
         );
     }
@@ -90,7 +85,7 @@ final readonly class TripDetailProvider implements ProviderInterface
     /**
      * Lists the {@see ComputationName} cases belonging to a progress category,
      * so the block-status derivation stays aligned with {@see ComputationName::category()}
-     * instead of hardcoding the WEATHER/WIND or STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW pairs.
+     * instead of hardcoding the WEATHER/WIND pair.
      *
      * @return list<ComputationName>
      */
@@ -184,9 +179,6 @@ final readonly class TripDetailProvider implements ProviderInterface
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
                 ? $this->serializeAccommodation($stage->selectedAccommodation)
                 : null,
-            // Persisted pass-1 stage analysis (issue #301) so it is restored on
-            // reload alongside the trip-level overview.
-            'aiAnalysis' => $stage->aiAnalysis?->toArray(),
         ];
     }
 

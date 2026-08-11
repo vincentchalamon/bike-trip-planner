@@ -75,28 +75,6 @@ services:
       - ./api:/app
       - /app/var
 
-  worker-llm:
-    image: bike-trip-planner-php:dev
-    build:
-      target: frankenphp_dev
-    read_only: false
-    environment:
-      APP_ENV: dev
-      MAILER_DSN: smtp://mailcatcher:1025
-      ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
-      LOCK_DSN: redis://redis:6379
-      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
-      JWT_SECRET_KEY: /app/config/jwt/private.pem
-      JWT_PUBLIC_KEY: /app/config/jwt/public.pem
-      JWT_PASSPHRASE: ""
-      FRONTEND_URL: "${FRONTEND_URL:-https://${SERVER_NAME:-localhost}}"
-    secrets: !reset null
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    volumes: !override
-      - ./api:/app
-      - /app/var
-
   pwa:
     image: bike-trip-planner-pwa:dev
     build:
@@ -114,10 +92,6 @@ services:
       NODE_ENV: development
       # Development usage only
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
-      # AI feature flag (recette #649): on in dev so the AI surface stays visible
-      # and its code keeps being exercised while it is masked in prod/recette.
-      # `next dev` reads NEXT_PUBLIC_* from the runtime env (no rebuild needed).
-      NEXT_PUBLIC_ENABLE_AI: "true"
       # Test-only SSE injection hook (SEC-012): on in dev so the mocked E2E suite
       # (`make test-e2e`) can inject Mercure events. `next dev` reads NEXT_PUBLIC_*
       # from the runtime env (no rebuild needed).

@@ -1,5 +1,3 @@
-import type { components } from "@/lib/api/schema";
-
 export interface CoordinatePayload {
   lat: number;
   lon: number;
@@ -19,17 +17,6 @@ export interface StagePayload {
 }
 
 /**
- * Per-stage AI analysis produced by the LLaMA pass 1 (issue #301 backend).
- *
- * Carried in each {@link EnrichedStagePayload} on the `trip_ready` Mercure
- * event. Derived from the OpenAPI-generated `StageAiAnalysis` schema so a
- * backend field rename/addition surfaces as a PWA compile error. Null/absent
- * when the AI pipeline is disabled, has failed, or has not yet completed.
- */
-export type StageAiAnalysisPayload =
-  components["schemas"]["StageAiAnalysis.jsonld"];
-
-/**
  * Fully enriched stage payload carried by Mode 1 `trip_ready` and Mode 2
  * `stage_updated` events. Mirrors {@link StagePayloadMapper::toPayload} on
  * the backend — keep both in sync.
@@ -41,8 +28,6 @@ export interface EnrichedStagePayload extends StagePayload {
   accommodations: AccommodationPayload[];
   selectedAccommodation: AccommodationPayload | null;
   events: EventPayload[];
-  /** LLaMA pass-1 stage analysis (issue #301). Null when the pipeline is off or pending. */
-  aiAnalysis?: StageAiAnalysisPayload | null;
 }
 
 export interface WeatherPayload {
@@ -150,19 +135,6 @@ export interface SupplyMarker {
   water: SupplyWaterPoint[];
   food: SupplyFoodPoint[];
 }
-
-/**
- * Trip-level AI overview produced by the LLaMA pass 2 (issue #302 backend).
- *
- * Carried by the terminal `trip_ready` Mercure event. Derived from the
- * OpenAPI-generated `components["schemas"]["TripAiOverview"]` (backed by
- * `api/src/Llm/Dto/TripAiOverview.php`) so a backend field rename/addition
- * surfaces as a PWA compile error.
- *
- * Null/absent when the AI pipeline is disabled, has failed, or has not yet
- * completed — consumers must treat the entire overview as optional.
- */
-export type TripAiOverviewPayload = components["schemas"]["TripAiOverview"];
 
 export type MercureEvent =
   | {
@@ -426,7 +398,6 @@ export type MercureEvent =
       data: {
         stages: EnrichedStagePayload[];
         computationStatus: Record<string, string>;
-        aiOverview?: TripAiOverviewPayload | null;
       };
     }
   | {

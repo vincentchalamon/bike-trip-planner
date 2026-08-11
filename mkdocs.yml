@@ -131,6 +131,7 @@ nav:
       - adr/adr-049-zone-opening-and-import-time-completeness.md
       - adr/adr-050-terrain-attribution-to-the-ridden-route.md
       - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
+      - adr/adr-052-remove-ai-support.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md

@@ -504,7 +504,6 @@ CREATE TABLE public.stage (
     accommodations jsonb NOT NULL,
     selected_accommodation jsonb,
     trip_id uuid NOT NULL,
-    ai_analysis jsonb,
     on_cycle_network double precision DEFAULT 0 NOT NULL,
     start_label character varying(255) DEFAULT NULL::character varying,
     end_label character varying(255) DEFAULT NULL::character varying
@@ -533,10 +532,8 @@ CREATE TABLE public.trip (
     created_at timestamp(0) without time zone NOT NULL,
     updated_at timestamp(0) without time zone NOT NULL,
     user_id uuid,
-    ai_overview jsonb,
     status character varying(20) DEFAULT 'draft'::character varying NOT NULL,
-    out_of_zone boolean DEFAULT false NOT NULL,
-    ai_overview_stale boolean DEFAULT false NOT NULL
+    out_of_zone boolean DEFAULT false NOT NULL
 );
 
 
@@ -571,9 +568,7 @@ CREATE TABLE public."user" (
     roles json NOT NULL,
     created_at timestamp(0) without time zone NOT NULL,
     locale character varying(5) DEFAULT 'fr'::character varying NOT NULL,
-    deleted_at timestamp(0) without time zone DEFAULT NULL::timestamp without time zone,
-    ai_provider character varying(32) DEFAULT NULL::character varying,
-    ai_token text
+    deleted_at timestamp(0) without time zone DEFAULT NULL::timestamp without time zone
 );
 
 

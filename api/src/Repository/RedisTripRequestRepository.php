@@ -11,7 +11,6 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\Llm\Dto\StageAiAnalysis;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Lock\LockFactory;
@@ -129,41 +128,6 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return null;
     }
 
-    /**
-     * Atomic read-modify-write guarded by a Symfony Lock so concurrent pass-1 handlers
-     * (one Messenger worker per stage) cannot lose sibling-worker updates against the
-     * monolithic stages blob.
-     *
-     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
-     */
-    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
-    {
-        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), ttl: 5);
-        $lock->acquire(blocking: true);
-
-        try {
-            $stages = $this->getStages($tripId);
-            if (null === $stages) {
-                return;
-            }
-
-            $changed = false;
-            foreach ($stages as $stage) {
-                if ($stage->dayNumber === $dayNumber) {
-                    $stage->aiAnalysis = null === $aiAnalysis ? null : StageAiAnalysis::fromArray($aiAnalysis);
-                    $changed = true;
-                    break;
-                }
-            }
-
-            if ($changed) {
-                $this->storeStages($tripId, $stages);
-            }
-        } finally {
-            $lock->release();
-        }
-    }
-
     public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
     {
         $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($weather): void {
@@ -206,7 +170,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     /**
      * Lock-guarded read-modify-write of a single stage (matched by dayNumber) in the
      * monolithic blob, so concurrent enrichment handlers can't lose each other's
-     * column updates (recette #649). Mirrors {@see self::updateStageAiAnalysis()}.
+     * column updates (recette #649).
      *
      * @param callable(Stage): void $mutator
      */
@@ -236,33 +200,6 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         } finally {
             $lock->release();
         }
-    }
-
-    /**
-     * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
-     */
-    public function updateTripAiOverview(string $tripId, ?array $aiOverview): void
-    {
-        $request = $this->getRequest($tripId);
-        if (!$request instanceof TripRequest) {
-            return;
-        }
-
-        $request->aiOverviewData = $aiOverview;
-        // Writing the overview clears the stale flag (mirrors the Doctrine impl).
-        $request->aiOverviewStale = false;
-        $this->set($this->requestKey($tripId), $request);
-    }
-
-    public function markAiOverviewStale(string $tripId): void
-    {
-        $request = $this->getRequest($tripId);
-        if (!$request instanceof TripRequest || null === $request->aiOverviewData) {
-            return;
-        }
-
-        $request->aiOverviewStale = true;
-        $this->set($this->requestKey($tripId), $request);
     }
 
     /**

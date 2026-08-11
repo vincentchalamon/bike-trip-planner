@@ -144,7 +144,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
      * lets two parallel enrichment workers clobber each other's write — a lost
      * `done` reverts a computation to `running` for good, and the completion gate
      * never fires (loader spins forever on a computed trip). Serialise the
-     * read-modify-write behind a per-trip lock, mirroring LlmAnalysisTracker.
+     * read-modify-write behind a per-trip lock.
      */
     private function updateStatus(string $tripId, ComputationName $computation, string $status): void
     {

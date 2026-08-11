@@ -76,28 +76,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'cache_pool' => 'cache.rate_limiter',
             ],
             // In-ride nearby-POI search (#934): a read-only PostGIS lookup a rider
-            // can fire repeatedly while moving, so it is capped more loosely than
-            // the LLM chats.
+            // can fire repeatedly while moving.
             'nearby_pois' => [
                 'policy' => 'sliding_window',
                 'limit' => 30,
-                'interval' => '60 seconds',
-                'cache_pool' => 'cache.rate_limiter',
-            ],
-            // AI route generation is heavier than chat (LLM + geocoding + Valhalla,
-            // possibly a corrective re-prompt) and runs on the user's own quota,
-            // so it is throttled more tightly.
-            'ai_generate' => [
-                'policy' => 'sliding_window',
-                'limit' => 5,
-                'interval' => '60 seconds',
-                'cache_pool' => 'cache.rate_limiter',
-            ],
-            // Stateless trip-brief chat (ADR-045): one LLM call per user turn on
-            // the rider's own quota, like the loaded-trip chat.
-            'ai_chat' => [
-                'policy' => 'sliding_window',
-                'limit' => 20,
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],

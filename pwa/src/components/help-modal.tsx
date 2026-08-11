@@ -13,7 +13,6 @@ import {
 import { FaqAccordion, type FaqCategory } from "@/components/faq-accordion";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
-import { isAiFeatureEnabled } from "@/lib/constants";
 
 /**
  * Unified help modal (#384) with two tabs:
@@ -82,19 +81,6 @@ export function HelpModal() {
         { question: tFaq("q9"), answer: tFaq("a9") },
       ],
     },
-    // "Assistant IA" category — hidden while the AI feature is off (recette #649).
-    ...(isAiFeatureEnabled()
-      ? [
-          {
-            id: "ai",
-            label: tFaq("categoryAi"),
-            items: [
-              { question: tFaq("q10"), answer: tFaq("a10") },
-              { question: tFaq("q11"), answer: tFaq("a11") },
-            ],
-          },
-        ]
-      : []),
   ];
 
   return (

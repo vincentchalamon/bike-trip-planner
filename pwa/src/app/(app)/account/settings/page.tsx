@@ -3,10 +3,8 @@
 import { useTranslations } from "next-intl";
 import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
-import { AiProviderSection } from "@/components/account/ai-provider-section";
 import { DataSection } from "@/components/account/data-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
-import { isAiFeatureEnabled } from "@/lib/constants";
 
 /**
  * Account settings page (#383).
@@ -43,7 +41,6 @@ export default function AccountSettingsPage() {
         <AccountRail />
         <div className="flex flex-col gap-6 min-w-0">
           <AccountSection />
-          {isAiFeatureEnabled() && <AiProviderSection />}
           <DataSection />
           <DangerZoneSection />
         </div>

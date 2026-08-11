@@ -113,7 +113,6 @@ final class TripDetailTest extends ApiTestCase
         // strips null properties, so they are absent here (the front reads them as
         // undefined and falls back to the presence of the underlying data).
         $this->assertNull($data['weatherStatus'] ?? null);
-        $this->assertNull($data['aiStatus'] ?? null);
     }
 
     /**
@@ -194,16 +193,13 @@ final class TripDetailTest extends ApiTestCase
         $tracker->initializeComputations(self::TRIP_ID, [
             ComputationName::WEATHER,
             ComputationName::WIND,
-            ComputationName::STAGE_AI_ANALYSIS,
-            ComputationName::TRIP_AI_OVERVIEW,
         ]);
-        // Weather: one done, one still running → running. AI: both pending → running.
+        // Weather: one done, one still running → running.
         $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
         $tracker->markRunning(self::TRIP_ID, ComputationName::WIND);
 
         $data = $this->fetchDetail();
         $this->assertSame('running', $data['weatherStatus']);
-        $this->assertSame('running', $data['aiStatus']);
     }
 
     #[Test]
@@ -217,17 +213,12 @@ final class TripDetailTest extends ApiTestCase
         $tracker->initializeComputations(self::TRIP_ID, [
             ComputationName::WEATHER,
             ComputationName::WIND,
-            ComputationName::STAGE_AI_ANALYSIS,
-            ComputationName::TRIP_AI_OVERVIEW,
         ]);
         $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
         $tracker->markDone(self::TRIP_ID, ComputationName::WIND);
-        $tracker->markDone(self::TRIP_ID, ComputationName::STAGE_AI_ANALYSIS);
-        $tracker->markDone(self::TRIP_ID, ComputationName::TRIP_AI_OVERVIEW);
 
         $data = $this->fetchDetail();
         $this->assertSame('done', $data['weatherStatus']);
-        $this->assertSame('done', $data['aiStatus']);
     }
 
     #[Test]
@@ -248,8 +239,6 @@ final class TripDetailTest extends ApiTestCase
 
         $data = $this->fetchDetail();
         $this->assertSame('failed', $data['weatherStatus']);
-        // AI computations were never tracked → null, stripped from the JSON-LD payload.
-        $this->assertNull($data['aiStatus'] ?? null);
     }
 
     #[Test]

@@ -1,5 +1,7 @@
 # ADR-042: Optional, Multi-Provider AI on a Bring-Your-Own Token (Per-User Cloud Models)
 
+> **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
+
 - **Status:** Accepted
 - **Date:** 2026-06-19
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-027 (Gate mechanism and two-phase pipeline), ADR-030 (symfony/ai adoption), ADR-035 (GDPR account erasure)

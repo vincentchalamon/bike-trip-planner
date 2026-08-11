@@ -53,10 +53,10 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
-      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
-      # guard fails closed rather than silently using the committed dev default.
-      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
+      # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
+      # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
+      # closed rather than silently using the committed dev default.
+      REFRESH_TOKEN_ENC_KEY: "${REFRESH_TOKEN_ENC_KEY:-}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
@@ -142,10 +142,10 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
-      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
-      # guard fails closed rather than silently using the committed dev default.
-      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
+      # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
+      # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
+      # closed rather than silently using the committed dev default.
+      REFRESH_TOKEN_ENC_KEY: "${REFRESH_TOKEN_ENC_KEY:-}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
@@ -180,86 +180,6 @@ services:
       timeout: 3s
       retries: 3
 
-  # Dedicated worker for slow LLM inference jobs. A single replica caps
-  # concurrent inferences at one (4 ARM cores can't run several in parallel
-  # without thrashing) and keeps the `async` workers free of head-of-line
-  # blocking by fast enrichment jobs. See issue #565.
-  worker-llm:
-    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
-    build:
-      context: ./
-      dockerfile: .docker/php/Dockerfile
-      target: frankenphp_prod
-    command: bin/console messenger:consume llm --time-limit=3600 -vv
-    networks:
-      - default
-    restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp
-    # Highest worker limit (#566): the LLM worker buffers prompt/response
-    # payloads, but inference runs in the user's external cloud provider
-    # (ADR-042), so the worker itself stays modest.
-    deploy:
-      replicas: ${WORKER_LLM_REPLICAS:-1}
-      resources:
-        limits:
-          memory: 768M
-    depends_on:
-      database:
-        condition: service_healthy
-      php:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      valhalla:
-        condition: service_healthy
-        required: false
-    environment:
-      APP_ENV: prod
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
-      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
-      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
-      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
-      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
-      # guard fails closed rather than silently using the committed dev default.
-      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
-      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
-      MESSENGER_FAILED_DSN: redis://redis:6379/failed
-      REDIS_URL: redis://redis:6379
-      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
-      # redis://localhost:6379 (unreachable from the container) -> trip creation
-      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
-      LOCK_DSN: redis://redis:6379
-      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      JWT_SECRET_KEY: /run/secrets/jwt_private_key
-      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
-      JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
-      MAILER_DSN: "${MAILER_DSN:-}"
-      ACCESS_REQUEST_HMAC_SECRET: "${ACCESS_REQUEST_HMAC_SECRET:-}"
-      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
-      SENTRY_DSN: "${SENTRY_DSN:-}"
-      APP_RELEASE: "${APP_RELEASE:-}"
-      # Workers must not run migrations — only the php service does (see ADR-032).
-      MIGRATIONS_ON_BOOT: "false"
-    secrets:
-      - jwt_private_key
-      - jwt_public_key
-    volumes:
-      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
-      # and our date.timezone=UTC override takes effect.
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
-      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
-    healthcheck:
-      test: pgrep -f 'messenger:consume llm' || exit 1
-      start_period: 30s
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
   pwa:
     image: ${PWA_IMAGE:-bike-trip-planner-pwa:ci}
     build:
@@ -280,13 +200,6 @@ services:
         # the self-hosted tracker script (e.g. https://analytics.example/js/script.js).
         NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
         NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
-        # AI feature flag (recette #649): default-off so prod and the iso-prod
-        # recette build hide the whole AI surface (generation assistant, stage
-        # briefings + trip overview, account provider config). The in-ride nearby
-        # search is AI-free (ADR-048) and is NOT gated by this flag.
-        # Override to "true" only where AI must show (CI E2E bake args, dev). The
-        # code and endpoints are kept for a later re-enable (ADR-042).
-        NEXT_PUBLIC_ENABLE_AI: "${NEXT_PUBLIC_ENABLE_AI:-false}"
         # Test-only SSE injection hook (SEC-012): default-off so the prod/recette
         # bundle tree-shakes it out. Override to "true" only for the mocked E2E
         # build (CI bake args, dev).
@@ -436,7 +349,7 @@ services:
     image: postgis/postgis:18-3.6-alpine
     restart: unless-stopped
     # Modest tuning for the beta profile (#566): max_connections covers php +
-    # 2 async workers + 1 llm worker + provisioner with headroom; shared_buffers
+    # 2 async workers + provisioner with headroom; shared_buffers
     # stays well inside the 1 GB limit below. effective_cache_size tells the
     # planner how much OS cache to assume (container_limit - shared_buffers -
     # overhead), not an allocation — keeps cost estimates realistic at 1 GB.

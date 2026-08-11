@@ -66,16 +66,6 @@ codes rather than relying on a hand-maintained map. See
 [ADR-014](adr/adr-014-alert-extensibility.md) and
 [ADR-015](adr/adr-015-dynamic-engine-management-design-pattern.md).
 
-## AI pipeline
-
-AI is optional, off by default, and per-user: each account brings its own API key for a chosen
-provider — Anthropic (Claude), Google (Gemini), or OpenAI — through `symfony/ai`. A two-pass
-analysis (per-stage, then whole-trip) plus a context-aware chat assistant enrich the roadbook;
-everything degrades gracefully when no key is set or the provider is unreachable, keeping the
-rule-based alerts fully visible. Keys are encrypted at rest and never returned by the API. See
-[ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md); the earlier self-hosted Ollama
-stack (ADR-028, ADR-030) was removed.
-
 ## Deployment & operations
 
 Production runs as Docker Compose on an Oracle Cloud VM, orchestrated by Coolify and shipped by
@@ -100,13 +90,11 @@ Uptime Kuma stacks kept in-repo but not deployed (reversible — see ADR-031). S
 - **Export & devices:** ADR-018 (Garmin), ADR-021 (enriched GPX), ADR-024 (mobile / Capacitor).
 - **Auth, access & privacy:** ADR-023 (magic link), ADR-029 (early access), ADR-034 (analytics),
   ADR-035 (GDPR erasure), ADR-038 (hide forbidden as not-found), ADR-047 (server-side web auth).
-- **AI:** ADR-042 (optional multi-provider, bring-your-own token), ADR-045 (conversational
-  trip-brief chat), ADR-046 (temporary AI feature flag).
 - **Infrastructure & ops:** ADR-019 (hosting), ADR-022 (storage), ADR-031 (error tracking),
   ADR-032 (migrations & rollback), ADR-039 (beta right-sizing free tier).
 - **Security:** ADR-011 (SSRF / XXE prevention).
 
 Several ADRs are superseded or revoked and kept in `adr/` for historical context: ADR-008 (PDF
 roadbook, revoked), ADR-020 & ADR-025 (self-hosted Overpass, replaced by PostGIS in ADR-040),
-ADR-028 & ADR-030 (self-hosted Ollama/Symfony AI, replaced by ADR-042), and ADR-033 (nightly OSM
-refresh, replaced by ADR-036).
+ADR-028, ADR-030, ADR-042, ADR-045 & ADR-046 (all AI, withdrawn by ADR-052 when AI support was
+removed), and ADR-033 (nightly OSM refresh, replaced by ADR-036).

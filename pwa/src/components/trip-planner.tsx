@@ -8,10 +8,7 @@ import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { OutOfZoneBanner } from "@/components/out-of-zone-banner";
 import { TripSummary } from "@/components/trip-summary";
-import { TripAiOverview } from "@/components/trip-ai-overview";
-import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { TripHeader } from "@/components/trip-header";
-import { useAiSettings } from "@/hooks/use-ai-settings";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { TripActions } from "@/components/trip-actions";
@@ -30,8 +27,6 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { useSwipe } from "@/hooks/use-swipe";
-import { fetchAiAvailability } from "@/lib/ai-availability";
-import { isAiFeatureEnabled } from "@/lib/constants";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,
@@ -55,8 +50,8 @@ const MapPanel = dynamic(
  *     structural computation runs (no stages yet);
  *   - **trip view** as soon as the structural stages exist.
  *
- * Weather and AI are the only remaining asynchronous enrichments. They render
- * their own spinners on top of the already-displayed trip view, driven by
+ * Weather is the only remaining asynchronous enrichment. It renders its own
+ * spinner on top of the already-displayed trip view, driven by
  * `useUiStore.blockStatus` (hydrated from `/detail`, kept live by Mercure).
  * There is no longer a user gate between structural computation and
  * enrichment.
@@ -92,7 +87,6 @@ export function TripPlanner() {
     removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
-    handleAiGeneration,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,
@@ -110,7 +104,6 @@ export function TripPlanner() {
     handleDuplicateTrip,
     handleDeleteTrip,
     handleShareTrip,
-    relaunchFullAnalysis,
     isShareModalOpen,
     setShareModalOpen,
     clearNewAccKey,
@@ -128,28 +121,6 @@ export function TripPlanner() {
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
-  const aiAvailable = useUiStore((s) => s.aiCapability.available);
-  const aiConfigured = useUiStore((s) => s.aiCapability.configured);
-  const setAiAvailable = useUiStore((s) => s.setAiAvailable);
-
-  // Initialise the AI availability signal on mount. Since ADR-042 there is no
-  // self-hosted tier to probe: with the BYO-token cloud model availability
-  // resolves to `true` here. A genuine provider outage surfaces reactively via
-  // the 503 the chat endpoint returns, not from this mount-time call.
-  useEffect(() => {
-    if (!isAiFeatureEnabled()) return;
-    let cancelled = false;
-    void fetchAiAvailability().then((available) => {
-      if (!cancelled) setAiAvailable(available);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [setAiAvailable]);
-
-  // Sync the `configured` signal from the account (ADR-042): AI surfaces stay
-  // disabled-but-visible until a provider + token is set.
-  useAiSettings();
 
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
@@ -213,17 +184,12 @@ export function TripPlanner() {
       const detail = (
         e as CustomEvent<{
           weather?: import("@/store/ui-store").BlockStatus;
-          ai?: import("@/store/ui-store").BlockStatus;
         }>
       ).detail;
       if (!detail) return;
       const ui = useUiStore.getState();
       if (detail.weather !== undefined)
         ui.setBlockStatus("weather", detail.weather);
-      if (detail.ai !== undefined) ui.setBlockStatus("ai", detail.ai);
-    };
-    const onClearAiOverview = () => {
-      useTripStore.getState().setAiOverview(null);
     };
     const onSetActiveDayNumber = (e: Event) => {
       const value = (e as CustomEvent<number | null>).detail;
@@ -239,26 +205,8 @@ export function TripPlanner() {
         useTripStore.getState().clearTrip();
       }
     };
-    const onSetAiCapability = (e: Event) => {
-      const detail = (
-        e as CustomEvent<{
-          available: boolean;
-          configured?: boolean;
-        }>
-      ).detail;
-      if (detail) {
-        // `configured` defaults to true so the capability tests that only drive
-        // `available` keep exercising the active path.
-        useUiStore.getState().setAiCapability({
-          available: detail.available,
-          configured: detail.configured ?? true,
-        });
-      }
-    };
-    window.addEventListener("__test_set_ai_capability", onSetAiCapability);
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_block_status", onBlockStatus);
-    window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
     window.addEventListener(
       "__test_set_active_day_number",
       onSetActiveDayNumber,
@@ -267,13 +215,11 @@ export function TripPlanner() {
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
       window.removeEventListener("__test_set_block_status", onBlockStatus);
-      window.removeEventListener("__test_clear_ai_overview", onClearAiOverview);
       window.removeEventListener(
         "__test_set_active_day_number",
         onSetActiveDayNumber,
       );
       window.removeEventListener("__test_set_trip_id", onSetTripId);
-      window.removeEventListener("__test_set_ai_capability", onSetAiCapability);
     };
   }, []);
 
@@ -423,12 +369,6 @@ export function TripPlanner() {
             <CardSelection
               onSubmitUrl={handleMagicLink}
               onUploadFile={handleGpxUpload}
-              onLaunchAiGeneration={(brief) => {
-                // The chat card consolidates the brief (structured `collected`
-                // parameters + the rider's turns as fallback, ADR-045); the
-                // host just forwards it to POST /trips/ai-generate.
-                if (brief) void handleAiGeneration(brief);
-              }}
               disabled={!isOnline}
             />
             <RecentTrips />
@@ -455,19 +395,6 @@ export function TripPlanner() {
              per-block spinners (ADR-043). === */}
         {isTripLoaded && (
           <>
-            {/* "Configure une IA" banner (feedback #830) — pinned just under
-                the site header, at the top of the trip content zone, so the
-                actionable CTA is the first thing the user sees rather than
-                buried above the AI overview. */}
-            {isAiFeatureEnabled() && !aiConfigured && (
-              <div className="mb-6">
-                <AiUnavailableNotice
-                  variant="notConfigured"
-                  context="analysis"
-                />
-              </div>
-            )}
-
             {/* Inline recomputation progress bar — thin bar at top of page */}
             <InlineRecomputationBar />
 
@@ -536,22 +463,6 @@ export function TripPlanner() {
                 averageSpeed={averageSpeed}
                 showNoDatesBanner={!isLocked}
               />
-
-              {/* Trip-level AI overview (issue #305) — narrative + patterns +
-                  recommendations produced by the LLaMA pass 2. Renders nothing
-                  silently when the LLM pipeline is disabled or did not produce
-                  an overview. Placed above the stage timeline so it gives the
-                  user a high-level view before they dive into per-stage data. */}
-              {isAiFeatureEnabled() && (
-                <>
-                  {aiConfigured && !aiAvailable && (
-                    <AiUnavailableNotice context="analysis" />
-                  )}
-                  <TripAiOverview
-                    onRegenerate={() => void relaunchFullAnalysis()}
-                  />
-                </>
-              )}
 
               {/* Sentinel — marks the natural position of the progress bar in the
                 flow. The sticky bar becomes visible once this exits the viewport. */}

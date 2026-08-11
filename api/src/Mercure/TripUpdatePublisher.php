@@ -79,8 +79,8 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     }
 
     /**
-     * @param list<Stage>                                                                                                                                                                                                                     $stages
-     * @param array{status: array<string, string>, aiOverview?: array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null} $summary
+     * @param list<Stage>                          $stages
+     * @param array{status: array<string, string>} $summary
      */
     public function publishTripReady(string $tripId, array $stages, array $summary): void
     {
@@ -88,10 +88,6 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
             'stages' => $this->stagePayloadMapper->toPayloadList($stages),
             'computationStatus' => $summary['status'] ?? [],
         ];
-
-        if (\array_key_exists('aiOverview', $summary)) {
-            $data['aiOverview'] = $summary['aiOverview'];
-        }
 
         $this->publish($tripId, MercureEventType::TRIP_READY, $data);
     }

@@ -36,8 +36,7 @@ interface VisualMetadata {
  * be masked in `toHaveScreenshot`:
  *  - MapLibre canvas + tiles (network-loaded, animated),
  *  - any `<canvas>` (infographic preview, elevation profile rendering),
- *  - dates/times (locale-formatted, "today"-relative),
- *  - AI narrative blocks (streamed / model-dependent text).
+ *  - dates/times (locale-formatted, "today"-relative).
  */
 export const MASK_SELECTORS = [
   ".maplibregl-map",
@@ -47,8 +46,6 @@ export const MASK_SELECTORS = [
   "canvas",
   "[data-testid='summary-dates']",
   "[data-testid='stage-weather-card']",
-  "[data-testid='stage-ai-summary']",
-  "[data-testid='trip-ai-overview']",
 ];
 
 export function maskRegions(page: Page): Locator[] {

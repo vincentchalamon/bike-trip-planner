@@ -27,24 +27,13 @@ const noop = () => {};
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllEnvs();
 });
 
-// Vitest sets NEXT_PUBLIC_ENABLE_AI=true globally (vitest.config.ts); the masked
-// case stubs it off to prove the AI surface disappears (recette #649).
-describe("CardSelection — AI feature flag (recette #649)", () => {
-  it("shows the AI assistant card when the flag is on", () => {
+describe("CardSelection", () => {
+  it("shows the link and GPX cards", () => {
     render(<CardSelection onSubmitUrl={noop} onUploadFile={noop} />);
-    expect(screen.getByTestId("card-ai")).toBeInTheDocument();
     expect(screen.getByTestId("card-link")).toBeInTheDocument();
     expect(screen.getByTestId("card-gpx")).toBeInTheDocument();
-  });
-
-  it("hides the AI assistant card when the flag is off (link + GPX remain)", () => {
-    vi.stubEnv("NEXT_PUBLIC_ENABLE_AI", "false");
-    render(<CardSelection onSubmitUrl={noop} onUploadFile={noop} />);
     expect(screen.queryByTestId("card-ai")).not.toBeInTheDocument();
-    expect(screen.getByTestId("card-link")).toBeInTheDocument();
-    expect(screen.getByTestId("card-gpx")).toBeInTheDocument();
   });
 });

@@ -20,12 +20,12 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `JWT_PUBLIC_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/jwt/public.pem` (VM) | `php`, `worker` (LexikJWT) | Oui | On-compromise (avec la clé privée) | ADR-023 |
 | `JWT_PASSPHRASE` | Passphrase | Coolify env | `php`, `worker` | Oui | On-compromise (avec la clé privée) | ADR-023 |
 | `MERCURE_JWT_KEY` | Passphrase HS256 | Coolify env | `php` (publisher + subscriber + Mercure hub) | Oui | On-compromise | `compose.yaml` |
-| `AI_TOKEN_ENC_KEY` | Clé de chiffrement (libsodium) | Coolify env | `php`, `worker`, `worker-llm` | Oui | On-compromise (invalide tokens IA + sessions refresh → re-login) | ADR-042 / SEC-003 |
+| `REFRESH_TOKEN_ENC_KEY` | Clé de chiffrement des refresh tokens (libsodium) | Coolify env | `php`, `worker` | Oui | On-compromise (invalide les refresh tokens chiffrés → re-login) | ADR-023 / ADR-052 / SEC-003 |
 | `DATABASE_USERNAME` | Identifiant Postgres | Coolify env | `php`, `worker`, `database` | Oui | Statique | ADR-022 |
 | `DATABASE_PASSWORD` | Password Postgres | Coolify env | `php`, `worker`, `database` | Oui | Bi-annuel + on-compromise | ADR-022 |
 | `DATABASE_NAME` | Nom de base | Coolify env | `php`, `worker`, `database` | Oui | Statique | ADR-022 |
 | `MAILER_DSN` | DSN Resend (contient API key) | Coolify env | `php`, `worker` | Oui | On-compromise | ADR-029 |
-| `ACCESS_REQUEST_HMAC_SECRET` | Secret HMAC-SHA256 | Coolify env | `php`, `worker`, `worker-llm` | Oui | On-compromise (invalide les liens d'activation en attente) | ADR-029 |
+| `ACCESS_REQUEST_HMAC_SECRET` | Secret HMAC-SHA256 | Coolify env | `php`, `worker` | Oui | On-compromise (invalide les liens d'activation en attente) | ADR-029 |
 | `DATATOURISME_API_KEY` | API key | Coolify env | `worker` (multi-source) | Oui | On-compromise | ADR-026 |
 | `OPENAGENDA_API_KEY` | API key Opendatasoft (facultative ; export public sans clé) | Coolify env | `provisioner` (source événements) | Non | On-compromise | ADR-051 |
 | `SENTRY_DSN` | DSN GlitchTip (public côté projet, technique côté ingestion) | Coolify env | `php`, `worker`, `pwa` (SSR) | Oui | On-compromise (projet GlitchTip recréé) | ADR-031 |

@@ -84,34 +84,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/me/ai-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves a AiSettings resource.
-         * @description Retrieves a AiSettings resource.
-         */
-        get: operations["api_usersmeai-settings_get"];
-        /**
-         * Replaces the AiSettings resource.
-         * @description Replaces the AiSettings resource.
-         */
-        put: operations["api_usersmeai-settings_put"];
-        post?: never;
-        /**
-         * Removes the AiSettings resource.
-         * @description Removes the AiSettings resource.
-         */
-        delete: operations["api_usersmeai-settings_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -414,46 +386,6 @@ export interface paths {
          * @description Creates a Trip resource.
          */
         post: operations["api_trips_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/ai-chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refine a trip brief through a stateless multi-turn chat with the user's configured AI provider.
-         * @description Refine a trip brief through a stateless multi-turn chat with the user's configured AI provider.
-         */
-        post: operations["api_tripsai-chat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/ai-generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Generate a trip from a natural-language brief using the user's configured AI provider.
-         * @description Generate a trip from a natural-language brief using the user's configured AI provider.
-         */
-        post: operations["api_tripsai-generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -834,69 +766,6 @@ export interface components {
          *     URL identifier, so there is no IDOR surface.
          */
         "Account.jsonld": components["schemas"]["HydraItemBaseSchema"] & Record<string, never>;
-        AiChatMessage: {
-            /**
-             * @description Conversation role, strictly "user" or "assistant".
-             * @enum {string}
-             */
-            role: "user" | "assistant";
-            /** @description Message content. */
-            content: string;
-        };
-        /**
-         * @description Per-user AI configuration (ADR-042): the chosen cloud provider and its API
-         *     token (bring-your-own-token). AI is opt-in — without a configured token every
-         *     AI feature stays disabled.
-         *
-         *     - GET    /users/me/ai-settings  current provider + whether a token is stored
-         *     - PUT    /users/me/ai-settings  set provider + token (token format validated)
-         *     - DELETE /users/me/ai-settings  clear both
-         *
-         *     The token is write-only: it is encrypted at rest and the API never returns it,
-         *     only the boolean {@see $tokenConfigured}. The current user is resolved from the
-         *     security token, never from a URL identifier (no IDOR surface).
-         */
-        AiSettings: {
-            /**
-             * @description Chosen provider. Required on write; null only when AI is not configured.
-             * @enum {string|null}
-             */
-            provider: "anthropic" | "gemini" | "openai" | null;
-            /** @description Write-only: the stored token is never serialised back, only whether one is set. */
-            token: string | null;
-            /**
-             * @description Read-only signal that a (non-empty) token is stored.
-             * @default false
-             */
-            readonly tokenConfigured: boolean;
-        };
-        /**
-         * @description Per-user AI configuration (ADR-042): the chosen cloud provider and its API
-         *     token (bring-your-own-token). AI is opt-in — without a configured token every
-         *     AI feature stays disabled.
-         *
-         *     - GET    /users/me/ai-settings  current provider + whether a token is stored
-         *     - PUT    /users/me/ai-settings  set provider + token (token format validated)
-         *     - DELETE /users/me/ai-settings  clear both
-         *
-         *     The token is write-only: it is encrypted at rest and the API never returns it,
-         *     only the boolean {@see $tokenConfigured}. The current user is resolved from the
-         *     security token, never from a URL identifier (no IDOR surface).
-         */
-        "AiSettings.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /**
-             * @description Chosen provider. Required on write; null only when AI is not configured.
-             * @enum {string|null}
-             */
-            provider: "anthropic" | "gemini" | "openai" | null;
-            /** @description Write-only: the stored token is never serialised back, only whether one is set. */
-            token: string | null;
-            /**
-             * @description Read-only signal that a (non-empty) token is stored.
-             * @default false
-             */
-            readonly tokenConfigured: boolean;
-        };
         "Alert.fit": {
             /**
              * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
@@ -1373,7 +1242,6 @@ export interface components {
             readonly startLabel?: string | null;
             readonly endLabel?: string | null;
             events?: components["schemas"]["Event.fit"][];
-            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1406,7 +1274,6 @@ export interface components {
             readonly startLabel?: string | null;
             readonly endLabel?: string | null;
             events?: components["schemas"]["Event.gpx"][];
-            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1439,7 +1306,6 @@ export interface components {
             readonly startLabel?: string | null;
             readonly endLabel?: string | null;
             events?: components["schemas"]["Event.jsonld"][];
-            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.jsonld"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1450,60 +1316,6 @@ export interface components {
             label?: string | null;
             elevationLoss?: number;
             isRestDay?: boolean;
-        };
-        "StageAiAnalysis.fit": {
-            /** @description short narrative paragraph (Synthèse section, ~80 words) */
-            narrative: string;
-            /** @description list of non-obvious facts the rider should know */
-            insights: string[];
-            /** @description list of actionable recommendations for the rider */
-            suggestions: string[];
-            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
-            model: string;
-            /** @description identifies the system prompt revision (so consumers can detect staleness) */
-            promptVersion: number;
-            /** @description RFC3339 timestamp when the analysis was generated */
-            generatedAt: string;
-        };
-        "StageAiAnalysis.gpx": {
-            /** @description short narrative paragraph (Synthèse section, ~80 words) */
-            narrative: string;
-            /** @description list of non-obvious facts the rider should know */
-            insights: string[];
-            /** @description list of actionable recommendations for the rider */
-            suggestions: string[];
-            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
-            model: string;
-            /** @description identifies the system prompt revision (so consumers can detect staleness) */
-            promptVersion: number;
-            /** @description RFC3339 timestamp when the analysis was generated */
-            generatedAt: string;
-        };
-        "StageAiAnalysis.jsonld": {
-            /** @description short narrative paragraph (Synthèse section, ~80 words) */
-            narrative: string;
-            /** @description list of non-obvious facts the rider should know */
-            insights: string[];
-            /** @description list of actionable recommendations for the rider */
-            suggestions: string[];
-            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
-            model: string;
-            /** @description identifies the system prompt revision (so consumers can detect staleness) */
-            promptVersion: number;
-            /** @description RFC3339 timestamp when the analysis was generated */
-            generatedAt: string;
-        };
-        "Trip.AiChatRequest": {
-            messages?: components["schemas"]["AiChatMessage"][];
-        };
-        "Trip.AiChatResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /** @description Conversational reply to display to the rider. */
-            reply: string;
-            /** @description True when the model judges the brief complete enough to launch generation. */
-            readyToGenerate: boolean;
-            collected: {
-                [key: string]: unknown;
-            };
         };
         "Trip.NearbyPoiSearchRequest": {
             /** @enum {string|null} */
@@ -1521,10 +1333,6 @@ export interface components {
             capReached?: boolean;
             outOfCoverage?: boolean;
             pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
-        };
-        "Trip.TripAiGenerateRequest": {
-            /** @description Free-form description of the desired trip (e.g. "boucle au départ de Lille, 2 jours, 80 km/jour, en tente"). */
-            brief: string;
         };
         "Trip.TripBatchRecomputeRequest": {
             modifications: components["schemas"]["TripModification"][];
@@ -1586,7 +1394,6 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
-            readonly aiOverview?: components["schemas"]["TripAiOverview"] | null;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -1630,7 +1437,6 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
-            readonly aiOverview?: components["schemas"]["TripAiOverview"] | null;
         };
         "Trip.fit": {
             id?: string;
@@ -1655,22 +1461,6 @@ export interface components {
                 [key: string]: string;
             };
             isLocked?: boolean;
-        };
-        TripAiOverview: {
-            /** @description global narrative paragraph (Vue d'ensemble + Charge et fatigue cumulative, ~120 words) */
-            narrative: string;
-            /** @description cross-stage patterns the rider should be aware of */
-            patterns: string[];
-            /** @description trip-level actionable recommendations */
-            recommendations: string[];
-            /** @description trip-level alerts spanning multiple stages (subset of patterns flagged as warnings) */
-            crossStageAlerts: string[];
-            /** @description LLM model identifier used to produce the overview (e.g. "llama3.1:8b") */
-            model: string;
-            /** @description identifies the system prompt revision (so consumers can detect staleness) */
-            promptVersion: number;
-            /** @description RFC3339 timestamp when the overview was generated */
-            generatedAt: string;
         };
         /**
          * @description Read-only trip detail resource for loading a persisted trip on the frontend.
@@ -1707,23 +1497,6 @@ export interface components {
              * @enum {string|null}
              */
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
-            /**
-             * @description Per-block AI computation status derived from the ComputationTracker (STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW). Null when no computations are tracked (e.g. expired Redis TTL).
-             * @enum {string|null}
-             */
-            aiStatus?: "pending" | "running" | "done" | "failed" | null;
-            /** @description Persisted LLaMA pass-2 trip overview (issue #302), so the AI narrative is restored on reload instead of being lost. Null when the trip was never analysed. */
-            aiOverview?: {
-                narrative?: string;
-                patterns?: string[];
-                recommendations?: string[];
-                crossStageAlerts?: string[];
-                model?: string;
-                promptVersion?: number;
-                generatedAt?: string;
-            } | null;
-            /** @description True when the trip data changed since the AI overview was generated: the frontend shows an "analysis outdated" note + a manual regenerate button. */
-            aiStale?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -1815,14 +1588,6 @@ export interface components {
                     possibleClosed?: boolean;
                     distanceToEndPoint?: number;
                 } | null;
-                aiAnalysis?: {
-                    narrative?: string;
-                    insights?: string[];
-                    suggestions?: string[];
-                    model?: string;
-                    promptVersion?: number;
-                    generatedAt?: string;
-                } | null;
             }[];
         };
         TripModification: {
@@ -1866,7 +1631,6 @@ export interface components {
             readonly startLabel?: string | null;
             readonly endLabel?: string | null;
             events?: components["schemas"]["Event.fit"][];
-            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1899,7 +1663,6 @@ export interface components {
             readonly startLabel?: string | null;
             readonly endLabel?: string | null;
             events?: components["schemas"]["Event.gpx"][];
-            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1955,23 +1718,6 @@ export interface components {
              * @enum {string|null}
              */
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
-            /**
-             * @description Per-block AI computation status derived from the ComputationTracker (STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW). Null when no computations are tracked (e.g. expired Redis TTL).
-             * @enum {string|null}
-             */
-            aiStatus?: "pending" | "running" | "done" | "failed" | null;
-            /** @description Persisted LLaMA pass-2 trip overview (issue #302), so the AI narrative is restored on reload instead of being lost. Null when the trip was never analysed. */
-            aiOverview?: {
-                narrative?: string;
-                patterns?: string[];
-                recommendations?: string[];
-                crossStageAlerts?: string[];
-                model?: string;
-                promptVersion?: number;
-                generatedAt?: string;
-            } | null;
-            /** @description True when the trip data changed since the AI overview was generated: the frontend shows an "analysis outdated" note + a manual regenerate button. */
-            aiStale?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -2062,14 +1808,6 @@ export interface components {
                     url?: string | null;
                     possibleClosed?: boolean;
                     distanceToEndPoint?: number;
-                } | null;
-                aiAnalysis?: {
-                    narrative?: string;
-                    insights?: string[];
-                    suggestions?: string[];
-                    model?: string;
-                    promptVersion?: number;
-                    generatedAt?: string;
                 } | null;
             }[];
         };
@@ -2290,157 +2028,6 @@ export interface operations {
                 content: {
                     "application/ld+json": components["schemas"]["Account.jsonld"];
                 };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    "api_usersmeai-settings_get": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description AiSettings resource */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["AiSettings.jsonld"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    "api_usersmeai-settings_put": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The updated AiSettings resource */
-        requestBody: {
-            content: {
-                "application/ld+json": components["schemas"]["AiSettings"];
-            };
-        };
-        responses: {
-            /** @description AiSettings resource updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["AiSettings.jsonld"];
-                };
-            };
-            /** @description Invalid input */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description An error occurred */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
-                    "application/problem+json": components["schemas"]["ConstraintViolation"];
-                    "application/json": components["schemas"]["ConstraintViolation"];
-                };
-            };
-        };
-    };
-    "api_usersmeai-settings_delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description AiSettings resource deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Forbidden */
             403: {
@@ -3386,143 +2973,6 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
-            };
-        };
-    };
-    "api_tripsai-chat_post": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The new Trip resource */
-        requestBody: {
-            content: {
-                "application/ld+json": components["schemas"]["Trip.AiChatRequest"];
-            };
-        };
-        responses: {
-            /** @description Trip resource created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Trip.AiChatResponse.jsonld"];
-                };
-            };
-            /** @description Invalid input */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description AI provider not configured, or invalid/oversized conversation payload */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
-                    "application/problem+json": components["schemas"]["ConstraintViolation"];
-                    "application/json": components["schemas"]["ConstraintViolation"];
-                };
-            };
-            /** @description Rate limit reached */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI assistant unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "api_tripsai-generate_post": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The new Trip resource */
-        requestBody: {
-            content: {
-                "application/ld+json": components["schemas"]["Trip.TripAiGenerateRequest"];
-            };
-        };
-        responses: {
-            /** @description Trip resource created */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Trip.jsonld"];
-                };
-            };
-            /** @description Invalid input */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description AI provider not configured */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
-                    "application/problem+json": components["schemas"]["ConstraintViolation"];
-                    "application/json": components["schemas"]["ConstraintViolation"];
-                };
-            };
-            /** @description Rate limit reached */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

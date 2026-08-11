@@ -110,7 +110,6 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
         terrain: "done",
         accommodations: "done",
       },
-      aiOverview: null,
     },
   };
 }
@@ -163,7 +162,6 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
         },
       ],
       computationStatus: { route: "done", stages: "done" },
-      aiOverview: null,
     },
   };
 }
@@ -365,7 +363,6 @@ test.describe("StageAlerts — severity grouping", () => {
           },
         ],
         computationStatus: { route: "done", stages: "done" },
-        aiOverview: null,
       },
     };
     await injectSequence([
