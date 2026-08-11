@@ -1,6 +1,8 @@
 # ADR-024: Mobile Strategy — Capacitor for Android APK
 
-- **Status:** Accepted
+> **Superseded by [ADR-053](adr-053-mobile-strategy-native-app.md) (2026-08-11) — Capacitor is abandoned in favour of a dedicated native app.** This record is kept for historical context only.
+
+- **Status:** Superseded
 - **Date:** 2026-04-01
 - **Depends on:** ADR-001 (Global Architecture), ADR-023 (Authentication Strategy)
 

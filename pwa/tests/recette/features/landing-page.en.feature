@@ -29,10 +29,6 @@ Feature: Landing page
     And the "rwgps" source is displayed
     And the "gpx" source is displayed
 
-  @desktop
-  Scenario: Platforms section
-    Then the platforms section is visible
-
   @desktop @critical
   Scenario: Footer with legal links
     Then the footer is visible

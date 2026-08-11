@@ -114,16 +114,6 @@ Then(
   },
 );
 
-Then("la section des plateformes est visible", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("section-availability").scrollIntoViewIfNeeded();
-  await expect(mockedPage.getByTestId("section-availability")).toBeVisible();
-});
-
-Then("the platforms section is visible", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("section-availability").scrollIntoViewIfNeeded();
-  await expect(mockedPage.getByTestId("section-availability")).toBeVisible();
-});
-
 // --- Then: footer + CTA (FR + EN) ---
 
 Then("le footer est visible", async ({ mockedPage }) => {

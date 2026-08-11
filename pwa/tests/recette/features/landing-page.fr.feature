@@ -30,10 +30,6 @@ Fonctionnalité: Page d'atterrissage
     Et la source "rwgps" est affichée
     Et la source "gpx" est affichée
 
-  @desktop
-  Scénario: Section plateformes
-    Alors la section des plateformes est visible
-
   @desktop @critique
   Scénario: Footer avec liens légaux
     Alors le footer est visible

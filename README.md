@@ -29,12 +29,6 @@
 
 ![Desktop - Split view](docs/assets/screenshots/desktop-split-view.png)
 
-> **Mobile** — Responsive timeline with weather, difficulty badge, and supply points.
-
-<p align="center">
-  <img src="docs/assets/screenshots/mobile-timeline.png" alt="Mobile - Timeline" width="300" />
-</p>
-
 ---
 
 ## Overview
