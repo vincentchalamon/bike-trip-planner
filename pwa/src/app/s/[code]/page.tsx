@@ -5,10 +5,6 @@ const SharedTripPage = dynamic(() => import("./shared-trip-page"), {
   loading: () => null,
 });
 
-export function generateStaticParams() {
-  return [{ code: "__placeholder" }];
-}
-
 /** Minimal shape of the public shared-trip payload used for metadata. */
 interface SharedTripMeta {
   title?: string | null;
@@ -29,10 +25,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { code } = await params;
   const fallback: Metadata = { title: "Shared trip — Bike Trip Planner" };
-
-  if ("__placeholder" === code) {
-    return fallback;
-  }
 
   try {
     const backend = process.env.API_BACKEND_URL ?? "http://php";

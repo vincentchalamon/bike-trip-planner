@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
@@ -52,18 +53,35 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     /**
-     * Sends a refresh request using Capacitor body transport (Origin header
-     * triggers body-based refresh token reading in the processor).
+     * Sends a refresh request with the refresh token in the HttpOnly cookie.
      */
     private function sendRefreshRequest(string $refreshToken): ResponseInterface
     {
-        return self::createClient()->request('POST', '/auth/refresh', [
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Origin' => 'capacitor://localhost',
-            ],
-            'json' => ['refresh_token' => $refreshToken],
+        $client = self::createClient();
+        // A raw `Cookie` header maps to $server['HTTP_COOKIE'] but never populates
+        // $request->cookies; the processor reads the cookie bag, so the token must
+        // go through the BrowserKit CookieJar (host localhost).
+        $client->getCookieJar()->set(
+            new BrowserKitCookie('refresh_token', $refreshToken, null, '/', 'localhost'),
+        );
+
+        return $client->request('POST', '/auth/refresh', [
+            'headers' => ['Content-Type' => 'application/json'],
         ]);
+    }
+
+    /**
+     * Extracts the rotated refresh token from the response's Set-Cookie header.
+     */
+    private function refreshCookieValue(ResponseInterface $response): string
+    {
+        foreach ($response->getHeaders(false)['set-cookie'] ?? [] as $setCookie) {
+            if (1 === preg_match('/(?:^|;\s*)refresh_token=([^;]+)/', $setCookie, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        self::fail('No refresh_token cookie in the response');
     }
 
     #[Test]
@@ -129,16 +147,14 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     #[Test]
-    public function refreshReturnsNewRefreshTokenInBody(): void
+    public function refreshRotatesTheRefreshTokenCookie(): void
     {
         $this->createUserWithRefreshToken('rotate@example.com', 'old-refresh-token');
 
         $response = $this->sendRefreshRequest('old-refresh-token');
 
         $this->assertResponseStatusCodeSame(200);
-        $data = $response->toArray(false);
-        $this->assertArrayHasKey('refresh_token', $data);
-        $this->assertNotEquals('old-refresh-token', $data['refresh_token']);
+        $this->assertNotEquals('old-refresh-token', $this->refreshCookieValue($response));
     }
 
     #[Test]
@@ -183,11 +199,11 @@ final class AuthRefreshTest extends ApiTestCase
 
         $first = $this->sendRefreshRequest('single-use-token');
         $this->assertResponseStatusCodeSame(200);
-        $successor = $first->toArray(false)['refresh_token'];
+        $successor = $this->refreshCookieValue($first);
 
         $second = $this->sendRefreshRequest('single-use-token');
         $this->assertResponseStatusCodeSame(200);
-        $this->assertSame($successor, $second->toArray(false)['refresh_token']);
+        $this->assertSame($successor, $this->refreshCookieValue($second));
     }
 
     #[Test]

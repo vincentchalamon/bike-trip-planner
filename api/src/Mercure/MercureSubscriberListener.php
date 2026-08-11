@@ -12,10 +12,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Attaches a Mercure subscriber JWT to responses that create or access a trip.
  *
- * Listens on kernel.response and injects the `mercureAuthorization` cookie and
- * the `X-Mercure-Token` response header for endpoints matching `/trips/{uuid}` patterns.
- * The header allows Capacitor clients (which cannot read HttpOnly cookies) to obtain
- * the subscriber JWT without requiring body injection.
+ * Listens on kernel.response and injects the `mercureAuthorization` cookie for
+ * endpoints matching `/trips/{uuid}` patterns.
  *
  * Matched routes:
  * - POST /trips (trip creation — 202 response)
@@ -64,9 +62,6 @@ final readonly class MercureSubscriberListener
 
         // Set the HttpOnly subscriber cookie (for browser SSE via EventSource)
         $response->headers->setCookie($this->tokenIssuer->createSubscriberCookie($token));
-
-        // Set the X-Mercure-Token header so Capacitor clients can read the JWT directly
-        $response->headers->set('X-Mercure-Token', $token);
     }
 
     /**
