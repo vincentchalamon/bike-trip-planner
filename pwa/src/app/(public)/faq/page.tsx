@@ -23,7 +23,6 @@ export default async function FaqPage() {
       items: [
         { question: t("q5"), answer: t("a5") },
         { question: t("q6"), answer: t("a6") },
-        { question: t("q7"), answer: t("a7") },
       ],
     },
     {

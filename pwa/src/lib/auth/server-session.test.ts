@@ -20,29 +20,17 @@ describe("resolveServerSession", () => {
     vi.clearAllMocks();
   });
 
-  it("returns null on the mobile static build (no server)", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "1");
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    expect(await resolveServerSession()).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(mockedCookies).not.toHaveBeenCalled();
-  });
-
   it("fails open (null) without a network call when the cookie is absent", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie(undefined);
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    // No cookie → nothing to validate → let the client decide (mobile-parity).
+    // No cookie → nothing to validate → let the client decide.
     expect(await resolveServerSession()).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fails open (null) when the backend responds non-2xx", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie("tok");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
@@ -50,7 +38,6 @@ describe("resolveServerSession", () => {
   });
 
   it("fails open (null) when fetch throws / times out", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie("tok");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
 
@@ -58,7 +45,6 @@ describe("resolveServerSession", () => {
   });
 
   it("treats a malformed authenticated payload as unauthenticated", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie("tok");
     vi.stubGlobal(
       "fetch",
@@ -75,7 +61,6 @@ describe("resolveServerSession", () => {
   });
 
   it("returns the validated session on a 2xx authenticated response", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie("tok");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

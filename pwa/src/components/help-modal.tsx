@@ -70,7 +70,6 @@ export function HelpModal() {
       items: [
         { question: tFaq("q5"), answer: tFaq("a5") },
         { question: tFaq("q6"), answer: tFaq("a6") },
-        { question: tFaq("q7"), answer: tFaq("a7") },
       ],
     },
     {

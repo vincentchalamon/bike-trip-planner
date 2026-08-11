@@ -15,21 +15,15 @@ export interface ServerSession {
  * - `{ authenticated, user }` when the backend answered (cookie present, valid
  *   or not — an invalid/expired cookie yields `{ authenticated: false }`, which
  *   is what lets the gate kill the stale-cookie shell);
- * - `null` when auth cannot be resolved server-side — the MOBILE static build
- *   (`output: export`, no server), NO cookie to validate, OR a backend
- *   error/timeout. `null` means "let the client decide" (fail-OPEN): callers
- *   fall back to the client bootstrap (`AuthGuard` / `silentRefresh`), so a
- *   flaky backend never locks an authenticated user out or wrongly shows the
- *   landing, and a genuinely anonymous visitor is still gated client-side.
+ * - `null` when auth cannot be resolved server-side — NO cookie to validate, OR
+ *   a backend error/timeout. `null` means "let the client decide" (fail-OPEN):
+ *   callers fall back to the client bootstrap (`AuthGuard` / `silentRefresh`),
+ *   so a flaky backend never locks an authenticated user out or wrongly shows
+ *   the landing, and a genuinely anonymous visitor is still gated client-side.
  *
- * Only ever imported by Server Components; the mobile guard runs BEFORE any
- * `next/headers` access so the static export never bundles server-only APIs.
+ * Only ever imported by Server Components.
  */
 export async function resolveServerSession(): Promise<ServerSession | null> {
-  if (process.env.NEXT_PUBLIC_IS_MOBILE_BUILD === "1") {
-    return null;
-  }
-
   const { cookies } = await import("next/headers");
   const token = (await cookies()).get("refresh_token")?.value;
   if (!token) {

@@ -12,11 +12,10 @@ import type { AlertData, StageData } from "@/lib/validation/schemas";
 
 /**
  * The Mercure hub the browser subscribes to. An explicit
- * `NEXT_PUBLIC_MERCURE_URL` wins (the native Capacitor build targets its remote
- * hub); otherwise the hub is taken from the CURRENT origin, so the web app works
- * unchanged on https://localhost, in prod (same origin), and behind a tunnel
- * (ngrok) for mobile testing — without baking a URL into the bundle. The
- * localhost fallback only applies during SSR, where no EventSource is opened.
+ * `NEXT_PUBLIC_MERCURE_URL` wins; otherwise the hub is taken from the CURRENT
+ * origin, so the app works unchanged on https://localhost, in prod (same
+ * origin), and behind a tunnel (ngrok) — without baking a URL into the bundle.
+ * The localhost fallback only applies during SSR, where no EventSource is opened.
  */
 function resolveMercureHubUrl(): string {
   if (process.env.NEXT_PUBLIC_MERCURE_URL) {
@@ -731,10 +730,7 @@ export async function resolveStageLabels(
  *
  * @param tripId - The trip identifier to subscribe to, or `null` to skip subscription
  */
-export function useMercure(
-  tripId: string | null,
-  mercureToken?: string | null,
-): void {
+export function useMercure(tripId: string | null): void {
   const clientRef = useRef<MercureClient | null>(null);
 
   useEffect(() => {
@@ -745,9 +741,6 @@ export function useMercure(
       resolveMercureHubUrl(),
       `/trips/${tripId}`,
     );
-    if (mercureToken) {
-      client.setMercureToken(mercureToken);
-    }
     clientRef.current = client;
     useUiStore.getState().setSseConnected(true);
 
@@ -760,5 +753,5 @@ export function useMercure(
       clientRef.current = null;
       useUiStore.getState().setSseConnected(false);
     };
-  }, [tripId, mercureToken]);
+  }, [tripId]);
 }

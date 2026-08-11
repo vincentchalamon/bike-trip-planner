@@ -27,7 +27,6 @@ test.describe("Landing page", () => {
       await expect(page.getByTestId("section-how-it-works")).toBeVisible();
       await expect(page.getByTestId("section-features")).toBeVisible();
       await expect(page.getByTestId("section-sources")).toBeVisible();
-      await expect(page.getByTestId("section-availability")).toBeVisible();
       await expect(page.getByTestId("section-screenshots")).toBeVisible();
       await expect(page.getByTestId("section-early-access")).toBeVisible();
       await expect(page.getByTestId("section-footer")).toBeVisible();

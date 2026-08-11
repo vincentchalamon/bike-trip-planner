@@ -734,7 +734,7 @@
       "step3Title": "Plan",
       "step3Description": "Refine stages, add accommodation, tweak pacing — everything is editable.",
       "step4Title": "Go",
-      "step4Description": "Download an optimised GPX/FIT and ride with confidence, even offline."
+      "step4Description": "Download an optimised GPX/FIT and ride with confidence."
     },
     "features": {
       "title": "Everything you need, in a single app",
@@ -779,18 +779,6 @@
       "stravaType": "Public route",
       "rwgpsType": "Public route",
       "gpxType": ".gpx file"
-    },
-    "availability": {
-      "title": "Available everywhere",
-      "subtitle": "On the web, in your pocket, and even offline.",
-      "webTitle": "Web",
-      "webDescription": "Optimised for every screen, from smartphone to desktop.",
-      "pwaTitle": "PWA",
-      "pwaDescription": "Install the app on your device like a native application.",
-      "androidTitle": "Android",
-      "androidDescription": "Native Android version for an optimal mobile experience.",
-      "offlineTitle": "Offline",
-      "offlineDescription": "Browse your trips without a connection while on the road."
     },
     "screenshots": {
       "title": "App preview",
@@ -948,8 +936,6 @@
     "a5": "Bike Trip Planner accepts Komoot tour and collection links, Strava routes, and RideWithGPS routes. You can also import a GPX file directly from your computer.",
     "q6": "Does the app work offline?",
     "a6": "Partially. In offline mode, you can view previously loaded trips in read-only mode. Creating or editing a trip requires an internet connection, as computations (pacing, alerts, accommodation suggestions) are performed server-side.",
-    "q7": "Can I use the app on mobile?",
-    "a7": "Yes. The app is a responsive PWA (Progressive Web App) optimised for mobile and tablet. You can install it on your home screen from your mobile browser for quick access, without going through an app store.",
     "q8": "How do I get access to the app?",
     "a8": "The app uses a magic link sign-in system: enter your email address on the sign-in page and you will receive a secure sign-in link. No password is required.",
     "q9": "Is the app free and open source?",

@@ -7,13 +7,13 @@
 
 ## Context and Problem Statement
 
-Bike Trip Planner needs an authentication layer to associate trips with users, control access, and enable features like trip listing, duplication, and sharing. The application follows a decoupled architecture (Symfony API backend + Next.js frontend) and must support both browser and future mobile (Capacitor) clients.
+Bike Trip Planner needs an authentication layer to associate trips with users, control access, and enable features like trip listing, duplication, and sharing. The application follows a decoupled architecture (Symfony API backend + Next.js frontend) and must support both browser and future native mobile clients.
 
 The authentication mechanism must be:
 
 - **Stateless** — consistent with the existing API Platform architecture (no server-side sessions)
 - **Self-hostable at zero cost** — no dependency on paid identity providers
-- **Mobile-compatible** — functional in Capacitor WebView where cookie behavior is unreliable
+- **Mobile-compatible** — functional in a native mobile client where cookie behavior is unreliable
 - **Low friction** — minimize user effort for an invite-only audience of bikepacking enthusiasts
 
 ### Invite-Only Model
@@ -27,7 +27,7 @@ The application does not offer self-registration. Users are created exclusively 
 - **Security** — minimize attack surface (no password database to breach, no credentials to phish)
 - **Simplicity** — reduce implementation and maintenance burden for a single-developer project
 - **Stateless architecture** — preserve the existing API Platform State Provider/Processor pattern
-- **Multi-platform** — must work in browser and Capacitor WebView without behavioral differences
+- **Multi-platform** — must work in browser and a native mobile client without behavioral differences
 - **Cost** — zero infrastructure cost; SMTP via Resend free tier (100 emails/day)
 
 ---
@@ -86,7 +86,7 @@ Server-side sessions stored in Redis or database.
 **Cons:**
 
 - Breaks stateless architecture; requires sticky sessions or shared session store
-- Fragile in Capacitor WebView (cookie partitioning, ITP restrictions)
+- Fragile in a native mobile client (cookie partitioning, ITP restrictions)
 - Does not scale to multiple API instances without shared state
 
 ### Option D: API Token (Database Lookup)
@@ -210,9 +210,11 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 - **Per IP:** max 3 requests per 15-minute window
 - Implemented via Symfony RateLimiter component with Redis backend
 
-### Capacitor (Mobile) Adaptation
+### Native Mobile Adaptation
 
-In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the backend detects a Capacitor Origin header, the refresh token is returned in the response body instead of a cookie. The mobile client stores it in the device's secure storage (Capacitor Preferences with encryption).
+A native mobile client (see [ADR-053](adr-053-mobile-strategy-native-app.md)) does not carry a browser cookie jar, so HttpOnly cookies cannot be relied on: the refresh token must instead be returned in the response body and kept in the platform's secure storage.
+
+The backend already carries this mechanism, but its client detection is currently keyed to the **removed** Capacitor WebView's `capacitor://` Origin (`AuthResponseHelper::isCapacitorRequest()`, the `capacitor://` entry in the `CORS_ALLOW_ORIGIN` allow-list, and the `X-Mercure-Token` response header set by `MercureSubscriberListener` so the WebView could read the JWT). With that client gone, this path is dead until the native app (ADR-053) is built and the detection is re-keyed to it. **Generalizing the detection to the native client is deferred to the native-app workstream** — it is not done in this iteration.
 
 ---
 

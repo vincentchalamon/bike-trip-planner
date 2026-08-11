@@ -155,14 +155,13 @@ export function useTripPlanner() {
   );
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
-  const [mercureToken, setMercureToken] = useState<string | null>(null);
   const preDragPacingSnapshot = useRef<ReturnType<
     typeof getUndoableSlice
   > | null>(null);
   const recomputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tripId = trip?.id ?? null;
-  useMercure(tripId, mercureToken);
+  useMercure(tripId);
 
   // Chat history is scoped to a single trip session. Wipe it whenever the
   // user switches trip so messages from trip A don't bleed into trip B's
@@ -185,7 +184,6 @@ export function useTripPlanner() {
 
   async function handleMagicLink(sourceUrl: string) {
     actions.clearTrip();
-    setMercureToken(null);
     setProcessing(true);
 
     try {
@@ -207,8 +205,6 @@ export function useTripPlanner() {
       }
 
       actions.setIsLocked(data.isLocked === true);
-      const token = response.headers.get("X-Mercure-Token");
-      if (token) setMercureToken(token);
       actions.setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
@@ -232,12 +228,11 @@ export function useTripPlanner() {
 
   async function handleGpxUpload(file: File) {
     actions.clearTrip();
-    setMercureToken(null);
     setProcessing(true);
 
     try {
       const pacing = getPacingState();
-      const { data, error, response } = await uploadGpxFile(file, {
+      const { data, error } = await uploadGpxFile(file, {
         ...pacing,
         startDate: useTripStore.getState().startDate,
       });
@@ -249,8 +244,6 @@ export function useTripPlanner() {
         return;
       }
 
-      const gpxToken = response?.headers.get("X-Mercure-Token");
-      if (gpxToken) setMercureToken(gpxToken);
       actions.setTrip({
         id: data.id,
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),

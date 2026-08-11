@@ -734,7 +734,7 @@
       "step3Title": "Planifie",
       "step3Description": "Affine tes étapes, ajoute des hébergements, ajuste le pacing — tout est éditable.",
       "step4Title": "Pars",
-      "step4Description": "Télécharge ton GPX/FIT optimisé et roule l'esprit tranquille, même hors ligne."
+      "step4Description": "Télécharge ton GPX/FIT optimisé et roule l'esprit tranquille."
     },
     "features": {
       "title": "Tout ce qu'il te faut, dans une seule appli",
@@ -779,18 +779,6 @@
       "stravaType": "Route publique",
       "rwgpsType": "Route publique",
       "gpxType": "Fichier .gpx"
-    },
-    "availability": {
-      "title": "Disponible partout",
-      "subtitle": "Sur le web, dans ta poche et même sans réseau.",
-      "webTitle": "Web",
-      "webDescription": "Optimisé pour tous les écrans, du smartphone au desktop.",
-      "pwaTitle": "PWA",
-      "pwaDescription": "Installe l'application sur ton appareil comme une app native.",
-      "androidTitle": "Android",
-      "androidDescription": "Version Android native pour une expérience mobile optimale.",
-      "offlineTitle": "Hors ligne",
-      "offlineDescription": "Consulte tes voyages sans connexion pendant le trajet."
     },
     "screenshots": {
       "title": "Aperçu de l'application",
@@ -948,8 +936,6 @@
     "a5": "Bike Trip Planner accepte les liens de tours et collections Komoot, les routes Strava et les routes RideWithGPS. Tu peux également importer directement un fichier GPX depuis ton ordinateur.",
     "q6": "L'application fonctionne-t-elle hors ligne ?",
     "a6": "Partiellement. En mode hors ligne, tu peux consulter tes voyages déjà chargés en lecture seule. La création ou modification d'un voyage nécessite une connexion internet, car les calculs (pacing, alertes, suggestions d'hébergements) sont effectués côté serveur.",
-    "q7": "L'application est-elle utilisable sur mobile ?",
-    "a7": "Oui. L'application est une PWA (Progressive Web App) responsive, optimisée pour mobile et tablette. Tu peux l'installer sur ton écran d'accueil depuis ton navigateur mobile pour un accès rapide, même sans passer par un store d'applications.",
     "q8": "Comment obtenir un accès à l'application ?",
     "a8": "L'application utilise un système de connexion par lien magique : entre ton adresse email sur la page de connexion et tu recevras un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
     "q9": "L'application est-elle gratuite et open source ?",

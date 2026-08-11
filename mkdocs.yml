@@ -132,6 +132,7 @@ nav:
       - adr/adr-050-terrain-attribution-to-the-ridden-route.md
       - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
       - adr/adr-052-remove-ai-support.md
+      - adr/adr-053-mobile-strategy-native-app.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md
@@ -152,5 +153,4 @@ nav:
       - runbooks/valhalla-overpass-rebuild.md
       - runbooks/zone-opening.md
       - runbooks/zone-opening-corrections.md
-      - runbooks/mobile-apk-local-testing.md
       - runbooks/events-refresh.md
