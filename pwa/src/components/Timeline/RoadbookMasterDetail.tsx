@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { StageDetailPanel } from "./StageDetailPanel";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import type { StageData, AccommodationData } from "@btp/core";
 
 interface RoadbookMasterDetailProps {
   stages: StageData[];

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { AlertList } from "./alert-list";
-import type { AlertData } from "@/lib/validation/schemas";
+import type { AlertData } from "@btp/core";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,

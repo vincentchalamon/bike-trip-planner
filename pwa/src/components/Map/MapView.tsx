@@ -10,7 +10,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import type { AlertData, StageData } from "@/lib/validation/schemas";
+import type { AlertData, StageData } from "@btp/core";
 import { getStageColor } from "./stage-colors";
 import { createCategoryMarkerElement } from "./icons/markerDom";
 import { resolveCategory, type MarkerCategory } from "./icons";

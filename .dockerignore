@@ -41,3 +41,6 @@ pwa/playwright-report/
 pwa/playwright.config.ts
 pwa/test-results/
 pwa/tests/
+node_modules/
+core/node_modules/
+mobile/node_modules/

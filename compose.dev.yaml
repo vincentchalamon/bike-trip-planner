@@ -104,10 +104,13 @@ services:
       # Mercure hub the browser subscribes to. Point it at the tunnel origin to
       # get live SSE updates on mobile; the localhost default is fine on desktop.
       NEXT_PUBLIC_MERCURE_URL: "${NEXT_PUBLIC_MERCURE_URL:-https://localhost/.well-known/mercure}"
+    # npm workspace: mount the repo root so the `core/` workspace resolves and the
+    # root lockfile drives `npm install`. node_modules is hoisted to the root; the
+    # web build cache stays under pwa/.next.
     volumes: !override
-      - ./pwa:/srv/app
+      - .:/srv/app
       - pwa_node_modules:/srv/app/node_modules
-      - pwa_next:/srv/app/.next
+      - pwa_next:/srv/app/pwa/.next
     # First boot runs `npm install` (empty node_modules volume) before serving.
     healthcheck:
       start_period: 120s

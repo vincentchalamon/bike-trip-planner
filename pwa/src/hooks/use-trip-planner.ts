@@ -31,8 +31,8 @@ import {
   MAX_ACCOMMODATION_RADIUS_KM,
   ACCOMMODATION_RADIUS_STEP_KM,
   DEFAULT_ACCOMMODATION_RADIUS_KM,
-} from "@/lib/accommodation-constants";
-import type { AccommodationData, StageData } from "@/lib/validation/schemas";
+} from "@btp/core/constants";
+import type { AccommodationData, StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 
 /** Map a source URL to its Plausible import event (null if unrecognised). */

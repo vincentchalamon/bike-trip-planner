@@ -18,7 +18,7 @@
  * Issue #398 — sprint 26.
  */
 import { useTranslations, useLocale } from "next-intl";
-import type { AlertData } from "@/lib/validation/schemas";
+import type { AlertData } from "@btp/core";
 import { Button } from "@/components/ui/button";
 import { Navigation, ExternalLink, X } from "lucide-react";
 import {

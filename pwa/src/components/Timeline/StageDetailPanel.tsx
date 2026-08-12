@@ -13,7 +13,7 @@ import { RoadbookEmptyState } from "@/components/roadbook-empty-state";
 import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
 import { useTripStore } from "@/store/trip-store";
-import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import type { StageData, AccommodationData } from "@btp/core";
 
 const MIN_KM = 5;
 

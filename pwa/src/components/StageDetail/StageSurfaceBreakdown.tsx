@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { SurfaceSegmentData } from "@/lib/validation/schemas";
+import type { SurfaceSegmentData } from "@btp/core";
 
 /**
  * Surface family used to group raw OSM `surface=*` values into a small set of

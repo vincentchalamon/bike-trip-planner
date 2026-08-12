@@ -17,9 +17,9 @@ import { useUiStore } from "@/store/ui-store";
 import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { resolveStageLabels } from "@/hooks/use-mercure";
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
-import type { components } from "@/lib/api/schema";
+import type { components } from "@btp/core/schema";
 import {
   INITIAL_RETRY_MS,
   MAX_RESYNC_MS,

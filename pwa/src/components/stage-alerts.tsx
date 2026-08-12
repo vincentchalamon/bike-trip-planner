@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AlertList } from "@/components/alert-list";
-import type { AlertData } from "@/lib/validation/schemas";
+import type { AlertData } from "@btp/core";
 
 interface StageAlertsProps {
   alerts: AlertData[];

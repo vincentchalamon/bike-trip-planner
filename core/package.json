@@ -1,0 +1,15 @@
+{
+  "name": "@btp/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./schema.d.ts",
+    "./constants": "./accommodation-constants.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

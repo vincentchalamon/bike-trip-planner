@@ -19,10 +19,10 @@ import {
   StageWeatherCard,
   StageSurfaceBreakdown,
 } from "@/components/StageDetail";
-import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import type { StageData, AccommodationData } from "@btp/core";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";

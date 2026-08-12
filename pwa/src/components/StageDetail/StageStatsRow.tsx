@@ -27,7 +27,7 @@ import {
   MEAL_COST_MAX,
   mealsForStage,
 } from "@/lib/budget-constants";
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 
 interface StatCellProps {
   label: string;

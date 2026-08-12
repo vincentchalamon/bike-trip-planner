@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 import { getStageColor } from "./stage-colors";
 
 /** Haversine distance between two lat/lon points in km. */

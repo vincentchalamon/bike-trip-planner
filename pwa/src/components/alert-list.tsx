@@ -14,7 +14,7 @@ import {
   CulturalPoiEnrichedIcon,
 } from "@/components/Map/icons";
 import { cn } from "@/lib/utils";
-import type { AlertActionData, AlertData } from "@/lib/validation/schemas";
+import type { AlertActionData, AlertData } from "@btp/core";
 import { normalizeExternalUrl } from "@/lib/validation/url";
 import { useTripStore } from "@/store/trip-store";
 

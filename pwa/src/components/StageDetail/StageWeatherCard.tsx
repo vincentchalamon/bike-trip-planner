@@ -16,7 +16,7 @@ import {
   computeStageDate,
   formatSunTime,
 } from "@/lib/sun-times";
-import type { WeatherData } from "@/lib/validation/schemas";
+import type { WeatherData } from "@btp/core";
 
 function getComfortColor(index: number): string {
   if (index >= 70) return "text-emerald-500";

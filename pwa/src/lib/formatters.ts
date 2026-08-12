@@ -1,4 +1,4 @@
-import type { AccommodationData } from "@/lib/validation/schemas";
+import type { AccommodationData } from "@btp/core";
 
 /**
  * Formats a distance in kilometers with one decimal place.

@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import type { components } from "@/lib/api/schema";
+import type { components } from "@btp/core/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
 type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { formatDistanceKm } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import type { components } from "@/lib/api/schema";
+import type { components } from "@btp/core/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
 
