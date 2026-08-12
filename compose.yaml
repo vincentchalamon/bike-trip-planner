@@ -241,6 +241,11 @@ services:
       NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      # Android App Links (ADR-053): the /.well-known/assetlinks.json route reads
+      # these at runtime (force-dynamic). Set once the app package + signing-cert
+      # SHA-256 fingerprint exist; empty until then (route serves []).
+      ANDROID_APP_PACKAGE: "${ANDROID_APP_PACKAGE:-}"
+      ANDROID_SHA256_CERT_FINGERPRINTS: "${ANDROID_SHA256_CERT_FINGERPRINTS:-}"
     # No volumes: the prod pwa is a self-contained Next.js standalone build
     # (WORKDIR /srv/app). Dev mounts the sources at /srv/app via compose.dev.yaml.
     healthcheck:

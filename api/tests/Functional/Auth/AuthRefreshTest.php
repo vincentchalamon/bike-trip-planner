@@ -203,6 +203,40 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     #[Test]
+    public function refreshNativeIgnoresCookieSoAForgedHeaderCannotExfiltrate(): void
+    {
+        // Security: X-Client-Type is JS-settable, so a web-origin XSS could forge
+        // it while the browser auto-attaches the HttpOnly refresh cookie. The
+        // native path must read the token ONLY from the body (never the cookie):
+        // a forged "native" request that carries the cookie but no body must be
+        // rejected — otherwise the XSS would get the rotated token in the body.
+        $this->createUserWithRefreshToken('forged@example.com', 'forged-cookie-token');
+
+        $client = self::createClient();
+        $client->getCookieJar()->set(
+            new BrowserKitCookie('refresh_token', 'forged-cookie-token', null, '/', 'localhost'),
+        );
+        $client->request('POST', '/auth/refresh', [
+            'headers' => ['X-Client-Type' => 'native'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    #[Test]
+    public function refreshNativeWithMalformedBodyReturns401NotServerError(): void
+    {
+        // A native client with an empty/garbled JSON body must fall through to the
+        // refresh_missing 401, not raise an uncaught JsonException (500).
+        self::createClient()->request('POST', '/auth/refresh', [
+            'headers' => ['Content-Type' => 'application/json', 'X-Client-Type' => 'native'],
+            'body' => '{not valid json',
+        ]);
+
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    #[Test]
     public function refreshWithInvalidTokenReturns401(): void
     {
         $this->sendRefreshRequest('nonexistent-token-xyz');

@@ -58,14 +58,32 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
         $request = $this->requestStack->getCurrentRequest();
-        $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
         $isNative = $this->isNativeRequest();
 
-        // Native clients cannot store the HttpOnly cookie: they send the refresh
-        // token in the request body instead.
-        if (null === $token && $isNative && $request instanceof Request) {
-            $body = $request->toArray();
-            $token = $body['refresh_token'] ?? null;
+        // Strict separation of the token source by client type — a security
+        // boundary, not a convenience. `X-Client-Type` is a JS-settable header, so
+        // a web-origin XSS could forge it. By reading the native token ONLY from
+        // the request body (never the auto-attached HttpOnly cookie), a forged
+        // "native" request is routed to the body path, which the XSS cannot satisfy
+        // — it cannot read the HttpOnly cookie to place it in the body. The web
+        // path, conversely, never reads the body.
+        if ($isNative) {
+            // Read the token ONLY from the body (never the cookie). json_decode
+            // with JSON_THROW_ON_ERROR mirrors MercureSubscriberListener so an
+            // empty or malformed body becomes a 401 (below), never an uncaught 500.
+            $token = null;
+            $content = $request instanceof Request ? $request->getContent() : '';
+            if ('' !== $content) {
+                try {
+                    $decoded = json_decode($content, true, 512, \JSON_THROW_ON_ERROR);
+                    $refreshToken = \is_array($decoded) ? ($decoded['refresh_token'] ?? null) : null;
+                    $token = \is_string($refreshToken) ? $refreshToken : null;
+                } catch (\JsonException) {
+                    $token = null;
+                }
+            }
+        } else {
+            $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
         }
 
         if (null === $token || '' === $token) {

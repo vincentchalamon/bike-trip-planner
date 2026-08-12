@@ -8,9 +8,13 @@ import { NextResponse } from "next/server";
  *
  * Env-driven: `ANDROID_APP_PACKAGE` and `ANDROID_SHA256_CERT_FINGERPRINTS`
  * (comma-separated list of SHA-256 fingerprints). Read at runtime, so the route
- * must stay dynamic (no `force-static`). Until the app ships, the env vars are
- * unset and we serve an empty `[]` — a valid, association-free statement list.
+ * must stay dynamic: a parameterless GET handler is otherwise prerendered at
+ * build time (baking in the empty `[]`), and the env would never take effect
+ * without a rebuild. Until the app ships, the env vars are unset and we serve an
+ * empty `[]` — a valid, association-free statement list.
  */
+export const dynamic = "force-dynamic";
+
 export function GET() {
   const packageName = process.env.ANDROID_APP_PACKAGE;
   const fingerprints = (process.env.ANDROID_SHA256_CERT_FINGERPRINTS ?? "")
