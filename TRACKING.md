@@ -1745,3 +1745,41 @@ Toutes les PRs sont vertes (CI + `claude-review`) et mergeables au 10/08/2026, s
   - [ ] `events-refresh` met à jour un événement modifié sans doublon et purge les événements passés.
 
 </details>
+
+<details><summary>
+
+## Sprint 53 — Mobile : preuve d'architecture
+
+</summary>
+Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'architecture de bout en bout — **cœur partagé web+mobile `core/`** + **store RN mince** + **SSE Mercure par header** + **édition optimiste réconciliée** — sur **un seul chemin réel** (voir un voyage + faire une édition live) avant d'élargir. Décisions actées : cœur partagé maintenant (tranche `core/` de la Phase 3 tirée en avant, sans le rename `pwa→apps/web`) + planificateur complet. Chaîne **sérielle** (PRs stackées), **pas** un `/sprint` parallèle. Suivi : [#1016](https://github.com/vincentchalamon/bike-trip-planner/issues/1016).
+
+**Pré-requis :** merger `feature/mobile-foundation` → `main` (amène `mobile/` dans l'arbre pour le workspace npm).
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1011](https://github.com/vincentchalamon/bike-trip-planner/issues/1011) | spike(mobile): auth Mercure par header | S | ⏳ À faire | — | — |
+| 2 | [#1012](https://github.com/vincentchalamon/bike-trip-planner/issues/1012) | build(repo): workspace npm + core/ (Zod) + recâblage web minimal | L | ⏳ À faire | — | merge `feature/mobile-foundation` |
+| 3 | [#1013](https://github.com/vincentchalamon/bike-trip-planner/issues/1013) | feat(core): réconciliation en réducteurs purs + tests vitest + store web | L | ⏳ À faire | — | #1012 |
+| 4 | [#1014](https://github.com/vincentchalamon/bike-trip-planner/issues/1014) | feat(mobile): store mince (compose core) + SSE header + roadbook live | M | ⏳ À faire | — | #1011, #1013 |
+| 5 | [#1015](https://github.com/vincentchalamon/bike-trip-planner/issues/1015) | feat(mobile): édition optimiste (supprimer étape) — preuve de bout en bout | M | ⏳ À faire | — | #1014 |
+
+**Ordre :** #1011 (indépendant) ‖ [merge fondation → #1012 → #1013] → #1014 → #1015.
+
+**Risques :** #1012 = risque infra max (Docker/CI/workspaces), code déplacé minimal → isolé ; #1013 = risque logique max (courses #840/#649/#787) → tests de caractérisation d'abord ; #1011 bloquant (hub cookie-only → item backend avant #1014) ; vérif **device-bound**.
+
+### Suite (esquissé, cf. #1016)
+
+- **Élargir le socle :** design system + primitives UI ; shell nav (tabs Créer/Voyages/Compte + segment Roadbook|Carte) ; `core` pur complet + store mince complet ; App Links (Caddy `assetlinks.json`→PWA + env `ANDROID_*` + prefix https Expo Router) + valider retry 401.
+- **Écrans (`/sprint`) :** composants trip-screen partagés d'abord, puis Créer (lien+GPX), roadbook 3 états + data/jour, édition inline complète, détail d'étape, carte enrichie + profil (`react-native-svg`).
+- **Plus tard (valeur native différée) :** Compte, Notifications (local→FCM), In-ride/GPS, Offline auto-sync, Partage.
+
+### Recette Sprint 53
+
+- **Tests :** vitest (réducteurs purs `core`, #1013) ; jest mobile (store/édition, #1014/#1015) ; device pour le rendu live.
+- **Checklist manuelle :**
+  - [ ] Abonnement Mercure mobile via header confirmé (#1011).
+  - [ ] CI web verte + build image PWA prod OK après extraction `core/` (#1012/#1013).
+  - [ ] Roadbook mobile alimenté par le store partagé, mise à jour live via SSE (#1014).
+  - [ ] Suppression d'étape optimiste, réconciliée SSE, rollback sur erreur, 423 → désactivé (#1015).
+
+</details>
