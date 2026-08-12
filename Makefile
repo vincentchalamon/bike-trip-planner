@@ -72,17 +72,20 @@ phpstan: ## Run PHPStan
 	@docker compose run --rm --no-deps php sh -c "bin/console cache:warmup -e dev && vendor/bin/phpstan analyse -c phpstan.dist.neon"
 	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=256M
 
+# The pwa container mounts the npm workspace root at /srv/app (compose.dev), so the
+# QA legs run with -w .../pwa to keep their pwa-scoped behaviour while core/ and the
+# hoisted node_modules stay resolvable one level up.
 eslint: ## Run Eslint
-	@docker compose run --rm --no-deps pwa npm run lint
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run lint
 
 i18n-check: ## Run i18n catalog completeness check
-	@docker compose run --rm --no-deps pwa npm run i18n:check
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run i18n:check
 
 prettier: ## Run Prettier
-	@docker compose run --rm --no-deps pwa npx prettier --check .
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npx prettier --check .
 
 typescript-check: ## Run TypeScript Check
-	@docker compose run --rm --no-deps pwa npm run test:ts
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run test:ts
 
 hadolint: ## Run Hadolint on Dockerfiles
 	@status=0; for f in $$(find .docker -name Dockerfile); do \
@@ -123,67 +126,67 @@ security-check: ## Run Security Check
 	@docker compose --profile provisioning run --rm --entrypoint "" provisioner symfony check:security
 
 test-pwa: ## Run Vitest unit tests (frontend)
-	@docker compose exec pwa npm run test:unit
+	@docker compose exec -w /srv/app/pwa pwa npm run test:unit
 
 test-e2e: ## Run Playwright End-to-End tests
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm install; npx playwright test $(ARGS)'
+		/bin/sh -c 'npm install; cd pwa && npx playwright test $(ARGS)'
 
 playwright: test-e2e ## Alias for "test-e2e"
 
 screenshots: ## Regenerate README + landing screenshots (run after UI changes; requires make start-dev)
 	@docker run --network host \
 		-w /repo/pwa -v $(CURDIR):/repo \
-		--mount type=volume,src=playwright_node_modules,dst=/repo/pwa/node_modules \
+		--mount type=volume,src=playwright_node_modules,dst=/repo/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
 		/bin/sh -c 'npm install; npx playwright test --config playwright.screenshots.config.ts'
 
 test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts; npx playwright test --config playwright.bdd.config.ts $(ARGS)'
+		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
 lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: make start)
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm ci; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
+		/bin/sh -c 'npm ci; cd pwa && CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
 
 lighthouse-authed: ## Run Lighthouse on authenticated pages (requires recette stack + RECETTE_COOKIE=refresh_token=...). Collect-only (warnings, no gate).
 	@test -n "$(RECETTE_COOKIE)" || { echo "Set RECETTE_COOKIE=refresh_token=<value> (from scripts/recette-seed.sh)"; exit 1; }
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		-e RECETTE_COOKIE="$(RECETTE_COOKIE)" \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm ci; sed "s|__RECETTE_COOKIE__|$$RECETTE_COOKIE|" lighthouserc.authed.json > /tmp/lhci-authed.json; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=/tmp/lhci-authed.json'
+		/bin/sh -c 'npm ci; cd pwa && sed "s|__RECETTE_COOKIE__|$$RECETTE_COOKIE|" lighthouserc.authed.json > /tmp/lhci-authed.json; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=/tmp/lhci-authed.json'
 
 visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts $(ARGS)'
+		/bin/sh -c 'npm ci; cd pwa && npx playwright test --config playwright.visual.config.ts $(ARGS)'
 
 visual-update: ## (Re)generate visual-regression baselines in the container (requires prod stack: make start)
 	@docker run --network host \
-		-w /app -v $(CURDIR)/pwa:/app \
+		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.62.1-noble \
-		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts --update-snapshots'
+		/bin/sh -c 'npm ci; cd pwa && npx playwright test --config playwright.visual.config.ts --update-snapshots'
 
 jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)
 	@docker compose exec php sh -c 'openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test'
@@ -269,7 +272,7 @@ openapigen: ## Generate OpenAPI
 	@docker compose run --rm --no-deps php bin/console api:openapi:export --yaml > pwa/openapi.yaml
 
 typegen: openapigen ## Run Typegen
-	@docker compose run --rm --no-deps pwa npm run typegen
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run typegen
 
 cache-pool-clear: ## Clear API cache pool
 	@docker compose exec php bin/console cache:pool:clear --all

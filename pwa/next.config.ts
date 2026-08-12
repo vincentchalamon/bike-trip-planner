@@ -1,9 +1,17 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // `core/` is a workspace package shipping TypeScript sources (Zod schemas +
+  // generated OpenAPI types), so Next must transpile it like app code.
+  transpilePackages: ["@btp/core"],
+  // The app lives in a subdirectory of the npm workspace root (node_modules is
+  // hoisted to the repo root). Anchor output file-tracing at the workspace root
+  // so the standalone build traces both the hoisted node_modules and `core/`.
+  outputFileTracingRoot: path.join(__dirname, ".."),
   // Don't advertise the framework (audit 35.2 SEC-005: drop `x-powered-by`).
   poweredByHeader: false,
   async rewrites() {

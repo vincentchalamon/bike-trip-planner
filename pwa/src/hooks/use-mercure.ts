@@ -7,8 +7,8 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
-import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
-import type { AlertData, StageData } from "@/lib/validation/schemas";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
+import type { AlertData, StageData } from "@btp/core";
 
 /**
  * The Mercure hub the browser subscribes to. An explicit

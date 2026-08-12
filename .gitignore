@@ -6,6 +6,9 @@
 openapi.*
 .playwright-mcp/
 
+# npm workspace root: deps are hoisted here (#1012)
+/node_modules/
+
 docker-compose.override.yaml
 docker-compose.override.yml
 compose.override.yaml

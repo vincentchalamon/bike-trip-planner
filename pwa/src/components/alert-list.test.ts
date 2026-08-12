@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { alertKey } from "@/components/alert-list";
-import type { AlertData } from "@/lib/validation/schemas";
+import type { AlertData } from "@btp/core";
 
 function alert(overrides: Partial<AlertData> = {}): AlertData {
   return {

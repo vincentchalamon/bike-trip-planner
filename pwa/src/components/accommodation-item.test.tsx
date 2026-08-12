@@ -7,7 +7,7 @@ import {
   ACCOMMODATION_TYPE_ICONS,
 } from "./accommodation-item";
 import { ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
-import type { AccommodationData } from "@/lib/validation/schemas";
+import type { AccommodationData } from "@btp/core";
 import fr from "../../messages/fr.json";
 
 // The real French catalogue rather than an identity stub: the completeness

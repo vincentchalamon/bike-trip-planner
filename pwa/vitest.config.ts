@@ -15,7 +15,17 @@ export default defineConfig({
     },
   },
   resolve: {
+    // react is nested in pwa/node_modules (19.2.8) while react-dom hoists to the
+    // workspace root; without dedupe vite loads two react copies and react-dom
+    // throws a version mismatch. Force a single instance resolved from pwa.
+    dedupe: ["react", "react-dom"],
     alias: {
+      "@btp/core/schema": path.resolve(__dirname, "../core/schema.d.ts"),
+      "@btp/core/constants": path.resolve(
+        __dirname,
+        "../core/accommodation-constants.ts",
+      ),
+      "@btp/core": path.resolve(__dirname, "../core/index.ts"),
       "@": path.resolve(__dirname, "./src"),
     },
   },

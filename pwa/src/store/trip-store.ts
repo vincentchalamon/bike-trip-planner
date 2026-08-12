@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
 import dayjs from "dayjs";
-import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 import type {
   StageData,
   WeatherData,
@@ -13,7 +13,7 @@ import type {
   AlertData,
   SupplyMarkerData,
   EventData,
-} from "@/lib/validation/schemas";
+} from "@btp/core";
 
 /**
  * A single user modification accumulated in the batch queue before being applied

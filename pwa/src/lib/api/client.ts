@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import { z } from "zod";
-import type { components, operations, paths } from "./schema";
+import type { components, operations, paths } from "@btp/core/schema";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
 

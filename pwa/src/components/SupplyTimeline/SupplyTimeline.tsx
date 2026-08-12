@@ -11,7 +11,7 @@ import type {
   SupplyMarkerData,
   SupplyWaterPointData,
   SupplyFoodPointData,
-} from "@/lib/validation/schemas";
+} from "@btp/core";
 
 /**
  * Maximum gap between two consecutive markers (by timeline %) that causes

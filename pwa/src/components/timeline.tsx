@@ -12,7 +12,7 @@ import { RestDayCard } from "@/components/rest-day-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
-import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import type { StageData, AccommodationData } from "@btp/core";
 
 interface TimelineProps {
   stages: StageData[];

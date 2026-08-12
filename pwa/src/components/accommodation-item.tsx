@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { AccommodationData } from "@/lib/validation/schemas";
+import type { AccommodationData } from "@btp/core";
 import { formatPrice, formatDistanceKm } from "@/lib/formatters";
 import {
   ACCOMMODATION_TYPES,

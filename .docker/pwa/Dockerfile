@@ -23,12 +23,22 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=localhost
 
-CMD ["sh", "-c", "npm install; npm run dev"]
+# Workspace root: install every workspace, then run the web dev server via the
+# `pwa` workspace. compose.dev mounts the repo root at /srv/app so `core/` resolves.
+CMD ["sh", "-c", "npm install; npm run dev --workspace pwa"]
 
 
 FROM base AS deps
 
-COPY --link pwa/package.json pwa/package-lock.json ./
+# npm workspace root: the lockfile lives at the repo root and hoists node_modules
+# there. Copy the root manifests plus every workspace manifest so `npm ci` can
+# resolve the whole tree, then install. `core/` is a source-only workspace the
+# web app imports; `mobile/` is listed but its deps are not traced into the web
+# bundle, so they never reach the prod image.
+COPY --link package.json package-lock.json .npmrc ./
+COPY --link core/package.json ./core/
+COPY --link pwa/package.json ./pwa/
+COPY --link mobile/package.json ./mobile/
 RUN npm ci
 
 
@@ -61,11 +71,16 @@ ARG NEXT_PUBLIC_ENABLE_TEST_HOOKS=false
 ARG NEXT_PUBLIC_API_URL=
 ARG NEXT_PUBLIC_MERCURE_URL=
 
-COPY --link pwa/. .
+# The web app imports the `core/` workspace (Zod schemas + generated OpenAPI
+# types), transpiled by Next via `transpilePackages`, so both trees must be present.
+COPY --link core/. ./core/
+COPY --link pwa/. ./pwa/
 
 # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: mounted via BuildKit
 # so it never lands in an image layer or the build cache. Absent → the build
 # proceeds without source-map upload (Sentry plugin silently skips).
+# `outputFileTracingRoot` (next.config.ts) anchors the standalone output at the
+# workspace root, so it traces the hoisted node_modules and `core/`.
 RUN --mount=type=secret,id=sentry_auth_token \
     SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
     NEXT_PUBLIC_APP_RELEASE="${NEXT_PUBLIC_APP_RELEASE}" \
@@ -75,7 +90,7 @@ RUN --mount=type=secret,id=sentry_auth_token \
     NEXT_PUBLIC_ENABLE_TEST_HOOKS="${NEXT_PUBLIC_ENABLE_TEST_HOOKS}" \
     NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
     NEXT_PUBLIC_MERCURE_URL="${NEXT_PUBLIC_MERCURE_URL}" \
-    npm run build
+    npm run build --workspace pwa
 
 
 # Production image, copy all the files and run next
@@ -90,16 +105,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs; \
 	adduser --system --uid 1001 nextjs
 
-COPY --from=builder --link /srv/app/public ./public
+# The workspace build runs with cwd=pwa and `outputFileTracingRoot` at the repo
+# root, so the standalone bundle is rooted at the workspace: it contains
+# `pwa/server.js`, the hoisted `node_modules`, and the traced `core/`.
+COPY --from=builder --link /srv/app/pwa/public ./pwa/public
 
 # Set the correct permission for prerender cache
-RUN mkdir .next; \
-	chown nextjs:nodejs .next
+RUN mkdir -p pwa/.next; \
+	chown nextjs:nodejs pwa/.next
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --link --chown=1001:1001 /srv/app/.next/standalone ./
-COPY --from=builder --link --chown=1001:1001 /srv/app/.next/static ./.next/static
+COPY --from=builder --link --chown=1001:1001 /srv/app/pwa/.next/standalone ./
+COPY --from=builder --link --chown=1001:1001 /srv/app/pwa/.next/static ./pwa/.next/static
 
 # Numeric uid:gid (hadolint DL3066) — same ids as the `nextjs`/`nodejs` pair
 # created above and as the `--chown=1001:1001` copies.
@@ -110,4 +128,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["node", "pwa/server.js"]

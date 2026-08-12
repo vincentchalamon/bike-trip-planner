@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { MapView } from "./MapView";
 import { ElevationProfile } from "./ElevationProfile";
 import "./map-markers.css";
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 
 interface MapPanelProps {
   focusedStageIndex: number | null;

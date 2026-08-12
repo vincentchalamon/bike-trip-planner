@@ -9,7 +9,7 @@ import type {
   AlertData,
   EventData,
   StageData,
-} from "@/lib/validation/schemas";
+} from "@btp/core";
 
 function makeStage(dayNumber: number, distance = 50): StageData {
   return {

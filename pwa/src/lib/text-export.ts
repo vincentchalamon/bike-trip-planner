@@ -1,4 +1,4 @@
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "./accommodation-constants";
 
 export const CoordinateSchema = z.object({
   lat: z.number(),

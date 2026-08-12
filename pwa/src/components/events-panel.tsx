@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { EventItem } from "@/components/event-item";
-import type { EventData } from "@/lib/validation/schemas";
+import type { EventData } from "@btp/core";
 
 const DEFAULT_VISIBLE = 3;
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildTripText } from "./text-export";
-import type { StageData } from "./validation/schemas";
+import type { StageData } from "@btp/core";
 
 function buildStage(
   dayNumber: number,

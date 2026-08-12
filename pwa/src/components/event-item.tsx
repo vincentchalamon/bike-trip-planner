@@ -2,7 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { EventData } from "@/lib/validation/schemas";
+import type { EventData } from "@btp/core";
 
 const EVENT_TYPE_KEYS: Record<string, string> = {
   "schema:Festival": "type_festival",

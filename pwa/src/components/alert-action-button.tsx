@@ -4,7 +4,7 @@ import { Sparkles, Shuffle, Map, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/plausible";
-import type { AlertActionData } from "@/lib/validation/schemas";
+import type { AlertActionData } from "@btp/core";
 
 /**
  * Maps each contextual action kind (defined backend-side, see #281/#282) to

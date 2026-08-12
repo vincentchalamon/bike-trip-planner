@@ -1,6 +1,5 @@
 openapi.json
 openapi.yaml
-src/lib/api/schema.d.ts
 
 # Local build / report artifacts (gitignored): they drift with every run and
 # would otherwise fail `make prettier` outside a fresh checkout.

@@ -45,7 +45,7 @@ import {
   revokeTripShare,
 } from "@/lib/api/client";
 import { trackEvent } from "@/lib/plausible";
-import type { StageData } from "@/lib/validation/schemas";
+import type { StageData } from "@btp/core";
 
 interface ShareModalProps {
   open: boolean;

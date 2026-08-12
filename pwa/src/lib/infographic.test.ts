@@ -6,7 +6,7 @@ import {
   stageColor,
   type InfographicData,
 } from "./infographic";
-import type { StageData } from "./validation/schemas";
+import type { StageData } from "@btp/core";
 
 const labels: InfographicData["labels"] = {
   distance: "Distance",

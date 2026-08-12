@@ -20,7 +20,7 @@ import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { TripCard } from "@/components/trip-card";
 import { TripsEmptyState } from "@/components/trips-empty-state";
-import type { components } from "@/lib/api/schema";
+import type { components } from "@btp/core/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
 type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
