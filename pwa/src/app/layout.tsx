@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { unstable_rethrow } from "next/navigation";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
@@ -34,9 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
     const t = await getTranslations("layout");
     title = t("title");
     description = t("description");
-  } catch {
-    // Static export prerendering: next-intl server context unavailable — keep
-    // the English defaults above.
+  } catch (error) {
+    unstable_rethrow(error);
+    // Vraie erreur uniquement : les bailouts framework (cookies()) sont relancés
+    // pour que Next marque la route dynamique. On garde les valeurs par défaut.
   }
 
   // Open Graph / Twitter Card on every page (audit 35.2 SEO-003). `metadataBase`
@@ -73,8 +75,9 @@ export default async function RootLayout({
   try {
     locale = await getLocale();
     messages = await getMessages();
-  } catch {
-    // Static export prerendering: next-intl server context unavailable
+  } catch (error) {
+    unstable_rethrow(error);
+    // Vraie erreur uniquement : repli sur la locale par défaut.
     locale = DEFAULT_LOCALE;
     messages = (await import(`../../messages/${DEFAULT_LOCALE}.json`)).default;
   }
