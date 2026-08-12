@@ -17,12 +17,17 @@ export default function Login() {
   const submit = async () => {
     setBusy(true);
     setError(null);
-    const ok = await requestLink(email.trim());
-    setBusy(false);
-    if (ok) {
-      setSent(true);
-    } else {
+    try {
+      const ok = await requestLink(email.trim());
+      if (ok) {
+        setSent(true);
+      } else {
+        setError("Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.");
+      }
+    } catch {
       setError("Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.");
+    } finally {
+      setBusy(false);
     }
   };
 

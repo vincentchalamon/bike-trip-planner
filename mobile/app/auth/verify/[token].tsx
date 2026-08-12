@@ -20,8 +20,12 @@ export default function VerifyScreen() {
     }
     handled.current = true;
     void (async () => {
-      const ok = await verify(token);
-      router.replace(ok ? '/(tabs)' : '/login');
+      try {
+        const ok = await verify(token);
+        router.replace(ok ? '/(tabs)' : '/login');
+      } catch {
+        router.replace('/login');
+      }
     })();
   }, [token, verify, router]);
 

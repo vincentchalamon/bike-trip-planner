@@ -34,7 +34,7 @@ npx expo start --dev-client
 
 The API base URL is read from `EXPO_PUBLIC_API_URL`. Create `mobile/.env`:
 
-```
+```dotenv
 EXPO_PUBLIC_API_URL=https://epidermis-sandlot-headrest.ngrok-free.dev
 ```
 
@@ -50,10 +50,10 @@ client-agnostic: auth tokens travel in the JSON body and calls negotiate on
 
 1. **Login** (`app/login.tsx`) posts the email to `POST /auth/request-link`.
 2. The email link opens the app via one of:
-   - custom scheme: `biketripplanner://verify?token=<token>`
+   - custom scheme: `biketripplanner://auth/verify/<token>`
    - Android App Link: `https://epidermis-sandlot-headrest.ngrok-free.dev/auth/verify/<token>`
-3. `useDeepLinkAuth` extracts the token and calls `POST /auth/verify`, which returns
-   the JWT (and, in the intended native contract, a refresh token). Both are stored
+3. The file route `app/auth/verify/[token].tsx` extracts the token and calls
+   `POST /auth/verify`, which returns the JWT and refresh token. Both are stored
    in `expo-secure-store`.
 4. `POST /auth/refresh` rotates the JWT when it expires.
 
@@ -63,7 +63,7 @@ Custom scheme (works without domain verification):
 
 ```bash
 adb shell am start -a android.intent.action.VIEW \
-  -d "biketripplanner://verify?token=TEST_TOKEN"
+  -d "biketripplanner://auth/verify/TEST_TOKEN"
 ```
 
 App Link (verified https link):
@@ -122,4 +122,3 @@ Since #1010 the backend auth is client-agnostic — no client detection, no cook
 All three negotiate on `application/ld+json` only (both `Content-Type` and `Accept`);
 a plain `application/json` POST is rejected (415/422). `src/auth/authApi.ts` posts and
 reads the token pair from the body accordingly.
-```
