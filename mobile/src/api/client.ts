@@ -6,12 +6,18 @@ import { refreshTokens } from '../auth/authApi';
 
 const RETRY_HEADER = 'X-Native-Retry';
 
+// Clone of each in-flight request, taken before dispatch. Once fetch() sends a
+// body-bearing request its stream is disturbed and clone() throws, so a 401 retry
+// cannot clone in onResponse; the mutating calls in #1014/#1015 would break there.
+const pendingRetries = new WeakMap<Request, Request>();
+
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
     const jwt = getJwt();
     if (jwt) {
       request.headers.set('Authorization', `Bearer ${jwt}`);
     }
+    pendingRetries.set(request, request.clone());
     return request;
   },
   async onResponse({ request, response }) {
@@ -30,7 +36,7 @@ const authMiddleware: Middleware = {
     if (!refreshed) {
       return undefined;
     }
-    const retry = request.clone();
+    const retry = pendingRetries.get(request) ?? request;
     retry.headers.set(RETRY_HEADER, '1');
     const jwt = getJwt();
     if (jwt) {
