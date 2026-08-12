@@ -21,14 +21,14 @@ Given("I am logged in", async ({ page }) => {
 });
 
 Given("ma session a expiré", async ({ page }) => {
-  await page.route("**/auth/refresh", (route, req) => {
+  await page.route("**/api/auth/refresh", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({ status: 401, body: "" });
   });
 });
 
 Given("my session has expired", async ({ page }) => {
-  await page.route("**/auth/refresh", (route, req) => {
+  await page.route("**/api/auth/refresh", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({ status: 401, body: "" });
   });
@@ -66,7 +66,7 @@ Then("I see the email confirmation message", async ({ page }) => {
 });
 
 When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
-  await page.route("**/auth/verify", (route, req) => {
+  await page.route("**/api/auth/verify", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,
@@ -74,7 +74,7 @@ When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
       body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
     });
   });
-  await page.route("**/auth/refresh", (route, req) => {
+  await page.route("**/api/auth/refresh", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,
@@ -106,7 +106,7 @@ When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
 });
 
 When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
-  await page.route("**/auth/verify", (route, req) => {
+  await page.route("**/api/auth/verify", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,
@@ -114,7 +114,7 @@ When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
       body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
     });
   });
-  await page.route("**/auth/refresh", (route, req) => {
+  await page.route("**/api/auth/refresh", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,

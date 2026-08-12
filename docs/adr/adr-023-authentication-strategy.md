@@ -161,7 +161,7 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 |---|---|---|---|
 | **Magic link token** | PostgreSQL (`magic_link` table), **SHA-256 hashed at rest** | 30 min, single use | One-time authentication |
 | **Access token (JWT)** | In-memory (JavaScript variable) | 15 min | API request authorization |
-| **Refresh token** | HttpOnly SameSite=Strict cookie; row in `refresh_token`, **encrypted at rest** (see note) | 30 days | Silent access token renewal |
+| **Refresh token** | Returned in the API response **body** (the API is client-agnostic, sets no cookie); the **web BFF** keeps it in an HttpOnly **SameSite=Lax** cookie it owns, the **native client** in the platform's secure storage. Backing row in `refresh_token`, **encrypted at rest** (see note) | 30 days | Silent access token renewal |
 
 > **Token-at-rest hardening (2026-07 security audit — token-at-rest finding; distinct from the audit-report.md `SEC-003` clickjacking item already fixed in #630).** The magic-link and email-change tokens are
 > high-entropy random values that ARE the credential, so only their **SHA-256 hash**
@@ -200,7 +200,7 @@ If a valid (non-expired, non-consumed) magic link already exists for a given ema
 - **Magic link entropy:** 256 bits (cryptographically secure random bytes), making brute-force infeasible
 - **Magic link TTL:** 30 minutes, single use — consumed immediately upon verification
 - **Access token:** stored in JavaScript memory only (never `localStorage` or `sessionStorage`) — immune to XSS exfiltration via storage APIs
-- **Refresh token:** HttpOnly + SameSite=Strict cookie — inaccessible to JavaScript, resistant to CSRF
+- **Refresh token:** the API returns it in the response body and sets no cookie of its own. On the **web**, a Next.js **BFF** (`src/app/api/auth/*`) exchanges the body token for an **HttpOnly SameSite=Lax** cookie it owns — inaccessible to browser JavaScript. `Lax` (not `Strict`) is deliberate: the magic-link landing is a top-level cross-site navigation and a `Strict` cookie would not ride it (#649). CSRF on the cookie-bearing `/api/auth/refresh|logout` routes is blocked by a same-origin guard (`Sec-Fetch-Site`, with an `Origin` fallback), not by `SameSite=Strict`.
 
 ### Throttling
 
@@ -210,11 +210,14 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 - **Per IP:** max 3 requests per 15-minute window
 - Implemented via Symfony RateLimiter component with Redis backend
 
-### Native Mobile Adaptation
+### Client-Agnostic API + Web BFF
 
-A native mobile client (see [ADR-053](adr-053-mobile-strategy-native-app.md)) does not carry a browser cookie jar, so HttpOnly cookies cannot be relied on: the refresh token must instead be returned in the response body and kept in the platform's secure storage.
+The API is **client-agnostic**: `/auth/verify` and `/auth/refresh` always return `{ token, refresh_token }` in the response **body** and set no cookie. There is no client detection — the backend does not care who calls it.
 
-An earlier Capacitor-specific version of this mechanism (client detection keyed to the WebView's `capacitor://` Origin, a `capacitor://` entry in the `CORS_ALLOW_ORIGIN` allow-list, and an `X-Mercure-Token` response header so the WebView could read the subscriber JWT) has been **removed** as dead code along with the Capacitor client. The mechanism will be **rebuilt** for the native client in the native-app workstream ([ADR-053](adr-053-mobile-strategy-native-app.md)), with a client detection scheme (origin or a dedicated native-client header) defined then. It is not carried in the current codebase.
+- The **web** never sees the refresh token in JavaScript. A Next.js **BFF** (`src/app/api/auth/*`) sits in front of the API: it forwards the browser's request, takes the `refresh_token` from the API body, stores it in an HttpOnly **SameSite=Lax** cookie it owns, and returns only the short-lived JWT to the browser. On refresh, the BFF reads its cookie, calls the API, re-pins the rotated token, and again hands back only the JWT. Cross-site abuse of the cookie-bearing routes is blocked by a same-origin guard (`Sec-Fetch-Site`, `Origin` fallback → 403).
+- A **native mobile client** (see [ADR-053](adr-053-mobile-strategy-native-app.md)) does not carry a browser cookie jar, so it talks to the API directly and keeps the body `refresh_token` in the platform's secure storage.
+
+An earlier Capacitor-specific mechanism (client detection keyed to the WebView's `capacitor://` Origin, a `capacitor://` entry in the `CORS_ALLOW_ORIGIN` allow-list, and an `X-Mercure-Token` response header so the WebView could read the subscriber JWT) has been **removed** as dead code along with the Capacitor client. It is superseded by the client-agnostic body-token + web-BFF design above (#1010) — no client detection is reintroduced.
 
 ---
 

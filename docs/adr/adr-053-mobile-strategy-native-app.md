@@ -27,5 +27,5 @@ Build a **dedicated native mobile app**, Android first (iOS later).
 
 - No more "single codebase" shortcut: the native app carries its own UI layer; sharing happens through `apps/core` (types + domain logic), not through React DOM components. This reverses ADR-024's main rationale, which was reasonable when the goal was merely consulting data in a WebView.
 - A new native mobile workstream (and a small backend brick for FCM push).
-- The authentication strategy (ADR-023) now applies to a **native client** rather than a Capacitor WebView: the refresh token is returned in the response body when a native client is detected and stored in the platform's secure storage.
+- The authentication strategy (ADR-023) now applies to a **native client** rather than a Capacitor WebView. There is **no client detection**: the API is client-agnostic and **always** returns `{ token, refresh_token }` in the response body, setting no cookie. The native client keeps the body refresh token in the platform's secure storage; the web goes through a Next.js **BFF** that holds the refresh token in an HttpOnly SameSite=Lax cookie (#1010).
 - The mobile approach is validated incrementally (spike → MVP), so this ADR states direction; the spike gates the final tech commitment.

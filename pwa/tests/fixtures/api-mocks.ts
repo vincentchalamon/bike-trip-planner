@@ -186,8 +186,10 @@ export async function mockAllApis(
     nearbyPoiResults,
   } = options;
 
-  // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
-  await page.route("**/auth/refresh", (route, request) => {
+  // POST /api/auth/refresh — the BFF route handler (ADR-053). The browser now
+  // talks to the Next.js BFF, never the backend directly, so we intercept the
+  // BFF path; the mock replies with a fake JWT and the handler never runs.
+  await page.route("**/api/auth/refresh", (route, request) => {
     if (request.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,

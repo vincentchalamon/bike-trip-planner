@@ -854,6 +854,9 @@ export interface components {
             userId?: string | null;
             email?: string | null;
         };
+        "Auth.RefreshRequest": {
+            refresh_token: string;
+        };
         /** @description Unprocessable entity */
         ConstraintViolation: {
             /** @default 422 */
@@ -2111,8 +2114,25 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description The new Auth resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Auth.RefreshRequest"];
+            };
+        };
         responses: {
+            /** @description Rotated refresh token and new JWT */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        refresh_token?: string;
+                    };
+                };
+            };
             /** @description Auth resource created */
             204: {
                 headers: {
@@ -2130,6 +2150,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Invalid or expired refresh token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error occurred */
             422: {
@@ -2234,6 +2261,18 @@ export interface operations {
             };
         };
         responses: {
+            /** @description JWT and refresh token issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        refresh_token?: string;
+                    };
+                };
+            };
             /** @description Auth resource created */
             204: {
                 headers: {
@@ -2251,6 +2290,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Invalid or expired magic link */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error occurred */
             422: {

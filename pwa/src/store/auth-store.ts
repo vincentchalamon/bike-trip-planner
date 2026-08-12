@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { API_URL } from "@/lib/constants";
 
 interface AuthUser {
   id: string;
@@ -75,12 +74,17 @@ export function parseJwtPayload(
  * - `logout()` — revokes all refresh tokens and clears local state
  *
  * The access token is stored in-memory only (not persisted) for security.
- * The refresh token is managed as an httpOnly cookie by the backend.
+ * The refresh token is never seen by this store: it lives in an httpOnly cookie
+ * owned by the Next.js BFF (`/api/auth/*`, ADR-053). Every action here talks to
+ * the BFF (relative URL + `credentials: "include"`), which forwards to the
+ * backend server-to-server and keeps the refresh token out of JS entirely.
  *
  * **Data flow:**
- * 1. User requests magic link → email sent with verification URL
- * 2. Backend verifies token → sets refresh_token cookie, issues JWT
- * 3. Frontend calls `silentRefresh()` → exchanges cookie for JWT
+ * 1. User requests magic link → `/api/auth/request-link` → email sent
+ * 2. `/api/auth/verify` verifies token → BFF stores refresh_token cookie,
+ *    returns only the JWT
+ * 3. `silentRefresh()` → `/api/auth/refresh` → BFF exchanges the cookie for a
+ *    fresh JWT (and rotates the cookie)
  * 4. JWT stored in this store → injected into API requests via middleware
  */
 // Deduplicates concurrent silentRefresh calls: if a refresh is already in
@@ -116,7 +120,9 @@ export const useAuthStore = create<AuthState>()(
       }),
 
     requestMagicLink: async (email: string) => {
-      await fetch(`${API_URL}/auth/request-link`, {
+      // BFF (ADR-053): the Next.js route handler forwards to the backend and
+      // owns the refresh cookie. The refresh token never transits through JS.
+      await fetch(`/api/auth/request-link`, {
         method: "POST",
         headers: { "Content-Type": "application/ld+json" },
         body: JSON.stringify({ email }),
@@ -129,7 +135,7 @@ export const useAuthStore = create<AuthState>()(
       const { accessToken } = get();
       let serverLogoutFailed = false;
       try {
-        const res = await fetch(`${API_URL}/auth/logout`, {
+        const res = await fetch(`/api/auth/logout`, {
           method: "POST",
           headers: {
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -158,7 +164,7 @@ export const useAuthStore = create<AuthState>()(
 
       pendingRefresh = (async () => {
         try {
-          const res = await fetch(`${API_URL}/auth/refresh`, {
+          const res = await fetch(`/api/auth/refresh`, {
             method: "POST",
             credentials: "include",
           });

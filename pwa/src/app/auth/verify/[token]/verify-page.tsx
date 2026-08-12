@@ -5,17 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
-import { API_URL } from "@/lib/constants";
 import { LinkExpired } from "@/components/auth/link-expired";
 
 /**
  * Magic link verification page.
  *
  * When the user clicks the magic link in their email, they land here.
- * This page POSTs the token to the backend `/auth/verify` endpoint.
- * On success the backend returns a JWT access token and sets a
- * refresh_token httpOnly cookie; the frontend stores the JWT and
- * redirects to the home page.
+ * This page POSTs the token to the BFF `/api/auth/verify` route handler
+ * (ADR-053). On success the BFF stores the refresh_token in an httpOnly cookie
+ * and returns only the JWT access token; the frontend stores the JWT and
+ * redirects to the home page. The refresh token never reaches the browser JS.
  *
  * On failure (invalid / expired token) the page renders the `LinkExpired`
  * component, which lets the user request a fresh magic link without leaving
@@ -40,7 +39,7 @@ export default function VerifyPage() {
 
     const verify = async () => {
       try {
-        const res = await fetch(`${API_URL}/auth/verify`, {
+        const res = await fetch(`/api/auth/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/ld+json" },
           body: JSON.stringify({ token: params.token }),

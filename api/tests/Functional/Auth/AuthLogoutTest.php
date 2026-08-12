@@ -69,32 +69,6 @@ final class AuthLogoutTest extends ApiTestCase
     }
 
     #[Test]
-    public function logoutClearsRefreshTokenCookie(): void
-    {
-        $auth = $this->createAuthenticatedUser('cookie-clear@example.com');
-
-        $response = self::createClient()->request('POST', '/auth/logout', [
-            'headers' => [
-                'Content-Type' => 'application/ld+json',
-                'Authorization' => 'Bearer '.$auth['jwt'],
-            ],
-        ]);
-
-        $this->assertResponseStatusCodeSame(204);
-
-        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
-        $cookieCleared = false;
-        foreach ($cookies as $cookie) {
-            if (str_starts_with($cookie, 'refresh_token=')) {
-                $cookieCleared = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($cookieCleared, 'Response should clear the refresh_token cookie');
-    }
-
-    #[Test]
     public function logoutRevokesAllRefreshTokens(): void
     {
         $auth = $this->createAuthenticatedUser('revoke@example.com');

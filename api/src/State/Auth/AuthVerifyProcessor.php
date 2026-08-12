@@ -21,12 +21,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Validates a magic link token, issues JWT + refresh token.
  *
+ * The refresh token is returned in the response body (OAuth-like), not a cookie:
+ * the API is client-agnostic and the web BFF (step 2) owns the cookie.
+ *
  * @implements ProcessorInterface<Auth, JsonResponse>
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
-    use AuthResponseHelper;
-
     public function __construct(
         private MagicLinkRepository $magicLinkRepository,
         private RefreshTokenRepository $refreshTokenRepository,
@@ -82,9 +83,6 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
-        $response = new JsonResponse(['token' => $jwt]);
-        $this->setRefreshTokenCookie($response, $plainToken, $refreshToken->getExpiresAt());
-
-        return $response;
+        return new JsonResponse(['token' => $jwt, 'refresh_token' => $plainToken]);
     }
 }

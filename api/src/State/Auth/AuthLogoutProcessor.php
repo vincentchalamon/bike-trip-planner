@@ -9,7 +9,6 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -17,7 +16,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Revokes all refresh tokens for the current user and clears the cookie.
+ * Revokes all refresh tokens for the current user.
+ *
+ * The API does not own a cookie any more (the web BFF clears it in step 2).
  *
  * @implements ProcessorInterface<Auth, Response>
  */
@@ -44,9 +45,6 @@ final readonly class AuthLogoutProcessor implements ProcessorInterface
             $this->logger->debug('Auth logout user logged out', ['user' => $user->getEmail()]);
         }
 
-        $response = new JsonResponse(null, Response::HTTP_NO_CONTENT);
-        $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
-
-        return $response;
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }
