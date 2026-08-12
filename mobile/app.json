@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Bike Trip Planner",
+    "slug": "bike-trip-planner",
+    "scheme": "biketripplanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "coop.lestilleuls.biketripplanner"
+    },
+    "android": {
+      "package": "coop.lestilleuls.biketripplanner",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "@maplibre/maplibre-react-native",
+      "expo-secure-store"
+    ]
+  }
+}
