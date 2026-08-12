@@ -4,7 +4,7 @@ import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 test.describe("Auth flow", () => {
   test("login page shows email form", async ({ page }) => {
     // Mock auth/refresh as 401 so AuthGuard doesn't auto-authenticate
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
@@ -19,7 +19,7 @@ test.describe("Auth flow", () => {
   });
 
   test("login page has a back-to-home link (#649)", async ({ page }) => {
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
@@ -36,13 +36,13 @@ test.describe("Auth flow", () => {
 
   test("login page shows confirmation after submit", async ({ page }) => {
     // Mock auth/refresh as 401 (not authenticated)
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
 
     // Mock POST /auth/request-link -> 202
-    await page.route("**/auth/request-link", (route, request) => {
+    await page.route("**/api/auth/request-link", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 202, body: "" });
     });
@@ -67,7 +67,7 @@ test.describe("Auth flow", () => {
 
   test("unauthenticated user sees landing page at /", async ({ page }) => {
     // Mock auth/refresh as 401 (no valid session)
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
@@ -85,7 +85,7 @@ test.describe("Auth flow", () => {
     page,
   }) => {
     // Mock auth/refresh as 401 (no valid session)
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
@@ -99,7 +99,7 @@ test.describe("Auth flow", () => {
 
   test("verify page redirects to home on valid token", async ({ page }) => {
     // Mock POST /auth/verify -> 200 with JWT
-    await page.route("**/auth/verify", (route, request) => {
+    await page.route("**/api/auth/verify", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
         status: 200,
@@ -109,7 +109,7 @@ test.describe("Auth flow", () => {
     });
 
     // Mock auth/refresh as 200 so the redirect to / doesn't bounce back to /login
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
         status: 200,

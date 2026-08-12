@@ -11,7 +11,7 @@ import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
  * (verifying spinner / success card / error card).
  */
 async function mockAuthenticated(page: import("@playwright/test").Page) {
-  await page.route("**/auth/refresh", (route, request) => {
+  await page.route("**/api/auth/refresh", (route, request) => {
     if (request.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 200,
@@ -86,7 +86,7 @@ test.describe("Email change verification (#777)", () => {
     // First /auth/refresh = AuthGuard mount (succeeds); the second = the
     // silentRefresh() after the email change (fails) → clearAuth + redirect.
     let refreshCount = 0;
-    await page.route("**/auth/refresh", (route, request) => {
+    await page.route("**/api/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       refreshCount++;
       return route.fulfill(
