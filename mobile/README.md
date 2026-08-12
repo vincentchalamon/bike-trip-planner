@@ -11,9 +11,8 @@ openapi-fetch.
 - JDK 17
 - The backend reachable over HTTPS (the shared ngrok tunnel, see below)
 
-`@maplibre/maplibre-react-native`, `expo-secure-store` and `expo-location` are
-**native modules**: they do not run in Expo Go. Use a development build
-(`npx expo run:android`).
+`@maplibre/maplibre-react-native` and `expo-secure-store` are **native modules**:
+they do not run in Expo Go. Use a development build (`npx expo run:android`).
 
 ## Install
 

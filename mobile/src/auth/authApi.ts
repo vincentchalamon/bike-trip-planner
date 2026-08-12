@@ -1,4 +1,5 @@
 import { API_BASE_URL, LD_JSON } from '../api/config';
+import { notifySessionInvalidated } from './session';
 import { clearTokens, getRefresh, setTokens } from './tokens';
 
 // verify / refresh use plain fetch rather than the typed client: both return the
@@ -44,23 +45,23 @@ export function refreshTokens(): Promise<boolean> {
 
 async function doRefresh(): Promise<boolean> {
   const refresh = getRefresh();
-  if (!refresh) {
-    return false;
+  if (refresh) {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: ldJsonHeaders,
+      body: JSON.stringify({ refresh_token: refresh }),
+    });
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as TokenPair;
+      if (data.token) {
+        await setTokens(data.token, data.refresh_token ?? refresh);
+        return true;
+      }
+    }
   }
-  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: ldJsonHeaders,
-    body: JSON.stringify({ refresh_token: refresh }),
-  });
-  if (!res.ok) {
-    await clearTokens();
-    return false;
-  }
-  const data = (await res.json().catch(() => ({}))) as TokenPair;
-  if (!data.token) {
-    await clearTokens();
-    return false;
-  }
-  await setTokens(data.token, data.refresh_token ?? refresh);
-  return true;
+  // Definitive failure (no refresh token, rejected, or malformed body): wipe the
+  // dead session and signal AuthProvider so the UI redirects to /login.
+  await clearTokens();
+  notifySessionInvalidated();
+  return false;
 }

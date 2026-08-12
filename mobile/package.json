@@ -6,7 +6,6 @@
     "@maplibre/maplibre-react-native": "^11.3.6",
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",
-    "expo-location": "~57.0.9",
     "expo-router": "~57.0.12",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",

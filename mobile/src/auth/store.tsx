@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
 import { verifyMagicToken } from './authApi';
+import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';
 
 type AuthContextValue = {
@@ -25,6 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
     })();
   }, []);
+
+  // A refresh that definitively fails clears the tokens outside React; flip the
+  // state so the (tabs) guard redirects to /login instead of 401'ing forever.
+  useEffect(() => onSessionInvalidated(() => setAuthenticated(false)), []);
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
