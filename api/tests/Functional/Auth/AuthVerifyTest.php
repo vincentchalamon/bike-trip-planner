@@ -127,6 +127,56 @@ final class AuthVerifyTest extends ApiTestCase
     }
 
     #[Test]
+    public function verifyNativeClientReturnsRefreshTokenInBody(): void
+    {
+        // A native client (X-Client-Type: native) cannot store the HttpOnly
+        // cookie, so the refresh token is also handed to it in the body (ADR-053).
+        // The cookie is still set (harmless for native).
+        $this->createUserWithMagicLink('native@example.com', 'native-verify-token');
+
+        $response = self::createClient()->request('POST', '/auth/verify', [
+            'headers' => [
+                'Content-Type' => 'application/ld+json',
+                'X-Client-Type' => 'native',
+            ],
+            'json' => ['token' => 'native-verify-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray(false);
+        $this->assertArrayHasKey('refresh_token', $data);
+        $this->assertNotEmpty($data['refresh_token']);
+
+        // The cookie remains set even for a native client.
+        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
+        $hasRefreshCookie = false;
+        foreach ($cookies as $cookie) {
+            if (str_starts_with($cookie, 'refresh_token=')) {
+                $hasRefreshCookie = true;
+                break;
+            }
+        }
+
+        $this->assertTrue($hasRefreshCookie, 'Cookie is still set for a native client');
+    }
+
+    #[Test]
+    public function verifyWebClientOmitsRefreshTokenFromBody(): void
+    {
+        // A regular web client (no X-Client-Type header) must NOT receive the
+        // refresh token in the body — cookie-only.
+        $this->createUserWithMagicLink('web@example.com', 'web-verify-token');
+
+        $response = self::createClient()->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => 'web-verify-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
+    }
+
+    #[Test]
     public function verifyExpiredTokenReturns401(): void
     {
         $this->createUserWithMagicLink(

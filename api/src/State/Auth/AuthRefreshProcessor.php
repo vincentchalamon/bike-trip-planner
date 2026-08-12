@@ -16,6 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -23,7 +24,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Rotates a refresh token and issues a new JWT.
  *
- * Reads the refresh token from the cookie.
+ * Reads the refresh token from the cookie, or from the request body for native
+ * clients (X-Client-Type: native), which cannot store the HttpOnly cookie and
+ * receive the rotated token in the response body too (ADR-053).
  *
  * @implements ProcessorInterface<Auth, JsonResponse>
  */
@@ -56,6 +59,14 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     {
         $request = $this->requestStack->getCurrentRequest();
         $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
+        $isNative = $this->isNativeRequest();
+
+        // Native clients cannot store the HttpOnly cookie: they send the refresh
+        // token in the request body instead.
+        if (null === $token && $isNative && $request instanceof Request) {
+            $body = $request->toArray();
+            $token = $body['refresh_token'] ?? null;
+        }
 
         if (null === $token || '' === $token) {
             return new JsonResponse(
@@ -113,7 +124,14 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $this->logger->debug('Auth refresh success', ['user' => $user->getEmail()]);
 
-        $response = new JsonResponse(['token' => $jwt]);
+        $responseData = ['token' => $jwt];
+        // Native clients cannot store the HttpOnly cookie: also return the rotated
+        // refresh token in the body. The cookie is still set (harmless for native).
+        if ($isNative) {
+            $responseData['refresh_token'] = $livePlain;
+        }
+
+        $response = new JsonResponse($responseData);
         $this->setRefreshTokenCookie($response, $livePlain, $live->getExpiresAt());
 
         return $response;
@@ -176,5 +194,10 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
         return $response;
+    }
+
+    private function getRequestStack(): RequestStack
+    {
+        return $this->requestStack;
     }
 }

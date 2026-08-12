@@ -71,6 +71,21 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     /**
+     * Sends a refresh request as a native client: no cookie, the refresh token
+     * in the body, X-Client-Type: native to opt into body transport (ADR-053).
+     */
+    private function sendNativeRefreshRequest(string $refreshToken): ResponseInterface
+    {
+        return self::createClient()->request('POST', '/auth/refresh', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Client-Type' => 'native',
+            ],
+            'json' => ['refresh_token' => $refreshToken],
+        ]);
+    }
+
+    /**
      * Extracts the rotated refresh token from the response's Set-Cookie header.
      */
     private function refreshCookieValue(ResponseInterface $response): string
@@ -155,6 +170,36 @@ final class AuthRefreshTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(200);
         $this->assertNotEquals('old-refresh-token', $this->refreshCookieValue($response));
+    }
+
+    #[Test]
+    public function refreshNativeClientReadsBodyAndReturnsRefreshTokenInBody(): void
+    {
+        // A native client (X-Client-Type: native) sends the refresh token in the
+        // body (no cookie) and receives the rotated token back in the body too,
+        // since it cannot store the HttpOnly cookie (ADR-053).
+        $this->createUserWithRefreshToken('native-refresh@example.com', 'native-old-token');
+
+        $response = $this->sendNativeRefreshRequest('native-old-token');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray(false);
+        $this->assertArrayHasKey('token', $data);
+        $this->assertArrayHasKey('refresh_token', $data);
+        $this->assertNotEquals('native-old-token', $data['refresh_token']);
+    }
+
+    #[Test]
+    public function refreshWebClientOmitsRefreshTokenFromBody(): void
+    {
+        // A regular web client (cookie transport, no X-Client-Type) must NOT get
+        // the refresh token in the body — cookie-only.
+        $this->createUserWithRefreshToken('web-refresh@example.com', 'web-old-token');
+
+        $response = $this->sendRefreshRequest('web-old-token');
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
     }
 
     #[Test]

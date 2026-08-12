@@ -15,11 +15,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Validates a magic link token, issues JWT + refresh token.
+ *
+ * For native clients (X-Client-Type: native), the refresh token is also included
+ * in the response body, since they cannot store the HttpOnly cookie (ADR-053).
  *
  * @implements ProcessorInterface<Auth, JsonResponse>
  */
@@ -32,6 +36,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         private RefreshTokenRepository $refreshTokenRepository,
         private EntityManagerInterface $entityManager,
         private JWTTokenManagerInterface $jwtManager,
+        private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
     ) {
@@ -82,9 +87,21 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
-        $response = new JsonResponse(['token' => $jwt]);
+        $responseData = ['token' => $jwt];
+        // Native clients cannot store the HttpOnly cookie: also return the refresh
+        // token in the body. The cookie is still set (harmless for native).
+        if ($this->isNativeRequest()) {
+            $responseData['refresh_token'] = $plainToken;
+        }
+
+        $response = new JsonResponse($responseData);
         $this->setRefreshTokenCookie($response, $plainToken, $refreshToken->getExpiresAt());
 
         return $response;
+    }
+
+    private function getRequestStack(): RequestStack
+    {
+        return $this->requestStack;
     }
 }
