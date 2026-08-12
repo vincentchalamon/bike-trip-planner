@@ -7,6 +7,8 @@ namespace App\ApiResource\Auth;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\OpenApi\Model\Operation;
+use ApiPlatform\OpenApi\Model\Response;
 use App\State\Auth\AuthLogoutProcessor;
 use App\State\Auth\AuthRefreshProcessor;
 use App\State\Auth\AuthRequestLinkProcessor;
@@ -26,13 +28,51 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             uriTemplate: '/auth/verify',
+            openapi: new Operation(
+                responses: [
+                    '200' => new Response(
+                        description: 'JWT and refresh token issued',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'token' => ['type' => 'string'],
+                                        'refresh_token' => ['type' => 'string'],
+                                    ],
+                                ],
+                            ],
+                        ]),
+                    ),
+                    '401' => new Response(description: 'Invalid or expired magic link'),
+                ],
+            ),
             validationContext: ['groups' => ['auth:verify']],
             output: false,
             processor: AuthVerifyProcessor::class,
         ),
         new Post(
             uriTemplate: '/auth/refresh',
-            input: false,
+            openapi: new Operation(
+                responses: [
+                    '200' => new Response(
+                        description: 'Rotated refresh token and new JWT',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'token' => ['type' => 'string'],
+                                        'refresh_token' => ['type' => 'string'],
+                                    ],
+                                ],
+                            ],
+                        ]),
+                    ),
+                    '401' => new Response(description: 'Invalid or expired refresh token'),
+                ],
+            ),
+            input: RefreshRequest::class,
             output: false,
             processor: AuthRefreshProcessor::class,
         ),

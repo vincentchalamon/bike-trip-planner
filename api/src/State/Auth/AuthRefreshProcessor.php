@@ -6,37 +6,32 @@ namespace App\State\Auth;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Auth\Auth;
+use App\ApiResource\Auth\RefreshRequest;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Rotates a refresh token and issues a new JWT.
  *
- * Reads the refresh token from the cookie, or from the request body for native
- * clients (X-Client-Type: native), which cannot store the HttpOnly cookie and
- * receive the rotated token in the response body too (ADR-053).
+ * The refresh token travels in the request body (OAuth-like) and the rotated
+ * token is returned in the body too: the API is client-agnostic and the web BFF
+ * (step 2) owns the cookie.
  *
- * @implements ProcessorInterface<Auth, JsonResponse>
+ * @implements ProcessorInterface<RefreshRequest, JsonResponse>
  */
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
-    use AuthResponseHelper;
-
     /**
-     * Seconds a just-rotated token stays usable so a reload race (the browser
-     * re-sends the pre-rotation cookie) resolves to its successor instead of a
+     * Seconds a just-rotated token stays usable so a reload race (the client
+     * re-sends the pre-rotation token) resolves to its successor instead of a
      * 401. Far longer than any reload round-trip, far shorter than the TTL.
      */
     private const int GRACE_SECONDS = 30;
@@ -45,7 +40,6 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         private RefreshTokenRepository $refreshTokenRepository,
         private EntityManagerInterface $entityManager,
         private JWTTokenManagerInterface $jwtManager,
-        private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
         private RefreshTokenEncryptor $encryptor,
@@ -53,45 +47,11 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     }
 
     /**
-     * @param Auth $data
+     * @param RefreshRequest $data
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
-        $request = $this->requestStack->getCurrentRequest();
-        $isNative = $this->isNativeRequest();
-
-        // Strict separation of the token source by client type — a security
-        // boundary, not a convenience. `X-Client-Type` is a JS-settable header, so
-        // a web-origin XSS could forge it. By reading the native token ONLY from
-        // the request body (never the auto-attached HttpOnly cookie), a forged
-        // "native" request is routed to the body path, which the XSS cannot satisfy
-        // — it cannot read the HttpOnly cookie to place it in the body. The web
-        // path, conversely, never reads the body.
-        if ($isNative) {
-            // Read the token ONLY from the body (never the cookie). json_decode
-            // with JSON_THROW_ON_ERROR mirrors MercureSubscriberListener so an
-            // empty or malformed body becomes a 401 (below), never an uncaught 500.
-            $token = null;
-            $content = $request instanceof Request ? $request->getContent() : '';
-            if ('' !== $content) {
-                try {
-                    $decoded = json_decode($content, true, 512, \JSON_THROW_ON_ERROR);
-                    $refreshToken = \is_array($decoded) ? ($decoded['refresh_token'] ?? null) : null;
-                    $token = \is_string($refreshToken) ? $refreshToken : null;
-                } catch (\JsonException) {
-                    $token = null;
-                }
-            }
-        } else {
-            $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
-        }
-
-        if (null === $token || '' === $token) {
-            return new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.refresh_missing', [], 'auth')],
-                Response::HTTP_UNAUTHORIZED,
-            );
-        }
+        $token = $data->refreshToken;
 
         $existing = $this->refreshTokenRepository->findValidByToken($token);
 
@@ -104,7 +64,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $user = $existing->getUser();
 
         // A deleted (anonymised) account must never be re-authenticated, even if
-        // a refresh token lingered (GDPR erasure is final). Reject + clear cookie.
+        // a refresh token lingered (GDPR erasure is final).
         if ($user->isDeleted()) {
             $this->logger->warning('Auth refresh attempted on a deleted account', ['user' => $user->getId()->toRfc4122()]);
 
@@ -113,9 +73,9 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         // Resolve the live successor token. A refresh token is rotated on first
         // use but kept valid for a short grace window: a rapid reload re-sends the
-        // pre-rotation cookie before the browser applied the Set-Cookie, and that
+        // pre-rotation token before the client applied the rotation, and that
         // request must resolve to the successor (idempotent) rather than a 401
-        // that clears the cookie and destroys the session (recette #649).
+        // that destroys the session (recette #649).
         $replacedBy = $existing->getReplacedByToken();
         $live = null !== $replacedBy
             ? $this->refreshTokenRepository->findValidByDigest($replacedBy)
@@ -142,24 +102,14 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $this->logger->debug('Auth refresh success', ['user' => $user->getEmail()]);
 
-        $responseData = ['token' => $jwt];
-        // Native clients cannot store the HttpOnly cookie: also return the rotated
-        // refresh token in the body. The cookie is still set (harmless for native).
-        if ($isNative) {
-            $responseData['refresh_token'] = $livePlain;
-        }
-
-        $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $livePlain, $live->getExpiresAt());
-
-        return $response;
+        return new JsonResponse(['token' => $jwt, 'refresh_token' => $livePlain]);
     }
 
     /**
      * Rotates the token but KEEPS the old one for a short grace window pointing
      * at its successor, instead of deleting it. A reload race that re-sends the
      * pre-rotation token then resolves to the successor (idempotent) rather than
-     * a 401 that clears the cookie and destroys the session (recette #649).
+     * a 401 that destroys the session (recette #649).
      */
     private function rotate(RefreshToken $existing, User $user): ?RefreshToken
     {
@@ -205,17 +155,9 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
     private function unauthorized(): JsonResponse
     {
-        $response = new JsonResponse(
+        return new JsonResponse(
             ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
             Response::HTTP_UNAUTHORIZED,
         );
-        $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
-
-        return $response;
-    }
-
-    private function getRequestStack(): RequestStack
-    {
-        return $this->requestStack;
     }
 }

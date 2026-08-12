@@ -103,43 +103,15 @@ final class AuthVerifyTest extends ApiTestCase
     }
 
     #[Test]
-    public function verifyValidTokenSetsRefreshTokenCookie(): void
+    public function verifyReturnsRefreshTokenInBody(): void
     {
-        $this->createUserWithMagicLink('bob@example.com', 'cookie-test-token');
+        // The API is client-agnostic: the refresh token is always returned in the
+        // body (OAuth-like), never a cookie. The web BFF (step 2) owns the cookie.
+        $this->createUserWithMagicLink('bob@example.com', 'body-test-token');
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'cookie-test-token'],
-        ]);
-
-        $this->assertResponseStatusCodeSame(200);
-
-        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
-        $hasRefreshCookie = false;
-        foreach ($cookies as $cookie) {
-            if (str_starts_with($cookie, 'refresh_token=')) {
-                $hasRefreshCookie = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($hasRefreshCookie, 'Response should set a refresh_token cookie');
-    }
-
-    #[Test]
-    public function verifyNativeClientReturnsRefreshTokenInBody(): void
-    {
-        // A native client (X-Client-Type: native) cannot store the HttpOnly
-        // cookie, so the refresh token is also handed to it in the body (ADR-053).
-        // The cookie is still set (harmless for native).
-        $this->createUserWithMagicLink('native@example.com', 'native-verify-token');
-
-        $response = self::createClient()->request('POST', '/auth/verify', [
-            'headers' => [
-                'Content-Type' => 'application/ld+json',
-                'X-Client-Type' => 'native',
-            ],
-            'json' => ['token' => 'native-verify-token'],
+            'json' => ['token' => 'body-test-token'],
         ]);
 
         $this->assertResponseStatusCodeSame(200);
@@ -147,33 +119,10 @@ final class AuthVerifyTest extends ApiTestCase
         $this->assertArrayHasKey('refresh_token', $data);
         $this->assertNotEmpty($data['refresh_token']);
 
-        // The cookie remains set even for a native client.
-        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
-        $hasRefreshCookie = false;
-        foreach ($cookies as $cookie) {
-            if (str_starts_with($cookie, 'refresh_token=')) {
-                $hasRefreshCookie = true;
-                break;
-            }
+        // The API sets no cookie any more.
+        foreach ($response->getHeaders(false)['set-cookie'] ?? [] as $cookie) {
+            $this->assertStringStartsNotWith('refresh_token=', (string) $cookie, 'The API must not set a refresh_token cookie');
         }
-
-        $this->assertTrue($hasRefreshCookie, 'Cookie is still set for a native client');
-    }
-
-    #[Test]
-    public function verifyWebClientOmitsRefreshTokenFromBody(): void
-    {
-        // A regular web client (no X-Client-Type header) must NOT receive the
-        // refresh token in the body — cookie-only.
-        $this->createUserWithMagicLink('web@example.com', 'web-verify-token');
-
-        $response = self::createClient()->request('POST', '/auth/verify', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'web-verify-token'],
-        ]);
-
-        $this->assertResponseStatusCodeSame(200);
-        $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
     }
 
     #[Test]
@@ -285,10 +234,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(401);
 
-        // No session must be established for a deleted account.
-        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
-        foreach ($cookies as $cookie) {
-            $this->assertStringStartsNotWith('refresh_token=', (string) $cookie, 'No refresh cookie for a deleted account');
-        }
+        // No session must be established for a deleted account: no refresh token.
+        $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
     }
 }
