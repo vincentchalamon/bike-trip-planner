@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from './schema';
-import { API_BASE_URL, CLIENT_TYPE_HEADER, CLIENT_TYPE_VALUE } from './config';
+import { API_BASE_URL } from './config';
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
 
@@ -8,7 +8,6 @@ const RETRY_HEADER = 'X-Native-Retry';
 
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
-    request.headers.set(CLIENT_TYPE_HEADER, CLIENT_TYPE_VALUE);
     const jwt = getJwt();
     if (jwt) {
       request.headers.set('Authorization', `Bearer ${jwt}`);

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../api/client';
+import { LD_JSON } from '../api/config';
 import { verifyMagicToken } from './authApi';
 import { clearTokens, loadTokens } from './tokens';
 
@@ -28,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
       body: { email },
-      headers: { Accept: 'application/json' },
+      headers: { 'Content-Type': LD_JSON, Accept: LD_JSON },
     });
     return response.ok;
   }, []);

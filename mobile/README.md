@@ -41,9 +41,10 @@ EXPO_PUBLIC_API_URL=https://epidermis-sandlot-headrest.ngrok-free.dev
 If unset, the client falls back to that same ngrok host (see `src/api/config.ts`).
 `EXPO_PUBLIC_*` vars are inlined at bundle time, so restart Metro after changing it.
 
-Every request carries `X-Client-Type: native` and, once authenticated, an
-`Authorization: Bearer <jwt>` header (`src/api/client.ts`). A 401 triggers a single
-token refresh + replay.
+Once authenticated, every request carries an `Authorization: Bearer <jwt>` header
+(`src/api/client.ts`). A 401 triggers a single token refresh + replay. The API is
+client-agnostic: auth tokens travel in the JSON body and calls negotiate on
+`application/ld+json` only.
 
 ## Auth / deep-link flow
 
@@ -110,15 +111,15 @@ docker run --rm -v "$PWD/api:/app" -v "/home/vincent/Sites/bike-trip-planner/api
 cd mobile && npm run typegen   # openapi-typescript openapi.json -> src/api/schema.d.ts
 ```
 
-## Known backend gap (to wire on the backend side)
+## Auth contract (client-agnostic, tokens in the body)
 
-The web auth is cookie-based: `POST /auth/verify` sets the refresh token as an
-httpOnly cookie and returns `{ token }`; `POST /auth/refresh` reads that cookie and
-ignores the body (`input: false`). The backend does **not** yet read
-`X-Client-Type: native` nor return/accept the refresh token in the JSON body.
+Since #1010 the backend auth is client-agnostic — no client detection, no cookie:
 
-This foundation already sends `X-Client-Type: native` and posts/reads the refresh
-token in the body (`src/auth/authApi.ts`), matching the intended native contract.
-The JWT returned by `/auth/verify` works today; native refresh needs the backend to
-return `refresh_token` in the verify/refresh body for that header.
+- `POST /auth/request-link` `{ email }` → 202.
+- `POST /auth/verify` `{ token }` → `{ token, refresh_token }` in the body.
+- `POST /auth/refresh` `{ refresh_token }` → `{ token, refresh_token }` in the body.
+
+All three negotiate on `application/ld+json` only (both `Content-Type` and `Accept`);
+a plain `application/json` POST is rejected (415/422). `src/auth/authApi.ts` posts and
+reads the token pair from the body accordingly.
 ```

@@ -3,7 +3,6 @@
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'https://epidermis-sandlot-headrest.ngrok-free.dev';
 
-// Native clients identify themselves so the backend can serve a token-based
-// (rather than cookie-based) auth contract. Sent on every request.
-export const CLIENT_TYPE_HEADER = 'X-Client-Type';
-export const CLIENT_TYPE_VALUE = 'native';
+// The API is client-agnostic and negotiates on JSON-LD only (auth tokens travel in
+// the body). Every mutating call sends and accepts application/ld+json.
+export const LD_JSON = 'application/ld+json';

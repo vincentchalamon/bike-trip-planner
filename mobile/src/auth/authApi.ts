@@ -1,15 +1,13 @@
-import { API_BASE_URL, CLIENT_TYPE_HEADER, CLIENT_TYPE_VALUE } from '../api/config';
+import { API_BASE_URL, LD_JSON } from '../api/config';
 import { clearTokens, getRefresh, setTokens } from './tokens';
 
-// verify / refresh talk to endpoints whose real (native) contract differs from
-// the exported OpenAPI (verify is documented 204 but returns { token }; refresh
-// is documented input:false but here we post the refresh token). They use plain
-// fetch rather than the typed client. See README "Backend native contract".
+// verify / refresh use plain fetch rather than the typed client: both return the
+// token pair ({ token, refresh_token }) in the body, and refresh posts the refresh
+// token in the body. The API negotiates on JSON-LD only, so both headers are set.
 
-const jsonHeaders = {
-  'Content-Type': 'application/json',
-  Accept: 'application/json',
-  [CLIENT_TYPE_HEADER]: CLIENT_TYPE_VALUE,
+const ldJsonHeaders = {
+  'Content-Type': LD_JSON,
+  Accept: LD_JSON,
 };
 
 type TokenPair = { token?: string; refresh_token?: string };
@@ -18,7 +16,7 @@ type TokenPair = { token?: string; refresh_token?: string };
 export async function verifyMagicToken(token: string): Promise<boolean> {
   const res = await fetch(`${API_BASE_URL}/auth/verify`, {
     method: 'POST',
-    headers: jsonHeaders,
+    headers: ldJsonHeaders,
     body: JSON.stringify({ token }),
   });
   if (!res.ok) {
@@ -51,7 +49,7 @@ async function doRefresh(): Promise<boolean> {
   }
   const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
-    headers: jsonHeaders,
+    headers: ldJsonHeaders,
     body: JSON.stringify({ refresh_token: refresh }),
   });
   if (!res.ok) {
