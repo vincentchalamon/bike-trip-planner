@@ -5,29 +5,33 @@ import { DataBlock } from './DataBlock';
 import { Route } from '../ui/icons';
 import { useTheme } from '../../theme';
 
-// Per-day supply timeline (water / food points). Placeholder content (per-marker
-// water/food counts); #1038 renders the distance-along-route timeline.
+// Per-day supply timeline (water / food points), ordered by distance along the
+// route: each marker shows its km mark plus the water / food counts.
 export function SupplyBlock({ supplyTimeline }: { supplyTimeline: SupplyMarkerData[] }) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const ordered = [...supplyTimeline].sort(
+    (a, b) => a.distanceFromStart - b.distanceFromStart,
+  );
   return (
     <DataBlock
       title={t('trip.blocks.supply')}
       icon={<Route color={theme.colors.mutedIcon} size={18} />}
-      isEmpty={supplyTimeline.length === 0}
+      isEmpty={ordered.length === 0}
       emptyLabel={t('trip.blocks.supplyEmpty')}
-      count={supplyTimeline.length}
+      count={ordered.length}
     >
-      {supplyTimeline.map((marker, i) => (
+      {ordered.map((marker, i) => (
         <Text
           key={i}
           style={{
             color: theme.colors.foreground,
-            fontFamily: theme.fonts.sans,
-            fontSize: 14,
+            fontFamily: theme.fonts.mono,
+            fontSize: 13,
           }}
         >
-          {t('trip.blocks.supplyMarker', {
+          {t('trip.blocks.supplyMarkerAt', {
+            distance: Math.round(marker.distanceFromStart),
             water: marker.water.length,
             food: marker.food.length,
           })}
