@@ -9,6 +9,7 @@
     "./constants": "./accommodation-constants.ts",
     "./mercure": "./mercure.ts",
     "./reconciliation": "./reconciliation.ts",
+    "./elevation": "./elevation.ts",
     "./package.json": "./package.json"
   },
   "dependencies": {

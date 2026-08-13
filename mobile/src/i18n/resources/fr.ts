@@ -62,6 +62,7 @@ export const fr = {
     rest: 'repos',
     today: "Aujourd'hui",
     stageMeta: '{{distance}} km · +{{elevation}} m',
+    elevationProfileA11y: 'Profil altimétrique du voyage',
     states: {
       upcoming: 'À venir',
       ongoing: 'En cours',

@@ -64,6 +64,7 @@ export const en: typeof fr = {
     rest: 'rest',
     today: 'Today',
     stageMeta: '{{distance}} km · +{{elevation}} m',
+    elevationProfileA11y: 'Trip elevation profile',
     states: {
       upcoming: 'Upcoming',
       ongoing: 'Ongoing',
