@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Screen } from '../src/components/ui';
 import { useTheme } from '../src/theme';

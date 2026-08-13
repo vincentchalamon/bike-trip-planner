@@ -19,18 +19,18 @@ export default function Trips() {
   const router = useRouter();
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   const load = useCallback(async () => {
-    setError(null);
+    setHasError(false);
     try {
       setTrips(await fetchTrips());
     } catch {
-      setError(t('trips.error'));
+      setHasError(true);
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -44,12 +44,12 @@ export default function Trips() {
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <Screen padded={false}>
         <ErrorState
           title={t('common.error')}
-          description={error}
+          description={t('trips.error')}
           onRetry={() => void load()}
           retryLabel={t('common.retry')}
         />
