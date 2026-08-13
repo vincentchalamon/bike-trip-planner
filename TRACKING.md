@@ -1757,15 +1757,19 @@ Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'archit
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1011](https://github.com/vincentchalamon/bike-trip-planner/issues/1011) | spike(mobile): auth Mercure par header | S | ⏳ À faire | — | — |
-| 2 | [#1012](https://github.com/vincentchalamon/bike-trip-planner/issues/1012) | build(repo): workspace npm + core/ (Zod) + recâblage web minimal | L | ⏳ À faire | — | merge `feature/mobile-foundation` |
-| 3 | [#1013](https://github.com/vincentchalamon/bike-trip-planner/issues/1013) | feat(core): réconciliation en réducteurs purs + tests vitest + store web | L | ⏳ À faire | — | #1012 |
-| 4 | [#1014](https://github.com/vincentchalamon/bike-trip-planner/issues/1014) | feat(mobile): store mince (compose core) + SSE header + roadbook live | M | ⏳ À faire | — | #1011, #1013 |
-| 5 | [#1015](https://github.com/vincentchalamon/bike-trip-planner/issues/1015) | feat(mobile): édition optimiste (supprimer étape) — preuve de bout en bout | M | ⏳ À faire | — | #1014 |
+| 0 | Pré-requis | Fondation Expo `mobile/` → `main` | — | ✅ Mergé | [#1018](https://github.com/vincentchalamon/bike-trip-planner/pull/1018) | — |
+| 1 | [#1011](https://github.com/vincentchalamon/bike-trip-planner/issues/1011) | spike(mobile): auth Mercure par header | S | ✅ Mergé | [#1020](https://github.com/vincentchalamon/bike-trip-planner/pull/1020) | — |
+| 1b | [#1019](https://github.com/vincentchalamon/bike-trip-planner/issues/1019) | feat(mercure): livrer le JWT subscriber aux clients non-navigateur | S | ✅ Mergé | [#1022](https://github.com/vincentchalamon/bike-trip-planner/pull/1022) | #1011 |
+| 2 | [#1012](https://github.com/vincentchalamon/bike-trip-planner/issues/1012) | build(repo): workspace npm + core/ (Zod) + recâblage web minimal | L | ✅ Mergé | [#1021](https://github.com/vincentchalamon/bike-trip-planner/pull/1021) | #1018 |
+| 3 | [#1013](https://github.com/vincentchalamon/bike-trip-planner/issues/1013) | feat(core): réconciliation en réducteurs purs + tests vitest + store web | L | ✅ Mergé | [#1023](https://github.com/vincentchalamon/bike-trip-planner/pull/1023) | #1012 |
+| 4 | [#1014](https://github.com/vincentchalamon/bike-trip-planner/issues/1014) | feat(mobile): store mince (compose core) + SSE header + roadbook live | M | ✅ Mergé | [#1024](https://github.com/vincentchalamon/bike-trip-planner/pull/1024) | #1011, #1013 |
+| 5 | [#1015](https://github.com/vincentchalamon/bike-trip-planner/issues/1015) | feat(mobile): édition optimiste (supprimer étape) — preuve de bout en bout | M | 🚧 En cours | [#1025](https://github.com/vincentchalamon/bike-trip-planner/pull/1025) | #1014 |
 
-**Ordre :** #1011 (indépendant) ‖ [merge fondation → #1012 → #1013] → #1014 → #1015.
+**Ordre :** #1011 (indépendant) ‖ [merge fondation #1018 → #1012 → #1013] → #1014 → #1015 ; #1019 (backend, engendré par le spike #1011) inséré avant #1014.
 
-**Risques :** #1012 = risque infra max (Docker/CI/workspaces), code déplacé minimal → isolé ; #1013 = risque logique max (courses #840/#649/#787) → tests de caractérisation d'abord ; #1011 bloquant (hub cookie-only → item backend avant #1014) ; vérif **device-bound**.
+**Risques (constatés) :** #1012 = risque infra max (Docker/CI/workspaces) : l'agent worktree a perdu son isolation, WIP récupéré + complété à la main (build image PWA prod validé localement) ; #1013 = risque logique max (courses #840/#649/#787) : réducteurs purs + tests de caractérisation mutation-prouvés avant recâblage ; #1011 = le hub n'était **pas** cookie-only (header OK), mais la **livraison** du token l'était → #1019 ; **validation device** (#1014/#1015) faite via ngrok + device physique (roadbook live SSE + suppression optimiste réconciliée).
+
+**Chaîne sérielle stackée** (pas de `/sprint` parallèle) : chaque PR mergée avant la suivante, donc **aucun conflit de merge attendu** entre elles.
 
 ### Suite (esquissé, cf. #1016)
 
