@@ -37,6 +37,9 @@ export function subscribeToTrip(
 
   const es = new EventSource(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
+    // Mercure/Caddy streams SSE with `\n` line endings; pin it so react-native-sse
+    // parses deterministically instead of warning it cannot auto-detect them.
+    lineEndingCharacter: '\n',
   });
 
   es.addEventListener('message', (event) => {
