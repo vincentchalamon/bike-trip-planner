@@ -86,6 +86,11 @@ export const en: typeof fr = {
     sse: {
       computing: 'Computing…',
     },
+    map: {
+      layerMap: 'Map',
+      layerSatellite: 'Satellite',
+      toggleA11y: 'Toggle base map',
+    },
     blocks: {
       distanceKm: '{{distance}} km',
       alerts: 'Alerts',
