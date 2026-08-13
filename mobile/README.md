@@ -29,6 +29,67 @@ npx expo run:android      # builds the dev client and installs it on device/emul
 npx expo start --dev-client
 ```
 
+## Installable preview build (device install)
+
+To test an increment on a real phone without keeping Metro + a tunnel running,
+build a standalone, self-contained APK once and install it. Policy is **free +
+local**: builds run on your own machine, no cloud EAS project is required.
+
+There are two paths; pick per need:
+
+| Path | Command | Ships JS bundle? | Needs Metro at runtime? |
+| --- | --- | --- | --- |
+| Dev client (debug) | `npx expo run:android` | no (Metro serves it) | yes |
+| Preview (standalone) | `npm run build:preview` | yes (baked in) | no |
+
+The **preview** build is the one you sideload for offline testing. It reads the
+`preview` profile in [`eas.json`](eas.json) (`distribution: internal`,
+`android.buildType: apk`) and runs the whole build locally via `eas build
+--local`.
+
+```bash
+cd mobile
+
+# EXPO_PUBLIC_API_URL is inlined into the bundle at build time. A non-development
+# build FAILS CLOSED without it (see src/api/config.ts and app.config.js), so it is
+# mandatory here — it also fixes the Android App Link host for the magic link.
+EXPO_PUBLIC_API_URL=https://epidermis-sandlot-headrest.ngrok-free.dev \
+  npm run build:preview
+# -> writes an APK such as build-<timestamp>.apk in mobile/
+```
+
+Notes:
+
+- `eas build --local` generates and reuses a local keystore on first run; you may
+  be prompted to log in to an Expo account for credential storage. No cloud build
+  is submitted.
+- `eas-cli` is not a project dependency; run it with `npx eas-cli ...` if the
+  `eas` binary is not on your `PATH` (`npm run build:preview` calls `eas`
+  directly — prefix with `npx` if needed).
+
+### Install the APK on a device
+
+```bash
+adb install -r build-<timestamp>.apk   # USB debugging enabled, device authorised
+# or copy the .apk to the phone and open it (allow "install unknown apps")
+```
+
+### How the installed app reaches the API
+
+The preview APK talks to whatever host you baked into `EXPO_PUBLIC_API_URL` at
+build time — there is no runtime override, the value is compiled into the JS
+bundle. For a physical device the host must be reachable **from the phone**, not
+just from your laptop:
+
+- **ngrok public URL** (the default above): works over Wi-Fi or cellular, and its
+  HTTPS is what the Android App Link (`/auth/verify`) verifies. Recommended.
+- **A LAN IP** (`http://192.168.x.y:8000`): only works when the phone is on the
+  same network, and cleartext HTTP additionally needs an ATS/`usesCleartext`
+  exception — the ngrok tunnel avoids both problems.
+
+`localhost` never works from a phone: it resolves to the device itself. To repoint
+the app at another environment, rebuild with a different `EXPO_PUBLIC_API_URL`.
+
 ## Pointing at the API (ngrok)
 
 The API base URL is read from `EXPO_PUBLIC_API_URL`. Create `mobile/.env`:
