@@ -8,4 +8,5 @@ export { AccommodationBlock } from './AccommodationBlock';
 export { SupplyBlock } from './SupplyBlock';
 export { EventsBlock } from './EventsBlock';
 export { RoadbookView } from './RoadbookView';
+export { RoadbookBanner, type RoadbookBannerVariant } from './RoadbookBanner';
 export { TripMapView } from './TripMapView';
