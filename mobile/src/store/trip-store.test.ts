@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import type { TripDetail } from '../api/trips';
 import { stageDataFromDetail, useTripStore } from './trip-store';
 
@@ -72,7 +73,9 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
     expect(s.loading).toBe(false);
     expect(s.stages).toHaveLength(1);
     expect(s.stages[0]!.startLabel).toBe('Paris');
-    expect(s.stages[0]!.accommodationSearchRadiusKm).toBe(5);
+    expect(s.stages[0]!.accommodationSearchRadiusKm).toBe(
+      DEFAULT_ACCOMMODATION_RADIUS_KM,
+    );
   });
 
   it('stageDataFromDetail tags persisted alerts with the terrain group', () => {

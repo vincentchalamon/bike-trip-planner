@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { StageData } from '@btp/core';
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import {
   reconcileStageUpdate,
   reconcileTripReady,
@@ -38,7 +39,7 @@ export function stageDataFromDetail(s: ApiStage): StageData {
     accommodations: (s.accommodations as StageData['accommodations']) ?? [],
     selectedAccommodation:
       (s.selectedAccommodation as StageData['selectedAccommodation']) ?? null,
-    accommodationSearchRadiusKm: 5,
+    accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     isRestDay: s.isRestDay ?? false,
     supplyTimeline: [],
     events: [],
