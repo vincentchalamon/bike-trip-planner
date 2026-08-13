@@ -426,6 +426,54 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     expect([...next.recomputingStages]).toEqual([0]);
   });
 
+  it("stages_computed (partial update) keeps the derived label on an unaffected stage when the payload omits it", () => {
+    // Mirrors use-mercure.ts:90 (`label: s.label ?? existing.label`): on the
+    // unaffected branch a null payload label must NOT blank the reverse-geocoded
+    // label already on the stage; only the affected stage is replaced.
+    const state = baseState({
+      stages: [
+        stage({ dayNumber: 1, label: "Col du Galibier" }),
+        stage({ dayNumber: 2, label: "Briançon" }),
+      ],
+      recomputingStages: new Set([1]),
+    });
+    const next = reduceMercureEvent(state, {
+      type: "stages_computed",
+      data: {
+        affectedIndices: [1],
+        stages: [
+          {
+            dayNumber: 1,
+            distance: 61,
+            elevation: 100,
+            elevationLoss: 90,
+            startPoint: A,
+            endPoint: B,
+            geometry: [],
+            label: null,
+          },
+          {
+            dayNumber: 2,
+            distance: 40,
+            elevation: 10,
+            elevationLoss: 5,
+            startPoint: B,
+            endPoint: C,
+            geometry: [],
+            label: "Névache",
+          },
+        ],
+      },
+    });
+    // Unaffected stage: core field updated, derived label preserved.
+    expect(next.stages[0]!.distance).toBe(61);
+    expect(next.stages[0]!.label).toBe("Col du Galibier");
+    // Affected stage: fully replaced by the payload.
+    expect(next.stages[1]!.label).toBe("Névache");
+    // In-range recomputing marker is kept (pruning only drops out-of-range).
+    expect([...next.recomputingStages]).toEqual([1]);
+  });
+
   it("trip_ready delegates to reconcileTripReady, stores status and clears recomputing", () => {
     const acc = { name: "Gite" } as StageData["accommodations"][number];
     const state = baseState({

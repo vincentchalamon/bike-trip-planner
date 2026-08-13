@@ -366,8 +366,8 @@ function reconcileStagesComputed(
           elevationLoss: s.elevationLoss ?? 0,
           startPoint: s.startPoint,
           endPoint: s.endPoint,
-          geometry: s.geometry,
-          label: s.label,
+          geometry: s.geometry ?? prev.geometry,
+          label: s.label ?? prev.label,
         };
       }
       return {
