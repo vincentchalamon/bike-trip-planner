@@ -46,13 +46,80 @@ export function stageDataFromDetail(s: ApiStage): StageData {
   };
 }
 
-interface TripState {
+/**
+ * A single user modification accumulated in the batch queue before being sent
+ * in one `POST /trips/{id}/recompute` pass. Mirrors the web store's shape and
+ * the backend `TripModification` (type ↔ re-dispatched handlers).
+ */
+export interface Modification {
+  /** Zero-based stage index. Null for trip-level changes (dates, pacing). */
+  stageIndex: number | null;
+  type: 'accommodation' | 'distance' | 'dates' | 'pacing';
+  /** Human-readable description for the queue panel. */
+  label: string;
+}
+
+/** Editable pacing / dates / preferences slice, mirrored from the web store. */
+export interface TripConfig {
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
+  ebikeMode: boolean;
+  departureHour: number;
+  enabledAccommodationTypes: string[];
+}
+
+const DEFAULT_CONFIG: TripConfig = {
+  startDate: null,
+  endDate: null,
+  fatigueFactor: 0.9,
+  elevationPenalty: 50,
+  maxDistancePerDay: 80,
+  averageSpeed: 15,
+  ebikeMode: false,
+  departureHour: 8,
+  enabledAccommodationTypes: [],
+};
+
+// Add `days` to a YYYY-MM-DD / ISO date string, returning YYYY-MM-DD. Used for
+// the optimistic endDate when a structural edit changes the stage count; the
+// authoritative value arrives over SSE. UTC math keeps it timezone-stable.
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Renumber dayNumbers 1..n after a structural edit.
+function renumber(stages: StageData[]): StageData[] {
+  return stages.map((stage, i) => ({ ...stage, dayNumber: i + 1 }));
+}
+
+// Recompute endDate from startDate + (stageCount - 1) days when a structural
+// edit changed the count (each stage spans one calendar day, rest days
+// included, recette #649). Returns the patch to apply, or {} without a start.
+function endDatePatch(
+  startDate: string | null,
+  stageCount: number,
+): Partial<TripConfig> {
+  if (!startDate) return {};
+  return { endDate: addDays(startDate, Math.max(0, stageCount - 1)) };
+}
+
+interface TripState extends TripConfig {
   tripId: string | null;
   title: string | null;
   stages: StageData[];
   // Trip started (startDate <= today): the backend rejects edits with 423, so the
   // UI disables them. Read from the /detail payload on hydrate.
   isLocked: boolean;
+  // Route outside the provisioned coverage area: editing/rerouting is disabled.
+  outOfZone: boolean;
+  // Accumulated edits not yet sent to /recompute.
+  pendingModifications: Modification[];
   loading: boolean;
   error: string | null;
   // Initial load from a /trips/{id}/detail payload.
@@ -63,30 +130,66 @@ interface TripState {
   applyStageUpdate: (index: number, stage: StageData) => void;
   // Replace the whole stage list (optimistic rollback restores a snapshot).
   setStages: (stages: StageData[]) => void;
-  // Optimistic delete: drop a stage and renumber the days, mirroring the web
-  // store. The authoritative state arrives via the SSE reconciliation; on API
-  // failure the caller restores the pre-delete snapshot via setStages.
+  // Patch any subset of the editable config slice.
+  setConfig: (patch: Partial<TripConfig>) => void;
+  setTitle: (title: string) => void;
+  setIsLocked: (isLocked: boolean) => void;
+  setOutOfZone: (outOfZone: boolean) => void;
+  // Optimistic structural edits (mirror the web store). The authoritative state
+  // arrives via SSE reconciliation; on API failure the caller restores the
+  // pre-edit snapshot via setStages.
   deleteStageOptimistic: (index: number) => void;
+  insertRestDayOptimistic: (afterIndex: number) => void;
+  insertStageOptimistic: (afterIndex: number, placeholder: StageData) => void;
+  moveStageOptimistic: (fromIndex: number, toIndex: number) => void;
+  selectAccommodationOptimistic: (
+    stageIndex: number,
+    accIndex: number,
+    nextStageIndex: number | null,
+  ) => void;
+  deselectAccommodationOptimistic: (stageIndex: number) => void;
+  // Batch queue: replace a duplicate (same type + stageIndex) rather than append.
+  queueModification: (modification: Modification) => void;
+  cancelAllModifications: () => void;
+  clearPendingModifications: () => void;
   setStatus: (patch: { loading?: boolean; error?: string | null }) => void;
   reset: () => void;
 }
 
-// Thin RN store: it holds StageData and delegates every reconciliation to the
-// pure reducers in @btp/core, so the web and mobile stores share one source of
-// truth and this file carries no reconciliation logic of its own (#1014).
+// Thin RN store: it holds StageData + the editable config and delegates every
+// reconciliation to the pure reducers in @btp/core, so the web and mobile stores
+// share one source of truth (#1014). Optimistic structural edits mirror the web
+// store's renumber/date bookkeeping so a mutation reflects immediately; the
+// mutation runners (mutations.ts) drive the API call + rollback (#1031).
 export const useTripStore = create<TripState>((set, get) => ({
   tripId: null,
   title: null,
   stages: [],
   isLocked: false,
+  outOfZone: false,
+  pendingModifications: [],
   loading: true,
   error: null,
+  ...DEFAULT_CONFIG,
   hydrate: (tripId, detail) =>
     set({
       tripId,
       title: detail.title ?? null,
       stages: (detail.stages ?? []).map(stageDataFromDetail),
       isLocked: detail.isLocked ?? false,
+      outOfZone: detail.outOfZone ?? false,
+      startDate: detail.startDate ?? null,
+      endDate: detail.endDate ?? null,
+      fatigueFactor: detail.fatigueFactor ?? DEFAULT_CONFIG.fatigueFactor,
+      elevationPenalty:
+        detail.elevationPenalty ?? DEFAULT_CONFIG.elevationPenalty,
+      maxDistancePerDay:
+        detail.maxDistancePerDay ?? DEFAULT_CONFIG.maxDistancePerDay,
+      averageSpeed: detail.averageSpeed ?? DEFAULT_CONFIG.averageSpeed,
+      ebikeMode: detail.ebikeMode ?? DEFAULT_CONFIG.ebikeMode,
+      departureHour: detail.departureHour ?? DEFAULT_CONFIG.departureHour,
+      enabledAccommodationTypes: detail.enabledAccommodationTypes ?? [],
+      pendingModifications: [],
       loading: false,
       error: null,
     }),
@@ -95,12 +198,107 @@ export const useTripStore = create<TripState>((set, get) => ({
   applyStageUpdate: (index, stage) =>
     set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
   setStages: (stages) => set({ stages }),
+  setConfig: (patch) => set(patch),
+  setTitle: (title) => set({ title }),
+  setIsLocked: (isLocked) => set({ isLocked }),
+  setOutOfZone: (outOfZone) => set({ outOfZone }),
   deleteStageOptimistic: (index) =>
+    set((state) => {
+      const stages = renumber(state.stages.filter((_, i) => i !== index));
+      return { stages, ...endDatePatch(state.startDate, stages.length) };
+    }),
+  insertRestDayOptimistic: (afterIndex) =>
+    set((state) => {
+      const after = state.stages[afterIndex];
+      if (!after) return {};
+      const restDay: StageData = {
+        dayNumber: afterIndex + 2,
+        distance: 0,
+        elevation: 0,
+        elevationLoss: 0,
+        startPoint: { ...after.endPoint },
+        endPoint: { ...after.endPoint },
+        geometry: [],
+        label: null,
+        startLabel: after.endLabel ?? null,
+        endLabel: after.endLabel ?? null,
+        weather: null,
+        alerts: [],
+        pois: [],
+        accommodations: [],
+        selectedAccommodation: null,
+        accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+        isRestDay: true,
+        supplyTimeline: [],
+        events: [],
+      };
+      const next = state.stages.slice();
+      next.splice(afterIndex + 1, 0, restDay);
+      const stages = renumber(next);
+      return { stages, ...endDatePatch(state.startDate, stages.length) };
+    }),
+  insertStageOptimistic: (afterIndex, placeholder) =>
+    set((state) => {
+      const next = state.stages.slice();
+      next.splice(afterIndex + 1, 0, placeholder);
+      const stages = renumber(next);
+      return { stages, ...endDatePatch(state.startDate, stages.length) };
+    }),
+  moveStageOptimistic: (fromIndex, toIndex) =>
+    set((state) => {
+      const next = state.stages.slice();
+      const [moved] = next.splice(fromIndex, 1);
+      if (!moved) return {};
+      next.splice(toIndex, 0, moved);
+      return { stages: renumber(next) };
+    }),
+  selectAccommodationOptimistic: (stageIndex, accIndex, nextStageIndex) =>
+    set((state) => {
+      const stage = state.stages[stageIndex];
+      const acc = stage?.accommodations[accIndex];
+      if (!stage || !acc) return {};
+      const endPoint = { lat: acc.lat, lon: acc.lon, ele: 0 };
+      const stages = state.stages.map((s, i) => {
+        if (i === stageIndex) {
+          return {
+            ...s,
+            accommodations: [acc],
+            selectedAccommodation: acc,
+            endPoint,
+          };
+        }
+        if (i === nextStageIndex) {
+          return { ...s, startPoint: endPoint };
+        }
+        return s;
+      });
+      return { stages };
+    }),
+  // Only clears the selection. Unlike selectAccommodationOptimistic we do NOT
+  // revert endPoint / the next startPoint: the pre-selection route endpoint is
+  // not retained here, so the stage stays pinned to the former accommodation
+  // until the SSE recompute streams the authoritative geometry. A transient,
+  // self-healing inconsistency by design (rerouting → requiresRouting: true).
+  deselectAccommodationOptimistic: (stageIndex) =>
     set((state) => ({
-      stages: state.stages
-        .filter((_, i) => i !== index)
-        .map((stage, i) => ({ ...stage, dayNumber: i + 1 })),
+      stages: state.stages.map((s, i) =>
+        i === stageIndex ? { ...s, selectedAccommodation: null } : s,
+      ),
     })),
+  queueModification: (modification) =>
+    set((state) => {
+      const i = state.pendingModifications.findIndex(
+        (m) =>
+          m.type === modification.type &&
+          m.stageIndex === modification.stageIndex,
+      );
+      const next = state.pendingModifications.slice();
+      if (i !== -1) next[i] = modification;
+      else next.push(modification);
+      return { pendingModifications: next };
+    }),
+  cancelAllModifications: () => set({ pendingModifications: [] }),
+  clearPendingModifications: () => set({ pendingModifications: [] }),
   setStatus: (patch) => set(patch),
   reset: () =>
     set({
@@ -108,7 +306,10 @@ export const useTripStore = create<TripState>((set, get) => ({
       title: null,
       stages: [],
       isLocked: false,
+      outOfZone: false,
+      pendingModifications: [],
       loading: true,
       error: null,
+      ...DEFAULT_CONFIG,
     }),
 }));
