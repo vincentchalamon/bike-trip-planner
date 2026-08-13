@@ -1,0 +1,67 @@
+// French resources (source of truth for the key set — en.ts mirrors it).
+export const fr = {
+  common: {
+    retry: 'Réessayer',
+  },
+  nav: {
+    create: 'Créer',
+    trips: 'Voyages',
+    account: 'Compte',
+  },
+  header: {
+    login: 'Connexion',
+    trip: 'Roadbook',
+  },
+  login: {
+    brand: 'Bike Trip Planner',
+    emailLabel: 'Adresse email',
+    emailPlaceholder: 'vous@exemple.fr',
+    submit: 'Recevoir un lien',
+    submitting: 'Envoi…',
+    sent: 'Un lien de connexion a été envoyé à {{email}}. Ouvrez-le sur cet appareil pour vous connecter.',
+    error: "Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.",
+  },
+  auth: {
+    verifying: 'Connexion en cours…',
+  },
+  trips: {
+    title: 'Mes voyages',
+    error: 'Impossible de charger les voyages.',
+    empty: 'Aucun voyage pour le moment.',
+    untitled: 'Voyage sans titre',
+    meta: '{{stages}} étapes · {{distance}} km · {{status}}',
+  },
+  create: {
+    title: 'Créer un voyage',
+    description:
+      'Collez un lien Komoot, Strava ou RideWithGPS pour générer votre roadbook. Bientôt disponible.',
+  },
+  account: {
+    title: 'Compte',
+    language: 'Langue',
+    logout: 'Déconnexion',
+  },
+  trip: {
+    title: 'Roadbook',
+    segmentRoadbook: 'Roadbook',
+    segmentMap: 'Carte',
+    empty: 'Aucune étape calculée.',
+    mapEmpty: 'Aucun tracé disponible pour ce voyage.',
+    day: 'Jour {{day}}',
+    rest: 'repos',
+    stageMeta: '{{distance}} km · +{{elevation}} m',
+    delete: 'Supprimer',
+    deleteA11y: 'Supprimer le jour {{day}}',
+    deleteConfirmTitle: 'Supprimer cette étape ?',
+    deleteConfirmMessage: "Le jour sera fusionné avec l'étape voisine.",
+    cancel: 'Annuler',
+    lockedTitle: 'Voyage démarré',
+    lockedMessage: 'Ce voyage a commencé : il est en lecture seule.',
+    deleteFailedTitle: 'Suppression impossible',
+    deleteFailedMessage: 'La suppression a échoué. Réessayez.',
+  },
+  language: {
+    fr: 'Français',
+    en: 'English',
+  },
+};
