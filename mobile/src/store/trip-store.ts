@@ -274,6 +274,11 @@ export const useTripStore = create<TripState>((set, get) => ({
       });
       return { stages };
     }),
+  // Only clears the selection. Unlike selectAccommodationOptimistic we do NOT
+  // revert endPoint / the next startPoint: the pre-selection route endpoint is
+  // not retained here, so the stage stays pinned to the former accommodation
+  // until the SSE recompute streams the authoritative geometry. A transient,
+  // self-healing inconsistency by design (rerouting → requiresRouting: true).
   deselectAccommodationOptimistic: (stageIndex) =>
     set((state) => ({
       stages: state.stages.map((s, i) =>

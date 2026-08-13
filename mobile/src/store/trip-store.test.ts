@@ -181,6 +181,26 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
     expect(s.stages[1]!.startPoint).toEqual({ lat: 9, lon: 9, ele: 0 });
   });
 
+  it('deselectAccommodationOptimistic clears the selection but leaves endPoint for SSE', () => {
+    const acc = { name: 'Gite', lat: 9, lon: 9 } as StageData['accommodations'][number];
+    useTripStore.setState({
+      stages: [
+        stageData({
+          accommodations: [acc],
+          selectedAccommodation: acc,
+          endPoint: { lat: 9, lon: 9, ele: 0 },
+        }),
+      ],
+      loading: false,
+    });
+    useTripStore.getState().deselectAccommodationOptimistic(0);
+    const s = useTripStore.getState();
+    expect(s.stages[0]!.selectedAccommodation).toBeNull();
+    // endPoint stays pinned to the former accommodation until the recompute
+    // reconciles it — documented transient behavior, not reverted here.
+    expect(s.stages[0]!.endPoint).toEqual({ lat: 9, lon: 9, ele: 0 });
+  });
+
   it('queueModification appends then replaces a duplicate (same type+index)', () => {
     const q = () => useTripStore.getState().queueModification;
     q()({ stageIndex: 0, type: 'distance', label: 'a' });

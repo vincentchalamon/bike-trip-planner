@@ -1,15 +1,22 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
 import {
+  runAddPoiWaypoint,
   runAddStage,
   runAnalyze,
   runApplyBatch,
   runDeleteTrip,
+  runDeselectAccommodation,
   runDuplicateTrip,
+  runInsertRestDay,
+  runMoveStage,
   runScanAccommodations,
   runSelectAccommodation,
+  runUpdateAccommodationTypes,
   runUpdateDates,
+  runUpdatePacing,
   runUpdateStageDistance,
+  runUpdateTitle,
 } from './mutations';
 import { useTripStore } from './trip-store';
 import { useOfflineStore } from './offline-store';
@@ -33,7 +40,10 @@ import {
   updateTripConfig,
   createStage,
   updateStageDistance,
+  moveStage,
+  insertRestDay,
   setStageAccommodation,
+  addPoiWaypoint,
   scanAccommodations,
   applyBatchRecompute,
   analyzeTrip,
@@ -192,6 +202,162 @@ describe('runSelectAccommodation', () => {
     expect(ok).toBe(false);
     expect(onFailure).toHaveBeenCalledWith('conflict');
     expect(useTripStore.getState().stages[0]!.selectedAccommodation).toBeNull();
+  });
+});
+
+describe('config runners (non-routing) — allowed out of zone + rollback', () => {
+  beforeEach(() => useTripStore.setState({ outOfZone: true }));
+
+  const pacing = {
+    fatigueFactor: 0.75,
+    elevationPenalty: 60,
+    maxDistancePerDay: 95,
+    averageSpeed: 21,
+    ebikeMode: true,
+    departureHour: 7,
+  };
+
+  it('runUpdatePacing applies optimistically out of zone', async () => {
+    mock(updateTripConfig).mockResolvedValue({ ok: true, status: 202 });
+    expect(await runUpdatePacing('t1', pacing, ctx(), jest.fn())).toBe(true);
+    expect(useTripStore.getState().averageSpeed).toBe(21);
+    expect(updateTripConfig).toHaveBeenCalled();
+  });
+
+  it('runUpdatePacing rolls back pacing on 422', async () => {
+    const before = useTripStore.getState().averageSpeed;
+    mock(updateTripConfig).mockResolvedValue({ ok: false, status: 422 });
+    const onFailure = jest.fn();
+    expect(await runUpdatePacing('t1', pacing, ctx(), onFailure)).toBe(false);
+    expect(useTripStore.getState().averageSpeed).toBe(before);
+    expect(onFailure).toHaveBeenCalledWith('validation');
+  });
+
+  it('runUpdateTitle applies then rolls back on failure', async () => {
+    mock(updateTripConfig).mockResolvedValue({ ok: true, status: 202 });
+    expect(await runUpdateTitle('t1', 'Corse', ctx(), jest.fn())).toBe(true);
+    expect(useTripStore.getState().title).toBe('Corse');
+
+    const before = useTripStore.getState().title;
+    mock(updateTripConfig).mockResolvedValue({ ok: false, status: 422 });
+    expect(await runUpdateTitle('t1', 'Alpes', ctx(), jest.fn())).toBe(false);
+    expect(useTripStore.getState().title).toBe(before);
+  });
+
+  it('runUpdateAccommodationTypes applies then rolls back on failure', async () => {
+    mock(updateTripConfig).mockResolvedValue({ ok: true, status: 202 });
+    expect(
+      await runUpdateAccommodationTypes('t1', ['hotel'], ctx(), jest.fn()),
+    ).toBe(true);
+    expect(useTripStore.getState().enabledAccommodationTypes).toEqual(['hotel']);
+
+    const before = useTripStore.getState().enabledAccommodationTypes;
+    mock(updateTripConfig).mockResolvedValue({ ok: false, status: 422 });
+    expect(
+      await runUpdateAccommodationTypes('t1', ['rental'], ctx(), jest.fn()),
+    ).toBe(false);
+    expect(useTripStore.getState().enabledAccommodationTypes).toEqual(before);
+  });
+
+  it('runInsertRestDay inserts optimistically out of zone and rolls back on failure', async () => {
+    mock(insertRestDay).mockResolvedValueOnce({ ok: true, status: 202 });
+    expect(await runInsertRestDay('t1', 0, ctx(), jest.fn())).toBe(true);
+    expect(useTripStore.getState().stages).toHaveLength(3);
+    expect(insertRestDay).toHaveBeenCalledWith('t1', 0);
+
+    mock(insertRestDay).mockResolvedValueOnce({ ok: false, status: 409 });
+    expect(await runInsertRestDay('t1', 0, ctx(), jest.fn())).toBe(false);
+    expect(useTripStore.getState().stages).toHaveLength(3); // rolled back to pre-call
+  });
+});
+
+describe('routing runners are refused out of zone (requiresRouting flag)', () => {
+  beforeEach(() => useTripStore.setState({ outOfZone: true }));
+
+  it('runMoveStage', async () => {
+    const onFailure = jest.fn();
+    expect(await runMoveStage('t1', 0, 1, ctx(), onFailure)).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('out_of_zone');
+    expect(moveStage).not.toHaveBeenCalled();
+    expect(useTripStore.getState().stages).toHaveLength(2);
+  });
+
+  it('runDeselectAccommodation', async () => {
+    const onFailure = jest.fn();
+    expect(await runDeselectAccommodation('t1', 0, ctx(), onFailure)).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('out_of_zone');
+    expect(setStageAccommodation).not.toHaveBeenCalled();
+  });
+
+  it('runAddPoiWaypoint', async () => {
+    const onFailure = jest.fn();
+    expect(await runAddPoiWaypoint('t1', 0, 1, 2, ctx(), onFailure)).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('out_of_zone');
+    expect(addPoiWaypoint).not.toHaveBeenCalled();
+  });
+});
+
+describe('runMoveStage (routing) — optimistic + rollback', () => {
+  beforeEach(() => {
+    useTripStore.setState({
+      stages: [
+        stage({ dayNumber: 1, distance: 10 }),
+        stage({ dayNumber: 2, distance: 20 }),
+      ],
+    });
+  });
+
+  it('moves optimistically then calls the API', async () => {
+    mock(moveStage).mockResolvedValue({ ok: true, status: 202 });
+    expect(await runMoveStage('t1', 1, 0, ctx(), jest.fn())).toBe(true);
+    expect(useTripStore.getState().stages.map((s) => s.distance)).toEqual([
+      20, 10,
+    ]);
+    expect(moveStage).toHaveBeenCalledWith('t1', 1, 0);
+  });
+
+  it('rolls back the stage order on 409', async () => {
+    const before = useTripStore.getState().stages.map((s) => s.distance);
+    mock(moveStage).mockResolvedValue({ ok: false, status: 409 });
+    const onFailure = jest.fn();
+    expect(await runMoveStage('t1', 1, 0, ctx(), onFailure)).toBe(false);
+    expect(useTripStore.getState().stages.map((s) => s.distance)).toEqual(before);
+    expect(onFailure).toHaveBeenCalledWith('conflict');
+  });
+});
+
+describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
+  const acc = { name: 'Gite', lat: 9, lon: 9 } as never;
+
+  beforeEach(() => {
+    useTripStore.setState({
+      stages: [stage({ selectedAccommodation: acc }), stage()],
+    });
+  });
+
+  it('clears the selection optimistically then calls the API with null coords', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: true, status: 202 });
+    expect(await runDeselectAccommodation('t1', 0, ctx(), jest.fn())).toBe(true);
+    expect(useTripStore.getState().stages[0]!.selectedAccommodation).toBeNull();
+    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 0, null, null);
+  });
+
+  it('rolls back the selection on 409', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    const onFailure = jest.fn();
+    expect(await runDeselectAccommodation('t1', 0, ctx(), onFailure)).toBe(false);
+    expect(useTripStore.getState().stages[0]!.selectedAccommodation).toEqual(acc);
+    expect(onFailure).toHaveBeenCalledWith('conflict');
+  });
+});
+
+describe('runAddPoiWaypoint (routing) — calls the API in zone', () => {
+  it('adds the waypoint when allowed', async () => {
+    mock(addPoiWaypoint).mockResolvedValue({ ok: true, status: 202 });
+    expect(await runAddPoiWaypoint('t1', 0, 1.5, 2.5, ctx(), jest.fn())).toBe(
+      true,
+    );
+    expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 0, 1.5, 2.5);
   });
 });
 
