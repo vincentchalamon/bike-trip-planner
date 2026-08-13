@@ -177,17 +177,20 @@ export function reconcileStageUpdate(
 /**
  * Drop recomputing markers for indices that no longer exist after the stage
  * array changed length, so a phantom index never holds the `processing`
- * overlay open forever (#840). Returns a new set.
+ * overlay open forever (#840). Only ever removes indices, so when nothing is
+ * stale it returns the SAME set reference — matching the old in-place
+ * `.delete()` semantics, so a store selector keyed on `recomputingStages`
+ * (Object.is) does not re-render on every resync/structural edit.
  */
 export function pruneStaleRecomputing(
   stageCount: number,
-  recomputing: ReadonlySet<number>,
+  recomputing: Set<number>,
 ): Set<number> {
   const next = new Set<number>();
   for (const i of recomputing) {
     if (i < stageCount) next.add(i);
   }
-  return next;
+  return next.size === recomputing.size ? recomputing : next;
 }
 
 /**

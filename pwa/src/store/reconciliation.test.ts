@@ -236,11 +236,16 @@ describe("pruneStaleRecomputing (#840)", () => {
     expect([...pruned].sort()).toEqual([0, 1]);
   });
 
-  it("returns a new set (does not mutate the input)", () => {
+  it("returns a new set (does not mutate the input) when something is pruned", () => {
     const input = new Set([0, 3]);
     const pruned = pruneStaleRecomputing(1, input);
     expect(input.has(3)).toBe(true);
     expect(pruned).not.toBe(input);
+  });
+
+  it("returns the SAME reference when nothing is stale (preserves Object.is, no phantom re-render)", () => {
+    const input = new Set([0, 1]);
+    expect(pruneStaleRecomputing(2, input)).toBe(input);
   });
 });
 
