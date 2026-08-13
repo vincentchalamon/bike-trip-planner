@@ -2,6 +2,7 @@
 import type { StageData } from '@btp/core';
 import { runDeleteStage } from './delete-stage';
 import { useTripStore } from './trip-store';
+import { useOfflineStore } from './offline-store';
 
 jest.mock('../api/trips', () => ({ deleteStage: jest.fn() }));
 import { deleteStage } from '../api/trips';
@@ -38,6 +39,7 @@ const noop = jest.fn();
 beforeEach(() => {
   jest.clearAllMocks();
   useTripStore.getState().reset();
+  useOfflineStore.setState({ isOnline: true });
   useTripStore.setState({
     stages: [stage(1), stage(2), stage(3)],
     isLocked: false,
@@ -79,14 +81,25 @@ describe('runDeleteStage optimistic delete (#1015)', () => {
     expect(onFailure).toHaveBeenCalledWith('locked');
   });
 
-  it('rolls back and reports "error" when the request throws', async () => {
+  it('rolls back and reports "network" when the request throws', async () => {
     mockDelete.mockRejectedValue(new Error('network'));
     const onFailure = jest.fn();
 
     await runDeleteStage('t1', 2, useTripStore.getState(), onFailure);
 
     expect(useTripStore.getState().stages).toHaveLength(3);
-    expect(onFailure).toHaveBeenCalledWith('error');
+    expect(onFailure).toHaveBeenCalledWith('network');
+  });
+
+  it('does not touch the store or call the API when offline', async () => {
+    useOfflineStore.setState({ isOnline: false });
+    const onFailure = jest.fn();
+
+    await runDeleteStage('t1', 1, useTripStore.getState(), onFailure);
+
+    expect(useTripStore.getState().stages).toHaveLength(3);
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(onFailure).toHaveBeenCalledWith('offline');
   });
 
   it('does not touch the store or call the API when the trip is locked', async () => {
