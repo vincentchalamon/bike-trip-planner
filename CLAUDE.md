@@ -157,6 +157,23 @@ docker compose --profile provisioning run --rm provisioner corse --allow-unroute
 
 **Worktree-agent isolation is not guaranteed — pre-create the worktree and pin the agent to it.** In Sprint 53 (#1012) an agent launched with `isolation: "worktree"` lost its isolation: instead of working in a dedicated worktree it edited the **main checkout** directly, leaving an incomplete WIP uncommitted on `main` that had to be rescued (`git switch -c feature/<n>` carrying the dirty tree, then reset `main` clean). The reliable pattern (used for #1019 right after, no mishap): **create the worktree yourself first** — `git worktree add -b feature/<n> ../<repo>-<n> main` — then launch a non-isolated agent whose prompt names the absolute worktree path and states, as hard rules: `cd` there first, work ONLY there, never touch the main checkout, and never run `git worktree`/`git switch`/`git checkout <branch>` (verify `git rev-parse --abbrev-ref HEAD` is the expected branch and STOP if not). Review the agent's diff before pushing.
 
+**A `/sprint` touching the `mobile/` workspace needs the JS toolchain bootstrapped by hand — it is not dockerized.** On a dev machine `node_modules` is empty (the pwa toolchain runs in Docker; mobile has **no** container at all), so agents cannot run `tsc`/`jest` until the workspace is installed. Do it once and share it (Sprint 54):
+
+1. **One `npm install` at the repo root**, then hard-link into each pre-created worktree — but link **all three** trees, not just the root: `node_modules`, `pwa/node_modules` **and** `mobile/node_modules`. The nested `mobile/node_modules` holds packages that don't hoist (e.g. `@types/jest`); linking only the root leaves mobile `tsc` failing with `Cannot find type definition file for 'jest'`.
+
+   ```bash
+   for p in node_modules pwa/node_modules mobile/node_modules; do
+     [ -d "$MAIN/$p" ] && { mkdir -p "$WT/$p"; rsync -a --delete --link-dest="$MAIN/$p/" "$MAIN/$p/" "$WT/$p/"; }
+   done
+   ```
+
+2. When a worktree agent **adds a dependency**, it must `npm install` in its own worktree (incremental, cheap) so `package.json` and `package-lock.json` stay in sync — CI runs `npm ci` and fails on drift. (A shim `.d.ts` stopgap works for `tsc` but leaves the lockfile out of sync and breaks `npm ci`; prefer the real install.)
+3. **After the sprint merges, re-run `npm install` on the `main` checkout.** Deps added in worktrees are absent from main's stale `node_modules`, so `tsc`/`jest` fail locally on missing modules — this is **not** a regression (CI's `npm ci` from the merged lockfile is green); it is just a stale local tree.
+
+Mobile verification legs (run from the worktree root): `npm run typecheck --workspace mobile` (tsc) and `npm run test --workspace mobile` (jest-expo — invoke via the npm script, not the `jest` binary directly, or it fails to resolve its preset). CI gates mobile on **tsc + jest only** (the RN tree is out of scope for the ESLint/Prettier legs).
+
+**Cleaning up worktrees after a docs sprint: `mkdocs build --strict` run via `docker run python:3.12-slim` writes a root-owned `.mkdocs/` into the mounted worktree** (the container runs as root), which then makes `git worktree remove` fail with `Permission non accordée` on an otherwise-merged branch. Run mkdocs with `--user "$(id -u):$(id -g)"`, or `rm -rf .mkdocs` (needs the owner) before removing the worktree. Same applies to any Docker-in-worktree step that emits build artifacts.
+
 ### GitHub Automation
 
 Claude can also be triggered directly from GitHub:
