@@ -11,7 +11,7 @@ const RETRY_HEADER = 'X-Native-Retry';
 // cannot clone in onResponse; the mutating calls in #1014/#1015 would break there.
 const pendingRetries = new WeakMap<Request, Request>();
 
-const authMiddleware: Middleware = {
+export const authMiddleware: Middleware = {
   async onRequest({ request }) {
     const jwt = getJwt();
     if (jwt) {
