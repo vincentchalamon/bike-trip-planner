@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
-import type { EnrichedStagePayload, MercureEvent } from "@btp/core/mercure";
+import type { MercureEvent } from "@btp/core/mercure";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
+import { enrichedPayloadToStageData } from "@btp/core/reconciliation";
 import type { AlertData, StageData } from "@btp/core";
 
 /**
@@ -648,40 +649,6 @@ function computeStageDiff(prev: StageData, next: StageData): Set<string> {
   if (hasNewAlerts) changed.add("alerts_added");
 
   return changed;
-}
-
-/**
- * Converts an enriched stage wire payload (from `trip_ready` / `stage_updated`)
- * into a {@link StageData} usable by the Zustand store. Supplies defaults for
- * the client-only fields that the backend intentionally does not serialize
- * (reverse-geocoded labels, accommodation search radius).
- */
-function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
-  return {
-    dayNumber: payload.dayNumber,
-    distance: payload.distance,
-    elevation: payload.elevation,
-    elevationLoss: payload.elevationLoss,
-    startPoint: payload.startPoint,
-    endPoint: payload.endPoint,
-    geometry: payload.geometry,
-    label: payload.label,
-    startLabel: null,
-    endLabel: null,
-    weather: payload.weather,
-    // Tag with the producing group so a later terrain_alerts event REPLACES
-    // (not duplicates) these. AnalyzeTerrain is the sole writer of the persisted
-    // alerts column since #794 (recette #649 round 7, #2; mirrors the trip-page
-    // hydrate). Covers stages_computed / trip_ready / stage_updated payloads.
-    alerts: (payload.alerts ?? []).map((a) => ({ ...a, _group: "terrain" })),
-    pois: payload.pois,
-    accommodations: payload.accommodations,
-    selectedAccommodation: payload.selectedAccommodation,
-    accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
-    isRestDay: payload.isRestDay ?? false,
-    supplyTimeline: [],
-    events: payload.events ?? [],
-  };
 }
 
 export async function resolveStageLabels(

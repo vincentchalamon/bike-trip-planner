@@ -1,26 +1,21 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { fetchTripDetail, type Stage, type TripDetail } from '../../src/api/trips';
+import { useTripLive } from '../../src/hooks/use-trip-live';
+import { useTripStore } from '../../src/store/trip-store';
 
 export default function TripRoadbook() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [detail, setDetail] = useState<TripDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        setDetail(await fetchTripDetail(id));
-      } catch {
-        setError('Impossible de charger le roadbook.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  // Hydrate the shared store from /detail and keep it live via SSE. The roadbook
+  // renders straight from the store, so a stage_updated event reconciled by the
+  // core reducers updates the list in place (no ad-hoc local state).
+  useTripLive(id);
+
+  const title = useTripStore((s) => s.title);
+  const stages = useTripStore((s) => s.stages);
+  const loading = useTripStore((s) => s.loading);
+  const error = useTripStore((s) => s.error);
 
   if (loading) {
     return (
@@ -30,19 +25,17 @@ export default function TripRoadbook() {
     );
   }
 
-  if (error || !detail) {
+  if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{error ?? 'Voyage introuvable.'}</Text>
+        <Text style={styles.error}>{error}</Text>
       </View>
     );
   }
 
-  const stages: Stage[] = detail.stages ?? [];
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{detail.title ?? 'Roadbook'}</Text>
+      <Text style={styles.title}>{title ?? 'Roadbook'}</Text>
       <Pressable style={styles.mapButton} onPress={() => router.push({ pathname: '/(tabs)/map', params: { id } })}>
         <Text style={styles.mapButtonText}>Voir sur la carte</Text>
       </Pressable>
