@@ -358,6 +358,149 @@ describe("reduceMercureEvent — alert groups", () => {
     expect(alert.action?.kind).toBe("navigate");
     expect(alert.action?.payload).toEqual({ lat: 4, lon: 5 });
   });
+
+  // Field-mapping coverage for the remaining groups: each must land on the
+  // right stage, carry its `_group` tag, and preserve the mapped message /
+  // source / action — a swapped mapping would otherwise only be caught by the
+  // no-fallthrough smoke test, which stays green on a wrong field.
+  it("bike_shop_alerts tags the stage alert with the bike_shop group", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "bike_shop_alerts",
+      data: {
+        alerts: [
+          { stageIndex: 0, dayNumber: 1, code: "BS", type: "nudge", message: "Vélociste" },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("bike_shop");
+    expect(a.message).toBe("Vélociste");
+  });
+
+  it("water_point_alerts maps the water_point source and group", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "water_point_alerts",
+      data: {
+        alerts: [
+          { stageIndex: 0, dayNumber: 1, code: "WP", type: "nudge", message: "Fontaine" },
+        ],
+        waterPointsByStage: [],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("water_point");
+    expect(a.source).toBe("water_point");
+  });
+
+  it("health_service_alerts tags the stage alert with the health_service group", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "health_service_alerts",
+      data: {
+        alerts: [
+          { stageIndex: 0, dayNumber: 1, code: "HS", type: "nudge", message: "Pharmacie" },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("health_service");
+    expect(a.message).toBe("Pharmacie");
+  });
+
+  it("cultural_poi_alerts maps the cultural_poi source and poi metadata", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "cultural_poi_alerts",
+      data: {
+        alerts: [
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "CP",
+            type: "nudge",
+            message: "Musée",
+            lat: 1,
+            lon: 1,
+            poiName: "Louvre",
+            poiType: "museum",
+            poiLat: 1,
+            poiLon: 1,
+            distanceFromRoute: 120,
+          },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("cultural_poi");
+    expect(a.source).toBe("cultural_poi");
+    expect(a.poiName).toBe("Louvre");
+  });
+
+  it("railway_station_alerts maps the source and optional navigate action", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "railway_station_alerts",
+      data: {
+        alerts: [
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "RS",
+            type: "nudge",
+            message: "Gare",
+            action: { kind: "navigate", label: "Voir", payload: { lat: 1, lon: 2 } },
+          },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("railway_station");
+    expect(a.source).toBe("railway_station");
+    expect(a.action?.payload).toEqual({ lat: 1, lon: 2 });
+  });
+
+  it("border_crossing_alerts maps the source and action", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "border_crossing_alerts",
+      data: {
+        alerts: [
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "BC",
+            type: "nudge",
+            message: "Frontière",
+            action: { kind: "navigate", label: "Voir", payload: { lat: 3, lon: 4 } },
+            lat: 3,
+            lon: 4,
+          },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("border_crossing");
+    expect(a.source).toBe("border_crossing");
+  });
+
+  it("ford_alerts maps the ford source and action", () => {
+    const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
+      type: "ford_alerts",
+      data: {
+        alerts: [
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "FD",
+            type: "warning",
+            message: "Gué",
+            action: { kind: "navigate", label: "Voir", payload: { lat: 5, lon: 6 } },
+            lat: 5,
+            lon: 6,
+          },
+        ],
+      },
+    });
+    const a = next.stages[0]!.alerts[0] as StageAlert;
+    expect(a._group).toBe("ford");
+    expect(a.source).toBe("ford");
+  });
 });
 
 describe("reduceMercureEvent — structural / terminal events", () => {

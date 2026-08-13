@@ -373,8 +373,8 @@ function reconcileStagesComputed(
       return {
         ...s,
         elevationLoss: s.elevationLoss ?? 0,
-        geometry: s.geometry,
-        label: s.label,
+        geometry: s.geometry ?? [],
+        label: s.label ?? null,
         isRestDay: s.isRestDay ?? false,
         startLabel: null,
         endLabel: null,
@@ -404,8 +404,8 @@ function reconcileStagesComputed(
     return {
       ...s,
       elevationLoss: s.elevationLoss ?? 0,
-      geometry: s.geometry,
-      label: s.label,
+      geometry: s.geometry ?? [],
+      label: s.label ?? null,
       isRestDay: s.isRestDay ?? false,
       startLabel: startMatch ? prev.startLabel : null,
       endLabel: endMatch ? prev.endLabel : null,
