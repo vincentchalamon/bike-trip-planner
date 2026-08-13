@@ -10,7 +10,7 @@ import {
   tripCompleteEvent,
   fullTripEventSequence,
 } from "../../fixtures/mock-data";
-import type { MercureEvent } from "../../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 
 // ---------------------------------------------------------------------------
 // Alerts and analysis — FR + EN

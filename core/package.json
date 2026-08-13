@@ -7,6 +7,8 @@
     ".": "./index.ts",
     "./schema": "./schema.d.ts",
     "./constants": "./accommodation-constants.ts",
+    "./mercure": "./mercure.ts",
+    "./reconciliation": "./reconciliation.ts",
     "./package.json": "./package.json"
   },
   "dependencies": {

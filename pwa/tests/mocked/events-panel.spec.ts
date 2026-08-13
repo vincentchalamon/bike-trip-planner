@@ -4,7 +4,7 @@ import {
   stagesComputedEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
-import type { MercureEvent } from "../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 
 function eventsFoundEvent(stageIndex: number): MercureEvent {
   return {

@@ -5,7 +5,7 @@ import {
   stagesComputedEvent,
   routeParsedEvent,
 } from "../../fixtures/mock-data";
-import type { MercureEvent } from "../../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 
 // ---------------------------------------------------------------------------
 // Weather and travel time — FR + EN

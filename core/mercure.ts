@@ -1,3 +1,8 @@
+// Mercure SSE wire payloads shared by web and mobile. Pure type declarations
+// (no runtime), mirrored from the backend publishers (StagePayloadMapper et al.).
+// Moved out of pwa/src/lib/mercure/types.ts into core/ so the mobile thin store
+// consumes the same event contract (#1013).
+
 export interface CoordinatePayload {
   lat: number;
   lon: number;

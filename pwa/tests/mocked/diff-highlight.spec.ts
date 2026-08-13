@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
-import type { MercureEvent } from "../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 import {
   routeParsedEvent,
   stagesComputedEvent,
