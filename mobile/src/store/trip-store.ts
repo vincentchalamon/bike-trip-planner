@@ -118,6 +118,9 @@ interface TripState extends TripConfig {
   isLocked: boolean;
   // Route outside the provisioned coverage area: editing/rerouting is disabled.
   outOfZone: boolean;
+  // An SSE recompute is streaming (computation_step events between a modification
+  // and the terminal trip_ready/trip_complete). Drives the SseStatusIndicator.
+  computing: boolean;
   // Accumulated edits not yet sent to /recompute.
   pendingModifications: Modification[];
   loading: boolean;
@@ -135,6 +138,7 @@ interface TripState extends TripConfig {
   setTitle: (title: string) => void;
   setIsLocked: (isLocked: boolean) => void;
   setOutOfZone: (outOfZone: boolean) => void;
+  setComputing: (computing: boolean) => void;
   // Optimistic structural edits (mirror the web store). The authoritative state
   // arrives via SSE reconciliation; on API failure the caller restores the
   // pre-edit snapshot via setStages.
@@ -167,6 +171,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   stages: [],
   isLocked: false,
   outOfZone: false,
+  computing: false,
   pendingModifications: [],
   loading: true,
   error: null,
@@ -178,6 +183,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       stages: (detail.stages ?? []).map(stageDataFromDetail),
       isLocked: detail.isLocked ?? false,
       outOfZone: detail.outOfZone ?? false,
+      computing: false,
       startDate: detail.startDate ?? null,
       endDate: detail.endDate ?? null,
       fatigueFactor: detail.fatigueFactor ?? DEFAULT_CONFIG.fatigueFactor,
@@ -202,6 +208,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   setTitle: (title) => set({ title }),
   setIsLocked: (isLocked) => set({ isLocked }),
   setOutOfZone: (outOfZone) => set({ outOfZone }),
+  setComputing: (computing) => set({ computing }),
   deleteStageOptimistic: (index) =>
     set((state) => {
       const stages = renumber(state.stages.filter((_, i) => i !== index));
@@ -307,6 +314,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       stages: [],
       isLocked: false,
       outOfZone: false,
+      computing: false,
       pendingModifications: [],
       loading: true,
       error: null,
