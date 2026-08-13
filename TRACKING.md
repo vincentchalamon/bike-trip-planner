@@ -1787,3 +1787,103 @@ Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'archit
   - [ ] Suppression d'étape optimiste, réconciliée SSE, rollback sur erreur, 423 → désactivé (#1015).
 
 </details>
+
+<details><summary>
+
+## Sprint 54 — Mobile : Fondation (UI + data)
+
+</summary>
+Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **data** (CI/jest). Design calqué sur les tokens du web (terracotta `#a8561a`/crème `#faf7f0`, Fraunces/Inter Tight/JetBrains Mono, dark mode). Doc tissée (ADR-054/055/056). Milestone : « Sprint 54 — Mobile : Fondation ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1028](https://github.com/vincentchalamon/bike-trip-planner/issues/1028) | design system — tokens + thème + dark mode + primitives UI | M | ⏳ À faire | — | — |
+| 2 | [#1029](https://github.com/vincentchalamon/bike-trip-planner/issues/1029) | i18n fr/en + shell navigation + migration écrans | M | ⏳ À faire | — | #1028 |
+| 3 | [#1030](https://github.com/vincentchalamon/bike-trip-planner/issues/1030) | core : réconciliation complète (tous events SSE) + garde de dérive | M | ⏳ À faire | — | — |
+| 4 | [#1031](https://github.com/vincentchalamon/bike-trip-planner/issues/1031) | store complet (mutations + batch + hooks) + gating | L | ⏳ À faire | — | #1030 |
+| 5 | [#1032](https://github.com/vincentchalamon/bike-trip-planner/issues/1032) | App Links (Caddy + env + prefix https) + retry 401 | M | ⏳ À faire | — | — |
+| 6 | [#1033](https://github.com/vincentchalamon/bike-trip-planner/issues/1033) | build de preview installable + doc d'install | S | ⏳ À faire | — | — |
+| 7 | [#1034](https://github.com/vincentchalamon/bike-trip-planner/issues/1034) | docs ADR-054/055/056 + README/CLAUDE.md/MkDocs | M | ⏳ À faire | — | — |
+
+</details>
+
+<details><summary>
+
+## Sprint 55 — Mobile : Consultation (roadbook + données + carte)
+
+</summary>
+Écrans de consultation (lecture seule). Composants partagés extraits d'abord. Jalon : **consultation complète**. Milestone : « Sprint 55 ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1035](https://github.com/vincentchalamon/bike-trip-planner/issues/1035) | composants trip-screen partagés (stage card, blocs data/jour, statut SSE) | M | ⏳ À faire | — | #1028, #1031 |
+| 2 | [#1036](https://github.com/vincentchalamon/bike-trip-planner/issues/1036) | liste des voyages (pagination + filtres titre/dates + suppression) | M | ⏳ À faire | — | #1031 |
+| 3 | [#1037](https://github.com/vincentchalamon/bike-trip-planner/issues/1037) | roadbook lecture — 3 états + dates + bannières + « Aujourd'hui » | M | ⏳ À faire | — | #1035 |
+| 4 | [#1038](https://github.com/vincentchalamon/bike-trip-planner/issues/1038) | données par jour — alertes (rejet + dédup) + événements + météo + POI + héberg. + ravito | L | ⏳ À faire | — | #1035, #1030 |
+| 5 | [#1039](https://github.com/vincentchalamon/bike-trip-planner/issues/1039) | détail d'étape plein écran + navigation | M | ⏳ À faire | — | #1035, #1040, #1041 |
+| 6 | [#1040](https://github.com/vincentchalamon/bike-trip-planner/issues/1040) | carte complète — tuiles/satellite + markers + fit-bounds + surlignage segment | L | ⏳ À faire | — | #1031 |
+| 7 | [#1041](https://github.com/vincentchalamon/bike-trip-planner/issues/1041) | profil altimétrique (react-native-svg) + hover synchronisé | M | ⏳ À faire | — | #1040 |
+
+</details>
+
+<details><summary>
+
+## Sprint 56 — Mobile : Planificateur (création + édition + export)
+
+</summary>
+Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)**. Milestone : « Sprint 56 ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | ⏳ À faire | — | #1031 |
+| 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | ⏳ À faire | — | #1031 |
+| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | ⏳ À faire | — | #1037 |
+| 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | ⏳ À faire | — | #1037 |
+| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | ⏳ À faire | — | #1037 |
+| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | ⏳ À faire | — | #1037 |
+| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | ⏳ À faire | — | #1037 |
+
+</details>
+
+<details><summary>
+
+## Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
+
+</summary>
+Épics à découper avant exécution. Push FCM = mobile + backend (secrets compose). Milestone : « Sprint 57 ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte (réglages, email change, RGPD, early-access, FAQ/légal, onboarding) | L | ⏳ À faire | — | Sprint 54 |
+| 2 | [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales (gestion + catégories) | M | ⏳ À faire | — | #1049 |
+| 3 | [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM (device-token + sender + secrets compose + réception) | L | ⏳ À faire | — | #1050 |
+
+</details>
+
+<details><summary>
+
+## Sprint 58 — Mobile : Terrain natif (offline + in-ride/GPS)
+
+</summary>
+Épics à découper. Jalon : **valeur native complète** (le différenciant du pivot). Milestone : « Sprint 58 ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1052](https://github.com/vincentchalamon/bike-trip-planner/issues/1052) | [epic] offline auto-sync (cache voyages à venir/en cours + fraîcheur + dégradation carte) | L | ⏳ À faire | — | Sprint 55 |
+| 2 | [#1053](https://github.com/vincentchalamon/bike-trip-planner/issues/1053) | [epic] in-ride / GPS foreground + nearby-pois | L | ⏳ À faire | — | #1052 |
+
+</details>
+
+<details><summary>
+
+## Sprint 59 — Mobile : Release Android + doc
+
+</summary>
+Épics à découper. Jalon : **shippable Android**. Milestone : « Sprint 59 ».
+
+| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+|-------|----|-------|--------|--------|-----|-----------|
+| 1 | [#1054](https://github.com/vincentchalamon/bike-trip-planner/issues/1054) | [epic] release Android signé + icône/splash + perf/a11y + E2E | L | ⏳ À faire | — | fin Sprint 58 |
+| 2 | [#1055](https://github.com/vincentchalamon/bike-trip-planner/issues/1055) | [epic] docs : consolidation (runbooks + MkDocs nav + monorepo cosmétique) | M | ⏳ À faire | — | #1054 |
+
+</details>
