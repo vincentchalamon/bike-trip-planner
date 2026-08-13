@@ -1,15 +1,18 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
+import '../src/i18n';
 import { AuthProvider } from '../src/auth/store';
 import { ThemeProvider } from '../src/theme';
 
 function RootNavigator() {
+  const { t } = useTranslation();
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ title: 'Connexion' }} />
+      <Stack.Screen name="login" options={{ title: t('header.login') }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="trip/[id]" options={{ title: 'Roadbook' }} />
+      <Stack.Screen name="trip/[id]" options={{ title: t('header.trip') }} />
       <Stack.Screen name="auth/verify/[token]" options={{ headerShown: false }} />
     </Stack>
   );

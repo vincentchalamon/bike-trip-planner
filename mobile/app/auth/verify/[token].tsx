@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { LoadingState, Screen } from '../../../src/components/ui';
 import { useAuth } from '../../../src/auth/store';
 
 // Handles the magic-link verification deep link, for both forms:
@@ -11,6 +12,7 @@ import { useAuth } from '../../../src/auth/store';
 export default function VerifyScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const { verify } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const handled = useRef(false);
 
@@ -30,14 +32,8 @@ export default function VerifyScreen() {
   }, [token, verify, router]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" />
-      <Text style={styles.label}>Connexion en cours…</Text>
-    </View>
+    <Screen padded={false}>
+      <LoadingState label={t('auth.verifying')} />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
-  label: { fontSize: 16 },
-});

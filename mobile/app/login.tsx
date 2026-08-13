@@ -1,9 +1,14 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Button, Input, Screen } from '../src/components/ui';
+import { useTheme } from '../src/theme';
 import { useAuth } from '../src/auth/store';
 
 export default function Login() {
+  const { t } = useTranslation();
+  const theme = useTheme();
   const { authenticated, requestLink } = useAuth();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -22,69 +27,60 @@ export default function Login() {
       if (ok) {
         setSent(true);
       } else {
-        setError("Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.");
+        setError(t('login.error'));
       }
     } catch {
-      setError("Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.");
+      setError(t('login.error'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bike Trip Planner</Text>
+    <Screen style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md }}>
+      <Text
+        style={{
+          color: theme.colors.foreground,
+          fontFamily: theme.fonts.serif,
+          fontSize: 28,
+          textAlign: 'center',
+          marginBottom: theme.spacing.lg,
+        }}
+      >
+        {t('login.brand')}
+      </Text>
       {sent ? (
-        <Text style={styles.info}>
-          Un lien de connexion a été envoyé à {email}. Ouvrez-le sur cet appareil pour vous
-          connecter.
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 16,
+            textAlign: 'center',
+          }}
+        >
+          {t('login.sent', { email })}
         </Text>
       ) : (
         <>
-          <Text style={styles.label}>Adresse email</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label={t('login.emailLabel')}
             value={email}
             onChangeText={setEmail}
+            error={error ?? undefined}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
-            placeholder="vous@exemple.fr"
+            placeholder={t('login.emailPlaceholder')}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Pressable
-            style={[styles.button, (busy || !email) && styles.buttonDisabled]}
+          <Button
+            label={busy ? t('login.submitting') : t('login.submit')}
+            onPress={() => void submit()}
+            loading={busy}
             disabled={busy || !email}
-            onPress={submit}
-          >
-            <Text style={styles.buttonText}>{busy ? 'Envoi…' : 'Recevoir un lien'}</Text>
-          </Pressable>
+            fullWidth
+          />
         </>
       )}
-    </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', gap: 12 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
-  label: { fontSize: 14, color: '#374151' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  info: { fontSize: 16, textAlign: 'center', color: '#374151' },
-  error: { color: '#dc2626' },
-});

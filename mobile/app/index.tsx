@@ -1,21 +1,7 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { useAuth } from '../src/auth/store';
 
+// The single auth guard lives in app/(tabs)/_layout.tsx: it redirects to /login
+// when unauthenticated. This entry route just points at the protected group.
 export default function Index() {
-  const { ready, authenticated } = useAuth();
-
-  if (!ready) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  return <Redirect href={authenticated ? '/(tabs)' : '/login'} />;
+  return <Redirect href="/(tabs)" />;
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-});
