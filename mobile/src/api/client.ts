@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from 'openapi-fetch';
-import type { paths } from './schema';
+import type { paths } from '@btp/core/schema';
 import { API_BASE_URL } from './config';
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';

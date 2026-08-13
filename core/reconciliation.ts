@@ -9,10 +9,45 @@
 // endpoint) and #787 (label preservation on a raw resync).
 
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "./accommodation-constants";
+import type { EnrichedStagePayload } from "./mercure";
 import type { AlertData, StageData } from "./schemas";
 
 /** A stage alert carrying the client-only `_group` tag added by the store. */
 export type StageAlert = AlertData & { _group?: string };
+
+/**
+ * Convert an enriched stage wire payload (from `trip_ready` / `stage_updated`)
+ * into a {@link StageData} for the store. Supplies defaults for the client-only
+ * fields the backend does not serialize (reverse-geocoded labels, radius, supply
+ * timeline). Alerts are tagged with the producing group ("terrain") so a later
+ * terrain_alerts event replaces rather than duplicates them (#794/#649). Shared
+ * by the web and mobile stores so the mapping never diverges (#1014).
+ */
+export function enrichedPayloadToStageData(
+  payload: EnrichedStagePayload,
+): StageData {
+  return {
+    dayNumber: payload.dayNumber,
+    distance: payload.distance,
+    elevation: payload.elevation,
+    elevationLoss: payload.elevationLoss,
+    startPoint: payload.startPoint,
+    endPoint: payload.endPoint,
+    geometry: payload.geometry,
+    label: payload.label,
+    startLabel: null,
+    endLabel: null,
+    weather: payload.weather,
+    alerts: (payload.alerts ?? []).map((a) => ({ ...a, _group: "terrain" })),
+    pois: payload.pois,
+    accommodations: payload.accommodations,
+    selectedAccommodation: payload.selectedAccommodation,
+    accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+    isRestDay: payload.isRestDay ?? false,
+    supplyTimeline: [],
+    events: payload.events ?? [],
+  };
+}
 
 function sameStart(prev: StageData, incoming: StageData): boolean {
   return (

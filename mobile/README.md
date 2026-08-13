@@ -97,18 +97,13 @@ keytool -list -v -keystore <keystore> -alias <alias> | grep SHA256
 
 Until assetlinks is published, use the custom scheme for testing.
 
-## Regenerating API types
+## API types
 
-The backend OpenAPI is the source of truth. Refresh types after a schema change:
-
-```bash
-# from the repo root, export the spec (main vendor mounted read-only):
-docker run --rm -v "$PWD/api:/app" -v "/home/vincent/Sites/bike-trip-planner/api/vendor:/app/vendor:ro" \
-  -w /app -e APP_ENV=dev --entrypoint sh bike-trip-planner-php:dev \
-  -c "bin/console api:openapi:export" > mobile/openapi.json
-
-cd mobile && npm run typegen   # openapi-typescript openapi.json -> src/api/schema.d.ts
-```
+Since #1014 the mobile app consumes the generated OpenAPI types from the shared
+`@btp/core` workspace (`@btp/core/schema`), the same source of truth the web app
+uses — there is no mobile-local `schema.d.ts` any more. Regenerate types from the
+repo root with `make typegen` (writes `core/schema.d.ts`); the mobile app picks up
+the change automatically through the workspace.
 
 ## Auth contract (client-agnostic, tokens in the body)
 
