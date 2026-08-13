@@ -4,7 +4,7 @@ import { mockAllApis, type MockApiOptions } from "../../fixtures/api-mocks";
 import { attachRuntimeMonitor } from "../../fixtures/runtime-monitor";
 import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { fullTripEventSequence } from "../../fixtures/mock-data";
-import type { MercureEvent } from "../../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 import { expandLinkCard } from "../../fixtures/base.fixture";
 import {
   clearCurrentRecettePage,

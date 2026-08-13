@@ -20,10 +20,17 @@ export default defineConfig({
     // throws a version mismatch. Force a single instance resolved from pwa.
     dedupe: ["react", "react-dom"],
     alias: {
+      // Subpath aliases must precede the "@btp/core" catch-all so the more
+      // specific entry wins (vite matches aliases in order).
       "@btp/core/schema": path.resolve(__dirname, "../core/schema.d.ts"),
       "@btp/core/constants": path.resolve(
         __dirname,
         "../core/accommodation-constants.ts",
+      ),
+      "@btp/core/mercure": path.resolve(__dirname, "../core/mercure.ts"),
+      "@btp/core/reconciliation": path.resolve(
+        __dirname,
+        "../core/reconciliation.ts",
       ),
       "@btp/core": path.resolve(__dirname, "../core/index.ts"),
       "@": path.resolve(__dirname, "./src"),

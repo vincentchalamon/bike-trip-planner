@@ -1,7 +1,7 @@
 import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 import { mockAllApis } from "../fixtures/api-mocks";
 import { injectSseEvent } from "../fixtures/sse-helpers";
-import type { MercureEvent } from "../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 import { culturalPoiAlertsEvent } from "../fixtures/mock-data";
 
 /**

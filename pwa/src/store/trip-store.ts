@@ -14,6 +14,14 @@ import type {
   SupplyMarkerData,
   EventData,
 } from "@btp/core";
+import {
+  reconcileResync,
+  reconcileTripReady,
+  reconcileStageUpdate,
+  pruneStaleRecomputing as corePruneStaleRecomputing,
+  dropStaleDateAlerts as coreDropStaleDateAlerts,
+  type StageAlert,
+} from "@btp/core/reconciliation";
 
 /**
  * A single user modification accumulated in the batch queue before being applied
@@ -351,39 +359,25 @@ export function getUndoableSlice(state: {
  * {@link useTripTemporalStore} exposes `undo()`, `redo()`, `canUndo`, and
  * `canRedo`.
  */
-type StageAlert = AlertData & { _group?: string };
+// StageAlert and the pure SSE reconciliation reducers live in
+// @btp/core/reconciliation (shared verbatim with the mobile store, #1013). The
+// two helpers below are thin adapters composing the pure functions at the
+// store's mutate-the-draft call sites; the reasoning for each lives in core.
 
-/**
- * Drop recompute markers for indices that fell out of bounds after the stage
- * array changed length. Shared by every mutation that resizes `state.stages`
- * (resync, delete, rest-day/placeholder insert) so an in-flight recompute
- * never holds the `processing` overlay open on a phantom index (#840).
- */
+/** Reassign the pruned recomputing set on the draft (see core, #840). */
 function pruneStaleRecomputing(state: {
   stages: StageData[];
   recomputingStages: Set<number>;
 }): void {
-  for (const i of [...state.recomputingStages]) {
-    if (i >= state.stages.length) state.recomputingStages.delete(i);
-  }
+  state.recomputingStages = corePruneStaleRecomputing(
+    state.stages.length,
+    state.recomputingStages,
+  );
 }
 
-/**
- * Drop date-derived calendar nudges from every stage after a structural edit
- * that shifts `dayNumber`s (rest-day / placeholder insert, delete). These
- * alerts ("L'étape N tombe un dimanche") are keyed to a stage's date, but the
- * splice keeps each stage's `alerts` array attached to the shifted object, so
- * the message would otherwise ride along onto a day that is no longer a Sunday.
- * They are recomputed and republished by CheckCalendar. Geographic groups
- * (terrain, accommodations, water, bike_shop, cultural_poi) stay valid because
- * the real stages' endpoints do not move on a rest-day insert.
- */
+/** Reassign the calendar-alert-filtered stages on the draft (see core). */
 function dropStaleDateAlerts(state: { stages: StageData[] }): void {
-  for (const stage of state.stages) {
-    stage.alerts = (stage.alerts as StageAlert[]).filter(
-      (a) => a._group !== "calendar",
-    );
-  }
+  state.stages = coreDropStaleDateAlerts(state.stages);
 }
 
 export const useTripStore = create<TripState>()(
@@ -408,43 +402,16 @@ export const useTripStore = create<TripState>()(
 
     setStages: (stages) =>
       set((state) => {
-        const existing = state.stages;
-        state.stages = stages.map((incoming, i) => {
-          const prev = existing[i];
-          const startMatch =
-            prev &&
-            prev.startPoint.lat === incoming.startPoint.lat &&
-            prev.startPoint.lon === incoming.startPoint.lon;
-          const endMatch =
-            prev &&
-            prev.endPoint.lat === incoming.endPoint.lat &&
-            prev.endPoint.lon === incoming.endPoint.lon;
-
-          return {
-            ...incoming,
-            // Preserve client-only reverse-geocoded labels across a raw
-            // re-hydrate/resync when the endpoint has not moved and the
-            // incoming payload lacks a label (the backend has not persisted it
-            // yet). Without this, a resync `/detail` replace would blank labels
-            // the client just resolved for a Komoot trip — whose stages arrive
-            // after a stageless draft — until `trip_ready` (~30s). Mirrors the
-            // preservation in applyTripReady/applyStageUpdate (recette #649).
-            startLabel: startMatch
-              ? (incoming.startLabel ?? prev.startLabel)
-              : incoming.startLabel,
-            endLabel: endMatch
-              ? (incoming.endLabel ?? prev.endLabel)
-              : incoming.endLabel,
-          };
-        });
+        // Raw re-hydrate/resync: preserve client-only labels on stable
+        // endpoints (see reconcileResync in core, #787/#649).
+        state.stages = reconcileResync(state.stages, stages);
         const max = Math.max(0, stages.length - 1);
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
         }
         // Drop recomputing markers for indices that no longer exist after the
-        // array changed length. Otherwise a phantom index (e.g. a stage that
-        // vanished when the day count shrank) is never cleared by a matching
-        // `stage_updated`, holding the `processing` overlay open forever (#840).
+        // array changed length, so a phantom index never holds the
+        // `processing` overlay open forever (#840).
         pruneStaleRecomputing(state);
       }),
 
@@ -731,147 +698,33 @@ export const useTripStore = create<TripState>()(
 
     applyTripReady: (stages) =>
       set((state) => {
-        const existing = state.stages;
-        state.stages = stages.map((incoming, i) => {
-          const prev = existing[i];
-          const endMatch =
-            prev &&
-            prev.endPoint.lat === incoming.endPoint.lat &&
-            prev.endPoint.lon === incoming.endPoint.lon;
-          const startMatch =
-            prev &&
-            prev.startPoint.lat === incoming.startPoint.lat &&
-            prev.startPoint.lon === incoming.startPoint.lon;
-
-          return {
-            ...incoming,
-            // Preserve client-only reverse-geocoded labels when endpoints
-            // have not moved so we don't drop them on re-analysis.
-            startLabel: startMatch
-              ? (prev.startLabel ?? incoming.startLabel)
-              : incoming.startLabel,
-            endLabel: endMatch
-              ? (prev.endLabel ?? incoming.endLabel)
-              : incoming.endLabel,
-            // Accommodation search radius is a UI-only knob that never
-            // ships with the enriched payload — keep the user's setting
-            // when the stage endpoint is stable.
-            accommodationSearchRadiusKm: endMatch
-              ? (prev.accommodationSearchRadiusKm ??
-                DEFAULT_ACCOMMODATION_RADIUS_KM)
-              : DEFAULT_ACCOMMODATION_RADIUS_KM,
-            // supply_timeline events always precede trip_ready (terminal
-            // event), so the timeline already set in the store is current
-            // — preserve it rather than blanking it.
-            supplyTimeline: prev?.supplyTimeline ?? [],
-            // Accommodations + alerts arrive via their own SSE events
-            // (accommodations_found) that may land before trip_ready. The
-            // terminal payload can carry an empty list, so preserve the
-            // current ones when the stage endpoint is stable to avoid
-            // blanking already-displayed data (recette #649).
-            accommodations: endMatch
-              ? prev.accommodations.length > 0
-                ? prev.accommodations
-                : incoming.accommodations
-              : incoming.accommodations,
-            selectedAccommodation: endMatch
-              ? (prev.selectedAccommodation ?? incoming.selectedAccommodation)
-              : incoming.selectedAccommodation,
-            alerts: endMatch
-              ? prev.alerts.length > 0
-                ? prev.alerts
-                : incoming.alerts
-              : incoming.alerts,
-            // Dated events arrive via their own `events_found` SSE, absent from
-            // the terminal trip_ready payload (which can carry an empty list).
-            // Preserve them when the endpoint is stable so they don't vanish
-            // once enrichment settles (same rule as accommodations/alerts).
-            events: endMatch
-              ? prev.events.length > 0
-                ? prev.events
-                : incoming.events
-              : incoming.events,
-          };
-        });
+        // Mode 1 terminal reconciliation: preserve client-only fields
+        // (labels, radius, supply timeline, non-empty accommodations/
+        // selection/alerts/events) on stable endpoints (see reconcileTripReady
+        // in core, #649).
+        state.stages = reconcileTripReady(state.stages, stages);
       }),
 
     applyStageUpdate: (stageIndex, stage) =>
       set((state) => {
-        const prev = state.stages[stageIndex];
-        if (!prev) {
-          // Reducing the last stage's distance splits off a brand-new trailing
-          // day on the backend (StageUpdateProcessor::applyDistanceChange),
-          // whose `stage_updated` lands at the next contiguous index. Append it
-          // so the new day is not silently dropped (#840). A larger index can
-          // only be a stale/obsolete event, so ignore it.
-          if (stageIndex === state.stages.length) {
-            state.stages.push(stage);
-            // Keep the trip's day window in sync with the new stage count,
-            // mirroring insertRestDay/insertStagePlaceholder/deleteStage
-            // (recette #649). Otherwise a last-stage edit that splits off a
-            // day leaves endDate one day short for downstream readers
-            // (trip-summary, infographic export, date-range-picker, shared page).
-            if (state.startDate) {
-              state.endDate = dayjs(state.startDate)
-                .add(state.stages.length - 1, "day")
-                .format("YYYY-MM-DD");
-            }
-          }
-          return;
+        // Mode 2 per-stage reconciliation: preserve client-only fields and
+        // merge cultural-POI alerts on a stable endpoint; a stage_updated at
+        // stages.length appends the split-off trailing day (see
+        // reconcileStageUpdate in core, #840/#649).
+        const { stages, appendedTrailingStage } = reconcileStageUpdate(
+          state.stages,
+          stageIndex,
+          stage,
+        );
+        state.stages = stages;
+        // Keep the trip's day window in sync with the new stage count when a
+        // last-stage edit split off a day, mirroring insertRestDay/deleteStage
+        // — otherwise endDate is one day short for downstream readers (#649).
+        if (appendedTrailingStage && state.startDate) {
+          state.endDate = dayjs(state.startDate)
+            .add(state.stages.length - 1, "day")
+            .format("YYYY-MM-DD");
         }
-
-        const endMatch =
-          prev.endPoint.lat === stage.endPoint.lat &&
-          prev.endPoint.lon === stage.endPoint.lon;
-        const startMatch =
-          prev.startPoint.lat === stage.startPoint.lat &&
-          prev.startPoint.lon === stage.startPoint.lon;
-
-        state.stages[stageIndex] = {
-          ...stage,
-          startLabel: startMatch
-            ? (prev.startLabel ?? stage.startLabel)
-            : stage.startLabel,
-          endLabel: endMatch
-            ? (prev.endLabel ?? stage.endLabel)
-            : stage.endLabel,
-          accommodationSearchRadiusKm: endMatch
-            ? (prev.accommodationSearchRadiusKm ??
-              DEFAULT_ACCOMMODATION_RADIUS_KM)
-            : DEFAULT_ACCOMMODATION_RADIUS_KM,
-          // Keep current supply timeline until the re-dispatched ScanPois
-          // handler delivers fresh data via a supply_timeline event.
-          supplyTimeline: prev.supplyTimeline,
-          // A stage_updated event (e.g. after selecting an accommodation)
-          // re-routes the stage but does not re-scan accommodations/alerts:
-          // the payload may carry an empty list, so preserve the current ones
-          // (and the selection) when the endpoint is stable (recette #649).
-          accommodations:
-            endMatch && prev.accommodations.length > 0
-              ? prev.accommodations
-              : stage.accommodations,
-          selectedAccommodation: endMatch
-            ? (prev.selectedAccommodation ?? stage.selectedAccommodation)
-            : stage.selectedAccommodation,
-          alerts:
-            endMatch && prev.alerts.length > 0
-              ? prev.alerts
-              : [
-                  // Cultural-POI recommendations come from a separate scan and
-                  // are absent from this terrain-only payload, so a bare replace
-                  // on reroute (e.g. accommodation selection moves the endpoint)
-                  // would make the dedicated "cultural recommendations" section
-                  // vanish. Preserve them from `prev`, take the rest from the
-                  // incoming payload (recette #649).
-                  ...prev.alerts.filter((a) => a.source === "cultural_poi"),
-                  ...stage.alerts.filter((a) => a.source !== "cultural_poi"),
-                ],
-          // Keep dated events (from the separate `events_found` SSE) until a
-          // fresh ScanEvents delivers them again — the stage_updated payload
-          // does not carry them and would otherwise blank the list.
-          events:
-            endMatch && prev.events.length > 0 ? prev.events : stage.events,
-        };
       }),
 
     startStageRecomputation: (indices) =>

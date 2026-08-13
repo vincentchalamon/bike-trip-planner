@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
-import type { EnrichedStagePayload, MercureEvent } from "@/lib/mercure/types";
+import type { EnrichedStagePayload, MercureEvent } from "@btp/core/mercure";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";

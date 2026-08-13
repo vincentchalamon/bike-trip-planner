@@ -83,7 +83,7 @@ function mockShareRevoke(
 async function openShareModal(fixtures: {
   submitUrl: (url?: string) => Promise<void>;
   injectSequence: (
-    events: import("../../src/lib/mercure/types").MercureEvent[],
+    events: import("@btp/core/mercure").MercureEvent[],
     delayMs?: number,
   ) => Promise<void>;
   mockedPage: import("@playwright/test").Page;

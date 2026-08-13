@@ -1,4 +1,4 @@
-import type { MercureEvent } from "./types";
+import type { MercureEvent } from "@btp/core/mercure";
 import { API_URL } from "@/lib/constants";
 
 const MAX_RECONNECT_DELAY = 30_000;

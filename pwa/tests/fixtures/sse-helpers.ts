@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import type { MercureEvent } from "../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 
 export async function injectSseEvent(
   page: Page,

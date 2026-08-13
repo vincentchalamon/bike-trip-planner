@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { When, Then } from "../support/fixtures";
-import type { MercureEvent } from "../../../src/lib/mercure/types";
+import type { MercureEvent } from "@btp/core/mercure";
 
 // ---------------------------------------------------------------------------
 // Diff highlight — post-recompute distance / alert highlighting. FR + EN.
