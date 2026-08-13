@@ -84,7 +84,7 @@
                     '*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
                 )
             )
-            || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*')
+            || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*', '/.well-known/assetlinks.json')
             || query({'_rsc': '*'})`
 
         # Content-Security-Policy (audit 35.2 SEC-001), scoped to the PWA so the

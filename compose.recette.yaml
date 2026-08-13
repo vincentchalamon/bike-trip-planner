@@ -47,6 +47,15 @@ services:
     environment:
       <<: *recette-env
 
+  pwa:
+    environment:
+      # Android App Links (ADR-053): recette is exercised on-device (via ngrok)
+      # with a DEBUG build, so it must serve the debug keystore association for the
+      # https App Link to verify. Prod (compose.yaml) stays empty until the release
+      # signing-cert fingerprint is added (Sprint 59).
+      ANDROID_APP_PACKAGE: "${ANDROID_APP_PACKAGE:-coop.lestilleuls.biketripplanner}"
+      ANDROID_SHA256_CERT_FINGERPRINTS: "${ANDROID_SHA256_CERT_FINGERPRINTS:-FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C}"
+
   mailcatcher:
     # Pinned by digest: schickling/mailcatcher has no versioned tags, and the
     # mutable tag would let an upstream rebuild change the HTTP API recette-seed.sh relies on.
