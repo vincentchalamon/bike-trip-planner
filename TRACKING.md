@@ -1801,9 +1801,9 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
 | 2 | [#1029](https://github.com/vincentchalamon/bike-trip-planner/issues/1029) | i18n fr/en + shell navigation + migration écrans | M | 🚧 En cours | [#1062](https://github.com/vincentchalamon/bike-trip-planner/pull/1062) `feature/1029` (stack → #1028) | #1028 |
 | 3 | [#1030](https://github.com/vincentchalamon/bike-trip-planner/issues/1030) | core : réconciliation complète (tous events SSE) + garde de dérive | M | 🚧 En cours | [#1060](https://github.com/vincentchalamon/bike-trip-planner/pull/1060) `feature/1030` | — |
 | 4 | [#1031](https://github.com/vincentchalamon/bike-trip-planner/issues/1031) | store complet (mutations + batch + hooks) + gating | L | 🚧 En cours | [#1063](https://github.com/vincentchalamon/bike-trip-planner/pull/1063) `feature/1031` (stack → #1030) | #1030 |
-| 5 | [#1032](https://github.com/vincentchalamon/bike-trip-planner/issues/1032) | App Links (Caddy + env + prefix https) + retry 401 | M | 🚧 En cours | [#1058](https://github.com/vincentchalamon/bike-trip-planner/pull/1058) `feature/1032` | — |
-| 6 | [#1033](https://github.com/vincentchalamon/bike-trip-planner/issues/1033) | build de preview installable + doc d'install | S | 🚧 En cours | [#1057](https://github.com/vincentchalamon/bike-trip-planner/pull/1057) `feature/1033` | — |
-| 7 | [#1034](https://github.com/vincentchalamon/bike-trip-planner/issues/1034) | docs ADR-054/055/056 + README/CLAUDE.md/MkDocs | M | 🚧 En cours | [#1059](https://github.com/vincentchalamon/bike-trip-planner/pull/1059) `feature/1034` | — |
+| 5 | [#1032](https://github.com/vincentchalamon/bike-trip-planner/issues/1032) | App Links (Caddy + env + prefix https) + retry 401 | M | ✅ Mergé | [#1058](https://github.com/vincentchalamon/bike-trip-planner/pull/1058) `feature/1032` | — |
+| 6 | [#1033](https://github.com/vincentchalamon/bike-trip-planner/issues/1033) | build de preview installable + doc d'install | S | ✅ Mergé | [#1057](https://github.com/vincentchalamon/bike-trip-planner/pull/1057) `feature/1033` | — |
+| 7 | [#1034](https://github.com/vincentchalamon/bike-trip-planner/issues/1034) | docs ADR-054/055/056 + README/CLAUDE.md/MkDocs | M | ✅ Mergé | [#1059](https://github.com/vincentchalamon/bike-trip-planner/pull/1059) `feature/1034` | — |
 
 **Ordre de merge et conflits attendus** (`/sprint 54`, 2026-08-13) :
 
@@ -1811,7 +1811,7 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
    - #1060 (`feature/1030`, core) **puis** #1063 (`feature/1031`, base `feature/1030`).
    - #1061 (`feature/1028`, design system) **puis** #1062 (`feature/1029`, base `feature/1028`).
    - Après le squash-merge d'un parent, GitHub recible l'enfant sur `main` mais l'enfant porte encore les commits pré-squash du parent : rebaser avec `gh stack rebase` (ou `git rebase --onto origin/main <dernier-commit-parent> feature/<enfant>`), pas un `git rebase origin/main` direct.
-2. **Indépendants** (base `main`, ordre libre) : #1057, #1058, #1059.
+2. **Indépendants déjà mergés** (base `main`) : #1057, #1058, #1059 (mergés le 2026-08-13).
 3. **Conflits attendus** : aucun entre PRs — le seul recoupement était `mobile/package.json`/`package-lock.json` (deps ajoutées par #1028 fonts+lucide+**react-native-svg**, par #1029 i18n). #1029 étant stacké sur #1028, ses ajouts sont disjoints et déjà rebasés (doublon `react-native-svg` retiré). `mobile/app.json` : #1028 (`userInterfaceStyle`) et #1032 (`android.intentFilters`) touchent des clés disjointes ; #1032 n'a finalement pas édité `app.json` (l'`app.config.js` existant fait foi). `docs`/`mkdocs.yml`/root `README`/`CLAUDE.md` : #1034 seul.
 4. **`claude-review` rouge sur #1061** = faux négatif connu (l'étape « Check for permission denials » du bot échoue sur une commande `rm`/`find` hors allowlist) ; la revue effective est **APPROVED**. Rejouer le job ne change rien (le déni n'est pas dans le diff) : la PR est mergeable une fois approuvée.
 5. **Recette device (manuelle, non couverte par la CI)** : APK preview installable (#1057/#1033), App Links vérifiés `adb pm verify-app-links` + magic-link https (#1058/#1032).
