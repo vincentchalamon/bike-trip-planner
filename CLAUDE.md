@@ -25,6 +25,16 @@ make php-shell          # Bash inside PHP container
 make pwa-shell          # Bash inside Node container
 ```
 
+**Mobile (Expo / React Native) workspace.** The repo is an npm-workspaces monorepo (`core` / `pwa` / `mobile`; see ADR-053). The mobile app is **not** dockerized — it runs natively via Expo, not through the Makefile. Install once from the repo root (`npm install`, which links all workspaces incl. `@btp/core`), then drive the `mobile` workspace with npm:
+
+```bash
+npm run android --workspace mobile     # build & launch on Android device/emulator (expo run:android)
+npm run ios     --workspace mobile     # iOS (expo run:ios)
+npm run start   --workspace mobile     # Expo dev server (expo start)
+npm run typecheck --workspace mobile   # tsc --noEmit
+npm run test    --workspace mobile     # jest (jest-expo)
+```
+
 **Compose layout:** `compose.yaml` is the iso-prod base (read as-is by CI and Coolify); `compose.dev.yaml` layers the dev overrides and is auto-loaded in dev via the Makefile (`COMPOSE_FILE`). Dev and prod run the same FrankenPHP image with Caddy + Mercure embedded — see [ADR-037](docs/adr/adr-037-docker-dev-prod-convergence.md). `make start-dev` runs dev; `make start` / `make build` target prod. **Gotcha:** there is no `compose.prod.yaml` — issues or docs written before ADR-037 may still reference it; the prod/iso-prod stack now lives in `compose.yaml`.
 
 **New runtime secret? Wire it into `compose.yaml`, not just dev/recette.** Compose does not forward an arbitrary Coolify/host env var into a container unless the file references it, and `compose.yaml` is the iso-prod base Coolify reads as-is. A secret added only to `compose.dev.yaml` / `compose.recette.yaml` reaches dev and recette but is **empty in prod** — and a fail-closed service (e.g. `AccessRequestHmacService`, which throws on an empty secret) then 500s on every request. Add the passthrough line `VAR: "${VAR:-}"` to **both** services (`php`, `worker`) in `compose.yaml`, next to `MAILER_DSN` / `REFRESH_TOKEN_ENC_KEY` (Sprint 52 #976: the HMAC secret was wired into dev + recette only and would have 500'd early-access in prod).
@@ -183,6 +193,8 @@ If the extension is absent, fall back to the manual `feature/<dep>` base plus th
 ### Type Contract (Single Source of Truth)
 
 Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `npm run typegen` (openapi-typescript) generates TypeScript types → openapi-fetch provides type-safe API calls. Schema changes on backend intentionally cause frontend compilation failures to prevent data drift.
+
+The generated types land in the **`@btp/core`** workspace (`core/schema.d.ts`, re-exported via `core/schemas.ts`), the single framework-free package that **both** `pwa` and `mobile` import. `@btp/core` also carries the Mercure wire types (`core/mercure.ts`) and the pure SSE reconciliation reducers (`core/reconciliation.ts`), so web and mobile share one source of truth for both the schema and the reconciliation logic — never re-implement either per platform (ADR-055). The repo is an npm-workspaces monorepo (`core` / `pwa` / `mobile`); see ADR-053.
 
 ### Key Patterns
 

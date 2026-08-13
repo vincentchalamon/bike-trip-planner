@@ -72,6 +72,7 @@ nav:
       - Accommodation tags: accommodations.md
       - Alert engine: alert-engine.md
       - External data sources: external-data-sources.md
+      - Mobile Mercure auth (SSE): mobile-mercure-auth.md
       - DataTourisme flux audit: datatourisme-flux-audit.md
       - AI / LLaMA pipeline (historical): LLaMA.md
   - Guides:
@@ -133,6 +134,9 @@ nav:
       - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
       - adr/adr-052-remove-ai-support.md
       - adr/adr-053-mobile-strategy-native-app.md
+      - adr/adr-054-mobile-design-system.md
+      - adr/adr-055-mobile-state-architecture.md
+      - adr/adr-056-mercure-header-auth-non-browser.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md

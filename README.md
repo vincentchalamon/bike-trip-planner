@@ -58,6 +58,34 @@ See [Getting Started](docs/getting-started.md) for prerequisites and detailed se
 
 ---
 
+## Mobile app
+
+Bike Trip Planner is being repositioned around two surfaces on one API: the web
+app above (discovery, sharing, planning on a large screen) and a **dedicated
+native mobile app** for in-the-field use — offline consultation and in-ride
+navigation ([ADR-053](docs/adr/adr-053-mobile-strategy-native-app.md)).
+
+The codebase is an npm-workspaces monorepo:
+
+| Workspace | Role |
+|---|---|
+| [`core/`](core/) (`@btp/core`) | Framework-free shared package: OpenAPI-derived types, Zod schemas, Mercure wire types, and the pure SSE reconciliation reducers used by both web and mobile |
+| [`pwa/`](pwa/) | Next.js 16 web app |
+| [`mobile/`](mobile/) | Expo / React Native app (Android first, iOS later) |
+
+The mobile foundation is documented in
+[ADR-054 (design system)](docs/adr/adr-054-mobile-design-system.md),
+[ADR-055 (state architecture)](docs/adr/adr-055-mobile-state-architecture.md), and
+[ADR-056 (Mercure header-auth)](docs/adr/adr-056-mercure-header-auth-non-browser.md).
+
+```bash
+npm install                          # install all workspaces from the repo root
+npm run android --workspace mobile   # build & launch on an Android device/emulator (expo run:android)
+npm run start --workspace mobile     # start the Expo dev server
+```
+
+---
+
 ## Documentation
 
 Full documentation is published with MkDocs Material at
@@ -74,7 +102,7 @@ Full documentation is published with MkDocs Material at
 | [External data sources](docs/external-data-sources.md) | OpenStreetMap, DataTourisme, Wikidata |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
-| [Architecture Decisions](docs/adr/) | 51 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 56 ADRs explaining every major technical choice |
 | [Runbooks](docs/runbooks/) | On-call playbooks: workers, DB, Redis, Mercure, releases |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 | [Legal & Licensing](docs/legal-and-licensing.md) | Project licence, data attribution, and GDPR posture |
