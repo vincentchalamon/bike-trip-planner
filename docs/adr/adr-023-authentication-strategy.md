@@ -219,6 +219,8 @@ The API is **client-agnostic**: `/auth/verify` and `/auth/refresh` always return
 
 An earlier Capacitor-specific mechanism (client detection keyed to the WebView's `capacitor://` Origin, a `capacitor://` entry in the `CORS_ALLOW_ORIGIN` allow-list, and an `X-Mercure-Token` response header so the WebView could read the subscriber JWT) has been **removed** as dead code along with the Capacitor client. It is superseded by the client-agnostic body-token + web-BFF design above (#1010) — no client detection is reintroduced.
 
+The native client is no longer hypothetical: the monorepo is materialized as npm workspaces (`core` / `pwa` / `mobile`) and the Expo / React Native app talks to this client-agnostic API directly, keeping the body `refresh_token` in `expo-secure-store` (see [ADR-053](adr-053-mobile-strategy-native-app.md)). The Mercure subscriber JWT — which the browser reads from an HttpOnly cookie the native client cannot — is delivered to the mobile client through a readable-body endpoint on the same no-client-detection principle ([ADR-056](adr-056-mercure-header-auth-non-browser.md)).
+
 ---
 
 ## Technical Implementation

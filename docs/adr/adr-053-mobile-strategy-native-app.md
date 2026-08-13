@@ -18,14 +18,35 @@ The real driver for going native is **not** aesthetics — a responsive web app 
 
 Build a **dedicated native mobile app**, Android first (iOS later).
 
-- **Leading candidate: React Native + Expo**, to reuse the single type contract (backend DTO → OpenAPI → TS) and the pure domain logic (pacing, Zod validation) across web and mobile in an upcoming monorepo (`apps/{core,web,mobile}`), and to get iOS at low marginal cost. MapLibre React Native mirrors the web's `maplibre-gl`.
+- **Leading candidate: React Native + Expo**, to reuse the single type contract (backend DTO → OpenAPI → TS) and the pure domain logic (pacing, Zod validation) across web and mobile in an upcoming monorepo, and to get iOS at low marginal cost. MapLibre React Native mirrors the web's `maplibre-gl`.
 - **Contingent on a throwaway spike.** The spike first de-risks the **offline vector-tile strategy** (self-hosted OpenMapTiles/Planetiler or PMTiles vs. a paid provider with an offline license) — a go/no-go on the native bet itself — then validates auth, background location, push, and the OpenAPI client from RN. A no-go on offline, or a spike verdict favouring Flutter, revisits the tech choice before any monorepo work.
 - **Push via FCM**, included from the MVP.
 - **Capacitor is abandoned:** its scaffolding (`capacitor.config.ts`, the Android project, the dual `BUILD_TARGET` Next.js export, the `android.yml` workflow) is removed and the web reverts to a plain SSR site.
 
 ## Consequences
 
-- No more "single codebase" shortcut: the native app carries its own UI layer; sharing happens through `apps/core` (types + domain logic), not through React DOM components. This reverses ADR-024's main rationale, which was reasonable when the goal was merely consulting data in a WebView.
+- No more "single codebase" shortcut: the native app carries its own UI layer; sharing happens through the `@btp/core` workspace (types + domain logic), not through React DOM components. This reverses ADR-024's main rationale, which was reasonable when the goal was merely consulting data in a WebView.
 - A new native mobile workstream (and a small backend brick for FCM push).
 - The authentication strategy (ADR-023) now applies to a **native client** rather than a Capacitor WebView. There is **no client detection**: the API is client-agnostic and **always** returns `{ token, refresh_token }` in the response body, setting no cookie. The native client keeps the body refresh token in the platform's secure storage; the web goes through a Next.js **BFF** that holds the refresh token in an HttpOnly SameSite=Lax cookie (#1010).
 - The mobile approach is validated incrementally (spike → MVP), so this ADR states direction; the spike gates the final tech commitment.
+
+## Update (2026-08-13) — monorepo materialized, RN + Expo committed
+
+The direction above is now realized. The spike resolved **in favour of React
+Native + Expo**, and the monorepo is materialized as npm workspaces at the repo
+root — not under an `apps/` prefix:
+
+- **`core/`** (`@btp/core`) — the shared, framework-free package: OpenAPI-derived
+  types and Zod schemas, the Mercure wire types (`core/mercure.ts`), the pure SSE
+  reconciliation reducers (`core/reconciliation.ts`), and shared constants.
+  Consumed by both `pwa/` and `mobile/`.
+- **`pwa/`** — the existing Next.js web app (kept as `pwa` rather than renamed to
+  `web`; a rename was not worth the churn).
+- **`mobile/`** — the Expo / React Native app (`expo-router`, `@maplibre/maplibre-react-native`,
+  `react-native-sse`, `expo-secure-store`).
+
+The mobile foundation is captured in three follow-up ADRs:
+
+- [ADR-054](adr-054-mobile-design-system.md) — mobile design system (tokens mirrored from web, OS-driven dark mode, native fonts).
+- [ADR-055](adr-055-mobile-state-architecture.md) — thin Zustand store composing the shared `@btp/core` reconciliation reducers (optimistic + SSE).
+- [ADR-056](adr-056-mercure-header-auth-non-browser.md) — Mercure header-auth so the non-browser client can subscribe to trip SSE.
