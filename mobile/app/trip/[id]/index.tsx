@@ -8,11 +8,11 @@ import {
   Screen,
   SegmentedControl,
   type Segment,
-} from '../../src/components/ui';
-import { RoadbookView, SseStatusIndicator, TripMapView } from '../../src/components/trip';
-import { useTheme } from '../../src/theme';
-import { useTripLive } from '../../src/hooks/use-trip-live';
-import { useTripStore } from '../../src/store/trip-store';
+} from '../../../src/components/ui';
+import { RoadbookView, SseStatusIndicator, TripMapView } from '../../../src/components/trip';
+import { useTheme } from '../../../src/theme';
+import { useTripLive } from '../../../src/hooks/use-trip-live';
+import { useTripStore } from '../../../src/store/trip-store';
 
 type TripView = 'roadbook' | 'map';
 

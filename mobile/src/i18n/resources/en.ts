@@ -14,6 +14,7 @@ export const en: typeof fr = {
   header: {
     login: 'Sign in',
     trip: 'Roadbook',
+    stageDetail: 'Stage',
   },
   login: {
     brand: 'Bike Trip Planner',
@@ -65,6 +66,19 @@ export const en: typeof fr = {
     today: 'Today',
     stageMeta: '{{distance}} km · +{{elevation}} m',
     elevationProfileA11y: 'Trip elevation profile',
+    openStageA11y: 'Open day {{day}} details',
+    stageDetail: {
+      notFound: 'Stage not found.',
+      prev: 'Previous',
+      next: 'Next',
+      position: 'Stage {{current}} / {{total}}',
+      distance: 'Distance',
+      ascent: 'Ascent',
+      descent: 'Descent',
+      distanceValue: '{{value}} km',
+      elevationValue: '{{value}} m',
+      surface: 'Surface',
+    },
     states: {
       upcoming: 'Upcoming',
       ongoing: 'Ongoing',

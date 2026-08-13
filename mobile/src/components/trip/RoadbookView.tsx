@@ -1,4 +1,5 @@
 import { Alert, FlatList, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
 import { StageCard } from './StageCard';
@@ -21,6 +22,7 @@ import { runDeleteStage } from '../../store/delete-stage';
 export function RoadbookView({ id }: { id: string }) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
   const stages = useTripStore((s) => s.stages);
   const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
@@ -99,6 +101,7 @@ export function RoadbookView({ id }: { id: string }) {
             index={index}
             locked={isLocked}
             onDelete={confirmDelete}
+            onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
             date={date}
             isToday={state === 'ongoing' && isStageToday(date, today)}
           />
