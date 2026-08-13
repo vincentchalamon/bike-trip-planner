@@ -412,3 +412,61 @@ export type MercureEvent =
       type: "stage_updated";
       data: { stageIndex: number; stage: EnrichedStagePayload };
     };
+
+/**
+ * Canonical list of every Mercure SSE event `type`. Single source of truth
+ * shared by web and mobile: the web hook (`use-mercure.ts`) dispatches on these,
+ * the pure `reduceMercureEvent` reducer in `reconciliation.ts` reconciles them,
+ * and the drift guard test (`pwa/src/store/mercure-reconciliation.test.ts`)
+ * asserts the three stay in lockstep. Keep alphabetically loose but complete —
+ * {@link MERCURE_EVENT_TYPES_ARE_EXHAUSTIVE} fails the build if a union variant
+ * is added above without being listed here.
+ */
+export const MERCURE_EVENT_TYPES = [
+  "route_parsed",
+  "stages_computed",
+  "weather_fetched",
+  "pois_scanned",
+  "accommodations_found",
+  "events_found",
+  "supply_timeline",
+  "terrain_alerts",
+  "calendar_alerts",
+  "wind_alerts",
+  "bike_shop_alerts",
+  "water_point_alerts",
+  "health_service_alerts",
+  "cultural_poi_alerts",
+  "railway_station_alerts",
+  "border_crossing_alerts",
+  "ferry_alerts",
+  "ford_alerts",
+  "route_segment_recalculated",
+  "trip_complete",
+  "computation_step_completed",
+  "trip_ready",
+  "stage_updated",
+  "validation_error",
+  "computation_error",
+] as const satisfies readonly MercureEvent["type"][];
+
+export type MercureEventType = (typeof MERCURE_EVENT_TYPES)[number];
+
+/**
+ * Compile-time completeness check: if a `MercureEvent` variant exists that is
+ * NOT listed in {@link MERCURE_EVENT_TYPES}, `_Complete` resolves to an object
+ * type and assigning `true` below fails to type-check — so the build breaks the
+ * moment the contract and the canonical list drift apart. (`satisfies` above
+ * already rejects a typo / an entry that is not a real event type.)
+ */
+type _Complete =
+  Exclude<MercureEvent["type"], MercureEventType> extends never
+    ? true
+    : {
+        ERROR_event_types_missing_from_MERCURE_EVENT_TYPES: Exclude<
+          MercureEvent["type"],
+          MercureEventType
+        >;
+      };
+
+export const MERCURE_EVENT_TYPES_ARE_EXHAUSTIVE: _Complete = true;
