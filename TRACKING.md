@@ -1827,13 +1827,37 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1035](https://github.com/vincentchalamon/bike-trip-planner/issues/1035) | composants trip-screen partagés (stage card, blocs data/jour, statut SSE) | M | ⏳ À faire | — | #1028, #1031 |
-| 2 | [#1036](https://github.com/vincentchalamon/bike-trip-planner/issues/1036) | liste des voyages (pagination + filtres titre/dates + suppression) | M | ⏳ À faire | — | #1031 |
-| 3 | [#1037](https://github.com/vincentchalamon/bike-trip-planner/issues/1037) | roadbook lecture — 3 états + dates + bannières + « Aujourd'hui » | M | ⏳ À faire | — | #1035 |
-| 4 | [#1038](https://github.com/vincentchalamon/bike-trip-planner/issues/1038) | données par jour — alertes (rejet + dédup) + événements + météo + POI + héberg. + ravito | L | ⏳ À faire | — | #1035, #1030 |
-| 5 | [#1039](https://github.com/vincentchalamon/bike-trip-planner/issues/1039) | détail d'étape plein écran + navigation | M | ⏳ À faire | — | #1035, #1040, #1041 |
-| 6 | [#1040](https://github.com/vincentchalamon/bike-trip-planner/issues/1040) | carte complète — tuiles/satellite + markers + fit-bounds + surlignage segment | L | ⏳ À faire | — | #1031 |
-| 7 | [#1041](https://github.com/vincentchalamon/bike-trip-planner/issues/1041) | profil altimétrique (react-native-svg) + hover synchronisé | M | ⏳ À faire | — | #1040 |
+| 1 | [#1035](https://github.com/vincentchalamon/bike-trip-planner/issues/1035) | composants trip-screen partagés (stage card, blocs data/jour, statut SSE) | M | 🚧 En cours | [#1068](https://github.com/vincentchalamon/bike-trip-planner/pull/1068) `feature/1035` | #1028, #1031 |
+| 2 | [#1036](https://github.com/vincentchalamon/bike-trip-planner/issues/1036) | liste des voyages (pagination + filtres titre/dates + suppression) | M | 🚧 En cours | [#1069](https://github.com/vincentchalamon/bike-trip-planner/pull/1069) `feature/1036` | #1031 |
+| 3 | [#1037](https://github.com/vincentchalamon/bike-trip-planner/issues/1037) | roadbook lecture — 3 états + dates + bannières + « Aujourd'hui » | M | 🚧 En cours | [#1070](https://github.com/vincentchalamon/bike-trip-planner/pull/1070) `feature/1037` | #1035 |
+| 4 | [#1038](https://github.com/vincentchalamon/bike-trip-planner/issues/1038) | données par jour — alertes (rejet + dédup) + événements + météo + POI + héberg. + ravito | L | 🚧 En cours | [#1071](https://github.com/vincentchalamon/bike-trip-planner/pull/1071) `feature/1038` | #1035, #1030 |
+| 5 | [#1039](https://github.com/vincentchalamon/bike-trip-planner/issues/1039) | détail d'étape plein écran + navigation | M | 🚧 En cours | [#1074](https://github.com/vincentchalamon/bike-trip-planner/pull/1074) `feature/1039` | #1035, #1040, #1041 |
+| 6 | [#1040](https://github.com/vincentchalamon/bike-trip-planner/issues/1040) | carte complète — tuiles/satellite + markers + fit-bounds + surlignage segment | L | 🚧 En cours | [#1072](https://github.com/vincentchalamon/bike-trip-planner/pull/1072) `feature/1040` | #1031 |
+| 7 | [#1041](https://github.com/vincentchalamon/bike-trip-planner/issues/1041) | profil altimétrique (react-native-svg) + hover synchronisé | M | 🚧 En cours | [#1073](https://github.com/vincentchalamon/bike-trip-planner/pull/1073) `feature/1041` | #1040 |
+
+### Ordre de merge et conflits attendus
+
+Livré en **stack GitHub linéaire unique** ([stack #1075](https://github.com/vincentchalamon/bike-trip-planner/pull/1075), `gh stack`) : chaque PR est basée sur la précédente, mergeable **bottom-up d'un coup**. `#1035` extrait d'abord les composants trip-screen pour rendre les diffs des frères **disjoints par construction** — d'où **aucun conflit interne** au stack (rebases de linéarisation propres, vérifiés : tip combiné `feature/1039` vert, tsc + 178 tests jest).
+
+**Ordre de merge (bottom → top), à respecter strictement :**
+
+| # | PR | Branche | Base | Fichiers principaux (disjoints) |
+|---|----|---------|------|---------------------------------|
+| 1 | #1068 | `feature/1035` | `main` | `mobile/src/components/trip/*` (fondation), `app/trip/[id].tsx`, `trip-store.ts`, `use-trip-live.ts` |
+| 2 | #1069 | `feature/1036` | `feature/1035` | `app/(tabs)/index.tsx`, `api/trips.ts`, `hooks/use-trips.ts` |
+| 3 | #1070 | `feature/1037` | `feature/1036` | `RoadbookView.tsx`, `StageCard.tsx`, `roadbook-dates.ts`, `RoadbookBanner.tsx` |
+| 4 | #1071 | `feature/1038` | `feature/1037` | 6 `*Block.tsx`, `StageDataBlocks.tsx`, `alert-utils.ts`, `store/dismissed-alerts.ts` |
+| 5 | #1072 | `feature/1040` | `feature/1038` | `TripMap.tsx`, `components/map/*`, `store/map-prefs.ts` |
+| 6 | #1073 | `feature/1041` | `feature/1040` | `core/elevation.ts`, `ElevationProfile.tsx`, `TripMapView.tsx` |
+| 7 | #1074 | `feature/1039` | `feature/1041` | `app/trip/[id]/index.tsx` (+ `stage/[index].tsx`), `StageDetailView.tsx` |
+
+**Zones partagées et arbitrage (déjà résolu dans le stack, à re-appliquer si conflit lors d'un merge séquentiel classique) :**
+- **i18n `fr.ts`/`en.ts`** — touchés par toutes les PRs, en **ajout additif** sous des sous-namespaces distincts (`trip.sse`, `trip.blocks`, `trip.states`/`banners`, `trip.map`, `trip.stageDetail`…). Conflit trivial : **garder les deux jeux de clés**, fr et en synchronisés.
+- **`StageCard.tsx`** — chrome par #1037 (date/pastille/labels/delete), body par #1038 (`StageDataBlocks`), `onPress` résumé par #1039. Arbitrage : **cumuler**, ne jamais retirer le chrome #1037 ni les data-blocks #1038.
+- **`TripMapView.tsx`** — markers par #1040, pilotage du highlight (hover profil) par #1041. Arbitrage : **cumuler** ; `TripMap.tsx`/`map-utils.ts` restent la source (#1040).
+- **`app/trip/[id].tsx` → `app/trip/[id]/index.tsx`** — #1039 convertit le fichier en dossier (contenu préservé, imports reprofondis). Doit rester **en haut du stack** (dernier merge).
+
+**Point de suivi (non bloquant) :** le câblage complet action d'alerte `navigate` → surlignage carte est exposé côté données (`onAlertNavigate`, #1038) et côté carte (`highlightedSegment`, #1040) ; le fil hover profil↔carte est branché dans `TripMapView` (#1041). Le routage `navigate` depuis le roadbook (segment Carte) vers le highlight reste à finaliser (candidat Sprint 56 ou follow-up consultation).
 
 </details>
 
