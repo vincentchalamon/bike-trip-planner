@@ -63,9 +63,8 @@ Notes:
 - `eas build --local` generates and reuses a local keystore on first run; you may
   be prompted to log in to an Expo account for credential storage. No cloud build
   is submitted.
-- `eas-cli` is not a project dependency; run it with `npx eas-cli ...` if the
-  `eas` binary is not on your `PATH` (`npm run build:preview` calls `eas`
-  directly — prefix with `npx` if needed).
+- `eas-cli` is not a project dependency; `npm run build:preview` runs it through
+  `npx --yes eas-cli`, so it is fetched on demand — nothing to install globally.
 
 ### Install the APK on a device
 
