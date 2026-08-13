@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../src/auth/store';
+import { ThemeProvider } from '../src/theme';
 
 function RootNavigator() {
   return (
@@ -16,9 +17,11 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <StatusBar style="auto" />
-      <RootNavigator />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <StatusBar style="auto" />
+        <RootNavigator />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
