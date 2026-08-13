@@ -1,0 +1,10 @@
+# ngrok traffic policy — équivalent de l'ancien `--host-header=rewrite`.
+# Réécrit le Host de la requête forwardée à l'upstream vers `localhost`, pour que
+# le Caddy du stack dev (SERVER_NAME=localhost, TRUSTED_HOSTS ^localhost|php$)
+# accepte les requêtes arrivant via le domaine ngrok.
+on_http_request:
+  - actions:
+      - type: add-headers
+        config:
+          headers:
+            host: localhost

@@ -23,6 +23,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       provisioner: ${{ steps.filter.outputs.provisioner }}
       pwa: ${{ steps.filter.outputs.pwa }}
+      mobile: ${{ steps.filter.outputs.mobile }}
       docker: ${{ steps.filter.outputs.docker }}
       docs: ${{ steps.filter.outputs.docs }}
       e2e: ${{ steps.filter.outputs.e2e }}
@@ -55,7 +56,7 @@ jobs:
           # the MkDocs config (mkdocs.yml, docs-only) and the non-code assets above have no code
           # impact. Fail-safe: run the full suite on non-PR events, on workflow changes, or when a
           # file matches no zone.
-          known='^api/|^provisioner/|^pwa/|^core/|^package\.json$|^package-lock\.json$|^\.npmrc$|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|^mkdocs\.yml$|'"$noncode"
+          known='^api/|^provisioner/|^pwa/|^core/|^mobile/|^package\.json$|^package-lock\.json$|^\.npmrc$|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|^mkdocs\.yml$|'"$noncode"
           run_all=false
           if [ "$EVENT_NAME" != "pull_request" ]; then run_all=true; fi
           if printf '%s\n' "$files" | grep -qE '^\.github/workflows/'; then run_all=true; fi
@@ -70,6 +71,9 @@ jobs:
           # manifests (package.json/-lock, .npmrc) affect the web build, so any of
           # them exercises the pwa jobs (and, via e2e below, Playwright).
           pwa=$(flag '^pwa/|^core/|^package\.json$|^package-lock\.json$|^\.npmrc$')
+          # mobile consumes core/ and the shared schema, and the root workspace
+          # manifests drive its install, so any of them exercises the mobile job.
+          mobile=$(flag '^mobile/|^core/|^package\.json$|^package-lock\.json$|^\.npmrc$')
           docker=$(flag '^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$')
           if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE '\.md$|^mkdocs\.yml$'; then docs=true; else docs=false; fi
           if [ "$api" = true ] || [ "$pwa" = true ] || [ "$docker" = true ]; then e2e=true; else e2e=false; fi
@@ -78,6 +82,7 @@ jobs:
             echo "api=$api"
             echo "provisioner=$provisioner"
             echo "pwa=$pwa"
+            echo "mobile=$mobile"
             echo "docker=$docker"
             echo "docs=$docs"
             echo "e2e=$e2e"
@@ -880,3 +885,26 @@ jobs:
         run: npm ci
       - name: Run unit tests with coverage
         run: npm run test:unit --workspace pwa -- --coverage
+
+  mobile-checks:
+    name: Mobile (tsc + jest)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.mobile == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TypeScript Check
+        run: npm run typecheck --workspace mobile
+      - name: Run jest
+        run: npm run test --workspace mobile

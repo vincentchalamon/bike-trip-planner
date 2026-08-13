@@ -145,6 +145,8 @@ docker compose --profile provisioning run --rm provisioner corse --allow-unroute
 /close [sprint-number]              # Close a sprint: clean worktrees/branches, update main, retrospective
 ```
 
+**Worktree-agent isolation is not guaranteed — pre-create the worktree and pin the agent to it.** In Sprint 53 (#1012) an agent launched with `isolation: "worktree"` lost its isolation: instead of working in a dedicated worktree it edited the **main checkout** directly, leaving an incomplete WIP uncommitted on `main` that had to be rescued (`git switch -c feature/<n>` carrying the dirty tree, then reset `main` clean). The reliable pattern (used for #1019 right after, no mishap): **create the worktree yourself first** — `git worktree add -b feature/<n> ../<repo>-<n> main` — then launch a non-isolated agent whose prompt names the absolute worktree path and states, as hard rules: `cd` there first, work ONLY there, never touch the main checkout, and never run `git worktree`/`git switch`/`git checkout <branch>` (verify `git rev-parse --abbrev-ref HEAD` is the expected branch and STOP if not). Review the agent's diff before pushing.
+
 ### GitHub Automation
 
 Claude can also be triggered directly from GitHub:
