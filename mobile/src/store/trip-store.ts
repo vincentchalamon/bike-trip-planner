@@ -50,6 +50,9 @@ interface TripState {
   tripId: string | null;
   title: string | null;
   stages: StageData[];
+  // Trip started (startDate <= today): the backend rejects edits with 423, so the
+  // UI disables them. Read from the /detail payload on hydrate.
+  isLocked: boolean;
   loading: boolean;
   error: string | null;
   // Initial load from a /trips/{id}/detail payload.
@@ -58,6 +61,12 @@ interface TripState {
   applyTripReady: (stages: StageData[]) => void;
   // Mode 2 per-stage event: reconcile a single slice via the shared core reducer.
   applyStageUpdate: (index: number, stage: StageData) => void;
+  // Replace the whole stage list (optimistic rollback restores a snapshot).
+  setStages: (stages: StageData[]) => void;
+  // Optimistic delete: drop a stage and renumber the days, mirroring the web
+  // store. The authoritative state arrives via the SSE reconciliation; on API
+  // failure the caller restores the pre-delete snapshot via setStages.
+  deleteStageOptimistic: (index: number) => void;
   setStatus: (patch: { loading?: boolean; error?: string | null }) => void;
   reset: () => void;
 }
@@ -69,6 +78,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   tripId: null,
   title: null,
   stages: [],
+  isLocked: false,
   loading: true,
   error: null,
   hydrate: (tripId, detail) =>
@@ -76,6 +86,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       tripId,
       title: detail.title ?? null,
       stages: (detail.stages ?? []).map(stageDataFromDetail),
+      isLocked: detail.isLocked ?? false,
       loading: false,
       error: null,
     }),
@@ -83,7 +94,21 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({ stages: reconcileTripReady(get().stages, stages) }),
   applyStageUpdate: (index, stage) =>
     set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
+  setStages: (stages) => set({ stages }),
+  deleteStageOptimistic: (index) =>
+    set((state) => ({
+      stages: state.stages
+        .filter((_, i) => i !== index)
+        .map((stage, i) => ({ ...stage, dayNumber: i + 1 })),
+    })),
   setStatus: (patch) => set(patch),
   reset: () =>
-    set({ tripId: null, title: null, stages: [], loading: true, error: null }),
+    set({
+      tripId: null,
+      title: null,
+      stages: [],
+      isLocked: false,
+      loading: true,
+      error: null,
+    }),
 }));

@@ -27,3 +27,18 @@ export async function fetchTripDetail(id: string): Promise<TripDetail | null> {
   }
   return data ?? null;
 }
+
+// Delete a stage (merges it with the adjacent day). The backend recomputes and
+// pushes the authoritative state over SSE; a started trip is rejected with 423
+// (App\State\TripLocker). Returns the raw status so the caller can distinguish a
+// lock (423) from any other failure and roll back its optimistic update.
+export async function deleteStage(
+  tripId: string,
+  index: number,
+): Promise<{ ok: boolean; status: number }> {
+  const { response } = await api.DELETE('/trips/{tripId}/stages/{index}', {
+    params: { path: { tripId, index: String(index) } },
+    headers: ld,
+  });
+  return { ok: response.ok, status: response.status };
+}
