@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTripLive } from '../../src/hooks/use-trip-live';
 import { useTripStore } from '../../src/store/trip-store';
+import { runDeleteStage } from '../../src/store/delete-stage';
 
 export default function TripRoadbook() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,8 +15,31 @@ export default function TripRoadbook() {
 
   const title = useTripStore((s) => s.title);
   const stages = useTripStore((s) => s.stages);
+  const isLocked = useTripStore((s) => s.isLocked);
   const loading = useTripStore((s) => s.loading);
   const error = useTripStore((s) => s.error);
+
+  function confirmDelete(index: number): void {
+    Alert.alert('Supprimer cette étape ?', 'Le jour sera fusionné avec l’étape voisine.', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => {
+          // Optimistic delete + rollback are orchestrated in runDeleteStage; the
+          // authoritative state comes back over SSE (reconciled by core).
+          void runDeleteStage(id, index, useTripStore.getState(), (reason) => {
+            Alert.alert(
+              reason === 'locked' ? 'Voyage démarré' : 'Suppression impossible',
+              reason === 'locked'
+                ? 'Ce voyage a commencé : il est en lecture seule.'
+                : 'La suppression a échoué. Réessayez.',
+            );
+          });
+        },
+      },
+    ]);
+  }
 
   if (loading) {
     return (
@@ -43,18 +67,30 @@ export default function TripRoadbook() {
         data={stages}
         keyExtractor={(_, index) => String(index)}
         ListEmptyComponent={<Text style={styles.empty}>Aucune étape calculée.</Text>}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.row}>
-            <Text style={styles.day}>
-              Jour {item.dayNumber ?? '?'}
-              {item.isRestDay ? ' · repos' : ''}
-            </Text>
-            <Text style={styles.label}>
-              {item.startLabel ?? '?'} → {item.endLabel ?? item.label ?? '?'}
-            </Text>
-            <Text style={styles.meta}>
-              {Math.round(item.distance ?? 0)} km · +{Math.round(item.elevation ?? 0)} m
-            </Text>
+            <View style={styles.rowText}>
+              <Text style={styles.day}>
+                Jour {item.dayNumber ?? '?'}
+                {item.isRestDay ? ' · repos' : ''}
+              </Text>
+              <Text style={styles.label}>
+                {item.startLabel ?? '?'} → {item.endLabel ?? item.label ?? '?'}
+              </Text>
+              <Text style={styles.meta}>
+                {Math.round(item.distance ?? 0)} km · +{Math.round(item.elevation ?? 0)} m
+              </Text>
+            </View>
+            {/* A started trip is read-only (423); hide the action entirely. */}
+            {!isLocked ? (
+              <Pressable
+                accessibilityLabel={`Supprimer le jour ${item.dayNumber ?? index + 1}`}
+                style={styles.deleteButton}
+                onPress={() => confirmDelete(index)}
+              >
+                <Text style={styles.deleteButtonText}>Supprimer</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       />
@@ -78,10 +114,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e5e7eb',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  rowText: { flex: 1 },
   day: { fontSize: 16, fontWeight: '600' },
   label: { color: '#374151', marginTop: 2 },
   meta: { color: '#6b7280', marginTop: 2 },
+  deleteButton: { paddingHorizontal: 12, paddingVertical: 6 },
+  deleteButtonText: { color: '#dc2626', fontWeight: '600' },
   error: { color: '#dc2626' },
   empty: { textAlign: 'center', color: '#6b7280', marginTop: 32 },
 });
