@@ -4,6 +4,7 @@ import type { fr } from './fr';
 export const en: typeof fr = {
   common: {
     retry: 'Retry',
+    error: 'Something went wrong',
   },
   nav: {
     create: 'Create',

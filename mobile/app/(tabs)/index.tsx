@@ -47,7 +47,12 @@ export default function Trips() {
   if (error) {
     return (
       <Screen padded={false}>
-        <ErrorState description={error} onRetry={() => void load()} retryLabel={t('common.retry')} />
+        <ErrorState
+          title={t('common.error')}
+          description={error}
+          onRetry={() => void load()}
+          retryLabel={t('common.retry')}
+        />
       </Screen>
     );
   }

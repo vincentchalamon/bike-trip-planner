@@ -82,7 +82,7 @@ export default function TripRoadbook() {
   if (error) {
     return (
       <Screen padded={false}>
-        <ErrorState description={error} />
+        <ErrorState title={t('common.error')} description={error} />
       </Screen>
     );
   }

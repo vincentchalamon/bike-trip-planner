@@ -2,6 +2,7 @@
 export const fr = {
   common: {
     retry: 'Réessayer',
+    error: 'Une erreur est survenue',
   },
   nav: {
     create: 'Créer',
