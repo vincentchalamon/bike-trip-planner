@@ -224,6 +224,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/mercure-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Issue a per-trip Mercure subscriber JWT for non-browser SSE clients (mobile).
+         * @description Issue a per-trip Mercure subscriber JWT for non-browser SSE clients (mobile).
+         */
+        get: operations["api_trips_idmercure-token_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -1095,6 +1115,19 @@ export interface components {
             });
             "@id": string;
             "@type": string;
+        };
+        /**
+         * @description Delivers the per-trip Mercure subscriber JWT in the response body.
+         *
+         *     The browser receives this token as the HttpOnly `mercureAuthorization` cookie
+         *     ({@see \App\Mercure\MercureSubscriberListener}), which a non-browser client
+         *     (React Native) cannot read. This resource exposes the same token — signed with
+         *     the same HMAC secret and scoped to `/trips/{id}` for 1h — through a readable
+         *     body so a mobile client can send it as `Authorization: Bearer` to the hub.
+         *     The cookie is untouched; the web keeps its cookie posture (issue #1019).
+         */
+        "MercureToken.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            token?: string;
         };
         "PoiSuggestionDto.jsonld": {
             /** @description Display name of the POI. */
@@ -2420,6 +2453,47 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+        };
+    };
+    "api_trips_idmercure-token_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description MercureToken identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscriber JWT scoped to the trip topic */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["MercureToken.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Trip not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
