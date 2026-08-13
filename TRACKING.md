@@ -1813,7 +1813,7 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
    - Après le squash-merge d'un parent, GitHub recible l'enfant sur `main` mais l'enfant porte encore les commits pré-squash du parent : rebaser avec `gh stack rebase` (ou `git rebase --onto origin/main <dernier-commit-parent> feature/<enfant>`), pas un `git rebase origin/main` direct.
 2. **Indépendants** (base `main`, ordre libre) : #1057, #1058, #1059.
 3. **Conflits attendus** : aucun entre PRs — le seul recoupement était `mobile/package.json`/`package-lock.json` (deps ajoutées par #1028 fonts+lucide+**react-native-svg**, par #1029 i18n). #1029 étant stacké sur #1028, ses ajouts sont disjoints et déjà rebasés (doublon `react-native-svg` retiré). `mobile/app.json` : #1028 (`userInterfaceStyle`) et #1032 (`android.intentFilters`) touchent des clés disjointes ; #1032 n'a finalement pas édité `app.json` (l'`app.config.js` existant fait foi). `docs`/`mkdocs.yml`/root `README`/`CLAUDE.md` : #1034 seul.
-4. **`claude-review` rouge sur #1061** = faux négatif connu (l'étape « Check for permission denials » du bot échoue sur une commande `rm`/`find` hors allowlist) ; la revue effective est **APPROVED**. Voir [[bike-trip-planner-ci-gotchas]].
+4. **`claude-review` rouge sur #1061** = faux négatif connu (l'étape « Check for permission denials » du bot échoue sur une commande `rm`/`find` hors allowlist) ; la revue effective est **APPROVED**. Rejouer le job ne change rien (le déni n'est pas dans le diff) : la PR est mergeable une fois approuvée.
 5. **Recette device (manuelle, non couverte par la CI)** : APK preview installable (#1057/#1033), App Links vérifiés `adb pm verify-app-links` + magic-link https (#1058/#1032).
 
 </details>
