@@ -3,7 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
 import '../../i18n';
-import { ElevationProfile } from './ElevationProfile';
+import { ElevationProfile, projectTouchToDistanceKm } from './ElevationProfile';
 
 // Render react-native-svg as inert host-like components so the tree resolves
 // under react-test-renderer without the native module.
@@ -55,6 +55,32 @@ const climbingStage = stage({
     { lat: 48.01, lon: 2, ele: 200 },
     { lat: 48.02, lon: 2, ele: 150 },
   ],
+});
+
+describe('projectTouchToDistanceKm (padding-aware touch mapping)', () => {
+  // Container has 8px horizontal padding; onLayout reports the border-box width
+  // (816 here → 800px content box that the Svg fills at width="100%").
+  const WIDTH = 816;
+
+  it('maps the left content edge to ~0 km, not into the profile', () => {
+    // A touch at the left content edge (locationX = PAD_H) must land at distance
+    // 0, not drift right. Without de-padding, svgX would be (8/816)*800 ≈ 7.84,
+    // yielding a positive distance — this asserts the corrected mapping is ≤ 0.
+    expect(projectTouchToDistanceKm(8, WIDTH, 100)).toBeLessThanOrEqual(0);
+  });
+
+  it('maps the right content edge to (near) the full distance', () => {
+    expect(projectTouchToDistanceKm(WIDTH - 8, WIDTH, 100)).toBeGreaterThanOrEqual(99);
+  });
+
+  it('clamps touches inside the padding gutters to the content box', () => {
+    expect(projectTouchToDistanceKm(0, WIDTH, 100)).toBeLessThanOrEqual(0);
+    expect(projectTouchToDistanceKm(WIDTH, WIDTH, 100)).toBeGreaterThanOrEqual(99);
+  });
+
+  it('returns null before the container has been measured', () => {
+    expect(projectTouchToDistanceKm(100, 0, 100)).toBeNull();
+  });
 });
 
 describe('ElevationProfile', () => {

@@ -21,6 +21,28 @@ const PAD_R = 8;
 const PAD_T = 8;
 const PAD_B = 20;
 const SVG_HEIGHT = 100;
+// Horizontal padding of the touch container (styles.container). onLayout reports
+// the border-box width (padding included), but the Svg (width="100%") only fills
+// the content box, so touch X must be de-padded before projecting into viewBox
+// space or the hovered point drifts right as the finger moves (kept in sync with
+// styles.container.paddingHorizontal).
+const PAD_H = 8;
+
+// Project a touch X (relative to the container's left border, padding included)
+// onto a cumulative distance in km. De-pads and clamps to the Svg content box —
+// which the Svg fills at width="100%" — before mapping viewBox → distance.
+// Returns null when the content box has no width yet. Exported for unit testing.
+export function projectTouchToDistanceKm(
+  locationX: number,
+  width: number,
+  maxDist: number,
+): number | null {
+  const contentWidth = width - 2 * PAD_H;
+  if (contentWidth <= 0) return null;
+  const contentX = Math.min(Math.max(locationX - PAD_H, 0), contentWidth);
+  const svgX = (contentX / contentWidth) * VW;
+  return ((svgX - PAD_L) / (VW - PAD_L - PAD_R)) * maxDist;
+}
 
 interface ElevationProfileProps {
   stages: StageData[];
@@ -113,10 +135,9 @@ export function ElevationProfile({
   }, [points, hasData, maxDist, displayMinEle, displayMaxEle]);
 
   const handleTouch = (e: GestureResponderEvent) => {
-    if (!hasData || width === 0) return;
-    const locationX = e.nativeEvent.locationX;
-    const svgX = (locationX / width) * VW;
-    const distKm = ((svgX - PAD_L) / (VW - PAD_L - PAD_R)) * maxDist;
+    if (!hasData) return;
+    const distKm = projectTouchToDistanceKm(e.nativeEvent.locationX, width, maxDist);
+    if (distKm === null) return;
     const best = findClosestProfilePoint(points, distKm);
     if (!best) return;
     const prev = lastEmitted.current;
@@ -227,7 +248,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: PAD_H,
     paddingVertical: 4,
   },
   tooltip: {
