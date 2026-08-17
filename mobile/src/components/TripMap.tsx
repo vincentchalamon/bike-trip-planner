@@ -64,15 +64,13 @@ export function TripMap({
     [coordinates],
   );
   // maplibre-react-native v11: `initialViewState` is applied once at native
-  // mount, whereas the top-level `CameraStop` props (bounds/padding, center/zoom)
-  // are reactive — feeding `bounds` here re-frames the camera whenever the
-  // coordinates change (e.g. prev/next stage on the detail screen, #1074).
+  // mount, whereas the top-level `CameraStop` `bounds`/`padding` are reactive —
+  // feeding `bounds` here re-frames the camera whenever the coordinates change
+  // (e.g. prev/next stage on the detail screen, #1074). `bounds` is only null for
+  // empty coordinates, which the early return below renders before this is used.
   const cameraStop = useMemo(
-    () =>
-      bounds
-        ? { bounds, padding: FIT_PADDING }
-        : { center: coordinates[0], zoom: 8 },
-    [bounds, coordinates],
+    () => ({ bounds: bounds ?? undefined, padding: FIT_PADDING }),
+    [bounds],
   );
 
   if (coordinates.length === 0) {
