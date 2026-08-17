@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, LoadingState } from '../ui';
 import { ArrowLeft, ChevronRight, Mountain, Route } from '../ui/icons';
 import { TripMap } from '../TripMap';
-import { collectMarkers } from '../map/map-utils';
+import { alertSegmentToCoords, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
 import { StageDataBlocks } from './StageDataBlocks';
 import { formatStageDate, stageDateFor } from './roadbook-dates';
@@ -39,6 +39,10 @@ export function StageDetailView({
   const startDate = useTripStore((s) => s.startDate);
   const loading = useTripStore((s) => s.loading);
   const [index, setIndex] = useState(initialIndex);
+  // Stretch highlighted by an alert `navigate` action ([lon, lat] for the map).
+  const [highlightedSegment, setHighlightedSegment] = useState<
+    [number, number][] | undefined
+  >(undefined);
 
   // Keep the index valid as stages hydrate / change under us.
   const count = stages.length;
@@ -46,6 +50,9 @@ export function StageDetailView({
   useEffect(() => {
     if (safeIndex !== index) setIndex(safeIndex);
   }, [safeIndex, index]);
+
+  // Drop a stale highlight when the stage changes: it belongs to another stretch.
+  useEffect(() => setHighlightedSegment(undefined), [safeIndex]);
 
   const stage = stages[safeIndex];
 
@@ -165,7 +172,11 @@ export function StageDetailView({
 
       <View style={{ height: 240 }}>
         {coordinates.length > 0 ? (
-          <TripMap coordinates={coordinates} markers={markers} />
+          <TripMap
+            coordinates={coordinates}
+            markers={markers}
+            highlightedSegment={highlightedSegment}
+          />
         ) : (
           <View style={{ flex: 1 }}>
             <EmptyState title={t('trip.mapEmpty')} />
@@ -194,7 +205,14 @@ export function StageDetailView({
           paddingBottom: theme.spacing.base,
         }}
       >
-        <StageDataBlocks stage={stage} />
+        <StageDataBlocks
+          stage={stage}
+          onAlertNavigate={(segments) =>
+            setHighlightedSegment(
+              segments.length > 0 ? alertSegmentToCoords(segments[0]) : undefined,
+            )
+          }
+        />
       </View>
     </ScrollView>
   );
