@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   deleteTrip,
@@ -81,14 +81,20 @@ export interface UseTrips {
   remove: (id: string) => Promise<string | null>;
 }
 
-// Paginated (12/page), server-filtered trip list. The title filter is debounced so
-// a keystroke does not refetch; date filters apply immediately. Any filter change
-// resets to page 1 and replaces the list; loadMore appends the next page.
+// Paginated (12/page), server-filtered trip list. Every filter (title and both
+// dates) flows through one debounced filter object so a keystroke does not refetch
+// and dates and title cannot race. Any filter change resets to page 1 and replaces
+// the list; loadMore appends the next page. A request counter drops the response of
+// a loadMore that was in flight when the filter/context changed.
 export function useTrips(): UseTrips {
   const [title, setTitle] = useState('');
-  const [debouncedTitle, setDebouncedTitle] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [debouncedFilters, setDebouncedFilters] = useState<TripFilters>({
+    title: '',
+    startDate: '',
+    endDate: '',
+  });
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -100,16 +106,29 @@ export function useTrips(): UseTrips {
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
-  useEffect(() => {
-    const handle = setTimeout(() => setDebouncedTitle(title), DEBOUNCE_MS);
-    return () => clearTimeout(handle);
-  }, [title]);
+  // Bumped on every page-1 (re)load; a loadMore captures it and drops its response
+  // if it no longer matches, i.e. the filter/context changed mid-flight.
+  const requestId = useRef(0);
 
-  // Page 1 on mount and on every query change (debounced title / dates / reload).
   useEffect(() => {
+    const handle = setTimeout(() => {
+      // Bail out on an unchanged filter (return prev) so no redundant page-1 refetch.
+      setDebouncedFilters((prev) =>
+        prev.title === title && prev.startDate === startDate && prev.endDate === endDate
+          ? prev
+          : { title, startDate, endDate },
+      );
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [title, startDate, endDate]);
+
+  // Page 1 on mount and on every query change (debounced filters / reload).
+  useEffect(() => {
+    requestId.current += 1;
     let cancelled = false;
     setLoading(true);
-    void runLoadTrips(1, { title: debouncedTitle, startDate, endDate }).then((res) => {
+    setLoadingMore(false);
+    void runLoadTrips(1, debouncedFilters).then((res) => {
       if (cancelled) return;
       setTrips(res.items);
       setTotalItems(res.totalItems);
@@ -121,23 +140,25 @@ export function useTrips(): UseTrips {
     return () => {
       cancelled = true;
     };
-  }, [debouncedTitle, startDate, endDate, nonce]);
+  }, [debouncedFilters, nonce]);
 
   const canLoadMore =
     !loading && !loadingMore && hasMorePages(trips.length, totalItems);
 
   const loadMore = useCallback(() => {
     if (loading || loadingMore || !hasMorePages(trips.length, totalItems)) return;
+    const token = requestId.current;
     const next = page + 1;
     setLoadingMore(true);
-    void runLoadTrips(next, { title: debouncedTitle, startDate, endDate }).then((res) => {
+    void runLoadTrips(next, debouncedFilters).then((res) => {
+      if (requestId.current !== token) return; // stale: filters/context changed mid-flight
       setTrips((prev) => [...prev, ...res.items]);
       setTotalItems(res.totalItems);
       if (res.error) setError(res.error);
       setPage(next);
       setLoadingMore(false);
     });
-  }, [loading, loadingMore, trips.length, totalItems, page, debouncedTitle, startDate, endDate]);
+  }, [loading, loadingMore, trips.length, totalItems, page, debouncedFilters]);
 
   const reload = useCallback(() => {
     setRefreshing(true);
@@ -162,7 +183,7 @@ export function useTrips(): UseTrips {
     title,
     startDate,
     endDate,
-    hasActiveFilter: hasActiveFilter({ title: debouncedTitle, startDate, endDate }),
+    hasActiveFilter: hasActiveFilter(debouncedFilters),
     canLoadMore,
     setTitle,
     setStartDate,

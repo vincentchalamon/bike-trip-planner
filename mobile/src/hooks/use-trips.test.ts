@@ -1,4 +1,6 @@
 /// <reference types="jest" />
+import { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
 import { Alert } from 'react-native';
 import {
   confirmDeleteTrip,
@@ -6,6 +8,8 @@ import {
   hasMorePages,
   runDeleteTrip,
   runLoadTrips,
+  useTrips,
+  type UseTrips,
 } from './use-trips';
 
 jest.mock('../api/trips', () => ({
@@ -61,6 +65,110 @@ describe('pagination + filter predicates (#1036)', () => {
     expect(hasActiveFilter({ title: 'alps' })).toBe(true);
     expect(hasActiveFilter({ startDate: '2026-01-01' })).toBe(true);
     expect(hasActiveFilter({ endDate: '2026-02-01' })).toBe(true);
+  });
+});
+
+function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+function page(items: string[], totalItems: number) {
+  return { items: items.map((id) => ({ id })), totalItems } as never;
+}
+
+// Minimal renderHook on react-test-renderer (the mobile convention, no RTL).
+function renderHook(): { result: { current: UseTrips }; unmount: () => void } {
+  const result = { current: undefined as unknown as UseTrips };
+  function Probe() {
+    result.current = useTrips();
+    return null;
+  }
+  let renderer!: ReturnType<typeof TestRenderer.create>;
+  act(() => {
+    renderer = TestRenderer.create(createElement(Probe));
+  });
+  return { result, unmount: () => act(() => renderer.unmount()) };
+}
+
+describe('useTrips filter/pagination races (#1036)', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('drops a loadMore response that lands after the filter changed', async () => {
+    const initial = deferred<never>();
+    const stalePage2 = deferred<never>();
+    const refetched = deferred<never>();
+    mockFetch
+      .mockReturnValueOnce(initial.promise) // mount: page 1, empty filters
+      .mockReturnValueOnce(stalePage2.promise) // loadMore: page 2, empty filters
+      .mockReturnValueOnce(refetched.promise); // page 1, new title filter
+
+    const { result, unmount } = renderHook();
+    await act(async () => {
+      initial.resolve(page(['a', 'b'], 30));
+    });
+    expect(result.current.trips.map((t) => t.id)).toEqual(['a', 'b']);
+
+    // loadMore is now in flight (page 2 of the empty-filter query)...
+    act(() => result.current.loadMore());
+    expect(mockFetch).toHaveBeenLastCalledWith(2, {
+      title: '',
+      startDate: '',
+      endDate: '',
+    });
+
+    // ...the user changes the title before it lands: page 1 refetches.
+    act(() => result.current.setTitle('paris'));
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+    await act(async () => {
+      refetched.resolve(page(['x'], 5));
+    });
+    expect(result.current.trips.map((t) => t.id)).toEqual(['x']);
+
+    // The stale page-2 response lands last and must be ignored, not appended.
+    await act(async () => {
+      stalePage2.resolve(page(['c', 'd'], 30));
+    });
+    expect(result.current.trips.map((t) => t.id)).toEqual(['x']);
+    expect(result.current.loadingMore).toBe(false);
+    unmount();
+  });
+
+  it('routes date changes through the same debounced load path as the title', async () => {
+    const initial = deferred<never>();
+    mockFetch.mockReturnValueOnce(initial.promise);
+    const { result, unmount } = renderHook();
+    await act(async () => {
+      initial.resolve(page([], 0));
+    });
+    mockFetch.mockClear();
+
+    // A date change must not refetch synchronously (debounced, like the title)...
+    const afterDate = deferred<never>();
+    mockFetch.mockReturnValueOnce(afterDate.promise);
+    act(() => result.current.setStartDate('2026-01-01'));
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // ...it fires once, after the debounce, as a single unified filter object.
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+    await act(async () => {
+      afterDate.resolve(page([], 0));
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(1, {
+      title: '',
+      startDate: '2026-01-01',
+      endDate: '',
+    });
+    unmount();
   });
 });
 
