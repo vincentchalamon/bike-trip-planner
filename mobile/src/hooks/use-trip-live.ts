@@ -14,6 +14,7 @@ export interface TripLiveStore {
   applyTripReady: ReturnType<typeof useTripStore.getState>['applyTripReady'];
   applyStageUpdate: ReturnType<typeof useTripStore.getState>['applyStageUpdate'];
   setStatus: ReturnType<typeof useTripStore.getState>['setStatus'];
+  setComputing: ReturnType<typeof useTripStore.getState>['setComputing'];
 }
 
 // Load a trip into the store from /detail, then open the Mercure SSE
@@ -52,11 +53,23 @@ export async function runTripLive(
     return subscribeToTrip(id, token, (event) => {
       if (event.type === 'trip_ready') {
         store.applyTripReady(event.data.stages.map(enrichedPayloadToStageData));
+        store.setComputing(false);
       } else if (event.type === 'stage_updated') {
         store.applyStageUpdate(
           event.data.stageIndex,
           enrichedPayloadToStageData(event.data.stage),
         );
+      } else if (event.type === 'computation_step_completed') {
+        // Progress tick: a recompute is streaming. Show the SSE badge until the
+        // terminal trip_ready / trip_complete arrives.
+        store.setComputing(true);
+      } else if (event.type === 'trip_complete') {
+        store.setComputing(false);
+      } else if (event.type === 'computation_error') {
+        // A retryable error means the computation is still running (the core
+        // reducer leaves the state untouched); only a non-retryable error is
+        // terminal and clears the computing badge.
+        if (!event.data.retryable) store.setComputing(false);
       }
     });
   } catch {
@@ -72,6 +85,7 @@ export function useTripLive(id: string): void {
   const applyTripReady = useTripStore((s) => s.applyTripReady);
   const applyStageUpdate = useTripStore((s) => s.applyStageUpdate);
   const setStatus = useTripStore((s) => s.setStatus);
+  const setComputing = useTripStore((s) => s.setComputing);
   const reset = useTripStore((s) => s.reset);
 
   useEffect(() => {
@@ -80,7 +94,7 @@ export function useTripLive(id: string): void {
 
     void runTripLive(
       id,
-      { hydrate, applyTripReady, applyStageUpdate, setStatus },
+      { hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing },
       () => cancelled,
     ).then((opened) => {
       if (cancelled) opened?.close();
@@ -92,5 +106,5 @@ export function useTripLive(id: string): void {
       sub?.close();
       reset();
     };
-  }, [id, hydrate, applyTripReady, applyStageUpdate, setStatus, reset]);
+  }, [id, hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing, reset]);
 }

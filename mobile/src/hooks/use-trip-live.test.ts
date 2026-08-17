@@ -140,3 +140,67 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(sub).toBeUndefined();
   });
 });
+
+describe('computing state machine driven by SSE', () => {
+  async function connect(): Promise<(event: MercureEvent) => void> {
+    mockDetail.mockResolvedValue(detail([apiStage()]));
+    mockToken.mockResolvedValue('jwt');
+    let dispatch: ((event: MercureEvent) => void) | undefined;
+    mockSubscribe.mockImplementation((_id, _token, cb) => {
+      dispatch = cb;
+      return { close: jest.fn() };
+    });
+    await runTripLive('t1', store(), notCancelled);
+    expect(dispatch).toBeDefined();
+    return dispatch!;
+  }
+
+  const stepCompleted: MercureEvent = {
+    type: 'computation_step_completed',
+    data: { step: 'route', category: 'route', completed: 1, total: 5 },
+  };
+
+  it('sets computing=true on computation_step_completed', async () => {
+    const dispatch = await connect();
+    expect(store().computing).toBe(false);
+    dispatch(stepCompleted);
+    expect(store().computing).toBe(true);
+  });
+
+  it('clears computing on trip_ready', async () => {
+    const dispatch = await connect();
+    dispatch(stepCompleted);
+    dispatch({
+      type: 'trip_ready',
+      data: { stages: [enrichedPayload()], computationStatus: {} },
+    });
+    expect(store().computing).toBe(false);
+  });
+
+  it('clears computing on trip_complete', async () => {
+    const dispatch = await connect();
+    dispatch(stepCompleted);
+    dispatch({ type: 'trip_complete', data: { computationStatus: {} } });
+    expect(store().computing).toBe(false);
+  });
+
+  it('clears computing on a non-retryable computation_error', async () => {
+    const dispatch = await connect();
+    dispatch(stepCompleted);
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'weather', message: 'boom', retryable: false },
+    });
+    expect(store().computing).toBe(false);
+  });
+
+  it('keeps computing=true on a retryable computation_error', async () => {
+    const dispatch = await connect();
+    dispatch(stepCompleted);
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'weather', message: 'transient', retryable: true },
+    });
+    expect(store().computing).toBe(true);
+  });
+});
