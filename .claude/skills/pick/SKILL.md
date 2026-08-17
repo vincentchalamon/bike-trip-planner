@@ -2,7 +2,7 @@
 name: pick
 description: Implement a GitHub issue end-to-end (branch, code, test, PR, CI, review)
 argument-hint: <issue-number> [base-branch]
-allowed-tools: Bash(git *), Bash(gh *), Bash(make *), Bash(rsync *), Read, Edit, Write, Glob, Grep
+allowed-tools: Bash(git *), Bash(gh *), Bash(make *), Bash(docker run:*), Bash(docker compose:*), Bash(rsync *), Read, Edit, Write, Glob, Grep
 ---
 
 Implement GitHub issue `$ARGUMENTS` end-to-end. Parse the arguments: first token is the issue number, second token (optional) is the base branch (default `main`).
@@ -52,7 +52,7 @@ Implement the solution respecting CLAUDE.md rules (architecture, SOLID, patterns
 
 ## Step 7 -- QA loop (mandatory, in the worktree)
 
-Run `make qa` from the worktree **before pushing**. PHP-CS-Fixer, Rector and Prettier auto-apply fixes — re-stage and commit those changes (`style:` or amend the previous commit). Repeat until `make qa` exits 0 with no working-tree diff. PHPStan / TypeScript / ESLint errors must be fixed by hand, then re-run.
+Run QA from the worktree **before pushing**. **On a dev machine `make qa` OOM-kills at the Rector leg (exit 137 — the 768M cap on the `php` service), so it never exits 0: run the legs individually via the container recipes in [`.claude/local-qa.md`](../../local-qa.md)** and paste their per-leg output as evidence. PHP-CS-Fixer, Rector and Prettier auto-apply fixes — re-stage and commit those changes (`style:` or amend the previous commit). PHPStan / TypeScript / ESLint errors must be fixed by hand, then re-run the leg. Every leg must be green individually.
 
 Skipping this and pushing raw code wastes a CI round-trip per autofixable issue (observed in Sprint 33: PR #538 went red three times in a row on `php-cs-fixer` because the agent never ran QA locally).
 
@@ -60,7 +60,7 @@ If `make qa` can't run fully (e.g. the frontend leg is broken by a stale `node_m
 
 ## Step 8 -- Run tests
 
-Run `make test`. Fix any failures until the suite passes.
+Run the test suites. `make test` cannot complete on a dev machine either (it chains QA + needs the full stack + a PWA served on `https://localhost` for Playwright) — run PHPUnit `tests/Unit`+`tests/Integration` via the container recipe in [`.claude/local-qa.md`](../../local-qa.md); **CI is the gate for the Functional suite and Playwright** (say so plainly, don't imply local E2E coverage). Fix any failures until green.
 
 ## Step 9 -- Self-review
 
@@ -84,7 +84,7 @@ Run the **bounded surveillance loop** (max 3 cycles) until the PR is READY. Neve
 
 Each cycle:
 1. **CI** — `gh pr checks`. If red: read the logs (`gh run view --log-failed`), fix, push.
-2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. Address actionable points, push, resolve threads; list any left unactioned with the reason.
+2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. **Fix, don't reply:** address actionable points by changing the code and pushing (which auto-resolves the review bot's own threads); **do not post replies or resolve threads yourself** (commenting in the user's name needs explicit consent). Report any point left unactioned, with the reason, to the user — not as a PR comment.
 3. **Conflicts** — `gh pr view --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base and resolve **conservatively**; if ambiguous or risky, stop and flag rather than force.
 4. **Parent moved (stacked PR)** — if the PR's base is `feature/<n>` and that branch has new commits on origin since the last sync, rebase: `git fetch origin && git rebase origin/feature/<n>`, then `git push --force-with-lease`. Resolve conflicts conservatively, flag if ambiguous.
 

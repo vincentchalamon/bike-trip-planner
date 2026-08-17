@@ -53,6 +53,8 @@ Sanity check: if one file is claimed by four or more issues, say so and ask the 
 
 For each wave, in order, launch worktree agents to implement each issue. **Maximum 3 concurrent agents per batch** (Agent tool limitation). If a wave has more than 3 issues, split into batches of 3.
 
+**Model tiering (cost).** Before launching, classify each issue from its body/scope and pass the Agent tool's `model` accordingly (the Agent tool exposes `model`, not `effort` — tiering is model-only). Default is the session model (**Opus**) — never downgrade by accident. Set `model: "sonnet"` **only** for mechanical, low-risk issues: i18n/translations, copy/UI tweaks, config, renaming, small localized fixes, docs, test-only adjustments (few files, no new entity/State Provider/alert rule/migration, no DTO change, nothing under `docs/adr`). Keep **Opus** for anything structural: new Doctrine entity or State Provider/Processor, a `StageAnalyzerInterface` rule, a migration, a DTO contract change, cross-cutting work, or an ADR. Rationale: a wrong Sonnet diff triggers extra Phase-4 cycles that cost far more than the model delta (a smaller model needing correction is slower overall). **Escalation guard:** if a Sonnet agent loops on ≥2 *semantic* (not lint) CI-red cycles in Phase 4, relaunch/resume it on Opus rather than burning K=3. Record the chosen model per issue (Step 8 + TRACKING.md).
+
 Each agent receives this prompt:
 
 ```
@@ -65,18 +67,16 @@ You are implementing GitHub issue #<number>: <title>
 1. Read CLAUDE.md to understand the project architecture and conventions
 2. Create branch `feature/<issue-number>` from `<base-branch>`
    - Base branch is `main` unless this issue depends on another, then use `feature/<dep-number>`
-3. Bootstrap deps in the worktree by hard-linking from the main repo (the worktree starts with empty vendor/ and node_modules/; reinstalling per worktree is expensive and Docker compose spins up a separate project per worktree path):
+3. Bootstrap deps in the worktree by hard-linking from the main repo (the worktree starts with empty vendor/ and node_modules/; reinstalling per worktree is expensive and Docker compose spins up a separate project per worktree path). Link **all three** JS trees, not just the root: the nested `mobile/node_modules` holds packages that don't hoist (e.g. `@types/jest`), and linking only the root leaves mobile `tsc` failing with `Cannot find type definition file for 'jest'`:
    ```bash
    MAIN=$(git worktree list | awk 'NR==1{print $1}')
-   for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin pwa/node_modules; do
+   for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin node_modules pwa/node_modules mobile/node_modules; do
      [ -d "$MAIN/$p" ] && rsync -a --link-dest="$MAIN/$p/" "$MAIN/$p/" "$p/"
    done
    ```
-4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns). Two CLAUDE.md test-contract gotchas that cost Sprint 51 a CI round-trip each — honour them up front:
-   - **API error codes:** a non-owner on an item operation gets **404, not 403** (object-authz masking, ADR-038); an unknown backed-enum value in the body is **422, not 400** (denormalization → validation). Write the functional test and the `openapi` responses to 404 / 422, whatever the issue text guesses.
-   - **French `.feature` files** must begin with `# language: fr` (with `Fonctionnalité:`), else `bddgen` dies parsing `Scénario:`. Validate with `npx bddgen --config playwright.bdd.config.ts`.
-   - **Timezone:** CI runs `Europe/Paris`; pin any offset/ATOM assertion's `DateTimeImmutable` to explicit UTC (a hard-coded `+00:00` passes in a UTC dev container and fails in CI).
-5. **`make qa` will NOT complete — do not spend turns on it.** Read the "Local QA" section of CLAUDE.md and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
+   Mobile verification legs (from the worktree root): `npm run typecheck --workspace mobile` and `npm run test --workspace mobile` (invoke via the npm script, not the `jest` binary, or it fails to resolve its preset). If you add a dependency, `npm install` in the worktree so `package.json`/`package-lock.json` stay in sync — CI runs `npm ci` and fails on drift.
+4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns). Test-contract gotchas to honour up front, whatever the issue text guesses (detail + repro in `.claude/local-qa.md`): **404 not 403** on a non-owner item op (object-authz masking, ADR-038); **422 not 400** on an unknown backed-enum in the body (denormalization → validation) — write the functional test and `openapi` responses accordingly; offset/ATOM assertions in **explicit UTC** (CI runs `Europe/Paris`); every `.fr.feature` starts with `# language: fr` (else `bddgen` dies on `Scénario:`, validate with `npx bddgen --config playwright.bdd.config.ts`).
+5. **`make qa` will NOT complete — do not spend turns on it.** Read [`.claude/local-qa.md`](../../local-qa.md) and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
    - Report the per-leg output verbatim in your final message. Do not write "make qa passes" — it cannot; say which legs you ran and what they printed.
 6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
 7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
@@ -84,17 +84,21 @@ You are implementing GitHub issue #<number>: <title>
 9. Focus only on writing correct, well-structured code and committing it
 ```
 
-Use `isolation: "worktree"` for each agent.
+Use `isolation: "worktree"` for each agent, with `model` set per the tiering above.
+
+> **Isolation caveat (Sprint 53 #1012).** `isolation: "worktree"` has been observed to fail: an agent edited the **main checkout** directly, leaving uncommitted WIP on `main` that had to be rescued. The reliable pattern (used for #1019 right after, no mishap): **pre-create the worktree yourself** — `git worktree add -b feature/<n> ../<repo>-<n> <base>` — then launch a **non-isolated** agent whose prompt names the absolute worktree path and states as hard rules: `cd` there first, work ONLY there, never touch the main checkout, never run `git worktree`/`git switch`/`git checkout <branch>`, and verify `git rev-parse --abbrev-ref HEAD` is the expected branch (STOP if not). Whichever path is used, **review the agent's diff and confirm it landed in the worktree, not `main`, before pushing.**
 
 **Dependency handling:**
 - If an issue depends on another issue from a previous wave, its agent branches from `feature/<dep-number>` instead of `main`
 - If a dependency's agent failed, mark the dependent issue as **BLOCKED** and skip it
 
+**Rule — prefer GitHub Stacks whenever a dependency chain exists.** As soon as two or more PRs form a chain (`feature/a → feature/b → …`), manage them as a GitHub native stack via the `gh stack` extension rather than by hand: it wires the bases, cascades rebases on a squash-merged parent (`--onto` mode), and replays conflict resolutions (`git rerere`) — all the manual work Sprint 44 paid for. Full flow in Step 5; only fall back to the manual `feature/<dep>` base + `git rebase --onto` recipe when the extension is unavailable.
+
 Track results: for each issue, record SUCCESS (with worktree branch), DTO_CHANGED, DEPS_CHANGED, FAILED, or BLOCKED.
 
 ## Step 4 — Phase 2: verify what is verifiable locally, then let CI be the gate
 
-**Do not run `make qa` or `make test` here.** Neither can complete on a dev machine (768M cap on the `php` service → Rector OOM; empty `pwa_node_modules` volume per worktree; Playwright needs the PWA built and served on `https://localhost`, which a worktree's changes are not). Running them anyway produces red output that has nothing to do with the code and burns a lot of wall-clock. See the "Local QA" section of CLAUDE.md for the container recipes used below.
+**Do not run `make qa` or `make test` here.** Neither can complete on a dev machine (768M cap on the `php` service → Rector OOM; empty `pwa_node_modules` volume per worktree; Playwright needs the PWA built and served on `https://localhost`, which a worktree's changes are not). Running them anyway produces red output that has nothing to do with the code and burns a lot of wall-clock. See [`.claude/local-qa.md`](../../local-qa.md) for the container recipes used below.
 
 For each successfully coded branch, **in dependency order**:
 
@@ -106,8 +110,8 @@ For each successfully coded branch, **in dependency order**:
    docker compose run --rm --no-deps --entrypoint php php bin/console api:openapi:export > pwa/openapi.json
    pwa/node_modules/.bin/openapi-typescript pwa/openapi.json -o pwa/src/lib/api/schema.d.ts
    ```
-4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the CLAUDE.md recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
-5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with the README mounted at `/README.md` (see CLAUDE.md — without it `AlertDocumentationTest` fails on a missing README and looks like a regression). Up to 3 attempts.
+4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the [`.claude/local-qa.md`](../../local-qa.md) recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
+5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with `docs/` mounted at `/docs:ro` (see [`.claude/local-qa.md`](../../local-qa.md) — without it `AlertDocumentationTest` fails on a missing `docs/alert-engine.md` and looks like a regression). Up to 3 attempts.
 6. If a leg still fails after 3 attempts, mark **FAILED** and move on.
 
 **Playwright and the Functional suite are CI's job.** State that plainly in the PR body and in the final report — never imply local E2E coverage you did not have.
@@ -147,12 +151,12 @@ For each open PR, run the **bounded surveillance loop** until it converges. **Ma
 
 Each cycle:
 
-1. **CI** — `gh pr checks <pr>`. If red: read the failing logs (`gh run view --log-failed`), apply the smallest fix, commit, push.
+1. **CI** — `gh pr checks <pr>`. If red: fetch the failure **surgically** — `gh run view <run-id> --log-failed | grep -iE 'error|fail|✗|exception|fatal' -A3 -B1` — read the failing lines, **not** the whole log (a full CI log is 5-50k tokens; never paste it into context). Extract the cause in a line or two, apply the smallest fix, commit, push. Same goal-loop as `/check`.
 2. **Review comments** — fetch both:
    - PR-level comments: `gh pr view <pr> --json comments`
    - Inline review comments: `gh api repos/:owner/:repo/pulls/<pr>/comments`
 
-   Address every **actionable** point, commit, push, then reply to / resolve the corresponding threads. List any comment you deliberately did not action, with the reason.
+   **Fix, don't reply.** Address every **actionable** point by changing the code, commit, push — the fix *is* the answer, and pushing auto-resolves the review bot's own threads. **Do not post replies and do not resolve threads yourself** (commenting in the user's name needs explicit consent). List any comment you deliberately did not action, with the reason, in the **final report to the user** — not as a PR comment.
 3. **Conflicts** — `gh pr view <pr> --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base branch and resolve **conservatively**. If the resolution is ambiguous or risks discarding work, **stop and flag it** — do not force a resolution.
 4. **Parent moved (stacked PR)** — if the PR's base is `feature/<n>` and that branch advanced on origin since the last sync (compare local merge-base vs `origin/feature/<n>`), rebase onto it: `git fetch origin feature/<n> && git rebase origin/feature/<n>`, then `git push --force-with-lease`. **Whenever you push new commits to a parent branch (Phase 4 cycle on that PR), immediately re-rebase every child PR onto it** to keep the stack consistent — the GitHub UI does not do this for you and the stale child will hit a phantom conflict at merge time.
 5. **Parent merged (squash) — child retargeted to `main`** — when a parent PR is **squash-merged** and its branch deleted, GitHub retargets the child PR onto `main`, but the child branch still carries the parent's pre-squash commits, so a plain `git rebase origin/main` conflicts and `mergeable` shows `CONFLICTING`. Do **not** rebase onto `main` directly. Instead replay only the child's own commits with `--onto`, dropping the now-merged parent commits:
@@ -188,12 +192,14 @@ Commit and push the TRACKING.md update **on a dedicated branch** (e.g. `chore/sp
 Display a summary table:
 
 ```
-| Issue | Title | Status | PR | Notes |
-|-------|-------|--------|----|-------|
-| #42   | Add X | ✅ READY | #50 | CI green, no blocking review |
-| #43   | Fix Y | ⚠️ NEEDS ATTENTION | #51 | Conflict on Foo.php, flagged |
-| #44   | Add Z | ❌ FAILED | — | QA: PHPStan error in Bar.php |
-| #45   | Add W | 🚫 BLOCKED | — | Depends on #44 |
+| Issue | Title | Model | Status | PR | Notes |
+|-------|-------|-------|--------|----|-------|
+| #42   | Add X | opus   | ✅ READY | #50 | CI green, no blocking review |
+| #43   | Fix Y | sonnet | ⚠️ NEEDS ATTENTION | #51 | Conflict on Foo.php, flagged |
+| #44   | Add Z | opus   | ❌ FAILED | — | QA: PHPStan error in Bar.php |
+| #45   | Add W | sonnet | 🚫 BLOCKED | — | Depends on #44 |
 ```
+
+The **Model** column records the tiering decision (and any Phase-4 escalation Sonnet→Opus).
 
 Include timing information if available (total duration, per-phase breakdown).
