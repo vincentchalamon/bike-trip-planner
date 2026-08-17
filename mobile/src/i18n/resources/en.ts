@@ -106,7 +106,6 @@ export const en: typeof fr = {
       accommodationPriceRange: '{{min}}–{{max}} €',
       supply: 'Supplies',
       supplyEmpty: 'No supply point.',
-      supplyMarker: '{{water}} water · {{food}} food',
       supplyMarkerAt: 'km {{distance}} · {{water}} water · {{food}} food',
       events: 'Events',
       eventsEmpty: 'No event.',

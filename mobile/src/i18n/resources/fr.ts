@@ -104,7 +104,6 @@ export const fr = {
       accommodationPriceRange: '{{min}}–{{max}} €',
       supply: 'Ravitaillement',
       supplyEmpty: 'Aucun point de ravitaillement.',
-      supplyMarker: '{{water}} eau · {{food}} ravito',
       supplyMarkerAt: 'km {{distance}} · {{water}} eau · {{food}} ravito',
       events: 'Événements',
       eventsEmpty: 'Aucun événement.',
