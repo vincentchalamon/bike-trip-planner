@@ -1837,7 +1837,7 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
 
 ### Ordre de merge et conflits attendus
 
-Livré en **stack GitHub linéaire unique** ([stack #1075](https://github.com/vincentchalamon/bike-trip-planner/pull/1075), `gh stack`) : chaque PR est basée sur la précédente, mergeable **bottom-up d'un coup**. `#1035` extrait d'abord les composants trip-screen pour rendre les diffs des frères **disjoints par construction** — d'où **aucun conflit interne** au stack (rebases de linéarisation propres, vérifiés : tip combiné `feature/1039` vert, tsc + 178 tests jest).
+Livré en **stack GitHub linéaire unique** (`gh stack`, PRs #1068-#1074) : chaque PR est basée sur la précédente, mergeable **bottom-up d'un coup**. `#1035` extrait d'abord les composants trip-screen pour rendre les diffs des frères **disjoints par construction** — d'où **aucun conflit interne** au stack (rebases de linéarisation propres, vérifiés : tip combiné `feature/1039` vert, tsc + 178 tests jest).
 
 **Ordre de merge (bottom → top), à respecter strictement :**
 
