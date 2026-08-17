@@ -49,7 +49,7 @@ export function AccommodationBlock({
         const meta = [
           acc.type,
           price,
-          acc.distanceToEndPoint
+          acc.distanceToEndPoint != null
             ? t('trip.blocks.distanceKm', { distance: Math.round(acc.distanceToEndPoint) })
             : null,
         ]

@@ -6,6 +6,7 @@ import type {
   AccommodationData,
   AlertData,
   EventData,
+  PoiData,
   SupplyMarkerData,
   WeatherData,
 } from '@btp/core';
@@ -16,6 +17,7 @@ import { alertDismissKey } from './alert-utils';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
 import { AccommodationBlock } from './AccommodationBlock';
+import { PoiBlock } from './PoiBlock';
 import { SupplyBlock } from './SupplyBlock';
 import { EventsBlock } from './EventsBlock';
 
@@ -243,6 +245,41 @@ describe('AccommodationBlock', () => {
       ),
     ).join(' ');
     expect(meta).not.toContain('€');
+  });
+
+  it('renders a zero distance rather than dropping it (accommodation at the endpoint)', () => {
+    const meta = texts(
+      render(<AccommodationBlock accommodations={[acc({ distanceToEndPoint: 0 })]} />),
+    ).join(' ');
+    expect(meta).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '0'));
+  });
+});
+
+describe('PoiBlock', () => {
+  function poi(overrides: Partial<PoiData> = {}): PoiData {
+    return {
+      name: 'Château',
+      category: 'heritage',
+      lat: 0,
+      lon: 0,
+      distanceFromStart: 5,
+      ...overrides,
+    } as PoiData;
+  }
+
+  it('renders name, category and distance from the start', () => {
+    const t = texts(render(<PoiBlock pois={[poi()]} />)).join(' ');
+    expect(t).toContain('Château');
+    expect(t).toContain('heritage');
+    expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
+  });
+
+  it('omits the distance label when distanceFromStart is null', () => {
+    const t = texts(
+      render(<PoiBlock pois={[poi({ distanceFromStart: null })]} />),
+    ).join(' ');
+    expect(t).toContain('Château');
+    expect(t).not.toContain(' km');
   });
 });
 

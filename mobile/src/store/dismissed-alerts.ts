@@ -7,7 +7,6 @@ import { create } from 'zustand';
 interface DismissedAlertsState {
   dismissed: Set<string>;
   dismiss: (key: string) => void;
-  restore: (key: string) => void;
   isDismissed: (key: string) => boolean;
   reset: () => void;
 }
@@ -19,13 +18,6 @@ export const useDismissedAlerts = create<DismissedAlertsState>((set, get) => ({
       if (s.dismissed.has(key)) return {};
       const next = new Set(s.dismissed);
       next.add(key);
-      return { dismissed: next };
-    }),
-  restore: (key) =>
-    set((s) => {
-      if (!s.dismissed.has(key)) return {};
-      const next = new Set(s.dismissed);
-      next.delete(key);
       return { dismissed: next };
     }),
   isDismissed: (key) => get().dismissed.has(key),
