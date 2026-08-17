@@ -121,8 +121,11 @@ export function TripMap({
                 'circle-color': [
                   'match',
                   ['get', 'kind'],
+                  // Three visually distinct fills: accentBrand aliases brand to the
+                  // same hex, so poi uses accentInk to stay distinguishable from
+                  // accommodation (brand) and waypoint (primary).
                   'poi',
-                  theme.colors.accentBrand,
+                  theme.colors.accentInk,
                   'accommodation',
                   theme.colors.brand,
                   theme.colors.primary,

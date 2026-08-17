@@ -141,4 +141,18 @@ describe('TripMap', () => {
     );
     expect(byId(withMarkers.root, 'Layer', 'markers-circle')).toHaveLength(1);
   });
+
+  it('colors the three marker kinds distinctly (poi/accommodation/waypoint)', () => {
+    const withMarkers = render(
+      <TripMap
+        coordinates={coordsA}
+        markers={[{ kind: 'poi', lon: 2.5, lat: 48.5, name: 'Café' }]}
+      />,
+    );
+    const layer = byId(withMarkers.root, 'Layer', 'markers-circle')[0]!;
+    // ['match', ['get','kind'], 'poi', <poi>, 'accommodation', <acc>, <waypoint>]
+    const match = layer.props.paint['circle-color'] as unknown[];
+    const [poi, accommodation, waypoint] = [match[3], match[5], match[6]];
+    expect(new Set([poi, accommodation, waypoint]).size).toBe(3);
+  });
 });
