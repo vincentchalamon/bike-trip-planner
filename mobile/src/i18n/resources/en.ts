@@ -78,6 +78,7 @@ export const en: typeof fr = {
       distanceValue: '{{value}} km',
       elevationValue: '{{value}} m',
       surface: 'Surface',
+      restNoProfile: 'No elevation profile for a rest day.',
     },
     states: {
       upcoming: 'Upcoming',

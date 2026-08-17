@@ -174,11 +174,18 @@ export function StageDetailView({
       </View>
 
       <View style={{ padding: theme.spacing.base }}>
-        <ElevationProfile
-          stages={stages}
-          focusedStageIndex={profileIndex}
-          onHover={() => {}}
-        />
+        {profileIndex === null ? (
+          // A rest day has no geometry/elevation of its own: rendering the
+          // profile with a null focus would draw the WHOLE trip. Show a
+          // placeholder instead (bug #1039).
+          <EmptyState title={t('trip.stageDetail.restNoProfile')} />
+        ) : (
+          <ElevationProfile
+            stages={stages}
+            focusedStageIndex={profileIndex}
+            onHover={() => {}}
+          />
+        )}
       </View>
 
       <View

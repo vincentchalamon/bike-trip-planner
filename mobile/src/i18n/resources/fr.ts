@@ -76,6 +76,7 @@ export const fr = {
       distanceValue: '{{value}} km',
       elevationValue: '{{value}} m',
       surface: 'Surface',
+      restNoProfile: 'Pas de profil altimétrique pour un jour de repos.',
     },
     states: {
       upcoming: 'À venir',

@@ -203,6 +203,31 @@ describe('StageDetailView', () => {
     expect(next().props.accessibilityState.disabled).toBe(true);
   });
 
+  it('shows a placeholder instead of the whole-trip profile on a rest day (#1039)', () => {
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [
+        stage({ dayNumber: 1, isRestDay: false }),
+        stage({ dayNumber: 2, isRestDay: true }),
+      ],
+      startDate: null,
+      loading: false,
+    });
+    const t = texts(render(<StageDetailView id="t1" initialIndex={1} />));
+    expect(t).toContain(fr.trip.stageDetail.restNoProfile);
+  });
+
+  it('renders the elevation profile on a riding day, not the rest placeholder (#1039)', () => {
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stage({ dayNumber: 1, isRestDay: false })],
+      startDate: null,
+      loading: false,
+    });
+    const t = texts(render(<StageDetailView id="t1" initialIndex={0} />));
+    expect(t).not.toContain(fr.trip.stageDetail.restNoProfile);
+  });
+
   it('shows the not-found placeholder for an out-of-range stage', () => {
     useTripStore.setState({ tripId: 't1', stages: [], loading: false });
     const t = texts(render(<StageDetailView id="t1" initialIndex={0} />));
