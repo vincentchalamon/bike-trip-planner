@@ -84,6 +84,11 @@ export const fr = {
     sse: {
       computing: 'Calcul en cours…',
     },
+    map: {
+      layerMap: 'Plan',
+      layerSatellite: 'Satellite',
+      toggleA11y: 'Changer le fond de carte',
+    },
     blocks: {
       distanceKm: '{{distance}} km',
       alerts: 'Alertes',
