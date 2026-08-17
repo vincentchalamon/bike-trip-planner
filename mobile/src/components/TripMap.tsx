@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { FeatureCollection } from 'geojson';
 import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -40,6 +40,41 @@ export function TripMap({
     void load();
   }, [load]);
 
+  // Every object/collection handed to the memoized native components is derived
+  // once per input change: a fresh reference on each render would defeat the
+  // upstream React.memo (Map/Camera/GeoJSONSource) and force a native re-diff.
+  const mapStyle = useMemo(() => mapStyleFor(base), [base]);
+  const bounds = useMemo(() => computeBounds(coordinates), [coordinates]);
+  const markerData = useMemo(() => markerCollection(markers ?? []), [markers]);
+  const segmentData = useMemo(
+    () => segmentFeature(highlightedSegment ?? []),
+    [highlightedSegment],
+  );
+  const line = useMemo<FeatureCollection>(
+    () => ({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates },
+        },
+      ],
+    }),
+    [coordinates],
+  );
+  // maplibre-react-native v11: `initialViewState` is applied once at native
+  // mount, whereas the top-level `CameraStop` props (bounds/padding, center/zoom)
+  // are reactive — feeding `bounds` here re-frames the camera whenever the
+  // coordinates change (e.g. prev/next stage on the detail screen, #1074).
+  const cameraStop = useMemo(
+    () =>
+      bounds
+        ? { bounds, padding: FIT_PADDING }
+        : { center: coordinates[0], zoom: 8 },
+    [bounds, coordinates],
+  );
+
   if (coordinates.length === 0) {
     return (
       <View style={styles.empty}>
@@ -51,31 +86,12 @@ export function TripMap({
   }
 
   const satellite = base === 'satellite';
-  const bounds = computeBounds(coordinates);
-  const markerData = markerCollection(markers ?? []);
   const hasSegment = (highlightedSegment?.length ?? 0) >= 2;
-
-  const line: FeatureCollection = {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'LineString', coordinates },
-      },
-    ],
-  };
 
   return (
     <View style={styles.container}>
-      <Map style={styles.map} mapStyle={mapStyleFor(base)}>
-        <Camera
-          initialViewState={
-            bounds
-              ? { bounds, padding: FIT_PADDING }
-              : { center: coordinates[0], zoom: 8 }
-          }
-        />
+      <Map style={styles.map} mapStyle={mapStyle}>
+        <Camera {...cameraStop} />
         <GeoJSONSource id="route" data={line}>
           <Layer
             id="route-line"
@@ -88,10 +104,7 @@ export function TripMap({
           />
         </GeoJSONSource>
         {hasSegment ? (
-          <GeoJSONSource
-            id="segment-highlight"
-            data={segmentFeature(highlightedSegment ?? [])}
-          >
+          <GeoJSONSource id="segment-highlight" data={segmentData}>
             <Layer
               id="segment-highlight-line"
               type="line"
