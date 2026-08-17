@@ -53,6 +53,8 @@ Sanity check: if one file is claimed by four or more issues, say so and ask the 
 
 For each wave, in order, launch worktree agents to implement each issue. **Maximum 3 concurrent agents per batch** (Agent tool limitation). If a wave has more than 3 issues, split into batches of 3.
 
+**Model tiering (cost).** Before launching, classify each issue from its body/scope and pass the Agent tool's `model` accordingly (the Agent tool exposes `model`, not `effort` — tiering is model-only). Default is the session model (**Opus**) — never downgrade by accident. Set `model: "sonnet"` **only** for mechanical, low-risk issues: i18n/translations, copy/UI tweaks, config, renaming, small localized fixes, docs, test-only adjustments (few files, no new entity/State Provider/alert rule/migration, no DTO change, nothing under `docs/adr`). Keep **Opus** for anything structural: new Doctrine entity or State Provider/Processor, a `StageAnalyzerInterface` rule, a migration, a DTO contract change, cross-cutting work, or an ADR. Rationale: a wrong Sonnet diff triggers extra Phase-4 cycles that cost far more than the model delta (a smaller model needing correction is slower overall). **Escalation guard:** if a Sonnet agent loops on ≥2 *semantic* (not lint) CI-red cycles in Phase 4, relaunch/resume it on Opus rather than burning K=3. Record the chosen model per issue (Step 8 + TRACKING.md).
+
 Each agent receives this prompt:
 
 ```
@@ -82,7 +84,7 @@ You are implementing GitHub issue #<number>: <title>
 9. Focus only on writing correct, well-structured code and committing it
 ```
 
-Use `isolation: "worktree"` for each agent.
+Use `isolation: "worktree"` for each agent, with `model` set per the tiering above.
 
 > **Isolation caveat (Sprint 53 #1012).** `isolation: "worktree"` has been observed to fail: an agent edited the **main checkout** directly, leaving uncommitted WIP on `main` that had to be rescued. The reliable pattern (used for #1019 right after, no mishap): **pre-create the worktree yourself** — `git worktree add -b feature/<n> ../<repo>-<n> <base>` — then launch a **non-isolated** agent whose prompt names the absolute worktree path and states as hard rules: `cd` there first, work ONLY there, never touch the main checkout, never run `git worktree`/`git switch`/`git checkout <branch>`, and verify `git rev-parse --abbrev-ref HEAD` is the expected branch (STOP if not). Whichever path is used, **review the agent's diff and confirm it landed in the worktree, not `main`, before pushing.**
 
@@ -190,12 +192,14 @@ Commit and push the TRACKING.md update **on a dedicated branch** (e.g. `chore/sp
 Display a summary table:
 
 ```
-| Issue | Title | Status | PR | Notes |
-|-------|-------|--------|----|-------|
-| #42   | Add X | ✅ READY | #50 | CI green, no blocking review |
-| #43   | Fix Y | ⚠️ NEEDS ATTENTION | #51 | Conflict on Foo.php, flagged |
-| #44   | Add Z | ❌ FAILED | — | QA: PHPStan error in Bar.php |
-| #45   | Add W | 🚫 BLOCKED | — | Depends on #44 |
+| Issue | Title | Model | Status | PR | Notes |
+|-------|-------|-------|--------|----|-------|
+| #42   | Add X | opus   | ✅ READY | #50 | CI green, no blocking review |
+| #43   | Fix Y | sonnet | ⚠️ NEEDS ATTENTION | #51 | Conflict on Foo.php, flagged |
+| #44   | Add Z | opus   | ❌ FAILED | — | QA: PHPStan error in Bar.php |
+| #45   | Add W | sonnet | 🚫 BLOCKED | — | Depends on #44 |
 ```
+
+The **Model** column records the tiering decision (and any Phase-4 escalation Sonnet→Opus).
 
 Include timing information if available (total duration, per-phase breakdown).
