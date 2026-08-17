@@ -12,6 +12,7 @@ import {
   clampIndex,
   hasNextStage,
   hasPrevStage,
+  ownsTripLive,
   parseStageIndex,
   stageGeometryCoords,
   stageStats,
@@ -130,6 +131,12 @@ describe('stage-detail helpers', () => {
     expect(activeStageIndex(stages, 1)).toBeNull(); // rest day
     expect(activeStageIndex(stages, 2)).toBe(1); // skips the rest day
     expect(activeStageIndex(stages, 9)).toBeNull(); // out of bounds
+  });
+
+  it('owns the live store only on a deep-link entry (different tripId)', () => {
+    expect(ownsTripLive('42', '42')).toBe(false); // roadbook already live
+    expect(ownsTripLive(null, '42')).toBe(true); // deep link, store empty
+    expect(ownsTripLive('7', '42')).toBe(true); // live for another trip
   });
 
   it('projects geometry to [lon, lat] pairs', () => {

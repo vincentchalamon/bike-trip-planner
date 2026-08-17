@@ -12,6 +12,14 @@ export function parseStageIndex(raw: string | undefined): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+// Whether this screen should own the live store: true only on a deep-link entry,
+// where the store isn't already live for this trip. When reached by tapping a
+// StageCard the roadbook already owns it (same tripId), so we return false to
+// avoid re-hydrating or resetting on unmount (which would blank the roadbook).
+export function ownsTripLive(currentTripId: string | null, routeTripId: string): boolean {
+  return currentTripId !== routeTripId;
+}
+
 // Clamp an index into [0, count-1]; 0 when there are no stages.
 export function clampIndex(index: number, count: number): number {
   if (count <= 0) return 0;

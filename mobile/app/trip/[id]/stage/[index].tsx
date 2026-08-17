@@ -2,7 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ErrorState, Screen } from '../../../../src/components/ui';
 import { StageDetailView } from '../../../../src/components/trip';
-import { parseStageIndex } from '../../../../src/components/trip/stage-detail';
+import { ownsTripLive, parseStageIndex } from '../../../../src/components/trip/stage-detail';
 import { useTripLive } from '../../../../src/hooks/use-trip-live';
 import { useTripStore } from '../../../../src/store/trip-store';
 
@@ -19,7 +19,7 @@ export default function StageDetailScreen() {
 
   // Own the live store only when it isn't already live for this trip (deep-link
   // entry). Captured once so a later tripId change doesn't tear it down.
-  const [owns] = useState(() => useTripStore.getState().tripId !== id);
+  const [owns] = useState(() => ownsTripLive(useTripStore.getState().tripId, id));
 
   useTripLive(id, { enabled: owns });
 
