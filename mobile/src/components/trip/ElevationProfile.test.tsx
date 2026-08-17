@@ -97,4 +97,30 @@ describe('ElevationProfile', () => {
     expect(onHover).toHaveBeenLastCalledWith(null, null);
     expect(tree.root.findAllByType('Line' as never)).toHaveLength(0);
   });
+
+  it('bubbles onHover only when the resolved point index changes', () => {
+    const onHover = jest.fn();
+    const tree = render(
+      <ElevationProfile stages={[climbingStage]} focusedStageIndex={null} onHover={onHover} />,
+    );
+    const view = tree.root.findByProps({ testID: 'elevation-profile' });
+    act(() => {
+      view.props.onLayout({ nativeEvent: { layout: { width: 800 } } });
+    });
+    // Two moves landing on the same nearest coord → a single onHover call.
+    act(() => {
+      view.props.onResponderGrant({ nativeEvent: { locationX: 799 } });
+    });
+    act(() => {
+      view.props.onResponderMove({ nativeEvent: { locationX: 800 } });
+    });
+    expect(onHover).toHaveBeenCalledTimes(1);
+    expect(onHover).toHaveBeenLastCalledWith(2, 0);
+    // A move resolving to a different coord fires again.
+    act(() => {
+      view.props.onResponderMove({ nativeEvent: { locationX: 0 } });
+    });
+    expect(onHover).toHaveBeenCalledTimes(2);
+    expect(onHover).toHaveBeenLastCalledWith(0, 0);
+  });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   type GestureResponderEvent,
   type LayoutChangeEvent,
@@ -48,6 +48,10 @@ export function ElevationProfile({
     gradient: number;
     distance: number;
   } | null>(null);
+  // Last (stageIndex, coordIndex) emitted to the parent. onResponderMove fires
+  // per pixel; we only bubble onHover when the resolved point actually changes,
+  // so the parent (and its map work) is not re-run on every frame.
+  const lastEmitted = useRef<{ stageIndex: number; coordIndex: number } | null>(null);
 
   const points = useMemo(
     () => buildProfilePoints(stages, focusedStageIndex),
@@ -115,11 +119,16 @@ export function ElevationProfile({
     const distKm = ((svgX - PAD_L) / (VW - PAD_L - PAD_R)) * maxDist;
     const best = findClosestProfilePoint(points, distKm);
     if (!best) return;
-    onHover(best.coordIndex, best.stageIndex);
+    const prev = lastEmitted.current;
+    if (!prev || prev.stageIndex !== best.stageIndex || prev.coordIndex !== best.coordIndex) {
+      lastEmitted.current = { stageIndex: best.stageIndex, coordIndex: best.coordIndex };
+      onHover(best.coordIndex, best.stageIndex);
+    }
     setHover({ x: toX(best.distanceKm), gradient: best.gradient, distance: best.distanceKm });
   };
 
   const handleRelease = () => {
+    lastEmitted.current = null;
     onHover(null, null);
     setHover(null);
   };
