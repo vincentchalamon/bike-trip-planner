@@ -46,7 +46,7 @@ For each branch whose PR is **merged or closed**, in this order:
    ```
    The project name is the worktree dir basename as Docker sanitizes it (lowercased, non-alphanumeric stripped); for `agent-<hex>` worktrees it is the basename verbatim. This only touches that worktree's project — never the main stack or other worktrees.
 
-2. **Remove the worktree.** Worktrees created via `EnterWorktree` are locked: `git worktree unlock <path>` then `git worktree remove <path>`, finally `git worktree prune`. If the remove fails with **Permission denied** because a sub-tree holds files written by Docker as root (typically `pwa/test-results/`, `recette-report/`, `.features-gen/`, `.phpunit.cache/`, `node_modules/.cache/`), do **not** use `sudo` and do **not** `chown`/`rm` on the host (the agent has neither permission). Delete them from inside a throwaway **root** container that bind-mounts the worktrees parent — a root container can remove root-owned files:
+2. **Remove the worktree.** Worktrees created via `EnterWorktree` are locked: `git worktree unlock <path>` then `git worktree remove <path>`, finally `git worktree prune`. If the remove fails with **Permission denied** because a sub-tree holds files written by Docker as root (typically `pwa/test-results/`, `recette-report/`, `.features-gen/`, `.phpunit.cache/`, `node_modules/.cache/`, and — after a docs sprint — a root-owned `.mkdocs/`), do **not** use `sudo` and do **not** `chown`/`rm` on the host (the agent has neither permission). Delete them from inside a throwaway **root** container that bind-mounts the worktrees parent — a root container can remove root-owned files:
    ```bash
    # Safety: assert <worktree-basename> is non-empty and contains no path
    # separator before running — an empty value expands to `rm -rf /wt/` and
@@ -56,6 +56,8 @@ For each branch whose PR is **merged or closed**, in this order:
    git worktree prune
    ```
    If Docker itself is unavailable (e.g. the user is mid-cleanup), flag the path and skip — never `sudo`.
+
+   **Prevention (docs sprints):** the `.mkdocs/` case comes from `mkdocs build --strict` run via `docker run python:3.12-slim`, which writes the artifact as root into the mounted worktree. Avoid it at the source by running mkdocs with `--user "$(id -u):$(id -g)"` (same applies to any Docker-in-worktree step that emits build artifacts), so the worktree removal never hits a root-owned dir in the first place.
 
 3. **Delete the branch.** `git branch -d <branch>` — use **`-d`, not `-D`**. If git refuses (unmerged — common with squash-merged PRs whose tip is not an ancestor of `main`), confirm the PR is merged on GitHub (`gh pr view`), then it is safe; flag it and let the user `-D`, or skip. Never force-delete blindly.
 
