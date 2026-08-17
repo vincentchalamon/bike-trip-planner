@@ -149,7 +149,7 @@ For each open PR, run the **bounded surveillance loop** until it converges. **Ma
 
 Each cycle:
 
-1. **CI** — `gh pr checks <pr>`. If red: read the failing logs (`gh run view --log-failed`), apply the smallest fix, commit, push.
+1. **CI** — `gh pr checks <pr>`. If red: fetch the failure **surgically** — `gh run view <run-id> --log-failed | grep -iE 'error|fail|✗|exception|fatal' -A3 -B1` — read the failing lines, **not** the whole log (a full CI log is 5-50k tokens; never paste it into context). Extract the cause in a line or two, apply the smallest fix, commit, push. Same goal-loop as `/check`.
 2. **Review comments** — fetch both:
    - PR-level comments: `gh pr view <pr> --json comments`
    - Inline review comments: `gh api repos/:owner/:repo/pulls/<pr>/comments`
