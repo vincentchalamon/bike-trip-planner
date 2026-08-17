@@ -1852,6 +1852,7 @@ Livré en **stack GitHub linéaire unique** ([stack #1075](https://github.com/vi
 | 7 | #1074 | `feature/1039` | `feature/1041` | `app/trip/[id]/index.tsx` (+ `stage/[index].tsx`), `StageDetailView.tsx` |
 
 **Zones partagées et arbitrage (déjà résolu dans le stack, à re-appliquer si conflit lors d'un merge séquentiel classique) :**
+
 - **i18n `fr.ts`/`en.ts`** — touchés par toutes les PRs, en **ajout additif** sous des sous-namespaces distincts (`trip.sse`, `trip.blocks`, `trip.states`/`banners`, `trip.map`, `trip.stageDetail`…). Conflit trivial : **garder les deux jeux de clés**, fr et en synchronisés.
 - **`StageCard.tsx`** — chrome par #1037 (date/pastille/labels/delete), body par #1038 (`StageDataBlocks`), `onPress` résumé par #1039. Arbitrage : **cumuler**, ne jamais retirer le chrome #1037 ni les data-blocks #1038.
 - **`TripMapView.tsx`** — markers par #1040, pilotage du highlight (hover profil) par #1041. Arbitrage : **cumuler** ; `TripMap.tsx`/`map-utils.ts` restent la source (#1040).
