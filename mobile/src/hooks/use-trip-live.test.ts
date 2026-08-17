@@ -2,6 +2,7 @@
 import type { EnrichedStagePayload, MercureEvent } from '@btp/core/mercure';
 import { runTripLive } from './use-trip-live';
 import { useTripStore } from '../store/trip-store';
+import { useDismissedAlerts } from '../store/dismissed-alerts';
 
 jest.mock('../api/trips', () => ({ fetchTripDetail: jest.fn() }));
 jest.mock('../api/mercure', () => ({
@@ -69,6 +70,7 @@ const notCancelled = () => false;
 beforeEach(() => {
   jest.clearAllMocks();
   useTripStore.getState().reset();
+  useDismissedAlerts.getState().reset();
 });
 
 describe('runTripLive orchestration (#1014)', () => {
@@ -84,6 +86,21 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(store().loading).toBe(false);
     expect(mockSubscribe).toHaveBeenCalledWith('t1', 'jwt', expect.any(Function));
     expect(sub).toEqual({ close });
+  });
+
+  it('clears alert dismissals from a previous trip on hydrate', async () => {
+    // Dismissals are keyed on dayNumber:code (global singleton), so loading a new
+    // trip must reset them or a dismissal leaks across trips.
+    useDismissedAlerts.getState().dismiss('1:ford_wet');
+    expect(useDismissedAlerts.getState().isDismissed('1:ford_wet')).toBe(true);
+
+    mockDetail.mockResolvedValue(detail([apiStage()]));
+    mockToken.mockResolvedValue('jwt');
+    mockSubscribe.mockReturnValue({ close: jest.fn() });
+
+    await runTripLive('t2', store(), notCancelled);
+
+    expect(useDismissedAlerts.getState().isDismissed('1:ford_wet')).toBe(false);
   });
 
   it('reconciles a stage_updated SSE event through the core reducers', async () => {

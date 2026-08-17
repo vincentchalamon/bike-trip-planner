@@ -8,6 +8,7 @@ import { fr } from '../../i18n/resources/fr';
 import { StageCard } from './StageCard';
 import { AlertsBlock } from './AlertsBlock';
 import { SseStatusIndicator } from './SseStatusIndicator';
+import { StageDataBlocks } from './StageDataBlocks';
 
 function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap((t: any) => {
@@ -86,7 +87,7 @@ describe('StageCard', () => {
 
 describe('AlertsBlock', () => {
   it('shows the empty placeholder with no alerts', () => {
-    const tree = render(<AlertsBlock alerts={[]} />);
+    const tree = render(<AlertsBlock alerts={[]} stageKey={1} />);
     expect(texts(tree)).toContain(fr.trip.blocks.alertsEmpty);
   });
 
@@ -95,7 +96,7 @@ describe('AlertsBlock', () => {
       { type: 'warning', message: 'Gué à traverser' },
       { type: 'critical', message: 'Route principale' },
     ];
-    const t = texts(render(<AlertsBlock alerts={alerts} />));
+    const t = texts(render(<AlertsBlock alerts={alerts} stageKey={1} />));
     expect(t).toContain('Gué à traverser');
     expect(t).toContain('Route principale');
     expect(t).not.toContain(fr.trip.blocks.alertsEmpty);
@@ -111,5 +112,28 @@ describe('SseStatusIndicator', () => {
   it('shows the "computing" badge while streaming', () => {
     const tree = render(<SseStatusIndicator computing />);
     expect(texts(tree)).toContain(fr.trip.sse.computing);
+  });
+});
+
+describe('CycleNetworkBadge (via StageDataBlocks)', () => {
+  const badge = (percent: string) =>
+    fr.trip.blocks.cycleNetwork.replace('{{percent}}', percent);
+
+  it('shows the badge at and above the 0.5 threshold', () => {
+    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.5 })} />)).join(' ')).toContain(
+      badge('50'),
+    );
+    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.82 })} />)).join(' ')).toContain(
+      badge('82'),
+    );
+  });
+
+  it('hides the badge below the threshold (0.49) and at zero', () => {
+    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.49 })} />)).join(' ')).not.toContain(
+      'Voie cyclable',
+    );
+    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0 })} />)).join(' ')).not.toContain(
+      'Voie cyclable',
+    );
   });
 });

@@ -4,6 +4,7 @@ import type { StageData } from '@btp/core';
 import { Trash2 } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { formatStageDate } from './roadbook-dates';
+import { StageDataBlocks } from './StageDataBlocks';
 
 interface StageCardProps {
   stage: StageData;
@@ -17,6 +18,9 @@ interface StageCardProps {
   // True when `date` is today on an ongoing trip: shows the "Aujourd'hui"
   // pastille.
   isToday?: boolean;
+  // Routes a `navigate` alert action to the map segment (#1040). Forwarded to
+  // the per-day data blocks.
+  onAlertNavigate?: (segments: [number, number][][]) => void;
 }
 
 // One roadbook row: the stage date (or "Jour N" fallback) + rest tag, start →
@@ -30,6 +34,7 @@ export function StageCard({
   onDelete,
   date = null,
   isToday = false,
+  onAlertNavigate,
 }: StageCardProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -37,16 +42,15 @@ export function StageCard({
     ? formatStageDate(date, i18n.language)
     : t('trip.day', { day: stage.dayNumber ?? '?' });
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: theme.spacing.md,
-        paddingHorizontal: theme.spacing.base,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-      }}
-    >
+    <View style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: theme.spacing.md,
+          paddingHorizontal: theme.spacing.base,
+        }}
+      >
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
           <Text
@@ -111,6 +115,15 @@ export function StageCard({
           <Trash2 color={theme.colors.destructive} size={20} />
         </Pressable>
       ) : null}
+      </View>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing.base,
+          paddingBottom: theme.spacing.md,
+        }}
+      >
+        <StageDataBlocks stage={stage} onAlertNavigate={onAlertNavigate} />
+      </View>
     </View>
   );
 }

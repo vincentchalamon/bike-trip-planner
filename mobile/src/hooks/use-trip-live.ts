@@ -7,6 +7,7 @@ import {
   type TripSubscription,
 } from '../api/mercure';
 import { useTripStore } from '../store/trip-store';
+import { useDismissedAlerts } from '../store/dismissed-alerts';
 
 // The store actions the orchestration drives.
 export interface TripLiveStore {
@@ -46,6 +47,10 @@ export async function runTripLive(
     return undefined;
   }
   store.hydrate(id, detail);
+  // Alert dismissals are keyed on dayNumber:code, which collide across trips;
+  // clear them when a new trip is loaded so a dismissal on one trip does not hide
+  // the same code on another (the dismissed-alerts store is a global singleton).
+  useDismissedAlerts.getState().reset();
 
   try {
     const token = await fetchMercureToken(id);
