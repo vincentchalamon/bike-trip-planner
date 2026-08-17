@@ -12,6 +12,7 @@ import type {
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { useDismissedAlerts } from '../../store/dismissed-alerts';
+import { alertDismissKey } from './alert-utils';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
 import { AccommodationBlock } from './AccommodationBlock';
@@ -67,6 +68,7 @@ describe('AlertsBlock', () => {
       render(
         <AlertsBlock
           alerts={[alert({ message: 'Premier' }), alert({ message: 'Second' })]}
+          stageKey={1}
         />,
       ),
     );
@@ -82,33 +84,50 @@ describe('AlertsBlock', () => {
             alert({ type: 'nudge', code: 'n', message: 'Nudge' }),
             alert({ type: 'critical', code: 'c', message: 'Critique' }),
           ]}
+          stageKey={1}
         />,
       ),
     );
     expect(t.indexOf('Critique')).toBeLessThan(t.indexOf('Nudge'));
   });
 
-  it('hides an alert dismissed by code (keyed on code, not wording)', () => {
-    useDismissedAlerts.getState().dismiss('c1');
-    const t = texts(render(<AlertsBlock alerts={[alert({ message: 'Caché' })]} />));
+  it('hides an alert dismissed on its stage (keyed on code, not wording)', () => {
+    useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
+    const t = texts(
+      render(<AlertsBlock alerts={[alert({ message: 'Caché' })]} stageKey={1} />),
+    );
     expect(t).not.toContain('Caché');
     expect(t).toContain(fr.trip.blocks.alertsEmpty);
   });
 
-  it('dismisses via the dismiss action button and hides the alert', () => {
+  it('keeps an alert dismissed on another stage (dismissal is per stage)', () => {
+    // Same code 'c1' dismissed on stage 1 must remain visible on stage 2.
+    useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
+    const t = texts(
+      render(<AlertsBlock alerts={[alert({ message: 'Visible' })]} stageKey={2} />),
+    );
+    expect(t).toContain('Visible');
+  });
+
+  it('dismisses via the dismiss action button and hides the alert on that stage only', () => {
     const a = alert({
       code: 'dz',
       message: 'À ignorer',
       action: { kind: 'dismiss', label: 'Ignorer', payload: {} },
     });
-    const tree = render(<AlertsBlock alerts={[a]} />);
+    const tree = render(<AlertsBlock alerts={[a]} stageKey={3} />);
     expect(texts(tree)).toContain('À ignorer');
     act(() => {
       tree.root
         .findByProps({ accessibilityLabel: fr.trip.blocks.alertDismiss })
         .props.onPress();
     });
-    expect(useDismissedAlerts.getState().isDismissed('dz')).toBe(true);
+    expect(
+      useDismissedAlerts.getState().isDismissed(alertDismissKey(3, a)),
+    ).toBe(true);
+    expect(
+      useDismissedAlerts.getState().isDismissed(alertDismissKey(4, a)),
+    ).toBe(false);
   });
 
   it('routes a navigate action to onNavigate with the segment geometry', () => {
@@ -122,7 +141,9 @@ describe('AlertsBlock', () => {
         payload: { segments: [[[45, 4]]] },
       },
     });
-    const tree = render(<AlertsBlock alerts={[a]} onNavigate={onNavigate} />);
+    const tree = render(
+      <AlertsBlock alerts={[a]} stageKey={1} onNavigate={onNavigate} />,
+    );
     act(() => {
       tree.root
         .findByProps({ accessibilityLabel: fr.trip.blocks.alertNavigate })
@@ -183,6 +204,45 @@ describe('AccommodationBlock', () => {
     expect(t).toContain('Choisi');
     expect(t).not.toContain('Autre');
     expect(t).toContain(fr.trip.blocks.accommodationSelected);
+  });
+
+  it('shows the max (upper bound) for an exact price, not the min (mirrors web formatPrice)', () => {
+    // Web `formatPrice` returns `fmt.format(max)` on the exact branch.
+    const meta = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[
+            acc({ estimatedPriceMin: 30, estimatedPriceMax: 45, isExactPrice: true }),
+          ]}
+        />,
+      ),
+    ).join(' ');
+    expect(meta).toContain('45 €');
+    expect(meta).not.toContain('30 €');
+  });
+
+  it('shows the min–max range for an estimated (non-exact) price', () => {
+    const meta = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[
+            acc({ estimatedPriceMin: 12, estimatedPriceMax: 20, isExactPrice: false }),
+          ]}
+        />,
+      ),
+    ).join(' ');
+    expect(meta).toContain('12–20 €');
+  });
+
+  it('omits the price when both bounds are zero', () => {
+    const meta = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[acc({ estimatedPriceMin: 0, estimatedPriceMax: 0 })]}
+        />,
+      ),
+    ).join(' ');
+    expect(meta).not.toContain('€');
   });
 });
 

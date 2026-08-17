@@ -2,6 +2,7 @@
 import type { AlertData } from '@btp/core';
 import {
   alertDedupKey,
+  alertDismissKey,
   dedupeAlerts,
   groupBySeverity,
   visibleAlerts,
@@ -53,19 +54,38 @@ describe('dedupeAlerts', () => {
   });
 });
 
+describe('alertDismissKey', () => {
+  it('scopes the code to the stage (same code, different day → different key)', () => {
+    expect(alertDismissKey(1, alert({ code: 'a' }))).not.toBe(
+      alertDismissKey(2, alert({ code: 'a' })),
+    );
+  });
+});
+
 describe('visibleAlerts', () => {
-  it('drops an alert whose code is dismissed', () => {
+  it('drops an alert dismissed on this stage', () => {
     const out = visibleAlerts(
       [alert({ code: 'a' }), alert({ code: 'b' })],
-      new Set(['a']),
+      new Set([alertDismissKey(1, alert({ code: 'a' }))]),
+      1,
     );
     expect(out.map((a) => a.code)).toEqual(['b']);
+  });
+
+  it('keeps an alert dismissed on another stage (dismissal is per stage)', () => {
+    const out = visibleAlerts(
+      [alert({ code: 'a' })],
+      new Set([alertDismissKey(1, alert({ code: 'a' }))]),
+      2,
+    );
+    expect(out.map((a) => a.code)).toEqual(['a']);
   });
 
   it('dedups before filtering (a dismissed code hides all its occurrences)', () => {
     const out = visibleAlerts(
       [alert({ code: 'a', message: 'x' }), alert({ code: 'a', message: 'y' })],
-      new Set(['a']),
+      new Set([alertDismissKey(1, alert({ code: 'a' }))]),
+      1,
     );
     expect(out).toHaveLength(0);
   });

@@ -38,15 +38,34 @@ export function dedupeAlerts(alerts: AlertData[]): AlertData[] {
 }
 
 /**
- * Deduplicated alerts minus the dismissed ones. Both operations key on
- * `alertDedupKey`, so a dismissed alert stays hidden across SSE updates that
- * reword or re-emit it.
+ * Session-dismissal key: the stable `code` scoped to the stage it was dismissed
+ * on. The web keeps dismissal in per-stage component state; the mobile store is
+ * global, so the stage identity (the day number) must be part of the key — else
+ * dismissing an alert on one day hides the same `code` on every other day
+ * (#1038 review). Dedup stays intra-stage on `alertDedupKey`; only the
+ * dismissal is scoped per stage.
+ */
+export function alertDismissKey(
+  stageKey: string | number,
+  alert: AlertData,
+): string {
+  return `${stageKey}:${alertDedupKey(alert)}`;
+}
+
+/**
+ * Deduplicated alerts (intra-stage, by `code`) minus the ones dismissed on this
+ * stage. Dedup keys on `alertDedupKey`; dismissal keys on `alertDismissKey`, so
+ * a dismissed alert stays hidden across SSE updates that reword or re-emit it,
+ * without leaking the dismissal to other stages sharing the same `code`.
  */
 export function visibleAlerts(
   alerts: AlertData[],
   dismissed: ReadonlySet<string>,
+  stageKey: string | number,
 ): AlertData[] {
-  return dedupeAlerts(alerts).filter((a) => !dismissed.has(alertDedupKey(a)));
+  return dedupeAlerts(alerts).filter(
+    (a) => !dismissed.has(alertDismissKey(stageKey, a)),
+  );
 }
 
 /** Group alerts by severity, preserving arrival order within each bucket. */

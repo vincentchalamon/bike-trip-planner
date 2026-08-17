@@ -5,6 +5,7 @@ import { DataBlock } from './DataBlock';
 import {
   SEVERITY_ORDER,
   alertDedupKey,
+  alertDismissKey,
   groupBySeverity,
   severityStyle,
   visibleAlerts,
@@ -19,6 +20,9 @@ type AlertSegments = [number, number][][];
 
 interface AlertsBlockProps {
   alerts: AlertData[];
+  // Identity of the owning stage (its day number), scoping dismissal so an alert
+  // ignored on one day does not disappear from every other day sharing its code.
+  stageKey: string | number;
   // Routes a `navigate` alert action to the map segment (#1040 owns the map and
   // will pass a handler that highlights the concerned stretch). Optional: the
   // navigate button self-hides until a handler is wired.
@@ -26,15 +30,16 @@ interface AlertsBlockProps {
 }
 
 // Per-day alerts: deduplicated by code, grouped by severity (critical → warning
-// → nudge), each with its dismiss / navigate action. Dismissal and dedup key on
-// the stable AlertCode (never the wording); dismissed alerts are hidden.
-export function AlertsBlock({ alerts, onNavigate }: AlertsBlockProps) {
+// → nudge), each with its dismiss / navigate action. Dedup keys on the stable
+// AlertCode (never the wording); dismissal keys on that code scoped to the
+// stage, so it stays per-day. Dismissed alerts are hidden.
+export function AlertsBlock({ alerts, stageKey, onNavigate }: AlertsBlockProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const dismissed = useDismissedAlerts((s) => s.dismissed);
   const dismiss = useDismissedAlerts((s) => s.dismiss);
 
-  const shown = visibleAlerts(alerts, dismissed);
+  const shown = visibleAlerts(alerts, dismissed, stageKey);
   const groups = groupBySeverity(shown);
 
   return (
@@ -81,7 +86,7 @@ export function AlertsBlock({ alerts, onNavigate }: AlertsBlockProps) {
                 {action?.kind === 'dismiss' ? (
                   <Pressable
                     hitSlop={8}
-                    onPress={() => dismiss(key)}
+                    onPress={() => dismiss(alertDismissKey(stageKey, alert))}
                     accessibilityRole="button"
                     accessibilityLabel={t('trip.blocks.alertDismiss')}
                   >

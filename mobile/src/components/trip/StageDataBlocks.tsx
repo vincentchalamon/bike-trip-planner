@@ -56,7 +56,11 @@ export function StageDataBlocks({ stage, onAlertNavigate }: StageDataBlocksProps
   return (
     <View style={{ gap: theme.spacing.sm }}>
       <CycleNetworkBadge fraction={stage.onCycleNetwork ?? 0} />
-      <AlertsBlock alerts={stage.alerts} onNavigate={onAlertNavigate} />
+      <AlertsBlock
+        alerts={stage.alerts}
+        stageKey={stage.dayNumber}
+        onNavigate={onAlertNavigate}
+      />
       <WeatherBlock weather={stage.weather} />
       <PoiBlock pois={stage.pois} />
       <AccommodationBlock

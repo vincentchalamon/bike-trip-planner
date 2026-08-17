@@ -20,21 +20,21 @@ export function AccommodationBlock({
   const { t } = useTranslation();
   const theme = useTheme();
   const items = selectedAccommodation ? [selectedAccommodation] : accommodations;
-  // A single figure when exact, otherwise the estimated min–max range (mirrors
-  // the web formatPrice); null when no price is known.
+  // Mirrors the web `formatPrice` (pwa/src/lib/formatters.ts): null when no
+  // price is known (both bounds zero); a single figure — the upper bound `max` —
+  // when the price is exact or the range has collapsed (min === max); otherwise
+  // the estimated min–max range. Values are rounded to whole euros.
   const priceLabel = (acc: AccommodationData): string | null => {
-    if (acc.isExactPrice) {
-      return t('trip.blocks.accommodationPrice', {
-        price: Math.round(acc.estimatedPriceMin),
-      });
+    const min = acc.estimatedPriceMin;
+    const max = acc.estimatedPriceMax;
+    if (min === 0 && max === 0) return null;
+    if (acc.isExactPrice || min === max) {
+      return t('trip.blocks.accommodationPrice', { price: Math.round(max) });
     }
-    if (acc.estimatedPriceMin > 0 || acc.estimatedPriceMax > 0) {
-      return t('trip.blocks.accommodationPriceRange', {
-        min: Math.round(acc.estimatedPriceMin),
-        max: Math.round(acc.estimatedPriceMax),
-      });
-    }
-    return null;
+    return t('trip.blocks.accommodationPriceRange', {
+      min: Math.round(min),
+      max: Math.round(max),
+    });
   };
   return (
     <DataBlock

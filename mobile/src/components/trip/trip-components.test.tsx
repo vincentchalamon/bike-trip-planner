@@ -86,7 +86,7 @@ describe('StageCard', () => {
 
 describe('AlertsBlock', () => {
   it('shows the empty placeholder with no alerts', () => {
-    const tree = render(<AlertsBlock alerts={[]} />);
+    const tree = render(<AlertsBlock alerts={[]} stageKey={1} />);
     expect(texts(tree)).toContain(fr.trip.blocks.alertsEmpty);
   });
 
@@ -95,7 +95,7 @@ describe('AlertsBlock', () => {
       { type: 'warning', message: 'Gué à traverser' },
       { type: 'critical', message: 'Route principale' },
     ];
-    const t = texts(render(<AlertsBlock alerts={alerts} />));
+    const t = texts(render(<AlertsBlock alerts={alerts} stageKey={1} />));
     expect(t).toContain('Gué à traverser');
     expect(t).toContain('Route principale');
     expect(t).not.toContain(fr.trip.blocks.alertsEmpty);
