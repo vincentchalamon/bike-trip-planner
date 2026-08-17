@@ -63,11 +63,13 @@ export async function runTripLive(
         // Progress tick: a recompute is streaming. Show the SSE badge until the
         // terminal trip_ready / trip_complete arrives.
         store.setComputing(true);
-      } else if (
-        event.type === 'trip_complete' ||
-        event.type === 'computation_error'
-      ) {
+      } else if (event.type === 'trip_complete') {
         store.setComputing(false);
+      } else if (event.type === 'computation_error') {
+        // A retryable error means the computation is still running (the core
+        // reducer leaves the state untouched); only a non-retryable error is
+        // terminal and clears the computing badge.
+        if (!event.data.retryable) store.setComputing(false);
       }
     });
   } catch {
