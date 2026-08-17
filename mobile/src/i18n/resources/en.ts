@@ -62,7 +62,18 @@ export const en: typeof fr = {
     mapEmpty: 'No route available for this trip.',
     day: 'Day {{day}}',
     rest: 'rest',
+    today: 'Today',
     stageMeta: '{{distance}} km · +{{elevation}} m',
+    states: {
+      upcoming: 'Upcoming',
+      ongoing: 'Ongoing',
+      past: 'Completed',
+    },
+    banners: {
+      locked: 'Trip started: read-only.',
+      outOfZone: 'Route outside the covered area.',
+      noDates: 'Set your trip dates.',
+    },
     delete: 'Delete',
     deleteA11y: 'Delete day {{day}}',
     deleteConfirmTitle: 'Delete this stage?',

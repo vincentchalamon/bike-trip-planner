@@ -60,7 +60,18 @@ export const fr = {
     mapEmpty: 'Aucun tracé disponible pour ce voyage.',
     day: 'Jour {{day}}',
     rest: 'repos',
+    today: "Aujourd'hui",
     stageMeta: '{{distance}} km · +{{elevation}} m',
+    states: {
+      upcoming: 'À venir',
+      ongoing: 'En cours',
+      past: 'Terminé',
+    },
+    banners: {
+      locked: 'Voyage démarré : lecture seule.',
+      outOfZone: 'Itinéraire hors de la zone couverte.',
+      noDates: 'Définissez les dates de votre voyage.',
+    },
     delete: 'Supprimer',
     deleteA11y: 'Supprimer le jour {{day}}',
     deleteConfirmTitle: 'Supprimer cette étape ?',

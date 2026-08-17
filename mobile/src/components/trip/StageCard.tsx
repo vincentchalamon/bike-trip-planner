@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
 import { Trash2 } from '../ui/icons';
 import { useTheme } from '../../theme';
+import { formatStageDate } from './roadbook-dates';
 
 interface StageCardProps {
   stage: StageData;
@@ -10,14 +11,31 @@ interface StageCardProps {
   // A started trip is read-only (backend 423): the delete action is hidden.
   locked: boolean;
   onDelete: (index: number) => void;
+  // Calendar day of the stage (YYYY-MM-DD, UTC), or null when the trip has no
+  // start date — the card then falls back to "Jour N".
+  date?: string | null;
+  // True when `date` is today on an ongoing trip: shows the "Aujourd'hui"
+  // pastille.
+  isToday?: boolean;
 }
 
-// One roadbook row: day number (+ rest tag), start → end labels, distance /
-// elevation, and a delete action when the trip is still editable. Rendered by
-// RoadbookView; #1039 wires the tap-through to the stage detail.
-export function StageCard({ stage, index, locked, onDelete }: StageCardProps) {
-  const { t } = useTranslation();
+// One roadbook row: the stage date (or "Jour N" fallback) + rest tag, start →
+// end labels, distance / elevation, a "today" pastille on the current day, and
+// a delete action when the trip is still editable. Rendered by RoadbookView;
+// #1039 wires the tap-through to the stage detail.
+export function StageCard({
+  stage,
+  index,
+  locked,
+  onDelete,
+  date = null,
+  isToday = false,
+}: StageCardProps) {
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
+  const heading = date
+    ? formatStageDate(date, i18n.language)
+    : t('trip.day', { day: stage.dayNumber ?? '?' });
   return (
     <View
       style={{
@@ -30,16 +48,35 @@ export function StageCard({ stage, index, locked, onDelete }: StageCardProps) {
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: theme.colors.foreground,
-            fontFamily: theme.fonts.sansSemibold,
-            fontSize: 16,
-          }}
-        >
-          {t('trip.day', { day: stage.dayNumber ?? '?' })}
-          {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Text
+            style={{
+              color: theme.colors.foreground,
+              fontFamily: theme.fonts.sansSemibold,
+              fontSize: 16,
+            }}
+          >
+            {heading}
+            {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
+          </Text>
+          {isToday ? (
+            <Text
+              accessibilityLabel={t('trip.today')}
+              style={{
+                color: theme.colors.accentInk,
+                backgroundColor: theme.colors.accentSoft,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 11,
+                overflow: 'hidden',
+                borderRadius: theme.radius.full,
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: 2,
+              }}
+            >
+              {t('trip.today')}
+            </Text>
+          ) : null}
+        </View>
         <Text
           style={{
             color: theme.colors.mutedForeground,
