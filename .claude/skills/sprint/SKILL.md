@@ -65,18 +65,19 @@ You are implementing GitHub issue #<number>: <title>
 1. Read CLAUDE.md to understand the project architecture and conventions
 2. Create branch `feature/<issue-number>` from `<base-branch>`
    - Base branch is `main` unless this issue depends on another, then use `feature/<dep-number>`
-3. Bootstrap deps in the worktree by hard-linking from the main repo (the worktree starts with empty vendor/ and node_modules/; reinstalling per worktree is expensive and Docker compose spins up a separate project per worktree path):
+3. Bootstrap deps in the worktree by hard-linking from the main repo (the worktree starts with empty vendor/ and node_modules/; reinstalling per worktree is expensive and Docker compose spins up a separate project per worktree path). Link **all three** JS trees, not just the root: the nested `mobile/node_modules` holds packages that don't hoist (e.g. `@types/jest`), and linking only the root leaves mobile `tsc` failing with `Cannot find type definition file for 'jest'`:
    ```bash
    MAIN=$(git worktree list | awk 'NR==1{print $1}')
-   for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin pwa/node_modules; do
+   for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin node_modules pwa/node_modules mobile/node_modules; do
      [ -d "$MAIN/$p" ] && rsync -a --link-dest="$MAIN/$p/" "$MAIN/$p/" "$p/"
    done
    ```
+   Mobile verification legs (from the worktree root): `npm run typecheck --workspace mobile` and `npm run test --workspace mobile` (invoke via the npm script, not the `jest` binary, or it fails to resolve its preset). If you add a dependency, `npm install` in the worktree so `package.json`/`package-lock.json` stay in sync — CI runs `npm ci` and fails on drift.
 4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns). Two CLAUDE.md test-contract gotchas that cost Sprint 51 a CI round-trip each — honour them up front:
    - **API error codes:** a non-owner on an item operation gets **404, not 403** (object-authz masking, ADR-038); an unknown backed-enum value in the body is **422, not 400** (denormalization → validation). Write the functional test and the `openapi` responses to 404 / 422, whatever the issue text guesses.
    - **French `.feature` files** must begin with `# language: fr` (with `Fonctionnalité:`), else `bddgen` dies parsing `Scénario:`. Validate with `npx bddgen --config playwright.bdd.config.ts`.
    - **Timezone:** CI runs `Europe/Paris`; pin any offset/ATOM assertion's `DateTimeImmutable` to explicit UTC (a hard-coded `+00:00` passes in a UTC dev container and fails in CI).
-5. **`make qa` will NOT complete — do not spend turns on it.** Read the "Local QA" section of CLAUDE.md and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
+5. **`make qa` will NOT complete — do not spend turns on it.** Read [`.claude/local-qa.md`](../../local-qa.md) and run the legs individually with the container recipes given there: the `php` service is capped at 768M in `compose.yaml` and Rector's parallel workers get OOM-killed (exit 137), and a worktree's `pwa_node_modules` volume is empty so `make qa-pwa` reports `eslint: not found`. Every leg must be green individually — Rector especially, because a skipped autofix fails CI in dry-run mode and costs a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`). Commit autofixes (PHP-CS-Fixer, Rector, Prettier). PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make install`.**
    - Report the per-leg output verbatim in your final message. Do not write "make qa passes" — it cannot; say which legs you ran and what they printed.
 6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
 7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
@@ -86,15 +87,19 @@ You are implementing GitHub issue #<number>: <title>
 
 Use `isolation: "worktree"` for each agent.
 
+> **Isolation caveat (Sprint 53 #1012).** `isolation: "worktree"` has been observed to fail: an agent edited the **main checkout** directly, leaving uncommitted WIP on `main` that had to be rescued. The reliable pattern (used for #1019 right after, no mishap): **pre-create the worktree yourself** — `git worktree add -b feature/<n> ../<repo>-<n> <base>` — then launch a **non-isolated** agent whose prompt names the absolute worktree path and states as hard rules: `cd` there first, work ONLY there, never touch the main checkout, never run `git worktree`/`git switch`/`git checkout <branch>`, and verify `git rev-parse --abbrev-ref HEAD` is the expected branch (STOP if not). Whichever path is used, **review the agent's diff and confirm it landed in the worktree, not `main`, before pushing.**
+
 **Dependency handling:**
 - If an issue depends on another issue from a previous wave, its agent branches from `feature/<dep-number>` instead of `main`
 - If a dependency's agent failed, mark the dependent issue as **BLOCKED** and skip it
+
+**Rule — prefer GitHub Stacks whenever a dependency chain exists.** As soon as two or more PRs form a chain (`feature/a → feature/b → …`), manage them as a GitHub native stack via the `gh stack` extension rather than by hand: it wires the bases, cascades rebases on a squash-merged parent (`--onto` mode), and replays conflict resolutions (`git rerere`) — all the manual work Sprint 44 paid for. Full flow in Step 5; only fall back to the manual `feature/<dep>` base + `git rebase --onto` recipe when the extension is unavailable.
 
 Track results: for each issue, record SUCCESS (with worktree branch), DTO_CHANGED, DEPS_CHANGED, FAILED, or BLOCKED.
 
 ## Step 4 — Phase 2: verify what is verifiable locally, then let CI be the gate
 
-**Do not run `make qa` or `make test` here.** Neither can complete on a dev machine (768M cap on the `php` service → Rector OOM; empty `pwa_node_modules` volume per worktree; Playwright needs the PWA built and served on `https://localhost`, which a worktree's changes are not). Running them anyway produces red output that has nothing to do with the code and burns a lot of wall-clock. See the "Local QA" section of CLAUDE.md for the container recipes used below.
+**Do not run `make qa` or `make test` here.** Neither can complete on a dev machine (768M cap on the `php` service → Rector OOM; empty `pwa_node_modules` volume per worktree; Playwright needs the PWA built and served on `https://localhost`, which a worktree's changes are not). Running them anyway produces red output that has nothing to do with the code and burns a lot of wall-clock. See [`.claude/local-qa.md`](../../local-qa.md) for the container recipes used below.
 
 For each successfully coded branch, **in dependency order**:
 
@@ -106,8 +111,8 @@ For each successfully coded branch, **in dependency order**:
    docker compose run --rm --no-deps --entrypoint php php bin/console api:openapi:export > pwa/openapi.json
    pwa/node_modules/.bin/openapi-typescript pwa/openapi.json -o pwa/src/lib/api/schema.d.ts
    ```
-4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the CLAUDE.md recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
-5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with the README mounted at `/README.md` (see CLAUDE.md — without it `AlertDocumentationTest` fails on a missing README and looks like a regression). Up to 3 attempts.
+4. Run the **QA legs individually** (Rector, PHPStan, PHP-CS-Fixer, tsc, ESLint, Prettier, `npm run i18n:check` — colon, not hyphen — and markdownlint) per the [`.claude/local-qa.md`](../../local-qa.md) recipes. Read each leg's output directly rather than piping it through `tail`, which hides a `Missing script` error behind the pipe's exit status. Fix by hand, commit, retry — up to 3 attempts.
+5. Run **PHPUnit `tests/Unit` + `tests/Integration`** against the main stack's network, with `docs/` mounted at `/docs:ro` (see [`.claude/local-qa.md`](../../local-qa.md) — without it `AlertDocumentationTest` fails on a missing `docs/alert-engine.md` and looks like a regression). Up to 3 attempts.
 6. If a leg still fails after 3 attempts, mark **FAILED** and move on.
 
 **Playwright and the Functional suite are CI's job.** State that plainly in the PR body and in the final report — never imply local E2E coverage you did not have.

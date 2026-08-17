@@ -2,7 +2,7 @@
 name: check
 description: Goal-loop quality gate — run QA/tests and fix until green, with real output as proof
 argument-hint: "[qa|test|all]"
-allowed-tools: Bash(make *), Read, Edit, Grep, Glob
+allowed-tools: Bash(make *), Bash(docker run:*), Bash(docker compose:*), Read, Edit, Grep, Glob
 ---
 
 Drive the project to a verified-green state. Parse `$ARGUMENTS`: `qa`, `test`, or `all` (default `all`).
@@ -14,6 +14,8 @@ This is a **goal-loop**: the completion condition is a passing run with its real
 - `qa` → `make qa`
 - `test` → `make test`
 - `all` (default) → `make qa`, then `make test`
+
+**On a dev machine `make qa` OOM-kills at the Rector leg (exit 137) — this is the 768M cap, not your diff.** When it does, do not conclude the branch is broken: run the QA legs individually via the one-off containers in [`.claude/local-qa.md`](../../local-qa.md) and paste their per-leg output as the evidence. `make test` likewise needs the full stack; the Functional/PHPUnit and Playwright recipes are there too.
 
 ## Step 2 — Run and inspect
 

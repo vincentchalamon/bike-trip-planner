@@ -71,20 +71,43 @@ git checkout main && git pull --ff-only origin main
 
 If `--ff-only` fails (local main diverged), report it and stop — do not reset or force.
 
+If the sprint added JS dependencies (workspaces `pwa`/`mobile`), **re-run `npm install` on the `main` checkout** after the merge: deps added in worktrees are absent from main's stale `node_modules`, so `tsc`/`jest` then fail locally on missing modules. This is **not** a regression (CI's `npm ci` from the merged lockfile is green) — just a stale local tree.
+
 ## Step 6 — Retrospective into the config (Phase A only)
 
 Skip this step in Phase B — the retrospective was already done in the prior Phase A run.
 
-Synthesize what went well / badly during this sprint, grounded in **actual events** (recurring CI failures, review back-and-forths, blocking hooks, conventions repeatedly missed). For each recurring pain point, propose a **concrete** config change:
-- `CLAUDE.md` rule or gotcha
-- a new/updated skill (`pick`, `sprint`, `check`, …)
-- a hook or permission in `.claude/settings.json`
+The retrospective is a **context-budget-neutral-or-negative** operation. `CLAUDE.md` and `MEMORY.md` are the always-loaded preamble: re-prefixed into **every** session AND **every `/sprint` worktree agent** (each agent reads `CLAUDE.md`). A line added here has a cost multiplied by every future session and agent. Historically this step was append-only — one retro gotcha per sprint — and grew `CLAUDE.md` past 240 lines. Do not continue that. **Prune before you add.**
 
-**Propose, do not apply.** If the user approves a change, implement it via a **feature branch + PR** — never commit config directly to `main`.
+### 6a — Prune first (mandatory)
+
+- **Archive the closing sprint.** Reduce this sprint's `MEMORY.md` entry to a **one-line** pointer and move it to `memory/ARCHIVE.md` (not loaded in the preamble). The underlying memory file stays on disk.
+- **Drop the obsolete.** Remove any gotcha whose workaround has been fixed or whose file/flag no longer exists. **Verify existence before keeping** (grep the repo) — a gotcha naming a vanished symbol is noise.
+
+### 6b — Synthesize learnings
+
+Synthesize what went well / badly, grounded in **actual events** (recurring CI failures, review back-and-forths, blocking hooks, conventions repeatedly missed).
+
+### 6c — Route each learning by lifetime (never default to `CLAUDE.md`)
+
+Apply the Boris filter to any `CLAUDE.md` addition: *would removing this line cause Claude to make a mistake in some arbitrary session?* If not, it does not belong in the always-loaded preamble. Route by scope:
+
+| Learning scope | Destination |
+|---|---|
+| Contract/architecture/gotcha relevant to *every* session | `CLAUDE.md` (rare) |
+| Specific to a workflow (QA, sprint, close, pick) | the matching `SKILL.md` |
+| Verbose recipe (docker commands, multi-line blocks) | `.claude/local-qa.md` |
+| One-off / sprint-specific incident | a `memory/` file + a **one-line** `MEMORY.md` pointer |
+
+**`CLAUDE.md` budget: ~120 lines.** If an addition would push it over, relocate or delete something first — the net line count must not grow.
+
+**Propose, do not apply.** If the user approves, implement via a **feature branch + PR** — never commit config directly to `main`.
 
 ## Step 7 — Surface manually-applicable config (Phase A only)
 
-`.claude/settings.json` and `.claude/settings.local.json` are protected by a `PreToolUse` hook against `Write`/`Edit`. Any retrospective proposal that touches them cannot be applied by the agent — it must be applied by the user.
+`CLAUDE.md`, the `.claude/skills/*/SKILL.md`, `.claude/local-qa.md`, `MEMORY.md` and the `memory/` files are **not** protected — the agent edits them directly in the retro PR (or in place for the personal `memory/` dir, which lives outside the repo). Do **not** treat those as manual.
+
+Only `.claude/settings.json` and `.claude/settings.local.json` are protected by a `PreToolUse` hook against `Write`/`Edit` (the pattern also matches the global `~/.claude/settings.json`). Any proposal touching them — a hook, a permission, `enabledPlugins`, model/effort — cannot be applied by the agent and must be applied by the user.
 
 When the retrospective produces such a proposal:
 1. Include the exact JSON diff in the retro PR description under a clearly-marked "Manual application required" section.
