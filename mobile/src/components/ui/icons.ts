@@ -15,6 +15,7 @@ export {
   Plus,
   RefreshCw,
   Route,
+  Search,
   Settings,
   Tent,
   Trash2,

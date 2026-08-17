@@ -1,60 +1,54 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { fetchTrips, type TripListItem } from '../../src/api/trips';
+import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
+import type { TripListItem } from '../../src/api/trips';
 import {
   EmptyState,
   ErrorState,
+  Input,
   ListRow,
   LoadingState,
   Screen,
 } from '../../src/components/ui';
-import { ChevronRight, Inbox } from '../../src/components/ui/icons';
+import { Inbox, Search, Trash2 } from '../../src/components/ui/icons';
 import { useTheme } from '../../src/theme';
 
 export default function Trips() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
-  const [trips, setTrips] = useState<TripListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const {
+    trips,
+    loading,
+    loadingMore,
+    refreshing,
+    error,
+    title,
+    startDate,
+    endDate,
+    hasActiveFilter,
+    canLoadMore,
+    setTitle,
+    setStartDate,
+    setEndDate,
+    reload,
+    loadMore,
+    remove,
+  } = useTrips();
 
-  const load = useCallback(async () => {
-    setHasError(false);
-    try {
-      setTrips(await fetchTrips());
-    } catch {
-      setHasError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  if (loading) {
-    return (
-      <Screen padded={false}>
-        <LoadingState />
-      </Screen>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <Screen padded={false}>
-        <ErrorState
-          title={t('common.error')}
-          description={t('trips.error')}
-          onRetry={() => void load()}
-          retryLabel={t('common.retry')}
-        />
-      </Screen>
-    );
+  function onDelete(item: TripListItem): void {
+    confirmDeleteTrip({
+      title: t('trips.deleteConfirmTitle'),
+      message: t('trips.deleteConfirmMessage', {
+        title: item.title ?? t('trips.untitled'),
+      }),
+      cancel: t('trips.cancel'),
+      confirm: t('trips.delete'),
+      onConfirm: () => {
+        void remove(item.id ?? '');
+      },
+    });
   }
 
   return (
@@ -71,33 +65,106 @@ export default function Trips() {
       >
         {t('trips.title')}
       </Text>
-      <FlatList
-        data={trips}
-        keyExtractor={(item) => item.id ?? String(Math.random())}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}
-        ListEmptyComponent={
-          <View style={{ height: 400 }}>
-            <EmptyState
-              title={t('trips.empty')}
-              icon={<Inbox color={theme.colors.mutedIcon} size={40} />}
+
+      <View style={{ paddingHorizontal: theme.spacing.base, gap: theme.spacing.sm }}>
+        <Input
+          value={title}
+          onChangeText={setTitle}
+          placeholder={t('trips.searchPlaceholder')}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <Input
+              value={startDate}
+              onChangeText={setStartDate}
+              placeholder={t('trips.startDate')}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
-        }
-        renderItem={({ item }) => (
-          <ListRow
-            title={item.title ?? t('trips.untitled')}
-            subtitle={t('trips.meta', {
-              stages: item.stageCount ?? 0,
-              distance: Math.round(item.totalDistance ?? 0),
-              status: item.status ?? 'draft',
-            })}
-            right={<ChevronRight color={theme.colors.mutedIcon} size={20} />}
-            onPress={() =>
-              router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })
-            }
-          />
-        )}
-      />
+          <View style={{ flex: 1 }}>
+            <Input
+              value={endDate}
+              onChangeText={setEndDate}
+              placeholder={t('trips.endDate')}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        </View>
+      </View>
+
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          title={t('common.error')}
+          description={t('trips.error')}
+          onRetry={reload}
+          retryLabel={t('common.retry')}
+        />
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={(item) => item.id ?? String(Math.random())}
+          contentContainerStyle={{ paddingTop: theme.spacing.sm }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (canLoadMore) loadMore();
+          }}
+          ListEmptyComponent={
+            <View style={{ height: 360 }}>
+              <EmptyState
+                title={hasActiveFilter ? t('trips.noResults') : t('trips.empty')}
+                description={hasActiveFilter ? t('trips.noResultsHint') : undefined}
+                icon={
+                  hasActiveFilter ? (
+                    <Search color={theme.colors.mutedIcon} size={40} />
+                  ) : (
+                    <Inbox color={theme.colors.mutedIcon} size={40} />
+                  )
+                }
+              />
+            </View>
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: theme.spacing.base }}>
+                <ActivityIndicator color={theme.colors.mutedIcon} />
+              </View>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <ListRow
+              title={item.title ?? t('trips.untitled')}
+              subtitle={t('trips.meta', {
+                stages: item.stageCount ?? 0,
+                distance: Math.round(item.totalDistance ?? 0),
+                status: item.status ?? 'draft',
+              })}
+              right={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('trips.deleteA11y', {
+                    title: item.title ?? t('trips.untitled'),
+                  })}
+                  hitSlop={8}
+                  onPress={() => onDelete(item)}
+                  style={{ padding: theme.spacing.xs }}
+                >
+                  <Trash2 color={theme.colors.mutedIcon} size={20} />
+                </Pressable>
+              }
+              onPress={() =>
+                router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })
+              }
+            />
+          )}
+        />
+      )}
     </Screen>
   );
 }

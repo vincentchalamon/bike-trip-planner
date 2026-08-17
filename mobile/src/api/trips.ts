@@ -27,14 +27,43 @@ const mergePatch = {
   'Content-Type': 'application/merge-patch+json',
 };
 
-export async function fetchTrips(): Promise<TripListItem[]> {
+export const TRIPS_PAGE_SIZE = 12;
+
+/** Server-side filters exposed by `GET /trips` (partial title, date range). */
+export interface TripFilters {
+  title?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+/** One page of the trip collection plus Hydra's total count (for pagination). */
+export interface TripsPage {
+  items: TripListItem[];
+  totalItems: number;
+}
+
+export async function fetchTrips(
+  page = 1,
+  filters: TripFilters = {},
+): Promise<TripsPage> {
+  // The API paginates and filters server-side (title partial match, startDate /
+  // endDate range) — see the `api_trips_get_collection` query params. Empty
+  // filters are omitted so the backend does not treat "" as a match constraint.
+  const query: Record<string, string | number> = {
+    page,
+    itemsPerPage: TRIPS_PAGE_SIZE,
+  };
+  if (filters.title) query.title = filters.title;
+  if (filters.startDate) query.startDate = filters.startDate;
+  if (filters.endDate) query.endDate = filters.endDate;
+
   // openapi-fetch resolves (never rejects) on a non-2xx, returning `error`. Throw
   // so callers can tell a real backend failure from a legitimately empty list.
-  const { data, error } = await api.GET('/trips', { headers: ld });
+  const { data, error } = await api.GET('/trips', { params: { query }, headers: ld });
   if (error) {
     throw new Error('Failed to fetch trips');
   }
-  return data?.member ?? [];
+  return { items: data?.member ?? [], totalItems: data?.totalItems ?? 0 };
 }
 
 export async function fetchTripDetail(id: string): Promise<TripDetail | null> {
