@@ -84,7 +84,7 @@ Run the **bounded surveillance loop** (max 3 cycles) until the PR is READY. Neve
 
 Each cycle:
 1. **CI** — `gh pr checks`. If red: read the logs (`gh run view --log-failed`), fix, push.
-2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. Address actionable points, push, resolve threads; list any left unactioned with the reason.
+2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. **Fix, don't reply:** address actionable points by changing the code and pushing (which auto-resolves the review bot's own threads); **do not post replies or resolve threads yourself** (commenting in the user's name needs explicit consent). Report any point left unactioned, with the reason, to the user — not as a PR comment.
 3. **Conflicts** — `gh pr view --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base and resolve **conservatively**; if ambiguous or risky, stop and flag rather than force.
 4. **Parent moved (stacked PR)** — if the PR's base is `feature/<n>` and that branch has new commits on origin since the last sync, rebase: `git fetch origin && git rebase origin/feature/<n>`, then `git push --force-with-lease`. Resolve conflicts conservatively, flag if ambiguous.
 
