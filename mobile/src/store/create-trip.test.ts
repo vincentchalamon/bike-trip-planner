@@ -126,6 +126,11 @@ describe('pickGpxFile (#1043)', () => {
     mockPick.mockResolvedValue({ canceled: true, assets: null } as never);
     expect(await pickGpxFile()).toBeNull();
   });
+
+  it('resolves null (never rejects) when the picker throws', async () => {
+    mockPick.mockRejectedValue(new Error('permission denied'));
+    await expect(pickGpxFile()).resolves.toBeNull();
+  });
 });
 
 describe('runUploadGpx (#1043)', () => {

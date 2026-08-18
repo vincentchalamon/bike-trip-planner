@@ -55,19 +55,25 @@ export async function runCreateTrip(
  * Open the system file picker for a single GPX file. Returns the picked asset,
  * or null when the user cancels (mobile-adapt of the web drag&drop). The GPX
  * mime type is not reliably reported across platforms, so we accept any file and
- * let the backend validate the extension/content.
+ * let the backend validate the extension/content. A picker rejection (denied
+ * permission, or a second pick launched while one is in flight — rejected on
+ * some platforms) is treated as a cancel (null), never a thrown rejection.
  */
 export async function pickGpxFile(): Promise<GpxFile | null> {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: '*/*',
-    copyToCacheDirectory: true,
-    multiple: false,
-  });
-  if (result.canceled || !result.assets?.[0]) {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets?.[0]) {
+      return null;
+    }
+    const asset = result.assets[0];
+    return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType };
+  } catch {
     return null;
   }
-  const asset = result.assets[0];
-  return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType };
 }
 
 /**
