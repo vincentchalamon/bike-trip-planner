@@ -222,6 +222,34 @@ describe('computing state machine driven by SSE', () => {
     });
     expect(store().computing).toBe(true);
   });
+
+  it('keeps the armed baseline on a non-retryable computation_error', async () => {
+    // The backend completion gate guarantees a trip_ready still follows once
+    // every pipeline computation has settled (done OR failed), so a single
+    // non-critical failure must NOT disarm the baseline — otherwise the highlight
+    // is dropped for the common partial-failure case.
+    const dispatch = await connect();
+    useTripStore.getState().armConfigDiff();
+    expect(store().diffBaseline).not.toBeNull();
+
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'route', message: 'fatal', retryable: false },
+    });
+    expect(store().diffBaseline).not.toBeNull();
+  });
+
+  it('leaves the armed baseline intact on a retryable computation_error', async () => {
+    const dispatch = await connect();
+    useTripStore.getState().armConfigDiff();
+
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'route', message: 'transient', retryable: true },
+    });
+    // Still running → the recompute may yet produce a trip_ready that diffs.
+    expect(store().diffBaseline).not.toBeNull();
+  });
 });
 
 // Minimal renderHook on react-test-renderer (the mobile convention, no RTL).

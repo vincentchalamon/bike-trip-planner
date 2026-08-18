@@ -6,6 +6,7 @@ import {
   reconcileTripReady,
 } from '@btp/core/reconciliation';
 import type { TripDetail } from '../api/trips';
+import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
 
 type ApiStage = NonNullable<TripDetail['stages']>[number];
 
@@ -123,6 +124,20 @@ interface TripState extends TripConfig {
   computing: boolean;
   // Accumulated edits not yet sent to /recompute.
   pendingModifications: Modification[];
+  // Indices of stages that changed on the last destructive recompute, lit as a
+  // transient diff-highlight in the roadbook and auto-cleared after DIFF_TTL_MS.
+  stageDiffs: Set<number>;
+  // Pre-recompute stage snapshot armed before a destructive config edit; the
+  // next trip_ready diffs against it to populate stageDiffs, then clears it.
+  diffBaseline: StageData[] | null;
+  // Generation counters for the single shared `diffBaseline` slot. Each arm
+  // bumps `diffBaselineToken`; each consumed trip_ready bumps
+  // `diffConsumedToken`. The baseline is only released once every armed
+  // generation has been consumed, so two destructive recomputes armed
+  // back-to-back don't let the first trip_ready null the slot out from under
+  // the second (which would silently drop its highlight).
+  diffBaselineToken: number;
+  diffConsumedToken: number;
   loading: boolean;
   error: string | null;
   // Initial load from a /trips/{id}/detail payload.
@@ -152,6 +167,15 @@ interface TripState extends TripConfig {
     nextStageIndex: number | null,
   ) => void;
   deselectAccommodationOptimistic: (stageIndex: number) => void;
+  // Arm a diff baseline before a destructive edit (dates/pacing): the next
+  // trip_ready compares against it to light the changed stages.
+  armConfigDiff: () => void;
+  // Cancel an armed generation whose commit failed (no trip_ready will follow):
+  // token-aware so it doesn't null the shared baseline out from under a second
+  // still-pending generation.
+  disarmConfigDiff: () => void;
+  // Clear the transient diff-highlight (called by the auto-expiry timer).
+  clearStageDiffs: () => void;
   // Batch queue: replace a duplicate (same type + stageIndex) rather than append.
   queueModification: (modification: Modification) => void;
   cancelAllModifications: () => void;
@@ -173,6 +197,10 @@ export const useTripStore = create<TripState>((set, get) => ({
   outOfZone: false,
   computing: false,
   pendingModifications: [],
+  stageDiffs: new Set<number>(),
+  diffBaseline: null,
+  diffBaselineToken: 0,
+  diffConsumedToken: 0,
   loading: true,
   error: null,
   ...DEFAULT_CONFIG,
@@ -196,11 +224,43 @@ export const useTripStore = create<TripState>((set, get) => ({
       departureHour: detail.departureHour ?? DEFAULT_CONFIG.departureHour,
       enabledAccommodationTypes: detail.enabledAccommodationTypes ?? [],
       pendingModifications: [],
+      stageDiffs: new Set<number>(),
+      diffBaseline: null,
+      diffBaselineToken: 0,
+      diffConsumedToken: 0,
       loading: false,
       error: null,
     }),
   applyTripReady: (stages) =>
-    set({ stages: reconcileTripReady(get().stages, stages) }),
+    set((state) => {
+      const reconciled = reconcileTripReady(state.stages, stages);
+      // No armed baseline → an ordinary recompute, no diff-highlight.
+      if (!state.diffBaseline) return { stages: reconciled };
+      const stageDiffs = diffStageIndices(state.diffBaseline, reconciled);
+      if (stageDiffs.size > 0) {
+        // Key the auto-expiry to this exact diff set: a later destructive
+        // recompute within the TTL replaces stageDiffs, and this stale timer
+        // must not wipe the fresher highlights.
+        setTimeout(() => {
+          if (get().stageDiffs === stageDiffs) get().clearStageDiffs();
+        }, DIFF_TTL_MS);
+      }
+      // Release the shared baseline only once every armed generation has been
+      // consumed. While earlier generations remain (a second destructive
+      // recompute was armed before this trip_ready), keep the baseline so the
+      // later trip_ready still diffs and doesn't silently drop its highlight.
+      const consumed = state.diffConsumedToken + 1;
+      if (consumed >= state.diffBaselineToken) {
+        return {
+          stages: reconciled,
+          stageDiffs,
+          diffBaseline: null,
+          diffBaselineToken: 0,
+          diffConsumedToken: 0,
+        };
+      }
+      return { stages: reconciled, stageDiffs, diffConsumedToken: consumed };
+    }),
   applyStageUpdate: (index, stage) =>
     set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
   setStages: (stages) => set({ stages }),
@@ -292,6 +352,35 @@ export const useTripStore = create<TripState>((set, get) => ({
         i === stageIndex ? { ...s, selectedAccommodation: null } : s,
       ),
     })),
+  armConfigDiff: () =>
+    set((state) => ({
+      // Only capture the snapshot for a fresh run (no baseline pending). A re-arm
+      // before the pending trip_ready must NOT recapture: `stages` may already
+      // have advanced (an earlier generation resolved while a later one is still
+      // pending), and overwriting the shared baseline with the newer stages would
+      // corrupt the still-pending generation's diff.
+      diffBaseline: state.diffBaseline ?? state.stages,
+      // A fresh arm starts a new generation run at 1 and clears any counters left
+      // over from a commit that never streamed back (a failed commit is disarmed
+      // by ConfigSheet / the SSE error path). A re-arm bumps the generation and
+      // keeps the consumed count.
+      diffBaselineToken: state.diffBaseline ? state.diffBaselineToken + 1 : 1,
+      diffConsumedToken: state.diffBaseline ? state.diffConsumedToken : 0,
+    })),
+  disarmConfigDiff: () =>
+    set((state) => {
+      if (!state.diffBaseline) return {};
+      // A failed commit is a consumed generation, not a full reset: only release
+      // the shared baseline once every armed generation is accounted for, so a
+      // second still-pending generation keeps its baseline (mirrors the consumed
+      // accounting in applyTripReady).
+      const consumed = state.diffConsumedToken + 1;
+      if (consumed >= state.diffBaselineToken) {
+        return { diffBaseline: null, diffBaselineToken: 0, diffConsumedToken: 0 };
+      }
+      return { diffConsumedToken: consumed };
+    }),
+  clearStageDiffs: () => set({ stageDiffs: new Set<number>() }),
   queueModification: (modification) =>
     set((state) => {
       const i = state.pendingModifications.findIndex(
@@ -316,6 +405,10 @@ export const useTripStore = create<TripState>((set, get) => ({
       outOfZone: false,
       computing: false,
       pendingModifications: [],
+      stageDiffs: new Set<number>(),
+      diffBaseline: null,
+      diffBaselineToken: 0,
+      diffConsumedToken: 0,
       loading: true,
       error: null,
       ...DEFAULT_CONFIG,

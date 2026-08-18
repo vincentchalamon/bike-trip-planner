@@ -9,6 +9,7 @@ module.exports = {
     '^@btp/core/mercure$': '<rootDir>/../core/mercure.ts',
     '^@btp/core/schema$': '<rootDir>/../core/schema.d.ts',
     '^@btp/core/constants$': '<rootDir>/../core/accommodation-constants.ts',
+    '^@btp/core/pacing-presets$': '<rootDir>/../core/pacing-presets.ts',
     '^@btp/core$': '<rootDir>/../core/index.ts',
   },
 };

@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   ErrorState,
@@ -9,7 +9,9 @@ import {
   SegmentedControl,
   type Segment,
 } from '../../../src/components/ui';
+import { Settings } from '../../../src/components/ui/icons';
 import {
+  ConfigSheet,
   ExportButton,
   RoadbookView,
   SseStatusIndicator,
@@ -26,6 +28,7 @@ export default function TripRoadbook() {
   const { t } = useTranslation();
   const theme = useTheme();
   const [view, setView] = useState<TripView>('roadbook');
+  const [configOpen, setConfigOpen] = useState(false);
 
   // Hydrate the shared store from /detail and keep it live via SSE. The child
   // views render straight from the store, so a stage_updated event reconciled by
@@ -81,11 +84,25 @@ export default function TripRoadbook() {
           </Text>
           <SseStatusIndicator computing={computing} />
           <ExportButton tripId={id} tripTitle={title ?? t('trip.title')} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('config.a11yOpen')}
+            hitSlop={8}
+            onPress={() => setConfigOpen(true)}
+          >
+            <Settings color={theme.colors.foreground} size={22} />
+          </Pressable>
         </View>
         <SegmentedControl segments={segments} value={view} onChange={setView} />
       </View>
 
       {view === 'map' ? <TripMapView /> : <RoadbookView id={id} />}
+
+      <ConfigSheet
+        tripId={id}
+        visible={configOpen}
+        onClose={() => setConfigOpen(false)}
+      />
     </Screen>
   );
 }

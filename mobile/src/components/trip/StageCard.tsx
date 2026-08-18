@@ -54,6 +54,9 @@ interface StageCardProps {
   // Tap-through to the full-screen stage detail (#1039). Wired on the stage
   // summary only (not the data blocks below, so their own controls keep working).
   onPress?: (index: number) => void;
+  // Transient diff-highlight after a destructive recompute (#1046): tints the
+  // row so the rider sees which days the re-split changed.
+  highlighted?: boolean;
 }
 
 // A compact pill action used by the inline edit footer.
@@ -123,6 +126,7 @@ export function StageCard({
   isToday = false,
   onAlertNavigate,
   onPress,
+  highlighted = false,
 }: StageCardProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -167,7 +171,14 @@ export function StageCard({
   }
 
   return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
+    <View
+      accessibilityLabel={highlighted ? t('trip.diffChanged') : undefined}
+      style={{
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+        backgroundColor: highlighted ? theme.colors.accentSoft : undefined,
+      }}
+    >
       <View
         style={{
           flexDirection: 'row',

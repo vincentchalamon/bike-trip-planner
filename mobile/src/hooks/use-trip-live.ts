@@ -73,7 +73,14 @@ export async function runTripLive(
       } else if (event.type === 'computation_error') {
         // A retryable error means the computation is still running (the core
         // reducer leaves the state untouched); only a non-retryable error is
-        // terminal and clears the computing badge.
+        // terminal and clears the computing badge. Do NOT disarm the diff
+        // baseline here: the backend completion gate (TripCompletionGate /
+        // AllEnrichmentsCompletedHandler) guarantees a trip_ready always
+        // eventually follows once every pipeline computation has settled (done
+        // OR failed) — including this one — so a single non-critical failure
+        // (weather, ferries, border crossing, …) does not mean trip_ready never
+        // arrives; disarming here would drop the highlight for that common
+        // partial-failure case.
         if (!event.data.retryable) store.setComputing(false);
       }
     });
@@ -105,7 +112,13 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
 
     void runTripLive(
       id,
-      { hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing },
+      {
+        hydrate,
+        applyTripReady,
+        applyStageUpdate,
+        setStatus,
+        setComputing,
+      },
       () => cancelled,
     ).then((opened) => {
       if (cancelled) opened?.close();
@@ -117,5 +130,14 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
       sub?.close();
       reset();
     };
-  }, [enabled, id, hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing, reset]);
+  }, [
+    enabled,
+    id,
+    hydrate,
+    applyTripReady,
+    applyStageUpdate,
+    setStatus,
+    setComputing,
+    reset,
+  ]);
 }

@@ -27,6 +27,10 @@ export default defineConfig({
         __dirname,
         "../core/accommodation-constants.ts",
       ),
+      "@btp/core/pacing-presets": path.resolve(
+        __dirname,
+        "../core/pacing-presets.ts",
+      ),
       "@btp/core/mercure": path.resolve(__dirname, "../core/mercure.ts"),
       "@btp/core/reconciliation": path.resolve(
         __dirname,
