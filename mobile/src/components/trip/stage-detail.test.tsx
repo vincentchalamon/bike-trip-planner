@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
-import { Text } from 'react-native';
+import { Text, TextInput } from 'react-native';
 import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
@@ -28,6 +28,19 @@ jest.mock('@maplibre/maplibre-react-native', () => ({
   Layer: () => null,
   Map: ({ children }: { children?: unknown }) => children ?? null,
 }));
+
+jest.mock('../../hooks/use-trip-mutations', () => ({ useTripMutations: jest.fn() }));
+import { useTripMutations } from '../../hooks/use-trip-mutations';
+const mockUseTripMutations = useTripMutations as jest.Mock;
+const mockUpdateStageDistance = jest.fn();
+// Every method the screen (and its data blocks) may call resolves to a jest.fn;
+// only updateStageDistance is asserted on.
+mockUseTripMutations.mockReturnValue(
+  new Proxy(
+    { updateStageDistance: mockUpdateStageDistance },
+    { get: (t, p) => (p in t ? (t as Record<string, unknown>)[p as string] : jest.fn()) },
+  ),
+);
 
 function textOf(node: any): string[] {
   const kids = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
@@ -239,5 +252,60 @@ describe('StageDetailView', () => {
     useTripStore.setState({ tripId: 't1', stages: [], loading: false });
     const t = texts(render(<StageDetailView initialIndex={0} />));
     expect(t).toContain(fr.trip.stageDetail.notFound);
+  });
+});
+
+describe('StageDetailView inline distance edit', () => {
+  // Computed lazily (i18n language is set in beforeAll, after describe collection).
+  const editLabel = () => i18n.t('trip.edit.editDistanceA11y', { day: 1 });
+
+  beforeEach(() => {
+    mockUpdateStageDistance.mockClear();
+    // canEditDistance = tripId set, not locked, online (store default), in zone,
+    // not a rest day.
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stage({ distance: 50 })],
+      loading: false,
+      isLocked: false,
+      outOfZone: false,
+    });
+  });
+
+  function openEditor(tree: any) {
+    act(() => {
+      navButton(tree, editLabel()).props.onPress();
+    });
+  }
+  function type(tree: any, value: string) {
+    const input = tree.root
+      .findAllByType(TextInput)
+      .find((i: any) => i.props.accessibilityLabel === editLabel());
+    act(() => {
+      input.props.onChangeText(value);
+    });
+  }
+  function save(tree: any) {
+    act(() => {
+      navButton(tree, i18n.t('trip.edit.saveA11y')).props.onPress();
+    });
+  }
+
+  it('commits a valid distance to the API', () => {
+    const tree = render(<StageDetailView initialIndex={0} />);
+    openEditor(tree);
+    type(tree, '42.5');
+    save(tree);
+    expect(mockUpdateStageDistance).toHaveBeenCalledWith(0, 42.5);
+  });
+
+  it('is a no-op for a non-finite or non-positive draft', () => {
+    const tree = render(<StageDetailView initialIndex={0} />);
+    for (const bad of ['abc', '0', '-5']) {
+      openEditor(tree);
+      type(tree, bad);
+      save(tree);
+    }
+    expect(mockUpdateStageDistance).not.toHaveBeenCalled();
   });
 });

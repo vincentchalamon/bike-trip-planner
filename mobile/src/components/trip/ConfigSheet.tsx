@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  type AccessibilityActionEvent,
   type GestureResponderEvent,
   type LayoutChangeEvent,
   Pressable,
@@ -113,6 +114,15 @@ function Slider({
         accessibilityRole="adjustable"
         accessibilityLabel={label}
         accessibilityValue={{ min, max, now: value, text: format(value) }}
+        // Screen readers (VoiceOver/TalkBack) drive an "adjustable" via
+        // increment/decrement actions, not raw touch — without these the sliders
+        // are unusable with a screen reader (the old +/- Stepper was operable).
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(e: AccessibilityActionEvent) => {
+          if (disabled) return;
+          if (e.nativeEvent.actionName === 'increment') onChange(clamp(value + step, min, max));
+          if (e.nativeEvent.actionName === 'decrement') onChange(clamp(value - step, min, max));
+        }}
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         onStartShouldSetResponder={() => !disabled}
         onMoveShouldSetResponder={() => !disabled}
