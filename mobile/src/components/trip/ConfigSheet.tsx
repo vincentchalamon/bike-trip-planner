@@ -244,15 +244,21 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
 
   // A destructive commit re-splits the trip: confirm, then arm the diff so the
   // roadbook highlights the stages that moved once the recompute streams back.
-  function confirmRecompute(run: () => void) {
+  function confirmRecompute(run: () => Promise<boolean>) {
     Alert.alert(t('config.confirmTitle'), t('config.confirmMessage'), [
       { text: t('config.cancel'), style: 'cancel' },
       {
         text: t('config.confirm'),
         style: 'destructive',
         onPress: () => {
+          // Arm the baseline, but disarm it if the commit fails (e.g. a
+          // malformed free-text date → 422): otherwise no trip_ready follows and
+          // the stale baseline would light spurious highlights on the NEXT
+          // unrelated successful recompute.
           useTripStore.getState().armConfigDiff();
-          run();
+          void run().then((ok) => {
+            if (!ok) useTripStore.setState({ diffBaseline: null });
+          });
           onClose();
         },
       },

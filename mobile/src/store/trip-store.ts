@@ -222,7 +222,12 @@ export const useTripStore = create<TripState>((set, get) => ({
       if (!state.diffBaseline) return { stages: reconciled };
       const stageDiffs = diffStageIndices(state.diffBaseline, reconciled);
       if (stageDiffs.size > 0) {
-        setTimeout(() => get().clearStageDiffs(), DIFF_TTL_MS);
+        // Key the auto-expiry to this exact diff set: a later destructive
+        // recompute within the TTL replaces stageDiffs, and this stale timer
+        // must not wipe the fresher highlights.
+        setTimeout(() => {
+          if (get().stageDiffs === stageDiffs) get().clearStageDiffs();
+        }, DIFF_TTL_MS);
       }
       return { stages: reconciled, stageDiffs, diffBaseline: null };
     }),

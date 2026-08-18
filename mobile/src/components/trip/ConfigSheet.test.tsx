@@ -156,6 +156,25 @@ describe('ConfigSheet destructive-confirm gating', () => {
     spy.mockRestore();
   });
 
+  it('disarms the diff baseline when the destructive commit fails', async () => {
+    // A malformed date (free-text field) → backend 422 → the runner resolves
+    // false with no trip_ready to follow. The armed baseline must be cleaned up.
+    mockUpdatePacing.mockResolvedValueOnce(false);
+    const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    press(findByA11y(tree.root, t('config.increase', { label: t('config.maxDistance') })));
+    press(findButton(tree.root, t('config.recompute'))!);
+    const buttons = (spy.mock.calls[0] as any)[2] as { style?: string; onPress?: () => void }[];
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    await act(async () => {
+      confirm?.onPress?.();
+      await Promise.resolve();
+    });
+    expect(mockUpdatePacing).toHaveBeenCalledTimes(1);
+    expect(useTripStore.getState().diffBaseline).toBeNull();
+    spy.mockRestore();
+  });
+
   it('cancelling the confirmation commits nothing', () => {
     const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);

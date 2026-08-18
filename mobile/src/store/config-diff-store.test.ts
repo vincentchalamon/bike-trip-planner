@@ -72,4 +72,35 @@ describe('destructive config diff arming', () => {
       jest.useRealTimers();
     }
   });
+
+  it("a stale expiry timer does not wipe a fresher recompute's highlights", () => {
+    jest.useFakeTimers();
+    try {
+      useTripStore.setState({ stages: [stage(), stage({ dayNumber: 2 })] });
+      // First destructive recompute: highlights stage 0.
+      useTripStore.getState().armConfigDiff();
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
+      expect([...useTripStore.getState().stageDiffs]).toEqual([0]);
+
+      // A second destructive recompute lands within the TTL: highlights stage 1.
+      jest.advanceTimersByTime(DIFF_TTL_MS - 1);
+      useTripStore.getState().armConfigDiff();
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2, distance: 42 })]);
+      expect([...useTripStore.getState().stageDiffs]).toEqual([1]);
+
+      // The FIRST timer now fires — it must be a no-op (stageDiffs was replaced).
+      jest.advanceTimersByTime(1);
+      expect([...useTripStore.getState().stageDiffs]).toEqual([1]);
+
+      // The SECOND timer still expires the fresh highlights on schedule.
+      jest.advanceTimersByTime(DIFF_TTL_MS);
+      expect(useTripStore.getState().stageDiffs.size).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
