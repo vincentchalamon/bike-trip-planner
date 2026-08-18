@@ -47,6 +47,11 @@ export const en: typeof fr = {
     duplicateA11y: 'Duplicate {{title}}',
     duplicateFailedTitle: 'Duplication failed',
     duplicateFailed: 'Duplication failed. Try again.',
+    status: {
+      draft: 'draft',
+      analyzing: 'analyzing',
+      analyzed: 'analyzed',
+    },
   },
   create: {
     title: 'Create a trip',
