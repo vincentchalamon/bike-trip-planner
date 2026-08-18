@@ -187,14 +187,30 @@ describe('runUpdateStageDistance (routing) — gating branches', () => {
 });
 
 describe('runSelectAccommodation', () => {
-  it('rolls back and reports "conflict" on 409 (stale list)', async () => {
+  beforeEach(() => {
     useTripStore.setState({
       stages: [
         stage({ accommodations: [{ name: 'Gite', lat: 9, lon: 9 } as never] }),
         stage(),
       ],
     });
+  });
+
+  it('selects optimistically then calls the API in zone', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: true, status: 202 });
+
+    const ok = await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
+
+    expect(ok).toBe(true);
+    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 0, 9, 9);
+    expect(
+      useTripStore.getState().stages[0]!.selectedAccommodation,
+    ).not.toBeNull();
+  });
+
+  it('rolls back and reports "conflict" on 409 (stale list)', async () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
     const onFailure = jest.fn();
 
     const ok = await runSelectAccommodation('t1', 0, 0, ctx(), onFailure);
@@ -202,6 +218,37 @@ describe('runSelectAccommodation', () => {
     expect(ok).toBe(false);
     expect(onFailure).toHaveBeenCalledWith('conflict');
     expect(useTripStore.getState().stages[0]!.selectedAccommodation).toBeNull();
+  });
+
+  it('re-scans this stage at the default radius on a 409 stale list', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
+
+    await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
+
+    // DEFAULT_ACCOMMODATION_RADIUS_KM = 5, stageIndex = 0.
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 0);
+  });
+
+  it('does NOT re-scan when the select succeeds', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: true, status: 202 });
+
+    await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
+
+    expect(scanAccommodations).not.toHaveBeenCalled();
+  });
+
+  it('reports "network" when the 409 re-scan itself fails (not swallowed)', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockRejectedValue(new Error('offline'));
+    const onFailure = jest.fn();
+
+    await runSelectAccommodation('t1', 0, 0, ctx(), onFailure);
+    // Let the fire-and-forget re-scan rejection settle.
+    await new Promise<void>((resolve) => setImmediate(() => resolve()));
+
+    expect(onFailure).toHaveBeenCalledWith('conflict');
+    expect(onFailure).toHaveBeenCalledWith('network');
   });
 });
 
@@ -344,10 +391,18 @@ describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
 
   it('rolls back the selection on 409', async () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
     const onFailure = jest.fn();
     expect(await runDeselectAccommodation('t1', 0, ctx(), onFailure)).toBe(false);
     expect(useTripStore.getState().stages[0]!.selectedAccommodation).toEqual(acc);
     expect(onFailure).toHaveBeenCalledWith('conflict');
+  });
+
+  it('re-scans this stage on a 409 stale list', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
+    await runDeselectAccommodation('t1', 0, ctx(), jest.fn());
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 0);
   });
 });
 

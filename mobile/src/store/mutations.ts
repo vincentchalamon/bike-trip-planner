@@ -77,6 +77,10 @@ export async function run(
     call: () => Promise<MutationResult>;
     optimistic?: () => void;
     rollback?: () => void;
+    // Fired (after rollback, before onFailure) when the backend answers 409. The
+    // accommodation runners use it to trigger a re-scan of the stale candidate
+    // list rather than leaving the user stuck on it.
+    onConflict?: () => void;
   },
   onFailure: OnFailure,
 ): Promise<boolean> {
@@ -90,7 +94,9 @@ export async function run(
     const { ok, status } = await opts.call();
     if (!ok) {
       opts.rollback?.();
-      onFailure(normalizeStatus(status));
+      const reason = normalizeStatus(status);
+      if (reason === 'conflict') opts.onConflict?.();
+      onFailure(reason);
       return false;
     }
     return true;
@@ -365,6 +371,16 @@ export function runSelectAccommodation(
         ctx.selectAccommodationOptimistic(stageIndex, accIndex, nextStageIndex),
       rollback: () => ctx.setStages(snapshot),
       call: () => setStageAccommodation(tripId, stageIndex, acc.lat, acc.lon),
+      // 409 = a concurrent scan invalidated the candidate list. Re-scan this
+      // stage at the default radius so the user gets a fresh list to retry from
+      // (mirrors the web handleSelectAccommodation flow). A failed re-scan is
+      // surfaced rather than swallowed (no silent unhandled rejection).
+      onConflict: () =>
+        void scanAccommodations(
+          tripId,
+          DEFAULT_ACCOMMODATION_RADIUS_KM,
+          stageIndex,
+        ).catch(() => onFailure('network')),
     },
     onFailure,
   );
@@ -384,6 +400,12 @@ export function runDeselectAccommodation(
       optimistic: () => ctx.deselectAccommodationOptimistic(stageIndex),
       rollback: () => ctx.setStages(snapshot),
       call: () => setStageAccommodation(tripId, stageIndex, null, null),
+      onConflict: () =>
+        void scanAccommodations(
+          tripId,
+          DEFAULT_ACCOMMODATION_RADIUS_KM,
+          stageIndex,
+        ).catch(() => onFailure('network')),
     },
     onFailure,
   );
