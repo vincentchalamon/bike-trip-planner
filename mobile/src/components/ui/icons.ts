@@ -8,6 +8,7 @@ export {
   ChevronRight,
   CloudRain,
   Copy,
+  Download,
   FileUp,
   Inbox,
   Map,

@@ -1,0 +1,228 @@
+/// <reference types="jest" />
+import { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import { Alert } from 'react-native';
+
+const mockCreate = jest.fn();
+const mockWrite = jest.fn();
+let mockUri = 'file:///cache/exports/trip.gpx';
+
+jest.mock('expo-file-system', () => ({
+  Paths: { cache: 'file:///cache' },
+  File: jest.fn().mockImplementation(() => ({
+    create: mockCreate,
+    write: mockWrite,
+    get uri() {
+      return mockUri;
+    },
+  })),
+}));
+
+const mockIsAvailable = jest.fn();
+const mockShareAsync = jest.fn();
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: (...args: unknown[]) => mockIsAvailable(...args),
+  shareAsync: (...args: unknown[]) => mockShareAsync(...args),
+}));
+
+// Records write/share ordering (#1047 review): `mockWrite` resolves on a macrotask
+// (setTimeout), which only elapses once the microtask queue (every unresolved
+// Promise, incl. `Sharing.isAvailableAsync`) has drained. So `write` lands in
+// `events` before `share` only if the write is genuinely awaited before sharing
+// proceeds — dropping that `await` lets `share` run first (isAvailableAsync's
+// already-resolved promise beats the pending setTimeout).
+let events: string[] = [];
+
+jest.mock('../api/trips', () => ({
+  fetchTripExport: jest.fn(),
+  fetchStageExport: jest.fn(),
+  tripExportFileName: jest.fn(() => 'trip.gpx'),
+  stageExportFileName: jest.fn(() => 'trip-stage-1.fit'),
+}));
+
+import { fetchStageExport, fetchTripExport } from '../api/trips';
+import {
+  confirmExportFormat,
+  runExportStage,
+  runExportTrip,
+  useExport,
+  writeAndShare,
+  type UseExport,
+} from './use-export';
+
+const mockFetchTripExport = fetchTripExport as jest.MockedFunction<typeof fetchTripExport>;
+const mockFetchStageExport = fetchStageExport as jest.MockedFunction<typeof fetchStageExport>;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  events = [];
+  mockIsAvailable.mockResolvedValue(true);
+  mockUri = 'file:///cache/exports/trip.gpx';
+  mockWrite.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          events.push('write');
+          resolve();
+        }, 0);
+      }),
+  );
+  mockShareAsync.mockImplementation(async () => {
+    events.push('share');
+  });
+});
+
+describe('writeAndShare (#1047)', () => {
+  it('writes the bytes to a cache file and shares it with the right mime type', async () => {
+    const bytes = new ArrayBuffer(4);
+    await writeAndShare(bytes, 'trip.gpx', 'gpx');
+
+    expect(mockCreate).toHaveBeenCalledWith({ intermediates: true, overwrite: true });
+    expect(mockWrite).toHaveBeenCalledWith(expect.any(Uint8Array));
+    expect(mockShareAsync).toHaveBeenCalledWith(mockUri, {
+      mimeType: 'application/gpx+xml',
+    });
+  });
+
+  it('uses the FIT mime type for a .fit export', async () => {
+    await writeAndShare(new ArrayBuffer(4), 'trip.fit', 'fit');
+    expect(mockShareAsync).toHaveBeenCalledWith(mockUri, {
+      mimeType: 'application/vnd.ant.fit',
+    });
+  });
+
+  it('throws instead of writing when no share target is available', async () => {
+    mockIsAvailable.mockResolvedValue(false);
+    await expect(writeAndShare(new ArrayBuffer(4), 'trip.gpx', 'gpx')).rejects.toThrow(
+      'Sharing is not available on this device',
+    );
+    expect(mockShareAsync).not.toHaveBeenCalled();
+  });
+
+  // Regression (#1047 review): `File#write` must be awaited before sharing, or
+  // the share sheet can be handed a still-writing (truncated/empty) cache file.
+  it('waits for the write to resolve before sharing', async () => {
+    await writeAndShare(new ArrayBuffer(4), 'trip.gpx', 'gpx');
+    expect(events).toEqual(['write', 'share']);
+  });
+});
+
+describe('runExportTrip (#1047)', () => {
+  it('resolves true after fetching and sharing the trip file', async () => {
+    mockFetchTripExport.mockResolvedValue(new ArrayBuffer(4));
+    const ok = await runExportTrip('trip-1', 'My Trip', 'gpx');
+    expect(mockFetchTripExport).toHaveBeenCalledWith('trip-1', 'gpx');
+    expect(mockShareAsync).toHaveBeenCalled();
+    expect(ok).toBe(true);
+  });
+
+  it('resolves false when the fetch fails, never throws', async () => {
+    mockFetchTripExport.mockRejectedValue(new Error('network down'));
+    const ok = await runExportTrip('trip-1', 'My Trip', 'gpx');
+    expect(ok).toBe(false);
+    expect(mockShareAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('runExportStage (#1047)', () => {
+  it('resolves true after fetching and sharing the stage file', async () => {
+    mockFetchStageExport.mockResolvedValue(new ArrayBuffer(4));
+    const ok = await runExportStage('trip-1', 3, 'My Trip', 'fit');
+    expect(mockFetchStageExport).toHaveBeenCalledWith('trip-1', 3, 'fit');
+    expect(ok).toBe(true);
+  });
+
+  // Regression (#1047 review): the export route resolves `{index}` on the
+  // 1-based `dayNumber` server-side, not the 0-based array position. A stage at
+  // array index 2 is day 3 — asserting the exact dayNumber value (distinct from
+  // any plausible 0-based index) catches a caller passing the wrong one back.
+  it('passes dayNumber, not a 0-based index, to fetchStageExport', async () => {
+    mockFetchStageExport.mockResolvedValue(new ArrayBuffer(4));
+    await runExportStage('trip-1', 3, 'My Trip', 'gpx');
+    expect(mockFetchStageExport).toHaveBeenCalledWith('trip-1', 3, 'gpx');
+    expect(mockFetchStageExport).not.toHaveBeenCalledWith('trip-1', 2, 'gpx');
+  });
+
+  it('resolves false when the fetch fails, never throws', async () => {
+    mockFetchStageExport.mockRejectedValue(new Error('network down'));
+    const ok = await runExportStage('trip-1', 3, 'My Trip', 'fit');
+    expect(ok).toBe(false);
+  });
+});
+
+describe('confirmExportFormat (#1047)', () => {
+  it('offers GPX/FIT and cancel, routing the chosen format to onSelect', () => {
+    const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const onSelect = jest.fn();
+    confirmExportFormat({
+      title: 'Export',
+      gpxLabel: 'GPX',
+      fitLabel: 'FIT',
+      cancelLabel: 'Cancel',
+      onSelect,
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [title, , buttons] = spy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; style?: string; onPress?: () => void }[],
+    ];
+    expect(title).toBe('Export');
+    const cancel = buttons.find((b) => b.style === 'cancel');
+    const gpx = buttons.find((b) => b.text === 'GPX');
+    const fit = buttons.find((b) => b.text === 'FIT');
+    expect(cancel).toBeDefined();
+    expect(onSelect).not.toHaveBeenCalled();
+    gpx!.onPress?.();
+    expect(onSelect).toHaveBeenCalledWith('gpx');
+    fit!.onPress?.();
+    expect(onSelect).toHaveBeenCalledWith('fit');
+    spy.mockRestore();
+  });
+});
+
+// Minimal renderHook on react-test-renderer (the mobile convention, no RTL).
+function renderHook(onFailure: () => void): {
+  result: { current: UseExport };
+  unmount: () => void;
+} {
+  const result = { current: undefined as unknown as UseExport };
+  function Probe() {
+    result.current = useExport(onFailure);
+    return null;
+  }
+  let renderer!: ReturnType<typeof TestRenderer.create>;
+  act(() => {
+    renderer = TestRenderer.create(createElement(Probe));
+  });
+  return { result, unmount: () => act(() => renderer.unmount()) };
+}
+
+describe('useExport (#1047)', () => {
+  it('tracks the in-flight export and calls onFailure on error', async () => {
+    mockFetchTripExport.mockRejectedValue(new Error('boom'));
+    const onFailure = jest.fn();
+    const { result, unmount } = renderHook(onFailure);
+
+    expect(result.current.exporting).toBe(false);
+    await act(async () => {
+      await result.current.exportTrip('trip-1', 'My Trip', 'gpx');
+    });
+    expect(result.current.exporting).toBe(false);
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('does not call onFailure on a successful stage export', async () => {
+    mockFetchStageExport.mockResolvedValue(new ArrayBuffer(4));
+    const onFailure = jest.fn();
+    const { result, unmount } = renderHook(onFailure);
+
+    await act(async () => {
+      await result.current.exportStage('trip-1', 3, 'My Trip', 'fit');
+    });
+    expect(onFailure).not.toHaveBeenCalled();
+    unmount();
+  });
+});

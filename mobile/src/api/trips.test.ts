@@ -1,7 +1,15 @@
 /// <reference types="jest" />
 jest.mock('./client', () => ({ api: { GET: jest.fn(), POST: jest.fn() } }));
 import { api } from './client';
-import { fetchTrips, TRIPS_PAGE_SIZE, uploadGpx } from './trips';
+import {
+  fetchStageExport,
+  fetchTripExport,
+  fetchTrips,
+  stageExportFileName,
+  tripExportFileName,
+  TRIPS_PAGE_SIZE,
+  uploadGpx,
+} from './trips';
 
 const mockGet = api.GET as jest.MockedFunction<typeof api.GET>;
 const mockPost = api.POST as jest.MockedFunction<typeof api.POST>;
@@ -75,5 +83,78 @@ describe('uploadGpx (#1043)', () => {
     mockPost.mockResolvedValue({ data: undefined, response: { status: 422 } } as never);
     const res = await uploadGpx({ uri: 'file:///bad.gpx', name: 'bad.gpx' });
     expect(res).toEqual({ id: null, status: 422 });
+  });
+});
+
+describe('export filenames (#1047)', () => {
+  it('sanitizes the trip title and appends the format', () => {
+    expect(tripExportFileName('Entre Sensée et Escaut', 'gpx')).toBe(
+      'Entre-Sens-e-et-Escaut.gpx',
+    );
+    expect(tripExportFileName('   ', 'fit')).toBe('trip.fit');
+  });
+
+  it('appends the stage day number before the format', () => {
+    expect(stageExportFileName('Entre Sensée et Escaut', 3, 'fit')).toBe(
+      'Entre-Sens-e-et-Escaut-stage-3.fit',
+    );
+  });
+});
+
+describe('fetchTripExport (#1047)', () => {
+  it('negotiates on Accept and reads the response as raw bytes', async () => {
+    const bytes = new ArrayBuffer(4);
+    mockGet.mockResolvedValue({
+      data: bytes,
+      error: undefined,
+      response: { ok: true },
+    } as never);
+
+    const res = await fetchTripExport('trip-1', 'gpx');
+
+    expect(mockGet).toHaveBeenCalledWith('/trips/{id}', {
+      params: { path: { id: 'trip-1' } },
+      headers: { Accept: 'application/gpx+xml' },
+      parseAs: 'arrayBuffer',
+    });
+    expect(res).toBe(bytes);
+  });
+
+  it('throws when the backend responds with an error', async () => {
+    mockGet.mockResolvedValue({
+      data: undefined,
+      error: { detail: 'boom' },
+      response: { ok: false },
+    } as never);
+    await expect(fetchTripExport('trip-1', 'fit')).rejects.toThrow('Failed to export trip');
+  });
+});
+
+describe('fetchStageExport (#1047)', () => {
+  it('negotiates on Accept for the FIT mime type and reads raw bytes', async () => {
+    const bytes = new ArrayBuffer(8);
+    mockGet.mockResolvedValue({
+      data: bytes,
+      error: undefined,
+      response: { ok: true },
+    } as never);
+
+    const res = await fetchStageExport('trip-1', 2, 'fit');
+
+    expect(mockGet).toHaveBeenCalledWith('/trips/{tripId}/stages/{index}/export', {
+      params: { path: { tripId: 'trip-1', index: '2' } },
+      headers: { Accept: 'application/vnd.ant.fit' },
+      parseAs: 'arrayBuffer',
+    });
+    expect(res).toBe(bytes);
+  });
+
+  it('throws when the backend responds with an error', async () => {
+    mockGet.mockResolvedValue({
+      data: undefined,
+      error: { detail: 'boom' },
+      response: { ok: false },
+    } as never);
+    await expect(fetchStageExport('trip-1', 2, 'gpx')).rejects.toThrow('Failed to export stage');
   });
 });

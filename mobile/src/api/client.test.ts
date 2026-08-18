@@ -46,6 +46,29 @@ describe('authMiddleware 401 retry (#1032)', () => {
     expect(result?.status).toBe(200);
   });
 
+  // Regression (#1047 review): a FIT export retried after a 401 must come back
+  // byte-for-byte — a `.text()` round-trip re-encodes as UTF-8 and corrupts
+  // binary content.
+  it('preserves a binary body byte-for-byte across the retry (#1047)', async () => {
+    mockGetJwt.mockReturnValueOnce('stale-jwt').mockReturnValue('fresh-jwt');
+    mockRefresh.mockResolvedValue(true);
+    const bytes = new Uint8Array([0x0e, 0x10, 0xff, 0x00, 0x8a, 0x2e]);
+    (globalThis.fetch as jest.Mock).mockResolvedValue(
+      new Response(bytes, {
+        status: 200,
+        headers: { 'Content-Type': 'application/vnd.ant.fit' },
+      }),
+    );
+
+    const request = new Request('https://api.test/trips/1/stages/1/export');
+    await onRequest(request);
+    const result = await onResponse(request, new Response(null, { status: 401 }));
+
+    expect(result).toBeInstanceOf(Response);
+    const resultBytes = new Uint8Array(await result!.arrayBuffer());
+    expect(resultBytes).toEqual(bytes);
+  });
+
   it('does not replay when the refresh fails', async () => {
     mockGetJwt.mockReturnValue('stale-jwt');
     mockRefresh.mockResolvedValue(false);
