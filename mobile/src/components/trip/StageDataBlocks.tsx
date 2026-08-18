@@ -131,6 +131,7 @@ export function StageDataBlocks({
         {...(editable && {
           radiusKm: stage.accommodationSearchRadiusKm,
           disabled,
+          outOfZone,
           onSelect: (accIndex: number) =>
             void mutations.selectAccommodation(stageIndex, accIndex),
           onDeselect: () => void mutations.deselectAccommodation(stageIndex),

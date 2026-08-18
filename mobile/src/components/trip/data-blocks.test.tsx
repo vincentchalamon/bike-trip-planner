@@ -329,6 +329,35 @@ describe('AccommodationBlock', () => {
     expect(atCap.root.findAllByProps({ label })).toHaveLength(0);
   });
 
+  it('gates widen on the NEXT radius, hiding it when a step would exceed the cap', () => {
+    const label = fr.trip.blocks.accommodationExpandRadius.replace(
+      '{{step}}',
+      String(ACCOMMODATION_RADIUS_STEP_KM),
+    );
+    // One step short of the cap → the next scan lands exactly on it: still shown.
+    const oneStepBelow = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={MAX_ACCOMMODATION_RADIUS_KM - ACCOMMODATION_RADIUS_STEP_KM}
+        onSelect={jest.fn()}
+        onExpandRadius={jest.fn()}
+      />,
+    );
+    expect(oneStepBelow.root.findAllByProps({ label })).toHaveLength(1);
+
+    // Below the cap but a step would overshoot it → hidden (radiusKm < MAX alone
+    // would wrongly still show it).
+    const wouldOvershoot = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={MAX_ACCOMMODATION_RADIUS_KM - 1}
+        onSelect={jest.fn()}
+        onExpandRadius={jest.fn()}
+      />,
+    );
+    expect(wouldOvershoot.root.findAllByProps({ label })).toHaveLength(0);
+  });
+
   it('disables the select button when locked/offline', () => {
     const tree = render(
       <AccommodationBlock
@@ -341,6 +370,41 @@ describe('AccommodationBlock', () => {
     expect(
       tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props
         .disabled,
+    ).toBe(true);
+  });
+
+  it('blocks selection out of zone: buttons disabled + hint shown', () => {
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={5}
+        outOfZone
+        onSelect={jest.fn()}
+      />,
+    );
+    expect(
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props
+        .disabled,
+    ).toBe(true);
+    expect(texts(tree).join(' ')).toContain(
+      fr.trip.blocks.accommodationOutOfZone,
+    );
+  });
+
+  it('disables the deselect button out of zone (deselect reroutes)', () => {
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        selectedAccommodation={acc()}
+        radiusKm={5}
+        outOfZone
+        onSelect={jest.fn()}
+        onDeselect={jest.fn()}
+      />,
+    );
+    expect(
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationDeselect })
+        .props.disabled,
     ).toBe(true);
   });
 });

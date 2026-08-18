@@ -373,13 +373,14 @@ export function runSelectAccommodation(
       call: () => setStageAccommodation(tripId, stageIndex, acc.lat, acc.lon),
       // 409 = a concurrent scan invalidated the candidate list. Re-scan this
       // stage at the default radius so the user gets a fresh list to retry from
-      // (mirrors the web handleSelectAccommodation flow).
+      // (mirrors the web handleSelectAccommodation flow). A failed re-scan is
+      // surfaced rather than swallowed (no silent unhandled rejection).
       onConflict: () =>
         void scanAccommodations(
           tripId,
           DEFAULT_ACCOMMODATION_RADIUS_KM,
           stageIndex,
-        ),
+        ).catch(() => onFailure('network')),
     },
     onFailure,
   );
@@ -404,7 +405,7 @@ export function runDeselectAccommodation(
           tripId,
           DEFAULT_ACCOMMODATION_RADIUS_KM,
           stageIndex,
-        ),
+        ).catch(() => onFailure('network')),
     },
     onFailure,
   );

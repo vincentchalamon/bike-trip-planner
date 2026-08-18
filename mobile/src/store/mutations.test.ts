@@ -210,6 +210,7 @@ describe('runSelectAccommodation', () => {
 
   it('rolls back and reports "conflict" on 409 (stale list)', async () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
     const onFailure = jest.fn();
 
     const ok = await runSelectAccommodation('t1', 0, 0, ctx(), onFailure);
@@ -235,6 +236,19 @@ describe('runSelectAccommodation', () => {
     await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
 
     expect(scanAccommodations).not.toHaveBeenCalled();
+  });
+
+  it('reports "network" when the 409 re-scan itself fails (not swallowed)', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockRejectedValue(new Error('offline'));
+    const onFailure = jest.fn();
+
+    await runSelectAccommodation('t1', 0, 0, ctx(), onFailure);
+    // Let the fire-and-forget re-scan rejection settle.
+    await new Promise<void>((resolve) => setImmediate(() => resolve()));
+
+    expect(onFailure).toHaveBeenCalledWith('conflict');
+    expect(onFailure).toHaveBeenCalledWith('network');
   });
 });
 
@@ -377,10 +391,18 @@ describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
 
   it('rolls back the selection on 409', async () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
     const onFailure = jest.fn();
     expect(await runDeselectAccommodation('t1', 0, ctx(), onFailure)).toBe(false);
     expect(useTripStore.getState().stages[0]!.selectedAccommodation).toEqual(acc);
     expect(onFailure).toHaveBeenCalledWith('conflict');
+  });
+
+  it('re-scans this stage on a 409 stale list', async () => {
+    mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
+    mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
+    await runDeselectAccommodation('t1', 0, ctx(), jest.fn());
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 0);
   });
 });
 

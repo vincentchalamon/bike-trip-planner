@@ -134,6 +134,7 @@ export const fr = {
       accommodationSelect: 'Choisir',
       accommodationDeselect: 'Désélectionner',
       accommodationExpandRadius: 'Élargir le rayon (+{{step}} km)',
+      accommodationOutOfZone: 'Hors zone : sélection indisponible.',
       poiAddWaypoint: 'Ajouter au tracé',
       poiWaypointOutOfZone: 'Hors zone : ajout au tracé indisponible.',
       supply: 'Ravitaillement',

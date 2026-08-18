@@ -136,6 +136,7 @@ export const en: typeof fr = {
       accommodationSelect: 'Select',
       accommodationDeselect: 'Deselect',
       accommodationExpandRadius: 'Widen radius (+{{step}} km)',
+      accommodationOutOfZone: 'Out of area: selection is unavailable.',
       poiAddWaypoint: 'Add to route',
       poiWaypointOutOfZone: 'Out of area: adding to the route is unavailable.',
       supply: 'Supplies',
