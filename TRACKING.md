@@ -1871,13 +1871,44 @@ Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)*
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | ⏳ À faire | — | #1031 |
-| 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | ⏳ À faire | — | #1031 |
-| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | ⏳ À faire | — | #1037 |
-| 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | ⏳ À faire | — | #1037 |
-| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | ⏳ À faire | — | #1037 |
-| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | ⏳ À faire | — | #1037 |
-| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | ⏳ À faire | — | #1037 |
+| 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | 🚧 En cours | [#1080](https://github.com/vincentchalamon/bike-trip-planner/pull/1080) (`feature/1042`) | #1031 |
+| 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | 🚧 En cours | [#1084](https://github.com/vincentchalamon/bike-trip-planner/pull/1084) (`feature/1043`, stack sur #1080) | #1031 |
+| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | 🚧 En cours | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`) | #1037 |
+| 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | 🚧 En cours | [#1082](https://github.com/vincentchalamon/bike-trip-planner/pull/1082) (`feature/1045`) | #1037 |
+| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | 🚧 En cours | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`) | #1037 |
+| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | 🚧 En cours | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`) | #1037 |
+| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | 🚧 En cours | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`) | #1037 |
+
+### Ordre de merge et conflits attendus (Sprint 56)
+
+Toutes les PRs ciblent `main` sauf **#1084 (#1043) qui est stackée sur #1080 (#1042)** (base `feature/1042`). Toutes vertes (CI + `Mobile tsc+jest`), reviews claude-code-review traitées (0 thread ouvert), en attente d'approbation/merge utilisateur. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
+
+**Ordre de merge recommandé** (minimise les rebases de fichiers additifs partagés) :
+
+1. **#1080 (#1042)** — bas du stack.
+2. **#1084 (#1043)** — juste après #1080. Après squash-merge de #1080, GitHub retargete #1084 sur `main` : rejouer avec `git rebase --onto origin/main <tip-1042-pré-squash> feature/1043` (ou `gh stack rebase` puisque la stack existe).
+3. **#1081 (#1044)** — touche `RoadbookView.tsx`/`StageCard.tsx` en premier.
+4. **#1082 (#1045)**.
+5. **#1085 (#1046)** — rebaser après #1044 (partage `RoadbookView.tsx`/`StageCard.tsx`).
+6. **#1083 (#1047)**.
+7. **#1086 (#1048)** — en dernier : réconcilier `expo-sharing` et régénérer `package-lock.json` (voir ci-dessous).
+
+**Fichiers partagés et arbitrage** (tous additifs sauf mention) :
+
+| Fichier | PRs | Résolution |
+|---------|-----|------------|
+| `mobile/src/api/trips.ts` | toutes | Union (fonctions distinctes appendées). |
+| `mobile/src/i18n/resources/{fr,en}.ts` | toutes | Union (namespaces distincts : create / trip.edit / config / export / share / accommodation). |
+| `mobile/src/components/ui/icons.ts` | #1043 (Copy/FileUp), #1044 (Check/Coffee/Pencil), #1047 (Download), #1048 (Share2) | Union. #1048 réduit à `Share2` après review → pas de doublon. |
+| `mobile/src/store/mutations.ts` | #1044, #1045 | Union. **Garder l'extension `onConflict` du shell `run` de #1045.** |
+| `mobile/src/hooks/use-trip-mutations.ts` | #1044, #1045 | Union. |
+| `mobile/src/store/trip-store.ts` | #1046 (stageDiffs/diffBaseline/token), #1048 (sourceUrl) | Union (champs distincts). |
+| `mobile/app/trip/[id]/index.tsx` (header) | #1046 (config), #1047 (export), #1048 (share) | **Garder les 3 actions** dans le header row (insertions self-contained). |
+| `mobile/src/components/trip/{RoadbookView,StageCard}.tsx` | #1044 (édition inline), #1046 (tint diff) | **Garder les deux** (footer édition + tint diff). Merger #1044 avant #1046. |
+| `mobile/src/components/trip/{StageDataBlocks,StageDetailView,index}.tsx` | #1045, #1047, #1048 | Union. |
+| `mobile/app/(tabs)/create.tsx` | #1042 + #1043 | Stack → pas de conflit par construction. |
+| `mobile/package.json` + `package-lock.json` | #1043 (expo-document-picker), #1047 (expo-file-system, expo-sharing ~57.0.11), #1048 (expo-clipboard, expo-sharing ~57.0.13, react-native-view-shot) | ⚠️ **Conflit deps** : #1047 et #1048 ajoutent `expo-sharing` en versions différentes. **Aligner sur ~57.0.13** (compat SDK 57) et régénérer `package-lock.json` (`npm install`) au merge de #1086. |
+| `core/budget.ts`, `core/difficulty.ts`, `core/trip-text.ts`, `pwa/src/lib/*`, `pwa/src/components/trip-planner.tsx` | #1048 seul | Aucun autre PR n'y touche → pas de conflit (extraction ADR-055). |
 
 </details>
 
