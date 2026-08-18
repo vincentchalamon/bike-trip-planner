@@ -189,7 +189,7 @@ describe('StageCard inline edit controls (#1044)', () => {
     expect(h.onEditDistance).toHaveBeenCalledWith(0, 72);
   });
 
-  it('does not commit an invalid or empty distance', () => {
+  it('keeps the editor open and does not commit an invalid or empty distance', () => {
     const h = handlers();
     const tree = render(
       <StageCard stage={stage({ distance: 50 })} index={0} locked={false} onDelete={jest.fn()} {...h} />,
@@ -199,6 +199,11 @@ describe('StageCard inline edit controls (#1044)', () => {
     act(() => queryByLabel(tree, distA11y).props.onChangeText('abc'));
     act(() => pressableByLabel(tree, fr.trip.edit.saveA11y).props.onPress());
     expect(h.onEditDistance).not.toHaveBeenCalled();
+    // The editor stays open (the input is still mounted) so the edit is not lost.
+    const input = queryByLabel(tree, distA11y);
+    expect(input).not.toBeNull();
+    expect('value' in input.props).toBe(true);
+    expect(input.props.value).toBe('abc');
   });
 });
 

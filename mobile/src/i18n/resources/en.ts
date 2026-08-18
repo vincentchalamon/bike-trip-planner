@@ -128,8 +128,6 @@ export const en: typeof fr = {
     cancel: 'Cancel',
     lockedTitle: 'Trip started',
     lockedMessage: 'This trip has started: it is read-only.',
-    deleteFailedTitle: 'Deletion failed',
-    deleteFailedMessage: 'The deletion failed. Try again.',
     editFailedTitle: 'Change failed',
     editFailedMessage: 'The change failed. Try again.',
     outOfZoneTitle: 'Out of area',

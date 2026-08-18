@@ -126,8 +126,6 @@ export const fr = {
     cancel: 'Annuler',
     lockedTitle: 'Voyage démarré',
     lockedMessage: 'Ce voyage a commencé : il est en lecture seule.',
-    deleteFailedTitle: 'Suppression impossible',
-    deleteFailedMessage: 'La suppression a échoué. Réessayez.',
     editFailedTitle: 'Modification impossible',
     editFailedMessage: 'La modification a échoué. Réessayez.',
     outOfZoneTitle: 'Hors zone',

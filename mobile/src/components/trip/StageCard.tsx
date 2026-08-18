@@ -125,8 +125,11 @@ export function StageCard({
 
   function commitDistance(): void {
     const km = Number(draft.replace(',', '.'));
+    // Keep the editor open on an invalid/empty value so the edit is not lost
+    // silently; only close + commit a finite, positive distance.
+    if (!Number.isFinite(km) || km <= 0) return;
     setEditingDistance(false);
-    if (Number.isFinite(km) && km > 0) onEditDistance?.(index, km);
+    onEditDistance?.(index, km);
   }
 
   return (
