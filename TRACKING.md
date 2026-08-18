@@ -1873,30 +1873,22 @@ Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)*
 |-------|----|-------|--------|--------|-----|-----------|
 | 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | ✅ Mergé | [#1080](https://github.com/vincentchalamon/bike-trip-planner/pull/1080) (`feature/1042`) | #1031 |
 | 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | ✅ Mergé | [#1084](https://github.com/vincentchalamon/bike-trip-planner/pull/1084) (`feature/1043`, stack sur #1080) | #1031 |
-| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | 🚧 En cours | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`, rebasée) | #1037 |
+| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | ✅ Mergé | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`) | #1037 |
 | 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | ✅ Mergé | [#1082](https://github.com/vincentchalamon/bike-trip-planner/pull/1082) (`feature/1045`) | #1037 |
 | 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | 🚧 En cours | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`, rebasée) | #1037 |
-| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | 🚧 En cours | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`, rebasée) | #1037 |
+| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | ✅ Mergé | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`) | #1037 |
 | 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | 🚧 En cours | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`, rebasée) | #1037 |
 
 ### Ordre de merge et conflits attendus (Sprint 56)
 
-**Mergées** : #1080 (#1042), #1084 (#1043, stack), #1082 (#1045). **Restantes** (rebasées sur `main`, résolution des conflits additifs en union) : #1081 (#1044), #1085 (#1046), #1083 (#1047), #1086 (#1048).
+**Mergées** : #1080 (#1042), #1084 (#1043, stack), #1082 (#1045), #1081 (#1044), #1083 (#1047). **Restantes** (rebasées sur `main`, conflits additifs résolus en union, MERGEABLE) : #1085 (#1046), #1086 (#1048).
 
 Statut de merge à revérifier PR par PR **juste avant chaque merge** — le check `claude-review`, le `reviewDecision` (une review `CHANGES_REQUESTED` reste formellement bloquante tant qu'elle n'est pas re-soumise/dismissée même si tous ses threads sont résolus) et le `mergeStateStatus` sont asynchrones après chaque push/rebase :
 `gh pr view <pr> --json mergeStateStatus,reviewDecision` + `gh pr checks <pr>`. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
 
-Ordre de merge recommandé pour les 4 restantes : **#1081 (#1044) → #1085 (#1046)** (partagent `RoadbookView.tsx`/`StageCard.tsx`), puis **#1083 (#1047) → #1086 (#1048)** (aligner `expo-sharing` + régénérer `package-lock.json` sur le dernier). Après chaque merge, les suivantes re-conflictent sur les fichiers additifs (`api/trips.ts`, i18n `.ts`, `icons.ts`, header `app/trip/[id]/index.tsx`, `package-lock.json`) → re-rebaser sur `main` et résoudre en union.
+Ordre de merge recommandé pour les 4 restantes : **#1081 (#1044) → #1085 (#1046)** (partagent `RoadbookView.tsx`/`StageCard.tsx`), puis **#1083 (#1047) → #1086 (#1048)** (aligner `expo-sharing` sur `~57.0.13` + régénérer `package-lock.json` sur le dernier). Après chaque merge, les suivantes re-conflictent sur les fichiers additifs (`api/trips.ts`, i18n `.ts`, `icons.ts`, header `app/trip/[id]/index.tsx`, `package-lock.json`) → re-rebaser sur `main` et résoudre en union.
 
-**Ordre de merge recommandé** (minimise les rebases de fichiers additifs partagés) :
-
-1. **#1080 (#1042)** — bas du stack.
-2. **#1084 (#1043)** — juste après #1080. Après squash-merge de #1080, GitHub retargete #1084 sur `main` : rejouer avec `git rebase --onto origin/main <tip-1042-pré-squash> feature/1043` (ou `gh stack rebase` puisque la stack existe).
-3. **#1081 (#1044)** — touche `RoadbookView.tsx`/`StageCard.tsx` en premier.
-4. **#1082 (#1045)**.
-5. **#1085 (#1046)** — rebaser après #1044 (partage `RoadbookView.tsx`/`StageCard.tsx`).
-6. **#1083 (#1047)**.
-7. **#1086 (#1048)** — en dernier : réconcilier `expo-sharing` et régénérer `package-lock.json` (voir ci-dessous).
+> Suivi d'exécution : #1081 (#1044) et #1083 (#1047) déjà mergés en cours de route ; #1085 (#1046) et #1086 (#1048) rebasés sur `main` (union) et MERGEABLE.
 
 **Fichiers partagés et arbitrage** (tous additifs sauf mention) :
 
