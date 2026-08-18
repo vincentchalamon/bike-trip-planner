@@ -354,11 +354,16 @@ export const useTripStore = create<TripState>((set, get) => ({
     })),
   armConfigDiff: () =>
     set((state) => ({
-      diffBaseline: state.stages,
-      // A fresh arm (no baseline pending) starts a new generation run at 1 and
-      // clears any counters left over from a commit that never streamed back (a
-      // failed commit is disarmed by ConfigSheet). A re-arm before the pending
-      // trip_ready bumps the generation and keeps the consumed count.
+      // Only capture the snapshot for a fresh run (no baseline pending). A re-arm
+      // before the pending trip_ready must NOT recapture: `stages` may already
+      // have advanced (an earlier generation resolved while a later one is still
+      // pending), and overwriting the shared baseline with the newer stages would
+      // corrupt the still-pending generation's diff.
+      diffBaseline: state.diffBaseline ?? state.stages,
+      // A fresh arm starts a new generation run at 1 and clears any counters left
+      // over from a commit that never streamed back (a failed commit is disarmed
+      // by ConfigSheet / the SSE error path). A re-arm bumps the generation and
+      // keeps the consumed count.
       diffBaselineToken: state.diffBaseline ? state.diffBaselineToken + 1 : 1,
       diffConsumedToken: state.diffBaseline ? state.diffConsumedToken : 0,
     })),

@@ -1,3 +1,15 @@
+import {
+  FILTERABLE_ACCOMMODATION_TYPES,
+  type FilterableAccommodationType,
+} from "@btp/core/constants";
+
+// The filterable list is shared, framework-free, from @btp/core (ADR-055, #1046);
+// re-exported here so the public `@/lib/accommodation-types` path stays stable.
+export {
+  FILTERABLE_ACCOMMODATION_TYPES,
+  type FilterableAccommodationType,
+};
+
 /**
  * All supported accommodation types for filtering.
  * Mirrors the OSM tourism tags imported by the Tier-1 provisioner
@@ -37,22 +49,13 @@ export function accommodationTypeLabelKey(
   return isAccommodationType(type) ? `type_${type}` : "type_other";
 }
 
-/**
- * The accommodation types that can be used for backend filtering.
- * "other" is excluded as it is reserved for manually-added accommodations.
- */
-export const FILTERABLE_ACCOMMODATION_TYPES = [
-  "hotel",
-  "hostel",
-  "camp_site",
-  "chalet",
-  "guest_house",
-  "alpine_hut",
-  "wilderness_hut",
-] as const satisfies ReadonlyArray<AccommodationType>;
-
-export type FilterableAccommodationType =
-  (typeof FILTERABLE_ACCOMMODATION_TYPES)[number];
+// Compile-time guard preserved from the pre-extraction `satisfies` clause: the
+// shared filterable list (now in @btp/core) must stay a subset of the full
+// contract type list. A stray value would make this type resolve to `never`.
+type _AssertFilterableSubset =
+  FilterableAccommodationType extends AccommodationType ? true : never;
+const _assertFilterableSubset: _AssertFilterableSubset = true;
+void _assertFilterableSubset;
 
 /**
  * Types enabled on a new trip. Mirrors TripRequest::ALL_ACCOMMODATION_TYPES:

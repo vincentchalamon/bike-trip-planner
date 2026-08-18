@@ -59,6 +59,46 @@ describe('destructive config diff arming', () => {
     }
   });
 
+  it('keeps a third generation diffing against the ORIGINAL snapshot (no recapture)', () => {
+    jest.useFakeTimers();
+    try {
+      // Baseline snapshot A = both stages at 50 km.
+      useTripStore.setState({ stages: [stage(), stage({ dayNumber: 2 })] });
+      useTripStore.getState().armConfigDiff(); // gen1
+      useTripStore.getState().armConfigDiff(); // gen2 (shares snapshot A)
+
+      // gen1's trip_ready resolves: consumed(1) < token(2) so the baseline is
+      // kept, but `stages` now advances to B = [60, 50].
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 60 }), stage({ dayNumber: 2 })]);
+      expect(useTripStore.getState().diffBaseline).not.toBeNull();
+
+      // A THIRD destructive recompute is armed now that stages == B. It must NOT
+      // recapture the baseline (which would overwrite A with B and corrupt gen2,
+      // still pending). With the fix the baseline stays A.
+      useTripStore.getState().armConfigDiff(); // gen3
+
+      // gen2's trip_ready → its diff must be computed against A ([50,50]), so a
+      // stage still at 60 vs A's 50 lights up index 0. If the baseline had been
+      // recaptured to B ([60,50]), index 0 would wrongly read "unchanged".
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 60 }), stage({ dayNumber: 2, distance: 70 })]);
+      expect(useTripStore.getState().stageDiffs.has(0)).toBe(true);
+      expect(useTripStore.getState().stageDiffs.has(1)).toBe(true);
+      expect(useTripStore.getState().diffBaseline).not.toBeNull();
+
+      // gen3's trip_ready → last pending generation consumed → baseline released.
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 60 }), stage({ dayNumber: 2, distance: 70 })]);
+      expect(useTripStore.getState().diffBaseline).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('auto-clears the highlight after the TTL', () => {
     jest.useFakeTimers();
     try {

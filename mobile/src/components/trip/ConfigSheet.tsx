@@ -6,8 +6,8 @@ import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
 import type { MutationFailure } from '../../store/gating';
+import { FILTERABLE_ACCOMMODATION_TYPES } from '@btp/core/constants';
 import {
-  FILTERABLE_ACCOMMODATION_TYPES,
   PRESETS,
   fromElevationPercent,
   fromFatiguePercent,
@@ -15,7 +15,7 @@ import {
   toElevationPercent,
   toFatiguePercent,
   type RiderPreset,
-} from '../../lib/pacing-presets';
+} from '@btp/core/pacing-presets';
 
 interface ConfigSheetProps {
   tripId: string;

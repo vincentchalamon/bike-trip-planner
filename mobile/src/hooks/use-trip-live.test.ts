@@ -222,6 +222,33 @@ describe('computing state machine driven by SSE', () => {
     });
     expect(store().computing).toBe(true);
   });
+
+  it('disarms the diff baseline on a non-retryable computation_error', async () => {
+    // A destructive commit accepted by the backend, then a terminal worker
+    // failure (no trip_ready follows): the armed baseline must be released, or
+    // it would corrupt the next successful recompute's diff-highlight.
+    const dispatch = await connect();
+    useTripStore.getState().armConfigDiff();
+    expect(store().diffBaseline).not.toBeNull();
+
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'route', message: 'fatal', retryable: false },
+    });
+    expect(store().diffBaseline).toBeNull();
+  });
+
+  it('leaves the armed baseline intact on a retryable computation_error', async () => {
+    const dispatch = await connect();
+    useTripStore.getState().armConfigDiff();
+
+    dispatch({
+      type: 'computation_error',
+      data: { computation: 'route', message: 'transient', retryable: true },
+    });
+    // Still running → the recompute may yet produce a trip_ready that diffs.
+    expect(store().diffBaseline).not.toBeNull();
+  });
 });
 
 // Minimal renderHook on react-test-renderer (the mobile convention, no RTL).

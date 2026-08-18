@@ -16,6 +16,7 @@ export interface TripLiveStore {
   applyStageUpdate: ReturnType<typeof useTripStore.getState>['applyStageUpdate'];
   setStatus: ReturnType<typeof useTripStore.getState>['setStatus'];
   setComputing: ReturnType<typeof useTripStore.getState>['setComputing'];
+  disarmConfigDiff: ReturnType<typeof useTripStore.getState>['disarmConfigDiff'];
 }
 
 // Load a trip into the store from /detail, then open the Mercure SSE
@@ -73,8 +74,15 @@ export async function runTripLive(
       } else if (event.type === 'computation_error') {
         // A retryable error means the computation is still running (the core
         // reducer leaves the state untouched); only a non-retryable error is
-        // terminal and clears the computing badge.
-        if (!event.data.retryable) store.setComputing(false);
+        // terminal and clears the computing badge. A destructive commit accepted
+        // by the backend (run()===true) whose worker then fails terminally never
+        // streams a trip_ready — disarm the diff baseline here too, or it would
+        // stay armed and corrupt the NEXT successful recompute's highlights.
+        // disarmConfigDiff() is a no-op when nothing is armed, so it's safe here.
+        if (!event.data.retryable) {
+          store.setComputing(false);
+          store.disarmConfigDiff();
+        }
       }
     });
   } catch {
@@ -96,6 +104,7 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
   const applyStageUpdate = useTripStore((s) => s.applyStageUpdate);
   const setStatus = useTripStore((s) => s.setStatus);
   const setComputing = useTripStore((s) => s.setComputing);
+  const disarmConfigDiff = useTripStore((s) => s.disarmConfigDiff);
   const reset = useTripStore((s) => s.reset);
 
   useEffect(() => {
@@ -105,7 +114,14 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
 
     void runTripLive(
       id,
-      { hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing },
+      {
+        hydrate,
+        applyTripReady,
+        applyStageUpdate,
+        setStatus,
+        setComputing,
+        disarmConfigDiff,
+      },
       () => cancelled,
     ).then((opened) => {
       if (cancelled) opened?.close();
@@ -117,5 +133,15 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
       sub?.close();
       reset();
     };
-  }, [enabled, id, hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing, reset]);
+  }, [
+    enabled,
+    id,
+    hydrate,
+    applyTripReady,
+    applyStageUpdate,
+    setStatus,
+    setComputing,
+    disarmConfigDiff,
+    reset,
+  ]);
 }

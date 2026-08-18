@@ -1,9 +1,9 @@
-// Rider pacing presets + percent/factor conversions. Mirrors the web
-// `pwa/src/lib/pacing-presets.ts` so both platforms expose the same profiles and
-// the same active-preset detection (#1046). Kept framework-free and pure.
+// Rider pacing presets + percent/factor conversions, framework-free so both
+// `pwa` and `mobile` import one source of truth (ADR-055). Formerly duplicated
+// as pwa/src/lib/pacing-presets.ts and mobile/src/lib/pacing-presets.ts (#1046).
 
 export interface RiderPreset {
-  key: 'beginner' | 'intermediate' | 'expert';
+  key: "beginner" | "intermediate" | "expert";
   maxDistancePerDay: number;
   averageSpeed: number;
   elevationPenaltyPercent: number;
@@ -12,21 +12,21 @@ export interface RiderPreset {
 
 export const PRESETS: RiderPreset[] = [
   {
-    key: 'beginner',
+    key: "beginner",
     maxDistancePerDay: 50,
     averageSpeed: 10,
     elevationPenaltyPercent: 30,
     fatiguePercent: 30,
   },
   {
-    key: 'intermediate',
+    key: "intermediate",
     maxDistancePerDay: 80,
     averageSpeed: 15,
     elevationPenaltyPercent: 20,
     fatiguePercent: 20,
   },
   {
-    key: 'expert',
+    key: "expert",
     maxDistancePerDay: 120,
     averageSpeed: 20,
     elevationPenaltyPercent: 10,
@@ -55,7 +55,7 @@ export function getActivePresetKey(
   averageSpeed: number,
   elevationPenalty: number,
   fatigueFactor: number,
-): RiderPreset['key'] | null {
+): RiderPreset["key"] | null {
   return (
     PRESETS.find(
       (p) =>
@@ -66,16 +66,3 @@ export function getActivePresetKey(
     )?.key ?? null
   );
 }
-
-// The accommodation types offered as filters in the config panel. Mirrors the
-// web `FILTERABLE_ACCOMMODATION_TYPES` (pwa/src/lib/accommodation-types.ts) and
-// the backend TripRequest contract. "other" is excluded (manual entries only).
-export const FILTERABLE_ACCOMMODATION_TYPES = [
-  'hotel',
-  'hostel',
-  'camp_site',
-  'chalet',
-  'guest_house',
-  'alpine_hut',
-  'wilderness_hut',
-] as const;

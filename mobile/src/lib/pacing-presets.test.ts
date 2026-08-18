@@ -1,4 +1,7 @@
 /// <reference types="jest" />
+// Exercises the shared pacing-presets module extracted to @btp/core (ADR-055,
+// #1046) from the mobile consumer, mirroring how mobile jest covers the other
+// framework-free core modules (reconciliation, elevation).
 import {
   PRESETS,
   fromElevationPercent,
@@ -6,7 +9,7 @@ import {
   getActivePresetKey,
   toElevationPercent,
   toFatiguePercent,
-} from './pacing-presets';
+} from '@btp/core/pacing-presets';
 
 describe('pacing-presets conversions', () => {
   it('round-trips fatigue percent <-> factor', () => {
