@@ -246,6 +246,7 @@ export const en: typeof fr = {
     datesDescription: 'Changing the dates regenerates the stage split.',
     startDate: 'Start (YYYY-MM-DD)',
     endDate: 'End (YYYY-MM-DD)',
+    datePlaceholder: 'YYYY-MM-DD',
     recompute: 'Apply and recompute',
     confirmTitle: 'Recompute the route?',
     confirmMessage: 'The stage split will be regenerated.',

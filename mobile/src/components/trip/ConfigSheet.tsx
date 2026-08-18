@@ -487,7 +487,7 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
           label={t('config.startDate')}
           value={startDraft}
           onChangeText={setStartDraft}
-          placeholder="AAAA-MM-JJ"
+          placeholder={t('config.datePlaceholder')}
           editable={!isLocked}
           autoCapitalize="none"
         />
@@ -496,7 +496,7 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
           label={t('config.endDate')}
           value={endDraft}
           onChangeText={setEndDraft}
-          placeholder="AAAA-MM-JJ"
+          placeholder={t('config.datePlaceholder')}
           editable={!isLocked}
           autoCapitalize="none"
         />

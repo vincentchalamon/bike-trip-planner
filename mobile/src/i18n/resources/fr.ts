@@ -244,6 +244,7 @@ export const fr = {
     datesDescription: 'Modifier les dates régénère le découpage des étapes.',
     startDate: 'Début (AAAA-MM-JJ)',
     endDate: 'Fin (AAAA-MM-JJ)',
+    datePlaceholder: 'AAAA-MM-JJ',
     recompute: 'Appliquer et recalculer',
     confirmTitle: "Recalculer l'itinéraire ?",
     confirmMessage: 'Le découpage des étapes sera régénéré.',
