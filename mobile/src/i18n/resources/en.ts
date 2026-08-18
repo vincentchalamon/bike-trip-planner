@@ -47,8 +47,30 @@ export const en: typeof fr = {
   },
   create: {
     title: 'Create a trip',
-    description:
-      'Paste a Komoot, Strava or RideWithGPS link to generate your roadbook. Coming soon.',
+    subtitle:
+      'Paste a Komoot, Strava or RideWithGPS link to generate your roadbook.',
+    linkLabel: 'Route link',
+    linkPlaceholder: 'https://www.komoot.com/tour/…',
+    supportedHint: 'Komoot (tour / collection), Strava and RideWithGPS.',
+    submit: 'Create trip',
+    submitting: 'Creating…',
+    createdTitle: 'Trip created',
+    launchAnalysis: 'Launch analysis',
+    relaunchAnalysis: 'Re-run analysis',
+    progress: 'Step {{completed}} / {{total}}',
+    analysisDone: 'Analysis complete.',
+    analysisFailed: 'Analysis failed. Try again.',
+    openRoadbook: 'Open roadbook',
+    newTrip: 'New trip',
+    createFailedTitle: 'Creation failed',
+    analysisFailedTitle: 'Analysis failed',
+    errors: {
+      invalidUrl: 'Link not recognized or rejected.',
+      offline: 'You are offline.',
+      conflict: 'Conflict: try again.',
+      network: 'Network error. Check your connection.',
+      generic: 'Something went wrong.',
+    },
   },
   account: {
     title: 'Account',
