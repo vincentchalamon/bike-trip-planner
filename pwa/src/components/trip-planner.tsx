@@ -27,11 +27,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { useSwipe } from "@/hooks/use-swipe";
-import {
-  MEAL_COST_MIN,
-  MEAL_COST_MAX,
-  mealsForStage,
-} from "@/lib/budget-constants";
+import { computeEstimatedBudget } from "@btp/core";
 
 // Lazy-load the map panel so MapLibre GL (~1.1 MB) is split out of the editor's
 // first chunk and only fetched when a map-bearing view is actually shown
@@ -252,35 +248,12 @@ export function TripPlanner() {
     }, [viewMode, setViewMode]),
   });
 
-  const estimatedBudget = useMemo(() => {
-    const nonRestStages = stages.filter((s) => !s.isRestDay);
-    const lastActiveIndex = nonRestStages.length - 1;
-    const restDayCount = stages.filter((s) => s.isRestDay).length;
-    let accMin = 0;
-    let accMax = 0;
-    let foodMin = restDayCount * 3 * MEAL_COST_MIN;
-    let foodMax = restDayCount * 3 * MEAL_COST_MAX;
-    nonRestStages.forEach((s, i) => {
-      const isFirst = i === 0;
-      const isLast = i === lastActiveIndex;
-      foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
-      foodMax += mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
-      if (!isLast) {
-        if (s.selectedAccommodation) {
-          accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
-          accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
-        } else if (s.accommodations.length > 0) {
-          accMin +=
-            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
-            s.accommodations.length;
-          accMax +=
-            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
-            s.accommodations.length;
-        }
-      }
-    });
-    return { min: accMin + foodMin, max: accMax + foodMax };
-  }, [stages]);
+  // Trip budget estimate — the pure calc lives framework-free in @btp/core
+  // (ADR-055), shared with mobile; the memo just caches it against `stages`.
+  const estimatedBudget = useMemo(
+    () => computeEstimatedBudget(stages),
+    [stages],
+  );
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible

@@ -1,4 +1,4 @@
-import { getDifficulty } from "@/lib/constants";
+import { computeOverallDifficulty } from "@btp/core";
 import type { StageData } from "@btp/core";
 
 export interface InfographicData {
@@ -72,30 +72,6 @@ const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 316
 // remaining height down to the map's baseline.
 const STAT_ROW_H = 40;
 const ELEV_GAP = 16;
-
-function computeOverallDifficulty(
-  stages: StageData[],
-  labels: InfographicData["labels"],
-): { label: string; color: string } {
-  const activeStages = stages.filter((s) => !s.isRestDay);
-  if (activeStages.length === 0) {
-    return { label: labels.difficultyEasy, color: "#22c55e" };
-  }
-
-  const difficulties = activeStages.map((s) =>
-    getDifficulty(s.distance, s.elevation),
-  );
-  const hardCount = difficulties.filter((d) => d === "hard").length;
-  const mediumCount = difficulties.filter((d) => d === "medium").length;
-
-  if (hardCount > activeStages.length * 0.3) {
-    return { label: labels.difficultyHard, color: "#ef4444" };
-  }
-  if (mediumCount + hardCount > activeStages.length * 0.5) {
-    return { label: labels.difficultyMedium, color: "#f97316" };
-  }
-  return { label: labels.difficultyEasy, color: "#22c55e" };
-}
 
 /**
  * Render a trip infographic summary to an HTMLCanvasElement.
@@ -173,7 +149,11 @@ export async function renderInfographic(
   const colWidth = CARD_WIDTH - statsX - PADDING;
 
   const activeStages = data.stages.filter((s) => !s.isRestDay);
-  const difficulty = computeOverallDifficulty(data.stages, data.labels);
+  const difficulty = computeOverallDifficulty(data.stages, {
+    easy: data.labels.difficultyEasy,
+    medium: data.labels.difficultyMedium,
+    hard: data.labels.difficultyHard,
+  });
   const datesValue =
     formatDateRange(data.startDate, data.endDate) || `${activeStages.length}`;
 

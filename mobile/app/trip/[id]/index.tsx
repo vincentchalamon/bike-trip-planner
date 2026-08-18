@@ -9,11 +9,12 @@ import {
   SegmentedControl,
   type Segment,
 } from '../../../src/components/ui';
-import { Settings } from '../../../src/components/ui/icons';
+import { Settings, Share2 } from '../../../src/components/ui/icons';
 import {
   ConfigSheet,
   ExportButton,
   RoadbookView,
+  ShareSheet,
   SseStatusIndicator,
   TripMapView,
 } from '../../../src/components/trip';
@@ -29,6 +30,7 @@ export default function TripRoadbook() {
   const theme = useTheme();
   const [view, setView] = useState<TripView>('roadbook');
   const [configOpen, setConfigOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Hydrate the shared store from /detail and keep it live via SSE. The child
   // views render straight from the store, so a stage_updated event reconciled by
@@ -92,6 +94,14 @@ export default function TripRoadbook() {
           >
             <Settings color={theme.colors.foreground} size={22} />
           </Pressable>
+          <Pressable
+            onPress={() => setShareOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('share.title')}
+            hitSlop={8}
+          >
+            <Share2 size={22} color={theme.colors.foreground} />
+          </Pressable>
         </View>
         <SegmentedControl segments={segments} value={view} onChange={setView} />
       </View>
@@ -103,6 +113,7 @@ export default function TripRoadbook() {
         visible={configOpen}
         onClose={() => setConfigOpen(false)}
       />
+      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} tripId={id} />
     </Screen>
   );
 }

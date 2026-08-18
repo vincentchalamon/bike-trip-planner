@@ -113,6 +113,8 @@ function endDatePatch(
 interface TripState extends TripConfig {
   tripId: string | null;
   title: string | null;
+  // Original import URL (Komoot/Strava/RideWithGPS), surfaced in the share text.
+  sourceUrl: string | null;
   stages: StageData[];
   // Trip started (startDate <= today): the backend rejects edits with 423, so the
   // UI disables them. Read from the /detail payload on hydrate.
@@ -192,6 +194,7 @@ interface TripState extends TripConfig {
 export const useTripStore = create<TripState>((set, get) => ({
   tripId: null,
   title: null,
+  sourceUrl: null,
   stages: [],
   isLocked: false,
   outOfZone: false,
@@ -208,6 +211,7 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({
       tripId,
       title: detail.title ?? null,
+      sourceUrl: detail.sourceUrl ?? null,
       stages: (detail.stages ?? []).map(stageDataFromDetail),
       isLocked: detail.isLocked ?? false,
       outOfZone: detail.outOfZone ?? false,
@@ -400,6 +404,7 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({
       tripId: null,
       title: null,
+      sourceUrl: null,
       stages: [],
       isLocked: false,
       outOfZone: false,

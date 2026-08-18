@@ -27,3 +27,5 @@ export {
   Trash2,
   X,
 } from 'lucide-react-native';
+// Share feature icon (#1048) — appended so the sorted set above stays untouched.
+export { Share2 } from 'lucide-react-native';
