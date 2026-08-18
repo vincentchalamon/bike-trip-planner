@@ -26,6 +26,7 @@ export function RoadbookView({ id }: { id: string }) {
   const theme = useTheme();
   const router = useRouter();
   const stages = useTripStore((s) => s.stages);
+  const stageDiffs = useTripStore((s) => s.stageDiffs);
   const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
   const startDate = useTripStore((s) => s.startDate);
@@ -111,6 +112,7 @@ export function RoadbookView({ id }: { id: string }) {
   return (
     <FlatList
       data={stages}
+      extraData={stageDiffs}
       keyExtractor={(item) => stageKey(item)}
       ListHeaderComponent={header}
       ListEmptyComponent={
@@ -139,6 +141,7 @@ export function RoadbookView({ id }: { id: string }) {
             onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
             date={date}
             isToday={state === 'ongoing' && isStageToday(date, today)}
+            highlighted={stageDiffs.has(index)}
           />
         );
       }}

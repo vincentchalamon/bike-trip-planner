@@ -6,6 +6,7 @@ import {
   reconcileTripReady,
 } from '@btp/core/reconciliation';
 import type { TripDetail } from '../api/trips';
+import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
 
 type ApiStage = NonNullable<TripDetail['stages']>[number];
 
@@ -123,6 +124,12 @@ interface TripState extends TripConfig {
   computing: boolean;
   // Accumulated edits not yet sent to /recompute.
   pendingModifications: Modification[];
+  // Indices of stages that changed on the last destructive recompute, lit as a
+  // transient diff-highlight in the roadbook and auto-cleared after DIFF_TTL_MS.
+  stageDiffs: Set<number>;
+  // Pre-recompute stage snapshot armed before a destructive config edit; the
+  // next trip_ready diffs against it to populate stageDiffs, then clears it.
+  diffBaseline: StageData[] | null;
   loading: boolean;
   error: string | null;
   // Initial load from a /trips/{id}/detail payload.
@@ -152,6 +159,11 @@ interface TripState extends TripConfig {
     nextStageIndex: number | null,
   ) => void;
   deselectAccommodationOptimistic: (stageIndex: number) => void;
+  // Arm a diff baseline before a destructive edit (dates/pacing): the next
+  // trip_ready compares against it to light the changed stages.
+  armConfigDiff: () => void;
+  // Clear the transient diff-highlight (called by the auto-expiry timer).
+  clearStageDiffs: () => void;
   // Batch queue: replace a duplicate (same type + stageIndex) rather than append.
   queueModification: (modification: Modification) => void;
   cancelAllModifications: () => void;
@@ -173,6 +185,8 @@ export const useTripStore = create<TripState>((set, get) => ({
   outOfZone: false,
   computing: false,
   pendingModifications: [],
+  stageDiffs: new Set<number>(),
+  diffBaseline: null,
   loading: true,
   error: null,
   ...DEFAULT_CONFIG,
@@ -196,11 +210,22 @@ export const useTripStore = create<TripState>((set, get) => ({
       departureHour: detail.departureHour ?? DEFAULT_CONFIG.departureHour,
       enabledAccommodationTypes: detail.enabledAccommodationTypes ?? [],
       pendingModifications: [],
+      stageDiffs: new Set<number>(),
+      diffBaseline: null,
       loading: false,
       error: null,
     }),
   applyTripReady: (stages) =>
-    set({ stages: reconcileTripReady(get().stages, stages) }),
+    set((state) => {
+      const reconciled = reconcileTripReady(state.stages, stages);
+      // No armed baseline → an ordinary recompute, no diff-highlight.
+      if (!state.diffBaseline) return { stages: reconciled };
+      const stageDiffs = diffStageIndices(state.diffBaseline, reconciled);
+      if (stageDiffs.size > 0) {
+        setTimeout(() => get().clearStageDiffs(), DIFF_TTL_MS);
+      }
+      return { stages: reconciled, stageDiffs, diffBaseline: null };
+    }),
   applyStageUpdate: (index, stage) =>
     set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
   setStages: (stages) => set({ stages }),
@@ -292,6 +317,8 @@ export const useTripStore = create<TripState>((set, get) => ({
         i === stageIndex ? { ...s, selectedAccommodation: null } : s,
       ),
     })),
+  armConfigDiff: () => set((state) => ({ diffBaseline: state.stages })),
+  clearStageDiffs: () => set({ stageDiffs: new Set<number>() }),
   queueModification: (modification) =>
     set((state) => {
       const i = state.pendingModifications.findIndex(
@@ -316,6 +343,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       outOfZone: false,
       computing: false,
       pendingModifications: [],
+      stageDiffs: new Set<number>(),
+      diffBaseline: null,
       loading: true,
       error: null,
       ...DEFAULT_CONFIG,
