@@ -3,7 +3,7 @@ import { Alert, FlatList, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
-import { StageCard } from './StageCard';
+import { StageCard, stageKey } from './StageCard';
 import { RoadbookBanner } from './RoadbookBanner';
 import {
   isStageToday,
@@ -89,7 +89,7 @@ export function RoadbookView({ id }: { id: string }) {
   return (
     <FlatList
       data={stages}
-      keyExtractor={(_, index) => String(index)}
+      keyExtractor={(item) => stageKey(item)}
       ListHeaderComponent={header}
       ListEmptyComponent={
         <View style={{ height: 300 }}>
