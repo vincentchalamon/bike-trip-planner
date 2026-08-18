@@ -25,7 +25,7 @@ jest.mock('../../api/trips', () => ({
   deleteTrip: jest.fn(),
 }));
 
-import { insertRestDay, updateStageDistance } from '../../api/trips';
+import { createStage, insertRestDay, updateStageDistance } from '../../api/trips';
 import { RoadbookView } from './RoadbookView';
 
 const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
@@ -75,6 +75,7 @@ function press(tree: any, label: string): void {
 
 const restDayA11y = () => i18n.t('trip.edit.addRestDayA11y', { day: 1 });
 const distanceA11y = () => i18n.t('trip.edit.editDistanceA11y', { day: 1 });
+const addStageA11y = () => i18n.t('trip.edit.addStageA11y', { day: 1 });
 
 describe('RoadbookView inline edit wiring (#1044)', () => {
   let alertSpy: jest.SpyInstance;
@@ -157,6 +158,41 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
       i18n.t('trip.edit.failedTitle'),
       i18n.t('trip.edit.reason.offline'),
     );
+  });
+
+  it('commits an inline add-stage to the API with the boundary payload', async () => {
+    mock(createStage).mockResolvedValue({ ok: true, status: 202 });
+    const tree = render(<RoadbookView id="t1" />);
+
+    press(tree, addStageA11y());
+
+    await act(async () => {});
+    // runAddStage splices at afterIndex+1 and routes prev.endPoint → next.startPoint.
+    expect(createStage).toHaveBeenCalledWith('t1', {
+      position: 1,
+      startPoint: { lat: 1, lon: 1, ele: 0 },
+      endPoint: { lat: 0, lon: 0, ele: 0 },
+    });
+  });
+
+  it('guards a double-tap on ＋étape: two rapid presses fire a single createStage', async () => {
+    mock(createStage).mockResolvedValue({ ok: true, status: 202 });
+    const tree = render(<RoadbookView id="t1" />);
+
+    // Capture the chip once and tap it twice within the same tick, before any
+    // re-render can disable it — the in-flight ref must swallow the second tap.
+    const chip = tree.root.find(
+      (n: any) =>
+        n.props.accessibilityLabel === addStageA11y() &&
+        typeof n.props.onPress === 'function',
+    );
+    act(() => {
+      chip.props.onPress();
+      chip.props.onPress();
+    });
+
+    await act(async () => {});
+    expect(createStage).toHaveBeenCalledTimes(1);
   });
 
   it('commits an inline distance edit to the API', async () => {

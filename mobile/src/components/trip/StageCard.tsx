@@ -31,6 +31,10 @@ interface StageCardProps {
   // Route outside the covered area: rerouting edits (+stage / distance) are
   // hidden; a rest day and a delete (no Valhalla reroute) stay available.
   outOfZone?: boolean;
+  // A structural mutation for this row is in flight (optimistic apply + API
+  // round-trip): every edit control is disabled so a rapid double-tap cannot
+  // dispatch the same insert/edit twice (#1044 review).
+  busy?: boolean;
   onDelete: (index: number) => void;
   // Insert a manual stage / rest day after this row (routing vs non-routing).
   onAddStage?: (index: number) => void;
@@ -110,6 +114,7 @@ export function StageCard({
   index,
   locked,
   outOfZone = false,
+  busy = false,
   onDelete,
   onAddStage,
   onAddRestDay,
@@ -150,6 +155,9 @@ export function StageCard({
   }
 
   function commitDistance(): void {
+    // A mutation for this row is already in flight: swallow the tap so a
+    // double-submit cannot dispatch a second update (#1044 review).
+    if (busy) return;
     const km = Number(draft.replace(',', '.'));
     // Keep the editor open on an invalid/empty value so the edit is not lost
     // silently; only close + commit a finite, positive distance.
@@ -277,9 +285,11 @@ export function StageCard({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('trip.edit.saveA11y')}
+                accessibilityState={{ disabled: busy }}
+                disabled={busy}
                 onPress={commitDistance}
                 hitSlop={6}
-                style={{ padding: theme.spacing.sm }}
+                style={{ padding: theme.spacing.sm, opacity: busy ? 0.4 : 1 }}
               >
                 <Check color={theme.colors.brandFill} size={22} />
               </Pressable>
@@ -301,7 +311,7 @@ export function StageCard({
                   label={t('trip.edit.addStage')}
                   a11yLabel={t('trip.edit.addStageA11y', { day })}
                   onPress={() => onAddStage(index)}
-                  disabled={outOfZone}
+                  disabled={outOfZone || busy}
                 />
               ) : null}
               {onAddRestDay ? (
@@ -310,6 +320,7 @@ export function StageCard({
                   label={t('trip.edit.addRestDay')}
                   a11yLabel={t('trip.edit.addRestDayA11y', { day })}
                   onPress={() => onAddRestDay(index)}
+                  disabled={busy}
                 />
               ) : null}
               {canEditDistance ? (
@@ -320,6 +331,7 @@ export function StageCard({
                   })}
                   a11yLabel={t('trip.edit.editDistanceA11y', { day })}
                   onPress={startEditDistance}
+                  disabled={busy}
                 />
               ) : null}
             </View>
