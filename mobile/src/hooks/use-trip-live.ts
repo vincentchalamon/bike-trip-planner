@@ -85,7 +85,12 @@ export async function runTripLive(
 }
 
 // Loads a trip into the shared store and keeps it live via Mercure SSE.
-export function useTripLive(id: string): void {
+// `options.enabled` (default true) gates the whole orchestration: when false,
+// nothing is subscribed and the store is never reset on unmount — the caller
+// already owns the live store (e.g. the stage detail reached by tap-through,
+// where a reset would blank the roadbook mounted underneath).
+export function useTripLive(id: string, options?: { enabled?: boolean }): void {
+  const enabled = options?.enabled ?? true;
   const hydrate = useTripStore((s) => s.hydrate);
   const applyTripReady = useTripStore((s) => s.applyTripReady);
   const applyStageUpdate = useTripStore((s) => s.applyStageUpdate);
@@ -94,6 +99,7 @@ export function useTripLive(id: string): void {
   const reset = useTripStore((s) => s.reset);
 
   useEffect(() => {
+    if (!enabled) return;
     let sub: TripSubscription | undefined;
     let cancelled = false;
 
@@ -111,5 +117,5 @@ export function useTripLive(id: string): void {
       sub?.close();
       reset();
     };
-  }, [id, hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing, reset]);
+  }, [enabled, id, hydrate, applyTripReady, applyStageUpdate, setStatus, setComputing, reset]);
 }

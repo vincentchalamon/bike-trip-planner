@@ -12,6 +12,7 @@ export const fr = {
   header: {
     login: 'Connexion',
     trip: 'Roadbook',
+    stageDetail: 'Étape',
   },
   login: {
     brand: 'Bike Trip Planner',
@@ -63,6 +64,20 @@ export const fr = {
     today: "Aujourd'hui",
     stageMeta: '{{distance}} km · +{{elevation}} m',
     elevationProfileA11y: 'Profil altimétrique du voyage',
+    openStageA11y: 'Ouvrir le détail du jour {{day}}',
+    stageDetail: {
+      notFound: 'Étape introuvable.',
+      prev: 'Précédent',
+      next: 'Suivant',
+      position: 'Étape {{current}} / {{total}}',
+      distance: 'Distance',
+      ascent: 'Dénivelé +',
+      descent: 'Dénivelé -',
+      distanceValue: '{{value}} km',
+      elevationValue: '{{value}} m',
+      surface: 'Surface',
+      restNoProfile: 'Pas de profil altimétrique pour un jour de repos.',
+    },
     states: {
       upcoming: 'À venir',
       ongoing: 'En cours',

@@ -1,6 +1,8 @@
 /// <reference types="jest" />
+import { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
 import type { EnrichedStagePayload, MercureEvent } from '@btp/core/mercure';
-import { runTripLive } from './use-trip-live';
+import { runTripLive, useTripLive } from './use-trip-live';
 import { useTripStore } from '../store/trip-store';
 import { useDismissedAlerts } from '../store/dismissed-alerts';
 
@@ -219,5 +221,51 @@ describe('computing state machine driven by SSE', () => {
       data: { computation: 'weather', message: 'transient', retryable: true },
     });
     expect(store().computing).toBe(true);
+  });
+});
+
+// Minimal renderHook on react-test-renderer (the mobile convention, no RTL).
+async function renderUseTripLive(
+  id: string,
+  options?: { enabled?: boolean },
+): Promise<{ unmount: () => void }> {
+  function Probe() {
+    useTripLive(id, options);
+    return null;
+  }
+  let renderer!: ReturnType<typeof TestRenderer.create>;
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(Probe));
+  });
+  return { unmount: () => act(() => renderer.unmount()) };
+}
+
+describe('useTripLive enabled gate (#1039)', () => {
+  it('runs no orchestration and never resets on unmount when enabled=false', async () => {
+    // The tap-through case: the roadbook already owns the live store for this
+    // trip; the detail screen must not re-hydrate nor reset() on back-nav.
+    useTripStore.setState({ tripId: 't1', stages: [apiStage()] as never });
+
+    const { unmount } = await renderUseTripLive('t1', { enabled: false });
+    expect(mockDetail).not.toHaveBeenCalled();
+
+    unmount();
+    // reset() would null tripId and empty stages — assert it didn't fire.
+    expect(store().tripId).toBe('t1');
+    expect(store().stages).toHaveLength(1);
+  });
+
+  it('runs the orchestration and resets on unmount when enabled (default)', async () => {
+    mockDetail.mockResolvedValue(detail([apiStage()]));
+    mockToken.mockResolvedValue('jwt');
+    mockSubscribe.mockReturnValue({ close: jest.fn() });
+
+    const { unmount } = await renderUseTripLive('t1');
+    expect(mockDetail).toHaveBeenCalledWith('t1');
+    expect(store().tripId).toBe('t1');
+
+    unmount();
+    expect(store().tripId).toBeNull();
+    expect(store().stages).toHaveLength(0);
   });
 });

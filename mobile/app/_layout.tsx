@@ -12,7 +12,11 @@ function RootNavigator() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ title: t('header.login') }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="trip/[id]" options={{ title: t('header.trip') }} />
+      <Stack.Screen name="trip/[id]/index" options={{ title: t('header.trip') }} />
+      <Stack.Screen
+        name="trip/[id]/stage/[index]"
+        options={{ title: t('header.stageDetail') }}
+      />
       <Stack.Screen name="auth/verify/[token]" options={{ headerShown: false }} />
     </Stack>
   );

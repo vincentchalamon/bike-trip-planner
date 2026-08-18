@@ -83,6 +83,63 @@ describe('StageCard', () => {
       tree.root.findAllByProps({ accessibilityLabel: fr.trip.deleteA11y.replace('{{day}}', '1') }),
     ).toHaveLength(0);
   });
+
+  it('fires onPress(index) when the summary is tapped (#1039)', () => {
+    const onPress = jest.fn();
+    const tree = render(
+      <StageCard stage={stage()} index={3} locked={false} onDelete={jest.fn()} onPress={onPress} />,
+    );
+    act(() => {
+      tree.root
+        .findByProps({ accessibilityLabel: fr.trip.openStageA11y.replace('{{day}}', '1') })
+        .props.onPress();
+    });
+    expect(onPress).toHaveBeenCalledWith(3);
+  });
+
+  it('routes the delete action to onDelete, never onPress (#1037)', () => {
+    const onPress = jest.fn();
+    const onDelete = jest.fn();
+    const tree = render(
+      <StageCard stage={stage()} index={2} locked={false} onDelete={onDelete} onPress={onPress} />,
+    );
+    act(() => {
+      tree.root
+        .findByProps({ accessibilityLabel: fr.trip.deleteA11y.replace('{{day}}', '1') })
+        .props.onPress();
+    });
+    expect(onDelete).toHaveBeenCalledWith(2);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('wires the tap-through to the summary only, not the data blocks (#1038)', () => {
+    const onPress = jest.fn();
+    const tree = render(
+      <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} onPress={onPress} />,
+    );
+    // Exactly one press trigger navigates: the summary. The data blocks below
+    // carry their own controls and are not wired to open the stage detail.
+    const openLabel = fr.trip.openStageA11y.replace('{{day}}', '1');
+    const triggers = tree.root.findAll(
+      (n: any) =>
+        n.props?.accessibilityLabel === openLabel && typeof n.props?.onPress === 'function',
+    );
+    expect(triggers).toHaveLength(1);
+  });
+
+  it('is not pressable when onPress is absent (disabled)', () => {
+    const tree = render(<StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />);
+    // No open-stage button is exposed…
+    const openLabel = fr.trip.openStageA11y.replace('{{day}}', '1');
+    const triggers = tree.root.findAll(
+      (n: any) =>
+        n.props?.accessibilityLabel === openLabel && typeof n.props?.onPress === 'function',
+    );
+    expect(triggers).toHaveLength(0);
+    // …and the summary is rendered disabled.
+    const disabled = tree.root.findAll((n: any) => n.props?.disabled === true);
+    expect(disabled).toHaveLength(1);
+  });
 });
 
 describe('AlertsBlock', () => {

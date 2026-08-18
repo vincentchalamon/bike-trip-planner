@@ -21,6 +21,9 @@ interface StageCardProps {
   // Routes a `navigate` alert action to the map segment (#1040). Forwarded to
   // the per-day data blocks.
   onAlertNavigate?: (segments: [number, number][][]) => void;
+  // Tap-through to the full-screen stage detail (#1039). Wired on the stage
+  // summary only (not the data blocks below, so their own controls keep working).
+  onPress?: (index: number) => void;
 }
 
 // One roadbook row: the stage date (or "Jour N" fallback) + rest tag, start →
@@ -35,6 +38,7 @@ export function StageCard({
   date = null,
   isToday = false,
   onAlertNavigate,
+  onPress,
 }: StageCardProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -51,7 +55,15 @@ export function StageCard({
           paddingHorizontal: theme.spacing.base,
         }}
       >
-      <View style={{ flex: 1 }}>
+      <Pressable
+        disabled={!onPress}
+        onPress={onPress ? () => onPress(index) : undefined}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={
+          onPress ? t('trip.openStageA11y', { day: stage.dayNumber ?? index + 1 }) : undefined
+        }
+        style={{ flex: 1 }}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
           <Text
             style={{
@@ -104,7 +116,7 @@ export function StageCard({
             elevation: Math.round(stage.elevation ?? 0),
           })}
         </Text>
-      </View>
+      </Pressable>
       {!locked ? (
         <Pressable
           accessibilityLabel={t('trip.deleteA11y', { day: stage.dayNumber ?? index + 1 })}
