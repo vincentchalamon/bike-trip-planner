@@ -25,6 +25,14 @@ jest.mock('expo-sharing', () => ({
   shareAsync: (...args: unknown[]) => mockShareAsync(...args),
 }));
 
+// Records write/share ordering (#1047 review): `mockWrite` resolves on a macrotask
+// (setTimeout), which only elapses once the microtask queue (every unresolved
+// Promise, incl. `Sharing.isAvailableAsync`) has drained. So `write` lands in
+// `events` before `share` only if the write is genuinely awaited before sharing
+// proceeds — dropping that `await` lets `share` run first (isAvailableAsync's
+// already-resolved promise beats the pending setTimeout).
+let events: string[] = [];
+
 jest.mock('../api/trips', () => ({
   fetchTripExport: jest.fn(),
   fetchStageExport: jest.fn(),
@@ -47,8 +55,21 @@ const mockFetchStageExport = fetchStageExport as jest.MockedFunction<typeof fetc
 
 beforeEach(() => {
   jest.clearAllMocks();
+  events = [];
   mockIsAvailable.mockResolvedValue(true);
   mockUri = 'file:///cache/exports/trip.gpx';
+  mockWrite.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          events.push('write');
+          resolve();
+        }, 0);
+      }),
+  );
+  mockShareAsync.mockImplementation(async () => {
+    events.push('share');
+  });
 });
 
 describe('writeAndShare (#1047)', () => {
@@ -76,6 +97,13 @@ describe('writeAndShare (#1047)', () => {
       'Sharing is not available on this device',
     );
     expect(mockShareAsync).not.toHaveBeenCalled();
+  });
+
+  // Regression (#1047 review): `File#write` must be awaited before sharing, or
+  // the share sheet can be handed a still-writing (truncated/empty) cache file.
+  it('waits for the write to resolve before sharing', async () => {
+    await writeAndShare(new ArrayBuffer(4), 'trip.gpx', 'gpx');
+    expect(events).toEqual(['write', 'share']);
   });
 });
 

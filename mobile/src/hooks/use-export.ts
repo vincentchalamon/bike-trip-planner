@@ -17,7 +17,10 @@ const MIME_TYPES: Record<ExportFormat, string> = {
 
 // Write the fetched bytes to a cache file and hand it to the native share sheet
 // (save to Files / send to another app). Extracted so the write+share plumbing is
-// unit-testable without a device (mocks expo-file-system / expo-sharing).
+// unit-testable without a device (mocks expo-file-system / expo-sharing). Awaits
+// the write before sharing: `File#write` is currently a synchronous JSI call in
+// expo-file-system, but awaiting it here is a no-op on that value and keeps the
+// write→share ordering correct if a future SDK makes it return a Promise.
 export async function writeAndShare(
   bytes: ArrayBuffer,
   filename: string,
@@ -25,7 +28,7 @@ export async function writeAndShare(
 ): Promise<void> {
   const file = new File(Paths.cache, filename);
   file.create({ intermediates: true, overwrite: true });
-  file.write(new Uint8Array(bytes));
+  await file.write(new Uint8Array(bytes));
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error('Sharing is not available on this device');
   }
