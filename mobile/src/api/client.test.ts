@@ -23,6 +23,18 @@ beforeEach(() => {
   globalThis.fetch = jest.fn();
 });
 
+describe('authMiddleware request headers', () => {
+  // Regression (#1090 device): RN advertises `zstd, br, gzip`; the server then
+  // picks zstd/br which okhttp does not transparently decode, mojibaking accented
+  // titles. Pinning `identity` keeps bodies decodable — must not be refactored away.
+  it('pins Accept-Encoding to identity on every request', async () => {
+    mockGetJwt.mockReturnValue('jwt');
+    const request = new Request('https://api.test/trips');
+    await onRequest(request);
+    expect(request.headers.get('Accept-Encoding')).toBe('identity');
+  });
+});
+
 describe('authMiddleware 401 retry (#1032)', () => {
   it('refreshes the token and replays the request with the new JWT on a 401', async () => {
     mockGetJwt.mockReturnValueOnce('stale-jwt').mockReturnValue('fresh-jwt');

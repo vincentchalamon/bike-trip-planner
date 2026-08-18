@@ -122,6 +122,16 @@ describe('pickGpxFile (#1043)', () => {
     });
   });
 
+  it('restricts the picker to GPX/XML mime types (not */*)', async () => {
+    mockPick.mockResolvedValue({ canceled: true, assets: null } as never);
+    await pickGpxFile();
+    expect(mockPick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ['application/gpx+xml', 'application/xml', 'text/xml', 'application/octet-stream'],
+      }),
+    );
+  });
+
   it('returns null when the user cancels the picker', async () => {
     mockPick.mockResolvedValue({ canceled: true, assets: null } as never);
     expect(await pickGpxFile()).toBeNull();
