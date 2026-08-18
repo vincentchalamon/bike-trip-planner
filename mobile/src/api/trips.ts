@@ -1,5 +1,5 @@
 import { api } from './client';
-import { API_BASE_URL } from './config';
+import { WEB_BASE_URL } from './config';
 import type { components } from '@btp/core/schema';
 
 export type TripListItem = components['schemas']['Trip.TripListItem.jsonld'];
@@ -444,13 +444,11 @@ export async function revokeTripShare(tripId: string): Promise<boolean> {
 
 /**
  * Build the public web share URL from a short code. The `/s/<code>` page is
- * rendered by the web frontend, so the origin comes from EXPO_PUBLIC_WEB_URL
- * (set for prod builds); it falls back to the API origin when unset.
+ * rendered by the web frontend, so the origin comes from WEB_BASE_URL
+ * (EXPO_PUBLIC_WEB_URL), which fails closed in non-dev builds when unset — a
+ * missing origin surfaces loudly instead of emitting a dead link.
  */
 export function buildShareUrl(shortCode: string): string {
-  const base = (process.env.EXPO_PUBLIC_WEB_URL ?? API_BASE_URL).replace(
-    /\/+$/,
-    '',
-  );
+  const base = WEB_BASE_URL.replace(/\/+$/, '');
   return `${base}/s/${encodeURIComponent(shortCode)}`;
 }

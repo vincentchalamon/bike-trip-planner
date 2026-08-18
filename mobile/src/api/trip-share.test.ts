@@ -2,7 +2,7 @@
 jest.mock('./client', () => ({
   api: { GET: jest.fn(), POST: jest.fn(), DELETE: jest.fn() },
 }));
-jest.mock('./config', () => ({ API_BASE_URL: 'https://api.example' }));
+jest.mock('./config', () => ({ WEB_BASE_URL: 'https://web.example/' }));
 
 import { api } from './client';
 import {
@@ -18,7 +18,6 @@ const mockDelete = api.DELETE as jest.MockedFunction<typeof api.DELETE>;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  delete process.env.EXPO_PUBLIC_WEB_URL;
 });
 
 describe('getTripShare (#1048)', () => {
@@ -83,12 +82,11 @@ describe('revokeTripShare (#1048)', () => {
 });
 
 describe('buildShareUrl (#1048)', () => {
-  it('builds the web /s/<code> URL from EXPO_PUBLIC_WEB_URL', () => {
-    process.env.EXPO_PUBLIC_WEB_URL = 'https://web.example/';
+  it('builds the web /s/<code> URL from WEB_BASE_URL, stripping a trailing slash', () => {
     expect(buildShareUrl('abc123')).toBe('https://web.example/s/abc123');
   });
 
-  it('falls back to the API origin when no web URL is configured', () => {
-    expect(buildShareUrl('abc123')).toBe('https://api.example/s/abc123');
+  it('encodes the short code', () => {
+    expect(buildShareUrl('a b/c')).toBe('https://web.example/s/a%20b%2Fc');
   });
 });

@@ -11,6 +11,20 @@ function getDevFallback(): string {
   return 'https://epidermis-sandlot-headrest.ngrok-free.dev';
 }
 
+// Public web origin serving the shared `/s/<code>` SSR page (#1048). The share
+// link points at the web frontend, NOT the API, so a missing var must fail
+// closed in non-dev builds rather than emit a dead link to the wrong origin.
+// Mirrors API_BASE_URL's fail-closed contract.
+export const WEB_BASE_URL =
+  process.env.EXPO_PUBLIC_WEB_URL ?? getWebDevFallback();
+
+function getWebDevFallback(): string {
+  if (!__DEV__) {
+    throw new Error('EXPO_PUBLIC_WEB_URL must be set for non-development builds');
+  }
+  return 'http://localhost:3000';
+}
+
 // The API is client-agnostic and negotiates on JSON-LD only (auth tokens travel in
 // the body). Every mutating call sends and accepts application/ld+json.
 export const LD_JSON = 'application/ld+json';

@@ -88,7 +88,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
 
   const buildText = useCallback(() => {
     const totals = computeTripTotals(stages);
-    return buildTripText({
+    const base = buildTripText({
       title,
       totalDistance: stages.length > 0 ? totals.totalDistance : null,
       totalElevation: stages.length > 0 ? totals.totalElevation : null,
@@ -96,13 +96,15 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
       sourceUrl,
       stages,
       startDate,
-      shareUrl,
       labels: {
         totalDistance: t('share.totalDistance'),
         totalElevation: t('share.totalElevation'),
-        viewOnline: t('share.viewOnline'),
       },
     });
+    // The public link is appended here (not in the shared core builder), so the
+    // read-only `/s/<code>` URL is included only once a link exists (mirrors the
+    // web ShareModal's fullText).
+    return shareUrl ? `${base}\n\n${t('share.viewOnline')} : ${shareUrl}` : base;
   }, [title, stages, sourceUrl, startDate, shareUrl, t]);
 
   const handleCopyText = useCallback(async () => {

@@ -103,14 +103,13 @@ describe('getDifficulty / computeOverallDifficulty (#1048)', () => {
   });
 });
 
-describe('buildTripText (#1048)', () => {
+describe('buildTripText (#1048, re-exported from @btp/core)', () => {
   const labels = {
     totalDistance: 'Distance totale',
     totalElevation: 'Dénivelé',
-    viewOnline: 'Voir en ligne',
   };
 
-  it('includes the budget per stage and appends the share link', () => {
+  it('includes the title, totals, source URL and per-stage budget', () => {
     const text = buildTripText({
       title: 'Traversée des Alpes',
       totalDistance: 80,
@@ -122,7 +121,6 @@ describe('buildTripText (#1048)', () => {
         stage({ dayNumber: 2 }),
       ],
       startDate: '2026-06-01',
-      shareUrl: 'https://web.example/s/abc123',
       labels,
     });
 
@@ -131,23 +129,7 @@ describe('buildTripText (#1048)', () => {
     expect(text).toContain('https://www.komoot.com/tour/1');
     // Last stage carries a food-only budget (2 meals): 24-40€.
     expect(text).toContain('24-40€');
-    // Share link appended at the end.
-    expect(text).toContain('Voir en ligne : https://web.example/s/abc123');
-    expect(text.trim().endsWith('https://web.example/s/abc123')).toBe(true);
-  });
-
-  it('omits the share-link section when no link is provided', () => {
-    const text = buildTripText({
-      title: 'Sans lien',
-      totalDistance: null,
-      totalElevation: null,
-      totalElevationLoss: null,
-      sourceUrl: '',
-      stages: [stage()],
-      startDate: null,
-      shareUrl: null,
-      labels,
-    });
-    expect(text).not.toContain('Voir en ligne');
+    // The public link is appended by the ShareSheet, not the core builder.
+    expect(text).not.toContain('/s/');
   });
 });
