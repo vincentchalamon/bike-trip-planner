@@ -73,6 +73,36 @@ describe('destructive config diff arming', () => {
     }
   });
 
+  it('does not lose the second highlight when two recomputes are armed before their trip_ready', () => {
+    jest.useFakeTimers();
+    try {
+      useTripStore.setState({ stages: [stage(), stage({ dayNumber: 2 })] });
+      // Two destructive recomputes armed back-to-back, both before any
+      // trip_ready streams back (they share the single diffBaseline slot).
+      useTripStore.getState().armConfigDiff();
+      useTripStore.getState().armConfigDiff();
+
+      // First trip_ready must NOT release the baseline (a second generation is
+      // still pending), otherwise the second trip_ready would find it null.
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
+      expect(useTripStore.getState().diffBaseline).not.toBeNull();
+
+      // Second trip_ready diffs against the still-armed baseline: its highlight
+      // (stage 1 moved too) is preserved, not silently dropped.
+      useTripStore
+        .getState()
+        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2, distance: 88 })]);
+      const { stageDiffs, diffBaseline } = useTripStore.getState();
+      expect(stageDiffs.has(1)).toBe(true);
+      // The baseline is released once the last armed generation is consumed.
+      expect(diffBaseline).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("a stale expiry timer does not wipe a fresher recompute's highlights", () => {
     jest.useFakeTimers();
     try {
