@@ -1,14 +1,23 @@
 /// <reference types="jest" />
 import {
   isSupportedSourceUrl,
+  pickGpxFile,
   runCreateTrip,
+  runUploadGpx,
   SUPPORTED_SOURCE_PATTERNS,
 } from './create-trip';
 import { useOfflineStore } from './offline-store';
 
-jest.mock('../api/trips', () => ({ createTrip: jest.fn() }));
-import { createTrip } from '../api/trips';
+jest.mock('../api/trips', () => ({ createTrip: jest.fn(), uploadGpx: jest.fn() }));
+import { createTrip, uploadGpx } from '../api/trips';
 const mockCreate = createTrip as jest.MockedFunction<typeof createTrip>;
+const mockUpload = uploadGpx as jest.MockedFunction<typeof uploadGpx>;
+
+jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
+import * as DocumentPicker from 'expo-document-picker';
+const mockPick = DocumentPicker.getDocumentAsync as jest.MockedFunction<
+  typeof DocumentPicker.getDocumentAsync
+>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -91,6 +100,83 @@ describe('runCreateTrip', () => {
     const onFailure = jest.fn();
 
     const id = await runCreateTrip('https://www.strava.com/routes/1', onFailure);
+
+    expect(id).toBeNull();
+    expect(onFailure).toHaveBeenCalledWith('network');
+  });
+});
+
+describe('pickGpxFile (#1043)', () => {
+  it('returns the first picked asset (uri / name / mimeType)', async () => {
+    mockPick.mockResolvedValue({
+      canceled: false,
+      assets: [
+        { uri: 'file:///r.gpx', name: 'r.gpx', mimeType: 'application/gpx+xml', lastModified: 0 },
+      ],
+    } as never);
+
+    expect(await pickGpxFile()).toEqual({
+      uri: 'file:///r.gpx',
+      name: 'r.gpx',
+      mimeType: 'application/gpx+xml',
+    });
+  });
+
+  it('returns null when the user cancels the picker', async () => {
+    mockPick.mockResolvedValue({ canceled: true, assets: null } as never);
+    expect(await pickGpxFile()).toBeNull();
+  });
+});
+
+describe('runUploadGpx (#1043)', () => {
+  const file = { uri: 'file:///r.gpx', name: 'r.gpx', mimeType: 'application/gpx+xml' };
+
+  it('returns the new id on success', async () => {
+    mockUpload.mockResolvedValue({ id: 'gpx-1', status: 202 });
+    const onFailure = jest.fn();
+
+    const id = await runUploadGpx(file, onFailure);
+
+    expect(id).toBe('gpx-1');
+    expect(mockUpload).toHaveBeenCalledWith(file);
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it('reports "offline" and never uploads when offline', async () => {
+    useOfflineStore.setState({ isOnline: false });
+    const onFailure = jest.fn();
+
+    const id = await runUploadGpx(file, onFailure);
+
+    expect(id).toBeNull();
+    expect(mockUpload).not.toHaveBeenCalled();
+    expect(onFailure).toHaveBeenCalledWith('offline');
+  });
+
+  it('normalizes a 422 (track-less GPX) to "validation"', async () => {
+    mockUpload.mockResolvedValue({ id: null, status: 422 });
+    const onFailure = jest.fn();
+
+    const id = await runUploadGpx(file, onFailure);
+
+    expect(id).toBeNull();
+    expect(onFailure).toHaveBeenCalledWith('validation');
+  });
+
+  it('normalizes a 400 (bad file) to "error"', async () => {
+    mockUpload.mockResolvedValue({ id: null, status: 400 });
+    const onFailure = jest.fn();
+
+    await runUploadGpx(file, onFailure);
+
+    expect(onFailure).toHaveBeenCalledWith('error');
+  });
+
+  it('reports "network" when the upload throws', async () => {
+    mockUpload.mockRejectedValue(new Error('boom'));
+    const onFailure = jest.fn();
+
+    const id = await runUploadGpx(file, onFailure);
 
     expect(id).toBeNull();
     expect(onFailure).toHaveBeenCalledWith('network');

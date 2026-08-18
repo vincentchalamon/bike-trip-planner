@@ -7,20 +7,27 @@ import {
   hasActiveFilter,
   hasMorePages,
   runDeleteTrip,
+  runDuplicateTrip,
   runLoadTrips,
   useTrips,
   type UseTrips,
 } from './use-trips';
+import { useOfflineStore } from '../store/offline-store';
 
 jest.mock('../api/trips', () => ({
   fetchTrips: jest.fn(),
   deleteTrip: jest.fn(),
+  duplicateTrip: jest.fn(),
 }));
-import { deleteTrip, fetchTrips } from '../api/trips';
+import { deleteTrip, duplicateTrip, fetchTrips } from '../api/trips';
 const mockFetch = fetchTrips as jest.MockedFunction<typeof fetchTrips>;
 const mockDelete = deleteTrip as jest.MockedFunction<typeof deleteTrip>;
+const mockDuplicate = duplicateTrip as jest.MockedFunction<typeof duplicateTrip>;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  useOfflineStore.setState({ isOnline: true });
+});
 
 describe('runLoadTrips (#1036)', () => {
   it('returns the page + total on success', async () => {
@@ -50,6 +57,30 @@ describe('runDeleteTrip (#1036)', () => {
   it('resolves a message when the delete fails (incl. 404 non-owner masking)', async () => {
     mockDelete.mockResolvedValue({ ok: false, status: 404 });
     expect(await runDeleteTrip('t1')).toBe('La suppression a échoué.');
+  });
+});
+
+describe('runDuplicateTrip (#1043)', () => {
+  it('returns the new trip id on success', async () => {
+    mockDuplicate.mockResolvedValue('t2');
+    expect(await runDuplicateTrip('t1')).toBe('t2');
+    expect(mockDuplicate).toHaveBeenCalledWith('t1');
+  });
+
+  it('returns null and never calls the API when offline', async () => {
+    useOfflineStore.setState({ isOnline: false });
+    expect(await runDuplicateTrip('t1')).toBeNull();
+    expect(mockDuplicate).not.toHaveBeenCalled();
+  });
+
+  it('returns null when the backend duplication fails', async () => {
+    mockDuplicate.mockResolvedValue(null);
+    expect(await runDuplicateTrip('t1')).toBeNull();
+  });
+
+  it('returns null (never throws) when the request rejects', async () => {
+    mockDuplicate.mockRejectedValue(new Error('boom'));
+    expect(await runDuplicateTrip('t1')).toBeNull();
   });
 });
 

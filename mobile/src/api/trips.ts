@@ -295,3 +295,33 @@ export async function createTrip(
   });
   return { id: data?.id ?? null, status: response.status };
 }
+
+/** A GPX file picked on-device (expo-document-picker asset shape). */
+export interface GpxFile {
+  uri: string;
+  name: string;
+  mimeType?: string;
+}
+
+/**
+ * Create a trip from a GPX file (multipart POST /trips/gpx-upload). Mirrors the
+ * web drag&drop upload: the backend parses the GPX and dispatches the async
+ * computations (202); the caller follows the pipeline over SSE. Returns the new
+ * trip id (null on failure) plus the raw status so a rejected file (400/422) can
+ * be classified. openapi-fetch passes a FormData body through untouched and lets
+ * fetch set the multipart boundary; the RN file part is `{ uri, name, type }`.
+ */
+export async function uploadGpx(
+  file: GpxFile,
+): Promise<{ id: string | null; status: number }> {
+  const formData = new FormData();
+  formData.append('gpxFile', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType ?? 'application/gpx+xml',
+  } as unknown as Blob);
+  const { data, response } = await api.POST('/trips/gpx-upload', {
+    body: formData as never,
+  });
+  return { id: data?.id ?? null, status: response.status };
+}

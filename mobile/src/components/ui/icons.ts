@@ -7,6 +7,8 @@ export {
   Calendar,
   ChevronRight,
   CloudRain,
+  Copy,
+  FileUp,
   Inbox,
   Map,
   MapPin,
