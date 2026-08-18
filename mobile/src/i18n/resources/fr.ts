@@ -69,10 +69,8 @@ export const fr = {
     title: 'Nouveau voyage',
     subtitle:
       "Colle un lien d'itinéraire ou importe un fichier GPX pour commencer.",
-    linkLabel: 'Lien du parcours',
     linkSection: 'Depuis un lien',
     linkPlaceholder: 'Lien Komoot, Strava ou RideWithGPS',
-    supportedHint: 'Komoot (tour / collection), Strava et RideWithGPS.',
     submit: 'Importer',
     submitting: 'Import…',
     or: 'ou',

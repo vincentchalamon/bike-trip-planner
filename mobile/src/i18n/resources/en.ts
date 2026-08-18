@@ -71,10 +71,8 @@ export const en: typeof fr = {
     title: 'New trip',
     subtitle:
       'Paste a route link or import a GPX file to get started.',
-    linkLabel: 'Route link',
     linkSection: 'From a link',
     linkPlaceholder: 'Komoot, Strava or RideWithGPS link',
-    supportedHint: 'Komoot (tour / collection), Strava and RideWithGPS.',
     submit: 'Import',
     submitting: 'Importing…',
     or: 'or',

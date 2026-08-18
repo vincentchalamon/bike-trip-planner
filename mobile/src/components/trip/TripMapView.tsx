@@ -83,9 +83,14 @@ export function TripMapView() {
           markers={markers}
           highlightedSegment={highlightedSegment}
         />
+        {/* "En selle" FAB: the in-ride screen is out of scope (Sprint 58), so this
+            is a deliberate placeholder — disabled and dispatches nothing, like the
+            roadbook FAB. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('trip.map.rideCta')}
+          accessibilityState={{ disabled: true }}
+          disabled
           onPress={onRide}
           style={[styles.fab, { backgroundColor: theme.colors.brand }, theme.shadows.medium]}
         >

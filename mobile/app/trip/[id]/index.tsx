@@ -29,8 +29,10 @@ import {
 } from '../../../src/components/trip';
 import { useTheme } from '../../../src/theme';
 import { useExport } from '../../../src/hooks/use-export';
+import { confirmDeleteTrip } from '../../../src/hooks/use-trips';
 import { useTripLive } from '../../../src/hooks/use-trip-live';
 import { useTripMutations } from '../../../src/hooks/use-trip-mutations';
+import { nextTitle } from '../../../src/screens/trip-actions';
 import type { MutationFailure } from '../../../src/store/gating';
 import { useTripStore } from '../../../src/store/trip-store';
 
@@ -120,28 +122,22 @@ export default function TripRoadbook() {
   }
 
   function saveTitle() {
-    const next = titleDraft.trim();
     setEditingTitle(false);
-    if (!next || next === (title ?? '')) return;
-    void mutations.updateTitle(next);
+    const next = nextTitle(titleDraft, title);
+    if (next) void mutations.updateTitle(next);
   }
 
-  function confirmDeleteTrip() {
-    Alert.alert(
-      t('trip.deleteTripConfirmTitle'),
-      t('trip.deleteTripConfirmMessage'),
-      [
-        { text: t('trip.cancel'), style: 'cancel' },
-        {
-          text: t('trip.menu.delete'),
-          style: 'destructive',
-          onPress: () =>
-            void mutations.deleteTrip().then((ok) => {
-              if (ok) router.back();
-            }),
-        },
-      ],
-    );
+  function onDeleteTrip() {
+    confirmDeleteTrip({
+      title: t('trip.deleteTripConfirmTitle'),
+      message: t('trip.deleteTripConfirmMessage'),
+      cancel: t('trip.cancel'),
+      confirm: t('trip.menu.delete'),
+      onConfirm: () =>
+        void mutations.deleteTrip().then((ok) => {
+          if (ok) router.back();
+        }),
+    });
   }
 
   function duplicate() {
@@ -340,7 +336,7 @@ export default function TripRoadbook() {
               danger
               onPress={() => {
                 setMenuOpen(false);
-                confirmDeleteTrip();
+                onDeleteTrip();
               }}
             />
           </View>

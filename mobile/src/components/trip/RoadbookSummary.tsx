@@ -7,7 +7,7 @@ import { useTheme } from '../../theme';
 
 // Localised "15 → 20 août 2026" range for the summary card. Formatted in UTC so
 // the shown day never drifts by a timezone offset (mirrors formatStageDate).
-function formatDateRange(
+export function formatDateRange(
   start: string,
   end: string | null,
   locale: string,
