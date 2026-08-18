@@ -10,6 +10,10 @@ import type {
   SupplyMarkerData,
   WeatherData,
 } from '@btp/core';
+import {
+  ACCOMMODATION_RADIUS_STEP_KM,
+  MAX_ACCOMMODATION_RADIUS_KM,
+} from '@btp/core/constants';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { useDismissedAlerts } from '../../store/dismissed-alerts';
@@ -253,6 +257,92 @@ describe('AccommodationBlock', () => {
     ).join(' ');
     expect(meta).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '0'));
   });
+
+  it('stays read-only (no select/expand buttons) without editing callbacks', () => {
+    const tree = render(<AccommodationBlock accommodations={[acc()]} />);
+    expect(
+      tree.root.findAllByProps({ label: fr.trip.blocks.accommodationSelect }),
+    ).toHaveLength(0);
+  });
+
+  it('selects a candidate by index via the select button', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[acc({ name: 'A' }), acc({ name: 'B' })]}
+        radiusKm={5}
+        onSelect={onSelect}
+      />,
+    );
+    const buttons = tree.root.findAllByProps({
+      label: fr.trip.blocks.accommodationSelect,
+    });
+    expect(buttons).toHaveLength(2);
+    act(() => buttons[1]!.props.onPress());
+    expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
+  it('clears the selection via the deselect button', () => {
+    const onDeselect = jest.fn();
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        selectedAccommodation={acc({ name: 'Choisi' })}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onDeselect={onDeselect}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationDeselect })
+        .props.onPress(),
+    );
+    expect(onDeselect).toHaveBeenCalled();
+  });
+
+  it('widens the radius while below the cap, hiding the button once reached', () => {
+    const onExpandRadius = jest.fn();
+    const label = fr.trip.blocks.accommodationExpandRadius.replace(
+      '{{step}}',
+      String(ACCOMMODATION_RADIUS_STEP_KM),
+    );
+    const below = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onExpandRadius={onExpandRadius}
+      />,
+    );
+    act(() => below.root.findByProps({ label }).props.onPress());
+    expect(onExpandRadius).toHaveBeenCalled();
+
+    const atCap = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={MAX_ACCOMMODATION_RADIUS_KM}
+        onSelect={jest.fn()}
+        onExpandRadius={onExpandRadius}
+      />,
+    );
+    expect(atCap.root.findAllByProps({ label })).toHaveLength(0);
+  });
+
+  it('disables the select button when locked/offline', () => {
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[acc()]}
+        radiusKm={5}
+        disabled
+        onSelect={jest.fn()}
+      />,
+    );
+    expect(
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props
+        .disabled,
+    ).toBe(true);
+  });
 });
 
 describe('PoiBlock', () => {
@@ -280,6 +370,42 @@ describe('PoiBlock', () => {
     ).join(' ');
     expect(t).toContain('Château');
     expect(t).not.toContain(' km');
+  });
+
+  it('stays read-only (no waypoint button) without an onAddWaypoint callback', () => {
+    const tree = render(<PoiBlock pois={[poi()]} />);
+    expect(
+      tree.root.findAllByProps({ label: fr.trip.blocks.poiAddWaypoint }),
+    ).toHaveLength(0);
+  });
+
+  it('inserts a POI as a waypoint with its coordinates', () => {
+    const onAddWaypoint = jest.fn();
+    const tree = render(
+      <PoiBlock
+        pois={[poi({ lat: 45.1, lon: 4.2 })]}
+        onAddWaypoint={onAddWaypoint}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.poiAddWaypoint })
+        .props.onPress(),
+    );
+    expect(onAddWaypoint).toHaveBeenCalledWith(45.1, 4.2);
+  });
+
+  it('blocks the waypoint out of zone: button disabled + hint shown', () => {
+    const tree = render(
+      <PoiBlock pois={[poi()]} outOfZone onAddWaypoint={jest.fn()} />,
+    );
+    expect(
+      tree.root.findByProps({ label: fr.trip.blocks.poiAddWaypoint }).props
+        .disabled,
+    ).toBe(true);
+    expect(texts(tree).join(' ')).toContain(
+      fr.trip.blocks.poiWaypointOutOfZone,
+    );
   });
 });
 

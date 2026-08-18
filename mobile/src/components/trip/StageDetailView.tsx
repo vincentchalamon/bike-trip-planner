@@ -201,6 +201,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
       >
         <StageDataBlocks
           stage={stage}
+          stageIndex={safeIndex}
           onAlertNavigate={(segments) =>
             setHighlightedSegment(
               segments.length > 0 ? alertSegmentToCoords(segments[0]) : undefined,
