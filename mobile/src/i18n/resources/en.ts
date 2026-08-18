@@ -44,7 +44,6 @@ export const en: typeof fr = {
     deleteA11y: 'Delete {{title}}',
     deleteConfirmTitle: 'Delete this trip?',
     deleteConfirmMessage: '"{{title}}" will be permanently deleted.',
-    duplicate: 'Duplicate',
     duplicateA11y: 'Duplicate {{title}}',
     duplicateFailedTitle: 'Duplication failed',
     duplicateFailed: 'Duplication failed. Try again.',

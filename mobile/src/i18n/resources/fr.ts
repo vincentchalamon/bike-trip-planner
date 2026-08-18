@@ -42,7 +42,6 @@ export const fr = {
     deleteA11y: 'Supprimer {{title}}',
     deleteConfirmTitle: 'Supprimer ce voyage ?',
     deleteConfirmMessage: '« {{title}} » sera définitivement supprimé.',
-    duplicate: 'Dupliquer',
     duplicateA11y: 'Dupliquer {{title}}',
     duplicateFailedTitle: 'Duplication impossible',
     duplicateFailed: 'La duplication a échoué. Réessayez.',

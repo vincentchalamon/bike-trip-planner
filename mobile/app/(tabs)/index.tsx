@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
@@ -38,6 +39,10 @@ export default function Trips() {
     duplicate,
   } = useTrips();
 
+  // Id of the trip whose duplication is in flight — guards against a double-tap
+  // firing two POST /trips/{id}/duplicate (each would clone the trip again).
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
   function onDelete(item: TripListItem): void {
     confirmDeleteTrip({
       title: t('trips.deleteConfirmTitle'),
@@ -53,7 +58,11 @@ export default function Trips() {
   }
 
   async function onDuplicate(item: TripListItem): Promise<void> {
-    const newId = await duplicate(item.id ?? '');
+    const id = item.id ?? '';
+    if (duplicatingId === id) return; // re-entrance guard: a duplication is in flight
+    setDuplicatingId(id);
+    const newId = await duplicate(id);
+    setDuplicatingId(null);
     if (!newId) {
       Alert.alert(t('trips.duplicateFailedTitle'), t('trips.duplicateFailed'));
     }
@@ -160,6 +169,8 @@ export default function Trips() {
                     accessibilityLabel={t('trips.duplicateA11y', {
                       title: item.title ?? t('trips.untitled'),
                     })}
+                    accessibilityState={{ disabled: duplicatingId === item.id }}
+                    disabled={duplicatingId === item.id}
                     hitSlop={8}
                     onPress={() => void onDuplicate(item)}
                     style={{ padding: theme.spacing.xs }}

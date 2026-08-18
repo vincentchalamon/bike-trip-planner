@@ -248,7 +248,7 @@ export default function Create() {
           label={submitting ? t('create.submitting') : t('create.submit')}
           onPress={() => void onSubmit()}
           loading={submitting}
-          disabled={!isValid}
+          disabled={!isValid || uploading}
           fullWidth
         />
       </View>
@@ -290,6 +290,7 @@ export default function Create() {
           label={uploading ? t('create.gpxUploading') : t('create.gpxImport')}
           onPress={() => void onImportGpx()}
           loading={uploading}
+          disabled={submitting}
           variant="secondary"
           icon={<FileUp color={theme.colors.foreground} size={18} />}
           fullWidth
