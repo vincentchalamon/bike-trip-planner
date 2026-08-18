@@ -257,7 +257,9 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
           // unrelated successful recompute.
           useTripStore.getState().armConfigDiff();
           void run().then((ok) => {
-            if (!ok) useTripStore.setState({ diffBaseline: null });
+            // Token-aware disarm: a failed commit consumes its own generation
+            // without nulling the shared baseline under a second still-pending one.
+            if (!ok) useTripStore.getState().disarmConfigDiff();
           });
           onClose();
         },

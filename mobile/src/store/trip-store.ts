@@ -170,6 +170,10 @@ interface TripState extends TripConfig {
   // Arm a diff baseline before a destructive edit (dates/pacing): the next
   // trip_ready compares against it to light the changed stages.
   armConfigDiff: () => void;
+  // Cancel an armed generation whose commit failed (no trip_ready will follow):
+  // token-aware so it doesn't null the shared baseline out from under a second
+  // still-pending generation.
+  disarmConfigDiff: () => void;
   // Clear the transient diff-highlight (called by the auto-expiry timer).
   clearStageDiffs: () => void;
   // Batch queue: replace a duplicate (same type + stageIndex) rather than append.
@@ -358,6 +362,19 @@ export const useTripStore = create<TripState>((set, get) => ({
       diffBaselineToken: state.diffBaseline ? state.diffBaselineToken + 1 : 1,
       diffConsumedToken: state.diffBaseline ? state.diffConsumedToken : 0,
     })),
+  disarmConfigDiff: () =>
+    set((state) => {
+      if (!state.diffBaseline) return {};
+      // A failed commit is a consumed generation, not a full reset: only release
+      // the shared baseline once every armed generation is accounted for, so a
+      // second still-pending generation keeps its baseline (mirrors the consumed
+      // accounting in applyTripReady).
+      const consumed = state.diffConsumedToken + 1;
+      if (consumed >= state.diffBaselineToken) {
+        return { diffBaseline: null, diffBaselineToken: 0, diffConsumedToken: 0 };
+      }
+      return { diffConsumedToken: consumed };
+    }),
   clearStageDiffs: () => set({ stageDiffs: new Set<number>() }),
   queueModification: (modification) =>
     set((state) => {
