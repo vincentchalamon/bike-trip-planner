@@ -1,4 +1,5 @@
 import { api } from './client';
+import { API_BASE_URL } from './config';
 import type { components } from '@btp/core/schema';
 
 export type TripListItem = components['schemas']['Trip.TripListItem.jsonld'];
@@ -394,4 +395,62 @@ export async function fetchStageExport(
     throw new Error('Failed to export stage');
   }
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Public share link (#1048). A read-only `/s/<code>` link the rider can create
+// and revoke; the shared SSR page is web-only (mobile only manages the link).
+// ---------------------------------------------------------------------------
+
+export type TripShareResponse = components['schemas']['TripShare.jsonld'];
+
+/** Active share link for a trip, or null when none exists (or on error). */
+export async function getTripShare(
+  tripId: string,
+): Promise<TripShareResponse | null> {
+  const { data, error } = await api.GET('/trips/{tripId}/share', {
+    params: { path: { tripId } },
+    headers: ld,
+  });
+  if (error) {
+    return null;
+  }
+  return data ?? null;
+}
+
+/** Create a read-only share link for a trip, or null on failure. */
+export async function createTripShare(
+  tripId: string,
+): Promise<TripShareResponse | null> {
+  const { data, error } = await api.POST('/trips/{tripId}/share', {
+    params: { path: { tripId } },
+    headers: ldBody,
+    body: {},
+  });
+  if (error) {
+    return null;
+  }
+  return data ?? null;
+}
+
+/** Revoke the active share link (soft delete). Returns true on success. */
+export async function revokeTripShare(tripId: string): Promise<boolean> {
+  const { response } = await api.DELETE('/trips/{tripId}/share', {
+    params: { path: { tripId } },
+    headers: ld,
+  });
+  return response.ok;
+}
+
+/**
+ * Build the public web share URL from a short code. The `/s/<code>` page is
+ * rendered by the web frontend, so the origin comes from EXPO_PUBLIC_WEB_URL
+ * (set for prod builds); it falls back to the API origin when unset.
+ */
+export function buildShareUrl(shortCode: string): string {
+  const base = (process.env.EXPO_PUBLIC_WEB_URL ?? API_BASE_URL).replace(
+    /\/+$/,
+    '',
+  );
+  return `${base}/s/${encodeURIComponent(shortCode)}`;
 }

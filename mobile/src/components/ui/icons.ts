@@ -27,3 +27,13 @@ export {
   Trash2,
   X,
 } from 'lucide-react-native';
+// Share feature icons (#1048) — appended so the sorted set above stays untouched.
+export {
+  Check,
+  Copy,
+  Download,
+  FileText,
+  Image,
+  Link,
+  Share2,
+} from 'lucide-react-native';
