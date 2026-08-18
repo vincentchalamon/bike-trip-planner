@@ -33,7 +33,7 @@ export default function StageDetailScreen() {
 
   return (
     <Screen padded={false} edges={['left', 'right']}>
-      <StageDetailView id={id} initialIndex={parseStageIndex(index)} />
+      <StageDetailView initialIndex={parseStageIndex(index)} />
     </Screen>
   );
 }

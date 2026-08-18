@@ -26,13 +26,7 @@ import { useTripStore } from '../../store/trip-store';
 // (weather / alerts / POI / accommodation / supply / events). Reads straight
 // from the live store; the stage index is local state so prev/next stays on one
 // mounted screen (no navigation stacking, no SSE re-subscribe).
-export function StageDetailView({
-  id,
-  initialIndex,
-}: {
-  id: string;
-  initialIndex: number;
-}) {
+export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const stages = useTripStore((s) => s.stages);

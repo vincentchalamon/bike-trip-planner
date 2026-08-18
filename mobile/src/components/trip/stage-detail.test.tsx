@@ -175,7 +175,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView id="t1" initialIndex={0} />)).join(' ');
+    const t = texts(render(<StageDetailView initialIndex={0} />)).join(' ');
     expect(t).toContain('Paris');
     expect(t).toContain('Lyon');
     expect(t).toContain('50 km');
@@ -194,7 +194,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const tree = render(<StageDetailView id="t1" initialIndex={0} />);
+    const tree = render(<StageDetailView initialIndex={0} />);
     const prev = () => navButton(tree, fr.trip.stageDetail.prev);
     const next = () => navButton(tree, fr.trip.stageDetail.next);
 
@@ -220,7 +220,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView id="t1" initialIndex={1} />));
+    const t = texts(render(<StageDetailView initialIndex={1} />));
     expect(t).toContain(fr.trip.stageDetail.restNoProfile);
   });
 
@@ -231,13 +231,13 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView id="t1" initialIndex={0} />));
+    const t = texts(render(<StageDetailView initialIndex={0} />));
     expect(t).not.toContain(fr.trip.stageDetail.restNoProfile);
   });
 
   it('shows the not-found placeholder for an out-of-range stage', () => {
     useTripStore.setState({ tripId: 't1', stages: [], loading: false });
-    const t = texts(render(<StageDetailView id="t1" initialIndex={0} />));
+    const t = texts(render(<StageDetailView initialIndex={0} />));
     expect(t).toContain(fr.trip.stageDetail.notFound);
   });
 });
