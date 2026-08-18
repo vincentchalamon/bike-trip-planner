@@ -86,6 +86,127 @@ describe('StageCard dates', () => {
   });
 });
 
+function pressableByLabel(tree: any, label: string): any {
+  return tree.root.find(
+    (node: any) =>
+      node.props.accessibilityLabel === label &&
+      typeof node.props.onPress === 'function',
+  );
+}
+
+function queryByLabel(tree: any, label: string): any {
+  const found = tree.root.findAll(
+    (node: any) => node.props.accessibilityLabel === label,
+  );
+  return found[0] ?? null;
+}
+
+describe('StageCard inline edit controls (#1044)', () => {
+  const handlers = () => ({
+    onAddStage: jest.fn(),
+    onAddRestDay: jest.fn(),
+    onEditDistance: jest.fn(),
+  });
+
+  it('hides every edit control (including delete) when locked', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard stage={stage()} index={0} locked onDelete={jest.fn()} {...h} />,
+    );
+    expect(queryByLabel(tree, fr.trip.deleteA11y.replace('{{day}}', '1'))).toBeNull();
+    expect(
+      queryByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1')),
+    ).toBeNull();
+    expect(
+      queryByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')),
+    ).toBeNull();
+  });
+
+  it('calls onAddStage / onAddRestDay with the row index when tapped', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard stage={stage()} index={2} locked={false} onDelete={jest.fn()} {...h} />,
+    );
+    act(() =>
+      pressableByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1')).props.onPress(),
+    );
+    act(() =>
+      pressableByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')).props.onPress(),
+    );
+    expect(h.onAddStage).toHaveBeenCalledWith(2);
+    expect(h.onAddRestDay).toHaveBeenCalledWith(2);
+  });
+
+  it('disables ＋étape and hides the distance chip out of zone, keeps ＋repos', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard stage={stage()} index={0} locked={false} outOfZone onDelete={jest.fn()} {...h} />,
+    );
+    const addStage = queryByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1'));
+    expect(addStage.props.accessibilityState.disabled).toBe(true);
+    expect(
+      queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1')),
+    ).toBeNull();
+    expect(
+      queryByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')),
+    ).not.toBeNull();
+  });
+
+  it('hides the distance chip on a rest day', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard
+        stage={stage({ isRestDay: true })}
+        index={0}
+        locked={false}
+        onDelete={jest.fn()}
+        {...h}
+      />,
+    );
+    expect(
+      queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1')),
+    ).toBeNull();
+  });
+
+  it('edits distance inline: pencil → input → save calls onEditDistance(km)', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard
+        stage={stage({ distance: 50 })}
+        index={0}
+        locked={false}
+        onDelete={jest.fn()}
+        {...h}
+      />,
+    );
+    const distA11y = fr.trip.edit.editDistanceA11y.replace('{{day}}', '1');
+    act(() => pressableByLabel(tree, distA11y).props.onPress());
+    // The input is seeded with the current rounded distance.
+    const input = queryByLabel(tree, distA11y);
+    expect(input.props.value).toBe('50');
+    act(() => input.props.onChangeText('72'));
+    act(() => pressableByLabel(tree, fr.trip.edit.saveA11y).props.onPress());
+    expect(h.onEditDistance).toHaveBeenCalledWith(0, 72);
+  });
+
+  it('keeps the editor open and does not commit an invalid or empty distance', () => {
+    const h = handlers();
+    const tree = render(
+      <StageCard stage={stage({ distance: 50 })} index={0} locked={false} onDelete={jest.fn()} {...h} />,
+    );
+    const distA11y = fr.trip.edit.editDistanceA11y.replace('{{day}}', '1');
+    act(() => pressableByLabel(tree, distA11y).props.onPress());
+    act(() => queryByLabel(tree, distA11y).props.onChangeText('abc'));
+    act(() => pressableByLabel(tree, fr.trip.edit.saveA11y).props.onPress());
+    expect(h.onEditDistance).not.toHaveBeenCalled();
+    // The editor stays open (the input is still mounted) so the edit is not lost.
+    const input = queryByLabel(tree, distA11y);
+    expect(input).not.toBeNull();
+    expect('value' in input.props).toBe(true);
+    expect(input.props.value).toBe('abc');
+  });
+});
+
 describe('RoadbookBanner', () => {
   it('renders the message for each variant', () => {
     expect(texts(render(<RoadbookBanner variant="locked" message={fr.trip.banners.locked} />))).toContain(
