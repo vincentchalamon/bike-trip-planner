@@ -258,3 +258,40 @@ export async function deleteTrip(tripId: string): Promise<MutationResult> {
   });
   return { ok: response.ok, status: response.status };
 }
+
+// The backend TripRequest requires the whole pacing block, so a fresh trip
+// created from a link ships the schema defaults; the rider tunes pacing later
+// from the roadbook. Mirrors the web create payload (use-trip-planner).
+const CREATE_DEFAULTS = {
+  fatigueFactor: 0.9,
+  elevationPenalty: 50,
+  ebikeMode: false,
+  departureHour: 8,
+  maxDistancePerDay: 80,
+  averageSpeed: 15,
+  enabledAccommodationTypes: [
+    'camp_site',
+    'hostel',
+    'alpine_hut',
+    'chalet',
+    'guest_house',
+    'hotel',
+    'wilderness_hut',
+  ],
+};
+
+/**
+ * Create a trip from a supported source URL (Komoot / Strava / RideWithGPS). The
+ * backend accepts asynchronously (202) and starts parsing + computing the route;
+ * the caller follows the pipeline over SSE. Returns the new trip id (null on
+ * failure) plus the raw status so a rejected / unsupported URL can be classified.
+ */
+export async function createTrip(
+  sourceUrl: string,
+): Promise<{ id: string | null; status: number }> {
+  const { data, response } = await api.POST('/trips', {
+    headers: ldBody,
+    body: { sourceUrl, ...CREATE_DEFAULTS },
+  });
+  return { id: data?.id ?? null, status: response.status };
+}

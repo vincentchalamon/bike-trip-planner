@@ -45,8 +45,30 @@ export const fr = {
   },
   create: {
     title: 'Créer un voyage',
-    description:
-      'Collez un lien Komoot, Strava ou RideWithGPS pour générer votre roadbook. Bientôt disponible.',
+    subtitle:
+      'Collez un lien Komoot, Strava ou RideWithGPS pour générer votre roadbook.',
+    linkLabel: 'Lien du parcours',
+    linkPlaceholder: 'https://www.komoot.com/tour/…',
+    supportedHint: 'Komoot (tour / collection), Strava et RideWithGPS.',
+    submit: 'Créer le voyage',
+    submitting: 'Création…',
+    createdTitle: 'Voyage créé',
+    launchAnalysis: "Lancer l'analyse",
+    relaunchAnalysis: "Relancer l'analyse",
+    progress: 'Étape {{completed}} / {{total}}',
+    analysisDone: 'Analyse terminée.',
+    analysisFailed: "L'analyse a échoué. Réessayez.",
+    openRoadbook: 'Ouvrir le roadbook',
+    newTrip: 'Nouveau voyage',
+    createFailedTitle: 'Création impossible',
+    analysisFailedTitle: 'Analyse impossible',
+    errors: {
+      invalidUrl: 'Lien non reconnu ou refusé.',
+      offline: 'Vous êtes hors ligne.',
+      conflict: 'Conflit : réessayez.',
+      network: 'Erreur réseau. Vérifiez votre connexion.',
+      generic: 'Une erreur est survenue.',
+    },
   },
   account: {
     title: 'Compte',
