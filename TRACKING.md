@@ -1871,17 +1871,22 @@ Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)*
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | 🚧 En cours | [#1080](https://github.com/vincentchalamon/bike-trip-planner/pull/1080) (`feature/1042`) | #1031 |
-| 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | 🚧 En cours | [#1084](https://github.com/vincentchalamon/bike-trip-planner/pull/1084) (`feature/1043`, stack sur #1080) | #1031 |
-| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | 🚧 En cours | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`) | #1037 |
-| 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | 🚧 En cours | [#1082](https://github.com/vincentchalamon/bike-trip-planner/pull/1082) (`feature/1045`) | #1037 |
-| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | 🚧 En cours | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`) | #1037 |
-| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | 🚧 En cours | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`) | #1037 |
-| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | 🚧 En cours | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`) | #1037 |
+| 1 | [#1042](https://github.com/vincentchalamon/bike-trip-planner/issues/1042) | création par lien + ouverture depuis partage + lancer l'analyse | M | ✅ Mergé | [#1080](https://github.com/vincentchalamon/bike-trip-planner/pull/1080) (`feature/1042`) | #1031 |
+| 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | ✅ Mergé | [#1084](https://github.com/vincentchalamon/bike-trip-planner/pull/1084) (`feature/1043`, stack sur #1080) | #1031 |
+| 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | 🚧 En cours | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`, rebasée) | #1037 |
+| 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | ✅ Mergé | [#1082](https://github.com/vincentchalamon/bike-trip-planner/pull/1082) (`feature/1045`) | #1037 |
+| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | 🚧 En cours | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`, rebasée) | #1037 |
+| 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | 🚧 En cours | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`, rebasée) | #1037 |
+| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | 🚧 En cours | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`, rebasée) | #1037 |
 
 ### Ordre de merge et conflits attendus (Sprint 56)
 
-Toutes les PRs ciblent `main` sauf **#1084 (#1043) qui est stackée sur #1080 (#1042)** (base `feature/1042`). CI verte (`Mobile tsc+jest`) et reviews claude-code-review traitées sur l'ensemble ; le check `claude-review` et `mergeStateStatus` sont asynchrones après chaque push, **à revérifier juste avant merge** (`gh pr checks <pr>` / `gh pr view <pr> --json mergeStateStatus`). En attente d'approbation/merge utilisateur. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
+**Mergées** : #1080 (#1042), #1084 (#1043, stack), #1082 (#1045). **Restantes** (rebasées sur `main`, résolution des conflits additifs en union) : #1081 (#1044), #1085 (#1046), #1083 (#1047), #1086 (#1048).
+
+Statut de merge à revérifier PR par PR **juste avant chaque merge** — le check `claude-review`, le `reviewDecision` (une review `CHANGES_REQUESTED` reste formellement bloquante tant qu'elle n'est pas re-soumise/dismissée même si tous ses threads sont résolus) et le `mergeStateStatus` sont asynchrones après chaque push/rebase :
+`gh pr view <pr> --json mergeStateStatus,reviewDecision` + `gh pr checks <pr>`. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
+
+Ordre de merge recommandé pour les 4 restantes : **#1081 (#1044) → #1085 (#1046)** (partagent `RoadbookView.tsx`/`StageCard.tsx`), puis **#1083 (#1047) → #1086 (#1048)** (aligner `expo-sharing` + régénérer `package-lock.json` sur le dernier). Après chaque merge, les suivantes re-conflictent sur les fichiers additifs (`api/trips.ts`, i18n `.ts`, `icons.ts`, header `app/trip/[id]/index.tsx`, `package-lock.json`) → re-rebaser sur `main` et résoudre en union.
 
 **Ordre de merge recommandé** (minimise les rebases de fichiers additifs partagés) :
 
