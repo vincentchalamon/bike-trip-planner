@@ -16,7 +16,6 @@ export interface TripLiveStore {
   applyStageUpdate: ReturnType<typeof useTripStore.getState>['applyStageUpdate'];
   setStatus: ReturnType<typeof useTripStore.getState>['setStatus'];
   setComputing: ReturnType<typeof useTripStore.getState>['setComputing'];
-  disarmConfigDiff: ReturnType<typeof useTripStore.getState>['disarmConfigDiff'];
 }
 
 // Load a trip into the store from /detail, then open the Mercure SSE
@@ -74,15 +73,15 @@ export async function runTripLive(
       } else if (event.type === 'computation_error') {
         // A retryable error means the computation is still running (the core
         // reducer leaves the state untouched); only a non-retryable error is
-        // terminal and clears the computing badge. A destructive commit accepted
-        // by the backend (run()===true) whose worker then fails terminally never
-        // streams a trip_ready — disarm the diff baseline here too, or it would
-        // stay armed and corrupt the NEXT successful recompute's highlights.
-        // disarmConfigDiff() is a no-op when nothing is armed, so it's safe here.
-        if (!event.data.retryable) {
-          store.setComputing(false);
-          store.disarmConfigDiff();
-        }
+        // terminal and clears the computing badge. Do NOT disarm the diff
+        // baseline here: the backend completion gate (TripCompletionGate /
+        // AllEnrichmentsCompletedHandler) guarantees a trip_ready always
+        // eventually follows once every pipeline computation has settled (done
+        // OR failed) — including this one — so a single non-critical failure
+        // (weather, ferries, border crossing, …) does not mean trip_ready never
+        // arrives; disarming here would drop the highlight for that common
+        // partial-failure case.
+        if (!event.data.retryable) store.setComputing(false);
       }
     });
   } catch {
@@ -104,7 +103,6 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
   const applyStageUpdate = useTripStore((s) => s.applyStageUpdate);
   const setStatus = useTripStore((s) => s.setStatus);
   const setComputing = useTripStore((s) => s.setComputing);
-  const disarmConfigDiff = useTripStore((s) => s.disarmConfigDiff);
   const reset = useTripStore((s) => s.reset);
 
   useEffect(() => {
@@ -120,7 +118,6 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
         applyStageUpdate,
         setStatus,
         setComputing,
-        disarmConfigDiff,
       },
       () => cancelled,
     ).then((opened) => {
@@ -141,7 +138,6 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
     applyStageUpdate,
     setStatus,
     setComputing,
-    disarmConfigDiff,
     reset,
   ]);
 }
