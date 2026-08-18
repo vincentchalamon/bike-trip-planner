@@ -38,12 +38,12 @@ function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap(textOf);
 }
 
-// Locate a nav Button (role="button") by its visible label — robust to the order
-// findAllByProps returns nodes in.
+// Locate a nav button (role="button") by its accessibilityLabel — the topbar
+// chevrons are icon-only, so match on the label rather than a visible string.
 function navButton(tree: any, label: string): any {
   return tree.root
     .findAllByProps({ accessibilityRole: 'button' })
-    .find((b: any) => b.findAllByType(Text).some((tx: any) => textOf(tx).includes(label)));
+    .find((b: any) => b.props.accessibilityLabel === label);
 }
 
 let lastTree: any;

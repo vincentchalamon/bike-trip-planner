@@ -1,6 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
 import type { TripListItem } from '../../src/api/trips';
@@ -8,15 +19,206 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  ListRow,
   LoadingState,
   Screen,
 } from '../../src/components/ui';
 import { Copy, Inbox, Search, Trash2 } from '../../src/components/ui/icons';
-import { useTheme } from '../../src/theme';
+import { useTheme, type Theme } from '../../src/theme';
+
+type TripStatus = 'draft' | 'analyzing' | 'analyzed';
+
+function statusOf(item: TripListItem): TripStatus {
+  return (item.status ?? 'draft') as TripStatus;
+}
+
+function badgeColors(theme: Theme, status: TripStatus): { bg: string; fg: string; border: string } {
+  if (status === 'analyzing') {
+    return { bg: theme.colors.accentSoft, fg: theme.colors.accentInk, border: theme.colors.accentBrand };
+  }
+  if (status === 'analyzed') {
+    return { bg: theme.colors.successSoft, fg: theme.colors.successInk, border: theme.colors.successBorder };
+  }
+  return { bg: theme.colors.muted, fg: theme.colors.mutedForeground, border: theme.colors.border };
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined, locale: string): string {
+  const parse = (iso: string) => new Date(iso.includes('T') ? iso : `${iso}T00:00:00`);
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+  const full = (d: Date) =>
+    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  if (start && end) return `${day(parse(start))} – ${full(parse(end))}`;
+  if (start) return full(parse(start));
+  if (end) return full(parse(end));
+  return '';
+}
+
+// Decorative, data-free vignette: a neutral surface with a faint winding line
+// standing in for a route trace (the trip list carries no geometry).
+function RouteThumbnail({ theme }: { theme: Theme }) {
+  return (
+    <Svg width="100%" height="100%" viewBox="0 0 112 96" preserveAspectRatio="xMidYMid slice">
+      <Path
+        d="M8 78 C 26 70, 24 44, 44 40 S 74 48, 84 30 S 100 16, 106 12"
+        stroke={theme.colors.mutedIcon}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.5}
+      />
+      <Path
+        d="M8 88 C 30 84, 40 66, 58 62 S 90 66, 106 52"
+        stroke={theme.colors.mutedIcon}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.25}
+      />
+    </Svg>
+  );
+}
+
+function StatusBadge({ theme, status, label }: { theme: Theme; status: TripStatus; label: string }) {
+  const c = badgeColors(theme, status);
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: theme.spacing.xs,
+        bottom: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 2,
+        borderRadius: theme.radius.full,
+        borderWidth: StyleSheet.hairlineWidth,
+        backgroundColor: c.bg,
+        borderColor: c.border,
+      }}
+    >
+      <Text style={{ color: c.fg, fontFamily: theme.fonts.sansMedium, fontSize: 11 }}>{label}</Text>
+    </View>
+  );
+}
+
+interface TripCardProps {
+  item: TripListItem;
+  theme: Theme;
+  duplicatingId: string | null;
+  onOpen: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  duplicateA11y: string;
+  deleteA11y: string;
+  statusLabel: string;
+  title: string;
+  subtitle: string;
+}
+
+function TripCard({
+  item,
+  theme,
+  duplicatingId,
+  onOpen,
+  onDelete,
+  onDuplicate,
+  duplicateA11y,
+  deleteA11y,
+  statusLabel,
+  title,
+  subtitle,
+}: TripCardProps) {
+  const duplicating = duplicatingId === item.id;
+  const iconBtn = {
+    width: 30,
+    height: 30,
+    borderRadius: theme.radius.full,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: theme.colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    ...theme.shadows.soft,
+  };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        overflow: 'hidden',
+        borderRadius: theme.radius.xl,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.colors.border,
+        backgroundColor: pressed ? theme.colors.muted : theme.colors.card,
+        ...theme.shadows.soft,
+      })}
+    >
+      <View
+        style={{
+          width: 116,
+          alignSelf: 'stretch',
+          backgroundColor: theme.colors.secondary,
+        }}
+      >
+        <RouteThumbnail theme={theme} />
+        <StatusBadge theme={theme} status={statusOf(item)} label={statusLabel} />
+        <View
+          style={{
+            position: 'absolute',
+            top: theme.spacing.xs,
+            right: theme.spacing.xs,
+            flexDirection: 'row',
+            gap: theme.spacing.xs,
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={duplicateA11y}
+            accessibilityState={{ disabled: duplicating }}
+            disabled={duplicating}
+            hitSlop={8}
+            onPress={onDuplicate}
+            style={iconBtn}
+          >
+            <Copy color={theme.colors.mutedForeground} size={16} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={deleteA11y}
+            hitSlop={8}
+            onPress={onDelete}
+            style={iconBtn}
+          >
+            <Trash2 color={theme.colors.destructive} size={16} />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ flex: 1, padding: theme.spacing.md, justifyContent: 'center' }}>
+        <Text
+          numberOfLines={2}
+          style={{ color: theme.colors.foreground, fontFamily: theme.fonts.serif, fontSize: 17 }}
+        >
+          {title}
+        </Text>
+        <Text
+          numberOfLines={2}
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+            marginTop: theme.spacing.xs,
+          }}
+        >
+          {subtitle}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
 
 export default function Trips() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const {
@@ -68,6 +270,15 @@ export default function Trips() {
     }
   }
 
+  function subtitleOf(item: TripListItem): string {
+    const parts = [
+      formatDateRange(item.startDate, item.endDate, i18n.language),
+      t('trips.stagesCount', { stages: item.stageCount ?? 0 }),
+      t('trips.distanceKm', { distance: Math.round(item.totalDistance ?? 0) }),
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }
+
   return (
     <Screen padded={false}>
       <Text
@@ -84,16 +295,39 @@ export default function Trips() {
       </Text>
 
       <View style={{ paddingHorizontal: theme.spacing.base, gap: theme.spacing.sm }}>
-        <Input
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('trips.searchPlaceholder')}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            height: 44,
+            paddingHorizontal: theme.spacing.md,
+            gap: theme.spacing.sm,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: theme.colors.input,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <Search color={theme.colors.mutedForeground} size={18} />
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t('trips.searchPlaceholder')}
+            placeholderTextColor={theme.colors.mutedForeground}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{
+              flex: 1,
+              color: theme.colors.foreground,
+              fontFamily: theme.fonts.sans,
+              fontSize: 16,
+            }}
+          />
+        </View>
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
           <View style={{ flex: 1 }}>
             <Input
+              label={t('trips.fromLabel')}
               value={startDate}
               onChangeText={setStartDate}
               placeholder={t('trips.startDate')}
@@ -103,6 +337,7 @@ export default function Trips() {
           </View>
           <View style={{ flex: 1 }}>
             <Input
+              label={t('trips.toLabel')}
               value={endDate}
               onChangeText={setEndDate}
               placeholder={t('trips.endDate')}
@@ -126,7 +361,11 @@ export default function Trips() {
         <FlatList
           data={trips}
           keyExtractor={(item) => item.id ?? String(Math.random())}
-          contentContainerStyle={{ paddingTop: theme.spacing.sm }}
+          contentContainerStyle={{
+            padding: theme.spacing.base,
+            paddingTop: theme.spacing.md,
+            gap: theme.spacing.md,
+          }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
@@ -154,47 +393,26 @@ export default function Trips() {
               </View>
             ) : null
           }
-          renderItem={({ item }) => (
-            <ListRow
-              title={item.title ?? t('trips.untitled')}
-              subtitle={t('trips.meta', {
-                stages: item.stageCount ?? 0,
-                distance: Math.round(item.totalDistance ?? 0),
-                status: t(`trips.status.${item.status ?? 'draft'}`),
-              })}
-              right={
-                <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('trips.duplicateA11y', {
-                      title: item.title ?? t('trips.untitled'),
-                    })}
-                    accessibilityState={{ disabled: duplicatingId === item.id }}
-                    disabled={duplicatingId === item.id}
-                    hitSlop={8}
-                    onPress={() => void onDuplicate(item)}
-                    style={{ padding: theme.spacing.xs }}
-                  >
-                    <Copy color={theme.colors.mutedIcon} size={20} />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('trips.deleteA11y', {
-                      title: item.title ?? t('trips.untitled'),
-                    })}
-                    hitSlop={8}
-                    onPress={() => onDelete(item)}
-                    style={{ padding: theme.spacing.xs }}
-                  >
-                    <Trash2 color={theme.colors.mutedIcon} size={20} />
-                  </Pressable>
-                </View>
-              }
-              onPress={() =>
-                router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })
-              }
-            />
-          )}
+          renderItem={({ item }) => {
+            const displayTitle = item.title ?? t('trips.untitled');
+            return (
+              <TripCard
+                item={item}
+                theme={theme}
+                duplicatingId={duplicatingId}
+                title={displayTitle}
+                subtitle={subtitleOf(item)}
+                statusLabel={t(`trips.status.${statusOf(item)}`)}
+                duplicateA11y={t('trips.duplicateA11y', { title: displayTitle })}
+                deleteA11y={t('trips.deleteA11y', { title: displayTitle })}
+                onOpen={() =>
+                  router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })
+                }
+                onDelete={() => onDelete(item)}
+                onDuplicate={() => void onDuplicate(item)}
+              />
+            );
+          }}
         />
       )}
     </Screen>

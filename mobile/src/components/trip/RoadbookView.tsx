@@ -1,9 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { Alert, FlatList, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
+import { Bike } from '../ui/icons';
 import { StageCard, stageKey } from './StageCard';
+import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
 import {
   isStageToday,
@@ -86,6 +88,13 @@ export function RoadbookView({ id }: { id: string }) {
         gap: theme.spacing.md,
       }}
     >
+      {stages.length > 0 ? (
+        <RoadbookSummary
+          stages={stages}
+          startDate={startDate}
+          endDate={endDate}
+        />
+      ) : null}
       {state ? (
         <Text
           style={{
@@ -110,42 +119,79 @@ export function RoadbookView({ id }: { id: string }) {
   );
 
   return (
-    <FlatList
-      data={stages}
-      extraData={stageDiffs}
-      keyExtractor={(item) => stageKey(item)}
-      ListHeaderComponent={header}
-      ListEmptyComponent={
-        <View style={{ height: 300 }}>
-          <EmptyState title={t('trip.empty')} />
-        </View>
-      }
-      renderItem={({ item, index }) => {
-        const date = stageDateFor(startDate, item.dayNumber ?? index + 1);
-        const key = stageKey(item);
-        return (
-          <StageCard
-            stage={item}
-            index={index}
-            locked={isLocked}
-            outOfZone={outOfZone}
-            busy={busyKeys.has(key)}
-            onDelete={confirmDelete}
-            onAddStage={() => runGuarded(key, () => mutations.addStage(index))}
-            onAddRestDay={() =>
-              runGuarded(key, () => mutations.insertRestDay(index))
-            }
-            onEditDistance={(_, distance) =>
-              runGuarded(key, () => mutations.updateStageDistance(index, distance))
-            }
-            onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
-            date={date}
-            isToday={state === 'ongoing' && isStageToday(date, today)}
-            highlighted={stageDiffs.has(index)}
-          />
-        );
-      }}
-      style={{ backgroundColor: theme.colors.background }}
-    />
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={stages}
+        extraData={stageDiffs}
+        keyExtractor={(item) => stageKey(item)}
+        ListHeaderComponent={header}
+        contentContainerStyle={{ paddingBottom: theme.spacing['4xl'] }}
+        ListEmptyComponent={
+          <View style={{ height: 300 }}>
+            <EmptyState title={t('trip.empty')} />
+          </View>
+        }
+        renderItem={({ item, index }) => {
+          const date = stageDateFor(startDate, item.dayNumber ?? index + 1);
+          const key = stageKey(item);
+          return (
+            <StageCard
+              stage={item}
+              index={index}
+              locked={isLocked}
+              outOfZone={outOfZone}
+              busy={busyKeys.has(key)}
+              onDelete={confirmDelete}
+              onAddStage={() => runGuarded(key, () => mutations.addStage(index))}
+              onAddRestDay={() =>
+                runGuarded(key, () => mutations.insertRestDay(index))
+              }
+              onEditDistance={(_, distance) =>
+                runGuarded(key, () => mutations.updateStageDistance(index, distance))
+              }
+              onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
+              date={date}
+              isToday={state === 'ongoing' && isStageToday(date, today)}
+              highlighted={stageDiffs.has(index)}
+            />
+          );
+        }}
+        style={{ backgroundColor: theme.colors.background }}
+      />
+      {/* "En selle" FAB (Spike-UX): the in-ride screen is out of scope, so this
+          is a deliberate placeholder — it is disabled and dispatches nothing. */}
+      {stages.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('trip.rideCtaA11y')}
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={{
+            position: 'absolute',
+            right: theme.spacing.lg,
+            bottom: theme.spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+            backgroundColor: theme.colors.brandFill,
+            borderRadius: theme.radius.full,
+            paddingHorizontal: theme.spacing.lg,
+            paddingVertical: theme.spacing.md,
+            ...theme.shadows.medium,
+          }}
+        >
+          <Bike color={theme.colors.primaryForeground} size={20} />
+          <Text
+            style={{
+              color: theme.colors.primaryForeground,
+              fontFamily: theme.fonts.sansSemibold,
+              fontSize: 15,
+            }}
+          >
+            {t('trip.rideCta')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }

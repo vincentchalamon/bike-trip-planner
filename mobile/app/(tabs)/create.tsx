@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Screen } from '../../src/components/ui';
-import { FileUp, Route } from '../../src/components/ui/icons';
+import { FileUp, Link2, Route } from '../../src/components/ui/icons';
 import { SseStatusIndicator } from '../../src/components/trip';
 import { useTheme } from '../../src/theme';
 import {
@@ -167,6 +167,20 @@ export default function Create() {
     </View>
   );
 
+  const sectionLabel = (text: string) => (
+    <Text
+      style={{
+        color: theme.colors.mutedForeground,
+        fontFamily: theme.fonts.sansSemibold,
+        fontSize: 12,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+      }}
+    >
+      {text}
+    </Text>
+  );
+
   if (createdId) {
     return (
       <Screen scroll style={{ gap: theme.spacing.lg }}>
@@ -220,30 +234,22 @@ export default function Create() {
   }
 
   return (
-    <Screen scroll style={{ gap: theme.spacing.lg }}>
+    <Screen scroll style={{ gap: theme.spacing.xl }}>
       {title}
       <View style={{ gap: theme.spacing.md }}>
+        {sectionLabel(t('create.linkSection'))}
         <Input
-          label={t('create.linkLabel')}
           value={link}
           onChangeText={setLink}
           onBlur={() => setTouched(true)}
           placeholder={t('create.linkPlaceholder')}
+          leadingIcon={<Link2 color={theme.colors.mutedForeground} size={18} />}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
           inputMode="url"
           error={showError ? t('create.errors.invalidUrl') : undefined}
         />
-        <Text
-          style={{
-            color: theme.colors.mutedForeground,
-            fontFamily: theme.fonts.sans,
-            fontSize: 13,
-          }}
-        >
-          {t('create.supportedHint')}
-        </Text>
         <Button
           label={submitting ? t('create.submitting') : t('create.submit')}
           onPress={() => void onSubmit()}
@@ -268,33 +274,26 @@ export default function Create() {
       </View>
 
       <View style={{ gap: theme.spacing.md }}>
-        <Text
-          style={{
-            color: theme.colors.foreground,
-            fontFamily: theme.fonts.sansSemibold,
-            fontSize: 16,
-          }}
-        >
-          {t('create.gpxTitle')}
-        </Text>
-        <Text
-          style={{
-            color: theme.colors.mutedForeground,
-            fontFamily: theme.fonts.sans,
-            fontSize: 13,
-          }}
-        >
-          {t('create.gpxHint')}
-        </Text>
+        {sectionLabel(t('create.gpxTitle'))}
         <Button
           label={uploading ? t('create.gpxUploading') : t('create.gpxImport')}
           onPress={() => void onImportGpx()}
           loading={uploading}
           disabled={submitting}
-          variant="secondary"
-          icon={<FileUp color={theme.colors.foreground} size={18} />}
+          variant="outline"
+          icon={<FileUp color={theme.colors.brand} size={18} />}
           fullWidth
         />
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+            textAlign: 'center',
+          }}
+        >
+          {t('create.gpxHint')}
+        </Text>
       </View>
     </Screen>
   );

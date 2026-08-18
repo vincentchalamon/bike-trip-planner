@@ -78,10 +78,13 @@ describe('TripMap', () => {
     expect(style()).toBe(POSITRON_STYLE_URL);
 
     act(() => {
+      // Tap the "Satellite" segment of the layers pill (multiple buttons now
+      // exist: two layer segments + two zoom controls).
       out.root
         .find(
           (n: any) =>
             n.props.accessibilityRole === 'button' &&
+            n.props.accessibilityLabel === 'Satellite' &&
             typeof n.props.onPress === 'function',
         )
         .props.onPress();

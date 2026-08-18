@@ -20,7 +20,7 @@ import type { TFunction } from 'i18next';
 // Surface a mutation failure as a native alert. Conflict maps to the "list
 // refreshed" message (the runner has already triggered a re-scan); the routing
 // gate maps to the out-of-zone message.
-function notifyFailure(t: TFunction, reason: MutationFailure): void {
+export function notifyFailure(t: TFunction, reason: MutationFailure): void {
   switch (reason) {
     case 'locked':
       Alert.alert(t('trip.lockedTitle'), t('trip.lockedMessage'));
@@ -107,24 +107,18 @@ export function StageDataBlocks({
   const mutations = useTripMutations(tripId ?? '', onFailure);
   const editable = stageIndex !== undefined && tripId !== null;
   const disabled = isLocked || !isOnline;
+  // Order mirrors the Spike-UX stage-detail mockup: weather, then alerts,
+  // events, arrival accommodation, supply and finally points of interest.
   return (
-    <View style={{ gap: theme.spacing.sm }}>
+    <View style={{ gap: theme.spacing.md }}>
       <CycleNetworkBadge fraction={stage.onCycleNetwork ?? 0} />
+      <WeatherBlock weather={stage.weather} />
       <AlertsBlock
         alerts={stage.alerts}
         stageKey={stage.dayNumber}
         onNavigate={onAlertNavigate}
       />
-      <WeatherBlock weather={stage.weather} />
-      <PoiBlock
-        pois={stage.pois}
-        {...(editable && {
-          disabled,
-          outOfZone,
-          onAddWaypoint: (lat: number, lon: number) =>
-            void mutations.addPoiWaypoint(stageIndex, lat, lon),
-        })}
-      />
+      <EventsBlock events={stage.events} />
       <AccommodationBlock
         accommodations={stage.accommodations}
         selectedAccommodation={stage.selectedAccommodation}
@@ -143,7 +137,15 @@ export function StageDataBlocks({
         })}
       />
       <SupplyBlock supplyTimeline={stage.supplyTimeline} />
-      <EventsBlock events={stage.events} />
+      <PoiBlock
+        pois={stage.pois}
+        {...(editable && {
+          disabled,
+          outOfZone,
+          onAddWaypoint: (lat: number, lon: number) =>
+            void mutations.addPoiWaypoint(stageIndex, lat, lon),
+        })}
+      />
     </View>
   );
 }
