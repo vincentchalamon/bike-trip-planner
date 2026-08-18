@@ -17,6 +17,12 @@ export const authMiddleware: Middleware = {
     if (jwt) {
       request.headers.set('Authorization', `Bearer ${jwt}`);
     }
+    // Force an uncompressed body. RN's networking advertises `zstd, br, gzip`, and
+    // the server (Caddy) then picks zstd/br — which okhttp does not transparently
+    // decode, leaving the body decoded as Latin-1 (UTF-8 `é` C3A9 -> "Ã©"). Pinning
+    // `identity` keeps accented titles intact; API payloads are small so the extra
+    // bytes are negligible.
+    request.headers.set('Accept-Encoding', 'identity');
     pendingRetries.set(request, request.clone());
     return request;
   },
