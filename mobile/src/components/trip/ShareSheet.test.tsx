@@ -21,6 +21,7 @@ import { captureAndShareInfographic } from '../../lib/share-image';
 import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
 import { ShareSheet } from './ShareSheet';
+import { ShareInfographic } from './ShareInfographic';
 
 const mockGet = getTripShare as jest.Mock;
 const mockCreate = createTripShare as jest.Mock;
@@ -188,5 +189,22 @@ describe('ShareSheet (#1048)', () => {
       tree.update(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     });
     expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mount the off-screen infographic until opened once (hasOpened guard)', async () => {
+    mockGet.mockResolvedValue(null);
+
+    // Never opened: the expensive off-screen ShareInfographic stays unmounted,
+    // so its useMemo pipeline never runs on SSE stage updates.
+    const tree = await render(
+      <ShareSheet visible={false} onClose={jest.fn()} tripId="t1" />,
+    );
+    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
+
+    // Opening mounts it (so handleShareImage can capture it).
+    await act(async () => {
+      tree.update(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
+    });
+    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(1);
   });
 });

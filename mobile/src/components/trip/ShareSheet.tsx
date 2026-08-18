@@ -36,11 +36,21 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
+  // The off-screen infographic runs an expensive useMemo pipeline (projectRoute
+  // flattens every stage's decimated geometry, budget/difficulty calcs). RN's
+  // Modal keeps children mounted when hidden, so gate the render on "opened at
+  // least once" — mirrors the web ShareModal's `if (!open) return` — to avoid
+  // paying that cost on every SSE stage update for riders who never open Share.
+  const [hasOpened, setHasOpened] = useState(visible);
   const [busy, setBusy] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
 
   const infographicRef = useRef<RNView>(null);
+
+  useEffect(() => {
+    if (visible) setHasOpened(true);
+  }, [visible]);
 
   // Fetch the active share once, the first time the sheet opens.
   useEffect(() => {
@@ -203,29 +213,32 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
         </View>
       </ScrollView>
 
-      {/* Off-screen infographic captured to PNG by handleShareImage. */}
-      <View style={styles.offscreen} pointerEvents="none">
-        <ShareInfographic
-          ref={infographicRef}
-          title={title}
-          stages={stages}
-          startDate={startDate}
-          endDate={endDate}
-          labels={{
-            distance: t('share.statDistance'),
-            elevation: t('share.statElevation'),
-            dates: t('share.statDates'),
-            budget: t('share.statBudget'),
-            difficulty: {
-              label: t('share.statDifficulty'),
-              easy: t('share.difficultyEasy'),
-              medium: t('share.difficultyMedium'),
-              hard: t('share.difficultyHard'),
-            },
-            powered: t('share.poweredBy'),
-          }}
-        />
-      </View>
+      {/* Off-screen infographic captured to PNG by handleShareImage. Only
+          mounted after Share has been opened once (see hasOpened). */}
+      {hasOpened && (
+        <View style={styles.offscreen} pointerEvents="none">
+          <ShareInfographic
+            ref={infographicRef}
+            title={title}
+            stages={stages}
+            startDate={startDate}
+            endDate={endDate}
+            labels={{
+              distance: t('share.statDistance'),
+              elevation: t('share.statElevation'),
+              dates: t('share.statDates'),
+              budget: t('share.statBudget'),
+              difficulty: {
+                label: t('share.statDifficulty'),
+                easy: t('share.difficultyEasy'),
+                medium: t('share.difficultyMedium'),
+                hard: t('share.difficultyHard'),
+              },
+              powered: t('share.poweredBy'),
+            }}
+          />
+        </View>
+      )}
     </Sheet>
   );
 }
