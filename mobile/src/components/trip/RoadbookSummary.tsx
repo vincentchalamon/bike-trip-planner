@@ -3,32 +3,8 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
 import { computeEstimatedBudget, computeTripTotals } from '../../lib/share';
+import { formatTripDateRange } from '../../lib/dates';
 import { useTheme } from '../../theme';
-
-// Localised "15 → 20 août 2026" range for the summary card. Formatted in UTC so
-// the shown day never drifts by a timezone offset (mirrors formatStageDate).
-export function formatDateRange(
-  start: string,
-  end: string | null,
-  locale: string,
-): string {
-  const s = new Date(start + 'T00:00:00Z');
-  if (Number.isNaN(s.getTime())) return start;
-  const dayMonthYear = new Intl.DateTimeFormat(locale, {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  if (!end) return dayMonthYear.format(s);
-  const e = new Date(end + 'T00:00:00Z');
-  if (Number.isNaN(e.getTime())) return dayMonthYear.format(s);
-  const dayOnly = new Intl.DateTimeFormat(locale, {
-    timeZone: 'UTC',
-    day: 'numeric',
-  });
-  return `${dayOnly.format(s)} → ${dayMonthYear.format(e)}`;
-}
 
 interface RoadbookSummaryProps {
   stages: StageData[];
@@ -88,9 +64,8 @@ export function RoadbookSummary({
             fontSize: 14,
           }}
         >
-          {startDate
-            ? formatDateRange(startDate, endDate, i18n.language)
-            : t('trip.summary.noDates')}
+          {formatTripDateRange(startDate, endDate, i18n.language) ||
+            t('trip.summary.noDates')}
         </Text>
         <View style={styles.grid}>
           {metrics.map((m) => (

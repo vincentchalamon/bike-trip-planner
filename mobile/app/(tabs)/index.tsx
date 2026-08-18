@@ -24,34 +24,8 @@ import {
 } from '../../src/components/ui';
 import { Copy, Inbox, Search, Trash2 } from '../../src/components/ui/icons';
 import { useTheme, type Theme } from '../../src/theme';
-
-type TripStatus = 'draft' | 'analyzing' | 'analyzed';
-
-function statusOf(item: TripListItem): TripStatus {
-  return (item.status ?? 'draft') as TripStatus;
-}
-
-function badgeColors(theme: Theme, status: TripStatus): { bg: string; fg: string; border: string } {
-  if (status === 'analyzing') {
-    return { bg: theme.colors.accentSoft, fg: theme.colors.accentInk, border: theme.colors.accentBrand };
-  }
-  if (status === 'analyzed') {
-    return { bg: theme.colors.successSoft, fg: theme.colors.successInk, border: theme.colors.successBorder };
-  }
-  return { bg: theme.colors.muted, fg: theme.colors.mutedForeground, border: theme.colors.border };
-}
-
-function formatDateRange(start: string | null | undefined, end: string | null | undefined, locale: string): string {
-  const parse = (iso: string) => new Date(iso.includes('T') ? iso : `${iso}T00:00:00`);
-  const day = (d: Date) =>
-    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
-  const full = (d: Date) =>
-    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
-  if (start && end) return `${day(parse(start))} – ${full(parse(end))}`;
-  if (start) return full(parse(start));
-  if (end) return full(parse(end));
-  return '';
-}
+import { formatTripDateRange } from '../../src/lib/dates';
+import { badgeColors, statusOf, type TripStatus } from '../../src/screens/trips-list';
 
 // Decorative, data-free vignette: a neutral surface with a faint winding line
 // standing in for a route trace (the trip list carries no geometry).
@@ -272,7 +246,11 @@ export default function Trips() {
 
   function subtitleOf(item: TripListItem): string {
     const parts = [
-      formatDateRange(item.startDate, item.endDate, i18n.language),
+      formatTripDateRange(item.startDate, item.endDate, i18n.language, {
+        separator: ' – ',
+        month: 'short',
+        startStyle: 'dayMonth',
+      }),
       t('trips.stagesCount', { stages: item.stageCount ?? 0 }),
       t('trips.distanceKm', { distance: Math.round(item.totalDistance ?? 0) }),
     ].filter(Boolean);

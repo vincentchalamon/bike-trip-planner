@@ -9,6 +9,7 @@ import {
   computeTripTotals,
   type DifficultyLabels,
 } from '../../lib/share';
+import { formatTripDateRange } from '../../lib/dates';
 
 // Off-screen infographic card captured to PNG by react-native-view-shot (#1048).
 // RN adaptation of the web canvas (pwa/src/lib/infographic.ts): same content
@@ -116,17 +117,6 @@ export function projectRoute(
   };
 }
 
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (iso: string) =>
-    new Date(iso.includes('T') ? iso : `${iso}T00:00:00`).toLocaleDateString(
-      undefined,
-      { day: 'numeric', month: 'short', year: 'numeric' },
-    );
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`;
-  if (start) return fmt(start);
-  return '';
-}
-
 export interface InfographicLabels {
   distance: string;
   elevation: string;
@@ -161,7 +151,12 @@ export const ShareInfographic = forwardRef<View, ShareInfographicProps>(
     const profile = useMemo(() => buildProfilePoints(stages, null), [stages]);
 
     const activeCount = stages.filter((s) => !s.isRestDay).length;
-    const datesValue = formatDateRange(startDate, endDate) || `${activeCount}`;
+    const datesValue =
+      formatTripDateRange(startDate, endDate, undefined, {
+        separator: ' → ',
+        month: 'short',
+        startStyle: 'full',
+      }) || `${activeCount}`;
 
     const stats: Array<{ icon: string; label: string; value: string; color: string }> = [
       {

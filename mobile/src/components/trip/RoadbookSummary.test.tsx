@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { Text } from 'react-native';
 import type { StageData, WeatherData } from '@btp/core';
 import i18n from '../../i18n';
-import { RoadbookSummary, formatDateRange } from './RoadbookSummary';
+import { RoadbookSummary } from './RoadbookSummary';
 
 function texts(tree: any): string[] {
   return tree.root
@@ -51,25 +51,6 @@ function stage(overrides: Partial<StageData> = {}): StageData {
 
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-});
-
-describe('formatDateRange', () => {
-  it('formats a start→end range in UTC (no timezone drift)', () => {
-    // 15 → 20 août 2026 (day-only start, full end).
-    expect(formatDateRange('2026-08-15', '2026-08-20', 'fr')).toBe('15 → 20 août 2026');
-  });
-
-  it('formats a single date when there is no end', () => {
-    expect(formatDateRange('2026-08-20', null, 'fr')).toBe('20 août 2026');
-  });
-
-  it('falls back to the raw start string on an invalid start ISO', () => {
-    expect(formatDateRange('not-a-date', '2026-08-20', 'fr')).toBe('not-a-date');
-  });
-
-  it('formats the start alone when the end ISO is invalid', () => {
-    expect(formatDateRange('2026-08-15', 'nope', 'fr')).toBe('15 août 2026');
-  });
 });
 
 describe('RoadbookSummary', () => {
