@@ -1965,9 +1965,10 @@ Hébergement réservé **hors app** (HomeExchange, AirBnb, Booking, warmshowers,
 
 **Décisions de conception (arrêtées avant exécution) :**
 
+- **Parité totale avec un hébergement standard** : le manuel est le **même** DTO `Accommodation` / `selectedAccommodation`, seul `source = "manual"` (+ `type = "other"`) le distingue — aucun modèle, type ou composant de rendu parallèle. Indiscernable en aval (budget, export GPX/FIT/texte, partage, carte, persistance, désélection).
 - **Ticket unique transverse** (backend + web + mobile), pas de découpage par plateforme.
 - **Adresse géocodée (Nominatim)** côté backend → `lat/lon`, pour que l'hébergement manuel se comporte comme un vrai (déplace `endPoint` de l'étape + `startPoint` de la suivante, recalcul), plutôt qu'une métadonnée informative seule. Client HTTP scopé (contrainte SSRF : base URI dédiée, 2 redirects, 10 s) + cache ; échec géocodage → 422.
-- **Contrat** `Accommodation` : nouveau champ `address`, `source` étendu à `manual`. Pas de nouveau champ prix : le « prix total » saisi est mappé sur `estimatedPriceMin = estimatedPriceMax` + `isExactPrice = true`. `make typegen` régénère `core/schema.d.ts`.
+- **Contrat** `Accommodation` : `address` ajouté comme champ **général et nullable** du modèle partagé (pas manuel-only : OSM `addr:*` / DataTourisme en portent aussi), `source` étendu à `manual`. Pas de champ prix parallèle : le « prix total » passe par le contrat standard `estimatedPriceMin = estimatedPriceMax` + `isExactPrice = true`. `make typegen` régénère `core/schema.d.ts`.
 - Socle réutilisé : pattern `StageSelectAccommodationProcessor` (Sprint 45/46 hébergements, Sprint 56 #1045 sélection/scan mobile). Le type `"other"` est déjà réservé aux hébergements manuels (`core/accommodation-constants.ts`).
 
 </details>
