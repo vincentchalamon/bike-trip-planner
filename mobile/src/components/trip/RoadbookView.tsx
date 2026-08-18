@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Alert, FlatList, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,8 @@ import {
 } from './roadbook-dates';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
-import { runDeleteStage } from '../../store/delete-stage';
+import type { MutationFailure } from '../../store/gating';
+import { useTripMutations } from '../../hooks/use-trip-mutations';
 
 // The roadbook tab: a lifecycle summary header (upcoming / ongoing / past),
 // the lock / out-of-zone / no-dates banners, then the stage list (StageCard
@@ -33,22 +35,23 @@ export function RoadbookView({ id }: { id: string }) {
   const state = tripStateFromDates(startDate, endDate, today);
   const hasDates = startDate !== null && endDate !== null;
 
+  // One failure surface for every inline edit: map the normalized reason to a
+  // localized alert (#1044). The runners already handle optimistic apply +
+  // rollback; the authoritative state comes back over SSE (reconciled by core).
+  const onFailure = useCallback(
+    (reason: MutationFailure) =>
+      Alert.alert(t('trip.edit.failedTitle'), t(`trip.edit.reason.${reason}`)),
+    [t],
+  );
+  const mutations = useTripMutations(id, onFailure);
+
   function confirmDelete(index: number): void {
     Alert.alert(t('trip.deleteConfirmTitle'), t('trip.deleteConfirmMessage'), [
       { text: t('trip.cancel'), style: 'cancel' },
       {
         text: t('trip.delete'),
         style: 'destructive',
-        onPress: () => {
-          // Optimistic delete + rollback are orchestrated in runDeleteStage; the
-          // authoritative state comes back over SSE (reconciled by core).
-          void runDeleteStage(id, index, useTripStore.getState(), (reason) => {
-            Alert.alert(
-              reason === 'locked' ? t('trip.lockedTitle') : t('trip.deleteFailedTitle'),
-              reason === 'locked' ? t('trip.lockedMessage') : t('trip.deleteFailedMessage'),
-            );
-          });
-        },
+        onPress: () => void mutations.deleteStage(index),
       },
     ]);
   }
@@ -100,7 +103,13 @@ export function RoadbookView({ id }: { id: string }) {
             stage={item}
             index={index}
             locked={isLocked}
+            outOfZone={outOfZone}
             onDelete={confirmDelete}
+            onAddStage={(i) => void mutations.addStage(i)}
+            onAddRestDay={(i) => void mutations.insertRestDay(i)}
+            onEditDistance={(i, distance) =>
+              void mutations.updateStageDistance(i, distance)
+            }
             onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
             date={date}
             isToday={state === 'ongoing' && isStageToday(date, today)}
