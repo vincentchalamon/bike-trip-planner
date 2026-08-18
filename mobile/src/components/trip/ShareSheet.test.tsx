@@ -166,14 +166,24 @@ describe('ShareSheet (#1048)', () => {
     expect(button(tree, 'Texte copié')).toBeTruthy();
   });
 
-  it('shares the infographic PNG via the capture helper', async () => {
+  it('captures + shares the infographic once mounted, without touching the link buttons', async () => {
     mockGet.mockResolvedValue(null);
 
     const tree = await render(
       <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
     );
+    // Idle: the expensive off-screen infographic is not mounted.
+    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
+
     await press(button(tree, "Partager l'image"));
+    // Pressing mounts it; capture fires after the layout timeout.
+    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(1);
+    await act(async () => {
+      jest.advanceTimersByTime(50);
+    });
     expect(mockCapture).toHaveBeenCalledTimes(1);
+    // Once done it unmounts again (no idle SSE-update cost).
+    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
   });
 
   it('fetches the existing share only once across re-renders (hasFetched guard)', async () => {
@@ -191,20 +201,14 @@ describe('ShareSheet (#1048)', () => {
     expect(mockGet).toHaveBeenCalledTimes(1);
   });
 
-  it('does not mount the off-screen infographic until opened once (hasOpened guard)', async () => {
+  it('keeps the off-screen infographic unmounted while the sheet is just open (idle)', async () => {
     mockGet.mockResolvedValue(null);
 
-    // Never opened: the expensive off-screen ShareInfographic stays unmounted,
-    // so its useMemo pipeline never runs on SSE stage updates.
+    // Opening the sheet must NOT mount the expensive infographic — it only mounts
+    // during a capture — so its useMemo pipeline never runs on idle SSE updates.
     const tree = await render(
-      <ShareSheet visible={false} onClose={jest.fn()} tripId="t1" />,
+      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
     );
     expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
-
-    // Opening mounts it (so handleShareImage can capture it).
-    await act(async () => {
-      tree.update(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
-    });
-    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(1);
   });
 });

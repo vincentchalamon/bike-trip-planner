@@ -36,21 +36,19 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
-  // The off-screen infographic runs an expensive useMemo pipeline (projectRoute
-  // flattens every stage's decimated geometry, budget/difficulty calcs). RN's
-  // Modal keeps children mounted when hidden, so gate the render on "opened at
-  // least once" — mirrors the web ShareModal's `if (!open) return` — to avoid
-  // paying that cost on every SSE stage update for riders who never open Share.
-  const [hasOpened, setHasOpened] = useState(visible);
   const [busy, setBusy] = useState(false);
+  // Image capture has its own busy flag so its spinner doesn't also light up the
+  // link buttons (which read `busy`). The off-screen infographic runs an
+  // expensive useMemo pipeline (projectRoute flattens every stage's decimated
+  // geometry, budget/difficulty calcs); RN's Modal keeps children mounted when
+  // hidden, so instead of paying that cost on open / every SSE update we mount it
+  // only for the duration of a capture (`capturing`), keeping the sheet snappy.
+  const [imageBusy, setImageBusy] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
 
   const infographicRef = useRef<RNView>(null);
-
-  useEffect(() => {
-    if (visible) setHasOpened(true);
-  }, [visible]);
 
   // Fetch the active share once, the first time the sheet opens.
   useEffect(() => {
@@ -127,14 +125,32 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
     await Share.share({ message: buildText() });
   }, [buildText]);
 
-  const handleShareImage = useCallback(async () => {
-    setBusy(true);
-    try {
-      await captureAndShareInfographic(infographicRef, title);
-    } finally {
-      setBusy(false);
-    }
-  }, [title]);
+  // Mount the off-screen infographic, then capture it once it has laid out.
+  const handleShareImage = useCallback(() => {
+    setImageBusy(true);
+    setCapturing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!capturing) return;
+    let cancelled = false;
+    // Let the just-mounted off-screen infographic lay out before captureRef reads
+    // it (a frame is enough; a small timeout is a safe cross-device margin).
+    const handle = setTimeout(async () => {
+      try {
+        await captureAndShareInfographic(infographicRef, title);
+      } finally {
+        if (!cancelled) {
+          setCapturing(false);
+          setImageBusy(false);
+        }
+      }
+    }, 50);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [capturing, title]);
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('share.title')}>
@@ -189,8 +205,8 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
           label={t('share.shareImage')}
           variant="secondary"
           size="sm"
-          loading={busy}
-          onPress={() => void handleShareImage()}
+          loading={imageBusy}
+          onPress={handleShareImage}
         />
 
         {/* Formatted text */}
@@ -213,9 +229,10 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
         </View>
       </ScrollView>
 
-      {/* Off-screen infographic captured to PNG by handleShareImage. Only
-          mounted after Share has been opened once (see hasOpened). */}
-      {hasOpened && (
+      {/* Off-screen infographic captured to PNG by handleShareImage. Mounted only
+          while a capture is in progress (see capturing) so the sheet stays snappy
+          and the expensive render never runs on idle SSE updates. */}
+      {capturing && (
         <View style={styles.offscreen} pointerEvents="none">
           <ShareInfographic
             ref={infographicRef}
