@@ -131,7 +131,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
             <ExportButton
               tripId={tripId}
               tripTitle={title ?? t('trip.title')}
-              stage={{ index: safeIndex, dayNumber: stage.dayNumber ?? safeIndex + 1 }}
+              stage={{ dayNumber: stage.dayNumber ?? safeIndex + 1 }}
             />
           ) : null}
         </View>

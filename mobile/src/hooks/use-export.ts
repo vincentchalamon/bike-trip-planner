@@ -49,15 +49,19 @@ export async function runExportTrip(
 }
 
 // Fetch + write + share a single stage (see {@link runExportTrip}).
+// The `{index}` path segment of `GET /trips/{tripId}/stages/{index}/export`
+// actually resolves on the 1-based `dayNumber` server-side (Stage.php's Link
+// targets `dayNumber`, not the 0-based array position) — pass `dayNumber`, not
+// a 0-based index, or the request 404s (index 0) or exports the wrong stage
+// (index N-1 → day N).
 export async function runExportStage(
   tripId: string,
-  index: number,
   dayNumber: number,
   tripTitle: string,
   format: ExportFormat,
 ): Promise<boolean> {
   try {
-    const bytes = await fetchStageExport(tripId, index, format);
+    const bytes = await fetchStageExport(tripId, dayNumber, format);
     await writeAndShare(bytes, stageExportFileName(tripTitle, dayNumber, format), format);
     return true;
   } catch {
@@ -87,7 +91,6 @@ export interface UseExport {
   exportTrip: (tripId: string, tripTitle: string, format: ExportFormat) => Promise<void>;
   exportStage: (
     tripId: string,
-    index: number,
     dayNumber: number,
     tripTitle: string,
     format: ExportFormat,
@@ -113,13 +116,12 @@ export function useExport(onFailure: () => void): UseExport {
   const exportStage = useCallback(
     async (
       tripId: string,
-      index: number,
       dayNumber: number,
       tripTitle: string,
       format: ExportFormat,
     ) => {
       setExporting(true);
-      const ok = await runExportStage(tripId, index, dayNumber, tripTitle, format);
+      const ok = await runExportStage(tripId, dayNumber, tripTitle, format);
       setExporting(false);
       if (!ok) onFailure();
     },

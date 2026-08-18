@@ -44,8 +44,12 @@ export const authMiddleware: Middleware = {
     }
     // Rebuild the retried response with the global `Response` constructor so it
     // passes openapi-fetch's `instanceof Response` check (same realm as the check).
+    // Read via arrayBuffer(), not text(): a text round-trip re-encodes the body as
+    // UTF-8, corrupting any binary payload (e.g. a #1047 FIT export retried after
+    // a mid-download token refresh). arrayBuffer preserves the raw bytes for both
+    // binary and text content.
     const retried = await fetch(retry);
-    const body = await retried.text();
+    const body = await retried.arrayBuffer();
     return new Response(body, {
       status: retried.status,
       statusText: retried.statusText,

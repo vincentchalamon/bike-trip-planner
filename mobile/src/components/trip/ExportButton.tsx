@@ -9,7 +9,9 @@ interface ExportButtonProps {
   tripId: string;
   tripTitle: string;
   // When set, exports this stage instead of the whole trip as GPX/FIT (#1047).
-  stage?: { index: number; dayNumber: number };
+  // `dayNumber` is the 1-based day the export route resolves on server-side —
+  // not the 0-based array index.
+  stage?: { dayNumber: number };
 }
 
 // Native share-sheet export (#1047): pick GPX/FIT via a native alert, download the
@@ -41,7 +43,7 @@ export function ExportButton({ tripId, tripTitle, stage }: ExportButtonProps) {
           cancelLabel: t('export.cancel'),
           onSelect: (format) =>
             void (stage
-              ? exportStage(tripId, stage.index, stage.dayNumber, tripTitle, format)
+              ? exportStage(tripId, stage.dayNumber, tripTitle, format)
               : exportTrip(tripId, tripTitle, format)),
         })
       }

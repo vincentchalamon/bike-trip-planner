@@ -99,14 +99,25 @@ describe('runExportTrip (#1047)', () => {
 describe('runExportStage (#1047)', () => {
   it('resolves true after fetching and sharing the stage file', async () => {
     mockFetchStageExport.mockResolvedValue(new ArrayBuffer(4));
-    const ok = await runExportStage('trip-1', 1, 1, 'My Trip', 'fit');
-    expect(mockFetchStageExport).toHaveBeenCalledWith('trip-1', 1, 'fit');
+    const ok = await runExportStage('trip-1', 3, 'My Trip', 'fit');
+    expect(mockFetchStageExport).toHaveBeenCalledWith('trip-1', 3, 'fit');
     expect(ok).toBe(true);
+  });
+
+  // Regression (#1047 review): the export route resolves `{index}` on the
+  // 1-based `dayNumber` server-side, not the 0-based array position. A stage at
+  // array index 2 is day 3 — asserting the exact dayNumber value (distinct from
+  // any plausible 0-based index) catches a caller passing the wrong one back.
+  it('passes dayNumber, not a 0-based index, to fetchStageExport', async () => {
+    mockFetchStageExport.mockResolvedValue(new ArrayBuffer(4));
+    await runExportStage('trip-1', 3, 'My Trip', 'gpx');
+    expect(mockFetchStageExport).toHaveBeenCalledWith('trip-1', 3, 'gpx');
+    expect(mockFetchStageExport).not.toHaveBeenCalledWith('trip-1', 2, 'gpx');
   });
 
   it('resolves false when the fetch fails, never throws', async () => {
     mockFetchStageExport.mockRejectedValue(new Error('network down'));
-    const ok = await runExportStage('trip-1', 1, 1, 'My Trip', 'fit');
+    const ok = await runExportStage('trip-1', 3, 'My Trip', 'fit');
     expect(ok).toBe(false);
   });
 });
@@ -181,7 +192,7 @@ describe('useExport (#1047)', () => {
     const { result, unmount } = renderHook(onFailure);
 
     await act(async () => {
-      await result.current.exportStage('trip-1', 1, 1, 'My Trip', 'fit');
+      await result.current.exportStage('trip-1', 3, 'My Trip', 'fit');
     });
     expect(onFailure).not.toHaveBeenCalled();
     unmount();
