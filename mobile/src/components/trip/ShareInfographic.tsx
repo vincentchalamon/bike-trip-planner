@@ -42,6 +42,23 @@ const mercY = (lat: number) => {
   return (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2;
 };
 
+/**
+ * Min/max of a numeric array via a single reduce. NOT `Math.min(...arr)`: a
+ * multi-day trip flattens several thousand decimated points into one array, and
+ * spreading that many arguments overflows Hermes' stricter argument limit
+ * (RangeError: Maximum call stack size exceeded). Mirrors the web infographic's
+ * loop-based bounds. Callers guarantee a non-empty array.
+ */
+export function minMax(values: number[]): { min: number; max: number } {
+  return values.reduce(
+    (acc, v) => ({
+      min: v < acc.min ? v : acc.min,
+      max: v > acc.max ? v : acc.max,
+    }),
+    { min: values[0]!, max: values[0]! },
+  );
+}
+
 interface RoutePolyline {
   points: string;
   color: string;
@@ -54,7 +71,7 @@ interface ProjectedRoute {
 }
 
 /** Project the trip route into the map box (WebMercator, fit + centered). */
-function projectRoute(
+export function projectRoute(
   stages: StageData[],
   w: number,
   h: number,
@@ -66,10 +83,8 @@ function projectRoute(
   }
   const xs = all.map((p) => (p.lon + 180) / 360);
   const ys = all.map((p) => mercY(p.lat));
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  const { min: minX, max: maxX } = minMax(xs);
+  const { min: minY, max: maxY } = minMax(ys);
   const spanX = maxX - minX || 1e-6;
   const spanY = maxY - minY || 1e-6;
   const scale = Math.min(w / spanX, h / spanY) * 0.92;
@@ -187,8 +202,7 @@ export const ShareInfographic = forwardRef<View, ShareInfographicProps>(
     const profilePath = useMemo(() => {
       if (profile.length < 2) return null;
       const eles = profile.map((p) => p.ele);
-      const minEle = Math.min(...eles);
-      const maxEle = Math.max(...eles);
+      const { min: minEle, max: maxEle } = minMax(eles);
       const range = maxEle - minEle;
       const displayMin = minEle - Math.max(range * 0.1, 10);
       const displayMax = maxEle + Math.max(range * 1.5, 100);
