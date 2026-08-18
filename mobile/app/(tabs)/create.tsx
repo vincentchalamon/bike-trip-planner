@@ -3,10 +3,15 @@ import { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Screen } from '../../src/components/ui';
-import { Route } from '../../src/components/ui/icons';
+import { FileUp, Route } from '../../src/components/ui/icons';
 import { SseStatusIndicator } from '../../src/components/trip';
 import { useTheme } from '../../src/theme';
-import { isSupportedSourceUrl, runCreateTrip } from '../../src/store/create-trip';
+import {
+  isSupportedSourceUrl,
+  pickGpxFile,
+  runCreateTrip,
+  runUploadGpx,
+} from '../../src/store/create-trip';
 import { runAnalyze } from '../../src/store/mutations';
 import { useAnalysisFollow } from '../../src/hooks/use-analysis-follow';
 import { useTripStore } from '../../src/store/trip-store';
@@ -15,6 +20,7 @@ import type { MutationFailure } from '../../src/store/gating';
 type CreateErrorKey =
   | 'create.errors.offline'
   | 'create.errors.invalidUrl'
+  | 'create.errors.invalidGpx'
   | 'create.errors.conflict'
   | 'create.errors.network'
   | 'create.errors.generic';
@@ -38,6 +44,23 @@ function failureMessageKey(reason: MutationFailure): CreateErrorKey {
   }
 }
 
+// GPX upload variant: a rejected file surfaces as 400 (missing/invalid extension
+// → 'error') or 422 (empty / no track points → 'validation'); both mean "bad GPX"
+// rather than a bad link. Other reasons keep the transversal wording.
+function gpxFailureMessageKey(reason: MutationFailure): CreateErrorKey {
+  switch (reason) {
+    case 'offline':
+      return 'create.errors.offline';
+    case 'validation':
+    case 'error':
+      return 'create.errors.invalidGpx';
+    case 'network':
+      return 'create.errors.network';
+    default:
+      return 'create.errors.generic';
+  }
+}
+
 // Create screen: paste a Komoot / Strava / RideWithGPS link (or open from a
 // share deep link `?link=`) → POST /trips → follow the computation over SSE and
 // launch / re-launch the enrichment analysis. Structured so a second creation
@@ -52,6 +75,7 @@ export default function Create() {
   const [link, setLink] = useState('');
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [launched, setLaunched] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -82,6 +106,20 @@ export default function Create() {
       Alert.alert(t('create.createFailedTitle'), t(failureMessageKey(reason))),
     );
     setSubmitting(false);
+    if (id) {
+      setCreatedId(id);
+      setLaunched(false);
+    }
+  }
+
+  async function onImportGpx(): Promise<void> {
+    const file = await pickGpxFile();
+    if (!file) return; // user cancelled
+    setUploading(true);
+    const id = await runUploadGpx(file, (reason) =>
+      Alert.alert(t('create.createFailedTitle'), t(gpxFailureMessageKey(reason))),
+    );
+    setUploading(false);
     if (id) {
       setCreatedId(id);
       setLaunched(false);
@@ -210,7 +248,51 @@ export default function Create() {
           label={submitting ? t('create.submitting') : t('create.submit')}
           onPress={() => void onSubmit()}
           loading={submitting}
-          disabled={!isValid}
+          disabled={!isValid || uploading}
+          fullWidth
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+          }}
+        >
+          {t('create.or')}
+        </Text>
+        <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+      </View>
+
+      <View style={{ gap: theme.spacing.md }}>
+        <Text
+          style={{
+            color: theme.colors.foreground,
+            fontFamily: theme.fonts.sansSemibold,
+            fontSize: 16,
+          }}
+        >
+          {t('create.gpxTitle')}
+        </Text>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+          }}
+        >
+          {t('create.gpxHint')}
+        </Text>
+        <Button
+          label={uploading ? t('create.gpxUploading') : t('create.gpxImport')}
+          onPress={() => void onImportGpx()}
+          loading={uploading}
+          disabled={submitting}
+          variant="secondary"
+          icon={<FileUp color={theme.colors.foreground} size={18} />}
           fullWidth
         />
       </View>

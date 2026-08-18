@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   deleteTrip,
+  duplicateTrip,
   fetchTrips,
   type TripFilters,
   type TripListItem,
 } from '../api/trips';
+import { useOfflineStore } from '../store/offline-store';
 
 const DEBOUNCE_MS = 300;
 
@@ -35,6 +37,20 @@ export async function runLoadTrips(
 export async function runDeleteTrip(id: string): Promise<string | null> {
   const { ok } = await deleteTrip(id);
   return ok ? null : 'La suppression a échoué.';
+}
+
+// Duplicate a trip from the list (deep clone, allowed on a started/out-of-zone
+// trip — it clones rather than edits — but not offline). Returns the new trip id
+// on success, or null on failure. Never throws.
+export async function runDuplicateTrip(id: string): Promise<string | null> {
+  if (!useOfflineStore.getState().isOnline) {
+    return null;
+  }
+  try {
+    return await duplicateTrip(id);
+  } catch {
+    return null;
+  }
 }
 
 /** More items on the server than we have loaded → another page is available. */
@@ -79,6 +95,7 @@ export interface UseTrips {
   reload: () => void;
   loadMore: () => void;
   remove: (id: string) => Promise<string | null>;
+  duplicate: (id: string) => Promise<string | null>;
 }
 
 // Paginated (12/page), server-filtered trip list. Every filter (title and both
@@ -174,6 +191,16 @@ export function useTrips(): UseTrips {
     return err;
   }, []);
 
+  // Duplicate a trip; on success reload page 1 so the clone surfaces at the top
+  // (the backend orders by creation date). Returns the new id, or null on failure.
+  const duplicate = useCallback(async (id: string): Promise<string | null> => {
+    const newId = await runDuplicateTrip(id);
+    if (newId) {
+      setNonce((n) => n + 1);
+    }
+    return newId;
+  }, []);
+
   return {
     trips,
     loading,
@@ -191,5 +218,6 @@ export function useTrips(): UseTrips {
     reload,
     loadMore,
     remove,
+    duplicate,
   };
 }

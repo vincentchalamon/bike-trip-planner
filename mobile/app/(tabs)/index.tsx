@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
 import type { TripListItem } from '../../src/api/trips';
@@ -11,7 +12,7 @@ import {
   LoadingState,
   Screen,
 } from '../../src/components/ui';
-import { Inbox, Search, Trash2 } from '../../src/components/ui/icons';
+import { Copy, Inbox, Search, Trash2 } from '../../src/components/ui/icons';
 import { useTheme } from '../../src/theme';
 
 export default function Trips() {
@@ -35,7 +36,12 @@ export default function Trips() {
     reload,
     loadMore,
     remove,
+    duplicate,
   } = useTrips();
+
+  // Id of the trip whose duplication is in flight — guards against a double-tap
+  // firing two POST /trips/{id}/duplicate (each would clone the trip again).
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   function onDelete(item: TripListItem): void {
     confirmDeleteTrip({
@@ -49,6 +55,17 @@ export default function Trips() {
         void remove(item.id ?? '');
       },
     });
+  }
+
+  async function onDuplicate(item: TripListItem): Promise<void> {
+    const id = item.id ?? '';
+    if (duplicatingId === id) return; // re-entrance guard: a duplication is in flight
+    setDuplicatingId(id);
+    const newId = await duplicate(id);
+    setDuplicatingId(null);
+    if (!newId) {
+      Alert.alert(t('trips.duplicateFailedTitle'), t('trips.duplicateFailed'));
+    }
   }
 
   return (
@@ -146,17 +163,32 @@ export default function Trips() {
                 status: item.status ?? 'draft',
               })}
               right={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('trips.deleteA11y', {
-                    title: item.title ?? t('trips.untitled'),
-                  })}
-                  hitSlop={8}
-                  onPress={() => onDelete(item)}
-                  style={{ padding: theme.spacing.xs }}
-                >
-                  <Trash2 color={theme.colors.mutedIcon} size={20} />
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('trips.duplicateA11y', {
+                      title: item.title ?? t('trips.untitled'),
+                    })}
+                    accessibilityState={{ disabled: duplicatingId === item.id }}
+                    disabled={duplicatingId === item.id}
+                    hitSlop={8}
+                    onPress={() => void onDuplicate(item)}
+                    style={{ padding: theme.spacing.xs }}
+                  >
+                    <Copy color={theme.colors.mutedIcon} size={20} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('trips.deleteA11y', {
+                      title: item.title ?? t('trips.untitled'),
+                    })}
+                    hitSlop={8}
+                    onPress={() => onDelete(item)}
+                    style={{ padding: theme.spacing.xs }}
+                  >
+                    <Trash2 color={theme.colors.mutedIcon} size={20} />
+                  </Pressable>
+                </View>
               }
               onPress={() =>
                 router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })

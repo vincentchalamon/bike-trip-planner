@@ -1,4 +1,5 @@
-import { createTrip } from '../api/trips';
+import * as DocumentPicker from 'expo-document-picker';
+import { createTrip, uploadGpx, type GpxFile } from '../api/trips';
 import { normalizeStatus, type MutationFailure } from './gating';
 import { useOfflineStore } from './offline-store';
 
@@ -39,6 +40,58 @@ export async function runCreateTrip(
   }
   try {
     const { id, status } = await createTrip(sourceUrl.trim());
+    if (!id) {
+      onFailure(normalizeStatus(status));
+      return null;
+    }
+    return id;
+  } catch {
+    onFailure('network');
+    return null;
+  }
+}
+
+/**
+ * Open the system file picker for a single GPX file. Returns the picked asset,
+ * or null when the user cancels (mobile-adapt of the web drag&drop). The GPX
+ * mime type is not reliably reported across platforms, so we accept any file and
+ * let the backend validate the extension/content. A picker rejection (denied
+ * permission, or a second pick launched while one is in flight — rejected on
+ * some platforms) is treated as a cancel (null), never a thrown rejection.
+ */
+export async function pickGpxFile(): Promise<GpxFile | null> {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets?.[0]) {
+      return null;
+    }
+    const asset = result.assets[0];
+    return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a trip from a picked GPX file. Blocked while offline (like every other
+ * mutation); a backend rejection (missing file / invalid extension = 400, empty
+ * or track-less GPX = 422) is normalized to a {@link MutationFailure}. Returns
+ * the new trip id, or null with the failure reported.
+ */
+export async function runUploadGpx(
+  file: GpxFile,
+  onFailure: (reason: MutationFailure) => void,
+): Promise<string | null> {
+  if (!useOfflineStore.getState().isOnline) {
+    onFailure('offline');
+    return null;
+  }
+  try {
+    const { id, status } = await uploadGpx(file);
     if (!id) {
       onFailure(normalizeStatus(status));
       return null;
