@@ -190,4 +190,13 @@ export const en: typeof fr = {
     fr: 'Français',
     en: 'English',
   },
+  export: {
+    trip: 'Export',
+    stage: 'Export',
+    gpx: 'GPX',
+    fit: 'FIT',
+    cancel: 'Cancel',
+    failedTitle: 'Export failed',
+    failedMessage: 'The export failed. Try again.',
+  },
 };

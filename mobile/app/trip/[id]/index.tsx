@@ -9,7 +9,12 @@ import {
   SegmentedControl,
   type Segment,
 } from '../../../src/components/ui';
-import { RoadbookView, SseStatusIndicator, TripMapView } from '../../../src/components/trip';
+import {
+  ExportButton,
+  RoadbookView,
+  SseStatusIndicator,
+  TripMapView,
+} from '../../../src/components/trip';
 import { useTheme } from '../../../src/theme';
 import { useTripLive } from '../../../src/hooks/use-trip-live';
 import { useTripStore } from '../../../src/store/trip-store';
@@ -75,6 +80,7 @@ export default function TripRoadbook() {
             {title ?? t('trip.title')}
           </Text>
           <SseStatusIndicator computing={computing} />
+          <ExportButton tripId={id} tripTitle={title ?? t('trip.title')} />
         </View>
         <SegmentedControl segments={segments} value={view} onChange={setView} />
       </View>

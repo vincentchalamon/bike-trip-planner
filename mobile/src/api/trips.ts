@@ -325,3 +325,73 @@ export async function uploadGpx(
   });
   return { id: data?.id ?? null, status: response.status };
 }
+
+// ---------------------------------------------------------------------------
+// GPX/FIT export (#1047): both endpoints negotiate on Accept (no `.gpx`/`.fit`
+// path suffix in the OpenAPI-typed paths) and return binary/text content, not
+// JSON — `parseAs: 'arrayBuffer'` reads the raw bytes instead of the default
+// JSON parse, while still going through the auth middleware in `client.ts`.
+// ---------------------------------------------------------------------------
+
+export type ExportFormat = 'gpx' | 'fit';
+
+const EXPORT_ACCEPT: Record<ExportFormat, string> = {
+  gpx: 'application/gpx+xml',
+  fit: 'application/vnd.ant.fit',
+};
+
+/** Sanitize a trip title into a filesystem-safe base name (mirrors the pwa helper). */
+function sanitizeExportFileBase(title: string): string {
+  return title.trim().replace(/[^a-z0-9-_]/gi, '-') || 'trip';
+}
+
+/** e.g. "Entre Sensée et Escaut" + gpx -> "Entre-Sens-e-et-Escaut.gpx". */
+export function tripExportFileName(tripTitle: string, format: ExportFormat): string {
+  return `${sanitizeExportFileBase(tripTitle)}.${format}`;
+}
+
+/** e.g. "Entre Sensée et Escaut" + day 1 + fit -> "Entre-Sens-e-et-Escaut-stage-1.fit". */
+export function stageExportFileName(
+  tripTitle: string,
+  dayNumber: number,
+  format: ExportFormat,
+): string {
+  return `${sanitizeExportFileBase(tripTitle)}-stage-${dayNumber}.${format}`;
+}
+
+/** Download the full trip as a single GPX/FIT file (all stages merged). */
+export async function fetchTripExport(
+  tripId: string,
+  format: ExportFormat,
+): Promise<ArrayBuffer> {
+  const { data, error, response } = await api.GET('/trips/{id}', {
+    params: { path: { id: tripId } },
+    headers: { Accept: EXPORT_ACCEPT[format] },
+    parseAs: 'arrayBuffer',
+  });
+  if (error || !response.ok) {
+    throw new Error('Failed to export trip');
+  }
+  return data;
+}
+
+/**
+ * Download a single stage as GPX/FIT. The `{index}` path segment actually
+ * resolves on the 1-based `dayNumber` server-side (Stage.php's Link targets
+ * `dayNumber`, not the 0-based array position) — pass `dayNumber`.
+ */
+export async function fetchStageExport(
+  tripId: string,
+  dayNumber: number,
+  format: ExportFormat,
+): Promise<ArrayBuffer> {
+  const { data, error, response } = await api.GET('/trips/{tripId}/stages/{index}/export', {
+    params: { path: { tripId, index: String(dayNumber) } },
+    headers: { Accept: EXPORT_ACCEPT[format] },
+    parseAs: 'arrayBuffer',
+  });
+  if (error || !response.ok) {
+    throw new Error('Failed to export stage');
+  }
+  return data;
+}

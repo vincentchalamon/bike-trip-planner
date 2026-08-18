@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronRight, Mountain, Route } from '../ui/icons';
 import { TripMap } from '../TripMap';
 import { alertSegmentToCoords, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
+import { ExportButton } from './ExportButton';
 import { StageDataBlocks } from './StageDataBlocks';
 import { formatStageDate, stageDateFor } from './roadbook-dates';
 import {
@@ -32,6 +33,8 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   const stages = useTripStore((s) => s.stages);
   const startDate = useTripStore((s) => s.startDate);
   const loading = useTripStore((s) => s.loading);
+  const tripId = useTripStore((s) => s.tripId);
+  const title = useTripStore((s) => s.title);
   const [index, setIndex] = useState(initialIndex);
   // Stretch highlighted by an alert `navigate` action ([lon, lat] for the map).
   const [highlightedSegment, setHighlightedSegment] = useState<
@@ -112,16 +115,26 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
           />
         </View>
 
-        <Text
-          style={{
-            color: theme.colors.foreground,
-            fontFamily: theme.fonts.serif,
-            fontSize: 22,
-          }}
-        >
-          {heading}
-          {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
-        </Text>
+        <View style={styles.headingRow}>
+          <Text
+            style={{
+              color: theme.colors.foreground,
+              fontFamily: theme.fonts.serif,
+              fontSize: 22,
+              flex: 1,
+            }}
+          >
+            {heading}
+            {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
+          </Text>
+          {tripId ? (
+            <ExportButton
+              tripId={tripId}
+              tripTitle={title ?? t('trip.title')}
+              stage={{ index: safeIndex, dayNumber: stage.dayNumber ?? safeIndex + 1 }}
+            />
+          ) : null}
+        </View>
         <Text
           style={{
             color: theme.colors.mutedForeground,
@@ -257,6 +270,12 @@ function StatCell({
 
 const styles = StyleSheet.create({
   navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

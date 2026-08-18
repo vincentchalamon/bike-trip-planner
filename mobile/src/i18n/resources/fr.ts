@@ -188,4 +188,13 @@ export const fr = {
     fr: 'Français',
     en: 'English',
   },
+  export: {
+    trip: 'Exporter',
+    stage: 'Exporter',
+    gpx: 'GPX',
+    fit: 'FIT',
+    cancel: 'Annuler',
+    failedTitle: 'Export impossible',
+    failedMessage: "L'export a échoué. Réessayez.",
+  },
 };
