@@ -49,6 +49,9 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
   const [textCopied, setTextCopied] = useState(false);
 
   const infographicRef = useRef<RNView>(null);
+  // Guards the one-shot capture: set on press, consumed by the off-screen view's
+  // onLayout so a screenshot fires exactly once, only after real layout.
+  const captureArmedRef = useRef(false);
 
   // Fetch the active share once, the first time the sheet opens.
   useEffect(() => {
@@ -125,32 +128,26 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
     await Share.share({ message: buildText() });
   }, [buildText]);
 
-  // Mount the off-screen infographic, then capture it once it has laid out.
+  // Mount the off-screen infographic; the actual capture fires from its onLayout
+  // (see runCapture) so we never race layout on a slow device / heavier trip.
   const handleShareImage = useCallback(() => {
     setImageBusy(true);
+    captureArmedRef.current = true;
     setCapturing(true);
   }, []);
 
-  useEffect(() => {
-    if (!capturing) return;
-    let cancelled = false;
-    // Let the just-mounted off-screen infographic lay out before captureRef reads
-    // it (a frame is enough; a small timeout is a safe cross-device margin).
-    const handle = setTimeout(async () => {
-      try {
-        await captureAndShareInfographic(infographicRef, title);
-      } finally {
-        if (!cancelled) {
-          setCapturing(false);
-          setImageBusy(false);
-        }
-      }
-    }, 50);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [capturing, title]);
+  // Triggered by the off-screen infographic's onLayout — once it has actually
+  // laid out — not a timer. Guarded to fire exactly once per press.
+  const runCapture = useCallback(async () => {
+    if (!captureArmedRef.current) return;
+    captureArmedRef.current = false;
+    try {
+      await captureAndShareInfographic(infographicRef, title);
+    } finally {
+      setCapturing(false);
+      setImageBusy(false);
+    }
+  }, [title]);
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('share.title')}>
@@ -233,7 +230,11 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
           while a capture is in progress (see capturing) so the sheet stays snappy
           and the expensive render never runs on idle SSE updates. */}
       {capturing && (
-        <View style={styles.offscreen} pointerEvents="none">
+        <View
+          style={styles.offscreen}
+          pointerEvents="none"
+          onLayout={() => void runCapture()}
+        >
           <ShareInfographic
             ref={infographicRef}
             title={title}

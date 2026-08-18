@@ -176,10 +176,13 @@ describe('ShareSheet (#1048)', () => {
     expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
 
     await press(button(tree, "Partager l'image"));
-    // Pressing mounts it; capture fires after the layout timeout.
-    expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(1);
+    // Pressing mounts it; capture fires from the off-screen view's onLayout.
+    const infographic = tree.root.findByType(ShareInfographic);
+    expect(infographic).toBeTruthy();
     await act(async () => {
-      jest.advanceTimersByTime(50);
+      infographic.parent!.props.onLayout({
+        nativeEvent: { layout: { x: 0, y: 0, width: 1, height: 1 } },
+      });
     });
     expect(mockCapture).toHaveBeenCalledTimes(1);
     // Once done it unmounts again (no idle SSE-update cost).
