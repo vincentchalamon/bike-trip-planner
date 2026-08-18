@@ -1881,7 +1881,7 @@ Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)*
 
 ### Ordre de merge et conflits attendus (Sprint 56)
 
-Toutes les PRs ciblent `main` sauf **#1084 (#1043) qui est stackée sur #1080 (#1042)** (base `feature/1042`). Toutes vertes (CI + `Mobile tsc+jest`), reviews claude-code-review traitées (0 thread ouvert), en attente d'approbation/merge utilisateur. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
+Toutes les PRs ciblent `main` sauf **#1084 (#1043) qui est stackée sur #1080 (#1042)** (base `feature/1042`). CI verte (`Mobile tsc+jest`) et reviews claude-code-review traitées sur l'ensemble ; le check `claude-review` et `mergeStateStatus` sont asynchrones après chaque push, **à revérifier juste avant merge** (`gh pr checks <pr>` / `gh pr view <pr> --json mergeStateStatus`). En attente d'approbation/merge utilisateur. Modèle : Opus partout sauf #1047 (Sonnet). Aucune modif backend (`api/`) ; pas de `DTO_CHANGED`.
 
 **Ordre de merge recommandé** (minimise les rebases de fichiers additifs partagés) :
 
