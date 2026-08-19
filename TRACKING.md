@@ -1943,6 +1943,8 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 | 1 | [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte (réglages, email change, RGPD, early-access, FAQ/légal, onboarding) | L | ⏳ À faire | — | Sprint 54 |
 | 2 | [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales (gestion + catégories) | M | ⏳ À faire | — | #1049 |
 | 3 | [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM (device-token + sender + secrets compose + réception) | L | ⏳ À faire | — | #1050 |
+| 4 | [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design(mobile): écran Compte conforme à la maquette 10-account (+ thème) | S | ⏳ À faire | — | #1049 |
+| 5 | [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design(mobile): écran Notifications conforme à la maquette 11-notifications (+ thème) | S | ⏳ À faire | — | #1050 |
 
 </details>
 
@@ -1957,6 +1959,7 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 |-------|----|-------|--------|--------|-----|-----------|
 | 1 | [#1052](https://github.com/vincentchalamon/bike-trip-planner/issues/1052) | [epic] offline auto-sync (cache voyages à venir/en cours + fraîcheur + dégradation carte) | L | ⏳ À faire | — | Sprint 55 |
 | 2 | [#1053](https://github.com/vincentchalamon/bike-trip-planner/issues/1053) | [epic] in-ride / GPS foreground + nearby-pois | L | ⏳ À faire | — | #1052 |
+| 3 | [#1094](https://github.com/vincentchalamon/bike-trip-planner/issues/1094) | design(mobile): écran In-ride conforme à la maquette 08-in-ride (+ thème) | S | ⏳ À faire | — | #1053 |
 
 </details>
 
