@@ -6,7 +6,7 @@
     "@id",
     "@type",
     "alerts",
-    "pois",
+    "resupply",
     "accommodations",
     "events",
     "trip",
@@ -44,14 +44,8 @@
         "properties": {}
       }
     },
-    "pois": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [],
-        "additionalProperties": false,
-        "properties": {}
-      }
+    "resupply": {
+      "type": "object"
     },
     "accommodations": {
       "type": "array",
