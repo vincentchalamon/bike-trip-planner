@@ -94,16 +94,48 @@ from every read model.
 
 ### 4. Vulcain is a layered optimization, not a foundation
 
-[Vulcain](https://vulcain.rocks) is in-stack (API Platform native support, Caddy
-module) and designed for exactly this client-driven fetch shape. But its headline
-mechanism, **HTTP/2 Server Push, is deprecated in browsers** (Chrome removed it in
-2022), so the "push linked resources" win no longer lands on the web. The parts
-that remain current — **`Fields` sparse fieldsets** (one `/stages/{index}`
-resource, web asking for all fields, mobile for the summary subset, avoiding two
-contract shapes) and `Link` / `103 Early Hints` preloading — are worth a **short
-spike** in Phase 2. The baseline that ships regardless is the client-driven
-**parallel progressive fetch** above; Vulcain layers on top only if the spike
-shows a clear win. We do **not** build the loading model on Server Push.
+[Vulcain](https://vulcain.rocks) is designed for exactly this client-driven fetch
+shape. But its headline mechanism, **HTTP/2 Server Push, is deprecated in
+browsers** (Chrome removed it in 2022), so the "push linked resources" win no
+longer lands on the web. The parts that remain current — **`Fields` sparse
+fieldsets** (one `/stages/{index}` resource, web asking for all fields, mobile for
+the summary subset, avoiding two contract shapes) and `Link` / `103 Early Hints`
+preloading — were worth a **short spike** before layering them on. The baseline
+that ships regardless is the client-driven **parallel progressive fetch** above;
+Vulcain layers on top only if the spike shows a clear win. We do **not** build the
+loading model on Server Push.
+
+#### Spike outcome (#1106): NO-GO for now — defer, do not adopt
+
+The spike verdict is **do not add Vulcain on top of the split**. Measured against
+the current stack, none of the three mechanisms clears the bar:
+
+- **Server Push** — dead in browsers, excluded up front.
+- **`Fields` sparse fieldsets** — would collapse the two stage shapes (the summary
+  stage inlined in `TripDetail.stages[]` vs the full `StageResponse` served at
+  `/stages/{index}/detail`) into a single resource. But that is a **contract**
+  simplification, **not a payload win**: the payload bottleneck this ADR targets —
+  the 1.18 MB corridor-POI dump — is already eliminated by the `#1099` resupply
+  curation and the read-model split, both served over HTTP/2-multiplexed parallel
+  fetch. The residual drift between the two shapes is narrow (the summary carries
+  `startLabel`/`endLabel`/`onCycleNetwork`; the full stage carries
+  `geometry`/`events`/a `trip` back-reference) and is cheaply maintained in
+  `@btp/core` without new infrastructure.
+- **`103 Early Hints`** — its benefit over the already-shipped HTTP/2-multiplexed
+  parallel fetch is marginal, and it depends on the production edge (the
+  Coolify-managed Traefik / the FrankenPHP–Caddy service) actually emitting or
+  forwarding `103`, which is unconfigured and unverified.
+
+Enabling any of this is not free: the `vulcain` Caddy directive must be added (the
+module ships compiled into the stock `dunglas/frankenphp` image but is **not**
+activated — it is absent from `.docker/php/Caddyfile`), API Platform's single
+`jsonld` format wiring extended, and both `openapi-fetch` clients taught to send
+the `Fields` header — new moving parts for a marginal, non-performance gain.
+
+**Revisit trigger:** adopt `Fields` only if the two-shape drift becomes a real
+maintenance burden (schema divergence causing client bugs), or `103 Early Hints`
+only if a measured client-side waterfall shows it would materially cut
+time-to-first-stage. Absent either signal, the progressive split alone stands.
 
 ## Consequences
 
