@@ -11,6 +11,7 @@ type AuthContextValue = {
   email: string | null;
   requestLink: (email: string) => Promise<boolean>;
   verify: (token: string) => Promise<boolean>;
+  refreshEmail: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -69,14 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
+  // Re-read the account email from the session — called after an email change is
+  // committed so the account screen reflects the new address without a re-login.
+  const refreshEmail = useCallback(async (): Promise<void> => {
+    const { data } = await api.GET('/auth/session', { headers: { Accept: LD_JSON } });
+    setEmail(data?.email ?? null);
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     await clearTokens();
     setAuthenticated(false);
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ready, authenticated, email, requestLink, verify, logout }),
-    [ready, authenticated, email, requestLink, verify, logout],
+    () => ({ ready, authenticated, email, requestLink, verify, refreshEmail, logout }),
+    [ready, authenticated, email, requestLink, verify, refreshEmail, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
