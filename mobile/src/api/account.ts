@@ -23,8 +23,14 @@ export async function fetchAccountExport(): Promise<ArrayBuffer> {
   return data;
 }
 
-/** Anonymise the account (204). Never throws: resolves to false on any failure. */
+// Anonymise the account (204). Never throws: resolves to false on any failure,
+// including a network rejection (offline/timeout) where `api.DELETE` rejects
+// before any response — otherwise the caller's button stays stuck in `loading`.
 export async function deleteAccount(): Promise<boolean> {
-  const { response } = await api.DELETE('/users/me', { headers: { Accept: LD_JSON } });
-  return response.ok;
+  try {
+    const { response } = await api.DELETE('/users/me', { headers: { Accept: LD_JSON } });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
