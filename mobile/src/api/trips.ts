@@ -84,6 +84,7 @@ export type TripRoute = components['schemas']['TripRoute.jsonld'];
 export async function fetchTripRoute(id: string): Promise<TripRoute | null> {
   const { data, error } = await api.GET('/trips/{id}/route', {
     params: { path: { id } },
+    headers: ld,
   });
   if (error) {
     throw new Error('Failed to fetch trip route');
