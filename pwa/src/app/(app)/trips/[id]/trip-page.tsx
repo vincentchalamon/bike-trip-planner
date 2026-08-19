@@ -145,7 +145,7 @@ function TripLoader({ tripId }: { tripId: string }) {
       // Pull the route geometry split off /detail (ADR-057) and merge it in.
       void fetchTripRoute(tripId)
         .then((route) => {
-          if (route) useTripStore.getState().applyRoute(route);
+          if (!cancelled && route) useTripStore.getState().applyRoute(route);
         })
         .catch(() => {});
 
