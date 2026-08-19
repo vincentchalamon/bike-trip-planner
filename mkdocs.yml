@@ -137,6 +137,8 @@ nav:
       - adr/adr-054-mobile-design-system.md
       - adr/adr-055-mobile-state-architecture.md
       - adr/adr-056-mercure-header-auth-non-browser.md
+      - adr/adr-057-progressive-trip-loading.md
+      - adr/adr-058-push-fcm.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md
