@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
+import { registerDeviceToken, subscribeTokenRotation, unregisterDeviceToken } from '../notifications/push';
 import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';
@@ -69,6 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [authenticated]);
 
+  // Register this device's push token once authenticated (fresh login or a
+  // restored session), and re-register on OS token rotation (#1125). Silent no-op
+  // when push permission is absent.
+  useEffect(() => {
+    if (!authenticated) return;
+    void registerDeviceToken();
+    const rotation = subscribeTokenRotation();
+    return () => rotation.remove();
+  }, [authenticated]);
+
   // A refresh that definitively fails clears the tokens outside React; flip the
   // state so the (tabs) guard redirects to /login instead of 401'ing forever.
   useEffect(() => onSessionInvalidated(endSession), [endSession]);
@@ -100,6 +111,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
+    // Unregister the push token while the JWT is still valid, so a shared device
+    // stops receiving this account's pushes (#1125). Best-effort: a failure must
+    // not block logout.
+    await unregisterDeviceToken().catch(() => undefined);
     await clearTokens();
     endSession();
   }, [endSession]);

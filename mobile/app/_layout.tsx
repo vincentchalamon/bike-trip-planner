@@ -3,11 +3,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
 import '../src/i18n';
 import { AuthProvider } from '../src/auth/store';
+import { usePushRouting } from '../src/notifications/use-push-routing';
 import { ThemeProvider, useTheme } from '../src/theme';
 
 function RootNavigator() {
   const { t } = useTranslation();
   const theme = useTheme();
+  // Route notification taps (warm + cold start) to the concerned screen (#1125).
+  usePushRouting();
   return (
     <Stack
       // The header integrates with the theme (light/dark) instead of the default
