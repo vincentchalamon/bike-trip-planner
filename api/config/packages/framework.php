@@ -105,6 +105,28 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 0,
                     'timeout' => 2,
                 ],
+                // Google OAuth2 token endpoint for the FCM service-account
+                // JWT-bearer exchange (epic #1051). Host-locked; the /token endpoint
+                // never legitimately redirects, so refuse any 3xx (SEC-007).
+                'google_oauth.client' => [
+                    'base_uri' => 'https://oauth2.googleapis.com',
+                    'max_redirects' => 0,
+                    'timeout' => 10,
+                    'retry_failed' => [
+                        'max_retries' => 2,
+                    ],
+                ],
+                // FCM HTTP v1 send endpoint (epic #1051). Host-locked; the project
+                // id folded into the path is a trusted server-side value, never a
+                // user URL, and the endpoint never redirects (SEC-007).
+                'fcm.client' => [
+                    'base_uri' => 'https://fcm.googleapis.com',
+                    'max_redirects' => 0,
+                    'timeout' => 10,
+                    'retry_failed' => [
+                        'max_retries' => 2,
+                    ],
+                ],
             ],
         ],
     ]);

@@ -21,6 +21,7 @@ use App\Message\ResolveStageLabels;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
+use App\Message\SendPushNotification;
 use App\Messenger\HandleCorrelationIdMiddleware;
 use App\Messenger\SendCorrelationIdMiddleware;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -67,6 +68,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 RecalculateStages::class => 'async',
                 ResolveStageLabels::class => 'async',
                 ScanEvents::class => 'async',
+                SendPushNotification::class => 'async',
                 AllEnrichmentsCompleted::class => 'async',
             ],
         ],

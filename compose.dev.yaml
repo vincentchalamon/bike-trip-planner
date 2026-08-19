@@ -28,6 +28,9 @@ services:
       # empty secret; dev needs a non-empty value or AccessRequestHmacService
       # throws at instantiation and the confirmation email is never sent.
       ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
+      # Push notifications (epic #1051). Empty in dev: FcmCredentials fails closed
+      # only on an actual send, so unrelated endpoints keep working with no key.
+      FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
       LOCK_DSN: redis://redis:6379
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
@@ -62,6 +65,9 @@ services:
       APP_ENV: dev
       MAILER_DSN: smtp://mailcatcher:1025
       ACCESS_REQUEST_HMAC_SECRET: dev-access-request-hmac-secret
+      # Push notifications (epic #1051). Empty in dev: FcmCredentials fails closed
+      # only on an actual send, so unrelated endpoints keep working with no key.
+      FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       JWT_SECRET_KEY: /app/config/jwt/private.pem

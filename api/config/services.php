@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Mercure\NullTripUpdatePublisher;
 use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Push\FcmClient;
+use App\Push\PushSenderInterface;
 use App\Repository\RedisTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -24,6 +26,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->autoconfigure();
 
     $services->load('App\\', __DIR__.'/../src/');
+
+    $services->alias(PushSenderInterface::class, FcmClient::class);
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);

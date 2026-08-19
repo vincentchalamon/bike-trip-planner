@@ -37,6 +37,9 @@ x-recette-env: &recette-env
   # Non-empty secret so AccessRequestHmacService boots (ADR-029): the early-access
   # confirmation email is signed with it. Prod stays fail-closed on the empty default.
   ACCESS_REQUEST_HMAC_SECRET: recette-access-request-hmac-secret
+  # Push notifications (epic #1051). Empty in recette: FcmCredentials fails closed
+  # only on an actual send, so the rest of the stack boots without a real FCM key.
+  FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
 
 services:
   php:

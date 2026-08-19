@@ -28,4 +28,39 @@ final class DeviceTokenRepository extends ServiceEntityRepository implements Dev
     {
         return $this->findOneBy(['token' => $token, 'user' => $user]);
     }
+
+    /**
+     * @return list<DeviceToken>
+     */
+    public function findByUserId(string $userId): array
+    {
+        /** @var list<DeviceToken> $tokens */
+        $tokens = $this->createQueryBuilder('dt')
+            ->andWhere('IDENTITY(dt.user) = :userId')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+
+        return $tokens;
+    }
+
+    /**
+     * Removes every device token whose value is in the given list (FCM reported
+     * them UNREGISTERED / 404). No-op on an empty list.
+     *
+     * @param list<string> $tokens
+     */
+    public function deleteByTokens(array $tokens): void
+    {
+        if ([] === $tokens) {
+            return;
+        }
+
+        $this->createQueryBuilder('dt')
+            ->delete()
+            ->where('dt.token IN (:tokens)')
+            ->setParameter('tokens', $tokens)
+            ->getQuery()
+            ->execute();
+    }
 }

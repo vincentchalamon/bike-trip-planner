@@ -71,6 +71,10 @@ services:
       FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
       MAILER_DSN: "${MAILER_DSN:-}"
       ACCESS_REQUEST_HMAC_SECRET: "${ACCESS_REQUEST_HMAC_SECRET:-}"
+      # FCM service-account JSON key for push notifications (epic #1051). Forwarded
+      # from the Coolify/host env; empty here so FcmCredentials fails closed rather
+      # than sending with a bogus key. Only the SendPushNotification worker reads it.
+      FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
@@ -160,6 +164,10 @@ services:
       FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
       MAILER_DSN: "${MAILER_DSN:-}"
       ACCESS_REQUEST_HMAC_SECRET: "${ACCESS_REQUEST_HMAC_SECRET:-}"
+      # FCM service-account JSON key for push notifications (epic #1051). Forwarded
+      # from the Coolify/host env; empty here so FcmCredentials fails closed rather
+      # than sending with a bogus key. Only the SendPushNotification worker reads it.
+      FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"

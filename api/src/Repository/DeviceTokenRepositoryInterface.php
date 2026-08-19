@@ -17,4 +17,14 @@ interface DeviceTokenRepositoryInterface
      * tokens (no object-level authorization to mask — see DeviceTokenDeleteProcessor).
      */
     public function findOneOwnedByUser(string $token, User $user): ?DeviceToken;
+
+    /**
+     * @return list<DeviceToken>
+     */
+    public function findByUserId(string $userId): array;
+
+    /**
+     * @param list<string> $tokens
+     */
+    public function deleteByTokens(array $tokens): void;
 }
