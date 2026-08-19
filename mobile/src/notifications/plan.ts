@@ -53,6 +53,37 @@ export function notificationIdentifier(category: LocalCategory, tripId: string):
   return `btp:${category}:${tripId}`;
 }
 
+// A one-shot whose ideal fire time is already in the past (rawFireAt <= now) is
+// clamped to `now` and fires immediately. Once fired it drops out of the scheduled
+// set, so without the persistent `delivered` guard reconcile keeps re-scheduling it
+// every pass (the id looks unscheduled). Suppress the re-schedule once delivered; a
+// future rawFireAt (e.g. departure pushed back) re-arms it, and reconcile clears the
+// delivered mark when it re-schedules that future instance.
+function buildAction(
+  category: LocalCategory,
+  tripId: string,
+  active: boolean,
+  rawFireAt: number,
+  now: number,
+  message: CategoryMessage,
+  delivered: ReadonlySet<string>,
+): NotificationAction {
+  const identifier = notificationIdentifier(category, tripId);
+  const pastDue = rawFireAt <= now;
+  const shouldSchedule = active && !(pastDue && delivered.has(identifier));
+  if (!shouldSchedule) {
+    return { type: 'cancel', identifier, category, tripId };
+  }
+  return {
+    type: 'schedule',
+    identifier,
+    category,
+    tripId,
+    fireAt: Math.max(now, rawFireAt),
+    ...message,
+  };
+}
+
 // Warn that a trip is not cached for offline use, timed to the approach of its
 // departure. Scheduled only while the departure is still in the future and the
 // data is not yet cached; cancelled once the cache is ready or the date passes.
@@ -61,25 +92,23 @@ function offlineNotReadyAction(
   prefs: Record<LocalCategory, boolean>,
   messages: LocalMessages,
   now: number,
+  delivered: ReadonlySet<string>,
 ): NotificationAction {
-  const identifier = notificationIdentifier('offlineNotReady', trip.id);
   const departure = trip.startDate ? Date.parse(trip.startDate) : NaN;
-  const shouldSchedule =
+  const active =
     prefs.offlineNotReady &&
     !trip.offlineReady &&
     Number.isFinite(departure) &&
     departure > now;
-  if (!shouldSchedule) {
-    return { type: 'cancel', identifier, category: 'offlineNotReady', tripId: trip.id };
-  }
-  return {
-    type: 'schedule',
-    identifier,
-    category: 'offlineNotReady',
-    tripId: trip.id,
-    fireAt: Math.max(now, departure - OFFLINE_LEAD_MS),
-    ...messages.offlineNotReady,
-  };
+  return buildAction(
+    'offlineNotReady',
+    trip.id,
+    active,
+    departure - OFFLINE_LEAD_MS,
+    now,
+    messages.offlineNotReady,
+    delivered,
+  );
 }
 
 // Remind the rider to set dates on a trip created without any. Scheduled while the
@@ -89,38 +118,39 @@ function tripNoDateAction(
   prefs: Record<LocalCategory, boolean>,
   messages: LocalMessages,
   now: number,
+  delivered: ReadonlySet<string>,
 ): NotificationAction {
-  const identifier = notificationIdentifier('tripNoDate', trip.id);
-  const shouldSchedule = prefs.tripNoDate && !trip.startDate;
-  if (!shouldSchedule) {
-    return { type: 'cancel', identifier, category: 'tripNoDate', tripId: trip.id };
-  }
+  const active = prefs.tripNoDate && !trip.startDate;
   const created = Date.parse(trip.createdAt);
   const base = Number.isFinite(created) ? created : now;
-  return {
-    type: 'schedule',
-    identifier,
-    category: 'tripNoDate',
-    tripId: trip.id,
-    fireAt: Math.max(now, base + NO_DATE_DELAY_MS),
-    ...messages.tripNoDate,
-  };
+  return buildAction(
+    'tripNoDate',
+    trip.id,
+    active,
+    base + NO_DATE_DELAY_MS,
+    now,
+    messages.tripNoDate,
+    delivered,
+  );
 }
 
 /**
  * One schedule-or-cancel action per (category, trip). Actions are scoped to the
  * trips passed in, so the reconcile layer never touches notifications for trips it
- * has not been told about (the list is paginated).
+ * has not been told about (the list is paginated). `delivered` holds the ids of
+ * one-shots that already fired, so a past-due reminder is not re-scheduled.
  */
 export function planLocalNotifications(input: {
   trips: TripNotificationInput[];
   prefs: Record<LocalCategory, boolean>;
   messages: LocalMessages;
   now?: number;
+  delivered?: ReadonlySet<string>;
 }): NotificationAction[] {
   const now = input.now ?? Date.now();
+  const delivered = input.delivered ?? new Set<string>();
   return input.trips.flatMap((trip) => [
-    offlineNotReadyAction(trip, input.prefs, input.messages, now),
-    tripNoDateAction(trip, input.prefs, input.messages, now),
+    offlineNotReadyAction(trip, input.prefs, input.messages, now, delivered),
+    tripNoDateAction(trip, input.prefs, input.messages, now, delivered),
   ]);
 }

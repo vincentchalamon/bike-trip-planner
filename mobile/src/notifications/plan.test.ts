@@ -26,6 +26,7 @@ const ALL_ON: Record<LocalCategory, boolean> = {
 function plan(
   trip: Partial<TripNotificationInput>,
   prefs: Record<LocalCategory, boolean> = ALL_ON,
+  delivered: ReadonlySet<string> = new Set<string>(),
 ): NotificationAction[] {
   const full: TripNotificationInput = {
     id: 't1',
@@ -34,7 +35,13 @@ function plan(
     offlineReady: false,
     ...trip,
   };
-  return planLocalNotifications({ trips: [full], prefs, messages: MESSAGES, now: NOW });
+  return planLocalNotifications({
+    trips: [full],
+    prefs,
+    messages: MESSAGES,
+    now: NOW,
+    delivered,
+  });
 }
 
 function action(actions: NotificationAction[], category: LocalCategory): NotificationAction {
@@ -131,5 +138,52 @@ describe('planLocalNotifications — offlineNotReady', () => {
       'offlineNotReady',
     );
     expect(a.type).toBe('cancel');
+  });
+});
+
+describe('planLocalNotifications — delivered one-shot guard', () => {
+  const NODATE_ID = notificationIdentifier('tripNoDate', 't1');
+  const OFFLINE_ID = notificationIdentifier('offlineNotReady', 't1');
+
+  it('does not re-schedule a past-due reminder that already fired (condition still true)', () => {
+    // Created 10 days ago, still dateless → rawFireAt is in the past. Once delivered
+    // it must not be re-scheduled even though the "no date" condition still holds.
+    const a = action(
+      plan(
+        { startDate: null, createdAt: new Date(NOW - 10 * DAY).toISOString() },
+        ALL_ON,
+        new Set([NODATE_ID]),
+      ),
+      'tripNoDate',
+    );
+    expect(a.type).toBe('cancel');
+  });
+
+  it('re-arms a delivered offline reminder once its fire date is back in the future', () => {
+    // Departure far out → rawFireAt > now: a fresh future instance, so a stale
+    // delivered mark must not suppress it (reconcile clears the mark).
+    const a = action(
+      plan(
+        { startDate: new Date(NOW + 10 * DAY).toISOString(), offlineReady: false },
+        ALL_ON,
+        new Set([OFFLINE_ID]),
+      ),
+      'offlineNotReady',
+    );
+    expect(a.type).toBe('schedule');
+    if (a.type === 'schedule') expect(a.fireAt).toBe(NOW + 10 * DAY - OFFLINE_LEAD_MS);
+  });
+
+  it('still schedules a past-due reminder that has NOT been delivered yet', () => {
+    const a = action(
+      plan(
+        { startDate: null, createdAt: new Date(NOW - 10 * DAY).toISOString() },
+        ALL_ON,
+        new Set<string>(),
+      ),
+      'tripNoDate',
+    );
+    expect(a.type).toBe('schedule');
+    if (a.type === 'schedule') expect(a.fireAt).toBe(NOW);
   });
 });

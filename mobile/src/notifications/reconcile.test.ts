@@ -36,9 +36,13 @@ function scheduledWith(identifiers: string[]): void {
   getAll.mockResolvedValue(identifiers.map((identifier) => ({ identifier })));
 }
 
+const markDelivered = jest.fn();
+const clearDelivered = jest.fn();
+
 async function run(
   trip: Partial<TripNotificationInput>,
   prefs: Record<LocalCategory, boolean> = ALL_ON,
+  delivered: ReadonlySet<string> = new Set<string>(),
 ): Promise<void> {
   const full: TripNotificationInput = {
     id: 't1',
@@ -52,6 +56,9 @@ async function run(
     prefs,
     messages: MESSAGES,
     now: NOW,
+    delivered,
+    markDelivered,
+    clearDelivered,
   });
 }
 
@@ -62,6 +69,8 @@ beforeEach(() => {
   getAll.mockReset();
   schedule.mockReset();
   cancel.mockReset();
+  markDelivered.mockReset();
+  clearDelivered.mockReset();
 });
 
 describe('reconcileLocalNotifications', () => {
@@ -112,5 +121,43 @@ describe('reconcileLocalNotifications', () => {
       offlineReady: true,
     });
     expect(cancel).toHaveBeenCalledWith(OFFLINE_ID);
+  });
+
+  it('marks a past-due one-shot delivered when it fires immediately', async () => {
+    scheduledWith([]);
+    // Created 10 days ago, still dateless → fireAt clamps to now (fires at once).
+    await run({ startDate: null, createdAt: new Date(NOW - 10 * DAY).toISOString() });
+    expect(schedule).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: NODATE_ID, trigger: { type: 'date', date: NOW } }),
+    );
+    expect(markDelivered).toHaveBeenCalledWith(NODATE_ID);
+  });
+
+  it('does not re-fire a past-due one-shot already delivered (condition still true)', async () => {
+    scheduledWith([]); // fired → gone from the scheduled set
+    await run(
+      { startDate: null, createdAt: new Date(NOW - 10 * DAY).toISOString() },
+      ALL_ON,
+      new Set([NODATE_ID]),
+    );
+    expect(schedule).not.toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: NODATE_ID }),
+    );
+    expect(markDelivered).not.toHaveBeenCalled();
+  });
+
+  it('clears the delivered mark when re-arming a future instance', async () => {
+    scheduledWith([]);
+    // Departure far out → fireAt in the future: a fresh instance re-arms.
+    await run(
+      { startDate: new Date(NOW + 10 * DAY).toISOString(), offlineReady: false },
+      ALL_ON,
+      new Set([OFFLINE_ID]),
+    );
+    expect(schedule).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: OFFLINE_ID }),
+    );
+    expect(clearDelivered).toHaveBeenCalledWith(OFFLINE_ID);
+    expect(markDelivered).not.toHaveBeenCalled();
   });
 });

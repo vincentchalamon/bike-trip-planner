@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TripListItem } from '../api/trips';
 import { useNotificationPrefs } from '../store/notification-prefs';
+import { useDeliveredNotifications } from '../store/delivered-notifications';
 import { reconcileLocalNotifications } from '../notifications/reconcile';
 import type { LocalMessages, TripNotificationInput } from '../notifications/plan';
 
@@ -13,13 +14,21 @@ export function useLocalNotifications(trips: TripListItem[]): void {
   const enabled = useNotificationPrefs((s) => s.enabled);
   const hydrated = useNotificationPrefs((s) => s.hydrated);
   const load = useNotificationPrefs((s) => s.load);
+  const delivered = useDeliveredNotifications((s) => s.delivered);
+  const deliveredHydrated = useDeliveredNotifications((s) => s.hydrated);
+  const loadDelivered = useDeliveredNotifications((s) => s.load);
+  const markDelivered = useDeliveredNotifications((s) => s.markDelivered);
+  const clearDelivered = useDeliveredNotifications((s) => s.clearDelivered);
 
   // The prefs store hydrates on the notifications screen; hydrate it here too so the
-  // schedule honours persisted toggles even if that screen was never opened.
+  // schedule honours persisted toggles even if that screen was never opened. The
+  // delivered set must also be hydrated before reconciling, else a past-due one-shot
+  // would look un-delivered on cold start and re-fire.
   useEffect(() => void load(), [load]);
+  useEffect(() => void loadDelivered(), [loadDelivered]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !deliveredHydrated) return;
     const inputs: TripNotificationInput[] = trips
       .filter((trip) => Boolean(trip.id) && Boolean(trip.createdAt))
       .map((trip) => ({
@@ -47,6 +56,19 @@ export function useLocalNotifications(trips: TripListItem[]): void {
         tripNoDate: enabled.tripNoDate,
       },
       messages,
+      delivered,
+      markDelivered,
+      clearDelivered,
     });
-  }, [trips, enabled.offlineNotReady, enabled.tripNoDate, hydrated, t]);
+  }, [
+    trips,
+    enabled.offlineNotReady,
+    enabled.tripNoDate,
+    hydrated,
+    deliveredHydrated,
+    delivered,
+    markDelivered,
+    clearDelivered,
+    t,
+  ]);
 }
