@@ -14,7 +14,7 @@ import { HydrationBoundary } from "@/components/hydration-boundary";
 import { SiteChrome } from "@/components/site-chrome";
 import { SharedViewBanner } from "@/components/shared-view-banner";
 import { TripDownloads } from "@/components/trip-downloads";
-import { fetchSharedTrip } from "@/lib/api/client";
+import { fetchSharedTrip, fetchSharedTripRoute } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
@@ -85,7 +85,8 @@ function SharedTripLoader({ code }: { code: string }) {
             lon: 0,
             ele: 0,
           },
-          geometry: (s.geometry as StageData["geometry"]) ?? [],
+          // Summary carries no geometry (ADR-057); fetched via GET /route.
+          geometry: [],
           label: (s.label as string) ?? null,
           // Server-persisted reverse-geocoded labels (recette #649 #3c): the
           // anonymous shared view cannot call the auth-gated /geocode endpoint,
@@ -107,6 +108,29 @@ function SharedTripLoader({ code }: { code: string }) {
         }));
 
         setStages(parsedStages);
+        // Pull the route geometry (split off /detail, ADR-057) via the public code.
+        // The page renders this component's local `stages` state, so the geometry
+        // must land there too — the store's applyRoute alone never reaches the map
+        // / elevation profile on the anonymous view.
+        void fetchSharedTripRoute(code)
+          .then((route) => {
+            if (cancelled || !route) return;
+            useTripStore.getState().applyRoute(route);
+            const geometryByDay = new Map(
+              (route.stages ?? []).map((s) => [
+                s.dayNumber,
+                (s.geometry ?? []) as StageData["geometry"],
+              ]),
+            );
+            setStages((prev) =>
+              prev.map((s) =>
+                geometryByDay.has(s.dayNumber)
+                  ? { ...s, geometry: geometryByDay.get(s.dayNumber)! }
+                  : s,
+              ),
+            );
+          })
+          .catch(() => {});
         // Hydrate the trip store so that <RoadbookMasterDetail /> (which
         // reads `selectedStageIndex` from the store) works correctly. The
         // store stays local — no `setTrip()` call means no API/PATCH calls

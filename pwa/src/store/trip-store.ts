@@ -125,6 +125,14 @@ interface TripState {
     sourceType: string;
     title: string | null;
   }) => void;
+  // Merge the on-demand route geometry (GET /route, split off /detail — ADR-057)
+  // into the matching stages by dayNumber.
+  applyRoute: (route: {
+    stages?: {
+      dayNumber?: number;
+      geometry?: { lat?: number; lon?: number; ele?: number }[];
+    }[];
+  }) => void;
   setStages: (stages: StageData[]) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
@@ -398,6 +406,24 @@ export const useTripStore = create<TripState>()(
         state.sourceType = data.sourceType;
         if (data.title && state.trip) {
           state.trip.title = data.title;
+        }
+      }),
+
+    applyRoute: (route) =>
+      set((state) => {
+        const geometryByDay = new Map(
+          (route.stages ?? []).map((s) => [
+            s.dayNumber,
+            (s.geometry ?? []).map((p) => ({
+              lat: p.lat ?? 0,
+              lon: p.lon ?? 0,
+              ele: p.ele ?? 0,
+            })),
+          ]),
+        );
+        for (const stage of state.stages) {
+          const geometry = geometryByDay.get(stage.dayNumber);
+          if (geometry) stage.geometry = geometry;
         }
       }),
 

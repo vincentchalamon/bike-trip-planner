@@ -631,3 +631,23 @@ describe("default enabled accommodation types", () => {
     expect(enabled).toEqual([...FILTERABLE_ACCOMMODATION_TYPES]);
   });
 });
+
+describe("applyRoute (ADR-057 geometry hydration)", () => {
+  it("merges the on-demand geometry into the matching stages by dayNumber", () => {
+    useTripStore.setState({ stages: [makeStage(1), makeStage(2)] });
+    useTripStore.getState().applyRoute({
+      stages: [{ dayNumber: 2, geometry: [{ lat: 48, lon: 2, ele: 100 }] }],
+    });
+    const { stages } = useTripStore.getState();
+    expect(stages[0]!.geometry).toEqual([]); // day 1 absent from the payload
+    expect(stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
+  });
+
+  it("coerces optional coordinate fields to numbers", () => {
+    useTripStore.setState({ stages: [makeStage(1)] });
+    useTripStore.getState().applyRoute({ stages: [{ dayNumber: 1, geometry: [{ lat: 48 }] }] });
+    expect(useTripStore.getState().stages[0]!.geometry).toEqual([
+      { lat: 48, lon: 0, ele: 0 },
+    ]);
+  });
+});
