@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationData } from '@btp/core';
@@ -9,6 +10,9 @@ import { DataBlock } from './DataBlock';
 import { Button } from '../ui';
 import { Search, Tent } from '../ui/icons';
 import { useTheme } from '../../theme';
+
+// Candidates are revealed a page at a time (#1105).
+const ACCOMMODATION_PAGE_SIZE = 5;
 
 interface AccommodationBlockProps {
   accommodations: AccommodationData[];
@@ -43,7 +47,21 @@ export function AccommodationBlock({
 }: AccommodationBlockProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const items = selectedAccommodation ? [selectedAccommodation] : accommodations;
+  // Candidates ordered by proximity to the stage arrival (null distances last),
+  // keeping each entry's original index so selection still targets the right one
+  // after sorting. Paginated 5 at a time (#1105).
+  const ranked = accommodations
+    .map((acc, originalIndex) => ({ acc, originalIndex }))
+    .sort(
+      (a, b) =>
+        (a.acc.distanceToEndPoint ?? Infinity) -
+        (b.acc.distanceToEndPoint ?? Infinity),
+    );
+  const [visibleCount, setVisibleCount] = useState(ACCOMMODATION_PAGE_SIZE);
+  const items = selectedAccommodation
+    ? [{ acc: selectedAccommodation, originalIndex: -1 }]
+    : ranked.slice(0, visibleCount);
+  const hasMore = !selectedAccommodation && ranked.length > items.length;
   const editable = Boolean(onSelect);
   // Select / deselect reroute the stage: blocked out of zone (mirrors PoiBlock).
   const selectionDisabled = disabled || outOfZone;
@@ -77,7 +95,7 @@ export function AccommodationBlock({
       emptyLabel={t('trip.blocks.accommodationEmpty')}
       count={selectedAccommodation ? undefined : accommodations.length}
     >
-      {items.map((acc, i) => {
+      {items.map(({ acc, originalIndex }, i) => {
         const price = priceLabel(acc);
         const meta = [
           acc.type,
@@ -145,12 +163,24 @@ export function AccommodationBlock({
                 size="sm"
                 label={t('trip.blocks.accommodationSelect')}
                 disabled={selectionDisabled}
-                onPress={() => onSelect?.(i)}
+                onPress={() => onSelect?.(originalIndex)}
               />
             ) : null}
           </View>
         );
       })}
+      {hasMore ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          label={t('trip.blocks.accommodationMore', {
+            count: ACCOMMODATION_PAGE_SIZE,
+          })}
+          onPress={() =>
+            setVisibleCount((n) => n + ACCOMMODATION_PAGE_SIZE)
+          }
+        />
+      ) : null}
       {canExpand ? (
         <Button
           variant="ghost"

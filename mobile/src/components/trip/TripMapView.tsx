@@ -50,9 +50,6 @@ export function TripMapView() {
     [hover, stages],
   );
 
-  // Placeholder — the "En selle" ride flow is not wired yet (Spike-UX FAB).
-  const onRide = () => {};
-
   if (coordinates.length === 0) {
     return <EmptyState title={t('trip.mapEmpty')} />;
   }
@@ -64,27 +61,17 @@ export function TripMapView() {
           markers={markers}
           highlightedSegment={highlightedSegment}
         />
-        {/* "En selle" FAB: the in-ride screen is out of scope (Sprint 58), so this
-            is a deliberate placeholder — disabled and dispatches nothing, like the
-            roadbook FAB. */}
+        {/* In-ride FAB: the in-ride screen is out of scope (Sprint 58), so this is
+            a deliberate placeholder — disabled, icon-only, dispatches nothing,
+            like the roadbook FAB. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('trip.map.rideCta')}
           accessibilityState={{ disabled: true }}
           disabled
-          onPress={onRide}
           style={[styles.fab, { backgroundColor: theme.colors.brand }, theme.shadows.medium]}
         >
-          <Bike size={18} color={theme.colors.primaryForeground} />
-          <Text
-            style={{
-              color: theme.colors.primaryForeground,
-              fontFamily: theme.fonts.sansSemibold,
-              fontSize: 14,
-            }}
-          >
-            {t('trip.map.rideCta')}
-          </Text>
+          <Bike size={22} color={theme.colors.primaryForeground} />
         </Pressable>
       </View>
       <View
@@ -167,11 +154,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     bottom: 12,
-    flexDirection: 'row',
+    width: 52,
+    height: 52,
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    justifyContent: 'center',
     borderRadius: 999,
   },
   profile: { borderTopWidth: StyleSheet.hairlineWidth },

@@ -21,7 +21,7 @@ import { alertDismissKey } from './alert-utils';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
 import { AccommodationBlock } from './AccommodationBlock';
-import { PoiBlock } from './PoiBlock';
+import { ResupplyBlock } from './ResupplyBlock';
 import { SupplyBlock } from './SupplyBlock';
 import { EventsBlock } from './EventsBlock';
 
@@ -409,11 +409,11 @@ describe('AccommodationBlock', () => {
   });
 });
 
-describe('PoiBlock', () => {
+describe('ResupplyBlock', () => {
   function poi(overrides: Partial<PoiData> = {}): PoiData {
     return {
-      name: 'Château',
-      category: 'heritage',
+      name: 'Boulangerie',
+      category: 'bakery',
       lat: 0,
       lon: 0,
       distanceFromStart: 5,
@@ -421,55 +421,53 @@ describe('PoiBlock', () => {
     } as PoiData;
   }
 
-  it('renders name, category and distance from the start', () => {
-    const t = texts(render(<PoiBlock pois={[poi()]} />)).join(' ');
-    expect(t).toContain('Château');
-    expect(t).toContain('heritage');
-    expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
-  });
+  const empty = {
+    foodAtLunch: [],
+    waterMorning: null,
+    waterAfternoon: null,
+    foodAtArrival: [],
+  };
 
-  it('omits the distance label when distanceFromStart is null', () => {
+  it('renders each role section with its POIs (name, category, distance)', () => {
     const t = texts(
-      render(<PoiBlock pois={[poi({ distanceFromStart: null })]} />),
+      render(
+        <ResupplyBlock
+          resupply={{
+            ...empty,
+            foodAtLunch: [poi()],
+            waterMorning: poi({ name: 'Fontaine', category: 'drinking_water' }),
+          }}
+        />,
+      ),
     ).join(' ');
-    expect(t).toContain('Château');
-    expect(t).not.toContain(' km');
+    expect(t).toContain(fr.trip.blocks.resupplyLunch);
+    expect(t).toContain('Boulangerie');
+    expect(t).toContain('bakery');
+    expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
+    expect(t).toContain(fr.trip.blocks.resupplyWaterMorning);
+    expect(t).toContain('Fontaine');
   });
 
-  it('stays read-only (no waypoint button) without an onAddWaypoint callback', () => {
-    const tree = render(<PoiBlock pois={[poi()]} />);
-    expect(
-      tree.root.findAllByProps({ label: fr.trip.blocks.poiAddWaypoint }),
-    ).toHaveLength(0);
+  it('hides a role section that has no POI', () => {
+    const t = texts(
+      render(<ResupplyBlock resupply={{ ...empty, foodAtLunch: [poi()] }} />),
+    ).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyLunch);
+    expect(t).not.toContain(fr.trip.blocks.resupplyWaterMorning);
+    expect(t).not.toContain(fr.trip.blocks.resupplyArrival);
   });
 
-  it('inserts a POI as a waypoint with its coordinates', () => {
-    const onAddWaypoint = jest.fn();
-    const tree = render(
-      <PoiBlock
-        pois={[poi({ lat: 45.1, lon: 4.2 })]}
-        onAddWaypoint={onAddWaypoint}
-      />,
-    );
-    act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.poiAddWaypoint })
-        .props.onPress(),
-    );
-    expect(onAddWaypoint).toHaveBeenCalledWith(45.1, 4.2);
+  it('shows the "suggestions only" help when non-empty', () => {
+    const t = texts(
+      render(<ResupplyBlock resupply={{ ...empty, foodAtArrival: [poi()] }} />),
+    ).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyHelp);
   });
 
-  it('blocks the waypoint out of zone: button disabled + hint shown', () => {
-    const tree = render(
-      <PoiBlock pois={[poi()]} outOfZone onAddWaypoint={jest.fn()} />,
-    );
-    expect(
-      tree.root.findByProps({ label: fr.trip.blocks.poiAddWaypoint }).props
-        .disabled,
-    ).toBe(true);
-    expect(texts(tree).join(' ')).toContain(
-      fr.trip.blocks.poiWaypointOutOfZone,
-    );
+  it('shows the empty state (and no help) when every role is empty', () => {
+    const t = texts(render(<ResupplyBlock resupply={empty} />)).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyEmpty);
+    expect(t).not.toContain(fr.trip.blocks.resupplyHelp);
   });
 });
 

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
@@ -26,6 +27,7 @@ import { useTripMutations } from '../../hooks/use-trip-mutations';
 export function RoadbookView({ id }: { id: string }) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const stages = useTripStore((s) => s.stages);
   const stageDiffs = useTripStore((s) => s.stageDiffs);
@@ -158,8 +160,9 @@ export function RoadbookView({ id }: { id: string }) {
         }}
         style={{ backgroundColor: theme.colors.background }}
       />
-      {/* "En selle" FAB (Spike-UX): the in-ride screen is out of scope, so this
-          is a deliberate placeholder — it is disabled and dispatches nothing. */}
+      {/* In-ride FAB (Spike-UX): the in-ride screen is out of scope, so this is a
+          deliberate placeholder — disabled, icon-only, dispatches nothing. Lifted
+          above the system nav bar via the bottom safe-area inset. */}
       {stages.length > 0 ? (
         <Pressable
           accessibilityRole="button"
@@ -169,27 +172,17 @@ export function RoadbookView({ id }: { id: string }) {
           style={{
             position: 'absolute',
             right: theme.spacing.lg,
-            bottom: theme.spacing.lg,
-            flexDirection: 'row',
+            bottom: insets.bottom + theme.spacing.lg,
+            width: 52,
+            height: 52,
             alignItems: 'center',
-            gap: theme.spacing.sm,
+            justifyContent: 'center',
             backgroundColor: theme.colors.brandFill,
             borderRadius: theme.radius.full,
-            paddingHorizontal: theme.spacing.lg,
-            paddingVertical: theme.spacing.md,
             ...theme.shadows.medium,
           }}
         >
-          <Bike color={theme.colors.primaryForeground} size={20} />
-          <Text
-            style={{
-              color: theme.colors.primaryForeground,
-              fontFamily: theme.fonts.sansSemibold,
-              fontSize: 15,
-            }}
-          >
-            {t('trip.rideCta')}
-          </Text>
+          <Bike color={theme.colors.primaryForeground} size={22} />
         </Pressable>
       ) : null}
     </View>

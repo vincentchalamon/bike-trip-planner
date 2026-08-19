@@ -2,11 +2,10 @@ import { useCallback } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
-import { resupplyPois } from '@btp/core';
 import { ACCOMMODATION_RADIUS_STEP_KM } from '@btp/core/constants';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
-import { PoiBlock } from './PoiBlock';
+import { ResupplyBlock } from './ResupplyBlock';
 import { AccommodationBlock } from './AccommodationBlock';
 import { SupplyBlock } from './SupplyBlock';
 import { EventsBlock } from './EventsBlock';
@@ -109,7 +108,8 @@ export function StageDataBlocks({
   const editable = stageIndex !== undefined && tripId !== null;
   const disabled = isLocked || !isOnline;
   // Order mirrors the Spike-UX stage-detail mockup: weather, then alerts,
-  // events, arrival accommodation, supply and finally points of interest.
+  // events, arrival accommodation, supply and finally the sectioned resupply
+  // suggestions (#1105).
   return (
     <View style={{ gap: theme.spacing.md }}>
       <CycleNetworkBadge fraction={stage.onCycleNetwork ?? 0} />
@@ -138,15 +138,7 @@ export function StageDataBlocks({
         })}
       />
       <SupplyBlock supplyTimeline={stage.supplyTimeline} />
-      <PoiBlock
-        pois={resupplyPois(stage.resupply)}
-        {...(editable && {
-          disabled,
-          outOfZone,
-          onAddWaypoint: (lat: number, lon: number) =>
-            void mutations.addPoiWaypoint(stageIndex, lat, lon),
-        })}
-      />
+      <ResupplyBlock resupply={stage.resupply} />
     </View>
   );
 }

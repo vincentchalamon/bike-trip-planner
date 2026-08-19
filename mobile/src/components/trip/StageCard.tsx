@@ -14,7 +14,6 @@ import {
 } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { formatStageDate } from './roadbook-dates';
-import { StageDataBlocks } from './StageDataBlocks';
 
 // A per-stage identity signature used both as the roadbook FlatList key and as
 // the reset trigger for a StageCard's local edit state. Stages carry no stable
@@ -57,11 +56,8 @@ interface StageCardProps {
   // True when `date` is today on an ongoing trip: shows the "Aujourd'hui"
   // pastille.
   isToday?: boolean;
-  // Routes a `navigate` alert action to the map segment (#1040). Forwarded to
-  // the per-day data blocks.
-  onAlertNavigate?: (segments: [number, number][][]) => void;
-  // Tap-through to the full-screen stage detail (#1039). Wired on the stage
-  // summary only (not the data blocks below, so their own controls keep working).
+  // Tap-through to the full-screen stage detail (#1039). The roadbook row is a
+  // summary only (ADR-057 / #1105); the per-day detail lives on the detail screen.
   onPress?: (index: number) => void;
   // Transient diff-highlight after a destructive recompute (#1046): tints the
   // row so the rider sees which days the re-split changed.
@@ -134,7 +130,6 @@ export function StageCard({
   onEditDistance,
   date = null,
   isToday = false,
-  onAlertNavigate,
   onPress,
   highlighted = false,
 }: StageCardProps) {
@@ -347,16 +342,15 @@ export function StageCard({
         </Pressable>
       ) : null}
       </View>
-      <View
-        style={{
-          paddingHorizontal: theme.spacing.base,
-          paddingBottom: theme.spacing.md,
-          gap: theme.spacing.sm,
-        }}
-      >
-        <StageDataBlocks stage={stage} onAlertNavigate={onAlertNavigate} />
-        {showFooter ? (
-          editingDistance ? (
+      {showFooter ? (
+        <View
+          style={{
+            paddingHorizontal: theme.spacing.base,
+            paddingBottom: theme.spacing.md,
+            gap: theme.spacing.sm,
+          }}
+        >
+          {editingDistance ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <TextInput
                 accessibilityLabel={t('trip.edit.editDistanceA11y', { day })}
@@ -433,9 +427,9 @@ export function StageCard({
                 />
               ) : null}
             </View>
-          )
-        ) : null}
-      </View>
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }
