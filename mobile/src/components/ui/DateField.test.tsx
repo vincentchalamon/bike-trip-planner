@@ -126,4 +126,18 @@ describe('DateField', () => {
       expect(onChange).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('closes the iOS spinner on a second field tap without picking a date', () => {
+    withPlatform('ios', () => {
+      const onChange = jest.fn();
+      const tree = render(<DateField {...base} value="" onChange={onChange} />);
+      act(() => button(tree, 'Date de début').props.onPress()); // open
+      expect(mockPicker).toHaveBeenCalledTimes(1);
+      act(() => button(tree, 'Date de début').props.onPress()); // second tap
+      // show flipped back to false → the picker unmounts (not re-rendered) and
+      // no date was committed. Guards the ternary against a "simplify to true".
+      expect(mockPicker).toHaveBeenCalledTimes(1);
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
 });
