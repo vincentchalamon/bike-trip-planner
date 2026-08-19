@@ -5,6 +5,7 @@ import type { EventData } from '@btp/core';
 import { DataBlock } from './DataBlock';
 import {
   DEFAULT_VISIBLE_EVENTS,
+  MAX_STAGE_EVENTS,
   eventTypeKey,
   formatEventDateRange,
   sortEvents,
@@ -20,7 +21,8 @@ export function EventsBlock({ events }: { events: EventData[] }) {
   const theme = useTheme();
   const [showAll, setShowAll] = useState(false);
 
-  const sorted = sortEvents(events);
+  // Cap the pool at the soonest 5, then collapse to the first few (#1105).
+  const sorted = sortEvents(events).slice(0, MAX_STAGE_EVENTS);
   const visible = showAll ? sorted : sorted.slice(0, DEFAULT_VISIBLE_EVENTS);
   const hidden = sorted.length - visible.length;
 

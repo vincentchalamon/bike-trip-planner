@@ -1920,11 +1920,11 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 
 | Ordre | ID | Titre | Effort | Statut | Dépend de |
 |-------|----|-------|--------|--------|-----------|
-| 1 | [#1099](https://github.com/vincentchalamon/bike-trip-planner/issues/1099) | `resupply` (≤6/étape) remplace les POIs en vrac — **merge en tête, débloque la recette** | M | ⏳ À faire | — |
-| 2 | [#1102](https://github.com/vincentchalamon/bike-trip-planner/issues/1102) | split modèle lecture — résumé (`/trips/{id}`) / détail-étape (`/stages/{index}/detail`) / route (`/route`) | L | 🚧 En cours | #1099 |
-| 3 | [#1103](https://github.com/vincentchalamon/bike-trip-planner/issues/1103) | hydratation progressive du store (`@btp/core` + mobile : lazy détail au tap, route à l'ouverture carte) | M | 🚧 En cours | #1102 |
-| 4 | [#1104](https://github.com/vincentchalamon/bike-trip-planner/issues/1104) | hydratation progressive de la timeline web (squelettes + fetch parallèle borné) | M | 🚧 En cours | #1102, #1099 |
-| 5 | [#1105](https://github.com/vincentchalamon/bike-trip-planner/issues/1105) | roadbook (05) résumé-seul + détail d'étape (07) catégorisé conformes aux maquettes | L | ⏳ À faire | #1099, #1102, #1103 |
+| 1 | [#1099](https://github.com/vincentchalamon/bike-trip-planner/issues/1099) | `resupply` (≤6/étape) remplace les POIs en vrac — **merge en tête, débloque la recette** | M | ✅ [#1108](https://github.com/vincentchalamon/bike-trip-planner/pull/1108) | — |
+| 2 | [#1102](https://github.com/vincentchalamon/bike-trip-planner/issues/1102) | split modèle lecture — résumé (`/trips/{id}`) / détail-étape (`/stages/{index}/detail`) / route (`/route`) | L | ✅ [#1110](https://github.com/vincentchalamon/bike-trip-planner/pull/1110) | #1099 |
+| 3 | [#1103](https://github.com/vincentchalamon/bike-trip-planner/issues/1103) | hydratation progressive du store (`@btp/core` + mobile : lazy détail au tap, route à l'ouverture carte) | M | ✅ [#1111](https://github.com/vincentchalamon/bike-trip-planner/pull/1111) | #1102 |
+| 4 | [#1104](https://github.com/vincentchalamon/bike-trip-planner/issues/1104) | hydratation progressive de la timeline web (squelettes + fetch parallèle borné) | M | ✅ [#1112](https://github.com/vincentchalamon/bike-trip-planner/pull/1112) | #1102, #1099 |
+| 5 | [#1105](https://github.com/vincentchalamon/bike-trip-planner/issues/1105) | roadbook (05) résumé-seul + détail d'étape (07) catégorisé conformes aux maquettes | L | 🚧 En cours (`feature/1105`) | #1099, #1102, #1103 |
 | 6 | [#1106](https://github.com/vincentchalamon/bike-trip-planner/issues/1106) | spike Vulcain (`Fields`/Early-Hints) par-dessus le fetch progressif | S | ⏳ À faire | #1102, #1104 |
 
 **Contrat** : `/detail` **remplacé** (pré-release, pas de dépréciation) ; `pois` retiré, `resupply` ajouté ; réconciliation SSE inchangée (par étape, ADR-055) ; types OpenAPI régénérés → dérive de compilation intentionnelle sur pwa + mobile. **Vulcain** = surcouche d'optimisation (spike #1106), pas une fondation — Server Push déprécié navigateur, la base reste le fetch HTTP/2 multiplexé.

@@ -44,3 +44,5 @@ export {
   Minus,
   MoreVertical,
 } from 'lucide-react-native';
+// Resupply block (#1105): sectioned food/water suggestions.
+export { ShoppingBag } from 'lucide-react-native';

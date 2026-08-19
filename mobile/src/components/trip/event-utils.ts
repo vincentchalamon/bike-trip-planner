@@ -3,6 +3,9 @@ import type { EventData } from '@btp/core';
 // Number of events shown before the "see more" toggle (mirrors the web).
 export const DEFAULT_VISIBLE_EVENTS = 3;
 
+// Hard cap on events surfaced per stage: the soonest 5 only (#1105).
+export const MAX_STAGE_EVENTS = 5;
+
 // Chronological order by start date (mirrors the web events-panel).
 export function sortEvents(events: EventData[]): EventData[] {
   return [...events].sort(

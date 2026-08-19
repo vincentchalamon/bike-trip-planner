@@ -1,7 +1,7 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ErrorState, Screen } from '../../../../src/components/ui';
-import { StageDetailView } from '../../../../src/components/trip';
+import { StageDetailView, TripTitleHeader } from '../../../../src/components/trip';
 import { ownsTripLive, parseStageIndex } from '../../../../src/components/trip/stage-detail';
 import { useTripLive } from '../../../../src/hooks/use-trip-live';
 import { useTripStore } from '../../../../src/store/trip-store';
@@ -33,6 +33,9 @@ export default function StageDetailScreen() {
 
   return (
     <Screen padded={false} edges={['left', 'right']}>
+      <Stack.Screen
+        options={{ headerTitle: () => <TripTitleHeader tripId={id} /> }}
+      />
       <StageDetailView initialIndex={parseStageIndex(index)} />
     </Screen>
   );

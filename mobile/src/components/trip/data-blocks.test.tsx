@@ -21,7 +21,7 @@ import { alertDismissKey } from './alert-utils';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
 import { AccommodationBlock } from './AccommodationBlock';
-import { PoiBlock } from './PoiBlock';
+import { ResupplyBlock } from './ResupplyBlock';
 import { SupplyBlock } from './SupplyBlock';
 import { EventsBlock } from './EventsBlock';
 
@@ -251,6 +251,59 @@ describe('AccommodationBlock', () => {
     expect(meta).not.toContain('€');
   });
 
+  it('orders candidates by proximity to the arrival (closest first)', () => {
+    const t = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[
+            acc({ name: 'Loin', distanceToEndPoint: 10 }),
+            acc({ name: 'Proche', distanceToEndPoint: 1 }),
+          ]}
+        />,
+      ),
+    );
+    expect(t.indexOf('Proche')).toBeLessThan(t.indexOf('Loin'));
+  });
+
+  it('paginates 5 at a time and reveals the rest via "show more"', () => {
+    const many = Array.from({ length: 7 }, (_, i) =>
+      acc({ name: `H${i}`, distanceToEndPoint: i }),
+    );
+    const tree = render(<AccommodationBlock accommodations={many} />);
+    // H0..H4 shown; H5/H6 hidden behind the pager.
+    expect(texts(tree)).toContain('H4');
+    expect(texts(tree)).not.toContain('H5');
+    act(() =>
+      tree.root
+        .findByProps({
+          label: fr.trip.blocks.accommodationMore.replace('{{count}}', '5'),
+        })
+        .props.onPress(),
+    );
+    expect(texts(tree)).toContain('H6');
+  });
+
+  it('selects by the original index after sorting, not the display position', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[
+          acc({ name: 'Loin', distanceToEndPoint: 10 }),
+          acc({ name: 'Proche', distanceToEndPoint: 1 }),
+        ]}
+        radiusKm={5}
+        onSelect={onSelect}
+      />,
+    );
+    // "Proche" renders first (index 0) but is index 1 in the source array.
+    act(() =>
+      tree.root
+        .findAllByProps({ label: fr.trip.blocks.accommodationSelect })[0]!
+        .props.onPress(),
+    );
+    expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
   it('renders a zero distance rather than dropping it (accommodation at the endpoint)', () => {
     const meta = texts(
       render(<AccommodationBlock accommodations={[acc({ distanceToEndPoint: 0 })]} />),
@@ -409,11 +462,11 @@ describe('AccommodationBlock', () => {
   });
 });
 
-describe('PoiBlock', () => {
+describe('ResupplyBlock', () => {
   function poi(overrides: Partial<PoiData> = {}): PoiData {
     return {
-      name: 'Château',
-      category: 'heritage',
+      name: 'Boulangerie',
+      category: 'bakery',
       lat: 0,
       lon: 0,
       distanceFromStart: 5,
@@ -421,55 +474,53 @@ describe('PoiBlock', () => {
     } as PoiData;
   }
 
-  it('renders name, category and distance from the start', () => {
-    const t = texts(render(<PoiBlock pois={[poi()]} />)).join(' ');
-    expect(t).toContain('Château');
-    expect(t).toContain('heritage');
-    expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
-  });
+  const empty = {
+    foodAtLunch: [],
+    waterMorning: null,
+    waterAfternoon: null,
+    foodAtArrival: [],
+  };
 
-  it('omits the distance label when distanceFromStart is null', () => {
+  it('renders each role section with its POIs (name, category, distance)', () => {
     const t = texts(
-      render(<PoiBlock pois={[poi({ distanceFromStart: null })]} />),
+      render(
+        <ResupplyBlock
+          resupply={{
+            ...empty,
+            foodAtLunch: [poi()],
+            waterMorning: poi({ name: 'Fontaine', category: 'drinking_water' }),
+          }}
+        />,
+      ),
     ).join(' ');
-    expect(t).toContain('Château');
-    expect(t).not.toContain(' km');
+    expect(t).toContain(fr.trip.blocks.resupplyLunch);
+    expect(t).toContain('Boulangerie');
+    expect(t).toContain('bakery');
+    expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
+    expect(t).toContain(fr.trip.blocks.resupplyWaterMorning);
+    expect(t).toContain('Fontaine');
   });
 
-  it('stays read-only (no waypoint button) without an onAddWaypoint callback', () => {
-    const tree = render(<PoiBlock pois={[poi()]} />);
-    expect(
-      tree.root.findAllByProps({ label: fr.trip.blocks.poiAddWaypoint }),
-    ).toHaveLength(0);
+  it('hides a role section that has no POI', () => {
+    const t = texts(
+      render(<ResupplyBlock resupply={{ ...empty, foodAtLunch: [poi()] }} />),
+    ).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyLunch);
+    expect(t).not.toContain(fr.trip.blocks.resupplyWaterMorning);
+    expect(t).not.toContain(fr.trip.blocks.resupplyArrival);
   });
 
-  it('inserts a POI as a waypoint with its coordinates', () => {
-    const onAddWaypoint = jest.fn();
-    const tree = render(
-      <PoiBlock
-        pois={[poi({ lat: 45.1, lon: 4.2 })]}
-        onAddWaypoint={onAddWaypoint}
-      />,
-    );
-    act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.poiAddWaypoint })
-        .props.onPress(),
-    );
-    expect(onAddWaypoint).toHaveBeenCalledWith(45.1, 4.2);
+  it('shows the "suggestions only" help when non-empty', () => {
+    const t = texts(
+      render(<ResupplyBlock resupply={{ ...empty, foodAtArrival: [poi()] }} />),
+    ).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyHelp);
   });
 
-  it('blocks the waypoint out of zone: button disabled + hint shown', () => {
-    const tree = render(
-      <PoiBlock pois={[poi()]} outOfZone onAddWaypoint={jest.fn()} />,
-    );
-    expect(
-      tree.root.findByProps({ label: fr.trip.blocks.poiAddWaypoint }).props
-        .disabled,
-    ).toBe(true);
-    expect(texts(tree).join(' ')).toContain(
-      fr.trip.blocks.poiWaypointOutOfZone,
-    );
+  it('shows the empty state (and no help) when every role is empty', () => {
+    const t = texts(render(<ResupplyBlock resupply={empty} />)).join(' ');
+    expect(t).toContain(fr.trip.blocks.resupplyEmpty);
+    expect(t).not.toContain(fr.trip.blocks.resupplyHelp);
   });
 });
 
@@ -511,5 +562,17 @@ describe('EventsBlock', () => {
     // The only button in the block is the "see more" toggle.
     act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
     expect(texts(tree)).toContain('D');
+  });
+
+  it('caps the list at the soonest 5, even fully expanded', () => {
+    const events = Array.from({ length: 7 }, (_, i) =>
+      event(`E${i}`, `2026-06-0${i + 1}`),
+    );
+    const tree = render(<EventsBlock events={events} />);
+    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    const t = texts(tree);
+    expect(t).toContain('E4'); // 5th soonest is shown
+    expect(t).not.toContain('E5'); // 6th and 7th are capped out
+    expect(t).not.toContain('E6');
   });
 });
