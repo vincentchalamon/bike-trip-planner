@@ -24,6 +24,7 @@ use App\Message\ScanPois;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceRegistry;
+use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -56,6 +57,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private SupplyTimelineBuilder $supplyTimelineBuilder,
+        private ResupplyBuilder $resupplyBuilder,
         private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private TranslatorInterface $translator,
@@ -123,9 +125,10 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             $waterByStage = $this->distributor->distributeByGeometry($allWaterPoints, $stages);
 
             foreach ($stages as $i => $stage) {
-                $pois = [];
+                // Build the full corridor set on the stage: the alert checks below
+                // read it before it is curated to the resupply suggestions.
                 foreach ($poisByStage[$i] ?? [] as $raw) {
-                    $poi = new PointOfInterest(
+                    $stage->addPoi(new PointOfInterest(
                         name: $raw['name'],
                         category: $raw['category'],
                         lat: $raw['lat'],
@@ -134,10 +137,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         osmId: $raw['osmId'] ?? null,
                         openingHours: $raw['openingHours'],
                         website: $raw['website'],
-                    );
-
-                    $stage->addPoi($poi);
-                    $pois[] = ['name' => $poi->name, 'category' => $poi->category];
+                    ));
                 }
 
                 // Lunch nudge: flag long stages with no food POIs.
@@ -177,9 +177,44 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $alerts[] = ['code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value, 'type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
+                // Position food + water along the route (shared by the resupply
+                // curation and the supply timeline).
+                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+                $cumulativeDistances = $this->supplyTimelineBuilder->buildCumulativeDistances($geometry);
+
+                $foodPoisWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_values(array_filter(
+                    $poisByStage[$i] ?? [],
+                    fn (array $p): bool => \in_array($p['category'], self::RESUPPLY_CATEGORIES, true),
+                )));
+                $waterPointsWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_map(
+                    static fn (array $w): array => ['name' => $w['name'], 'category' => 'water', 'lat' => $w['lat'], 'lon' => $w['lon']],
+                    $waterByStage[$i] ?? [],
+                ));
+
+                // Curate the persisted POIs to <=6 resupply suggestions (#1099): the
+                // raw corridor set (thousands per stage) is a computation input, never
+                // a client payload — it blocked the mobile trip-open parse.
+                $lunchKm = $this->estimateLunchDistanceKm($stage->distance, $departureHour, $averageSpeed, $stage->elevation);
+                $stage->pois = $this->resupplyBuilder->select(
+                    $foodPoisWithDistance,
+                    $waterPointsWithDistance,
+                    $lunchKm,
+                    $stage->distance,
+                    $this->poiLabels->displayName('water', $locale),
+                );
+
                 $payload = [
                     'stageIndex' => $i,
-                    'pois' => $pois,
+                    'pois' => array_map(
+                        static fn (PointOfInterest $p): array => [
+                            'name' => $p->name,
+                            'category' => $p->category,
+                            'lat' => $p->lat,
+                            'lon' => $p->lon,
+                            'distanceFromStart' => $p->distanceFromStart,
+                        ],
+                        $stage->pois,
+                    ),
                 ];
 
                 if ([] !== $alerts) {
@@ -187,21 +222,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, $payload);
-
-                // Compute and publish supply timeline for this stage
-                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-                $cumulativeDistances = $this->supplyTimelineBuilder->buildCumulativeDistances($geometry);
-
-                $foodPoisRaw = array_filter(
-                    $poisByStage[$i] ?? [],
-                    fn (array $p): bool => \in_array($p['category'], self::RESUPPLY_CATEGORIES, true),
-                );
-
-                $foodPoisWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_values($foodPoisRaw));
-                $waterPointsWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_map(
-                    static fn (array $w): array => ['name' => $w['name'], 'category' => 'water', 'lat' => $w['lat'], 'lon' => $w['lon']],
-                    $waterByStage[$i] ?? [],
-                ));
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);
 
@@ -225,6 +245,33 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     private function hasResupplyPoi(Stage $stage): bool
     {
         return array_any($stage->pois, fn (PointOfInterest $poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
+    }
+
+    /**
+     * Distance marker (km) at which the rider reaches the lunch hour, used to
+     * anchor the resupply suggestions. Binary search over the (monotone in
+     * distance) passage-time model; clamps to the stage ends when lunch falls
+     * before departure or after arrival.
+     */
+    private function estimateLunchDistanceKm(float $totalKm, int $departureHour, float $averageSpeed, float $elevation): float
+    {
+        if ($totalKm <= 0.0) {
+            return 0.0;
+        }
+
+        $lunchHour = 12.5;
+        $lo = 0.0;
+        $hi = $totalKm;
+        for ($k = 0; $k < 24; ++$k) {
+            $mid = ($lo + $hi) / 2;
+            if ($this->riderTimeEstimator->estimateTimeAtDistance($mid, $totalKm, $departureHour, $averageSpeed, $elevation) < $lunchHour) {
+                $lo = $mid;
+            } else {
+                $hi = $mid;
+            }
+        }
+
+        return ($lo + $hi) / 2;
     }
 
     /**

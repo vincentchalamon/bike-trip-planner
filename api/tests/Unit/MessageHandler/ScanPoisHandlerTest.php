@@ -22,6 +22,7 @@ use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceInterface;
 use App\Poi\PoiSourceRegistry;
+use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
@@ -125,6 +126,7 @@ final class ScanPoisHandlerTest extends TestCase
             $waterPointRepository,
             $distributor,
             new SupplyTimelineBuilder($haversine),
+            new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
             $translator,
