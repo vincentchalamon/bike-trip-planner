@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../../theme';
 import type { Theme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
+import { useTripRoute } from '../../hooks/use-trip-route';
 import {
   buildShareUrl,
   createTripShare,
@@ -42,6 +43,10 @@ interface ShareSheetProps {
 // via clipboard. Restyled to the Spike-UX mockup: read-only link field + accent
 // copy, then a stack of icon "send another way" option rows.
 export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
+  // The summary omits geometry (ADR-057) and the share sheet is reachable from
+  // the roadbook without the map ever mounting; pull the route in when it opens
+  // so the captured infographic has a real route line.
+  useTripRoute({ enabled: visible });
   const { t } = useTranslation();
   const theme = useTheme();
   const s = styles(theme);

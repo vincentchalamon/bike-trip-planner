@@ -24,7 +24,10 @@ export function useStageDetail(index: number): void {
           applyStageDetail(index, (detail.geometry ?? []) as StageData['geometry']);
         }
       })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        // Graceful degradation (mini-map/profile stay empty) but not silent.
+        console.warn('Failed to load stage detail geometry', error);
+      });
     return () => {
       cancelled = true;
     };
