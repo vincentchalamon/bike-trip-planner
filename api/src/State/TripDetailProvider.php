@@ -167,7 +167,8 @@ final readonly class TripDetailProvider implements ProviderInterface
             'elevationLoss' => $stage->elevationLoss,
             'startPoint' => $this->serializeCoord($stage->startPoint),
             'endPoint' => $this->serializeCoord($stage->endPoint),
-            'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
+            // Geometry is split off to GET /trips/{id}/route (ADR-057): it is the only
+            // O(points) per-stage field, and the roadbook summary never renders it.
             'label' => $stage->label,
             'startLabel' => $stage->startLabel,
             'endLabel' => $stage->endLabel,

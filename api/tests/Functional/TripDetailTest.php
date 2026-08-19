@@ -103,7 +103,8 @@ final class TripDetailTest extends ApiTestCase
         $stage = $data['stages'][0];
         $this->assertArrayHasKey('dayNumber', $stage);
         $this->assertArrayHasKey('distance', $stage);
-        $this->assertArrayHasKey('geometry', $stage);
+        // Geometry is split off to GET /trips/{id}/route (ADR-057); the summary omits it.
+        $this->assertArrayNotHasKey('geometry', $stage);
         $this->assertArrayHasKey('alerts', $stage);
         $this->assertArrayHasKey('accommodations', $stage);
         // No cycle routes provisioned in the test DB → stage is not on a network.
@@ -500,5 +501,115 @@ final class TripDetailTest extends ApiTestCase
         $this->client->request('GET', '/trips/01936f6e-0000-7000-8000-000000000001/detail');
 
         $this->assertResponseStatusCodeSame(401);
+    }
+
+    #[Test]
+    public function routeReturnsPerStageGeometry(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [
+            new StageDto(
+                tripId: self::TRIP_ID,
+                dayNumber: 1,
+                distance: 40.0,
+                elevation: 300.0,
+                startPoint: new Coordinate(45.0, 6.0, 100.0),
+                endPoint: new Coordinate(45.5, 6.5, 200.0),
+                geometry: [new Coordinate(45.0, 6.0, 100.0), new Coordinate(45.5, 6.5, 200.0)],
+            ),
+        ]);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $data = $response->toArray(false);
+        $this->assertSame(self::TRIP_ID, $data['id']);
+        $this->assertCount(1, $data['stages']);
+        $this->assertSame(1, $data['stages'][0]['dayNumber']);
+        $this->assertCount(2, $data['stages'][0]['geometry']);
+        $this->assertEqualsWithDelta(45.0, $data['stages'][0]['geometry'][0]['lat'], 0.0001);
+    }
+
+    #[Test]
+    public function stageDetailReturnsTheFullStageIncludingGeometry(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [
+            new StageDto(
+                tripId: self::TRIP_ID,
+                dayNumber: 1,
+                distance: 40.0,
+                elevation: 300.0,
+                startPoint: new Coordinate(45.0, 6.0, 100.0),
+                endPoint: new Coordinate(45.5, 6.5, 200.0),
+                geometry: [new Coordinate(45.0, 6.0, 100.0), new Coordinate(45.5, 6.5, 200.0)],
+            ),
+        ]);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $data = $response->toArray(false);
+        $this->assertSame(1, $data['dayNumber']);
+        $this->assertCount(2, $data['geometry']);
+        $this->assertArrayHasKey('resupply', $data);
+        $this->assertArrayHasKey('accommodations', $data);
+    }
+
+    #[Test]
+    public function routeOfAnotherUsersTripReturns404(): void
+    {
+        // IDOR-DETAIL regression: TRIP_VIEW hides another user's trip as a 404.
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function stageDetailOfAnotherUsersTripReturns404(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [
+            new StageDto(
+                tripId: self::TRIP_ID,
+                dayNumber: 1,
+                distance: 40.0,
+                elevation: 300.0,
+                startPoint: new Coordinate(45.0, 6.0, 100.0),
+                endPoint: new Coordinate(45.5, 6.5, 200.0),
+            ),
+        ]);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder2@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function stageDetailOutOfRangeIndexReturns404(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
     }
 }

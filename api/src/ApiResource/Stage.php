@@ -21,6 +21,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\State\RestDayInsertProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
+use App\State\StageDetailProvider;
 use App\State\StageMoveProcessor;
 use App\State\StagePoiWaypointProcessor;
 use App\State\StageProvider;
@@ -48,6 +49,20 @@ use App\State\StageUpdateProcessor;
             openapi: new Operation(summary: 'Download a stage as GPX or FIT file.'),
             security: "is_granted('TRIP_VIEW', request.attributes.get('tripId'))",
             provider: StageProvider::class,
+        ),
+        new Get(
+            // On-demand full stage detail (ADR-057), on a distinct sub-route for the
+            // same reason as the export above: the plain '/stages/{index}' path is the
+            // StageResponse NotExposed IRI and would be shadowed by NotExposedAction.
+            uriTemplate: '/trips/{tripId}/stages/{index}/detail{._format}',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            openapi: new Operation(summary: 'Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).'),
+            security: "is_granted('TRIP_VIEW', request.attributes.get('tripId'))",
+            output: StageResponse::class,
+            provider: StageDetailProvider::class,
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages{._format}',

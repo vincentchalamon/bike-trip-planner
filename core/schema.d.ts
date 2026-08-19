@@ -308,6 +308,26 @@ export interface paths {
         patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
         trace?: never;
     };
+    "/trips/{tripId}/stages/{index}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).
+         * @description Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).
+         */
+        get: operations["api_trips_tripIdstages_indexdetail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages/{index}/export": {
         parameters: {
             query?: never;
@@ -552,6 +572,26 @@ export interface paths {
          * @description Load trip configuration and persisted stages for frontend hydration.
          */
         get: operations["api_trips_iddetail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{id}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * All-stages decimated geometry for the map (loaded on demand).
+         * @description All-stages decimated geometry for the map (loaded on demand).
+         */
+        get: operations["api_trips_idroute_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1686,6 +1726,22 @@ export interface components {
             type: "accommodation" | "distance" | "dates" | "pacing";
             /** @description Human-readable description for display in the frontend queue panel. */
             label?: string | null;
+        };
+        /**
+         * @description Route geometry for the whole trip, split off the trip read model (ADR-057):
+         *     the map tab fetches it on demand instead of every trip load paying the parse
+         *     cost of the decimated points on a months-long trip.
+         */
+        "TripRoute.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            stages?: {
+                dayNumber?: number;
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
+            }[];
         };
         TripShare: {
             /** Format: uuid */
@@ -2830,6 +2886,53 @@ export interface operations {
             };
         };
     };
+    api_trips_tripIdstages_indexdetail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stage resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Stage.StageResponse.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     api_trips_tripIdstages_indexexport_get: {
         parameters: {
             query?: never;
@@ -3720,6 +3823,51 @@ export interface operations {
                 };
                 content: {
                     "application/ld+json": components["schemas"]["TripDetail.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_idroute_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripRoute identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripRoute resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripRoute.jsonld"];
                 };
             };
             /** @description Forbidden */
