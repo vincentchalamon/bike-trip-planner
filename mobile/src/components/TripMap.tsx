@@ -14,6 +14,7 @@ import { Minus, Plus } from './ui/icons';
 import { useTheme } from '../theme/context';
 import { useMapPrefs } from '../store/map-prefs';
 import {
+  applyZoom,
   computeBounds,
   mapStyleFor,
   markerCollection,
@@ -50,13 +51,13 @@ export function TripMap({
     void load();
   }, [load]);
 
-  // Relative zoom: read the live zoom off the map and animate the camera one
-  // step in/out. No-op until the native map has mounted and reported a zoom.
-  const zoomBy = async (delta: number) => {
-    const current = await mapRef.current?.getZoom();
-    if (current == null) return;
-    cameraRef.current?.zoomTo(current + delta, { duration: 200 });
-  };
+  // Relative zoom for the +/- controls (see applyZoom).
+  const zoomBy = (delta: number) =>
+    applyZoom(
+      () => mapRef.current?.getZoom(),
+      (zoom) => cameraRef.current?.zoomTo(zoom, { duration: 200 }),
+      delta,
+    );
 
   // Every object/collection handed to the memoized native components is derived
   // once per input change: a fresh reference on each render would defeat the

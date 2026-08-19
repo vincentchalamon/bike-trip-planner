@@ -2,6 +2,7 @@
 import type { StageData } from '@btp/core';
 import {
   alertSegmentToCoords,
+  applyZoom,
   buildSatelliteStyle,
   collectMarkers,
   computeBounds,
@@ -144,5 +145,23 @@ describe('alertSegmentToCoords / segmentFeature', () => {
       [5, 45],
     ]);
     expect(fc.features[0]).toMatchObject({ geometry: { type: 'LineString' } });
+  });
+});
+
+describe('applyZoom', () => {
+  it('zooms to the current level plus the delta', async () => {
+    const zoomTo = jest.fn();
+    await applyZoom(() => Promise.resolve(9), zoomTo, 1);
+    expect(zoomTo).toHaveBeenCalledWith(10);
+
+    await applyZoom(() => Promise.resolve(9), zoomTo, -1);
+    expect(zoomTo).toHaveBeenLastCalledWith(8);
+  });
+
+  it('is a no-op before the map has reported a zoom', async () => {
+    const zoomTo = jest.fn();
+    await applyZoom(() => Promise.resolve(undefined), zoomTo, 1);
+    await applyZoom(() => undefined, zoomTo, 1);
+    expect(zoomTo).not.toHaveBeenCalled();
   });
 });

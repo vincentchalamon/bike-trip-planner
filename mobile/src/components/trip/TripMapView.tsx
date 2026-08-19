@@ -1,22 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { buildProfilePoints, profileHighlightSegment } from '@btp/core/elevation';
+import { profileHighlightSegment } from '@btp/core/elevation';
 import { EmptyState } from '../ui';
 import { Bike } from '../ui/icons';
 import { TripMap } from '../TripMap';
 import { collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
+import { computeProfileSummary, groupThousands } from './trip-map-summary';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
-
-// Group an integer into space-separated thousands (fr/en convention, "5 240").
-// Manual grouping avoids depending on the runtime's Intl/ICU build.
-function groupThousands(value: number): string {
-  return Math.round(value)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
 
 // The map tab: derives the route polyline and markers from the store's stages
 // and hands them to the shared TripMap, or shows the empty state when there is
@@ -44,22 +37,7 @@ export function TripMapView() {
 
   const markers = useMemo(() => collectMarkers(stages), [stages]);
 
-  // Totals for the profile header/axis: distance + endpoint/max elevations come
-  // from the same shared profile maths the SVG uses; the gain sums each riding
-  // stage's climb.
-  const summary = useMemo(() => {
-    const points = buildProfilePoints(stages, null);
-    const gain = stages.reduce((sum, s) => sum + (s.isRestDay ? 0 : s.elevation), 0);
-    if (points.length < 2) return null;
-    const eles = points.map((p) => p.ele);
-    return {
-      distanceKm: points[points.length - 1]!.distanceKm,
-      gain,
-      startEle: points[0]!.ele,
-      endEle: points[points.length - 1]!.ele,
-      maxEle: Math.max(...eles),
-    };
-  }, [stages]);
+  const summary = useMemo(() => computeProfileSummary(stages), [stages]);
 
   const highlightedSegment = useMemo(
     () =>

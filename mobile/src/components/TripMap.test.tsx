@@ -60,7 +60,7 @@ const coordsB: [number, number][] = [
 beforeEach(() => {
   setItem.mockClear();
   // Pre-hydrated so the mount-time load() is a no-op (no async store write to
-  // chase through act()); these tests drive the base explicitly via the toggle.
+  // chase through act()); these tests drive the base explicitly via setBase.
   act(() => {
     useMapPrefs.setState({ base: 'map', hydrated: true });
   });

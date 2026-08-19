@@ -11,12 +11,11 @@ interface MapPrefsState {
   base: MapBase;
   hydrated: boolean;
   setBase: (base: MapBase) => void;
-  toggle: () => void;
   load: () => Promise<void>;
 }
 
 // Persisted base-map choice (Positron plan vs Esri satellite). The write is
-// fire-and-forget so the toggle stays synchronous; `load()` hydrates once.
+// fire-and-forget so `setBase` stays synchronous; `load()` hydrates once.
 export const useMapPrefs = create<MapPrefsState>((set, get) => ({
   base: 'map',
   hydrated: false,
@@ -24,7 +23,6 @@ export const useMapPrefs = create<MapPrefsState>((set, get) => ({
     set({ base });
     void SecureStore.setItemAsync(KEY, base);
   },
-  toggle: () => get().setBase(get().base === 'satellite' ? 'map' : 'satellite'),
   load: async () => {
     if (get().hydrated) return;
     const stored = await SecureStore.getItemAsync(KEY);

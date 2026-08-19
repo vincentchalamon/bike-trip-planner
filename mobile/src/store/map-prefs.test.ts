@@ -27,13 +27,6 @@ describe('useMapPrefs', () => {
     expect(setItem).toHaveBeenCalledWith('btp_map_base', 'satellite');
   });
 
-  it('toggle flips between map and satellite', () => {
-    useMapPrefs.getState().toggle();
-    expect(useMapPrefs.getState().base).toBe('satellite');
-    useMapPrefs.getState().toggle();
-    expect(useMapPrefs.getState().base).toBe('map');
-  });
-
   it('load hydrates the stored satellite choice once', async () => {
     getItem.mockResolvedValue('satellite');
     await useMapPrefs.getState().load();
