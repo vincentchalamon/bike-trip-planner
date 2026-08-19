@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
 import { Text, TextInput } from 'react-native';
 import type { StageData } from '@btp/core';
@@ -82,7 +83,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: 'Lyon',
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 10,

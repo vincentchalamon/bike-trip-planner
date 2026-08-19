@@ -43,7 +43,12 @@ function buildStage(
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: {
+      foodAtLunch: [],
+      waterMorning: null,
+      waterAfternoon: null,
+      foodAtArrival: [],
+    },
     accommodations: [],
     accommodationSearchRadiusKm: 5,
     isRestDay,

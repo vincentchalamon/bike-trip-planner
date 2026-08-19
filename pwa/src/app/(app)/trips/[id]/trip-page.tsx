@@ -17,6 +17,7 @@ import { useUiStore } from "@/store/ui-store";
 import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { resolveStageLabels } from "@/hooks/use-mercure";
+import { EMPTY_RESUPPLY } from "@btp/core";
 import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { components } from "@btp/core/schema";
@@ -125,7 +126,7 @@ function TripLoader({ tripId }: { tripId: string }) {
             ...a,
             _group: "terrain",
           })),
-          pois: (s.pois as StageData["pois"]) ?? [],
+          resupply: (s.resupply as StageData["resupply"]) ?? EMPTY_RESUPPLY,
           accommodations:
             (s.accommodations as StageData["accommodations"]) ?? [],
           selectedAccommodation:

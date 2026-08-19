@@ -34,7 +34,12 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: {
+      foodAtLunch: [],
+      waterMorning: null,
+      waterAfternoon: null,
+      foodAtArrival: [],
+    },
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 5,

@@ -23,6 +23,7 @@ import {
   MEAL_COST_MAX,
   mealsForStage,
 } from "@/lib/budget-constants";
+import { EMPTY_RESUPPLY } from "@btp/core";
 import type { StageData } from "@btp/core";
 
 const noop = () => {};
@@ -93,7 +94,7 @@ function SharedTripLoader({ code }: { code: string }) {
           endLabel: (s.endLabel as string) ?? null,
           weather: (s.weather as StageData["weather"]) ?? null,
           alerts: (s.alerts as StageData["alerts"]) ?? [],
-          pois: (s.pois as StageData["pois"]) ?? [],
+          resupply: (s.resupply as StageData["resupply"]) ?? EMPTY_RESUPPLY,
           accommodations:
             (s.accommodations as StageData["accommodations"]) ?? [],
           selectedAccommodation:

@@ -22,6 +22,7 @@ use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceInterface;
 use App\Poi\PoiSourceRegistry;
+use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
@@ -71,7 +72,9 @@ final class ScanPoisHandlerTest extends TestCase
         self::assertCount(1, $poisScannedEvents);
         $data = array_first($poisScannedEvents)['payload'];
 
-        self::assertSame(['Boulangerie', 'Boulangerie'], array_column($data['pois'], 'name'));
+        // Both bakeries are food; with the default (0.0) passage-time stub lunch
+        // lands at the arrival, so both are kept as the lunch food picks.
+        self::assertSame(['Boulangerie', 'Boulangerie'], array_column($data['resupply']['foodAtLunch'], 'name'));
     }
 
     private function createStage(string $tripId, int $dayNumber, float $distance = 80.0): Stage
@@ -125,6 +128,7 @@ final class ScanPoisHandlerTest extends TestCase
             $waterPointRepository,
             $distributor,
             new SupplyTimelineBuilder($haversine),
+            new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
             $translator,
@@ -491,7 +495,7 @@ final class ScanPoisHandlerTest extends TestCase
             array_any($data['alerts'] ?? [], static fn (array $a): bool => 'warning' === $a['type']),
             'Expected no resupply timing warning on a rest day',
         );
-        self::assertNotEmpty($data['pois'] ?? [], 'POIs must still be published on a rest day');
+        self::assertNotEmpty($data['resupply']['foodAtLunch'] ?? [], 'Resupply must still be published on a rest day');
     }
 
     #[Test]

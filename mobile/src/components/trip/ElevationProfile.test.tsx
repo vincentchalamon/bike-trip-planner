@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
 import '../../i18n';
@@ -38,7 +39,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 10,

@@ -29,7 +29,7 @@ export interface StagePayload {
 export interface EnrichedStagePayload extends StagePayload {
   weather: WeatherPayload["weather"];
   alerts: AlertPayload[];
-  pois: PoiPayload[];
+  resupply: ResupplyPayload;
   accommodations: AccommodationPayload[];
   selectedAccommodation: AccommodationPayload | null;
   events: EventPayload[];
@@ -76,6 +76,14 @@ export interface PoiPayload {
   distanceFromStart: number | null;
   osmType?: "node" | "way" | "relation" | null;
   osmId?: number | null;
+}
+
+// Curated resupply suggestions per stage (#1099), replacing the raw POI list.
+export interface ResupplyPayload {
+  foodAtLunch: PoiPayload[];
+  waterMorning: PoiPayload | null;
+  waterAfternoon: PoiPayload | null;
+  foodAtArrival: PoiPayload[];
 }
 
 export interface AccommodationPayload {
@@ -161,7 +169,7 @@ export type MercureEvent =
       type: "pois_scanned";
       data: {
         stageIndex: number;
-        pois: PoiPayload[];
+        resupply: ResupplyPayload;
         alerts?: AlertPayload[];
       };
     }

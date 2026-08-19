@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
 import '../../i18n';
@@ -58,7 +59,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 10,
@@ -75,7 +76,12 @@ const routedStage = stage({
     { lat: 48.01, lon: 2.01, ele: 200 },
     { lat: 48.02, lon: 2.02, ele: 150 },
   ],
-  pois: [{ name: 'Café', category: 'amenity', lat: 48.01, lon: 2.01 }] as StageData['pois'],
+  resupply: {
+    foodAtLunch: [{ name: 'Café', category: 'amenity', lat: 48.01, lon: 2.01 }],
+    waterMorning: null,
+    waterAfternoon: null,
+    foodAtArrival: [],
+  } as StageData['resupply'],
 });
 
 describe('TripMapView', () => {

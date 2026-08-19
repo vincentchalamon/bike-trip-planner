@@ -1,4 +1,5 @@
 import type { StageData } from '@btp/core';
+import { resupplyPois } from '@btp/core';
 import type { StyleSpecification } from '@maplibre/maplibre-react-native';
 import type { FeatureCollection } from 'geojson';
 
@@ -110,7 +111,7 @@ export function collectMarkers(stages: StageData[]): MapMarker[] {
         name: stage.endLabel ?? '',
       });
     }
-    for (const poi of stage.pois) {
+    for (const poi of resupplyPois(stage.resupply)) {
       markers.push({ kind: 'poi', lon: poi.lon, lat: poi.lat, name: poi.name });
     }
     const accommodations = stage.selectedAccommodation

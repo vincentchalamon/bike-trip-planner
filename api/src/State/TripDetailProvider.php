@@ -8,8 +8,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
+use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
@@ -174,7 +175,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
             'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
-            'pois' => array_map($this->serializePoi(...), $stage->pois),
+            'resupply' => $this->serializeResupply($stage->resupply),
             'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
                 ? $this->serializeAccommodation($stage->selectedAccommodation)
@@ -223,6 +224,14 @@ final readonly class TripDetailProvider implements ProviderInterface
             // Only the kinds the frontend actually handles are exposed (issue #863).
             'action' => $alert->action?->toDeliverablePayload(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeResupply(?Resupply $resupply): array
+    {
+        return ($resupply ?? new Resupply())->map($this->serializePoi(...));
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mapper;
 
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\Trip;
@@ -46,7 +47,10 @@ final readonly class StageResponseMapper
         $response->isRestDay = $stage->isRestDay;
         $response->weather = $stage->weather;
         $response->alerts = $stage->alerts;
-        $response->pois = $stage->pois;
+        // Always serialize a resupply object (skip_null_values would omit a null
+        // one, breaking the response schema — it is a required field like the old
+        // pois array was).
+        $response->resupply = $stage->resupply ?? new Resupply();
         $response->accommodations = $stage->accommodations;
         $response->selectedAccommodation = $stage->selectedAccommodation;
         $response->events = $stage->events;

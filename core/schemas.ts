@@ -89,6 +89,16 @@ export const PointOfInterestSchema = z.object({
   osmId: z.number().int().nullable().optional().catch(null),
 });
 
+// Curated resupply suggestions per stage (#1099), replacing the raw POI dump:
+// 2 food shops near the lunch stop, one water point each half of the day, 2 food
+// shops at the arrival. All fields default so a legacy/absent value parses empty.
+export const ResupplySchema = z.object({
+  foodAtLunch: z.array(PointOfInterestSchema).default([]),
+  waterMorning: PointOfInterestSchema.nullable().default(null),
+  waterAfternoon: PointOfInterestSchema.nullable().default(null),
+  foodAtArrival: z.array(PointOfInterestSchema).default([]),
+});
+
 export const SupplyWaterPointSchema = z.object({
   name: z.string().nullable(),
   lat: z.number(),
@@ -187,7 +197,12 @@ export const StageDataSchema = z.object({
   endLabel: z.string().nullable(),
   weather: WeatherForecastSchema.nullable(),
   alerts: z.array(AlertSchema),
-  pois: z.array(PointOfInterestSchema),
+  resupply: ResupplySchema.default({
+    foodAtLunch: [],
+    waterMorning: null,
+    waterAfternoon: null,
+    foodAtArrival: [],
+  }),
   accommodations: z.array(AccommodationSchema),
   selectedAccommodation: AccommodationSchema.nullable().optional(),
   accommodationSearchRadiusKm: z
@@ -242,6 +257,34 @@ export type AlertActionData = z.infer<typeof AlertActionSchema>;
 export type AlertData = z.infer<typeof AlertSchema>;
 export type WeatherData = z.infer<typeof WeatherForecastSchema>;
 export type PoiData = z.infer<typeof PointOfInterestSchema>;
+export type ResupplyData = z.infer<typeof ResupplySchema>;
+
+/** A stage with no resupply suggestions (recompute reset / before the scan). */
+export const EMPTY_RESUPPLY: ResupplyData = {
+  foodAtLunch: [],
+  waterMorning: null,
+  waterAfternoon: null,
+  foodAtArrival: [],
+};
+
+/** Flatten a resupply into a POI list (map markers, GPX waypoints), deduped by coordinate. */
+export function resupplyPois(resupply: ResupplyData): PoiData[] {
+  const seen = new Set<string>();
+  const out: PoiData[] = [];
+  for (const poi of [
+    ...resupply.foodAtLunch,
+    resupply.waterMorning,
+    resupply.waterAfternoon,
+    ...resupply.foodAtArrival,
+  ]) {
+    if (!poi) continue;
+    const key = `${poi.lat},${poi.lon}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(poi);
+  }
+  return out;
+}
 export type SupplyWaterPointData = z.infer<typeof SupplyWaterPointSchema>;
 export type SupplyFoodPointData = z.infer<typeof SupplyFoodPointSchema>;
 export type SupplyMarkerData = z.infer<typeof SupplyMarkerSchema>;

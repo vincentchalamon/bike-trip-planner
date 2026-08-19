@@ -38,7 +38,12 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: {
+      foodAtLunch: [],
+      waterMorning: null,
+      waterAfternoon: null,
+      foodAtArrival: [],
+    },
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 5,
@@ -77,7 +82,12 @@ function enriched(
     label: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: {
+      foodAtLunch: [],
+      waterMorning: null,
+      waterAfternoon: null,
+      foodAtArrival: [],
+    },
     accommodations: [],
     selectedAccommodation: null,
     events: [],
@@ -134,7 +144,10 @@ describe("reduceMercureEvent — trip-level events", () => {
   it("trip_complete stores the status and clears recomputing markers", () => {
     const next = reduceMercureEvent(
       baseState({ recomputingStages: new Set([0, 1]) }),
-      { type: "trip_complete", data: { computationStatus: { weather: "done" } } },
+      {
+        type: "trip_complete",
+        data: { computationStatus: { weather: "done" } },
+      },
     );
     expect(next.computationStatus).toEqual({ weather: "done" });
     expect(next.recomputingStages.size).toBe(0);
@@ -180,7 +193,9 @@ describe("reduceMercureEvent — trip-level events", () => {
 
 describe("reduceMercureEvent — per-stage enrichment", () => {
   it("weather_fetched sets weather on the stage matching dayNumber", () => {
-    const state = baseState({ stages: [stage({ dayNumber: 1 }), stage({ dayNumber: 2 })] });
+    const state = baseState({
+      stages: [stage({ dayNumber: 1 }), stage({ dayNumber: 2 })],
+    });
     const next = reduceMercureEvent(state, {
       type: "weather_fetched",
       data: { stages: [{ dayNumber: 2, weather }] },
@@ -189,17 +204,30 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     expect(next.stages[1]!.weather).toEqual(weather);
   });
 
-  it("pois_scanned sets pois and tags optional alerts with the pois group", () => {
+  it("pois_scanned sets resupply and tags optional alerts with the pois group", () => {
     const state = baseState({ stages: [stage()] });
     const next = reduceMercureEvent(state, {
       type: "pois_scanned",
       data: {
         stageIndex: 0,
-        pois: [{ name: "Fort", category: "castle", lat: 1, lon: 1, distanceFromStart: 3 }],
+        resupply: {
+          foodAtLunch: [
+            {
+              name: "Fort",
+              category: "castle",
+              lat: 1,
+              lon: 1,
+              distanceFromStart: 3,
+            },
+          ],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
         alerts: [{ type: "nudge", message: "poi", lat: null, lon: null }],
       },
     });
-    expect(next.stages[0]!.pois).toHaveLength(1);
+    expect(next.stages[0]!.resupply.foodAtLunch).toHaveLength(1);
     expect((next.stages[0]!.alerts[0] as StageAlert)._group).toBe("pois");
   });
 
@@ -247,12 +275,19 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
 
   it("accommodations_found sets accommodations and radius, but not over a rider's selection", () => {
     const acc = { name: "Gite" } as StageData["accommodations"][number];
-    const state = baseState({ stages: [stage(), stage({ selectedAccommodation: acc, accommodations: [acc] })] });
+    const state = baseState({
+      stages: [
+        stage(),
+        stage({ selectedAccommodation: acc, accommodations: [acc] }),
+      ],
+    });
     const next = reduceMercureEvent(state, {
       type: "accommodations_found",
       data: {
         stageIndex: 0,
-        accommodations: [{ name: "New" } as StageData["accommodations"][number]],
+        accommodations: [
+          { name: "New" } as StageData["accommodations"][number],
+        ],
         searchRadiusKm: 12,
       },
     });
@@ -263,7 +298,9 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
       type: "accommodations_found",
       data: {
         stageIndex: 1,
-        accommodations: [{ name: "Ignored" } as StageData["accommodations"][number]],
+        accommodations: [
+          { name: "Ignored" } as StageData["accommodations"][number],
+        ],
       },
     });
     expect(kept.stages[1]!.accommodations).toEqual([acc]);
@@ -290,13 +327,19 @@ describe("reduceMercureEvent — alert groups", () => {
     let state = baseState({ stages: [stage()] });
     state = reduceMercureEvent(state, {
       type: "terrain_alerts",
-      data: { alertsByStage: { "0": [{ type: "warning", message: "t", lat: null, lon: null }] } },
+      data: {
+        alertsByStage: {
+          "0": [{ type: "warning", message: "t", lat: null, lon: null }],
+        },
+      },
     });
     state = reduceMercureEvent(state, {
       type: "wind_alerts",
       data: { alerts: [{ type: "nudge", message: "w", lat: null, lon: null }] },
     });
-    const sources = state.stages[0]!.alerts.map((a) => (a as StageAlert)._group).sort();
+    const sources = state.stages[0]!.alerts.map(
+      (a) => (a as StageAlert)._group,
+    ).sort();
     expect(sources).toEqual(["terrain", "wind"]);
   });
 
@@ -368,7 +411,13 @@ describe("reduceMercureEvent — alert groups", () => {
       type: "bike_shop_alerts",
       data: {
         alerts: [
-          { stageIndex: 0, dayNumber: 1, code: "BS", type: "nudge", message: "Vélociste" },
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "BS",
+            type: "nudge",
+            message: "Vélociste",
+          },
         ],
       },
     });
@@ -382,7 +431,13 @@ describe("reduceMercureEvent — alert groups", () => {
       type: "water_point_alerts",
       data: {
         alerts: [
-          { stageIndex: 0, dayNumber: 1, code: "WP", type: "nudge", message: "Fontaine" },
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "WP",
+            type: "nudge",
+            message: "Fontaine",
+          },
         ],
         waterPointsByStage: [],
       },
@@ -397,7 +452,13 @@ describe("reduceMercureEvent — alert groups", () => {
       type: "health_service_alerts",
       data: {
         alerts: [
-          { stageIndex: 0, dayNumber: 1, code: "HS", type: "nudge", message: "Pharmacie" },
+          {
+            stageIndex: 0,
+            dayNumber: 1,
+            code: "HS",
+            type: "nudge",
+            message: "Pharmacie",
+          },
         ],
       },
     });
@@ -445,7 +506,11 @@ describe("reduceMercureEvent — alert groups", () => {
             code: "RS",
             type: "nudge",
             message: "Gare",
-            action: { kind: "navigate", label: "Voir", payload: { lat: 1, lon: 2 } },
+            action: {
+              kind: "navigate",
+              label: "Voir",
+              payload: { lat: 1, lon: 2 },
+            },
           },
         ],
       },
@@ -467,7 +532,11 @@ describe("reduceMercureEvent — alert groups", () => {
             code: "BC",
             type: "nudge",
             message: "Frontière",
-            action: { kind: "navigate", label: "Voir", payload: { lat: 3, lon: 4 } },
+            action: {
+              kind: "navigate",
+              label: "Voir",
+              payload: { lat: 3, lon: 4 },
+            },
             lat: 3,
             lon: 4,
           },
@@ -490,7 +559,11 @@ describe("reduceMercureEvent — alert groups", () => {
             code: "FD",
             type: "warning",
             message: "Gué",
-            action: { kind: "navigate", label: "Voir", payload: { lat: 5, lon: 6 } },
+            action: {
+              kind: "navigate",
+              label: "Voir",
+              payload: { lat: 5, lon: 6 },
+            },
             lat: 5,
             lon: 6,
           },
@@ -658,10 +731,23 @@ describe("reduceMercureEvent — purity", () => {
     const state = baseState({ stages, recomputingStages });
     reduceMercureEvent(state, {
       type: "pois_scanned",
-      data: { stageIndex: 0, pois: [{ name: "x", category: "c", lat: 1, lon: 1, distanceFromStart: 0 }] },
+      data: {
+        stageIndex: 0,
+        resupply: {
+          foodAtLunch: [
+            { name: "x", category: "c", lat: 1, lon: 1, distanceFromStart: 0 },
+          ],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
+      },
     });
-    reduceMercureEvent(state, { type: "trip_complete", data: { computationStatus: {} } });
-    expect(state.stages[0]!.pois).toHaveLength(0);
+    reduceMercureEvent(state, {
+      type: "trip_complete",
+      data: { computationStatus: {} },
+    });
+    expect(state.stages[0]!.resupply.foodAtLunch).toHaveLength(0);
     expect(recomputingStages.has(0)).toBe(true);
   });
 });
@@ -688,12 +774,17 @@ describe("Mercure contract drift guard (#1030)", () => {
 
   it("every event dispatched by use-mercure.ts is a canonical core event", () => {
     const orphanInHook = [...handledInHook].filter((t) => !canonical.has(t));
-    expect(orphanInHook, "web hook handles events not in @btp/core").toEqual([]);
+    expect(orphanInHook, "web hook handles events not in @btp/core").toEqual(
+      [],
+    );
   });
 
   it("every canonical core event is dispatched by use-mercure.ts", () => {
     const missingFromHook = [...canonical].filter((t) => !handledInHook.has(t));
-    expect(missingFromHook, "@btp/core events not handled by the web hook").toEqual([]);
+    expect(
+      missingFromHook,
+      "@btp/core events not handled by the web hook",
+    ).toEqual([]);
   });
 
   it("the core reducer handles every canonical event at runtime (no fallthrough)", () => {
@@ -707,7 +798,15 @@ describe("Mercure contract drift guard (#1030)", () => {
       },
       stages_computed: { stages: [] },
       weather_fetched: { stages: [] },
-      pois_scanned: { stageIndex: 0, pois: [] },
+      pois_scanned: {
+        stageIndex: 0,
+        resupply: {
+          foodAtLunch: [],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
+      },
       accommodations_found: { stageIndex: 0, accommodations: [] },
       events_found: { stageIndex: 0, events: [] },
       supply_timeline: { stageIndex: 0, markers: [] },
@@ -731,7 +830,12 @@ describe("Mercure contract drift guard (#1030)", () => {
         coordinates: [],
       },
       trip_complete: { computationStatus: {} },
-      computation_step_completed: { step: "", category: "route", completed: 0, total: 0 },
+      computation_step_completed: {
+        step: "",
+        category: "route",
+        completed: 0,
+        total: 0,
+      },
       trip_ready: { stages: [], computationStatus: {} },
       stage_updated: { stageIndex: 0, stage: enriched() },
       validation_error: { code: "", message: "" },
@@ -741,7 +845,10 @@ describe("Mercure contract drift guard (#1030)", () => {
     for (const type of MERCURE_EVENT_TYPES) {
       const event = { type, data: stubData[type] } as MercureEvent;
       const next = reduceMercureEvent(baseState(), event);
-      expect(Array.isArray(next.stages), `reducer returned no state for ${type}`).toBe(true);
+      expect(
+        Array.isArray(next.stages),
+        `reducer returned no state for ${type}`,
+      ).toBe(true);
     }
   });
 });

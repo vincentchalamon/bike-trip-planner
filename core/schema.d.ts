@@ -1206,6 +1206,27 @@ export interface components {
             /** @description Official website of the POI, when OpenStreetMap knows one. */
             website?: string | null;
         };
+        "Resupply.fit": {
+            foodAtLunch?: components["schemas"]["PointOfInterest.fit"][];
+            waterMorning?: components["schemas"]["PointOfInterest.fit"] | null;
+            waterAfternoon?: components["schemas"]["PointOfInterest.fit"] | null;
+            foodAtArrival?: components["schemas"]["PointOfInterest.fit"][];
+            readonly empty?: boolean;
+        };
+        "Resupply.gpx": {
+            foodAtLunch?: components["schemas"]["PointOfInterest.gpx"][];
+            waterMorning?: components["schemas"]["PointOfInterest.gpx"] | null;
+            waterAfternoon?: components["schemas"]["PointOfInterest.gpx"] | null;
+            foodAtArrival?: components["schemas"]["PointOfInterest.gpx"][];
+            readonly empty?: boolean;
+        };
+        "Resupply.jsonld": {
+            foodAtLunch?: components["schemas"]["PointOfInterest.jsonld"][];
+            waterMorning?: components["schemas"]["PointOfInterest.jsonld"] | null;
+            waterAfternoon?: components["schemas"]["PointOfInterest.jsonld"] | null;
+            foodAtArrival?: components["schemas"]["PointOfInterest.jsonld"][];
+            readonly empty?: boolean;
+        };
         "Stage.StagePoiWaypointRequest": {
             /** @description POI latitude to insert as waypoint. */
             waypointLat: number | null;
@@ -1231,7 +1252,7 @@ export interface components {
         "Stage.StageResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             alerts?: components["schemas"]["Alert.jsonld"][];
-            pois?: components["schemas"]["PointOfInterest.jsonld"][];
+            resupply?: components["schemas"]["Resupply.jsonld"] | null;
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             events?: components["schemas"]["Event.jsonld"][];
@@ -1260,7 +1281,7 @@ export interface components {
         "Stage.fit": {
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
             alerts?: components["schemas"]["Alert.fit"][];
-            pois?: components["schemas"]["PointOfInterest.fit"][];
+            resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             /**
@@ -1292,7 +1313,7 @@ export interface components {
         "Stage.gpx": {
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
             alerts?: components["schemas"]["Alert.gpx"][];
-            pois?: components["schemas"]["PointOfInterest.gpx"][];
+            resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             /**
@@ -1324,7 +1345,7 @@ export interface components {
         "Stage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             alerts?: components["schemas"]["Alert.jsonld"][];
-            pois?: components["schemas"]["PointOfInterest.jsonld"][];
+            resupply?: components["schemas"]["Resupply.jsonld"] | null;
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             /**
@@ -1591,15 +1612,44 @@ export interface components {
                         };
                     } | null;
                 }[];
-                pois?: {
-                    name?: string;
-                    category?: string;
-                    lat?: number;
-                    lon?: number;
-                    distanceFromStart?: number | null;
-                    osmType?: ("node" | "way" | "relation") | null;
-                    osmId?: number | null;
-                }[];
+                resupply?: {
+                    foodAtLunch?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    }[];
+                    waterMorning?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    } | null;
+                    waterAfternoon?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    } | null;
+                    foodAtArrival?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    }[];
+                };
                 accommodations?: {
                     name?: string;
                     type?: string;
@@ -1649,7 +1699,7 @@ export interface components {
         "TripShare.Stage.fit": {
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
             alerts?: components["schemas"]["Alert.fit"][];
-            pois?: components["schemas"]["PointOfInterest.fit"][];
+            resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             /**
@@ -1681,7 +1731,7 @@ export interface components {
         "TripShare.Stage.gpx": {
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
             alerts?: components["schemas"]["Alert.gpx"][];
-            pois?: components["schemas"]["PointOfInterest.gpx"][];
+            resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             /**
@@ -1812,15 +1862,44 @@ export interface components {
                         };
                     } | null;
                 }[];
-                pois?: {
-                    name?: string;
-                    category?: string;
-                    lat?: number;
-                    lon?: number;
-                    distanceFromStart?: number | null;
-                    osmType?: ("node" | "way" | "relation") | null;
-                    osmId?: number | null;
-                }[];
+                resupply?: {
+                    foodAtLunch?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    }[];
+                    waterMorning?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    } | null;
+                    waterAfternoon?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    } | null;
+                    foodAtArrival?: {
+                        name?: string;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number | null;
+                        osmType?: ("node" | "way" | "relation") | null;
+                        osmId?: number | null;
+                    }[];
+                };
                 accommodations?: {
                     name?: string;
                     type?: string;

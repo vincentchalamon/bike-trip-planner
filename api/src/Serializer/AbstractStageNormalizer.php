@@ -66,7 +66,7 @@ abstract readonly class AbstractStageNormalizer implements NormalizerInterface
     {
         $waypoints = [];
 
-        foreach ($stage->pois as $poi) {
+        foreach ($stage->resupply?->all() ?? [] as $poi) {
             $waypoints[] = $this->buildWaypointEntry($poi->name, $poi->category, $poi->lat, $poi->lon);
         }
 

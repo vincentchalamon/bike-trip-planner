@@ -1,4 +1,5 @@
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import {
   addPoiWaypoint,
@@ -277,7 +278,7 @@ export function runAddStage(
     endLabel: next?.startLabel ?? null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,

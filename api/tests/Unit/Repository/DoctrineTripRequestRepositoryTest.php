@@ -14,6 +14,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
@@ -215,7 +216,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         );
         $stageDto->weather = $weather;
         $stageDto->addAlert($alert);
-        $stageDto->addPoi($poi);
+        $stageDto->resupply = new Resupply(foodAtLunch: [$poi]);
         $stageDto->addAccommodation($accommodation);
         $stageDto->selectedAccommodation = $selectedAccommodation;
 
@@ -270,17 +271,19 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame(48.0, $result->alerts[0]->lat);
         self::assertSame(3.5, $result->alerts[0]->lon);
 
-        // POIs
-        self::assertCount(1, $result->pois);
-        self::assertSame('Cathédrale de Sens', $result->pois[0]->name);
-        self::assertSame('monument', $result->pois[0]->category);
-        self::assertSame(48.197, $result->pois[0]->lat);
-        self::assertSame(3.283, $result->pois[0]->lon);
-        self::assertSame(85.2, $result->pois[0]->distanceFromStart);
+        // Resupply (persisted in the repurposed pois column)
+        self::assertNotNull($result->resupply);
+        self::assertCount(1, $result->resupply->foodAtLunch);
+        $lunchPoi = $result->resupply->foodAtLunch[0];
+        self::assertSame('Cathédrale de Sens', $lunchPoi->name);
+        self::assertSame('monument', $lunchPoi->category);
+        self::assertSame(48.197, $lunchPoi->lat);
+        self::assertSame(3.283, $lunchPoi->lon);
+        self::assertSame(85.2, $lunchPoi->distanceFromStart);
         // Without these in poiToArray() the OSM link would vanish on reload and in
         // the shared view, exactly as the accommodation enrichment did (#870).
-        self::assertSame('way', $result->pois[0]->osmType);
-        self::assertSame(4242, $result->pois[0]->osmId);
+        self::assertSame('way', $lunchPoi->osmType);
+        self::assertSame(4242, $lunchPoi->osmId);
 
         // Accommodations
         self::assertCount(1, $result->accommodations);
@@ -300,6 +303,40 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame(65.0, $result->selectedAccommodation->estimatedPriceMin);
         self::assertSame(95.0, $result->selectedAccommodation->estimatedPriceMax);
         self::assertTrue($result->selectedAccommodation->isExactPrice);
+    }
+
+    #[Test]
+    public function legacyFlatPoiListReadsBackAsEmptyResupply(): void
+    {
+        // A pre-#1099 row: the (repurposed) pois column still holds the raw flat POI
+        // list, without the foodAtLunch/foodAtArrival resupply keys. It must round-
+        // trip to an empty Resupply, not throw or return garbage, until re-scanned.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 50.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.0, 2.0, 0.0),
+            endPoint: new Coordinate(48.5, 2.5, 0.0),
+        );
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stageEntity = $trip->stages->first();
+        self::assertNotFalse($stageEntity);
+        $stageEntity->setPois([
+            ['name' => 'Old shop', 'category' => 'bakery', 'lat' => 1.0, 'lon' => 2.0],
+        ]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        self::assertNotNull($stages[0]->resupply);
+        self::assertTrue($stages[0]->resupply->isEmpty());
     }
 
     #[Test]
