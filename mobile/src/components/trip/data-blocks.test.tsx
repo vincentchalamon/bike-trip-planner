@@ -251,6 +251,59 @@ describe('AccommodationBlock', () => {
     expect(meta).not.toContain('€');
   });
 
+  it('orders candidates by proximity to the arrival (closest first)', () => {
+    const t = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[
+            acc({ name: 'Loin', distanceToEndPoint: 10 }),
+            acc({ name: 'Proche', distanceToEndPoint: 1 }),
+          ]}
+        />,
+      ),
+    );
+    expect(t.indexOf('Proche')).toBeLessThan(t.indexOf('Loin'));
+  });
+
+  it('paginates 5 at a time and reveals the rest via "show more"', () => {
+    const many = Array.from({ length: 7 }, (_, i) =>
+      acc({ name: `H${i}`, distanceToEndPoint: i }),
+    );
+    const tree = render(<AccommodationBlock accommodations={many} />);
+    // H0..H4 shown; H5/H6 hidden behind the pager.
+    expect(texts(tree)).toContain('H4');
+    expect(texts(tree)).not.toContain('H5');
+    act(() =>
+      tree.root
+        .findByProps({
+          label: fr.trip.blocks.accommodationMore.replace('{{count}}', '5'),
+        })
+        .props.onPress(),
+    );
+    expect(texts(tree)).toContain('H6');
+  });
+
+  it('selects by the original index after sorting, not the display position', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[
+          acc({ name: 'Loin', distanceToEndPoint: 10 }),
+          acc({ name: 'Proche', distanceToEndPoint: 1 }),
+        ]}
+        radiusKm={5}
+        onSelect={onSelect}
+      />,
+    );
+    // "Proche" renders first (index 0) but is index 1 in the source array.
+    act(() =>
+      tree.root
+        .findAllByProps({ label: fr.trip.blocks.accommodationSelect })[0]!
+        .props.onPress(),
+    );
+    expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
   it('renders a zero distance rather than dropping it (accommodation at the endpoint)', () => {
     const meta = texts(
       render(<AccommodationBlock accommodations={[acc({ distanceToEndPoint: 0 })]} />),
@@ -509,5 +562,17 @@ describe('EventsBlock', () => {
     // The only button in the block is the "see more" toggle.
     act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
     expect(texts(tree)).toContain('D');
+  });
+
+  it('caps the list at the soonest 5, even fully expanded', () => {
+    const events = Array.from({ length: 7 }, (_, i) =>
+      event(`E${i}`, `2026-06-0${i + 1}`),
+    );
+    const tree = render(<EventsBlock events={events} />);
+    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    const t = texts(tree);
+    expect(t).toContain('E4'); // 5th soonest is shown
+    expect(t).not.toContain('E5'); // 6th and 7th are capped out
+    expect(t).not.toContain('E6');
   });
 });
