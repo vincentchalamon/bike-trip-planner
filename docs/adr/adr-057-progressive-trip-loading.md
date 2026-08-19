@@ -65,11 +65,13 @@ from every read model.
   `elevationLoss`, `isRestDay`, a weather summary, and an alert **count** — no
   geometry, no collections. ~200 B/stage, so it stays instant for a months-long
   trip.
-- **`GET /trips/{tripId}/stages/{index}` — stage detail** (on demand). The full
-  single stage: that stage's geometry, `resupply`, accommodations, events,
+- **`GET /trips/{tripId}/stages/{index}/detail` — stage detail** (on demand). The
+  full single stage: that stage's geometry, `resupply`, accommodations, events,
   classified alerts, weather. The `StageResponse` DTO already models this shape
   (currently `#[NotExposed]`); it is promoted to an exposed operation with a
-  provider. O(1) per stage opened.
+  provider on a `/detail` sub-route (the bare `/stages/{index}` IRI is shadowed by
+  the `NotExposed` `StageResponse`, same reason `/export` uses a sub-route). O(1)
+  per stage opened.
 - **`GET /trips/{id}/route` — route geometry** (on demand). All stages, **geometry
   only**, for the map. The one unavoidable all-stages payload, kept geometry-only
   and fetched **only when the map is actually viewed**.
@@ -83,7 +85,7 @@ from every read model.
   then fetches every stage detail **in parallel with bounded concurrency**
   (HTTP/2-multiplexed over FrankenPHP/Caddy), each row hydrating as its detail
   arrives. **No UI change** — the same timeline, filled progressively. The map
-  uses the route resource. Each `/stages/{index}` is independently cacheable
+  uses the route resource. Each `/stages/{index}/detail` is independently cacheable
   (Redis server-side, browser/CDN client-side) and resumable, unlike one 630 KB
   blob.
 - **SSE reconciliation is unchanged** (ADR-055): Mercure events already target

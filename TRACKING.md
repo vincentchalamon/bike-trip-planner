@@ -1921,9 +1921,9 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 | Ordre | ID | Titre | Effort | Statut | Dépend de |
 |-------|----|-------|--------|--------|-----------|
 | 1 | [#1099](https://github.com/vincentchalamon/bike-trip-planner/issues/1099) | `resupply` (≤6/étape) remplace les POIs en vrac — **merge en tête, débloque la recette** | M | ⏳ À faire | — |
-| 2 | [#1102](https://github.com/vincentchalamon/bike-trip-planner/issues/1102) | split modèle lecture — résumé (`/trips/{id}`) / détail-étape (`/stages/{index}`) / route (`/route`) | L | ⏳ À faire | #1099 |
-| 3 | [#1103](https://github.com/vincentchalamon/bike-trip-planner/issues/1103) | hydratation progressive du store (`@btp/core` + mobile : lazy détail au tap, route à l'ouverture carte) | M | ⏳ À faire | #1102 |
-| 4 | [#1104](https://github.com/vincentchalamon/bike-trip-planner/issues/1104) | hydratation progressive de la timeline web (squelettes + fetch parallèle borné) | M | ⏳ À faire | #1102, #1099 |
+| 2 | [#1102](https://github.com/vincentchalamon/bike-trip-planner/issues/1102) | split modèle lecture — résumé (`/trips/{id}`) / détail-étape (`/stages/{index}/detail`) / route (`/route`) | L | 🚧 En cours | #1099 |
+| 3 | [#1103](https://github.com/vincentchalamon/bike-trip-planner/issues/1103) | hydratation progressive du store (`@btp/core` + mobile : lazy détail au tap, route à l'ouverture carte) | M | 🚧 En cours | #1102 |
+| 4 | [#1104](https://github.com/vincentchalamon/bike-trip-planner/issues/1104) | hydratation progressive de la timeline web (squelettes + fetch parallèle borné) | M | 🚧 En cours | #1102, #1099 |
 | 5 | [#1105](https://github.com/vincentchalamon/bike-trip-planner/issues/1105) | roadbook (05) résumé-seul + détail d'étape (07) catégorisé conformes aux maquettes | L | ⏳ À faire | #1099, #1102, #1103 |
 | 6 | [#1106](https://github.com/vincentchalamon/bike-trip-planner/issues/1106) | spike Vulcain (`Fields`/Early-Hints) par-dessus le fetch progressif | S | ⏳ À faire | #1102, #1104 |
 
