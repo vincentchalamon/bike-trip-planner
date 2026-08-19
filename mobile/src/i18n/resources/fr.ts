@@ -291,8 +291,6 @@ export const fr = {
     valueKmh: '{{value}} km/h',
     valueHour: '{{value}}h',
     valuePercent: '{{value}} %',
-    decrease: 'Diminuer {{label}}',
-    increase: 'Augmenter {{label}}',
     accommodationTitle: "Types d'hébergement",
     accommodationDescription: 'Au moins un type doit rester activé.',
     type_hotel: 'Hôtel',

@@ -293,8 +293,6 @@ export const en: typeof fr = {
     valueKmh: '{{value}} km/h',
     valueHour: '{{value}}h',
     valuePercent: '{{value}}%',
-    decrease: 'Decrease {{label}}',
-    increase: 'Increase {{label}}',
     accommodationTitle: 'Accommodation types',
     accommodationDescription: 'At least one type must stay enabled.',
     type_hotel: 'Hotel',

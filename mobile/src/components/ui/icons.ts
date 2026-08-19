@@ -32,10 +32,7 @@ export { Share2 } from 'lucide-react-native';
 // Spike-UX restyle: icons used by the redesigned screens (login/create/roadbook/
 // share/map/stage-detail). Appended to keep the sorted set above stable.
 export {
-  ArrowDown,
-  ArrowUp,
   CloudSun,
-  Euro,
   FileText,
   Flag,
   Gauge,

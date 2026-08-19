@@ -73,6 +73,15 @@ function dragSlider(root: any, label: string, locationX: number, width = 270): a
   return s;
 }
 
+function fireA11yAction(root: any, label: string, actionName: string): void {
+  const s = root.find(
+    (n: any) => n.props.accessibilityRole === 'adjustable' && n.props.accessibilityLabel === label,
+  );
+  act(() => {
+    s.props.onAccessibilityAction({ nativeEvent: { actionName } });
+  });
+}
+
 function press(node: any) {
   act(() => {
     node.props.onPress();
@@ -225,5 +234,28 @@ describe('ConfigSheet accommodation types (min 1)', () => {
     expect(toggle.props.disabled).toBe(true);
     press(toggle);
     expect(mockUpdateAccommodationTypes).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConfigSheet slider screen-reader actions', () => {
+  it('increments and decrements the value via accessibility actions', () => {
+    const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    const label = t('config.maxDistance'); // 80 km, step 5
+
+    fireA11yAction(tree.root, label, 'increment');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 85 }));
+
+    fireA11yAction(tree.root, label, 'decrement');
+    fireA11yAction(tree.root, label, 'decrement');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 75 }));
+  });
+
+  it('ignores accessibility actions while the trip is locked (disabled)', () => {
+    act(() => {
+      useTripStore.setState({ isLocked: true });
+    });
+    const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    fireA11yAction(tree.root, t('config.maxDistance'), 'increment');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 80 }));
   });
 });
