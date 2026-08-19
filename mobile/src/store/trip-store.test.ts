@@ -101,6 +101,33 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
     useTripStore.getState().applyTripReady([stageData({ accommodations: [] })]);
     expect(useTripStore.getState().stages[0]!.accommodations).toEqual([acc]);
   });
+
+  it('applyRoute merges the on-demand geometry into the matching stages by dayNumber', () => {
+    useTripStore.setState({
+      stages: [stageData({ dayNumber: 1 }), stageData({ dayNumber: 2 })],
+      geometryLoaded: false,
+      loading: false,
+    });
+    useTripStore.getState().applyRoute({
+      id: 't1',
+      stages: [{ dayNumber: 2, geometry: [{ lat: 48, lon: 2, ele: 100 }] }],
+    } as never);
+    const { stages, geometryLoaded } = useTripStore.getState();
+    expect(geometryLoaded).toBe(true);
+    expect(stages[0]!.geometry).toEqual([]); // day 1 absent from the route payload
+    expect(stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
+  });
+
+  it('applyStageDetail merges one stage geometry without touching the others', () => {
+    useTripStore.setState({
+      stages: [stageData({ dayNumber: 1 }), stageData({ dayNumber: 2 })],
+      loading: false,
+    });
+    useTripStore.getState().applyStageDetail(1, [{ lat: 48, lon: 2, ele: 100 }]);
+    const { stages } = useTripStore.getState();
+    expect(stages[0]!.geometry).toEqual([]);
+    expect(stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
+  });
 });
 
 describe('mobile trip store — config + optimistic structural edits (#1031)', () => {

@@ -39,6 +39,7 @@ import {
 } from './stage-detail';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
+import { useStageDetail } from '../../hooks/use-stage-detail';
 import { useOfflineStore } from '../../store/offline-store';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
 import type { MutationFailure } from '../../store/gating';
@@ -73,6 +74,9 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   // Keep the index valid as stages hydrate / change under us.
   const count = stages.length;
   const safeIndex = clampIndex(index, count);
+  // The summary omits geometry (ADR-057); pull just this stage's detail in for
+  // the mini-map + profile (not the whole route).
+  useStageDetail(safeIndex);
   useEffect(() => {
     if (safeIndex !== index) setIndex(safeIndex);
   }, [safeIndex, index]);

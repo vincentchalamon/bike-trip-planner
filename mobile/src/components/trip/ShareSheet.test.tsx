@@ -9,6 +9,9 @@ jest.mock('../../api/trips', () => ({
   getTripShare: jest.fn(),
   createTripShare: jest.fn(),
   revokeTripShare: jest.fn(),
+  // The sheet pulls the route on open (geometry is split off /detail, ADR-057)
+  // so the infographic has a real route line — mock it like the other fetchers.
+  fetchTripRoute: jest.fn().mockResolvedValue(null),
   buildShareUrl: (code: string) => `https://web.example/s/${code}`,
 }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
@@ -17,7 +20,12 @@ jest.mock('../../lib/share-image', () => ({
 }));
 
 import * as Clipboard from 'expo-clipboard';
-import { getTripShare, createTripShare, revokeTripShare } from '../../api/trips';
+import {
+  getTripShare,
+  createTripShare,
+  revokeTripShare,
+  fetchTripRoute,
+} from '../../api/trips';
 import { captureAndShareInfographic } from '../../lib/share-image';
 import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
@@ -29,6 +37,7 @@ const mockCreate = createTripShare as jest.Mock;
 const mockRevoke = revokeTripShare as jest.Mock;
 const mockClip = Clipboard.setStringAsync as jest.Mock;
 const mockCapture = captureAndShareInfographic as jest.Mock;
+const mockRoute = fetchTripRoute as jest.Mock;
 
 function textOf(node: any): string[] {
   const kids = Array.isArray(node.props.children)
@@ -201,6 +210,38 @@ describe('ShareSheet (#1048)', () => {
       tree.update(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     });
     expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('pulls the route geometry into the store when opened (ADR-057)', async () => {
+    // The summary omits geometry, and Share is reachable without the map ever
+    // mounting — so opening the sheet must fetch /route or the infographic has a
+    // blank route line.
+    mockGet.mockResolvedValue(null);
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stage({ dayNumber: 1 })],
+      geometryLoaded: false,
+    });
+    mockRoute.mockResolvedValue({
+      id: 't1',
+      stages: [{ dayNumber: 1, geometry: [{ lat: 45, lon: 6, ele: 800 }] }],
+    });
+
+    await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
+
+    expect(mockRoute).toHaveBeenCalledWith('t1');
+    const s = useTripStore.getState();
+    expect(s.geometryLoaded).toBe(true);
+    expect(s.stages[0]!.geometry).toEqual([{ lat: 45, lon: 6, ele: 800 }]);
+  });
+
+  it('does not fetch the route while the sheet is closed', async () => {
+    mockGet.mockResolvedValue(null);
+    useTripStore.setState({ tripId: 't1', geometryLoaded: false });
+
+    await render(<ShareSheet visible={false} onClose={jest.fn()} tripId="t1" />);
+
+    expect(mockRoute).not.toHaveBeenCalled();
   });
 
   it('keeps the off-screen infographic unmounted while the sheet is just open (idle)', async () => {
