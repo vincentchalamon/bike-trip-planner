@@ -288,6 +288,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieves the collection of NotificationPreference resources.
+         * @description Retrieves the collection of NotificationPreference resources.
+         */
+        get: operations["api_usersmenotification-preferences_get_collection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/notification-preferences/{category}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replaces the NotificationPreference resource.
+         * @description Replaces the NotificationPreference resource.
+         */
+        put: operations["api_usersmenotification-preferences_category_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -1272,6 +1312,38 @@ export interface components {
          */
         "MercureToken.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             token?: string;
+        };
+        /**
+         * @description Per-category server-push opt-in for the authenticated user (#1124).
+         *
+         *     - GET /users/me/notification-preferences         the effective opt-in for every
+         *       category (stored override, or the category default when unset).
+         *     - PUT /users/me/notification-preferences/{category}  set the opt-in for one
+         *       category. Body: {"enabled": true|false}. An unknown category is 404.
+         *
+         *     Defaults: weatherSafety and analysisDone are ON, zoneOpening is OFF (opt-in).
+         *     The current user is always resolved from the security token, never a URL id.
+         */
+        NotificationPreference: {
+            /** @enum {string|null} */
+            category?: "weatherSafety" | "analysisDone" | "zoneOpening" | null;
+            enabled?: boolean;
+        };
+        /**
+         * @description Per-category server-push opt-in for the authenticated user (#1124).
+         *
+         *     - GET /users/me/notification-preferences         the effective opt-in for every
+         *       category (stored override, or the category default when unset).
+         *     - PUT /users/me/notification-preferences/{category}  set the opt-in for one
+         *       category. Body: {"enabled": true|false}. An unknown category is 404.
+         *
+         *     Defaults: weatherSafety and analysisDone are ON, zoneOpening is OFF (opt-in).
+         *     The current user is always resolved from the security token, never a URL id.
+         */
+        "NotificationPreference.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /** @enum {string|null} */
+            category?: "weatherSafety" | "analysisDone" | "zoneOpening" | null;
+            enabled?: boolean;
         };
         "PoiSuggestionDto.jsonld": {
             /** @description Display name of the POI. */
@@ -2915,6 +2987,114 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    "api_usersmenotification-preferences_get_collection": {
+        parameters: {
+            query?: {
+                /** @description The collection page number */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description NotificationPreference collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
+                        member: components["schemas"]["NotificationPreference.jsonld"][];
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_usersmenotification-preferences_category_put": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description NotificationPreference identifier */
+                category: string;
+            };
+            cookie?: never;
+        };
+        /** @description The updated NotificationPreference resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["NotificationPreference"];
+            };
+        };
+        responses: {
+            /** @description NotificationPreference resource updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["NotificationPreference.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
             };
         };
     };
