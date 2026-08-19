@@ -559,4 +559,57 @@ final class TripDetailTest extends ApiTestCase
         $this->assertArrayHasKey('resupply', $data);
         $this->assertArrayHasKey('accommodations', $data);
     }
+
+    #[Test]
+    public function routeOfAnotherUsersTripReturns404(): void
+    {
+        // IDOR-DETAIL regression: TRIP_VIEW hides another user's trip as a 404.
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function stageDetailOfAnotherUsersTripReturns404(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [
+            new StageDto(
+                tripId: self::TRIP_ID,
+                dayNumber: 1,
+                distance: 40.0,
+                elevation: 300.0,
+                startPoint: new Coordinate(45.0, 6.0, 100.0),
+                endPoint: new Coordinate(45.5, 6.5, 200.0),
+            ),
+        ]);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder2@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function stageDetailOutOfRangeIndexReturns404(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
 }

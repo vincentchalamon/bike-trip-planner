@@ -1613,6 +1613,11 @@ export interface components {
                     lon?: number;
                     ele?: number;
                 };
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
                 label?: string | null;
                 startLabel?: string | null;
                 endLabel?: string | null;
@@ -1874,6 +1879,11 @@ export interface components {
                     lon?: number;
                     ele?: number;
                 };
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
                 label?: string | null;
                 startLabel?: string | null;
                 endLabel?: string | null;
