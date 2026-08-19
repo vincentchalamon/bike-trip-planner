@@ -200,6 +200,19 @@ export const fr = {
       contactBody:
         "Pour toute question relative à cette politique de confidentialité, écris-nous à : __CONTACT_EMAIL__.\n\nCette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page.",
     },
+    export: {
+      description:
+        'Télécharge une archive JSON de ton profil et de tes voyages (portabilité RGPD).',
+      action: 'Exporter mes données',
+      failed: "L'export a échoué. Réessaie.",
+    },
+    delete: {
+      warningBefore: 'Action irréversible : tes voyages et données seront anonymisés. Tape ',
+      keyword: 'SUPPRIMER',
+      warningAfter: ' pour confirmer.',
+      action: 'Supprimer définitivement mon compte',
+      failed: 'La suppression a échoué. Réessaie.',
+    },
   },
   notifications: {
     title: 'Notifications',
