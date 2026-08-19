@@ -53,7 +53,11 @@ export function DateField({
     : placeholder;
 
   const onPick = (event: DateTimePickerEvent, date?: Date) => {
-    setShow(false);
+    // iOS renders the spinner inline and fires onChange once per scroll tick
+    // (always type 'set', never 'dismissed'); closing on the first tick would
+    // hide the wheel before the user reaches their date. Keep it open on iOS —
+    // the field tap toggles it shut. Android's calendar dialog closes itself.
+    if (Platform.OS !== 'ios') setShow(false);
     if (event.type === 'set' && date) onChange(dateToIso(date));
   };
 
@@ -76,7 +80,7 @@ export function DateField({
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ disabled }}
         disabled={disabled}
-        onPress={() => setShow(true)}
+        onPress={() => setShow((s) => (Platform.OS === 'ios' ? !s : true))}
         style={[
           styles.field,
           {
@@ -101,7 +105,7 @@ export function DateField({
         >
           {display}
         </Text>
-        {value ? (
+        {value && !disabled ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={clearLabel ?? accessibilityLabel}

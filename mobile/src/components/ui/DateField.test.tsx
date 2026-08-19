@@ -1,7 +1,19 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
+
+// Pin Platform.OS for a block, then restore — the picker's dismiss behaviour
+// diverges between iOS (inline spinner) and Android (dialog).
+function withPlatform(os: 'ios' | 'android', fn: () => void) {
+  const orig = Platform.OS;
+  Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+  try {
+    fn();
+  } finally {
+    Object.defineProperty(Platform, 'OS', { value: orig, configurable: true });
+  }
+}
 
 // Capture the native picker's props so a test can drive its onChange without a
 // real calendar dialog. `mock`-prefixed so the jest.mock factory may close over it.
@@ -85,5 +97,33 @@ describe('DateField', () => {
     const field = button(tree, 'Date de début');
     expect(field.props.disabled).toBe(true);
     expect(field.props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('hides the clear button when disabled (a locked trip cannot clear its date)', () => {
+    const onChange = jest.fn();
+    const tree = render(
+      <DateField {...base} value="2026-08-15" onChange={onChange} disabled />,
+    );
+    expect(button(tree, 'Effacer')).toBeUndefined();
+  });
+
+  it('keeps the iOS spinner open across scroll ticks (each tick commits)', () => {
+    withPlatform('ios', () => {
+      const onChange = jest.fn();
+      const tree = render(<DateField {...base} value="" onChange={onChange} />);
+      act(() => button(tree, 'Date de début').props.onPress());
+      // First scroll tick commits but must NOT close the inline spinner.
+      act(() =>
+        mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 20)),
+      );
+      expect(onChange).toHaveBeenLastCalledWith('2026-08-20');
+      // Still open → a further tick still routes through (impossible if it had
+      // closed on the first tick, as Android's dialog does).
+      act(() =>
+        mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 21)),
+      );
+      expect(onChange).toHaveBeenLastCalledWith('2026-08-21');
+      expect(onChange).toHaveBeenCalledTimes(2);
+    });
   });
 });
