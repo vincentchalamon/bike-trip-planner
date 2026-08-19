@@ -224,8 +224,13 @@ export const fr = {
       "Quand le voyage est prêt — ou en cas d'échec — et que tu n'es pas déjà en train de le regarder.",
     offlineNotReadyTitle: 'Synchro hors-ligne non prête',
     offlineNotReadyDesc: "Avant un départ, si les données ne sont pas encore en cache.",
+    offlineNotReadyNotifTitle: 'Départ proche : données non téléchargées',
+    offlineNotReadyNotifBody:
+      "Mets ton voyage en cache pour l'avoir hors-ligne pendant le trajet.",
     tripNoDateTitle: 'Voyage sans date',
     tripNoDateDesc: 'Rappel de définir les dates, 1-2 jours après la création.',
+    tripNoDateNotifTitle: 'Définis les dates de ton voyage',
+    tripNoDateNotifBody: 'Ajoute une date de départ pour planifier étapes et météo.',
     zoneOpeningTitle: "Ouverture d'une nouvelle zone",
     zoneOpeningDesc: 'Quand une région qui te concerne devient couverte.',
   },

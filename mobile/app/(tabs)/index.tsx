@@ -14,6 +14,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
+import { useLocalNotifications } from '../../src/hooks/use-local-notifications';
 import type { TripListItem } from '../../src/api/trips';
 import {
   DateField,
@@ -214,6 +215,10 @@ export default function Trips() {
     remove,
     duplicate,
   } = useTrips();
+
+  // Re-plan the on-device local notifications (offline-not-ready, trip-without-date)
+  // off the loaded trip list, gated by the per-category toggles.
+  useLocalNotifications(trips);
 
   // Id of the trip whose duplication is in flight — guards against a double-tap
   // firing two POST /trips/{id}/duplicate (each would clone the trip again).

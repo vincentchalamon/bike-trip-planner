@@ -7,6 +7,19 @@ import type { UseTrips } from '../hooks/use-trips';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
+// The Trips screen schedules local notifications off the list (useLocalNotifications):
+// stub the native modules it touches so the screen renders without a device.
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn(),
+}));
+jest.mock('expo-notifications', () => ({
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+  getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
+  scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+}));
+
 jest.mock('../hooks/use-trips', () => {
   const actual = jest.requireActual('../hooks/use-trips');
   return { ...actual, useTrips: jest.fn() };
