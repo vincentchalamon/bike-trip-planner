@@ -8,12 +8,13 @@ import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 import type {
   StageData,
   WeatherData,
-  PoiData,
+  ResupplyData,
   AccommodationData,
   AlertData,
   SupplyMarkerData,
   EventData,
 } from "@btp/core";
+import { EMPTY_RESUPPLY } from "@btp/core";
 import {
   reconcileResync,
   reconcileTripReady,
@@ -126,7 +127,7 @@ interface TripState {
   }) => void;
   setStages: (stages: StageData[]) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
-  updateStagePois: (stageIndex: number, pois: PoiData[]) => void;
+  updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
   updateStageSupplyTimeline: (
     stageIndex: number,
     markers: SupplyMarkerData[],
@@ -421,10 +422,10 @@ export const useTripStore = create<TripState>()(
         if (stage) stage.weather = weather;
       }),
 
-    updateStagePois: (stageIndex, pois) =>
+    updateStageResupply: (stageIndex, resupply) =>
       set((state) => {
         if (state.stages[stageIndex]) {
-          state.stages[stageIndex].pois = pois;
+          state.stages[stageIndex].resupply = resupply;
         }
       }),
 
@@ -640,7 +641,7 @@ export const useTripStore = create<TripState>()(
           endLabel: afterStage.endLabel ?? null,
           weather: null,
           alerts: [],
-          pois: [],
+          resupply: EMPTY_RESUPPLY,
           accommodations: [],
           accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
           isRestDay: true,

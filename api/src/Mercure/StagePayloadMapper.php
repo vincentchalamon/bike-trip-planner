@@ -8,8 +8,9 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\Event;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 
@@ -47,10 +48,7 @@ final readonly class StagePayloadMapper
                 $this->alertToPayload(...),
                 $stage->alerts,
             ),
-            'pois' => array_map(
-                $this->poiToPayload(...),
-                $stage->pois,
-            ),
+            'resupply' => $this->resupplyToPayload($stage->resupply),
             'accommodations' => array_map(
                 $this->accommodationToPayload(...),
                 $stage->accommodations,
@@ -105,6 +103,19 @@ final readonly class StagePayloadMapper
     private function coordinateToPayload(Coordinate $coordinate): array
     {
         return ['lat' => $coordinate->lat, 'lon' => $coordinate->lon, 'ele' => $coordinate->ele];
+    }
+
+    /** @return array<string, mixed> */
+    private function resupplyToPayload(?Resupply $resupply): array
+    {
+        $resupply ??= new Resupply();
+
+        return [
+            'foodAtLunch' => array_map($this->poiToPayload(...), $resupply->foodAtLunch),
+            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $this->poiToPayload($resupply->waterMorning) : null,
+            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $this->poiToPayload($resupply->waterAfternoon) : null,
+            'foodAtArrival' => array_map($this->poiToPayload(...), $resupply->foodAtArrival),
+        ];
     }
 
     /** @return array<string, mixed> */

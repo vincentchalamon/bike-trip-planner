@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
+import { resupplyPois } from '@btp/core';
 import { ACCOMMODATION_RADIUS_STEP_KM } from '@btp/core/constants';
 import { AlertsBlock } from './AlertsBlock';
 import { WeatherBlock } from './WeatherBlock';
@@ -138,7 +139,7 @@ export function StageDataBlocks({
       />
       <SupplyBlock supplyTimeline={stage.supplyTimeline} />
       <PoiBlock
-        pois={stage.pois}
+        pois={resupplyPois(stage.resupply)}
         {...(editable && {
           disabled,
           outOfZone,

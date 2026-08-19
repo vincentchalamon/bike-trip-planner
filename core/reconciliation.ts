@@ -9,7 +9,12 @@
 // endpoint) and #787 (label preservation on a raw resync).
 
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "./accommodation-constants";
-import type { EnrichedStagePayload, MercureEvent, StagePayload } from "./mercure";
+import type {
+  EnrichedStagePayload,
+  MercureEvent,
+  StagePayload,
+} from "./mercure";
+import { EMPTY_RESUPPLY } from "./schemas";
 import type { AlertData, StageData } from "./schemas";
 
 /** A stage alert carrying the client-only `_group` tag added by the store. */
@@ -39,7 +44,7 @@ export function enrichedPayloadToStageData(
     endLabel: null,
     weather: payload.weather,
     alerts: (payload.alerts ?? []).map((a) => ({ ...a, _group: "terrain" })),
-    pois: payload.pois,
+    resupply: payload.resupply,
     accommodations: payload.accommodations,
     selectedAccommodation: payload.selectedAccommodation,
     accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
@@ -380,7 +385,7 @@ function reconcileStagesComputed(
         endLabel: null,
         weather: null,
         alerts: prev?.alerts ?? [],
-        pois: [],
+        resupply: EMPTY_RESUPPLY,
         supplyTimeline: [],
         events: [],
         accommodations: prev?.accommodations ?? [],
@@ -411,7 +416,7 @@ function reconcileStagesComputed(
       endLabel: endMatch ? prev.endLabel : null,
       weather: null,
       alerts: [],
-      pois: [],
+      resupply: EMPTY_RESUPPLY,
       supplyTimeline: [],
       events: [],
       accommodations: endMatch ? prev.accommodations : [],
@@ -477,7 +482,7 @@ export function reduceMercureEvent(
     case "pois_scanned": {
       let stages = patchStage(state.stages, event.data.stageIndex, (s) => ({
         ...s,
-        pois: event.data.pois,
+        resupply: event.data.resupply,
       }));
       if (event.data.alerts && event.data.alerts.length > 0) {
         stages = replaceStageAlerts(
@@ -504,7 +509,9 @@ export function reduceMercureEvent(
       let stages = patchStage(state.stages, stageIndex, (s) => ({
         ...s,
         // Do not clobber a rider's picked accommodation (store parity).
-        accommodations: s.selectedAccommodation ? s.accommodations : accommodations,
+        accommodations: s.selectedAccommodation
+          ? s.accommodations
+          : accommodations,
         accommodationSearchRadiusKm:
           searchRadiusKm !== undefined
             ? searchRadiusKm
@@ -548,7 +555,9 @@ export function reduceMercureEvent(
       // dropped out of the new set keeps no stale nudge (recette Sunday bug).
       const cleared = state.stages.map((s) => ({
         ...s,
-        alerts: (s.alerts as StageAlert[]).filter((a) => a._group !== "calendar"),
+        alerts: (s.alerts as StageAlert[]).filter(
+          (a) => a._group !== "calendar",
+        ),
       }));
       const grouped = groupAlerts(event.data.alerts, (a) => ({
         code: a.code,
@@ -557,7 +566,10 @@ export function reduceMercureEvent(
         lat: null,
         lon: null,
       }));
-      return { ...state, stages: applyGroupedAlerts(cleared, grouped, "calendar") };
+      return {
+        ...state,
+        stages: applyGroupedAlerts(cleared, grouped, "calendar"),
+      };
     }
 
     case "wind_alerts":
@@ -679,7 +691,10 @@ export function reduceMercureEvent(
           payload: a.action.payload,
         },
       }));
-      return { ...state, stages: applyGroupedAlerts(state.stages, grouped, "ferry") };
+      return {
+        ...state,
+        stages: applyGroupedAlerts(state.stages, grouped, "ferry"),
+      };
     }
 
     case "ford_alerts": {
@@ -696,7 +711,10 @@ export function reduceMercureEvent(
           payload: a.action.payload,
         },
       }));
-      return { ...state, stages: applyGroupedAlerts(state.stages, grouped, "ford") };
+      return {
+        ...state,
+        stages: applyGroupedAlerts(state.stages, grouped, "ford"),
+      };
     }
 
     case "route_segment_recalculated": {
@@ -706,7 +724,12 @@ export function reduceMercureEvent(
         elevation: event.data.elevationGain,
         geometry: event.data.coordinates,
       }));
-      stages = replaceStageAlerts(stages, event.data.stageIndex, [], "cultural_poi");
+      stages = replaceStageAlerts(
+        stages,
+        event.data.stageIndex,
+        [],
+        "cultural_poi",
+      );
       return { ...state, stages, recomputingStages: new Set(NO_RECOMPUTING) };
     }
 

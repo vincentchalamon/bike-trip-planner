@@ -32,6 +32,7 @@ import {
   ACCOMMODATION_RADIUS_STEP_KM,
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@btp/core/constants";
+import { EMPTY_RESUPPLY } from "@btp/core";
 import type { AccommodationData, StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 
@@ -416,7 +417,7 @@ export function useTripPlanner() {
       endLabel: nextStage?.startLabel ?? null,
       weather: null,
       alerts: [],
-      pois: [],
+      resupply: EMPTY_RESUPPLY,
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
       supplyTimeline: [],

@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import { diffStageIndices } from './config-diff';
 
 const P = { lat: 0, lon: 0, ele: 0 };
@@ -18,7 +19,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 5,

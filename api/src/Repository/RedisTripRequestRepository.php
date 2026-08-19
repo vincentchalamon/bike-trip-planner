@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -143,11 +143,10 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         });
     }
 
-    /** @param list<PointOfInterest> $pois */
-    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($pois): void {
-            $stage->pois = $pois;
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($resupply): void {
+            $stage->resupply = $resupply;
         });
     }
 

@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Serializer;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\Serializer\GpxNormalizer;
 use PHPUnit\Framework\Attributes\Test;
@@ -27,7 +28,7 @@ final class GpxNormalizerTest extends TestCase
             geometry: [new Coordinate(50.629, 3.057, 42.0), new Coordinate(50.700, 3.100, 50.0)],
         );
 
-        $stage->addPoi(new PointOfInterest('Bakery Test', 'bakery', 50.650, 3.070));
+        $stage->resupply = new Resupply(foodAtLunch: [new PointOfInterest('Bakery Test', 'bakery', 50.650, 3.070)]);
         $stage->addAccommodation(new Accommodation(
             'Camping Test',
             'camp_site',

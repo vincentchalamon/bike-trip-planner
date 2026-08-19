@@ -16,7 +16,7 @@ use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
-use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\State\RestDayInsertProcessor;
 use App\State\StageCreateProcessor;
@@ -151,8 +151,7 @@ final class Stage
     /** @var Alert[] */
     public array $alerts = [];
 
-    /** @var PointOfInterest[] */
-    public array $pois = [];
+    public ?Resupply $resupply = null;
 
     /** @var Accommodation[] */
     public array $accommodations = [];
@@ -205,11 +204,6 @@ final class Stage
     public function addAlert(Alert $alert): void
     {
         $this->alerts[] = $alert;
-    }
-
-    public function addPoi(PointOfInterest $poi): void
-    {
-        $this->pois[] = $poi;
     }
 
     public function addAccommodation(Accommodation $accommodation): void

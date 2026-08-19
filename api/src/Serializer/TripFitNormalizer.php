@@ -48,7 +48,7 @@ final readonly class TripFitNormalizer implements NormalizerInterface
             );
             array_push($points, ...$stagePoints);
 
-            foreach ($stage->pois as $poi) {
+            foreach ($stage->resupply?->all() ?? [] as $poi) {
                 $waypoints[] = [
                     'lat' => $poi->lat,
                     'lon' => $poi->lon,

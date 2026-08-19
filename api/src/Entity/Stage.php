@@ -91,7 +91,8 @@ class Stage
     #[ORM\Column(type: 'jsonb')]
     private array $alerts = [];
 
-    /** @var list<array<string, mixed>> */
+    // Repurposed to hold the curated resupply object (#1099), not the raw POI list.
+    /** @var array<string, mixed> */
     #[ORM\Column(type: 'jsonb')]
     private array $pois = [];
 
@@ -354,13 +355,13 @@ class Stage
         return $this;
     }
 
-    /** @return list<array<string, mixed>> */
+    /** @return array<string, mixed> */
     public function getPois(): array
     {
         return $this->pois;
     }
 
-    /** @param list<array<string, mixed>> $pois */
+    /** @param array<string, mixed> $pois */
     public function setPois(array $pois): self
     {
         $this->pois = $pois;

@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -79,11 +79,9 @@ interface TripRequestRepositoryInterface
     public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void;
 
     /**
-     * Persists a single stage's POIs atomically (see {@see self::updateStageWeather()}).
-     *
-     * @param list<PointOfInterest> $pois
+     * Persists a single stage's curated resupply atomically (see {@see self::updateStageWeather()}).
      */
-    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void;
+    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void;
 
     /**
      * Persists a single stage's accommodations atomically (see {@see self::updateStageWeather()}).

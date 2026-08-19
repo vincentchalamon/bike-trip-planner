@@ -24,6 +24,7 @@ use App\Osm\WaterPointRepository;
 use App\Poi\DataTourismeFoodPoiSource;
 use App\Poi\OsmPoiSource;
 use App\Poi\PoiLabelResolver;
+use App\Poi\ResupplyBuilder;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Tourism\FoodPoiRepository;
@@ -90,8 +91,8 @@ final class ScanPoisCorridorTest extends KernelTestCase
 
         self::assertContains(
             'restaurant',
-            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->pois),
-            'The seeded restaurant in the corridor must be detected from the local index',
+            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->resupply?->all() ?? []),
+            'The seeded restaurant in the corridor must be curated into the resupply',
         );
         self::assertFalse(
             array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
@@ -111,10 +112,9 @@ final class ScanPoisCorridorTest extends KernelTestCase
         $stage = $this->stageOnRoute($route);
         $this->runScan($route, $stage);
 
-        self::assertContains(
-            'viewpoint',
-            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->pois),
-        );
+        // A viewpoint is not a resupply category, so nothing is curated into the
+        // resupply for this corridor.
+        self::assertTrue($stage->resupply?->isEmpty() ?? true);
         self::assertTrue(
             array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
             'A long stage with no resupply POI in the corridor must raise the lunch nudge',
@@ -136,8 +136,8 @@ final class ScanPoisCorridorTest extends KernelTestCase
 
         self::assertContains(
             'fuel',
-            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->pois),
-            'The seeded fuel station in the corridor must be detected from the local index',
+            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->resupply?->all() ?? []),
+            'The seeded fuel station in the corridor must be curated into the resupply',
         );
         self::assertFalse(
             array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
@@ -205,6 +205,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new WaterPointRepository($this->connection),
             new GeometryBasedDistributor($haversine),
             new SupplyTimelineBuilder($haversine),
+            new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $this->createStub(RiderTimeEstimatorInterface::class),
             $translator,

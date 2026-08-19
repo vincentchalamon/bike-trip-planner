@@ -14,6 +14,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
@@ -215,7 +216,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         );
         $stageDto->weather = $weather;
         $stageDto->addAlert($alert);
-        $stageDto->addPoi($poi);
+        $stageDto->resupply = new Resupply(foodAtLunch: [$poi]);
         $stageDto->addAccommodation($accommodation);
         $stageDto->selectedAccommodation = $selectedAccommodation;
 
@@ -270,17 +271,19 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame(48.0, $result->alerts[0]->lat);
         self::assertSame(3.5, $result->alerts[0]->lon);
 
-        // POIs
-        self::assertCount(1, $result->pois);
-        self::assertSame('Cathédrale de Sens', $result->pois[0]->name);
-        self::assertSame('monument', $result->pois[0]->category);
-        self::assertSame(48.197, $result->pois[0]->lat);
-        self::assertSame(3.283, $result->pois[0]->lon);
-        self::assertSame(85.2, $result->pois[0]->distanceFromStart);
+        // Resupply (persisted in the repurposed pois column)
+        self::assertNotNull($result->resupply);
+        self::assertCount(1, $result->resupply->foodAtLunch);
+        $lunchPoi = $result->resupply->foodAtLunch[0];
+        self::assertSame('Cathédrale de Sens', $lunchPoi->name);
+        self::assertSame('monument', $lunchPoi->category);
+        self::assertSame(48.197, $lunchPoi->lat);
+        self::assertSame(3.283, $lunchPoi->lon);
+        self::assertSame(85.2, $lunchPoi->distanceFromStart);
         // Without these in poiToArray() the OSM link would vanish on reload and in
         // the shared view, exactly as the accommodation enrichment did (#870).
-        self::assertSame('way', $result->pois[0]->osmType);
-        self::assertSame(4242, $result->pois[0]->osmId);
+        self::assertSame('way', $lunchPoi->osmType);
+        self::assertSame(4242, $lunchPoi->osmId);
 
         // Accommodations
         self::assertCount(1, $result->accommodations);

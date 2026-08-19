@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import {
   reconcileStageUpdate,
@@ -36,7 +37,7 @@ export function stageDataFromDetail(s: ApiStage): StageData {
       ...a,
       _group: 'terrain',
     })),
-    pois: (s.pois as StageData['pois']) ?? [],
+    resupply: (s.resupply as StageData['resupply']) ?? EMPTY_RESUPPLY,
     accommodations: (s.accommodations as StageData['accommodations']) ?? [],
     selectedAccommodation:
       (s.selectedAccommodation as StageData['selectedAccommodation']) ?? null,
@@ -295,7 +296,7 @@ export const useTripStore = create<TripState>((set, get) => ({
         endLabel: after.endLabel ?? null,
         weather: null,
         alerts: [],
-        pois: [],
+        resupply: EMPTY_RESUPPLY,
         accommodations: [],
         selectedAccommodation: null,
         accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,

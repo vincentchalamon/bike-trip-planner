@@ -46,7 +46,7 @@ final readonly class StageResponseMapper
         $response->isRestDay = $stage->isRestDay;
         $response->weather = $stage->weather;
         $response->alerts = $stage->alerts;
-        $response->pois = $stage->pois;
+        $response->resupply = $stage->resupply;
         $response->accommodations = $stage->accommodations;
         $response->selectedAccommodation = $stage->selectedAccommodation;
         $response->events = $stage->events;

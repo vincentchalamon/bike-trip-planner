@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import {
   alertSegmentToCoords,
   applyZoom,
@@ -28,7 +29,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 10,
@@ -75,7 +76,12 @@ describe('collectMarkers', () => {
       endPoint: { lat: 45, lon: 5, ele: 0 },
       startLabel: 'Paris',
       endLabel: 'Lyon',
-      pois: [{ name: 'Château', category: 'castle', lat: 46, lon: 3 }],
+      resupply: {
+        foodAtLunch: [{ name: 'Château', category: 'castle', lat: 46, lon: 3 }],
+        waterMorning: null,
+        waterAfternoon: null,
+        foodAtArrival: [],
+      },
       accommodations: [
         { name: 'Gîte', type: 'guest_house', lat: 45.1, lon: 5.1, estimatedPriceMin: 40, estimatedPriceMax: 60, isExactPrice: false, possibleClosed: false, distanceToEndPoint: 0, source: 'osm' },
       ],

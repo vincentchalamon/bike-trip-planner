@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import { runDeleteStage } from './delete-stage';
 import { useTripStore } from './trip-store';
 import { useOfflineStore } from './offline-store';
@@ -24,7 +25,7 @@ function stage(dayNumber: number): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 5,

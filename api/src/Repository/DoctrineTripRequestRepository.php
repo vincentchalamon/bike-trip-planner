@@ -11,6 +11,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
@@ -397,19 +398,20 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
-    /** @param list<PointOfInterest> $pois */
-    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void
     {
         if (!Uuid::isValid($tripId)) {
             return;
         }
 
+        // Stored in the (JSONB) `pois` column — repurposed to hold the curated
+        // resupply object since the raw corridor set is no longer persisted (#1099).
         $this->getEntityManager()->createQuery(
             'UPDATE App\Entity\Stage s SET s.pois = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('dayNumber', $dayNumber)
-            ->setParameter('value', array_map($this->poiToArray(...), $pois), 'jsonb')
+            ->setParameter('value', $this->resupplyToArray($resupply), 'jsonb')
             ->execute();
     }
 
@@ -542,13 +544,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
         $entity->setAlerts($alerts);
 
-        // POIs: PointOfInterest[] → list<array>
-        $pois = [];
-        foreach ($dto->pois as $poi) {
-            $pois[] = $this->poiToArray($poi);
-        }
-
-        $entity->setPois($pois);
+        // Resupply → the (repurposed) pois JSONB column.
+        $entity->setPois($this->resupplyToArray($dto->resupply ?? new Resupply()));
 
         // Accommodations: Accommodation[] → list<array>
         $accommodations = [];
@@ -605,12 +602,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $dto->addAlert($this->arrayToAlert($alertData));
         }
 
-        // POIs
-        /** @var list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}> $poisData */
-        $poisData = $entity->getPois();
-        foreach ($poisData as $poiData) {
-            $dto->addPoi($this->arrayToPoi($poiData));
-        }
+        // Resupply (stored in the repurposed pois JSONB column).
+        $dto->resupply = $this->arrayToResupply($entity->getPois());
 
         // Accommodations
         /** @var list<array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float}> $accommodationsData */
@@ -781,6 +774,35 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             osmId: $data['osmId'] ?? null,
             openingHours: $data['openingHours'] ?? null,
             website: $data['website'] ?? null,
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function resupplyToArray(Resupply $resupply): array
+    {
+        return [
+            'foodAtLunch' => array_map($this->poiToArray(...), $resupply->foodAtLunch),
+            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $this->poiToArray($resupply->waterMorning) : null,
+            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $this->poiToArray($resupply->waterAfternoon) : null,
+            'foodAtArrival' => array_map($this->poiToArray(...), $resupply->foodAtArrival),
+        ];
+    }
+
+    /** @param array<int|string, mixed> $data */
+    private function arrayToResupply(array $data): Resupply
+    {
+        // Legacy flat POI list (pre-#1099) or empty: nothing to reconstruct until
+        // the trip is re-scanned.
+        if (!isset($data['foodAtLunch'], $data['foodAtArrival'])) {
+            return new Resupply();
+        }
+
+        /* @var array{foodAtLunch: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}>, waterMorning: array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}|null, waterAfternoon: array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}|null, foodAtArrival: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}>} $data */
+        return new Resupply(
+            foodAtLunch: array_values(array_map($this->arrayToPoi(...), $data['foodAtLunch'])),
+            waterMorning: null !== ($data['waterMorning'] ?? null) ? $this->arrayToPoi($data['waterMorning']) : null,
+            waterAfternoon: null !== ($data['waterAfternoon'] ?? null) ? $this->arrayToPoi($data['waterAfternoon']) : null,
+            foodAtArrival: array_values(array_map($this->arrayToPoi(...), $data['foodAtArrival'])),
         );
     }
 

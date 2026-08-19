@@ -8,6 +8,7 @@ use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
 use App\Repository\TripRequestRepositoryInterface;
@@ -71,7 +72,7 @@ final class TripGpxNormalizerTest extends TestCase
             startPoint: new Coordinate(50.629, 3.057),
             endPoint: new Coordinate(50.700, 3.100),
         );
-        $stage1->addPoi(new PointOfInterest('Bakery', 'bakery', 50.650, 3.070));
+        $stage1->resupply = new Resupply(foodAtLunch: [new PointOfInterest('Bakery', 'bakery', 50.650, 3.070)]);
 
         $stage2 = new Stage(
             tripId: 'trip-abc',

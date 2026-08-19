@@ -9,6 +9,7 @@ import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 import { enrichedPayloadToStageData } from "@btp/core/reconciliation";
+import { EMPTY_RESUPPLY } from "@btp/core";
 import type { AlertData, StageData } from "@btp/core";
 
 /**
@@ -107,7 +108,7 @@ function dispatchEvent(event: MercureEvent): void {
             // stage's alerts don't flash empty between `stages_computed` and those
             // follow-up events (e.g. after selecting an accommodation) (recette #649).
             alerts: existing?.alerts ?? [],
-            pois: [],
+            resupply: EMPTY_RESUPPLY,
             supplyTimeline: [],
             events: [],
             accommodations: existing?.accommodations ?? [],
@@ -147,7 +148,7 @@ function dispatchEvent(event: MercureEvent): void {
             endLabel: endMatch ? prev.endLabel : null,
             weather: null,
             alerts: [],
-            pois: [],
+            resupply: EMPTY_RESUPPLY,
             supplyTimeline: [],
             events: [],
             accommodations: endMatch ? prev.accommodations : [],
@@ -184,7 +185,7 @@ function dispatchEvent(event: MercureEvent): void {
       break;
 
     case "pois_scanned":
-      store.updateStagePois(event.data.stageIndex, event.data.pois);
+      store.updateStageResupply(event.data.stageIndex, event.data.resupply);
       if (event.data.alerts && event.data.alerts.length > 0) {
         store.updateStageAlerts(
           event.data.stageIndex,

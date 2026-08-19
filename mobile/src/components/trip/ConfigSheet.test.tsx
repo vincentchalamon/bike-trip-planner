@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import { Alert, Text } from 'react-native';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import i18n from '../../i18n';
@@ -111,7 +112,7 @@ beforeEach(() => {
         endLabel: null,
         weather: null,
         alerts: [],
-        pois: [],
+        resupply: EMPTY_RESUPPLY,
         accommodations: [],
         selectedAccommodation: null,
         accommodationSearchRadiusKm: 5,

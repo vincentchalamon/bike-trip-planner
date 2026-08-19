@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import { useTripStore } from './trip-store';
 import { DIFF_TTL_MS } from './config-diff';
 
@@ -19,7 +20,7 @@ function stage(overrides: Partial<StageData> = {}): StageData {
     endLabel: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     accommodationSearchRadiusKm: 5,

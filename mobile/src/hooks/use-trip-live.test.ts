@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import { createElement } from 'react';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import TestRenderer, { act } from 'react-test-renderer';
 import type { EnrichedStagePayload, MercureEvent } from '@btp/core/mercure';
 import { runTripLive, useTripLive } from './use-trip-live';
@@ -36,7 +37,7 @@ function apiStage(overrides: Record<string, unknown> = {}) {
     endLabel: 'Lyon',
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: EMPTY_RESUPPLY,
     accommodations: [],
     selectedAccommodation: null,
     isRestDay: false,
@@ -59,7 +60,7 @@ function enrichedPayload(): EnrichedStagePayload {
     label: null,
     weather: null,
     alerts: [],
-    pois: [],
+    resupply: { foodAtLunch: [], waterMorning: null, waterAfternoon: null, foodAtArrival: [] },
     accommodations: [],
     selectedAccommodation: null,
     events: [],
