@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import { createElement } from 'react';
-import i18n from '../../src/i18n';
+import i18n from '../i18n';
 
 // create.tsx pulls in the trip barrel (SseStatusIndicator), which transitively
 // imports the native maplibre module — stub it so jest can load the screen.
@@ -17,13 +17,13 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
-jest.mock('../../src/hooks/use-analysis-follow', () => {
-  const actual = jest.requireActual('../../src/hooks/use-analysis-follow');
+jest.mock('../hooks/use-analysis-follow', () => {
+  const actual = jest.requireActual('../hooks/use-analysis-follow');
   return { ...actual, useAnalysisFollow: () => actual.INITIAL_FOLLOW_STATE };
 });
 
-jest.mock('../../src/store/create-trip', () => {
-  const actual = jest.requireActual('../../src/store/create-trip');
+jest.mock('../store/create-trip', () => {
+  const actual = jest.requireActual('../store/create-trip');
   return {
     ...actual,
     runCreateTrip: jest.fn(),
@@ -31,8 +31,8 @@ jest.mock('../../src/store/create-trip', () => {
     pickGpxFile: jest.fn(),
   };
 });
-import { pickGpxFile, runCreateTrip, runUploadGpx } from '../../src/store/create-trip';
-import Create from './create';
+import { pickGpxFile, runCreateTrip, runUploadGpx } from '../store/create-trip';
+import Create from '../../app/(tabs)/create';
 
 const mockRunCreate = runCreateTrip as jest.MockedFunction<typeof runCreateTrip>;
 const mockRunUpload = runUploadGpx as jest.MockedFunction<typeof runUploadGpx>;

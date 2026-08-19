@@ -2,17 +2,17 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { createElement } from 'react';
 import { Alert } from 'react-native';
-import i18n from '../../src/i18n';
-import type { UseTrips } from '../../src/hooks/use-trips';
+import i18n from '../i18n';
+import type { UseTrips } from '../hooks/use-trips';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
-jest.mock('../../src/hooks/use-trips', () => {
-  const actual = jest.requireActual('../../src/hooks/use-trips');
+jest.mock('../hooks/use-trips', () => {
+  const actual = jest.requireActual('../hooks/use-trips');
   return { ...actual, useTrips: jest.fn() };
 });
-import { useTrips } from '../../src/hooks/use-trips';
-import Trips from './index';
+import { useTrips } from '../hooks/use-trips';
+import Trips from '../../app/(tabs)/index';
 
 const mockUseTrips = useTrips as jest.MockedFunction<typeof useTrips>;
 
