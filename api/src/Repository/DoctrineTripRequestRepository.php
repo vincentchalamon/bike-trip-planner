@@ -32,7 +32,7 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
@@ -182,6 +182,36 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     public function getLocale(string $tripId): ?string
     {
         return $this->findTripRequest($tripId)?->locale;
+    }
+
+    public function getOwnerId(string $tripId): ?string
+    {
+        return $this->findTripRequest($tripId)?->user?->getId()->toRfc4122();
+    }
+
+    /**
+     * Owned trips whose date range covers the given day, for the weather-safety
+     * batch (#1124). Bounded to a 60-day look-back so ancient trips are not
+     * scanned; the caller checks a non-rest stage actually falls on that day.
+     *
+     * @return list<TripRequest>
+     */
+    public function findOwnedTripsCoveringDate(\DateTimeImmutable $date): array
+    {
+        $floor = $date->modify('-60 days');
+
+        /** @var list<TripRequest> $trips */
+        $trips = $this->createQueryBuilder('t')
+            ->andWhere('t.user IS NOT NULL')
+            ->andWhere('t.startDate IS NOT NULL')
+            ->andWhere('t.startDate <= :date')
+            ->andWhere('t.startDate > :floor')
+            ->setParameter('date', $date)
+            ->setParameter('floor', $floor)
+            ->getQuery()
+            ->getResult();
+
+        return $trips;
     }
 
     /** @param list<StageDto> $stages */

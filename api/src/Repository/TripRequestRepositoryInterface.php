@@ -119,4 +119,10 @@ interface TripRequestRepositoryInterface
     public function storeLocale(string $tripId, string $locale): void;
 
     public function getLocale(string $tripId): ?string;
+
+    /**
+     * The RFC 4122 id of the trip's owner, or null when the trip is anonymous
+     * (no account attached) or does not exist. Used to target server pushes (#1124).
+     */
+    public function getOwnerId(string $tripId): ?string;
 }

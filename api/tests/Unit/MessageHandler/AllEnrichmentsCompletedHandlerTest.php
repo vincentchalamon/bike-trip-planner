@@ -8,8 +8,11 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Mercure\MercureSubscriptionCheckerInterface;
 use App\Message\AllEnrichmentsCompleted;
 use App\MessageHandler\AllEnrichmentsCompletedHandler;
+use App\Notification\AnalysisNotifier;
+use App\Notification\NotificationDispatcherInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -57,6 +60,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tracker,
             $publisher,
             $tripStateManager,
+            $this->noopAnalysisNotifier(),
             new NullLogger(),
         );
 
@@ -80,6 +84,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tracker,
             $publisher,
             $tripStateManager,
+            $this->noopAnalysisNotifier(),
             new NullLogger(),
         );
 
@@ -111,9 +116,26 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tracker,
             $publisher,
             $tripStateManager,
+            $this->noopAnalysisNotifier(),
             new NullLogger(),
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
+    }
+
+    /**
+     * A no-op notifier (anonymous trip => nothing pushed); the analysis-push path
+     * is covered on its own in {@see \App\Tests\Unit\Notification\AnalysisNotifierTest}.
+     */
+    private function noopAnalysisNotifier(): AnalysisNotifier
+    {
+        $tripRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRepository->method('getOwnerId')->willReturn(null);
+
+        return new AnalysisNotifier(
+            $tripRepository,
+            $this->createStub(MercureSubscriptionCheckerInterface::class),
+            $this->createStub(NotificationDispatcherInterface::class),
+        );
     }
 }
