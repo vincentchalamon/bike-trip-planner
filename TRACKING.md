@@ -1936,15 +1936,48 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 ## Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
 
 </summary>
-Épics à découper avant exécution. Push FCM = mobile + backend (secrets compose). Milestone : « Sprint 57 ».
+Épics **découpés** en 10 sous-issues (#1116-#1125). Backend Compte déjà en place (Sprint 52 : email-change, export/delete RGPD, access-requests) → #1049 = câblage UI mobile. Maquettes 10-account/11-notifications = projet Claude Design (récupérées via DesignSync, spec embarquée dans #1116/#1120). Push FCM (#1122-#1125) : le critère « push reçu app fermée » n'est **pas vérifiable en CI** (Firebase + device physique) → preuve manuelle hors sprint. Milestone : « Sprint 57 ».
 
-| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
-|-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte (réglages, email change, RGPD, early-access, FAQ/légal, onboarding) | L | ⏳ À faire | — | Sprint 54 |
-| 2 | [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales (gestion + catégories) | M | ⏳ À faire | — | #1049 |
-| 3 | [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM (device-token + sender + secrets compose + réception) | L | ⏳ À faire | — | #1050 |
-| 4 | [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design(mobile): écran Compte conforme à la maquette 10-account (+ thème) | S | ⏳ À faire | — | #1049 |
-| 5 | [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design(mobile): écran Notifications conforme à la maquette 11-notifications (+ thème) | S | ⏳ À faire | — | #1050 |
+**Épics (parents, découpés) :**
+
+| ID | Titre | Sous-issues | Statut |
+|----|-------|-------------|--------|
+| [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte | #1116, #1117, #1118, #1119 | 🔨 Découpé |
+| [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales | #1120, #1121 | 🔨 Découpé |
+| [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM | #1122, #1123, #1124, #1125 | 🔨 Découpé |
+| [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design: écran Compte (maquette 10-account) | absorbé par #1116 | 🔀 Replié |
+| [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design: écran Notifications (maquette 11-notifications) | absorbé par #1120 | 🔀 Replié |
+
+**Sous-issues (exécution) :**
+
+| Vague | ID | Titre | Modèle | Base | Statut | PR |
+|-------|----|-------|--------|------|--------|----|
+| 1 | [#1116](https://github.com/vincentchalamon/bike-trip-planner/issues/1116) | Compte : écran structuré + profil + thème (abs. #1092) | opus | main | ⏳ À faire | — |
+| 1 | [#1122](https://github.com/vincentchalamon/bike-trip-planner/issues/1122) | api: enregistrement device-tokens | opus | main | ⏳ À faire | — |
+| 2 | [#1117](https://github.com/vincentchalamon/bike-trip-planner/issues/1117) | Compte : flux changement d'email | opus | feature/1116 | ⏳ À faire | — |
+| 2 | [#1118](https://github.com/vincentchalamon/bike-trip-planner/issues/1118) | Compte : RGPD export + suppression | opus | feature/1116 | ⏳ À faire | — |
+| 2 | [#1119](https://github.com/vincentchalamon/bike-trip-planner/issues/1119) | Compte : écrans statiques FAQ/légal + onboarding | sonnet | feature/1116 | ⏳ À faire | — |
+| 2 | [#1120](https://github.com/vincentchalamon/bike-trip-planner/issues/1120) | Notifs : écran + infra locale (abs. #1093) | opus | feature/1116 | ⏳ À faire | — |
+| 2 | [#1123](https://github.com/vincentchalamon/bike-trip-planner/issues/1123) | api: sender FCM + secrets compose + ADR | opus | feature/1122 | ⏳ À faire | — |
+| 3 | [#1121](https://github.com/vincentchalamon/bike-trip-planner/issues/1121) | Notifs : déclencheurs locaux | opus | feature/1120 | ⏳ À faire | — |
+| 3 | [#1124](https://github.com/vincentchalamon/bike-trip-planner/issues/1124) | api: catégories push serveur | opus | feature/1123 | ⏳ À faire | — |
+| 3 | [#1125](https://github.com/vincentchalamon/bike-trip-planner/issues/1125) | mobile: enregistrement + réception push | opus | feature/1120 | ⏳ À faire | — |
+
+**Ordre de merge et conflits attendus :**
+
+Deux stacks indépendants. Merger dans l'ordre des vagues, stack par stack.
+
+1. **Stack Compte/Notifs (mobile)** : `#1116` d'abord (fondation) → puis `#1117`/`#1118`/`#1119`/`#1120` (tous basés sur feature/1116) → puis `#1121` (base feature/1120).
+2. **Stack FCM (backend)** : `#1122` → `#1123` → `#1124`.
+3. **`#1125`** en dernier : base feature/1120, à rebaser sur main une fois `#1122` (endpoint device-token) mergé.
+
+Fichiers partagés (arbitrage) :
+- `mobile/app/(tabs)/account.tsx` : écrit **uniquement** par #1116 (squelette de nav complet). #1117/#1118/#1119/#1120 n'y touchent pas (ils implémentent leurs routes). Conflit attendu : **aucun** si le contrat est respecté.
+- `mobile/src/i18n/resources/{fr,en}.ts` : #1116 pose `account.*`, #1120 pose `notifications`, les enfants ajoutent leurs sous-clés. Conflits triviaux additifs à la fin de l'objet → résoudre en gardant les deux blocs.
+- `mobile/src/store/notification-prefs.ts` : défini par #1120 ; #1121 et #1125 le **lisent** seulement (ne pas redéfinir).
+- `mobile/package.json` + `package-lock.json` : `expo-notifications` ajouté par #1120 (gagne). #1125 réutilise, ne réajoute pas.
+- `pwa/src/lib/api/schema.d.ts` : régénéré par #1122 (DTO device-token). #1123/#1124 rebasent dessus.
+- `compose.yaml` (php+worker) + `api/config/services.php` : secrets FCM ajoutés **uniquement** par #1123.
 
 </details>
 
