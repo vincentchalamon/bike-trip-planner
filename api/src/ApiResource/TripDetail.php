@@ -74,7 +74,6 @@ final readonly class TripDetail
                     'elevationLoss' => ['type' => 'number', 'format' => 'float'],
                     'startPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
                     'endPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
-                    'geometry' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]]],
                     'label' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                     'startLabel' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                     'endLabel' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
