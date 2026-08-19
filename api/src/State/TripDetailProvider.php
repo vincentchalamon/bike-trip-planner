@@ -231,14 +231,7 @@ final readonly class TripDetailProvider implements ProviderInterface
      */
     private function serializeResupply(?Resupply $resupply): array
     {
-        $resupply ??= new Resupply();
-
-        return [
-            'foodAtLunch' => array_map($this->serializePoi(...), $resupply->foodAtLunch),
-            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $this->serializePoi($resupply->waterMorning) : null,
-            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $this->serializePoi($resupply->waterAfternoon) : null,
-            'foodAtArrival' => array_map($this->serializePoi(...), $resupply->foodAtArrival),
-        ];
+        return ($resupply ?? new Resupply())->map($this->serializePoi(...));
     }
 
     /**

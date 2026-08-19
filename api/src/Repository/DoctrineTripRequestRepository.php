@@ -780,12 +780,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     /** @return array<string, mixed> */
     private function resupplyToArray(Resupply $resupply): array
     {
-        return [
-            'foodAtLunch' => array_map($this->poiToArray(...), $resupply->foodAtLunch),
-            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $this->poiToArray($resupply->waterMorning) : null,
-            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $this->poiToArray($resupply->waterAfternoon) : null,
-            'foodAtArrival' => array_map($this->poiToArray(...), $resupply->foodAtArrival),
-        ];
+        return $resupply->map($this->poiToArray(...));
     }
 
     /** @param array<int|string, mixed> $data */
@@ -797,13 +792,44 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return new Resupply();
         }
 
-        /* @var array{foodAtLunch: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}>, waterMorning: array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}|null, waterAfternoon: array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}|null, foodAtArrival: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}>} $data */
         return new Resupply(
-            foodAtLunch: array_values(array_map($this->arrayToPoi(...), $data['foodAtLunch'])),
-            waterMorning: null !== ($data['waterMorning'] ?? null) ? $this->arrayToPoi($data['waterMorning']) : null,
-            waterAfternoon: null !== ($data['waterAfternoon'] ?? null) ? $this->arrayToPoi($data['waterAfternoon']) : null,
-            foodAtArrival: array_values(array_map($this->arrayToPoi(...), $data['foodAtArrival'])),
+            foodAtLunch: $this->poiListFromData($data['foodAtLunch']),
+            waterMorning: $this->poiFromData($data['waterMorning'] ?? null),
+            waterAfternoon: $this->poiFromData($data['waterAfternoon'] ?? null),
+            foodAtArrival: $this->poiListFromData($data['foodAtArrival']),
         );
+    }
+
+    /**
+     * @return list<PointOfInterest>
+     */
+    private function poiListFromData(mixed $items): array
+    {
+        if (!\is_array($items)) {
+            return [];
+        }
+
+        $pois = [];
+        foreach ($items as $item) {
+            $poi = $this->poiFromData($item);
+            if ($poi instanceof PointOfInterest) {
+                $pois[] = $poi;
+            }
+        }
+
+        return $pois;
+    }
+
+    private function poiFromData(mixed $item): ?PointOfInterest
+    {
+        if (!\is_array($item)) {
+            return null;
+        }
+
+        /** @var array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int, openingHours?: ?string, website?: ?string} $poi */
+        $poi = $item;
+
+        return $this->arrayToPoi($poi);
     }
 
     /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float, source: string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, osmType: ?string, osmId: ?int} */

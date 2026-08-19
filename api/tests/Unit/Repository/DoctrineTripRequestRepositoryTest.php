@@ -306,6 +306,40 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function legacyFlatPoiListReadsBackAsEmptyResupply(): void
+    {
+        // A pre-#1099 row: the (repurposed) pois column still holds the raw flat POI
+        // list, without the foodAtLunch/foodAtArrival resupply keys. It must round-
+        // trip to an empty Resupply, not throw or return garbage, until re-scanned.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 50.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.0, 2.0, 0.0),
+            endPoint: new Coordinate(48.5, 2.5, 0.0),
+        );
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stageEntity = $trip->stages->first();
+        self::assertNotFalse($stageEntity);
+        $stageEntity->setPois([
+            ['name' => 'Old shop', 'category' => 'bakery', 'lat' => 1.0, 'lon' => 2.0],
+        ]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        self::assertNotNull($stages[0]->resupply);
+        self::assertTrue($stages[0]->resupply->isEmpty());
+    }
+
+    #[Test]
     public function accommodationEnrichmentSurvivesRoundtrip(): void
     {
         // #870: the five enrichment fields (source + Wikidata payload) were dropped

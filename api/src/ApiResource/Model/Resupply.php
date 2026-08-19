@@ -51,6 +51,28 @@ final readonly class Resupply
         return $pois;
     }
 
+    /**
+     * Map every suggestion through $poiMapper, preserving the by-role structure.
+     * The single source of the resupply → array/payload shape, so the four
+     * serializers (read model, per-stage response, live scan, Mercure enriched
+     * payload) only supply their own leaf POI mapper.
+     *
+     * @template T
+     *
+     * @param callable(PointOfInterest): T $poiMapper
+     *
+     * @return array{foodAtLunch: list<T>, waterMorning: T|null, waterAfternoon: T|null, foodAtArrival: list<T>}
+     */
+    public function map(callable $poiMapper): array
+    {
+        return [
+            'foodAtLunch' => array_values(array_map($poiMapper, $this->foodAtLunch)),
+            'waterMorning' => $this->waterMorning instanceof PointOfInterest ? $poiMapper($this->waterMorning) : null,
+            'waterAfternoon' => $this->waterAfternoon instanceof PointOfInterest ? $poiMapper($this->waterAfternoon) : null,
+            'foodAtArrival' => array_values(array_map($poiMapper, $this->foodAtArrival)),
+        ];
+    }
+
     public function isEmpty(): bool
     {
         return [] === $this->foodAtLunch

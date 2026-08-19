@@ -253,20 +253,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
      */
     private function resupplyToArray(Resupply $resupply): array
     {
-        $poi = static fn (PointOfInterest $p): array => [
+        return $resupply->map(static fn (PointOfInterest $p): array => [
             'name' => $p->name,
             'category' => $p->category,
             'lat' => $p->lat,
             'lon' => $p->lon,
             'distanceFromStart' => $p->distanceFromStart,
-        ];
-
-        return [
-            'foodAtLunch' => array_map($poi, $resupply->foodAtLunch),
-            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $poi($resupply->waterMorning) : null,
-            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $poi($resupply->waterAfternoon) : null,
-            'foodAtArrival' => array_map($poi, $resupply->foodAtArrival),
-        ];
+        ]);
     }
 
     /**

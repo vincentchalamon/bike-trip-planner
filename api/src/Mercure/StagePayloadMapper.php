@@ -108,14 +108,7 @@ final readonly class StagePayloadMapper
     /** @return array<string, mixed> */
     private function resupplyToPayload(?Resupply $resupply): array
     {
-        $resupply ??= new Resupply();
-
-        return [
-            'foodAtLunch' => array_map($this->poiToPayload(...), $resupply->foodAtLunch),
-            'waterMorning' => $resupply->waterMorning instanceof PointOfInterest ? $this->poiToPayload($resupply->waterMorning) : null,
-            'waterAfternoon' => $resupply->waterAfternoon instanceof PointOfInterest ? $this->poiToPayload($resupply->waterAfternoon) : null,
-            'foodAtArrival' => array_map($this->poiToPayload(...), $resupply->foodAtArrival),
-        ];
+        return ($resupply ?? new Resupply())->map($this->poiToPayload(...));
     }
 
     /** @return array<string, mixed> */
