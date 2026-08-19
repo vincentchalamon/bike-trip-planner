@@ -5,6 +5,7 @@ export { ListRow } from './ListRow';
 export { SegmentedControl, type Segment } from './SegmentedControl';
 export { Sheet } from './Sheet';
 export { Input } from './Input';
+export { DateField } from './DateField';
 export { LoadingState } from './LoadingState';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';

@@ -8,6 +8,7 @@
     "@expo-google-fonts/inter-tight": "^0.4.1",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@maplibre/maplibre-react-native": "^11.3.6",
+    "@react-native-community/datetimepicker": "^9.1.0",
     "expo": "~57.0.12",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.10",
