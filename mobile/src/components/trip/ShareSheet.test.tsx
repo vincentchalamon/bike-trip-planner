@@ -159,14 +159,13 @@ describe('ShareSheet (#1048)', () => {
       <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
     );
 
-    await press(button(tree, 'Copier le texte'));
+    await press(button(tree, 'Texte (roadbook)'));
     const copied = mockClip.mock.calls[0][0] as string;
     expect(copied).toContain('Traversée des Alpes');
     expect(copied).toContain('Voir en ligne : https://web.example/s/xyz789');
-    expect(button(tree, 'Texte copié')).toBeTruthy();
   });
 
-  it('captures + shares the infographic once mounted, without touching the link buttons', async () => {
+  it('captures + shares the infographic once it has laid out', async () => {
     mockGet.mockResolvedValue(null);
 
     const tree = await render(
@@ -175,10 +174,9 @@ describe('ShareSheet (#1048)', () => {
     // Idle: the expensive off-screen infographic is not mounted.
     expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
 
-    await press(button(tree, "Partager l'image"));
+    await press(button(tree, 'Infographie (PNG)'));
     // Pressing mounts it; capture fires from the off-screen view's onLayout.
     const infographic = tree.root.findByType(ShareInfographic);
-    expect(infographic).toBeTruthy();
     await act(async () => {
       infographic.parent!.props.onLayout({
         nativeEvent: { layout: { x: 0, y: 0, width: 1, height: 1 } },

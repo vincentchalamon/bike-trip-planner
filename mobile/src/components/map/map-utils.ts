@@ -35,6 +35,20 @@ export function mapStyleFor(base: MapBase): string | StyleSpecification {
   return base === 'satellite' ? buildSatelliteStyle() : POSITRON_STYLE_URL;
 }
 
+// Relative zoom step for the +/- controls: read the live zoom off the map and
+// animate the camera one step in/out. No-op until the native map has mounted and
+// reported a zoom (getZoom resolves null/undefined). Extracted from TripMap so
+// the ref orchestration is unit-testable without a native map.
+export async function applyZoom(
+  getZoom: () => Promise<number | undefined> | number | undefined,
+  zoomTo: (zoom: number) => void,
+  delta: number,
+): Promise<void> {
+  const current = await getZoom();
+  if (current == null) return;
+  zoomTo(current + delta);
+}
+
 // Bounding box of all coordinates as [west, south, east, north] (MapLibre's
 // LngLatBounds), or null when there is nothing to frame. Feeds the Camera so it
 // fits the whole route rather than a fixed center/zoom.

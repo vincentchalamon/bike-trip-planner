@@ -29,3 +29,18 @@ export {
 } from 'lucide-react-native';
 // Share feature icon (#1048) — appended so the sorted set above stays untouched.
 export { Share2 } from 'lucide-react-native';
+// Spike-UX restyle: icons used by the redesigned screens (login/create/roadbook/
+// share/map/stage-detail). Appended to keep the sorted set above stable.
+export {
+  CloudSun,
+  FileText,
+  Flag,
+  Gauge,
+  Image as ImageIcon,
+  KeyRound,
+  Link2,
+  Lock,
+  Mail,
+  Minus,
+  MoreVertical,
+} from 'lucide-react-native';

@@ -24,6 +24,8 @@ export function RoadbookBanner({ variant, message }: RoadbookBannerProps) {
         {
           backgroundColor: theme.colors.accentSoft,
           borderColor: accent,
+          borderLeftWidth: 3,
+          borderLeftColor: accent,
           borderRadius: theme.radius.lg,
           padding: theme.spacing.md,
           gap: theme.spacing.sm,

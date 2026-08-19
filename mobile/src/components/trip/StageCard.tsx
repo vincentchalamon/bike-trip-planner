@@ -2,7 +2,16 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
-import { Check, Coffee, Pencil, Plus, Trash2, X } from '../ui/icons';
+import {
+  AlertTriangle,
+  Check,
+  Coffee,
+  CloudSun,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from '../ui/icons';
 import { useTheme } from '../../theme';
 import { formatStageDate } from './roadbook-dates';
 import { StageDataBlocks } from './StageDataBlocks';
@@ -87,7 +96,8 @@ function EditChip({
         alignItems: 'center',
         gap: theme.spacing.xs,
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: theme.colors.accentBrand,
+        backgroundColor: theme.colors.accentSoft,
         borderRadius: theme.radius.full,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.xs,
@@ -97,7 +107,7 @@ function EditChip({
       {icon}
       <Text
         style={{
-          color: theme.colors.foreground,
+          color: theme.colors.accentInk,
           fontFamily: theme.fonts.sansMedium,
           fontSize: 13,
         }}
@@ -170,21 +180,28 @@ export function StageCard({
     onEditDistance?.(index, km);
   }
 
+  const alertCount = stage.alerts?.length ?? 0;
+
   return (
     <View
       accessibilityLabel={highlighted ? t('trip.diffChanged') : undefined}
       style={{
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-        backgroundColor: highlighted ? theme.colors.accentSoft : undefined,
+        marginHorizontal: theme.spacing.base,
+        marginBottom: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radius.lg,
+        overflow: 'hidden',
+        backgroundColor: highlighted ? theme.colors.accentSoft : theme.colors.card,
       }}
     >
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           paddingVertical: theme.spacing.md,
-          paddingHorizontal: theme.spacing.base,
+          paddingHorizontal: theme.spacing.md,
+          gap: theme.spacing.sm,
         }}
       >
       <Pressable
@@ -194,67 +211,137 @@ export function StageCard({
         accessibilityLabel={
           onPress ? t('trip.openStageA11y', { day }) : undefined
         }
-        style={{ flex: 1 }}
+        style={{ flex: 1, flexDirection: 'row', gap: theme.spacing.md }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        {/* Date badge */}
+        <View
+          style={{
+            minWidth: 56,
+            alignItems: 'center',
+            backgroundColor: theme.colors.accentSoft,
+            borderRadius: theme.radius.md,
+            paddingHorizontal: theme.spacing.sm,
+            paddingVertical: theme.spacing.xs,
+          }}
+        >
           <Text
             style={{
-              color: theme.colors.foreground,
+              color: theme.colors.accentInk,
               fontFamily: theme.fonts.sansSemibold,
-              fontSize: 16,
+              fontSize: 13,
+              textAlign: 'center',
             }}
           >
             {heading}
-            {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
           </Text>
-          {isToday ? (
+          {stage.isRestDay ? (
             <Text
-              accessibilityLabel={t('trip.today')}
               style={{
                 color: theme.colors.accentInk,
-                backgroundColor: theme.colors.accentSoft,
                 fontFamily: theme.fonts.sansMedium,
                 fontSize: 11,
-                overflow: 'hidden',
-                borderRadius: theme.radius.full,
-                paddingHorizontal: theme.spacing.sm,
-                paddingVertical: 2,
+                marginTop: 2,
               }}
             >
-              {t('trip.today')}
+              {t('trip.rest')}
             </Text>
           ) : null}
         </View>
-        <Text
-          style={{
-            color: theme.colors.mutedForeground,
-            fontFamily: theme.fonts.sans,
-            fontSize: 14,
-            marginTop: 2,
-          }}
-        >
-          {stage.startLabel ?? '?'} → {stage.endLabel ?? stage.label ?? '?'}
-        </Text>
-        <Text
-          style={{
-            color: theme.colors.mutedForeground,
-            fontFamily: theme.fonts.mono,
-            fontSize: 13,
-            marginTop: 2,
-          }}
-        >
-          {t('trip.stageMeta', {
-            distance: Math.round(stage.distance ?? 0),
-            elevation: Math.round(stage.elevation ?? 0),
-          })}
-        </Text>
+        {/* Title + route + KPIs */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+            <Text
+              style={{
+                color: theme.colors.foreground,
+                fontFamily: theme.fonts.sansSemibold,
+                fontSize: 16,
+                flexShrink: 1,
+              }}
+            >
+              {stage.startLabel ?? '?'} → {stage.endLabel ?? stage.label ?? '?'}
+            </Text>
+            {isToday ? (
+              <Text
+                accessibilityLabel={t('trip.today')}
+                style={{
+                  color: theme.colors.accentInk,
+                  backgroundColor: theme.colors.accentSoft,
+                  fontFamily: theme.fonts.sansMedium,
+                  fontSize: 11,
+                  overflow: 'hidden',
+                  borderRadius: theme.radius.full,
+                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: 2,
+                }}
+              >
+                {t('trip.today')}
+              </Text>
+            ) : null}
+          </View>
+          <Text
+            style={{
+              color: theme.colors.mutedForeground,
+              fontFamily: theme.fonts.mono,
+              fontSize: 13,
+              marginTop: 4,
+            }}
+          >
+            {t('trip.stageMeta', {
+              distance: Math.round(stage.distance ?? 0),
+              elevation: Math.round(stage.elevation ?? 0),
+            })}
+          </Text>
+        </View>
       </Pressable>
+      {/* Weather + alerts */}
+      <View style={{ alignItems: 'flex-end', gap: theme.spacing.xs }}>
+        {stage.weather ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+            <CloudSun color={theme.colors.mutedIcon} size={16} />
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 13,
+              }}
+            >
+              {t('trip.summary.degrees', {
+                value: Math.round(stage.weather.tempMax),
+              })}
+            </Text>
+          </View>
+        ) : null}
+        {alertCount > 0 ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.xs,
+              backgroundColor: theme.colors.accentSoft,
+              borderRadius: theme.radius.full,
+              paddingHorizontal: theme.spacing.sm,
+              paddingVertical: 2,
+            }}
+          >
+            <AlertTriangle color={theme.colors.accentBrand} size={13} />
+            <Text
+              style={{
+                color: theme.colors.accentInk,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 12,
+              }}
+            >
+              {alertCount}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       {!locked ? (
         <Pressable
           accessibilityLabel={t('trip.deleteA11y', { day })}
           hitSlop={8}
           onPress={() => onDelete(index)}
-          style={{ padding: theme.spacing.sm }}
+          style={{ padding: theme.spacing.xs }}
         >
           <Trash2 color={theme.colors.destructive} size={20} />
         </Pressable>
@@ -318,7 +405,7 @@ export function StageCard({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               {onAddStage ? (
                 <EditChip
-                  icon={<Plus color={theme.colors.foreground} size={14} />}
+                  icon={<Plus color={theme.colors.accentBrand} size={14} />}
                   label={t('trip.edit.addStage')}
                   a11yLabel={t('trip.edit.addStageA11y', { day })}
                   onPress={() => onAddStage(index)}
@@ -327,7 +414,7 @@ export function StageCard({
               ) : null}
               {onAddRestDay ? (
                 <EditChip
-                  icon={<Coffee color={theme.colors.foreground} size={14} />}
+                  icon={<Coffee color={theme.colors.accentBrand} size={14} />}
                   label={t('trip.edit.addRestDay')}
                   a11yLabel={t('trip.edit.addRestDayA11y', { day })}
                   onPress={() => onAddRestDay(index)}
@@ -336,7 +423,7 @@ export function StageCard({
               ) : null}
               {canEditDistance ? (
                 <EditChip
-                  icon={<Pencil color={theme.colors.foreground} size={14} />}
+                  icon={<Pencil color={theme.colors.accentBrand} size={14} />}
                   label={t('trip.blocks.distanceKm', {
                     distance: Math.round(stage.distance ?? 0),
                   })}

@@ -60,7 +60,7 @@ const coordsB: [number, number][] = [
 beforeEach(() => {
   setItem.mockClear();
   // Pre-hydrated so the mount-time load() is a no-op (no async store write to
-  // chase through act()); these tests drive the base explicitly via the toggle.
+  // chase through act()); these tests drive the base explicitly via setBase.
   act(() => {
     useMapPrefs.setState({ base: 'map', hydrated: true });
   });
@@ -78,10 +78,13 @@ describe('TripMap', () => {
     expect(style()).toBe(POSITRON_STYLE_URL);
 
     act(() => {
+      // Tap the "Satellite" segment of the layers pill (multiple buttons now
+      // exist: two layer segments + two zoom controls).
       out.root
         .find(
           (n: any) =>
             n.props.accessibilityRole === 'button' &&
+            n.props.accessibilityLabel === 'Satellite' &&
             typeof n.props.onPress === 'function',
         )
         .props.onPress();

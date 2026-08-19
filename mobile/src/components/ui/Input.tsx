@@ -1,13 +1,16 @@
+import { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { useTheme } from '../../theme/context';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
   error?: string;
+  leadingIcon?: ReactNode;
 }
 
 // Labelled text field with an error line; border turns destructive on error.
-export function Input({ label, error, ...props }: InputProps) {
+// An optional leading icon sits inside the bordered field, ahead of the input.
+export function Input({ label, error, leadingIcon, ...props }: InputProps) {
   const theme = useTheme();
   return (
     <View>
@@ -23,21 +26,24 @@ export function Input({ label, error, ...props }: InputProps) {
           {label}
         </Text>
       ) : null}
-      <TextInput
-        placeholderTextColor={theme.colors.mutedForeground}
+      <View
         style={[
           styles.field,
           {
-            color: theme.colors.foreground,
             backgroundColor: theme.colors.surface,
             borderColor: error ? theme.colors.destructive : theme.colors.input,
             borderRadius: theme.radius.md,
             paddingHorizontal: theme.spacing.md,
-            fontFamily: theme.fonts.sans,
           },
         ]}
-        {...props}
-      />
+      >
+        {leadingIcon ? <View style={{ marginRight: theme.spacing.sm }}>{leadingIcon}</View> : null}
+        <TextInput
+          placeholderTextColor={theme.colors.mutedForeground}
+          style={[styles.input, { color: theme.colors.foreground, fontFamily: theme.fonts.sans }]}
+          {...props}
+        />
+      </View>
       {error ? (
         <Text
           style={{
@@ -55,5 +61,11 @@ export function Input({ label, error, ...props }: InputProps) {
 }
 
 const styles = StyleSheet.create({
-  field: { height: 44, borderWidth: StyleSheet.hairlineWidth, fontSize: 16 },
+  field: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  input: { flex: 1, height: '100%', fontSize: 16, padding: 0 },
 });

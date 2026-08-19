@@ -10,7 +10,7 @@ import {
 import { useTheme } from '../../theme/context';
 import type { Theme } from '../../theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -30,6 +30,8 @@ function colorsFor(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
     case 'secondary':
       return { bg: c.secondary, fg: c.secondaryForeground, border: c.border };
+    case 'outline':
+      return { bg: 'transparent', fg: c.brand, border: c.brand };
     case 'ghost':
       return { bg: 'transparent', fg: c.foreground, border: 'transparent' };
     case 'destructive':

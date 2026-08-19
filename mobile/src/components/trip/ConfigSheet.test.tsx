@@ -57,6 +57,31 @@ function findByA11y(root: any, label: string): any {
   );
 }
 
+// Drive the themed track Slider: set a known track width via onLayout, then fire
+// a responder grant at `locationX`. value = clamp(round((min + x/width*(max-min))/step)*step).
+// For maxDistance (min 30, max 300, step 5): width 270, x 55 -> 85 km.
+function dragSlider(root: any, label: string, locationX: number, width = 270): any {
+  const s = root.find(
+    (n: any) => n.props.accessibilityRole === 'adjustable' && n.props.accessibilityLabel === label,
+  );
+  act(() => {
+    s.props.onLayout({ nativeEvent: { layout: { width } } });
+  });
+  act(() => {
+    s.props.onResponderGrant({ nativeEvent: { locationX } });
+  });
+  return s;
+}
+
+function fireA11yAction(root: any, label: string, actionName: string): void {
+  const s = root.find(
+    (n: any) => n.props.accessibilityRole === 'adjustable' && n.props.accessibilityLabel === label,
+  );
+  act(() => {
+    s.props.onAccessibilityAction({ nativeEvent: { actionName } });
+  });
+}
+
 function press(node: any) {
   act(() => {
     node.props.onPress();
@@ -117,8 +142,7 @@ function allTexts(root: any): string[] {
 describe('ConfigSheet pacing live-preview', () => {
   it('previews the value locally without committing until confirmed', () => {
     const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
-    const inc = findByA11y(tree.root, t('config.increase', { label: t('config.maxDistance') }));
-    press(inc);
+    dragSlider(tree.root, t('config.maxDistance'), 55);
     // Live preview: the displayed value moved from 80 to 85 km...
     expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 85 }));
     // ...but no destructive commit fired yet.
@@ -131,7 +155,7 @@ describe('ConfigSheet destructive-confirm gating', () => {
     const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const onClose = jest.fn();
     const tree = render(<ConfigSheet tripId="t1" visible onClose={onClose} />);
-    press(findByA11y(tree.root, t('config.increase', { label: t('config.maxDistance') })));
+    dragSlider(tree.root, t('config.maxDistance'), 55);
 
     const recompute = findButton(tree.root, t('config.recompute'));
     expect(recompute).toBeDefined();
@@ -162,7 +186,7 @@ describe('ConfigSheet destructive-confirm gating', () => {
     mockUpdatePacing.mockResolvedValueOnce(false);
     const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
-    press(findByA11y(tree.root, t('config.increase', { label: t('config.maxDistance') })));
+    dragSlider(tree.root, t('config.maxDistance'), 55);
     press(findButton(tree.root, t('config.recompute'))!);
     const buttons = (spy.mock.calls[0] as any)[2] as { style?: string; onPress?: () => void }[];
     const confirm = buttons.find((b) => b.style === 'destructive');
@@ -178,7 +202,7 @@ describe('ConfigSheet destructive-confirm gating', () => {
   it('cancelling the confirmation commits nothing', () => {
     const spy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
-    press(findByA11y(tree.root, t('config.increase', { label: t('config.maxDistance') })));
+    dragSlider(tree.root, t('config.maxDistance'), 55);
     press(findButton(tree.root, t('config.recompute'))!);
     const buttons = (spy.mock.calls[0] as any)[2] as { style?: string; onPress?: () => void }[];
     const cancel = buttons.find((b) => b.style === 'cancel');
@@ -210,5 +234,28 @@ describe('ConfigSheet accommodation types (min 1)', () => {
     expect(toggle.props.disabled).toBe(true);
     press(toggle);
     expect(mockUpdateAccommodationTypes).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConfigSheet slider screen-reader actions', () => {
+  it('increments and decrements the value via accessibility actions', () => {
+    const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    const label = t('config.maxDistance'); // 80 km, step 5
+
+    fireA11yAction(tree.root, label, 'increment');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 85 }));
+
+    fireA11yAction(tree.root, label, 'decrement');
+    fireA11yAction(tree.root, label, 'decrement');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 75 }));
+  });
+
+  it('ignores accessibility actions while the trip is locked (disabled)', () => {
+    act(() => {
+      useTripStore.setState({ isLocked: true });
+    });
+    const tree = render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    fireA11yAction(tree.root, t('config.maxDistance'), 'increment');
+    expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 80 }));
   });
 });

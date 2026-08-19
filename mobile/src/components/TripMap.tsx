@@ -1,11 +1,20 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { FeatureCollection } from 'geojson';
-import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
+import {
+  Camera,
+  type CameraRef,
+  GeoJSONSource,
+  Layer,
+  Map,
+  type MapRef,
+} from '@maplibre/maplibre-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Minus, Plus } from './ui/icons';
 import { useTheme } from '../theme/context';
 import { useMapPrefs } from '../store/map-prefs';
 import {
+  applyZoom,
   computeBounds,
   mapStyleFor,
   markerCollection,
@@ -33,12 +42,22 @@ export function TripMap({
   const theme = useTheme();
   const { t } = useTranslation();
   const base = useMapPrefs((s) => s.base);
-  const toggle = useMapPrefs((s) => s.toggle);
+  const setBase = useMapPrefs((s) => s.setBase);
   const load = useMapPrefs((s) => s.load);
+  const mapRef = useRef<MapRef>(null);
+  const cameraRef = useRef<CameraRef>(null);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Relative zoom for the +/- controls (see applyZoom).
+  const zoomBy = (delta: number) =>
+    applyZoom(
+      () => mapRef.current?.getZoom(),
+      (zoom) => cameraRef.current?.zoomTo(zoom, { duration: 200 }),
+      delta,
+    );
 
   // Every object/collection handed to the memoized native components is derived
   // once per input change: a fresh reference on each render would defeat the
@@ -88,8 +107,8 @@ export function TripMap({
 
   return (
     <View style={styles.container}>
-      <Map style={styles.map} mapStyle={mapStyle}>
-        <Camera {...cameraStop} />
+      <Map ref={mapRef} style={styles.map} mapStyle={mapStyle}>
+        <Camera ref={cameraRef} {...cameraStop} />
         <GeoJSONSource id="route" data={line}>
           <Layer
             id="route-line"
@@ -137,24 +156,82 @@ export function TripMap({
           </GeoJSONSource>
         ) : null}
       </Map>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('trip.map.toggleA11y')}
-        onPress={toggle}
+      <View
         style={[
-          styles.toggle,
-          { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+          styles.zoom,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            ...theme.shadows.soft,
+          },
         ]}
       >
-        <Text
-          style={[
-            styles.toggleText,
-            { color: theme.colors.foreground, fontFamily: theme.fonts.sansMedium },
-          ]}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('trip.map.zoomInA11y')}
+          onPress={() => void zoomBy(1)}
+          style={styles.zoomButton}
         >
-          {satellite ? t('trip.map.layerMap') : t('trip.map.layerSatellite')}
-        </Text>
-      </Pressable>
+          <Plus size={20} color={theme.colors.foreground} />
+        </Pressable>
+        <View style={[styles.zoomDivider, { backgroundColor: theme.colors.border }]} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('trip.map.zoomOutA11y')}
+          onPress={() => void zoomBy(-1)}
+          style={styles.zoomButton}
+        >
+          <Minus size={20} color={theme.colors.foreground} />
+        </Pressable>
+      </View>
+      <View
+        accessibilityLabel={t('trip.map.toggleA11y')}
+        style={[
+          styles.layers,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+            ...theme.shadows.soft,
+          },
+        ]}
+      >
+        {(['map', 'satellite'] as const).map((layer) => {
+          const active = base === layer;
+          return (
+            <Pressable
+              key={layer}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={
+                layer === 'map'
+                  ? t('trip.map.layerMap')
+                  : t('trip.map.layerSatellite')
+              }
+              onPress={() => setBase(layer)}
+              style={[
+                styles.layerSegment,
+                active && { backgroundColor: theme.colors.brand },
+              ]}
+            >
+              <Text
+                style={{
+                  color: active
+                    ? theme.colors.primaryForeground
+                    : theme.colors.foreground,
+                  fontFamily: active
+                    ? theme.fonts.sansSemibold
+                    : theme.fonts.sansMedium,
+                  fontSize: 13,
+                }}
+              >
+                {layer === 'map'
+                  ? t('trip.map.layerMap')
+                  : t('trip.map.layerSatellite')}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -163,14 +240,33 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  toggle: {
+  zoom: {
     position: 'absolute',
     top: 12,
     right: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomDivider: { height: StyleSheet.hairlineWidth },
+  layers: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
+    padding: 3,
   },
-  toggleText: { fontSize: 13 },
+  layerSegment: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
 });

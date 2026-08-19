@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  type AccessibilityActionEvent,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Sheet } from '../ui';
+import { Calendar } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
@@ -38,15 +48,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-// A compact -/+ numeric control (no slider dep on RN). `format` renders the
-// current value; `label` is used for the accessible +/- labels.
-function Stepper({
+// A themed track slider (no native slider dep): a drag on the track maps the
+// touch x to a stepped value. Uses raw responder props (not PanResponder) so the
+// commit closure stays inspectable and the gesture is unit-testable via
+// onLayout + onResponder* without pulling in PanResponder's touch-history
+// internals. `format` renders the accent value; end labels sit under the track.
+function Slider({
   label,
   value,
   min,
   max,
   step,
   format,
+  minLabel,
+  maxLabel,
+  disabled,
   onChange,
 }: {
   label: string;
@@ -55,62 +71,164 @@ function Stepper({
   max: number;
   step: number;
   format: (v: number) => string;
+  minLabel: string;
+  maxLabel: string;
+  disabled: boolean;
   onChange: (v: number) => void;
 }) {
   const theme = useTheme();
-  const { t } = useTranslation();
-  const btn = (delta: number, a11y: string) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={a11y}
-      disabled={delta < 0 ? value <= min : value >= max}
-      onPress={() => onChange(clamp(value + delta, min, max))}
-      hitSlop={6}
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: theme.radius.md,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: (delta < 0 ? value <= min : value >= max) ? 0.4 : 1,
-      }}
-    >
-      <Text style={{ color: theme.colors.foreground, fontSize: 18 }}>
-        {delta < 0 ? '−' : '+'}
-      </Text>
-    </Pressable>
-  );
+  const [width, setWidth] = useState(0);
+  const pct = max > min ? clamp((value - min) / (max - min), 0, 1) : 0;
+  const THUMB = 22;
+
+  const commit = (e: GestureResponderEvent) => {
+    if (disabled || width <= 0) return;
+    const ratio = clamp(e.nativeEvent.locationX / width, 0, 1);
+    const stepped = Math.round((min + ratio * (max - min)) / step) * step;
+    onChange(clamp(stepped, min, max));
+  };
+
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: theme.spacing.xs,
-        gap: theme.spacing.sm,
-      }}
-    >
-      <Text style={{ color: theme.colors.foreground, fontSize: 14, flex: 1 }}>
-        {label}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        {btn(-step, t('config.decrease', { label }))}
+    <View style={{ paddingVertical: theme.spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Text
           style={{
-            color: theme.colors.mutedForeground,
+            color: theme.colors.foreground,
+            fontFamily: theme.fonts.sansMedium,
+            fontSize: 14,
+          }}
+        >
+          {label}
+        </Text>
+        <Text
+          style={{
+            color: theme.colors.accentBrand,
             fontFamily: theme.fonts.mono,
             fontSize: 14,
-            minWidth: 64,
-            textAlign: 'center',
           }}
         >
           {format(value)}
         </Text>
-        {btn(step, t('config.increase', { label }))}
+      </View>
+      <View
+        accessibilityRole="adjustable"
+        accessibilityLabel={label}
+        accessibilityValue={{ min, max, now: value, text: format(value) }}
+        // Screen readers (VoiceOver/TalkBack) drive an "adjustable" via
+        // increment/decrement actions, not raw touch — without these the sliders
+        // are unusable with a screen reader (the old +/- Stepper was operable).
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(e: AccessibilityActionEvent) => {
+          if (disabled) return;
+          if (e.nativeEvent.actionName === 'increment') onChange(clamp(value + step, min, max));
+          if (e.nativeEvent.actionName === 'decrement') onChange(clamp(value - step, min, max));
+        }}
+        onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+        onStartShouldSetResponder={() => !disabled}
+        onMoveShouldSetResponder={() => !disabled}
+        onResponderGrant={commit}
+        onResponderMove={commit}
+        hitSlop={{ top: 12, bottom: 12 }}
+        style={{
+          height: THUMB + 8,
+          justifyContent: 'center',
+          marginTop: theme.spacing.sm,
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: theme.colors.muted }}>
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: `${pct * 100}%`,
+              borderRadius: 3,
+              backgroundColor: theme.colors.brandFill,
+            }}
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 3 - THUMB / 2,
+              left: `${pct * 100}%`,
+              marginLeft: -THUMB / 2,
+              width: THUMB,
+              height: THUMB,
+              borderRadius: THUMB / 2,
+              backgroundColor: theme.colors.brandFill,
+              borderWidth: 3,
+              borderColor: theme.colors.card,
+              ...theme.shadows.soft,
+            }}
+          />
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.xs }}>
+        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono, fontSize: 11 }}>
+          {minLabel}
+        </Text>
+        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono, fontSize: 11 }}>
+          {maxLabel}
+        </Text>
       </View>
     </View>
+  );
+}
+
+// A themed track switch (no native Switch dep): a rounded track whose knob
+// slides to the checked end; the track fills with the brand accent when on
+// (the theme has no dedicated success/green token — brand accent is the closest
+// themed match for the mockup's green "on" state).
+function Switch({
+  value,
+  disabled,
+  onValueChange,
+  label,
+}: {
+  value: boolean;
+  disabled: boolean;
+  onValueChange: (v: boolean) => void;
+  label: string;
+}) {
+  const theme = useTheme();
+  const W = 46;
+  const H = 28;
+  const PAD = 3;
+  const KNOB = H - 2 * PAD;
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
+      onPress={() => onValueChange(!value)}
+      hitSlop={8}
+      style={{
+        width: W,
+        height: H,
+        borderRadius: H / 2,
+        padding: PAD,
+        justifyContent: 'center',
+        backgroundColor: value ? theme.colors.brandFill : theme.colors.muted,
+        borderWidth: value ? 0 : 1,
+        borderColor: theme.colors.border,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <View
+        style={{
+          width: KNOB,
+          height: KNOB,
+          borderRadius: KNOB / 2,
+          backgroundColor: '#ffffff',
+          alignSelf: value ? 'flex-end' : 'flex-start',
+          ...theme.shadows.soft,
+        }}
+      />
+    </Pressable>
   );
 }
 
@@ -342,49 +460,64 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
         </View>
 
         <View style={{ marginTop: theme.spacing.sm }}>
-          <Stepper
+          <Slider
             label={t('config.maxDistance')}
             value={pacing.maxDistancePerDay}
             min={30}
             max={300}
             step={5}
+            disabled={isLocked}
             format={(v) => t('config.valueKm', { value: v })}
+            minLabel={t('config.valueKm', { value: 30 })}
+            maxLabel={t('config.valueKm', { value: 300 })}
             onChange={(v) => setPacing((p) => ({ ...p, maxDistancePerDay: v }))}
           />
-          <Stepper
+          <Slider
             label={t('config.averageSpeed')}
             value={pacing.averageSpeed}
             min={5}
             max={50}
             step={1}
+            disabled={isLocked}
             format={(v) => t('config.valueKmh', { value: v })}
+            minLabel={t('config.valueKmh', { value: 5 })}
+            maxLabel={t('config.valueKmh', { value: 50 })}
             onChange={(v) => setPacing((p) => ({ ...p, averageSpeed: v }))}
           />
-          <Stepper
+          <Slider
             label={t('config.departureHour')}
             value={pacing.departureHour}
             min={0}
             max={23}
             step={1}
+            disabled={isLocked}
             format={(v) => t('config.valueHour', { value: String(v).padStart(2, '0') })}
+            minLabel={t('config.valueHour', { value: '00' })}
+            maxLabel={t('config.valueHour', { value: '23' })}
             onChange={(v) => setPacing((p) => ({ ...p, departureHour: v }))}
           />
-          <Stepper
+          <Slider
             label={t('config.fatigue')}
             value={toFatiguePercent(pacing.fatigueFactor)}
             min={1}
             max={50}
             step={1}
+            disabled={isLocked}
             format={(v) => t('config.valuePercent', { value: v })}
+            minLabel={t('config.valuePercent', { value: 1 })}
+            maxLabel={t('config.valuePercent', { value: 50 })}
             onChange={(v) => setPacing((p) => ({ ...p, fatigueFactor: fromFatiguePercent(v) }))}
           />
-          <Stepper
+          <Slider
             label={t('config.elevation')}
             value={toElevationPercent(pacing.elevationPenalty)}
             min={1}
             max={100}
             step={1}
+            disabled={isLocked}
             format={(v) => t('config.valuePercent', { value: v })}
+            minLabel={t('config.elevationLow')}
+            maxLabel={t('config.elevationHigh')}
             onChange={(v) =>
               setPacing((p) => ({ ...p, elevationPenalty: fromElevationPercent(v) }))
             }
@@ -394,31 +527,30 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingVertical: theme.spacing.xs,
+              marginTop: theme.spacing.sm,
+              paddingVertical: theme.spacing.md,
+              paddingHorizontal: theme.spacing.md,
+              borderRadius: theme.radius.lg,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.secondary,
             }}
           >
-            <Text style={{ color: theme.colors.foreground, fontSize: 14 }}>
-              {t('config.ebikeMode')}
-            </Text>
-            <Pressable
-              accessibilityRole="switch"
-              accessibilityLabel={t('config.ebikeMode')}
-              accessibilityState={{ checked: pacing.ebikeMode }}
-              disabled={isLocked}
-              onPress={() => setPacing((p) => ({ ...p, ebikeMode: !p.ebikeMode }))}
+            <Text
               style={{
-                paddingHorizontal: theme.spacing.md,
-                paddingVertical: theme.spacing.xs,
-                borderRadius: theme.radius.full,
-                borderWidth: 1,
-                borderColor: pacing.ebikeMode ? theme.colors.brandFill : theme.colors.border,
-                backgroundColor: pacing.ebikeMode ? theme.colors.accentSoft : 'transparent',
+                color: theme.colors.foreground,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 14,
               }}
             >
-              <Text style={{ color: theme.colors.foreground, fontSize: 13 }}>
-                {pacing.ebikeMode ? t('config.on') : t('config.off')}
-              </Text>
-            </Pressable>
+              {t('config.ebikeMode')}
+            </Text>
+            <Switch
+              label={t('config.ebikeMode')}
+              value={pacing.ebikeMode}
+              disabled={isLocked}
+              onValueChange={(v) => setPacing((p) => ({ ...p, ebikeMode: v }))}
+            />
           </View>
         </View>
         <View style={{ marginTop: theme.spacing.sm }}>
@@ -438,70 +570,79 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
           title={t('config.accommodationTitle')}
           description={t('config.accommodationDescription')}
         />
-        {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
-          const enabled = enabledAccommodationTypes.includes(type);
-          const isLast = enabled && enabledAccommodationTypes.length <= 1;
-          return (
-            <View
-              key={type}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingVertical: theme.spacing.xs,
-              }}
-            >
-              <Text style={{ color: theme.colors.foreground, fontSize: 14 }}>
-                {t(`config.type_${type}` as const)}
-              </Text>
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityLabel={t(`config.type_${type}` as const)}
-                accessibilityState={{ checked: enabled, disabled: isLocked || isLast }}
-                disabled={isLocked || isLast}
-                onPress={() => toggleAccommodationType(type)}
+        <View style={{ gap: theme.spacing.sm }}>
+          {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
+            const enabled = enabledAccommodationTypes.includes(type);
+            const isLast = enabled && enabledAccommodationTypes.length <= 1;
+            return (
+              <View
+                key={type}
                 style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: theme.spacing.md,
                   paddingHorizontal: theme.spacing.md,
-                  paddingVertical: theme.spacing.xs,
-                  borderRadius: theme.radius.full,
+                  borderRadius: theme.radius.lg,
                   borderWidth: 1,
-                  borderColor: enabled ? theme.colors.brandFill : theme.colors.border,
-                  backgroundColor: enabled ? theme.colors.accentSoft : 'transparent',
-                  opacity: isLast ? 0.5 : 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.secondary,
                 }}
               >
-                <Text style={{ color: theme.colors.foreground, fontSize: 13 }}>
-                  {enabled ? t('config.on') : t('config.off')}
+                <Text
+                  style={{
+                    color: theme.colors.foreground,
+                    fontFamily: theme.fonts.sansMedium,
+                    fontSize: 14,
+                  }}
+                >
+                  {t(`config.type_${type}` as const)}
                 </Text>
-              </Pressable>
-            </View>
-          );
-        })}
+                <Switch
+                  label={t(`config.type_${type}` as const)}
+                  value={enabled}
+                  disabled={isLocked || isLast}
+                  onValueChange={() => toggleAccommodationType(type)}
+                />
+              </View>
+            );
+          })}
+        </View>
 
         <View style={{ height: theme.spacing.lg }} />
 
         {/* Dates */}
-        <SectionTitle
-          title={t('config.datesTitle')}
-          description={t('config.datesDescription')}
-        />
-        <Input
-          label={t('config.startDate')}
-          value={startDraft}
-          onChangeText={setStartDraft}
-          placeholder={t('config.datePlaceholder')}
-          editable={!isLocked}
-          autoCapitalize="none"
-        />
-        <View style={{ height: theme.spacing.sm }} />
-        <Input
-          label={t('config.endDate')}
-          value={endDraft}
-          onChangeText={setEndDraft}
-          placeholder={t('config.datePlaceholder')}
-          editable={!isLocked}
-          autoCapitalize="none"
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+          <Calendar size={16} color={theme.colors.accentBrand} />
+          <View style={{ flex: 1 }}>
+            <SectionTitle
+              title={t('config.datesTitle')}
+              description={t('config.datesDescription')}
+            />
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <Input
+              label={t('config.startDate')}
+              value={startDraft}
+              onChangeText={setStartDraft}
+              placeholder={t('config.datePlaceholder')}
+              editable={!isLocked}
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Input
+              label={t('config.endDate')}
+              value={endDraft}
+              onChangeText={setEndDraft}
+              placeholder={t('config.datePlaceholder')}
+              editable={!isLocked}
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
         <View style={{ marginTop: theme.spacing.sm }}>
           <Button
             label={t('config.recompute')}

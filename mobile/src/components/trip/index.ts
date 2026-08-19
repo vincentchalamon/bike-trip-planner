@@ -9,6 +9,7 @@ export { SupplyBlock } from './SupplyBlock';
 export { EventsBlock } from './EventsBlock';
 export { StageDataBlocks } from './StageDataBlocks';
 export { RoadbookView } from './RoadbookView';
+export { RoadbookSummary } from './RoadbookSummary';
 export { StageDetailView } from './StageDetailView';
 export { RoadbookBanner, type RoadbookBannerVariant } from './RoadbookBanner';
 export { TripMapView } from './TripMapView';

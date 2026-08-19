@@ -34,6 +34,20 @@ export interface ThemeColors {
   brandHover: string;
   brandFill: string;
   brandFillHover: string;
+  // Spike-UX green branded surfaces (fixed in both schemes, like brandFill):
+  // the login hero gradient and the roadbook/share summary card. `forest*` and
+  // `summary*` are the same green under two names (hero vs card); keep both.
+  forest: string;
+  forestDeep: string;
+  heroForeground: string;
+  summary: string;
+  summaryEnd: string;
+  summaryForeground: string;
+  summaryMuted: string;
+  // Soft green "analysed" status badge (trips list).
+  successSoft: string;
+  successInk: string;
+  successBorder: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -67,6 +81,16 @@ export const lightColors: ThemeColors = {
   brandHover: '#8c4716',
   brandFill: '#a8561a',
   brandFillHover: '#8c4716',
+  forest: '#3e5c3a',
+  forestDeep: '#2f4a34',
+  heroForeground: '#f5f0e8',
+  summary: '#3e5c3a',
+  summaryEnd: '#2f4a34',
+  summaryForeground: '#f5f0e8',
+  summaryMuted: 'rgba(245,240,232,0.72)',
+  successSoft: '#eaf4ec',
+  successInk: '#1a3d22',
+  successBorder: '#cfe6d4',
 };
 
 export const darkColors: ThemeColors = {
@@ -100,6 +124,16 @@ export const darkColors: ThemeColors = {
   brandHover: '#f09050',
   brandFill: '#a8561a',
   brandFillHover: '#8c4716',
+  forest: '#3e5c3a',
+  forestDeep: '#2f4a34',
+  heroForeground: '#f5f0e8',
+  summary: '#3e5c3a',
+  summaryEnd: '#2f4a34',
+  summaryForeground: '#f5f0e8',
+  summaryMuted: 'rgba(245,240,232,0.72)',
+  successSoft: '#0d2e14',
+  successInk: '#b8f0c0',
+  successBorder: 'rgba(120,200,140,0.25)',
 };
 
 // Spacing scale (px) — mirrors --spacing-* in globals.css.
