@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\StageResponse;
 use App\Mapper\StageResponseMapper;
-use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -23,7 +23,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class StageDetailProvider implements ProviderInterface
 {
     public function __construct(
-        private DoctrineTripRequestRepository $tripStateManager,
+        private TripRequestRepositoryInterface $tripStateManager,
         private StageResponseMapper $mapper,
     ) {
     }

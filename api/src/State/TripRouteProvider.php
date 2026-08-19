@@ -9,7 +9,7 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRoute;
-use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripRouteProvider implements ProviderInterface
 {
     public function __construct(
-        private DoctrineTripRequestRepository $tripStateManager,
+        private TripRequestRepositoryInterface $tripStateManager,
     ) {
     }
 
