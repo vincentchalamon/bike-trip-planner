@@ -1911,6 +1911,28 @@ Ordre de merge recommandé pour les 4 restantes : **#1081 (#1044) → #1085 (#10
 
 <details><summary>
 
+## Sprint 56.b — Mobile + Web : Chargement progressif & perf (ADR-057)
+
+</summary>
+Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un voyage (#1099) puis découpe le modèle de lecture monolithique en résumé / détail-étape / route, avec hydratation progressive du store (web + mobile). Voir [ADR-057](docs/adr/adr-057-progressive-trip-loading.md). Milestone : « Sprint 56.b ».
+
+**Cause racine #1099** : `/trips/{id}/detail` émet tous les POIs du corridor (mesuré : 5 457 POIs / ~1.18 MB sur un trip 2 étapes ; la géométrie ne pèse que ~28 KB) → `JSON.parse` Hermes bloque ~20 s avant tout rendu, puis `PoiBlock` non virtualisé monte des milliers de vues. Le diagnostic initial (« géométrie ») était faux.
+
+| Ordre | ID | Titre | Effort | Statut | Dépend de |
+|-------|----|-------|--------|--------|-----------|
+| 1 | [#1099](https://github.com/vincentchalamon/bike-trip-planner/issues/1099) | `resupply` (≤6/étape) remplace les POIs en vrac — **merge en tête, débloque la recette** | M | ⏳ À faire | — |
+| 2 | [#1102](https://github.com/vincentchalamon/bike-trip-planner/issues/1102) | split modèle lecture — résumé (`/trips/{id}`) / détail-étape (`/stages/{index}`) / route (`/route`) | L | ⏳ À faire | #1099 |
+| 3 | [#1103](https://github.com/vincentchalamon/bike-trip-planner/issues/1103) | hydratation progressive du store (`@btp/core` + mobile : lazy détail au tap, route à l'ouverture carte) | M | ⏳ À faire | #1102 |
+| 4 | [#1104](https://github.com/vincentchalamon/bike-trip-planner/issues/1104) | hydratation progressive de la timeline web (squelettes + fetch parallèle borné) | M | ⏳ À faire | #1102, #1099 |
+| 5 | [#1105](https://github.com/vincentchalamon/bike-trip-planner/issues/1105) | roadbook (05) résumé-seul + détail d'étape (07) catégorisé conformes aux maquettes | L | ⏳ À faire | #1099, #1102, #1103 |
+| 6 | [#1106](https://github.com/vincentchalamon/bike-trip-planner/issues/1106) | spike Vulcain (`Fields`/Early-Hints) par-dessus le fetch progressif | S | ⏳ À faire | #1102, #1104 |
+
+**Contrat** : `/detail` **remplacé** (pré-release, pas de dépréciation) ; `pois` retiré, `resupply` ajouté ; réconciliation SSE inchangée (par étape, ADR-055) ; types OpenAPI régénérés → dérive de compilation intentionnelle sur pwa + mobile. **Vulcain** = surcouche d'optimisation (spike #1106), pas une fondation — Server Push déprécié navigateur, la base reste le fetch HTTP/2 multiplexé.
+
+</details>
+
+<details><summary>
+
 ## Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
 
 </summary>
