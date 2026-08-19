@@ -44,7 +44,7 @@ categorized **`resupply`** suggestion per stage from the existing lunch estimati
 (`riderTimeEstimator` + `LUNCH_NUDGE_DISTANCE_KM`, already in `ScanPoisHandler`)
 and route-distance positioning:
 
-```
+```text
 resupply: {
   foodAtLunch:     Poi[≤2],   // best food shops near the estimated lunch stop
   waterMorning:    Poi|null,  // one water point between start and lunch
