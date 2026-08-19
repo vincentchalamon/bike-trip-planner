@@ -10,6 +10,7 @@ import { ElevationProfile } from './ElevationProfile';
 import { computeProfileSummary, groupThousands } from './trip-map-summary';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
+import { useTripRoute } from '../../hooks/use-trip-route';
 
 // The map tab: derives the route polyline and markers from the store's stages
 // and hands them to the shared TripMap, or shows the empty state when there is
@@ -18,6 +19,8 @@ import { useTripStore } from '../../store/trip-store';
 // profile surlines the matching stretch on the map. The Spike-UX restyle frames
 // the map full-bleed with a fixed bottom profile panel and a floating ride CTA.
 export function TripMapView() {
+  // The summary omits geometry (ADR-057); pull the route in so the map has a line.
+  useTripRoute();
   const theme = useTheme();
   const { t } = useTranslation();
   const stages = useTripStore((s) => s.stages);

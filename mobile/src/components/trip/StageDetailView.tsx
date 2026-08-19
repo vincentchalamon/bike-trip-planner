@@ -39,6 +39,7 @@ import {
 } from './stage-detail';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
+import { useTripRoute } from '../../hooks/use-trip-route';
 import { useOfflineStore } from '../../store/offline-store';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
 import type { MutationFailure } from '../../store/gating';
@@ -52,6 +53,8 @@ import type { MutationFailure } from '../../store/gating';
 // the live store; the stage index is local state so prev/next stays on one
 // mounted screen (no navigation stacking, no SSE re-subscribe).
 export function StageDetailView({ initialIndex }: { initialIndex: number }) {
+  // The summary omits geometry (ADR-057); pull the route in for the mini-map + profile.
+  useTripRoute();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const stages = useTripStore((s) => s.stages);

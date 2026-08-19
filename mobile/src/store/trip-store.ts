@@ -6,7 +6,7 @@ import {
   reconcileStageUpdate,
   reconcileTripReady,
 } from '@btp/core/reconciliation';
-import type { TripDetail } from '../api/trips';
+import type { TripDetail, TripRoute } from '../api/trips';
 import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
 
 type ApiStage = NonNullable<TripDetail['stages']>[number];
@@ -26,7 +26,9 @@ export function stageDataFromDetail(s: ApiStage): StageData {
       ele: 0,
     },
     endPoint: (s.endPoint as StageData['endPoint']) ?? { lat: 0, lon: 0, ele: 0 },
-    geometry: (s.geometry as StageData['geometry']) ?? [],
+    // The summary carries no geometry (ADR-057): it is hydrated on demand from
+    // GET /route (map) and GET /stages/{i}/detail (stage view).
+    geometry: [],
     label: s.label ?? null,
     startLabel: s.startLabel ?? null,
     endLabel: s.endLabel ?? null,
@@ -125,6 +127,9 @@ interface TripState extends TripConfig {
   // An SSE recompute is streaming (computation_step events between a modification
   // and the terminal trip_ready/trip_complete). Drives the SseStatusIndicator.
   computing: boolean;
+  // Route geometry (split off /detail, ADR-057) has been fetched and merged into
+  // the stages. False after a fresh hydrate; set once GET /route lands.
+  geometryLoaded: boolean;
   // Accumulated edits not yet sent to /recompute.
   pendingModifications: Modification[];
   // Indices of stages that changed on the last destructive recompute, lit as a
@@ -149,6 +154,8 @@ interface TripState extends TripConfig {
   applyTripReady: (stages: StageData[]) => void;
   // Mode 2 per-stage event: reconcile a single slice via the shared core reducer.
   applyStageUpdate: (index: number, stage: StageData) => void;
+  // Merge the on-demand route geometry (GET /route) into the matching stages.
+  applyRoute: (route: TripRoute) => void;
   // Replace the whole stage list (optimistic rollback restores a snapshot).
   setStages: (stages: StageData[]) => void;
   // Patch any subset of the editable config slice.
@@ -200,6 +207,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   isLocked: false,
   outOfZone: false,
   computing: false,
+  geometryLoaded: false,
   pendingModifications: [],
   stageDiffs: new Set<number>(),
   diffBaseline: null,
@@ -217,6 +225,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       isLocked: detail.isLocked ?? false,
       outOfZone: detail.outOfZone ?? false,
       computing: false,
+      geometryLoaded: false,
       startDate: detail.startDate ?? null,
       endDate: detail.endDate ?? null,
       fatigueFactor: detail.fatigueFactor ?? DEFAULT_CONFIG.fatigueFactor,
@@ -268,6 +277,21 @@ export const useTripStore = create<TripState>((set, get) => ({
     }),
   applyStageUpdate: (index, stage) =>
     set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
+  applyRoute: (route) =>
+    set((state) => {
+      const geometryByDay = new Map(
+        (route.stages ?? []).map((s) => [s.dayNumber, s.geometry]),
+      );
+      return {
+        geometryLoaded: true,
+        stages: state.stages.map((stage) => {
+          const geometry = geometryByDay.get(stage.dayNumber);
+          return geometry
+            ? { ...stage, geometry: geometry as StageData['geometry'] }
+            : stage;
+        }),
+      };
+    }),
   setStages: (stages) => set({ stages }),
   setConfig: (patch) => set(patch),
   setTitle: (title) => set({ title }),
@@ -410,6 +434,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       isLocked: false,
       outOfZone: false,
       computing: false,
+      geometryLoaded: false,
       pendingModifications: [],
       stageDiffs: new Set<number>(),
       diffBaseline: null,

@@ -78,6 +78,36 @@ export async function fetchTripDetail(id: string): Promise<TripDetail | null> {
   return data ?? null;
 }
 
+// All-stages geometry for the map (ADR-057), fetched on demand off the summary.
+export type TripRoute = components['schemas']['TripRoute.jsonld'];
+
+export async function fetchTripRoute(id: string): Promise<TripRoute | null> {
+  const { data, error } = await api.GET('/trips/{id}/route', {
+    params: { path: { id } },
+  });
+  if (error) {
+    throw new Error('Failed to fetch trip route');
+  }
+  return data ?? null;
+}
+
+// One stage in full (geometry, resupply, accommodations, events, alerts).
+export type StageDetail = components['schemas']['Stage.StageResponse.jsonld'];
+
+export async function fetchStageDetail(
+  tripId: string,
+  index: number,
+): Promise<StageDetail | null> {
+  const { data, error } = await api.GET('/trips/{tripId}/stages/{index}/detail', {
+    params: { path: { tripId, index: String(index) } },
+    headers: ld,
+  });
+  if (error) {
+    throw new Error('Failed to fetch stage detail');
+  }
+  return data ?? null;
+}
+
 // Delete a stage (merges it with the adjacent day). The backend recomputes and
 // pushes the authoritative state over SSE; a started trip is rejected with 423
 // (App\State\TripLocker). Returns the raw status so the caller can distinguish a
