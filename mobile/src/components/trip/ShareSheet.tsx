@@ -36,21 +36,22 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
-  // The off-screen infographic runs an expensive useMemo pipeline (projectRoute
-  // flattens every stage's decimated geometry, budget/difficulty calcs). RN's
-  // Modal keeps children mounted when hidden, so gate the render on "opened at
-  // least once" — mirrors the web ShareModal's `if (!open) return` — to avoid
-  // paying that cost on every SSE stage update for riders who never open Share.
-  const [hasOpened, setHasOpened] = useState(visible);
   const [busy, setBusy] = useState(false);
+  // Image capture has its own busy flag so its spinner doesn't also light up the
+  // link buttons (which read `busy`). The off-screen infographic runs an
+  // expensive useMemo pipeline (projectRoute flattens every stage's decimated
+  // geometry, budget/difficulty calcs); RN's Modal keeps children mounted when
+  // hidden, so instead of paying that cost on open / every SSE update we mount it
+  // only for the duration of a capture (`capturing`), keeping the sheet snappy.
+  const [imageBusy, setImageBusy] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
 
   const infographicRef = useRef<RNView>(null);
-
-  useEffect(() => {
-    if (visible) setHasOpened(true);
-  }, [visible]);
+  // Guards the one-shot capture: set on press, consumed by the off-screen view's
+  // onLayout so a screenshot fires exactly once, only after real layout.
+  const captureArmedRef = useRef(false);
 
   // Fetch the active share once, the first time the sheet opens.
   useEffect(() => {
@@ -127,12 +128,24 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
     await Share.share({ message: buildText() });
   }, [buildText]);
 
-  const handleShareImage = useCallback(async () => {
-    setBusy(true);
+  // Mount the off-screen infographic; the actual capture fires from its onLayout
+  // (see runCapture) so we never race layout on a slow device / heavier trip.
+  const handleShareImage = useCallback(() => {
+    setImageBusy(true);
+    captureArmedRef.current = true;
+    setCapturing(true);
+  }, []);
+
+  // Triggered by the off-screen infographic's onLayout — once it has actually
+  // laid out — not a timer. Guarded to fire exactly once per press.
+  const runCapture = useCallback(async () => {
+    if (!captureArmedRef.current) return;
+    captureArmedRef.current = false;
     try {
       await captureAndShareInfographic(infographicRef, title);
     } finally {
-      setBusy(false);
+      setCapturing(false);
+      setImageBusy(false);
     }
   }, [title]);
 
@@ -189,8 +202,8 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
           label={t('share.shareImage')}
           variant="secondary"
           size="sm"
-          loading={busy}
-          onPress={() => void handleShareImage()}
+          loading={imageBusy}
+          onPress={handleShareImage}
         />
 
         {/* Formatted text */}
@@ -213,10 +226,15 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
         </View>
       </ScrollView>
 
-      {/* Off-screen infographic captured to PNG by handleShareImage. Only
-          mounted after Share has been opened once (see hasOpened). */}
-      {hasOpened && (
-        <View style={styles.offscreen} pointerEvents="none">
+      {/* Off-screen infographic captured to PNG by handleShareImage. Mounted only
+          while a capture is in progress (see capturing) so the sheet stays snappy
+          and the expensive render never runs on idle SSE updates. */}
+      {capturing && (
+        <View
+          style={styles.offscreen}
+          pointerEvents="none"
+          onLayout={() => void runCapture()}
+        >
           <ShareInfographic
             ref={infographicRef}
             title={title}

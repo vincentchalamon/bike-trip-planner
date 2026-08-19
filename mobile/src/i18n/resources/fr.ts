@@ -45,6 +45,11 @@ export const fr = {
     duplicateA11y: 'Dupliquer {{title}}',
     duplicateFailedTitle: 'Duplication impossible',
     duplicateFailed: 'La duplication a échoué. Réessayez.',
+    status: {
+      draft: 'brouillon',
+      analyzing: 'analyse en cours',
+      analyzed: 'analysé',
+    },
   },
   create: {
     title: 'Créer un voyage',

@@ -160,7 +160,7 @@ export default function Trips() {
               subtitle={t('trips.meta', {
                 stages: item.stageCount ?? 0,
                 distance: Math.round(item.totalDistance ?? 0),
-                status: item.status ?? 'draft',
+                status: t(`trips.status.${item.status ?? 'draft'}`),
               })}
               right={
                 <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>

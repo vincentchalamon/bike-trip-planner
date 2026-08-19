@@ -52,17 +52,24 @@ export async function runCreateTrip(
 }
 
 /**
- * Open the system file picker for a single GPX file. Returns the picked asset,
- * or null when the user cancels (mobile-adapt of the web drag&drop). The GPX
- * mime type is not reliably reported across platforms, so we accept any file and
- * let the backend validate the extension/content. A picker rejection (denied
- * permission, or a second pick launched while one is in flight — rejected on
- * some platforms) is treated as a cancel (null), never a thrown rejection.
+ * Open the system file picker restricted to GPX files. Returns the picked asset,
+ * or null when the user cancels (mobile-adapt of the web drag&drop). GPX has no
+ * universal mime type across platforms (Android often reports a `.gpx` as
+ * `application/octet-stream`), so we pass the known GPX/XML types plus
+ * octet-stream to narrow the picker without hiding real `.gpx` files; the backend
+ * still validates extension/content. A picker rejection (denied permission, or a
+ * second pick launched while one is in flight — rejected on some platforms) is
+ * treated as a cancel (null), never a thrown rejection.
  */
 export async function pickGpxFile(): Promise<GpxFile | null> {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
+      type: [
+        'application/gpx+xml',
+        'application/xml',
+        'text/xml',
+        'application/octet-stream',
+      ],
       copyToCacheDirectory: true,
       multiple: false,
     });
