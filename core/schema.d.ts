@@ -660,6 +660,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/s/{shortCode}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * All-stages geometry for a shared trip (anonymous).
+         * @description All-stages geometry for a shared trip (anonymous).
+         */
+        get: operations["api_s_shortCoderoute_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/s/{shortCode}/stages/{index}": {
         parameters: {
             query?: never;
@@ -1980,6 +2000,17 @@ export interface components {
                     possibleClosed?: boolean;
                     distanceToEndPoint?: number;
                 } | null;
+            }[];
+        };
+        "TripShare.TripRoute.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            stages?: {
+                dayNumber?: number;
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
             }[];
         };
         "TripShare.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
@@ -4003,6 +4034,51 @@ export interface operations {
                 };
                 content: {
                     "application/gpx+xml": components["schemas"]["TripShare.Trip.gpx"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_s_shortCoderoute_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                shortCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripShare.TripRoute.jsonld"];
                 };
             };
             /** @description Forbidden */

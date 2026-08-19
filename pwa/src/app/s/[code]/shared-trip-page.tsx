@@ -14,7 +14,7 @@ import { HydrationBoundary } from "@/components/hydration-boundary";
 import { SiteChrome } from "@/components/site-chrome";
 import { SharedViewBanner } from "@/components/shared-view-banner";
 import { TripDownloads } from "@/components/trip-downloads";
-import { fetchSharedTrip } from "@/lib/api/client";
+import { fetchSharedTrip, fetchSharedTripRoute } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
@@ -85,7 +85,8 @@ function SharedTripLoader({ code }: { code: string }) {
             lon: 0,
             ele: 0,
           },
-          geometry: (s.geometry as StageData["geometry"]) ?? [],
+          // Summary carries no geometry (ADR-057); fetched via GET /route.
+          geometry: [],
           label: (s.label as string) ?? null,
           // Server-persisted reverse-geocoded labels (recette #649 #3c): the
           // anonymous shared view cannot call the auth-gated /geocode endpoint,
@@ -107,6 +108,12 @@ function SharedTripLoader({ code }: { code: string }) {
         }));
 
         setStages(parsedStages);
+        // Pull the route geometry (split off /detail, ADR-057) via the public code.
+        void fetchSharedTripRoute(code)
+          .then((route) => {
+            if (route) useTripStore.getState().applyRoute(route);
+          })
+          .catch(() => {});
         // Hydrate the trip store so that <RoadbookMasterDetail /> (which
         // reads `selectedStageIndex` from the store) works correctly. The
         // store stays local — no `setTrip()` call means no API/PATCH calls

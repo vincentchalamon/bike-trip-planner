@@ -855,6 +855,29 @@ export async function fetchSharedTrip(
   return res.json() as Promise<SharedTripDetail>;
 }
 
+// All-stages geometry, split off the trip summary (ADR-057), fetched on demand.
+export type TripRoute = components["schemas"]["TripRoute.jsonld"];
+
+export async function fetchTripRoute(id: string): Promise<TripRoute | null> {
+  const { data, error } = await apiClient.GET("/trips/{id}/route", {
+    params: { path: { id } },
+  });
+  if (error) return null;
+  return data ?? null;
+}
+
+// Public counterpart for the anonymous shared view (no auth token).
+export async function fetchSharedTripRoute(
+  shortCode: string,
+): Promise<TripRoute | null> {
+  const res = await fetch(
+    `${API_URL}/s/${encodeURIComponent(shortCode)}/route`,
+    { headers: { Accept: "application/ld+json" } },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<TripRoute>;
+}
+
 /**
  * Download a shared trip as GPX or FIT via short code (anonymous).
  */

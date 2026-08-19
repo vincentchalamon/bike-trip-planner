@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, fetchTripRoute } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { resolveStageLabels } from "@/hooks/use-mercure";
 import { EMPTY_RESUPPLY } from "@btp/core";
@@ -112,7 +112,8 @@ function TripLoader({ tripId }: { tripId: string }) {
             lon: 0,
             ele: 0,
           },
-          geometry: (s.geometry as StageData["geometry"]) ?? [],
+          // Summary carries no geometry (ADR-057); fetched via GET /route.
+          geometry: [],
           label: s.label ?? null,
           startLabel: s.startLabel ?? null,
           endLabel: s.endLabel ?? null,
@@ -141,6 +142,12 @@ function TripLoader({ tripId }: { tripId: string }) {
       });
 
       setStages(stages);
+      // Pull the route geometry split off /detail (ADR-057) and merge it in.
+      void fetchTripRoute(tripId)
+        .then((route) => {
+          if (route) useTripStore.getState().applyRoute(route);
+        })
+        .catch(() => {});
 
       if (stages.length > 0) {
         const totalDistance = stages

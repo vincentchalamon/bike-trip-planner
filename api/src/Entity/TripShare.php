@@ -14,6 +14,7 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
 use App\ApiResource\TripDetail;
+use App\ApiResource\TripRoute;
 use App\ApiResource\TripRequest;
 use App\Repository\TripShareRepository;
 use App\State\TripShareCreateProcessor;
@@ -21,6 +22,7 @@ use App\State\TripShareCreateProvider;
 use App\State\TripShareDeleteProcessor;
 use App\State\TripShareGpxProvider;
 use App\State\TripShareProvider;
+use App\State\TripShareRouteProvider;
 use App\State\TripShareShortCodeProvider;
 use App\State\TripShareStageProvider;
 use Doctrine\ORM\Mapping as ORM;
@@ -92,6 +94,15 @@ use Symfony\Component\Uid\Uuid;
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Trip::class,
             provider: TripShareGpxProvider::class, // format-agnostic: also serves .fit
+        ),
+        new Get(
+            uriTemplate: '/s/{shortCode}/route',
+            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
+            requirements: ['shortCode' => '[A-Za-z0-9_-]+'],
+            openapi: new Operation(summary: 'All-stages geometry for a shared trip (anonymous).'),
+            security: 'is_granted("PUBLIC_ACCESS")',
+            output: TripRoute::class,
+            provider: TripShareRouteProvider::class,
         ),
         new Get(
             uriTemplate: '/s/{shortCode}/stages/{index}{._format}',
