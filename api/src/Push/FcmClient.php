@@ -84,19 +84,15 @@ final class FcmClient implements PushSenderInterface
     }
 
     /**
-     * A stale token is reported as HTTP 404 with error status NOT_FOUND /
-     * errorCode UNREGISTERED. Treat any 404 as prunable; corroborate with the
-     * body when present.
+     * A stale token is the only 404 we may prune. FCM v1 returns the same generic
+     * `{"error":{"code":404,"status":"NOT_FOUND"}}` wrapper for unrelated 404s
+     * (wrong project_id, disabled FCM API, revoked service account), so keying on
+     * the status or an empty body would wipe every user's tokens on a config error.
+     * The only reliable dead-token signal is the nested `errorCode: UNREGISTERED`.
      */
     private function isUnregistered(int $status, string $body): bool
     {
-        if (404 !== $status) {
-            return false;
-        }
-
-        return str_contains($body, 'UNREGISTERED')
-            || str_contains($body, 'NOT_FOUND')
-            || '' === trim($body);
+        return 404 === $status && str_contains($body, 'UNREGISTERED');
     }
 
     private function accessToken(): string

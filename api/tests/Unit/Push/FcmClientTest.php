@@ -54,6 +54,23 @@ final class FcmClientTest extends TestCase
     }
 
     #[Test]
+    public function doesNotPruneOnAGeneric404WithoutUnregistered(): void
+    {
+        // A wrong project_id / disabled API / revoked key surfaces as the same
+        // generic 404 NOT_FOUND wrapper. Pruning on it would wipe every user's
+        // tokens on a config error, so only the nested UNREGISTERED errorCode
+        // may prune — this response must leave the token in place.
+        $oauthClient = new MockHttpClient(new MockResponse((string) json_encode(['access_token' => 'ya29.test', 'expires_in' => 3600])));
+        $fcmClient = new MockHttpClient([
+            new MockResponse((string) json_encode(['error' => ['code' => 404, 'status' => 'NOT_FOUND', 'message' => 'Requested entity was not found.']]), ['http_code' => 404]),
+        ]);
+
+        $invalid = $this->client($oauthClient, $fcmClient)->send(['some-token'], 'T', 'B');
+
+        self::assertSame([], $invalid);
+    }
+
+    #[Test]
     public function fetchesTheAccessTokenOnlyOnceForABatch(): void
     {
         // One queued OAuth response: a second token exchange would throw, proving
