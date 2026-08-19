@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Sheet } from '../ui';
+import { Button, DateField, Input, Sheet } from '../ui';
 import { Calendar } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
@@ -623,23 +623,25 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
         </View>
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <Input
+            <DateField
               label={t('config.startDate')}
               value={startDraft}
-              onChangeText={setStartDraft}
+              onChange={setStartDraft}
               placeholder={t('config.datePlaceholder')}
-              editable={!isLocked}
-              autoCapitalize="none"
+              accessibilityLabel={t('config.startDate')}
+              clearLabel={t('trips.clearDate')}
+              disabled={isLocked}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Input
+            <DateField
               label={t('config.endDate')}
               value={endDraft}
-              onChangeText={setEndDraft}
+              onChange={setEndDraft}
               placeholder={t('config.datePlaceholder')}
-              editable={!isLocked}
-              autoCapitalize="none"
+              accessibilityLabel={t('config.endDate')}
+              clearLabel={t('trips.clearDate')}
+              disabled={isLocked}
             />
           </View>
         </View>

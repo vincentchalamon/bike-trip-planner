@@ -16,9 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
 import type { TripListItem } from '../../src/api/trips';
 import {
+  DateField,
   EmptyState,
   ErrorState,
-  Input,
   LoadingState,
   Screen,
 } from '../../src/components/ui';
@@ -304,23 +304,23 @@ export default function Trips() {
         </View>
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <Input
+            <DateField
               label={t('trips.fromLabel')}
               value={startDate}
-              onChangeText={setStartDate}
+              onChange={setStartDate}
               placeholder={t('trips.startDate')}
-              autoCapitalize="none"
-              autoCorrect={false}
+              accessibilityLabel={t('trips.fromLabel')}
+              clearLabel={t('trips.clearDate')}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Input
+            <DateField
               label={t('trips.toLabel')}
               value={endDate}
-              onChangeText={setEndDate}
+              onChange={setEndDate}
               placeholder={t('trips.endDate')}
-              autoCapitalize="none"
-              autoCorrect={false}
+              accessibilityLabel={t('trips.toLabel')}
+              clearLabel={t('trips.clearDate')}
             />
           </View>
         </View>
