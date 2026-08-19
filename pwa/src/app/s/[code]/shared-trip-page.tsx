@@ -109,9 +109,26 @@ function SharedTripLoader({ code }: { code: string }) {
 
         setStages(parsedStages);
         // Pull the route geometry (split off /detail, ADR-057) via the public code.
+        // The page renders this component's local `stages` state, so the geometry
+        // must land there too — the store's applyRoute alone never reaches the map
+        // / elevation profile on the anonymous view.
         void fetchSharedTripRoute(code)
           .then((route) => {
-            if (route) useTripStore.getState().applyRoute(route);
+            if (cancelled || !route) return;
+            useTripStore.getState().applyRoute(route);
+            const geometryByDay = new Map(
+              (route.stages ?? []).map((s) => [
+                s.dayNumber,
+                (s.geometry ?? []) as StageData["geometry"],
+              ]),
+            );
+            setStages((prev) =>
+              prev.map((s) =>
+                geometryByDay.has(s.dayNumber)
+                  ? { ...s, geometry: geometryByDay.get(s.dayNumber)! }
+                  : s,
+              ),
+            );
           })
           .catch(() => {});
         // Hydrate the trip store so that <RoadbookMasterDetail /> (which
