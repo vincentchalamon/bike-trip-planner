@@ -145,6 +145,63 @@ export const en: typeof fr = {
         'This confirmation link is no longer valid. Start a new email change from your account.',
       backToAccount: 'Back to account',
     },
+    faqContent: {
+      q1: 'What is bikepacking?',
+      a1: 'Bikepacking means travelling by bike over several days, self-supported, either camping along the way or staying in accommodation. Bike Trip Planner automatically splits your route into daily stages tailored to your profile.',
+      q2: 'What is the roadbook?',
+      a2: 'The roadbook is the day-by-day view of your trip: distance, elevation, suggested accommodation, weather and alerts for each stage. It updates automatically after a recompute.',
+      q3: 'How do notifications work?',
+      a3: 'Notifications let you know about important events on your trips (recompute finished, weather alert, etc.). You can manage which categories are enabled from Account > Notifications.',
+      q4: 'How do I change my account information?',
+      a4: 'Go to Account to change your email address, language, theme, or export/delete your data.',
+      q5: 'What happens if my trip has already started?',
+      a5: "A started trip becomes read-only: date or stage changes are no longer possible, to keep the already-computed data consistent.",
+    },
+    legalContent: {
+      lastUpdated: 'Last updated: 29 May 2026',
+      publisherTitle: 'Publisher',
+      publisherBody:
+        'Bike Trip Planner is an open-source project published by Vincent Chalamon.\n\nThe source code is available on GitHub under an open-source license: https://github.com/vincentchalamon/bike-trip-planner\n\nPublication director: Vincent Chalamon.',
+      hostTitle: 'Host',
+      hostBody:
+        'The application is hosted by the operator of this instance.\n\nThe exact details of the host can be provided on request at the contact address below.',
+      contactTitle: 'Contact',
+      contactBody:
+        "For any question about the site or to exercise your rights, contact us at: contact@example.org.\n\nYou can also open an issue on the project's GitHub repository.",
+      ipTitle: 'Intellectual property',
+      ipBody:
+        'The Bike Trip Planner source code is distributed under an open-source license; the usage and redistribution terms are available in the GitHub repository.\n\nRoute and mapping data come from third-party sources (OpenStreetMap, DataTourisme, OpenAgenda, Wikidata) and remain subject to their respective licenses, credited within the application.\n\nThird-party trademarks, logos and content (Komoot, Strava, RideWithGPS, Garmin, Wahoo) remain the property of their respective owners.',
+    },
+    privacyContent: {
+      lastUpdated: 'Last updated: 29 May 2026',
+      controllerTitle: 'Data controller',
+      controllerBody:
+        'The data controller is the publisher of Bike Trip Planner (see the legal notice).\n\nFor any question about your personal data, contact us at: contact@example.org.',
+      basisTitle: 'Legal basis',
+      basisBody:
+        'Processing of your email address is based on the performance of the service you request (magic-link sign-in and account management), under Article 6(1)(b) GDPR.\n\nAnonymous audience measurement is based on our legitimate interest in improving the service, without prejudice to your rights and freedoms (Article 6(1)(f) GDPR).',
+      purposesTitle: 'Purposes',
+      purposesBody:
+        'Your data is used to authenticate you, save and restore your trips, and compute route analyses (pacing, alerts, accommodation, weather).\n\nAnonymous audience measurement is used solely to understand overall usage of the service and improve its usability.',
+      dataTitle: 'Data collected',
+      dataBody:
+        'Account: your email address, required for magic-link sign-in.\n\nTrips: your trip configuration (title, dates, rider profile, stages, selected accommodation) is stored so you can access it from any device.\n\nRoute data: imported raw GPS points are cached temporarily (Redis) and then deleted automatically.\n\nNo sensitive data is collected, and no data is sold to third parties.',
+      retentionTitle: 'Retention period',
+      retentionBody:
+        'Your account and trips are kept for as long as your account is active. You may request their deletion at any time; deletion triggers an immediate and irreversible anonymisation of your account.\n\nRaw cached route data is kept for a maximum of 24 hours.\n\nAnonymous audience measurement data is aggregated and cannot be used to re-identify you.',
+      rightsTitle: 'Your rights',
+      rightsBody:
+        'In accordance with the GDPR, you have the right of access, rectification, erasure, restriction, objection and portability of your data.\n\nTo exercise these rights, contact us at: contact@example.org. We respond within one month.\n\nYou also have the right to lodge a complaint with your supervisory authority (in France, the CNIL — www.cnil.fr).',
+      processorsTitle: 'Processors',
+      processorsBody:
+        'Infrastructure hosting: a cloud provider chosen by the operator of this instance.\n\nSending sign-in emails: a transactional email delivery provider.\n\nOpen-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them.',
+      analyticsTitle: 'Audience measurement (Plausible)',
+      analyticsBody:
+        'We use Plausible Analytics, a privacy-friendly audience measurement solution, self-hosted on the same infrastructure as the application.\n\nPlausible sets no cookies and uses no fingerprinting techniques. No data is shared with third parties for advertising purposes.\n\nIP addresses and user agents (browser) are anonymised and never stored; no data can be used to identify you or track you across sites.\n\nPurpose: to understand, in aggregate, which pages are visited and overall usage in order to improve the service. Retention: aggregated statistics only, no individual data.\n\nNo consent banner is required because no personal data is collected; you nevertheless retain the objection rights described above.',
+      contactTitle: 'Contact',
+      contactBody:
+        'For any question about this privacy policy, write to us at: contact@example.org.\n\nThis policy may be updated; the last-updated date is shown at the top of this page.',
+    },
   },
   trip: {
     title: 'Roadbook',
