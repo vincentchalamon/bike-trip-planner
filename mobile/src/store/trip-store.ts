@@ -156,6 +156,9 @@ interface TripState extends TripConfig {
   applyStageUpdate: (index: number, stage: StageData) => void;
   // Merge the on-demand route geometry (GET /route) into the matching stages.
   applyRoute: (route: TripRoute) => void;
+  // Merge one stage's on-demand geometry (GET /stages/{index}/detail) into that
+  // stage — the per-stage detail screen only needs ~300 points, not the whole route.
+  applyStageDetail: (index: number, geometry: StageData['geometry']) => void;
   // Replace the whole stage list (optimistic rollback restores a snapshot).
   setStages: (stages: StageData[]) => void;
   // Patch any subset of the editable config slice.
@@ -291,6 +294,14 @@ export const useTripStore = create<TripState>((set, get) => ({
             : stage;
         }),
       };
+    }),
+  applyStageDetail: (index, geometry) =>
+    set((state) => {
+      const stage = state.stages[index];
+      if (!stage) return {};
+      const stages = [...state.stages];
+      stages[index] = { ...stage, geometry };
+      return { stages };
     }),
   setStages: (stages) => set({ stages }),
   setConfig: (patch) => set(patch),
