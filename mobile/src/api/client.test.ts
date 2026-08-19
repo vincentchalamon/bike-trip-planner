@@ -26,13 +26,12 @@ beforeEach(() => {
 describe('authMiddleware request headers', () => {
   // Regression (#1090 device): RN advertises `zstd, br, gzip`; the server then
   // picks zstd/br which okhttp does not transparently decode, mojibaking accented
-  // titles. Pinning `gzip` (which okhttp does decode) keeps bodies decodable AND
-  // compressed — must not be refactored away.
-  it('pins Accept-Encoding to gzip on every request', async () => {
+  // titles. Pinning `identity` keeps bodies decodable — must not be refactored away.
+  it('pins Accept-Encoding to identity on every request', async () => {
     mockGetJwt.mockReturnValue('jwt');
     const request = new Request('https://api.test/trips');
     await onRequest(request);
-    expect(request.headers.get('Accept-Encoding')).toBe('gzip');
+    expect(request.headers.get('Accept-Encoding')).toBe('identity');
   });
 });
 
