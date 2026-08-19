@@ -9,7 +9,7 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRoute;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -17,8 +17,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final readonly class TripRouteProvider implements ProviderInterface
 {
+    // Persisted stages live in Postgres, but the repository *interface* is
+    // aliased to the Redis (transient) implementation in services.php; inject
+    // the Doctrine repository explicitly, like TripDetailProvider.
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private DoctrineTripRequestRepository $tripStateManager,
     ) {
     }
 
