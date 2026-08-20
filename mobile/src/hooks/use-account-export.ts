@@ -1,23 +1,16 @@
 import { useCallback, useState } from 'react';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { ACCOUNT_EXPORT_FILENAME, fetchAccountExport } from '../api/account';
+import { writeAndShareFile } from '../lib/fs-share';
 
 // Not to be confused with `use-export.ts` (trip/stage GPX/FIT export). This hook
 // handles the RGPD account archive (profile + trips as a single JSON file).
 
 const JSON_MIME = 'application/json';
 
-// Write the fetched bytes to a cache file and hand it to the native share sheet.
-// Awaits the write before sharing (see the ordering note in use-export.ts).
+// Write the fetched bytes to a cache file and hand it to the native share sheet
+// (shared plumbing in fs-share.ts, same as the trip GPX/FIT export).
 export async function writeAndShareAccount(bytes: ArrayBuffer): Promise<void> {
-  const file = new File(Paths.cache, ACCOUNT_EXPORT_FILENAME);
-  file.create({ intermediates: true, overwrite: true });
-  await file.write(new Uint8Array(bytes));
-  if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Sharing is not available on this device');
-  }
-  await Sharing.shareAsync(file.uri, { mimeType: JSON_MIME });
+  return writeAndShareFile(bytes, ACCOUNT_EXPORT_FILENAME, JSON_MIME);
 }
 
 // Fetch + write + share the archive. Never throws: resolves to false on failure
