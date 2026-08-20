@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Push;
 
 use App\Push\FcmClient;
 use App\Push\FcmCredentials;
+use App\Push\FcmSendException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
@@ -54,6 +55,27 @@ final class FcmClientTest extends TestCase
         $invalid = $this->client($oauthClient, $fcmClient)->send(['live-token', 'dead-token'], 'T', 'B');
 
         self::assertSame(['dead-token'], $invalid);
+    }
+
+    #[Test]
+    public function carriesTheDeadTokensOnTheExceptionWhenABatchAlsoHasARealFailure(): void
+    {
+        // Mixed batch: one UNREGISTERED (dead) token + one real 500 failure. The
+        // real failure rethrows for Messenger retry, but the dead token must still
+        // ride out on the exception so the caller prunes it once instead of
+        // rediscovering it on every retry (ADR-058).
+        $oauthClient = new MockHttpClient(new MockResponse((string) json_encode(['access_token' => 'ya29.test', 'expires_in' => 3600])));
+        $fcmClient = new MockHttpClient([
+            new MockResponse((string) json_encode(['error' => ['status' => 'NOT_FOUND', 'details' => [['errorCode' => 'UNREGISTERED']]]]), ['http_code' => 404]),
+            new MockResponse((string) json_encode(['error' => ['status' => 'INTERNAL', 'message' => 'backend error']]), ['http_code' => 500]),
+        ]);
+
+        try {
+            $this->client($oauthClient, $fcmClient)->send(['dead-token', 'live-token'], 'T', 'B');
+            self::fail('send() must rethrow on a real failure.');
+        } catch (FcmSendException $e) {
+            self::assertSame(['dead-token'], $e->invalidTokens);
+        }
     }
 
     #[Test]

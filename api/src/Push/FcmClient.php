@@ -119,9 +119,11 @@ final class FcmClient implements PushSenderInterface
         // (3 retries, backoff) fires — losing a security alert silently is worse than
         // the trade-off risk of a duplicate push re-delivered to a token already
         // served in this batch on retry. UNREGISTERED pruning is normal churn, not a
-        // failure, so it never triggers a rethrow.
+        // failure, so it never triggers a rethrow. When both happen in one batch the
+        // dead tokens still ride out on the exception so the caller prunes them once
+        // instead of rediscovering them on every retry (ADR-058).
         if ($failures > 0) {
-            throw new \RuntimeException(\sprintf('FCM push failed for %d of %d token(s) (category: %s); rethrowing for Messenger retry.', $failures, $targetedTokens, $category ?? 'none'));
+            throw new FcmSendException(\sprintf('FCM push failed for %d of %d token(s) (category: %s); rethrowing for Messenger retry.', $failures, $targetedTokens, $category ?? 'none'), $invalid);
         }
 
         return $invalid;

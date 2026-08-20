@@ -14,6 +14,10 @@ interface PushSenderInterface
      *
      * @return list<string> the subset of tokens FCM rejected as permanently
      *                      invalid (UNREGISTERED / 404), to be pruned by the caller
+     *
+     * @throws FcmSendException on a real send/transport failure (for Messenger
+     *                          retry); its `invalidTokens` still carries the dead
+     *                          tokens found in the batch so the caller prunes them
      */
     public function send(array $tokens, string $title, string $body, array $data = []): array;
 }

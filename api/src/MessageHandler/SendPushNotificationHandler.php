@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Message\SendPushNotification;
+use App\Push\FcmSendException;
 use App\Push\PushSenderInterface;
 use App\Repository\DeviceTokenRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -45,7 +46,16 @@ final readonly class SendPushNotificationHandler
             $data['category'] = $message->category;
         }
 
-        $invalidTokens = $this->pushSender->send($tokens, $message->title, $message->body, $data);
+        // A real send failure is rethrown for Messenger retry, but the dead tokens
+        // discovered in the same batch are pruned first (they carry on the exception)
+        // so they are not rediscovered on every retry (ADR-058).
+        try {
+            $invalidTokens = $this->pushSender->send($tokens, $message->title, $message->body, $data);
+        } catch (FcmSendException $e) {
+            $this->deviceTokenRepository->deleteByTokens($e->invalidTokens);
+
+            throw $e;
+        }
 
         $this->deviceTokenRepository->deleteByTokens($invalidTokens);
     }

@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Enum\DevicePlatform;
 use App\Message\SendPushNotification;
 use App\MessageHandler\SendPushNotificationHandler;
+use App\Push\FcmSendException;
 use App\Push\PushSenderInterface;
 use App\Repository\DeviceTokenRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -57,6 +58,27 @@ final class SendPushNotificationHandlerTest extends TestCase
         $sender->method('send')->willReturn(['dead-token']);
 
         $repository->expects($this->once())->method('deleteByTokens')->with(['dead-token']);
+
+        new SendPushNotificationHandler($sender, $repository)(new SendPushNotification(
+            title: 'T',
+            body: 'B',
+            tokens: ['live-token', 'dead-token'],
+        ));
+    }
+
+    #[Test]
+    public function prunesTheDeadTokensThenRethrowsWhenTheSenderFails(): void
+    {
+        // A real send failure rethrows for Messenger retry, but the dead tokens the
+        // sender found in the same batch (carried on the exception) are pruned first
+        // so they are not rediscovered on every retry (ADR-058).
+        $repository = $this->createMock(DeviceTokenRepositoryInterface::class);
+        $sender = $this->createStub(PushSenderInterface::class);
+        $sender->method('send')->willThrowException(new FcmSendException('boom', ['dead-token']));
+
+        $repository->expects($this->once())->method('deleteByTokens')->with(['dead-token']);
+
+        $this->expectException(FcmSendException::class);
 
         new SendPushNotificationHandler($sender, $repository)(new SendPushNotification(
             title: 'T',
