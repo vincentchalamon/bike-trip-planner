@@ -1,0 +1,19 @@
+notification:
+  analysis:
+    done:
+      title: "Analysis complete"
+      body: "Your trip is ready. Open the app to explore the stages and alerts."
+    failed:
+      title: "Analysis incomplete"
+      body: "Some stages of your trip could not be analysed. Open the app to check."
+  weather_safety:
+    title: "Day %day% — %headline%"
+    headline:
+      pending: "forecast pending"
+      forecast: "%description%, %min%–%max% °C"
+    body:
+      none: "No safety alerts for this stage. Enjoy the ride!"
+      some: "{1}%count% safety alert on this stage. Open the app for details.|]1,Inf[%count% safety alerts on this stage. Open the app for details."
+  zone_opening:
+    title: "New zone available"
+    body: "The %zone% zone is now covered. Plan your next trip there!"

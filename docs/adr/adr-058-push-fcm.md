@@ -67,14 +67,41 @@ with an OAuth2 service-account flow, over host-locked scoped HTTP clients.
 a token held by another account reassigns it. Account erasure cascades the rows;
 FCM-side pruning removes tokens the transport reports dead.
 
-## Categories, opt-in, and permission (planned — #1124)
+## Categories, opt-in, and permission (implemented — #1124)
 
-This ADR lands the transport; notification **categories** and their user-facing
-controls are #1124. The message already carries a `category` field (folded into
-the FCM `data` payload) so the client can route to the right Android channel / iOS
-category, but the catalogue of categories, the per-category opt-in, and the
-**opt-in per opened zone** (a rider subscribes to announcements for the zones they
-ride) are deferred to that issue.
+This ADR lands the transport; #1124 builds the **categories** on top of it. The
+`category` field of `SendPushNotification` (folded into the FCM `data` payload) now
+names one of three server-pushed categories (`App\Enum\NotificationCategory`):
+
+- **`weatherSafety`** — the forecast + safety-alert count for the stage a rider
+  tackles on a given day. Recurring by nature, but there is no Symfony Scheduler in
+  the project, so the trigger is a console command,
+  `app:notifications:weather-safety --day=today|tomorrow`, scheduled by ops twice a
+  day (evening before + morning of). Default **ON**.
+- **`analysisDone`** — pushed when a trip's enrichment pipeline settles, from
+  `AllEnrichmentsCompletedHandler` via `App\Notification\AnalysisNotifier`, **only
+  when no Mercure SSE subscriber is live** on the trip topic (`/trips/{id}`): if the
+  rider is watching, they already receive `TRIP_READY`, so a push would be
+  redundant. Liveness is read from the hub's subscription API
+  (`GET /.well-known/mercure/subscriptions/{topic}`, enabled by the `subscriptions`
+  Caddy directive) through the host-locked `mercure.health.client`; on any hub error
+  the check **fails open** (push proceeds) so a hiccup never swallows the notice.
+  Default **ON**.
+- **`zoneOpening`** — announcement when a new reference zone is opened. **Opt-in,
+  default OFF.** Zone opening lives in the separate provisioner process (only writes
+  `osm.zones`), so ops triggers `app:notifications:zone-opened <slug>`, which targets
+  only the users who explicitly enabled the category.
+
+**Server-side preference storage.** A dedicated `notification_preference` entity
+(one row per `(user, category)`, unique, `ON DELETE CASCADE`) holds overrides; the
+absence of a row means the category default. `NotificationDispatcher` is the single
+opt-in gate every category passes through, and the push handler only ever resolves
+tokens for the targeted user, so a user with the category disabled or no registered
+device is never reached (RGPD). Preferences are read/written by the user at
+`GET /users/me/notification-preferences` and
+`PUT /users/me/notification-preferences/{category}` (frontend controls: #1125).
+The **per-opened-zone** granularity (subscribing to specific zones rather than the
+global `zoneOpening` opt-in) remains deferred.
 
 - **Permission is the device's, not the server's.** The OS prompt (POST_NOTIFICATIONS
   on Android 13+, the iOS authorization prompt) is requested client-side; the

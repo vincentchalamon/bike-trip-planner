@@ -1,0 +1,19 @@
+notification:
+  analysis:
+    done:
+      title: "Analyse terminée"
+      body: "Votre voyage est prêt. Ouvrez l'app pour découvrir les étapes et les alertes."
+    failed:
+      title: "Analyse incomplète"
+      body: "Certaines étapes de votre voyage n'ont pas pu être analysées. Ouvrez l'app pour vérifier."
+  weather_safety:
+    title: "Étape J%day% — %headline%"
+    headline:
+      pending: "météo à venir"
+      forecast: "%description%, %min%–%max% °C"
+    body:
+      none: "Aucune alerte de sécurité signalée pour cette étape. Bonne route !"
+      some: "{1}%count% alerte de sécurité sur cette étape. Ouvrez l'app pour les détails.|]1,Inf[%count% alertes de sécurité sur cette étape. Ouvrez l'app pour les détails."
+  zone_opening:
+    title: "Nouvelle zone disponible"
+    body: "La zone %zone% est maintenant couverte. Planifiez-y votre prochain voyage !"

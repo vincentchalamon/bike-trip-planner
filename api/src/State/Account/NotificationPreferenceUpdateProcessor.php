@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\State\Account;
+
+use ApiPlatform\Metadata\Operation;
+use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\Account\NotificationPreference as NotificationPreferenceResource;
+use App\Entity\NotificationPreference;
+use App\Entity\User;
+use App\Enum\NotificationCategory;
+use App\Repository\NotificationPreferenceRepositoryInterface;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/**
+ * Upserts the current user's opt-in for one notification category (#1124).
+ *
+ * The category comes from the URL, the boolean from the body. An unknown category
+ * is 404 (there is no such preference resource). Same user + same value is an
+ * idempotent no-op that still returns the resource.
+ *
+ * @implements ProcessorInterface<NotificationPreferenceResource, NotificationPreferenceResource>
+ */
+final readonly class NotificationPreferenceUpdateProcessor implements ProcessorInterface
+{
+    public function __construct(
+        private Security $security,
+        private NotificationPreferenceRepositoryInterface $preferences,
+    ) {
+    }
+
+    /**
+     * @param NotificationPreferenceResource $data
+     */
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): NotificationPreferenceResource
+    {
+        $user = $this->security->getUser();
+        \assert($user instanceof User);
+
+        $rawCategory = $uriVariables['category'] ?? null;
+        $category = \is_string($rawCategory) ? NotificationCategory::tryFrom($rawCategory) : null;
+        if (null === $category) {
+            throw new NotFoundHttpException();
+        }
+
+        // Guaranteed non-null by the resource's #[Assert\NotNull] (validation runs
+        // before this processor): a PUT omitting `enabled` 422s and never reaches here.
+        $enabled = $data->enabled;
+        \assert(null !== $enabled);
+
+        $preference = $this->preferences->findOne($user, $category);
+        if ($preference instanceof NotificationPreference) {
+            $preference->setEnabled($enabled);
+        } else {
+            $preference = new NotificationPreference($user, $category, $enabled);
+        }
+
+        try {
+            $this->preferences->save($preference);
+        } catch (UniqueConstraintViolationException) {
+            // A concurrent PUT for the same (user, category) inserted between the
+            // lookup and this flush — same guard as DeviceTokenRegisterProcessor.
+            throw new ConflictHttpException('Notification preference update conflicted with a concurrent request; retry.');
+        }
+
+        return new NotificationPreferenceResource($category, $preference->isEnabled());
+    }
+}

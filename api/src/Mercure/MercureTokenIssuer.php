@@ -57,6 +57,30 @@ final readonly class MercureTokenIssuer
     }
 
     /**
+     * Generates a JWT authorising a read of the hub's subscription API for a trip
+     * topic (#1124). Server-side only (never handed to a client): it lets the
+     * backend ask the hub whether anyone is currently subscribed to the trip's SSE
+     * stream. The `subscribe` claim must cover both the subscription-API URI
+     * template and the trip topic itself.
+     */
+    public function generateSubscriptionsToken(string $tripId): string
+    {
+        $now = new \DateTimeImmutable();
+        $topic = \sprintf('/trips/%s', $tripId);
+
+        $token = $this->jwtConfig->builder()
+            ->issuedAt($now)
+            ->expiresAt($now->modify('+60 seconds'))
+            ->withClaim('mercure', ['subscribe' => [
+                '/.well-known/mercure/subscriptions{/topic}{/subscriber}',
+                $topic,
+            ]])
+            ->getToken($this->jwtConfig->signer(), $this->jwtConfig->signingKey());
+
+        return $token->toString();
+    }
+
+    /**
      * Creates an HttpOnly cookie containing the subscriber JWT.
      *
      * The cookie path is scoped to `/.well-known/mercure` so it is only

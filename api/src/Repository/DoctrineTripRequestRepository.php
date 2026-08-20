@@ -32,7 +32,7 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
@@ -182,6 +182,41 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     public function getLocale(string $tripId): ?string
     {
         return $this->findTripRequest($tripId)?->locale;
+    }
+
+    public function getOwnerId(string $tripId): ?string
+    {
+        return $this->findTripRequest($tripId)?->user?->getId()->toRfc4122();
+    }
+
+    /**
+     * Owned trips whose date range covers the given day, for the weather-safety
+     * batch (#1124). Started on or before the day and not yet ended — a trip whose
+     * `endDate` is still unset counts as not-yet-ended, so an open-ended trip is
+     * kept rather than silently dropped. No fixed look-back window, so a long-haul
+     * trip is never excluded by length; the caller checks a non-rest stage actually
+     * falls on that day.
+     *
+     * @return list<TripRequest>
+     */
+    public function findOwnedTripsCoveringDate(\DateTimeImmutable $date): array
+    {
+        /** @var list<TripRequest> $trips */
+        // Fetch-join the stages: stageOnDay() iterates t.stages per trip, so a lazy
+        // OneToMany would fire one SELECT per trip (N+1) on a batch that runs twice
+        // a day.
+        $trips = $this->createQueryBuilder('t')
+            ->leftJoin('t.stages', 's')
+            ->addSelect('s')
+            ->andWhere('t.user IS NOT NULL')
+            ->andWhere('t.startDate IS NOT NULL')
+            ->andWhere('t.startDate <= :date')
+            ->andWhere('t.endDate IS NULL OR t.endDate >= :date')
+            ->setParameter('date', $date)
+            ->getQuery()
+            ->getResult();
+
+        return $trips;
     }
 
     /** @param list<StageDto> $stages */

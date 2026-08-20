@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
+use App\Notification\AnalysisNotifier;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -17,7 +18,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
  * Fired by {@see AbstractTripMessageHandler} once the enrichment gate
  * (issue #299) detects that every initialised computation has settled
  * (`done` or `failed`). It publishes the `TRIP_READY` Mercure event directly
- * so the frontend swaps state atomically with the enriched payload.
+ * so the frontend swaps state atomically with the enriched payload, then asks the
+ * {@see AnalysisNotifier} to push an `analysisDone` notification when no SSE client
+ * is watching the trip (#1124).
  */
 #[AsMessageHandler]
 final readonly class AllEnrichmentsCompletedHandler
@@ -26,6 +29,7 @@ final readonly class AllEnrichmentsCompletedHandler
         private ComputationTrackerInterface $computationTracker,
         private TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripRequestRepository,
+        private AnalysisNotifier $analysisNotifier,
         private LoggerInterface $logger,
     ) {
     }
@@ -57,5 +61,7 @@ final readonly class AllEnrichmentsCompletedHandler
         $this->publisher->publishTripReady($tripId, $stages, [
             'status' => $statuses,
         ]);
+
+        $this->analysisNotifier->notify($tripId, $statuses);
     }
 }

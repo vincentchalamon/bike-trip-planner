@@ -313,6 +313,11 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return $value;
     }
 
+    public function getOwnerId(string $tripId): ?string
+    {
+        return $this->getRequest($tripId)?->user?->getId()->toRfc4122();
+    }
+
     private function titleKey(string $tripId): string
     {
         return \sprintf('trip.%s.title', $tripId);
