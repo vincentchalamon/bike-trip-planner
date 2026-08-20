@@ -29,6 +29,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   getPerms.mockResolvedValue({ granted: true });
   getToken.mockResolvedValue({ type: 'android', data: 'fcm-token-abc' });
+  // clearAllMocks resets call records but not implementations; restore the happy
+  // path so a per-test mockRejectedValue does not leak into the next test.
+  post.mockResolvedValue({});
+  del.mockResolvedValue({});
 });
 
 describe('registerDeviceToken', () => {
@@ -60,6 +64,12 @@ describe('registerDeviceToken', () => {
     getPerms.mockRejectedValue(new Error('no Google Play Services'));
     await expect(registerDeviceToken()).resolves.toBeUndefined();
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it('resolves without throwing when the POST rejects (offline/timeout)', async () => {
+    post.mockRejectedValue(new Error('network error'));
+    await expect(registerDeviceToken()).resolves.toBeUndefined();
+    expect(post).toHaveBeenCalledTimes(1);
   });
 });
 

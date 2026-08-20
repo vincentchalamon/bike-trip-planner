@@ -58,10 +58,16 @@ export async function registerDeviceToken(): Promise<void> {
   const token = await fetchDeviceToken();
   if (!token) return;
   registeredToken = token;
-  await api.POST('/users/me/device-tokens', {
-    body: { token, platform: devicePlatform() },
-    headers: { 'Content-Type': LD_JSON, Accept: LD_JSON },
-  });
+  try {
+    await api.POST('/users/me/device-tokens', {
+      body: { token, platform: devicePlatform() },
+      headers: { 'Content-Type': LD_JSON, Accept: LD_JSON },
+    });
+  } catch {
+    // Best-effort: register is fired fire-and-forget from the auth store, so a
+    // network reject (offline/timeout) must not crash it. Registration retries
+    // on the next login/rotation. Symmetric to unregisterDeviceToken.
+  }
 }
 
 // Remove this device's token on logout so a shared device stops receiving the
