@@ -84,4 +84,37 @@ describe('AuthProvider stale-response guard (#1117)', () => {
 
     expect(captured.email).toBe('me@example.com');
   });
+
+  it('drops a refreshEmail() response that lands after logout(): email stays null', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    // Mount effect resolves immediately with the current email.
+    mockGet.mockResolvedValueOnce({ data: { email: 'me@example.com' } } as never);
+
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+    expect(captured.email).toBe('me@example.com');
+
+    // A manual refreshEmail() leaves its GET /users/me in flight.
+    const pending = deferred<{ data?: { email?: string } }>();
+    mockGet.mockReturnValueOnce(pending.promise as never);
+    let refreshPromise!: Promise<void>;
+    await act(async () => {
+      refreshPromise = captured.refreshEmail();
+    });
+
+    // Log out before the refresh response comes back.
+    await act(async () => {
+      await captured.logout();
+    });
+    expect(captured.authenticated).toBe(false);
+
+    // The stale refresh response resolves — the generation guard must ignore it,
+    // so the address is not resurrected after the session ended.
+    await act(async () => {
+      pending.resolve({ data: { email: 'changed@example.com' } });
+      await refreshPromise;
+    });
+    expect(captured.email).toBeNull();
+  });
 });

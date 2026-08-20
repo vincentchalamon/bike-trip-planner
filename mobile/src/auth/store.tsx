@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
 import { verifyMagicToken } from './authApi';
@@ -21,6 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  // Bumped on every session teardown (logout / invalidation). An in-flight
+  // GET /users/me captures the generation at call time and only writes back if it
+  // still matches — so a response landing after logout can't resurrect `email`.
+  const sessionGen = useRef(0);
+  const endSession = useCallback(() => {
+    sessionGen.current += 1;
+    setAuthenticated(false);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -54,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // A refresh that definitively fails clears the tokens outside React; flip the
   // state so the (tabs) guard redirects to /login instead of 401'ing forever.
-  useEffect(() => onSessionInvalidated(() => setAuthenticated(false)), []);
+  useEffect(() => onSessionInvalidated(endSession), [endSession]);
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
@@ -74,14 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // email change is committed so the account screen reflects the new address
   // without a re-login. (Not /auth/session, which is cookie-only web transport.)
   const refreshEmail = useCallback(async (): Promise<void> => {
+    const gen = sessionGen.current;
     const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
-    setEmail(data?.email ?? null);
+    // Drop a response that outlived its session (a logout raced this fetch).
+    if (sessionGen.current === gen) {
+      setEmail(data?.email ?? null);
+    }
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
     await clearTokens();
-    setAuthenticated(false);
-  }, []);
+    endSession();
+  }, [endSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ ready, authenticated, email, requestLink, verify, refreshEmail, logout }),
