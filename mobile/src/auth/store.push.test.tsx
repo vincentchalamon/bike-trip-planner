@@ -74,9 +74,11 @@ describe('AuthProvider push wiring', () => {
     expect(unregister).toHaveBeenCalledTimes(1);
   });
 
-  it('unregisters the device token when the session is invalidated', async () => {
+  it('flips authenticated to false on session invalidation without unregistering (#1125)', async () => {
     // Capture the callback the provider hands to onSessionInvalidated so we can
-    // fire it as an out-of-band refresh failure would.
+    // fire it as an out-of-band refresh failure would. Unregister now happens in
+    // doRefresh (while the JWT is still valid), NOT here — by the time this fires
+    // the JWT is already cleared, so a DELETE would 401.
     let onInvalidated: (() => void) | undefined;
     (onSessionInvalidated as jest.Mock).mockImplementation((cb: () => void) => {
       onInvalidated = cb;
@@ -87,12 +89,14 @@ describe('AuthProvider push wiring', () => {
     await act(async () => {
       await auth.verify('magic-token');
     });
+    expect(auth.authenticated).toBe(true);
 
     await act(async () => {
       onInvalidated?.();
       await Promise.resolve();
     });
 
-    expect(unregister).toHaveBeenCalledTimes(1);
+    expect(auth.authenticated).toBe(false);
+    expect(unregister).not.toHaveBeenCalled();
   });
 });

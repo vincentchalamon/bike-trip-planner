@@ -27,9 +27,10 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Best-effort push-token unregister, shared by explicit logout and out-of-band
-// session invalidation (#1125). On invalidation the JWT may already be cleared,
-// so the DELETE can fail server-side — swallow it so it never blocks teardown.
+// Best-effort push-token unregister for explicit logout, while the JWT is still
+// valid. Out-of-band session invalidation unregisters in doRefresh (before it
+// clears the tokens), not here — by the time onSessionInvalidated fires the JWT
+// is already gone, so a DELETE here would 401 (#1125).
 function dropPushToken(): Promise<void> {
   return unregisterDeviceToken().catch(() => undefined);
 }
@@ -87,17 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => rotation.remove();
   }, [authenticated]);
 
-  // A refresh that definitively fails clears the tokens outside React; unregister
-  // the push token (so an expired session stops receiving pushes) and flip the
-  // state so the (tabs) guard redirects to /login instead of 401'ing forever.
-  useEffect(
-    () =>
-      onSessionInvalidated(() => {
-        void dropPushToken();
-        endSession();
-      }),
-    [endSession],
-  );
+  // A refresh that definitively fails clears the tokens outside React (after
+  // unregistering the push token, in doRefresh). Flip the state so the (tabs)
+  // guard redirects to /login instead of 401'ing forever.
+  useEffect(() => onSessionInvalidated(endSession), [endSession]);
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
