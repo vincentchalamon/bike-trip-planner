@@ -1936,15 +1936,70 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 ## Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
 
 </summary>
-Épics à découper avant exécution. Push FCM = mobile + backend (secrets compose). Milestone : « Sprint 57 ».
+Épics **découpés** en 10 sous-issues (#1116-#1125). Backend Compte déjà en place (Sprint 52 : email-change, export/delete RGPD, access-requests) → #1049 = câblage UI mobile. Maquettes 10-account/11-notifications = projet Claude Design (récupérées via DesignSync, spec embarquée dans #1116/#1120). Push FCM (#1122-#1125) : le critère « push reçu app fermée » n'est **pas vérifiable en CI** (Firebase + device physique) → preuve manuelle hors sprint. Milestone : « Sprint 57 ».
 
-| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
-|-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte (réglages, email change, RGPD, early-access, FAQ/légal, onboarding) | L | ⏳ À faire | — | Sprint 54 |
-| 2 | [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales (gestion + catégories) | M | ⏳ À faire | — | #1049 |
-| 3 | [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM (device-token + sender + secrets compose + réception) | L | ⏳ À faire | — | #1050 |
-| 4 | [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design(mobile): écran Compte conforme à la maquette 10-account (+ thème) | S | ⏳ À faire | — | #1049 |
-| 5 | [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design(mobile): écran Notifications conforme à la maquette 11-notifications (+ thème) | S | ⏳ À faire | — | #1050 |
+**Épics (parents, découpés) :**
+
+| ID | Titre | Sous-issues | Statut |
+|----|-------|-------------|--------|
+| [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte | #1116, #1117, #1118, #1119 | 🔨 Découpé |
+| [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales | #1120, #1121 | 🔨 Découpé |
+| [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM | #1122, #1123, #1124, #1125 | 🔨 Découpé |
+| [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design: écran Compte (maquette 10-account) | absorbé par #1116 | 🔀 Replié |
+| [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design: écran Notifications (maquette 11-notifications) | absorbé par #1120 | 🔀 Replié |
+
+**Sous-issues (exécution) :**
+
+| Vague | ID | Titre | Modèle | Base | Statut | PR |
+|-------|----|-------|--------|------|--------|----|
+| 1 | [#1116](https://github.com/vincentchalamon/bike-trip-planner/issues/1116) | Compte : écran structuré + profil + thème (abs. #1092) | opus | main | 🚧 En cours | [#1127](https://github.com/vincentchalamon/bike-trip-planner/pull/1127) |
+| 1 | [#1122](https://github.com/vincentchalamon/bike-trip-planner/issues/1122) | api: enregistrement device-tokens | opus | main | 🚧 En cours | [#1128](https://github.com/vincentchalamon/bike-trip-planner/pull/1128) |
+| 2 | [#1117](https://github.com/vincentchalamon/bike-trip-planner/issues/1117) | Compte : flux changement d'email | opus | feature/1116 | 🚧 En cours | [#1129](https://github.com/vincentchalamon/bike-trip-planner/pull/1129) |
+| 2 | [#1118](https://github.com/vincentchalamon/bike-trip-planner/issues/1118) | Compte : RGPD export + suppression | opus | feature/1116 | 🚧 En cours | [#1132](https://github.com/vincentchalamon/bike-trip-planner/pull/1132) |
+| 2 | [#1119](https://github.com/vincentchalamon/bike-trip-planner/issues/1119) | Compte : écrans statiques FAQ/légal + onboarding | sonnet | feature/1116 | 🚧 En cours | [#1131](https://github.com/vincentchalamon/bike-trip-planner/pull/1131) |
+| 2 | [#1120](https://github.com/vincentchalamon/bike-trip-planner/issues/1120) | Notifs : écran + infra locale (abs. #1093) | opus | feature/1116 | 🚧 En cours | [#1130](https://github.com/vincentchalamon/bike-trip-planner/pull/1130) |
+| 2 | [#1123](https://github.com/vincentchalamon/bike-trip-planner/issues/1123) | api: sender FCM + secrets compose + ADR | opus | feature/1122 | 🚧 En cours | [#1136](https://github.com/vincentchalamon/bike-trip-planner/pull/1136) |
+| 3 | [#1121](https://github.com/vincentchalamon/bike-trip-planner/issues/1121) | Notifs : déclencheurs locaux | opus | feature/1120 | 🚧 En cours | [#1135](https://github.com/vincentchalamon/bike-trip-planner/pull/1135) |
+| 3 | [#1124](https://github.com/vincentchalamon/bike-trip-planner/issues/1124) | api: catégories push serveur | opus | feature/1123 | 🚧 En cours | [#1137](https://github.com/vincentchalamon/bike-trip-planner/pull/1137) |
+| 3 | [#1125](https://github.com/vincentchalamon/bike-trip-planner/issues/1125) | mobile: enregistrement + réception push | opus | feature/1120 (+#1122) | 🚧 En cours | [#1134](https://github.com/vincentchalamon/bike-trip-planner/pull/1134) |
+
+**Ordre de merge et conflits attendus :**
+
+Deux stacks indépendants. Merger dans l'ordre des vagues, stack par stack.
+
+1. **Stack Compte/Notifs (mobile)** : `#1116` d'abord (fondation) → puis `#1117`/`#1118`/`#1119`/`#1120` (tous basés sur feature/1116) → puis `#1121` (base feature/1120).
+2. **Stack FCM (backend)** : `#1122` → `#1123` → `#1124`.
+3. **`#1125`** en dernier : base feature/1120, à rebaser sur main une fois `#1122` (endpoint device-token) mergé.
+
+Fichiers partagés (arbitrage) :
+
+- `mobile/app/(tabs)/account.tsx` : écrit **uniquement** par #1116 (squelette de nav complet). #1117/#1118/#1119/#1120 n'y touchent pas (ils implémentent leurs routes). Conflit attendu : **aucun** si le contrat est respecté.
+- `mobile/src/i18n/resources/{fr,en}.ts` : #1116 pose `account.*`, #1120 pose `notifications`, les enfants ajoutent leurs sous-clés. Conflits triviaux additifs à la fin de l'objet → résoudre en gardant les deux blocs.
+- `mobile/src/store/notification-prefs.ts` : défini par #1120 ; #1121 et #1125 le **lisent** seulement (ne pas redéfinir).
+- `mobile/package.json` + `package-lock.json` : `expo-notifications` ajouté par #1120 (gagne). #1125 réutilise, ne réajoute pas.
+- `compose.yaml` (php+worker) + `api/config/services.php` : secrets FCM ajoutés **uniquement** par #1123.
+- `core/schema.d.ts` : régénéré par **#1116** (endpoint `GET /users/me`) **et** par **#1122** (DTO device-token), #1123/#1124 rebasent dessus. Conflit attendu quand le 2e des deux stacks merge sur main → **résoudre en régénérant** (`make typegen`), ne pas merger le fichier à la main. (Chemin réel des types générés depuis ADR-053, pas `pwa/src/lib/api/schema.d.ts`.)
+- `mobile/src/auth/store.tsx` : réécrit par #1116 (email via `GET /users/me`) ; #1117 (`refreshEmail`) et #1125 (register/unregister device-token) ajoutent des hunks additifs. Rebasés proprement, mais re-résoudre en régénérant si un futur rebase diverge.
+
+**#1125 (base reconstruite).** `feature/1125` = `feature/1120` (à jour) + merge `feature/1122` (à jour) + son commit propre. À merger **en dernier**, après l'atterrissage des deux stacks sur main, en rebasant sur main (le diff se réduira à la couche mobile push).
+
+**Round de revue (bot claude-code-review).** Findings bloquants corrigés avant READY : #1127 email header (`GET /auth/session` cookie-only → nouvel endpoint `GET /users/me` JWT, #1116), #1132 (`deleteAccount` catch réseau), #1135 (rappels locaux one-shot re-déclenchés → set `delivered` persistant), #1136 (purge device-tokens seulement sur `UNREGISTERED` + retrait retry non-idempotent). Findings « issue » aussi corrigés : #1130 (bannière permission re-checkée au foreground), #1131 (email contact configurable `EXPO_PUBLIC_CONTACT_EMAIL`), #1128 (contrat OpenAPI 201 + race → 409). Suggestions laissées (notées) : couverture de tests hook `useEmailChange` (#1129) et repository DQL (#1136).
+
+**2e round de revue (correctness).** Aussi corrigés : #1129 (route verify `/account/email-change/verify` + catch verify/refreshEmail séparés + garde d'annulation `refreshEmail`), #1135 (reschedule sur changement d'heure + **annulation des notifs orphelines** d'un voyage supprimé), #1134 (garde du POST register + **désenregistrement device-token sur invalidation de session**), #1136 (logs d'échec FCM au niveau **error** — un `warning` ne franchit pas le `fingers_crossed action_level:error` de prod), #1128 (test race 409), #1130 (bannière **verte** quand accordée, compteur « N actives » pluralisé, tests denied/Allow), #1118 (mot-clé SUPPRIMER **monospace**, bouton **Annuler**, feedback succès export), #1116 (logout **outline**). Conformité maquettes 10-account/11-notifications + thème vérifiés (aucun hex brut dans les écrans).
+
+**⚠️ Conflit de merge attendu — `mobile/src/auth/store.tsx`.** #1117 (garde `refreshEmail` via `sessionGen`/`endSession` sur `onSessionInvalidated`) et #1125 (`dropPushToken` sur `onSessionInvalidated` + logout) modifient tous deux le handler `onSessionInvalidated`. Au merge : **garder les deux** — l'invalidation doit à la fois `dropPushToken()`, bumper `sessionGen` et `setAuthenticated(false)`.
+
+**Threads laissés ouverts (design assumé, non bloquants).** #1128 token dans l'URL du DELETE (identifiant naturel, bot le marque non-bloquant) ; #1130 `NOTIFICATION_CHANNELS` (groundwork consommé par #1121/#1125) et `request()` set-state-after-unmount (mineur) ; #1134 test de la garde `cancelled` (couvert par le test de #1117 dans la même stack).
+
+**Perf (~20s) — QA device (hors périmètre Sprint 57).** Testé sur device Android (dev build) contre le backend réel :
+
+- **~20s NON reproduit** : le trip dispo (192 km, 2 étapes) charge sa carte (`GET /route` + rendu géométrie + profil) en **<3s**. Les ~20s viennent probablement d'un trip bien plus gros (géométrie volumineuse) ou d'autres conditions réseau — repro exact à préciser.
+- `mobile/src/api/client.ts` force `Accept-Encoding: identity` (contourne un bug okhttp br/zstd → accents en Latin-1). **`identity` est load-bearing pour les accents** (confirmé device : un build antérieur au fix affichait « SensÃ©e »), donc il désactive la compression sur `/route`. Réactiver la compression doit se faire **côté serveur** (Caddy : négociation charset/encoding par UA), PAS en retirant `identity` — sinon régression accents. À traiter en PR perf/serveur dédiée si les ~20s se confirment sur gros trip.
+
+**QA device — 2 bugs pré-existants sur `main` (pas Sprint 57) :**
+
+- **Menu ⋮ du détail voyage recouvrait son bouton** → corrigé + vérifié device, **PR [#1140](https://github.com/vincentchalamon/bike-trip-planner/pull/1140)** (`fix/trip-menu-overlap`) : dropdown ancré sous le header + bouton toggle.
+- **Mojibake « SensÃ©e » sur la liste** → **PAS un bug du `main` courant** : la carte reçoit le titre correct (é=U+00E9), le cold-start l'affiche « Sensée ». Le mojibake venait du **bundle de l'APK périmé du device** (build antérieur au fix `identity`). Aucun fix code ; réinstaller un build récent sur le device.
 
 </details>
 
