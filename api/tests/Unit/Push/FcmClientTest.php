@@ -57,27 +57,30 @@ final class FcmClientTest extends TestCase
     }
 
     #[Test]
-    public function doesNotPruneOnAGeneric404WithoutUnregistered(): void
+    public function rethrowsWithoutPruningOnAGeneric404WithoutUnregistered(): void
     {
         // A wrong project_id / disabled API / revoked key surfaces as the same
         // generic 404 NOT_FOUND wrapper. Pruning on it would wipe every user's
         // tokens on a config error, so only the nested UNREGISTERED errorCode
-        // may prune — this response must leave the token in place.
+        // may prune. It is a real send failure, so it must rethrow (Messenger
+        // retry) and must never prune the token.
         $oauthClient = new MockHttpClient(new MockResponse((string) json_encode(['access_token' => 'ya29.test', 'expires_in' => 3600])));
         $fcmClient = new MockHttpClient([
             new MockResponse((string) json_encode(['error' => ['code' => 404, 'status' => 'NOT_FOUND', 'message' => 'Requested entity was not found.']]), ['http_code' => 404]),
         ]);
 
-        $invalid = $this->client($oauthClient, $fcmClient)->send(['some-token'], 'T', 'B');
+        $this->expectException(\RuntimeException::class);
 
-        self::assertSame([], $invalid);
+        $this->client($oauthClient, $fcmClient)->send(['some-token'], 'T', 'B');
     }
 
     #[Test]
-    public function logsAWarningAndKeepsTheTokenOnAGenericSendFailure(): void
+    public function rethrowsAndKeepsTheTokenOnAGenericSendFailure(): void
     {
         // A 5xx / bad-request / quota failure is a real incident (ADR-058: never a
-        // silent no-op). It must be logged at warning and must NOT prune the token.
+        // silent no-op). It must be logged at error and rethrown so Messenger retries
+        // the whole message — a lost security alert is worse than a duplicate push.
+        // The token must NOT be pruned (nothing is returned when we rethrow).
         $logger = new class () extends AbstractLogger {
             /** @var list<array{0: mixed, 1: string}> */
             public array $records = [];
@@ -92,17 +95,23 @@ final class FcmClientTest extends TestCase
             new MockResponse((string) json_encode(['error' => ['status' => 'INTERNAL', 'message' => 'backend error']]), ['http_code' => 500]),
         ]);
 
-        $invalid = $this->client($oauthClient, $fcmClient, $logger)->send(['tok'], 'T', 'B', ['category' => 'safety']);
+        $thrown = false;
+        try {
+            $this->client($oauthClient, $fcmClient, $logger)->send(['tok'], 'T', 'B', ['category' => 'safety']);
+        } catch (\RuntimeException) {
+            $thrown = true;
+        }
 
-        self::assertSame([], $invalid);
+        self::assertTrue($thrown, 'send() must rethrow so Messenger retries the message.');
+        // The error log is emitted before the rethrow, and the token is not pruned.
         self::assertTrue($this->loggedError($logger->records, 'FCM push send failed'));
     }
 
     #[Test]
-    public function logsAWarningAndKeepsTheTokenOnATransportError(): void
+    public function rethrowsAndKeepsTheTokenOnATransportError(): void
     {
-        // A transport-level failure (timeout, DNS, TLS reset) is caught, surfaced at
-        // warning, and the send loop continues without pruning the token.
+        // A transport-level failure (timeout, DNS, TLS reset) is caught, logged at
+        // error, then rethrown so Messenger retries the message. The token stays.
         $logger = new class () extends AbstractLogger {
             /** @var list<array{0: mixed, 1: string}> */
             public array $records = [];
@@ -117,9 +126,14 @@ final class FcmClientTest extends TestCase
             throw new TransportException('connection reset');
         });
 
-        $invalid = $this->client($oauthClient, $fcmClient, $logger)->send(['tok'], 'T', 'B');
+        $thrown = false;
+        try {
+            $this->client($oauthClient, $fcmClient, $logger)->send(['tok'], 'T', 'B');
+        } catch (\RuntimeException) {
+            $thrown = true;
+        }
 
-        self::assertSame([], $invalid);
+        self::assertTrue($thrown, 'send() must rethrow so Messenger retries the message.');
         self::assertTrue($this->loggedError($logger->records, 'FCM push transport error'));
     }
 

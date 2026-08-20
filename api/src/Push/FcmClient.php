@@ -52,6 +52,7 @@ final class FcmClient implements PushSenderInterface
         $category = $data['category'] ?? null;
         $targetedTokens = \count($tokens);
         $invalid = [];
+        $failures = 0;
 
         foreach ($tokens as $token) {
             try {
@@ -88,8 +89,9 @@ final class FcmClient implements PushSenderInterface
                 // send failure the operator must see (ADR-058: never a silent no-op).
                 // Logged at error, not warning: prod's monolog `main` handler is
                 // fingers_crossed with action_level: error, so a warning never
-                // crosses the threshold and would be dropped. Best-effort: keep
-                // sending to the other tokens.
+                // crosses the threshold and would be dropped. Counted so the batch
+                // is rethrown below and Messenger retries it.
+                ++$failures;
                 $error = $this->extractError($responseBody);
                 $this->logger->error('FCM push send failed.', [
                     'httpStatus' => $status,
@@ -101,7 +103,9 @@ final class FcmClient implements PushSenderInterface
                 ]);
             } catch (\Throwable $e) {
                 // Transport-level failure (timeout, DNS, TLS reset): surfaced at
-                // error (crosses prod fingers_crossed), not swallowed. Loop continues.
+                // error (crosses prod fingers_crossed), counted so the batch is
+                // rethrown below. Loop continues to log every failing token first.
+                ++$failures;
                 $this->logger->error('FCM push transport error.', [
                     'error' => $e->getMessage(),
                     'tokenRef' => $this->tokenRef($token),
@@ -109,6 +113,15 @@ final class FcmClient implements PushSenderInterface
                     'targetedTokens' => $targetedTokens,
                 ]);
             }
+        }
+
+        // A real send/transport failure must reach Messenger so its retry_strategy
+        // (3 retries, backoff) fires — losing a security alert silently is worse than
+        // the trade-off risk of a duplicate push re-delivered to a token already
+        // served in this batch on retry. UNREGISTERED pruning is normal churn, not a
+        // failure, so it never triggers a rethrow.
+        if ($failures > 0) {
+            throw new \RuntimeException(\sprintf('FCM push failed for %d of %d token(s) (category: %s); rethrowing for Messenger retry.', $failures, $targetedTokens, $category ?? 'none'));
         }
 
         return $invalid;
