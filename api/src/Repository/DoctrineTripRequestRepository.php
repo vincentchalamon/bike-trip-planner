@@ -201,7 +201,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $floor = $date->modify('-60 days');
 
         /** @var list<TripRequest> $trips */
+        // Fetch-join the stages: stageOnDay() iterates t.stages per trip, so a lazy
+        // OneToMany would fire one SELECT per trip (N+1) on a batch that runs twice
+        // a day over a 60-day window.
         $trips = $this->createQueryBuilder('t')
+            ->leftJoin('t.stages', 's')
+            ->addSelect('s')
             ->andWhere('t.user IS NOT NULL')
             ->andWhere('t.startDate IS NOT NULL')
             ->andWhere('t.startDate <= :date')

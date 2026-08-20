@@ -7,6 +7,7 @@ namespace App\Notification;
 use App\Entity\Stage;
 use App\Enum\NotificationCategory;
 use App\Repository\OwnedTripFinderInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Pushes the `weatherSafety` notification for the stage a rider tackles on a given
@@ -16,13 +17,15 @@ use App\Repository\OwnedTripFinderInterface;
  * command ({@see \App\Command\NotifyWeatherSafetyCommand}) that ops schedules
  * twice a day: the evening before (`--day=tomorrow`) and the morning of
  * (`--day=today`). Each call notifies every owned trip whose ridden stage lands
- * on the target day, for owners who kept the category enabled.
+ * on the target day, for owners who kept the category enabled. Copy is localised
+ * to the trip's locale (falling back to English).
  */
 final readonly class WeatherSafetyNotifier
 {
     public function __construct(
         private OwnedTripFinderInterface $tripRepository,
         private NotificationDispatcherInterface $dispatcher,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -45,11 +48,19 @@ final readonly class WeatherSafetyNotifier
                 continue;
             }
 
+            $locale = '' !== $trip->locale ? $trip->locale : 'en';
+            $title = $this->translator->trans(
+                'notification.weather_safety.title',
+                ['%day%' => $dayNumber, '%headline%' => $this->weatherHeadline($stage, $locale)],
+                'notifications',
+                $locale,
+            );
+
             $dispatched += $this->dispatcher->dispatch(
                 $trip->user->getId()->toRfc4122(),
                 NotificationCategory::WEATHER_SAFETY,
-                \sprintf('Étape J%d — %s', $dayNumber, $this->weatherHeadline($stage)),
-                $this->body($stage),
+                $title,
+                $this->body($stage, $locale),
                 ['tripId' => $trip->id->toRfc4122(), 'dayNumber' => (string) $dayNumber],
             ) ? 1 : 0;
         }
@@ -71,32 +82,43 @@ final readonly class WeatherSafetyNotifier
         return null;
     }
 
-    private function weatherHeadline(Stage $stage): string
+    private function weatherHeadline(Stage $stage, string $locale): string
     {
         $weather = $stage->getWeather();
         if (null === $weather) {
-            return 'météo à venir';
+            return $this->translator->trans('notification.weather_safety.headline.pending', [], 'notifications', $locale);
         }
 
-        $description = \is_string($weather['description'] ?? null) ? $weather['description'] : 'météo';
+        $description = \is_string($weather['description'] ?? null) ? $weather['description'] : '';
         $min = $weather['tempMin'] ?? null;
         $max = $weather['tempMax'] ?? null;
 
-        if (is_numeric($min) && is_numeric($max)) {
-            return \sprintf('%s, %d–%d °C', $description, (int) round((float) $min), (int) round((float) $max));
+        if ('' !== $description && is_numeric($min) && is_numeric($max)) {
+            return $this->translator->trans(
+                'notification.weather_safety.headline.forecast',
+                [
+                    '%description%' => $description,
+                    '%min%' => (int) round((float) $min),
+                    '%max%' => (int) round((float) $max),
+                ],
+                'notifications',
+                $locale,
+            );
         }
 
-        return $description;
+        return '' !== $description
+            ? $description
+            : $this->translator->trans('notification.weather_safety.headline.pending', [], 'notifications', $locale);
     }
 
-    private function body(Stage $stage): string
+    private function body(Stage $stage, string $locale): string
     {
         $alerts = \count($stage->getAlerts());
 
         if (0 === $alerts) {
-            return 'Aucune alerte de sécurité signalée pour cette étape. Bonne route !';
+            return $this->translator->trans('notification.weather_safety.body.none', [], 'notifications', $locale);
         }
 
-        return \sprintf('%d alerte%s de sécurité sur cette étape. Ouvrez l\'app pour les détails.', $alerts, $alerts > 1 ? 's' : '');
+        return $this->translator->trans('notification.weather_safety.body.some', ['%count%' => $alerts], 'notifications', $locale);
     }
 }

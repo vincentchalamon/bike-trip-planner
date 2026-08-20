@@ -17,12 +17,13 @@ interface NotificationPreferenceRepositoryInterface
     public function isEnabled(string $userId, NotificationCategory $category): bool;
 
     /**
-     * User ids that explicitly enabled a category (used for opt-in categories such
-     * as zone opening, where the default is OFF so only opted-in users are targeted).
+     * Users who explicitly enabled a category (used for opt-in categories such as
+     * zone opening, where the default is OFF so only opted-in users are targeted).
+     * Each row carries the user id and locale so the push can be localised per user.
      *
-     * @return list<string>
+     * @return list<array{id: string, locale: string}>
      */
-    public function findUserIdsEnabled(NotificationCategory $category): array;
+    public function findEnabledUsers(NotificationCategory $category): array;
 
     public function findOne(User $user, NotificationCategory $category): ?NotificationPreference;
 

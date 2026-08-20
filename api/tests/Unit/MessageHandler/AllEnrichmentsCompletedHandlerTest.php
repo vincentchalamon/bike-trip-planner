@@ -17,6 +17,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Validates the gate's terminal handler: once every enrichment settles it
@@ -136,6 +137,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripRepository,
             $this->createStub(MercureSubscriptionCheckerInterface::class),
             $this->createStub(NotificationDispatcherInterface::class),
+            $this->createStub(TranslatorInterface::class),
         );
     }
 }

@@ -57,26 +57,28 @@ final class NotificationPreferenceRepositoryTest extends KernelTestCase
     }
 
     #[Test]
-    public function findsOnlyUsersWhoExplicitlyOptedIntoACategory(): void
+    public function findsOnlyUsersWhoExplicitlyOptedIntoACategoryWithTheirLocale(): void
     {
-        $optedIn = $this->persistUser('in@example.com');
-        $optedOut = $this->persistUser('out@example.com');
-        $this->persistUser('untouched@example.com');
+        $optedIn = $this->persistUser('in@example.com', 'en');
+        $optedOut = $this->persistUser('out@example.com', 'fr');
+        $this->persistUser('untouched@example.com', 'fr');
 
         $this->repository->save(new NotificationPreference($optedIn, NotificationCategory::ZONE_OPENING, true));
         $this->repository->save(new NotificationPreference($optedOut, NotificationCategory::ZONE_OPENING, false));
 
-        $ids = $this->repository->findUserIdsEnabled(NotificationCategory::ZONE_OPENING);
+        $users = $this->repository->findEnabledUsers(NotificationCategory::ZONE_OPENING);
 
-        self::assertSame([$optedIn->getId()->toRfc4122()], $ids);
+        self::assertSame([['id' => $optedIn->getId()->toRfc4122(), 'locale' => 'en']], $users);
     }
 
     /**
      * @param non-empty-string $email
      */
-    private function persistUser(string $email): User
+    private function persistUser(string $email, string $locale = 'fr'): User
     {
         $user = new User($email);
+        $user->setLocale($locale);
+
         $this->em->persist($user);
         $this->em->flush();
 

@@ -34,18 +34,22 @@ final class NotificationPreferenceRepository extends ServiceEntityRepository imp
         return $preference?->isEnabled() ?? $category->defaultEnabled();
     }
 
-    public function findUserIdsEnabled(NotificationCategory $category): array
+    public function findEnabledUsers(NotificationCategory $category): array
     {
-        /** @var list<array{userId: string}> $rows */
+        /** @var list<array{id: string, locale: string}> $rows */
         $rows = $this->createQueryBuilder('np')
-            ->select('IDENTITY(np.user) AS userId')
+            ->select('IDENTITY(np.user) AS id', 'u.locale AS locale')
+            ->join('np.user', 'u')
             ->andWhere('np.category = :category')
             ->andWhere('np.enabled = true')
             ->setParameter('category', $category)
             ->getQuery()
             ->getArrayResult();
 
-        return array_map(static fn (array $row): string => (string) $row['userId'], $rows);
+        return array_map(
+            static fn (array $row): array => ['id' => (string) $row['id'], 'locale' => (string) $row['locale']],
+            $rows,
+        );
     }
 
     public function findOne(User $user, NotificationCategory $category): ?NotificationPreference
