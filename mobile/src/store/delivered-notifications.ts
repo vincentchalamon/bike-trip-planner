@@ -21,7 +21,12 @@ interface DeliveredNotificationsState {
 }
 
 function persist(delivered: Set<string>): void {
-  void SecureStore.setItemAsync(KEY, JSON.stringify([...delivered]));
+  // Swallow a rejected write (SecureStore has historically rejected large values):
+  // an unhandled rejection here would crash the JS context, and the set is rebuilt
+  // from the live scheduled state on the next reconcile pass anyway.
+  void Promise.resolve(SecureStore.setItemAsync(KEY, JSON.stringify([...delivered]))).catch(
+    () => undefined,
+  );
 }
 
 function parseStored(raw: string | null): Set<string> {

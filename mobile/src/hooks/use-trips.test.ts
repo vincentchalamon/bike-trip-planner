@@ -22,6 +22,10 @@ jest.mock('../api/trips', () => ({
 jest.mock('../notifications/native', () => ({
   cancelLocalNotification: jest.fn().mockResolvedValue(undefined),
 }));
+const mockClearDelivered = jest.fn();
+jest.mock('../store/delivered-notifications', () => ({
+  useDeliveredNotifications: { getState: () => ({ clearDelivered: mockClearDelivered }) },
+}));
 import { deleteTrip, duplicateTrip, fetchTrips } from '../api/trips';
 import { cancelLocalNotification } from '../notifications/native';
 import { notificationIdentifier } from '../notifications/plan';
@@ -72,6 +76,13 @@ describe('runDeleteTrip (#1036)', () => {
     await runDeleteTrip('t1');
     expect(mockCancel).toHaveBeenCalledWith(notificationIdentifier('offlineNotReady', 't1'));
     expect(mockCancel).toHaveBeenCalledWith(notificationIdentifier('tripNoDate', 't1'));
+  });
+
+  it('forgets the deleted trip delivered marks so the persisted set does not leak (#1144)', async () => {
+    mockDelete.mockResolvedValue({ ok: true, status: 204 });
+    await runDeleteTrip('t1');
+    expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('offlineNotReady', 't1'));
+    expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('tripNoDate', 't1'));
   });
 
   it('does not cancel reminders when the delete fails (#1121)', async () => {

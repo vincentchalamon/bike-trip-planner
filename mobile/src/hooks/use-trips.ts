@@ -8,6 +8,7 @@ import {
   type TripListItem,
 } from '../api/trips';
 import { useOfflineStore } from '../store/offline-store';
+import { useDeliveredNotifications } from '../store/delivered-notifications';
 import { cancelLocalNotification } from '../notifications/native';
 import { LOCAL_CATEGORIES, notificationIdentifier } from '../notifications/plan';
 
@@ -44,10 +45,15 @@ export async function runDeleteTrip(id: string): Promise<string | null> {
   if (!ok) {
     return 'La suppression a échoué.';
   }
+  const { clearDelivered } = useDeliveredNotifications.getState();
   await Promise.all(
-    LOCAL_CATEGORIES.map((category) =>
-      cancelLocalNotification(notificationIdentifier(category, id)).catch(() => undefined),
-    ),
+    LOCAL_CATEGORIES.map((category) => {
+      const identifier = notificationIdentifier(category, id);
+      // Forget any delivered mark too: without this the persisted set keeps an
+      // entry for every trip ever deleted, growing unbounded (SecureStore ceiling).
+      clearDelivered(identifier);
+      return cancelLocalNotification(identifier).catch(() => undefined);
+    }),
   );
   return null;
 }

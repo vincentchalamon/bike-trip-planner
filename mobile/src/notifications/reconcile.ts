@@ -60,8 +60,16 @@ export async function reconcileLocalNotifications(input: {
         await cancelLocalNotification(action.identifier);
         await commit(action);
       }
-    } else if (scheduled.has(action.identifier)) {
-      await cancelLocalNotification(action.identifier);
+    } else {
+      // A cancel resolves the condition (a date got set, the cache became ready):
+      // drop the OS schedule if it is still pending, and always forget any delivered
+      // mark. A past-due one-shot that already fired is gone from `scheduled` but
+      // still marked delivered — clearing it here is the only site that reclaims it,
+      // so the persisted set does not leak an entry per resolved reminder.
+      if (scheduled.has(action.identifier)) {
+        await cancelLocalNotification(action.identifier);
+      }
+      input.clearDelivered(action.identifier);
     }
   }
 }

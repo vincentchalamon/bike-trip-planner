@@ -6,17 +6,26 @@ import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import type { ScheduleAction } from './plan';
 
 // Read the epoch-ms fire time out of a scheduled notification's DATE trigger.
-// getAllScheduledNotificationsAsync() returns the trigger for each request, so a
-// DATE trigger carries back its `date` (number | Date). Returns null when the fire
-// time cannot be read (non-DATE / unknown trigger) so reconcile leaves it untouched.
+// getAllScheduledNotificationsAsync() hands back the trigger as the native layer
+// serializes it on READ, which is NOT the {type:'date', date} *input* shape passed
+// to scheduleNotificationAsync: on Android a DATE trigger reads back as
+// {type:'date', value:<epoch ms>} (expo-notifications NotificationTriggers.kt), and
+// the JS scheduler normalizes the input to {type:'date', timestamp}. Accept every
+// field that carries the instant. Returns null when unreadable (e.g. iOS maps a
+// DATE input to a calendar trigger, which has no single timestamp), so reconcile
+// simply leaves that reminder untouched rather than rescheduling on a false drift.
 function dateTriggerFireAt(trigger: unknown): number | null {
   if (!trigger || typeof trigger !== 'object') return null;
-  const t = trigger as { type?: unknown; date?: unknown };
+  const t = trigger as { type?: unknown; value?: unknown; timestamp?: unknown; date?: unknown };
   if (t.type !== 'date') return null;
-  if (typeof t.date === 'number') return t.date;
-  if (t.date instanceof Date) return t.date.getTime();
-  if (typeof t.date === 'string') {
-    const parsed = Date.parse(t.date);
+  return toEpochMs(t.value) ?? toEpochMs(t.timestamp) ?? toEpochMs(t.date);
+}
+
+function toEpochMs(value: unknown): number | null {
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
     return Number.isNaN(parsed) ? null : parsed;
   }
   return null;

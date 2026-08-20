@@ -36,13 +36,15 @@ function scheduledWith(identifiers: string[]): void {
   getAll.mockResolvedValue(identifiers.map((identifier) => ({ identifier })));
 }
 
-// Scheduled notifications carrying their DATE-trigger fire time (as the real API
-// returns), so reconcile can compare the desired time against the scheduled one.
+// Scheduled notifications carrying their DATE-trigger fire time, in the shape the
+// native layer serializes on READ (Android: {type:'date', value:<epoch ms>}, see
+// NotificationTriggers.kt) — NOT the {type:'date', date} input shape — so this
+// exercises dateTriggerFireAt against the real device response.
 function scheduledWithDates(entries: Record<string, number>): void {
   getAll.mockResolvedValue(
-    Object.entries(entries).map(([identifier, date]) => ({
+    Object.entries(entries).map(([identifier, value]) => ({
       identifier,
-      trigger: { type: 'date', date },
+      trigger: { type: 'date', repeats: false, value },
     })),
   );
 }
@@ -181,6 +183,27 @@ describe('reconcileLocalNotifications', () => {
     );
     expect(clearDelivered).toHaveBeenCalledWith(OFFLINE_ID);
     expect(markDelivered).not.toHaveBeenCalled();
+  });
+
+  it('clears the delivered mark when a scheduled reminder condition is resolved', async () => {
+    scheduledWith([NODATE_ID]);
+    await run({ startDate: '2026-09-10T00:00:00Z' }); // date set → tripNoDate resolved
+    expect(cancel).toHaveBeenCalledWith(NODATE_ID);
+    expect(clearDelivered).toHaveBeenCalledWith(NODATE_ID);
+  });
+
+  it('clears the delivered mark of a past-due one-shot that fired then resolved', async () => {
+    // The one-shot already fired (gone from the scheduled set) and is still marked
+    // delivered; its condition now resolves. Nothing to cancel, but the delivered
+    // entry must be reclaimed so the persisted set does not leak forever.
+    scheduledWith([]);
+    await run(
+      { startDate: '2026-09-10T00:00:00Z' },
+      ALL_ON,
+      new Set([NODATE_ID]),
+    );
+    expect(cancel).not.toHaveBeenCalled();
+    expect(clearDelivered).toHaveBeenCalledWith(NODATE_ID);
   });
 
   it('reschedules an already-scheduled reminder when its desired fire time moved', async () => {
