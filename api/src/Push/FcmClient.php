@@ -138,7 +138,27 @@ final class FcmClient implements PushSenderInterface
      */
     private function isUnregistered(int $status, string $body): bool
     {
-        return 404 === $status && str_contains($body, 'UNREGISTERED');
+        if (404 !== $status) {
+            return false;
+        }
+
+        try {
+            /** @var array{error?: array{details?: list<array{errorCode?: string}>}} $decoded */
+            $decoded = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        // Parse the nested errorCode rather than substring-matching the whole body:
+        // the literal could otherwise appear in a human-readable `message` on an
+        // unrelated 404 and wrongly prune every token on a config error.
+        foreach ($decoded['error']['details'] ?? [] as $detail) {
+            if ('UNREGISTERED' === ($detail['errorCode'] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

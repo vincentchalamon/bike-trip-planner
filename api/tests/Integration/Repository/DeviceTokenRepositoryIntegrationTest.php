@@ -60,6 +60,41 @@ final class DeviceTokenRepositoryIntegrationTest extends KernelTestCase
         self::assertSame([], $this->repository->findByUserId($user->getId()->toRfc4122()));
     }
 
+    #[Test]
+    public function deleteByTokensRemovesOnlyTheListedTokensAcrossUsers(): void
+    {
+        // Round-trips the IN (:tokens) array binding through real Postgres (the unit
+        // test stubs the QueryBuilder): only the listed tokens go, the rest survive.
+        $a = $this->persistUser('a@example.com');
+        $b = $this->persistUser('b@example.com');
+        $this->persistToken($a, 'dead-1', DevicePlatform::ANDROID);
+        $this->persistToken($a, 'live-1', DevicePlatform::IOS);
+        $this->persistToken($b, 'dead-2', DevicePlatform::ANDROID);
+
+        $this->repository->deleteByTokens(['dead-1', 'dead-2']);
+        $this->em->clear();
+
+        $remaining = array_map(
+            static fn (DeviceToken $t): string => $t->getToken(),
+            $this->em->getRepository(DeviceToken::class)->findAll(),
+        );
+        sort($remaining);
+
+        self::assertSame(['live-1'], $remaining);
+    }
+
+    #[Test]
+    public function deleteByTokensIsANoOpOnAnEmptyList(): void
+    {
+        $user = $this->persistUser('noop@example.com');
+        $this->persistToken($user, 'keep', DevicePlatform::ANDROID);
+
+        $this->repository->deleteByTokens([]);
+        $this->em->clear();
+
+        self::assertCount(1, $this->em->getRepository(DeviceToken::class)->findAll());
+    }
+
     /**
      * @param non-empty-string $email
      */
