@@ -188,6 +188,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/device-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a DeviceToken resource.
+         * @description Creates a DeviceToken resource.
+         */
+        post: operations["api_usersmedevice-tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/device-tokens/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes the DeviceToken resource.
+         * @description Removes the DeviceToken resource.
+         */
+        delete: operations["api_usersmedevice-tokens_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/email-change": {
         parameters: {
             query?: never;
@@ -1025,6 +1065,28 @@ export interface components {
             lat?: number;
             lon?: number;
             ele?: number;
+        };
+        /**
+         * @description Push-notification device-token registration for the authenticated user (epic #1051).
+         *
+         *     - POST   /users/me/device-tokens         idempotent upsert of an FCM token bound
+         *       to the current user (re-registering the same token does not duplicate; a token
+         *       held by another account is reassigned). 201 on create, 200 on update.
+         *     - DELETE /users/me/device-tokens/{token}  unregister a token owned by the current
+         *       user. The lookup is scoped to the caller's own tokens, so an unknown or foreign
+         *       token is simply "not found" -> 404 (no object-level authorization to mask).
+         *
+         *     The current user is always resolved from the security token, never from a URL
+         *     identifier (no IDOR surface). The delete carries the token in the URL path as the
+         *     resource identifier — a semi-sensitive value that lands in access logs, an
+         *     accepted trade-off (see DeviceTokenDeleteProcessor).
+         */
+        DeviceToken: {
+            token: string;
+            /** @enum {string|null} */
+            platform: "android" | "ios" | null;
+            /** Format: date-time */
+            createdAt?: string | null;
         };
         /**
          * @description Email-change-by-magic-link flow for the authenticated user (#777).
@@ -2570,6 +2632,135 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmedevice-tokens_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new DeviceToken resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["DeviceToken"];
+            };
+        };
+        responses: {
+            /** @description Device token re-registered (platform refreshed / reassigned) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        /** @enum {string} */
+                        platform?: "android" | "ios";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+            /** @description Device token registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        /** @enum {string} */
+                        platform?: "android" | "ios";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Concurrent registration of the same token; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or unknown platform */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmedevice-tokens_token_delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description DeviceToken identifier */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description DeviceToken resource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
