@@ -172,10 +172,11 @@ export function RoadbookView({
                 isToday={state === 'ongoing' && isStageToday(date, today)}
                 highlighted={stageDiffs.has(index)}
               />
-              {/* Insertion row between stages (and after the last, maquette 05):
-                  hidden when the trip is read-only. Keyed on the preceding
-                  stage's key so a rapid double-tap fires a single mutation. */}
-              {!readOnly ? (
+              {/* Insertion row BETWEEN stages only — never after the last one
+                  (nothing to insert past the destination, like the web). Hidden
+                  when the trip is read-only. Keyed on the preceding stage's key so
+                  a rapid double-tap fires a single mutation. */}
+              {!readOnly && index < stages.length - 1 ? (
                 <StageInsertRow
                   afterIndex={index}
                   day={item.dayNumber ?? index + 1}

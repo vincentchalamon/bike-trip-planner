@@ -105,6 +105,19 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
 
   afterEach(() => alertSpy.mockRestore());
 
+  it('renders an insertion row between stages but never after the last one', () => {
+    const tree = render(<RoadbookView id="t1" />);
+    const addStageCount = (day: number) =>
+      tree.root.findAll(
+        (n: any) =>
+          n.props.accessibilityLabel === i18n.t('trip.edit.addStageA11y', { day }) &&
+          typeof n.props.onPress === 'function',
+      ).length;
+    // Two stages → one insertion row (after day 1); nothing past the destination.
+    expect(addStageCount(1)).toBe(1);
+    expect(addStageCount(2)).toBe(0);
+  });
+
   it('applies a rest-day insertion optimistically and calls the API', async () => {
     mock(insertRestDay).mockResolvedValue({ ok: true, status: 202 });
     const tree = render(<RoadbookView id="t1" />);
