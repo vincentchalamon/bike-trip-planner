@@ -16,7 +16,6 @@ jest.mock('../../hooks/use-trip-mutations', () => ({
     addStage: jest.fn(),
     insertRestDay: jest.fn(),
     deleteStage: jest.fn(),
-    updateStageDistance: jest.fn(),
   }),
 }));
 

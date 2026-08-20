@@ -166,12 +166,7 @@ export function RoadbookView({
                 stage={item}
                 index={index}
                 locked={readOnly}
-                outOfZone={outOfZone}
-                busy={busyKeys.has(key)}
                 onDelete={confirmDelete}
-                onEditDistance={(_, distance) =>
-                  runGuarded(key, () => mutations.updateStageDistance(index, distance))
-                }
                 onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
                 date={date}
                 isToday={state === 'ongoing' && isStageToday(date, today)}
