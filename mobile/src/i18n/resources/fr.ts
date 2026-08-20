@@ -165,7 +165,7 @@ export const fr = {
         "L'application est hébergée par l'opérateur de cette instance.\n\nLes coordonnées exactes de l'hébergeur peuvent être communiquées sur demande à l'adresse de contact ci-dessous.",
       contactTitle: 'Contact',
       contactBody:
-        'Pour toute question relative au site ou pour exercer tes droits, tu peux nous contacter à l\'adresse : contact@example.org.\n\nTu peux également ouvrir une issue sur le dépôt GitHub du projet.',
+        "Pour toute question relative au site ou pour exercer tes droits, tu peux nous contacter à l'adresse : __CONTACT_EMAIL__.\n\nTu peux également ouvrir une issue sur le dépôt GitHub du projet.",
       ipTitle: 'Propriété intellectuelle',
       ipBody:
         "Le code source de Bike Trip Planner est distribué sous licence open-source ; les conditions d'utilisation et de redistribution figurent dans le dépôt GitHub.\n\nLes données d'itinéraire et cartographiques proviennent de sources tierces (OpenStreetMap, DataTourisme, OpenAgenda, Wikidata) et restent soumises à leurs licences respectives, créditées sur l'application.\n\nLes marques, logos et contenus appartenant à des tiers (Komoot, Strava, RideWithGPS, Garmin, Wahoo) demeurent la propriété de leurs détenteurs respectifs.",
@@ -174,7 +174,7 @@ export const fr = {
       lastUpdated: 'Dernière mise à jour : 29 mai 2026',
       controllerTitle: 'Responsable du traitement',
       controllerBody:
-        "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).\n\nPour toute question relative à tes données personnelles, contacte-nous à : contact@example.org.",
+        "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).\n\nPour toute question relative à tes données personnelles, contacte-nous à : __CONTACT_EMAIL__.",
       basisTitle: 'Base légale',
       basisBody:
         "Le traitement de ton adresse email repose sur l'exécution du service que tu demandes (connexion par lien magique et gestion de ton compte), au sens de l'article 6.1.b du RGPD.\n\nLa mesure d'audience anonyme repose sur notre intérêt légitime à améliorer le service, sans préjudice pour tes droits et libertés (article 6.1.f du RGPD).",
@@ -189,7 +189,7 @@ export const fr = {
         'Ton compte et tes voyages sont conservés tant que ton compte est actif. Tu peux demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de ton compte.\n\nLes données de tracé brutes en cache sont conservées au maximum 24 heures.\n\nLes données de mesure d\'audience anonyme sont agrégées et ne permettent pas de te réidentifier.',
       rightsTitle: 'Tes droits',
       rightsBody:
-        "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de tes données.\n\nPour exercer ces droits, contacte-nous à : contact@example.org. Nous répondons dans un délai d'un mois.\n\nTu as également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr).",
+        "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de tes données.\n\nPour exercer ces droits, contacte-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.\n\nTu as également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr).",
       processorsTitle: 'Sous-traitants',
       processorsBody:
         "Hébergement de l'infrastructure : prestataire cloud choisi par l'opérateur de cette instance.\n\nEnvoi des emails de connexion : prestataire d'envoi d'emails transactionnels.\n\nSources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise.",
@@ -198,7 +198,7 @@ export const fr = {
         "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur la même infrastructure que l'application.\n\nPlausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.\n\nLes adresses IP et les agents utilisateurs (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de t'identifier ou de te suivre entre les sites.\n\nFinalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.\n\nAucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; tu conserves néanmoins tes droits d'opposition décrits ci-dessus.",
       contactTitle: 'Contact',
       contactBody:
-        'Pour toute question relative à cette politique de confidentialité, écris-nous à : contact@example.org.\n\nCette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page.',
+        "Pour toute question relative à cette politique de confidentialité, écris-nous à : __CONTACT_EMAIL__.\n\nCette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page.",
     },
   },
   trip: {

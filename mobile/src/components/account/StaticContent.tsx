@@ -1,10 +1,18 @@
 import { Text, View } from 'react-native';
 import { Card } from '../ui';
 import { useTheme } from '../../theme';
+import { CONTACT_EMAIL } from '../../api/config';
 
 // Shared building blocks for the static account content screens (FAQ, legal
 // notice, privacy policy — #1119): a titled text section and a Q/A pair,
 // each rendered inside its own Card.
+
+// Substitutes the `__CONTACT_EMAIL__` token in legal/privacy copy with
+// CONTACT_EMAIL. Mirrors the pwa's withContactEmail (legal-page.tsx), adapted
+// to a single body string instead of a paragraph array.
+export function withContactEmail(body: string): string {
+  return body.replace(/__CONTACT_EMAIL__/g, CONTACT_EMAIL);
+}
 
 export function ContentSection({ title, body }: { title: string; body: string }) {
   const theme = useTheme();
@@ -23,7 +31,7 @@ export function ContentSection({ title, body }: { title: string; body: string })
       <Text
         style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 14, lineHeight: 21 }}
       >
-        {body}
+        {withContactEmail(body)}
       </Text>
     </Card>
   );
