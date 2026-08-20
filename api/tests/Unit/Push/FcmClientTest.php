@@ -73,8 +73,8 @@ final class FcmClientTest extends TestCase
         try {
             $this->client($oauthClient, $fcmClient)->send(['dead-token', 'live-token'], 'T', 'B');
             self::fail('send() must rethrow on a real failure.');
-        } catch (FcmSendException $e) {
-            self::assertSame(['dead-token'], $e->invalidTokens);
+        } catch (FcmSendException $fcmSendException) {
+            self::assertSame(['dead-token'], $fcmSendException->invalidTokens);
         }
     }
 

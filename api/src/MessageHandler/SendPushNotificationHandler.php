@@ -51,10 +51,10 @@ final readonly class SendPushNotificationHandler
         // so they are not rediscovered on every retry (ADR-058).
         try {
             $invalidTokens = $this->pushSender->send($tokens, $message->title, $message->body, $data);
-        } catch (FcmSendException $e) {
-            $this->deviceTokenRepository->deleteByTokens($e->invalidTokens);
+        } catch (FcmSendException $fcmSendException) {
+            $this->deviceTokenRepository->deleteByTokens($fcmSendException->invalidTokens);
 
-            throw $e;
+            throw $fcmSendException;
         }
 
         $this->deviceTokenRepository->deleteByTokens($invalidTokens);
