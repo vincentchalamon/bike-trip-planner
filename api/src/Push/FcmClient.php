@@ -54,9 +54,15 @@ final class FcmClient implements PushSenderInterface
         $invalid = [];
         $failures = 0;
 
+        // Issue every request up front, then consume the responses. Symfony's
+        // HttpClient is lazy — request() returns immediately and the calls
+        // multiplex concurrently as long as no response is read until all are
+        // issued — so a batch of N tokens costs ~one round-trip instead of N
+        // serialized ones inside the Messenger worker.
+        $responses = [];
         foreach ($tokens as $token) {
             try {
-                $response = $this->fcmClient->request('POST', $endpoint, [
+                $responses[] = [$token, $this->fcmClient->request('POST', $endpoint, [
                     'auth_bearer' => $accessToken,
                     'json' => [
                         'message' => [
@@ -65,8 +71,17 @@ final class FcmClient implements PushSenderInterface
                             'data' => $data,
                         ],
                     ],
-                ]);
+                ])];
+            } catch (\Throwable $e) {
+                // A synchronous transport failure at issue time (rare with the lazy
+                // client): logged and counted; the other tokens are still issued.
+                ++$failures;
+                $this->logTransportError($token, $e, $category, $targetedTokens);
+            }
+        }
 
+        foreach ($responses as [$token, $response]) {
+            try {
                 $status = $response->getStatusCode();
                 if (200 === $status) {
                     continue;
@@ -102,16 +117,12 @@ final class FcmClient implements PushSenderInterface
                     'targetedTokens' => $targetedTokens,
                 ]);
             } catch (\Throwable $e) {
-                // Transport-level failure (timeout, DNS, TLS reset): surfaced at
-                // error (crosses prod fingers_crossed), counted so the batch is
-                // rethrown below. Loop continues to log every failing token first.
+                // Transport-level failure (timeout, DNS, TLS reset) surfaced while
+                // consuming: logged at error (crosses prod fingers_crossed), counted
+                // so the batch is rethrown below. Loop continues so every failing
+                // token is logged first.
                 ++$failures;
-                $this->logger->error('FCM push transport error.', [
-                    'error' => $e->getMessage(),
-                    'tokenRef' => $this->tokenRef($token),
-                    'category' => $category,
-                    'targetedTokens' => $targetedTokens,
-                ]);
+                $this->logTransportError($token, $e, $category, $targetedTokens);
             }
         }
 
@@ -127,6 +138,16 @@ final class FcmClient implements PushSenderInterface
         }
 
         return $invalid;
+    }
+
+    private function logTransportError(string $token, \Throwable $e, mixed $category, int $targetedTokens): void
+    {
+        $this->logger->error('FCM push transport error.', [
+            'error' => $e->getMessage(),
+            'tokenRef' => $this->tokenRef($token),
+            'category' => $category,
+            'targetedTokens' => $targetedTokens,
+        ]);
     }
 
     /**
