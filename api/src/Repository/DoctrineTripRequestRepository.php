@@ -191,28 +191,28 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
     /**
      * Owned trips whose date range covers the given day, for the weather-safety
-     * batch (#1124). Bounded to a 60-day look-back so ancient trips are not
-     * scanned; the caller checks a non-rest stage actually falls on that day.
+     * batch (#1124). Bounded by the trip's own date range (startDate <= day <=
+     * endDate), so it never silently drops a long-haul trip the way a fixed
+     * look-back window would; the caller checks a non-rest stage actually falls on
+     * that day.
      *
      * @return list<TripRequest>
      */
     public function findOwnedTripsCoveringDate(\DateTimeImmutable $date): array
     {
-        $floor = $date->modify('-60 days');
-
         /** @var list<TripRequest> $trips */
         // Fetch-join the stages: stageOnDay() iterates t.stages per trip, so a lazy
         // OneToMany would fire one SELECT per trip (N+1) on a batch that runs twice
-        // a day over a 60-day window.
+        // a day. The endDate bound already keeps the scan to trips still running on
+        // the given day, regardless of how long ago they started.
         $trips = $this->createQueryBuilder('t')
             ->leftJoin('t.stages', 's')
             ->addSelect('s')
             ->andWhere('t.user IS NOT NULL')
             ->andWhere('t.startDate IS NOT NULL')
             ->andWhere('t.startDate <= :date')
-            ->andWhere('t.startDate > :floor')
+            ->andWhere('t.endDate >= :date')
             ->setParameter('date', $date)
-            ->setParameter('floor', $floor)
             ->getQuery()
             ->getResult();
 
