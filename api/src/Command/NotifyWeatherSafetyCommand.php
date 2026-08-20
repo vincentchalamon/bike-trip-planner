@@ -49,7 +49,7 @@ final class NotifyWeatherSafetyCommand extends Command
         $date = match ($day) {
             'today' => new \DateTimeImmutable('today', new \DateTimeZone('UTC')),
             'tomorrow' => new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC')),
-            default => \DateTimeImmutable::createFromFormat('!Y-m-d', $day, new \DateTimeZone('UTC')) ?: null,
+            default => $this->parseIsoDate($day),
         };
 
         if (!$date instanceof \DateTimeImmutable) {
@@ -62,5 +62,16 @@ final class NotifyWeatherSafetyCommand extends Command
         $io->success(\sprintf('Dispatched %d weather-safety push(es) for %s.', $count, $date->format('Y-m-d')));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Strict ISO parse: createFromFormat silently rolls over impossible dates
+     * (2026-13-40), so reject any value that does not round-trip to itself.
+     */
+    private function parseIsoDate(string $day): ?\DateTimeImmutable
+    {
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $day, new \DateTimeZone('UTC'));
+
+        return false !== $date && $date->format('Y-m-d') === $day ? $date : null;
     }
 }
