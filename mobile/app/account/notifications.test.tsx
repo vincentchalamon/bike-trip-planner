@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
-import { Text } from 'react-native';
+import { AppState, Text } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import i18n from '../../src/i18n';
 import { NOTIFICATION_DEFAULTS, selectActiveCount, useNotificationPrefs } from '../../src/store/notification-prefs';
@@ -58,6 +58,31 @@ describe('AccountNotifications screen', () => {
     expect(labels).toContain('Voyage sans date');
     expect(labels).toContain("Ouverture d'une nouvelle zone");
     expect(labels).toContain('opt-in · désactivé par défaut');
+  });
+
+  it('re-checks the permission when the app returns to the foreground', async () => {
+    let appStateListener: (s: string) => void = () => {};
+    const addSpy = jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((_event, cb) => {
+        appStateListener = cb as (s: string) => void;
+        return { remove: jest.fn() } as never;
+      });
+
+    // Mount while permission can still be asked → prompt banner.
+    getPerms.mockResolvedValue({ granted: false, canAskAgain: true });
+    const tree = await render(<AccountNotifications />);
+    expect(texts(tree)).toContain('Active les notifications système');
+
+    // User granted it in Android settings and came back to the app.
+    getPerms.mockResolvedValue({ granted: true, canAskAgain: false });
+    await act(async () => {
+      appStateListener('active');
+      await Promise.resolve();
+    });
+    expect(texts(tree)).toContain('Autorisées par le système');
+
+    addSpy.mockRestore();
   });
 
   it('toggling the weather switch flips the store', async () => {

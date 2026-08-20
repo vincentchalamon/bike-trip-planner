@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { AppState, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
@@ -122,13 +122,23 @@ function PermissionBanner() {
   const { t } = useTranslation();
   const [state, setState] = useState<PermissionState>('unknown');
 
+  // Re-check on mount and every time the app returns to the foreground: the
+  // common flow is toggling the OS permission in Android settings and coming
+  // back, which must refresh the banner without a remount.
   useEffect(() => {
     let active = true;
-    void Notifications.getPermissionsAsync().then((res) => {
-      if (active) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+    const check = () => {
+      void Notifications.getPermissionsAsync().then((res) => {
+        if (active) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+      });
+    };
+    check();
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') check();
     });
     return () => {
       active = false;
+      subscription.remove();
     };
   }, []);
 
