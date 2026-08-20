@@ -21,6 +21,7 @@ jest.mock('expo-notifications', () => ({
 jest.mock('expo-router', () => ({ Stack: { Screen: () => null } }));
 
 const getPerms = Notifications.getPermissionsAsync as jest.Mock;
+const requestPerms = Notifications.requestPermissionsAsync as jest.Mock;
 
 function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap((t: any) => {
@@ -43,6 +44,8 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  getPerms.mockReset();
+  requestPerms.mockReset();
   getPerms.mockResolvedValue({ granted: true, canAskAgain: false });
   useNotificationPrefs.setState({ enabled: { ...NOTIFICATION_DEFAULTS }, hydrated: false });
 });
@@ -83,6 +86,34 @@ describe('AccountNotifications screen', () => {
     expect(texts(tree)).toContain('Autorisées par le système');
 
     addSpy.mockRestore();
+  });
+
+  it('renders the denied banner when permission is refused and not re-askable', async () => {
+    getPerms.mockResolvedValue({ granted: false, canAskAgain: false });
+    const tree = await render(<AccountNotifications />);
+    const labels = texts(tree);
+    expect(labels).toContain('Bloquées par le système');
+    expect(labels).toContain('Réactive-les dans les réglages Android.');
+    // No request button in the denied state — the OS won't prompt again.
+    expect(labels).not.toContain('Autoriser');
+  });
+
+  it('requests permission from the prompt banner and updates on the result', async () => {
+    getPerms.mockResolvedValue({ granted: false, canAskAgain: true });
+    requestPerms.mockResolvedValue({ granted: true, canAskAgain: false });
+    const tree = await render(<AccountNotifications />);
+    expect(texts(tree)).toContain('Active les notifications système');
+
+    const allowBtn = tree.root.find(
+      (n: any) => n.props.label === 'Autoriser' && typeof n.props.onPress === 'function',
+    );
+    await act(async () => {
+      allowBtn.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(requestPerms).toHaveBeenCalledTimes(1);
+    expect(texts(tree)).toContain('Autorisées par le système');
   });
 
   it('toggling the weather switch flips the store', async () => {
