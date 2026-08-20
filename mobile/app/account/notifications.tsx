@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -121,15 +121,18 @@ function PermissionBanner() {
   const theme = useTheme();
   const { t } = useTranslation();
   const [state, setState] = useState<PermissionState>('unknown');
+  // Shared by the mount/foreground check AND request() so a permission result
+  // resolving after the banner unmounts is a no-op in both paths.
+  const activeRef = useRef(true);
 
   // Re-check on mount and every time the app returns to the foreground: the
   // common flow is toggling the OS permission in Android settings and coming
   // back, which must refresh the banner without a remount.
   useEffect(() => {
-    let active = true;
+    activeRef.current = true;
     const check = () => {
       void Notifications.getPermissionsAsync().then((res) => {
-        if (active) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+        if (activeRef.current) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
       });
     };
     check();
@@ -137,7 +140,7 @@ function PermissionBanner() {
       if (next === 'active') check();
     });
     return () => {
-      active = false;
+      activeRef.current = false;
       subscription.remove();
     };
   }, []);
@@ -170,7 +173,7 @@ function PermissionBanner() {
 
   const request = () => {
     void Notifications.requestPermissionsAsync().then((res) => {
-      setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+      if (activeRef.current) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
     });
   };
 
