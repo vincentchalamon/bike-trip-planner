@@ -1979,6 +1979,12 @@ Fichiers partagés (arbitrage) :
 - `mobile/package.json` + `package-lock.json` : `expo-notifications` ajouté par #1120 (gagne). #1125 réutilise, ne réajoute pas.
 - `pwa/src/lib/api/schema.d.ts` : régénéré par #1122 (DTO device-token). #1123/#1124 rebasent dessus.
 - `compose.yaml` (php+worker) + `api/config/services.php` : secrets FCM ajoutés **uniquement** par #1123.
+- `core/schema.d.ts` : régénéré par **#1116** (nouvel endpoint `GET /users/me`, ajouté au round de revue) **et** par **#1122** (device-tokens). Conflit attendu quand le 2e des deux stacks merge sur main → **résoudre en régénérant** (`make typegen`), ne pas merger le fichier à la main.
+- `mobile/src/auth/store.tsx` : réécrit par #1116 (email via `GET /users/me`) ; #1117 (`refreshEmail`) et #1125 (register/unregister device-token) ajoutent des hunks additifs. Rebasés proprement, mais re-résoudre en régénérant si un futur rebase diverge.
+
+**#1125 (base reconstruite).** `feature/1125` = `feature/1120` (à jour) + merge `feature/1122` (à jour) + son commit propre. À merger **en dernier**, après l'atterrissage des deux stacks sur main, en rebasant sur main (le diff se réduira à la couche mobile push).
+
+**Round de revue (bot claude-code-review).** Findings bloquants corrigés avant READY : #1127 email header (`GET /auth/session` cookie-only → nouvel endpoint `GET /users/me` JWT, #1116), #1132 (`deleteAccount` catch réseau), #1135 (rappels locaux one-shot re-déclenchés → set `delivered` persistant), #1136 (purge device-tokens seulement sur `UNREGISTERED` + retrait retry non-idempotent). Findings « issue » aussi corrigés : #1130 (bannière permission re-checkée au foreground), #1131 (email contact configurable `EXPO_PUBLIC_CONTACT_EMAIL`), #1128 (contrat OpenAPI 201 + race → 409). Suggestions laissées (notées) : couverture de tests hook `useEmailChange` (#1129) et repository DQL (#1136).
 
 </details>
 
