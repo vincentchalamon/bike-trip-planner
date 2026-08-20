@@ -8,6 +8,7 @@ use App\Entity\DeviceToken;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<DeviceToken>
@@ -37,7 +38,10 @@ final class DeviceTokenRepository extends ServiceEntityRepository implements Dev
         /** @var list<DeviceToken> $tokens */
         $tokens = $this->createQueryBuilder('dt')
             ->andWhere('IDENTITY(dt.user) = :userId')
-            ->setParameter('userId', $userId)
+            // Wrap in Uuid so the parameter round-trips through the `uuid` DBAL type
+            // like every other uuid-column comparison here; a raw string risks a type
+            // error or a silently-never-matching query (ADR-058: no silent no-op).
+            ->setParameter('userId', Uuid::fromString($userId))
             ->getQuery()
             ->getResult();
 

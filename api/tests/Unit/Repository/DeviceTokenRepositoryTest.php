@@ -94,7 +94,9 @@ final class DeviceTokenRepositoryTest extends TestCase
 
         self::assertSame([$token], $result);
         self::assertSame('IDENTITY(dt.user) = :userId', $this->andWhereDql);
-        self::assertSame($userId, $this->parameters['userId']);
+        // Bound as a Uuid (not the raw string) so it round-trips through the `uuid`
+        // DBAL type against the FK column.
+        self::assertEquals(Uuid::fromString($userId), $this->parameters['userId']);
     }
 
     #[Test]
