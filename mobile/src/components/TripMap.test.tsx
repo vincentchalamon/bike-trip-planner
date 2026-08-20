@@ -74,6 +74,23 @@ describe('TripMap', () => {
     expect(findAll(out.root, 'Map')).toHaveLength(0);
   });
 
+  it('renders (framed on the markers) when a stage has markers but no drawable line', () => {
+    // Rest-day case (#1142): the stage carries a single point, so `stageSegments`
+    // is empty (no line to draw) but its location marker remains. The map must
+    // still render and frame on the marker instead of falling through to the
+    // empty state.
+    const out = render(
+      <TripMap
+        stageSegments={[]}
+        markers={[{ kind: 'waypoint', lon: 2.5, lat: 48.5, name: 'Repos' }]}
+      />,
+    );
+    expect(findAll(out.root, 'Map')).toHaveLength(1);
+    expect(findAll(out.root, 'Camera')[0].props.bounds).toEqual(
+      computeBounds([[2.5, 48.5]]),
+    );
+  });
+
   it('feeds the memoized Positron style, then the satellite style once toggled', () => {
     const out = render(<TripMap stageSegments={segsA} />);
     const style = () => findAll(out.root, 'Map')[0].props.mapStyle;

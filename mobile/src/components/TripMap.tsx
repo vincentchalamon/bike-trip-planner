@@ -66,9 +66,20 @@ export function TripMap({
   // once per input change: a fresh reference on each render would defeat the
   // upstream React.memo (Map/Camera/GeoJSONSource) and force a native re-diff.
   const mapStyle = useMemo(() => mapStyleFor(base), [base]);
-  const coordinates = useMemo(
+  const lineCoords = useMemo(
     () => stageSegments.flatMap((s) => s.coordinates),
     [stageSegments],
+  );
+  // Framing / presence coordinates: the route line when there is one, else the
+  // markers as a fallback. A rest day carries a single point (no drawable line,
+  // so `stageSegments` is empty) but still has its location marker — without the
+  // fallback the early return below would hide its detail map entirely (#1142).
+  const coordinates = useMemo(
+    () =>
+      lineCoords.length > 0
+        ? lineCoords
+        : (markers ?? []).map((m) => [m.lon, m.lat] as [number, number]),
+    [lineCoords, markers],
   );
   const bounds = useMemo(() => computeBounds(coordinates), [coordinates]);
   const markerData = useMemo(() => markerCollection(markers ?? []), [markers]);

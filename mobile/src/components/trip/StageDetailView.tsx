@@ -23,7 +23,8 @@ import {
   X,
 } from '../ui/icons';
 import { TripMap } from '../TripMap';
-import { alertSegmentToCoords, buildStageLines, collectMarkers } from '../map/map-utils';
+import { alertSegmentToCoords, collectMarkers } from '../map/map-utils';
+import { stageColor } from '../map/stage-colors';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
 import { StageDataBlocks, notifyFailure } from './StageDataBlocks';
@@ -102,10 +103,15 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
     [stage],
   );
   // One colored line for this stage, keyed on its dayNumber, so its color
-  // matches the trip map's stage coloring (see stageColor).
+  // matches the trip map's stage coloring (see stageColor). Built directly
+  // (not via buildStageLines, which drops rest days for the multi-stage
+  // overview map) so a rest day's own point(s) still render here.
   const stageSegments = useMemo(
-    () => (stage ? buildStageLines([stage]) : []),
-    [stage],
+    () =>
+      stage && coordinates.length >= 2
+        ? [{ color: stageColor(stage.dayNumber ?? 0), coordinates }]
+        : [],
+    [stage, coordinates],
   );
   const markers = useMemo(() => (stage ? collectMarkers([stage]) : []), [stage]);
   const profileIndex = useMemo(
