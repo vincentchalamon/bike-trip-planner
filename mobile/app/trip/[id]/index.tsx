@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { type ReactNode, useState } from 'react';
-import { Alert, Modal, Pressable, Text, View } from 'react-native';
+import { type ReactNode, useMemo, useState } from 'react';
+import { Alert, Modal, PanResponder, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,6 +33,7 @@ import { useTripLive } from '../../../src/hooks/use-trip-live';
 import { useTripMutations } from '../../../src/hooks/use-trip-mutations';
 import type { MutationFailure } from '../../../src/store/gating';
 import { useTripStore } from '../../../src/store/trip-store';
+import { swipeToView } from '../../../src/lib/swipe';
 
 type TripView = 'roadbook' | 'map';
 
@@ -85,8 +86,30 @@ export default function TripRoadbook() {
   const insets = useSafeAreaInsets();
   const [view, setView] = useState<TripView>('roadbook');
   const [configOpen, setConfigOpen] = useState(false);
+  const [configSection, setConfigSection] = useState<'dates' | undefined>(undefined);
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Horizontal swipe between the roadbook and map tabs, mirroring the segmented
+  // control. Claims only a decisive horizontal gesture so the roadbook's
+  // vertical scroll (and, over the native map, its own pan) keep working.
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        onPanResponderRelease: (_, g) => {
+          const next = swipeToView(g.dx);
+          if (next) setView(next);
+        },
+      }),
+    [],
+  );
+
+  function openDatesConfig() {
+    setConfigSection('dates');
+    setConfigOpen(true);
+  }
 
   // Hydrate the shared store from /detail and keep it live via SSE. The child
   // views render straight from the store, so a stage_updated event reconciled by
@@ -131,9 +154,13 @@ export default function TripRoadbook() {
     });
   }
 
+  // Before the trip is hydrated, hide the native header: otherwise it shows the
+  // raw route name ("trip/[id]/index") next to the spinner. The header (title +
+  // ⋯ menu) appears only once the trip is loaded.
   if (loading) {
     return (
       <Screen padded={false}>
+        <Stack.Screen options={{ headerShown: false }} />
         <LoadingState />
       </Screen>
     );
@@ -142,6 +169,7 @@ export default function TripRoadbook() {
   if (error) {
     return (
       <Screen padded={false}>
+        <Stack.Screen options={{ headerShown: false }} />
         <ErrorState title={t('common.error')} description={error} />
       </Screen>
     );
@@ -151,6 +179,7 @@ export default function TripRoadbook() {
     <Screen padded={false}>
       <Stack.Screen
         options={{
+          headerShown: true,
           headerTitle: () => <TripTitleHeader tripId={id} />,
           headerRight: () => (
             <View
@@ -174,11 +203,23 @@ export default function TripRoadbook() {
           ),
         }}
       />
-      <View style={{ padding: theme.spacing.base }}>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing.base,
+          paddingTop: theme.spacing.sm,
+          paddingBottom: theme.spacing.sm,
+        }}
+      >
         <SegmentedControl segments={segments} value={view} onChange={setView} />
       </View>
 
-      {view === 'map' ? <TripMapView /> : <RoadbookView id={id} />}
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+        {view === 'map' ? (
+          <TripMapView />
+        ) : (
+          <RoadbookView id={id} onConfigureDates={openDatesConfig} />
+        )}
+      </View>
 
       <Modal
         visible={menuOpen}
@@ -209,6 +250,7 @@ export default function TripRoadbook() {
               label={t('trip.menu.config')}
               onPress={() => {
                 setMenuOpen(false);
+                setConfigSection(undefined);
                 setConfigOpen(true);
               }}
             />
@@ -267,6 +309,7 @@ export default function TripRoadbook() {
       <ConfigSheet
         tripId={id}
         visible={configOpen}
+        initialSection={configSection}
         onClose={() => setConfigOpen(false)}
       />
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} tripId={id} />
