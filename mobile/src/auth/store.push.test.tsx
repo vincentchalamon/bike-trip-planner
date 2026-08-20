@@ -3,6 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { AuthProvider, useAuth } from './store';
 import { registerDeviceToken, unregisterDeviceToken } from '../notifications/push';
 import { verifyMagicToken } from './authApi';
+import { onSessionInvalidated } from './session';
 
 // Wiring test (#1125): the AuthProvider must register the push token on login and
 // unregister it on logout. The push module itself is stubbed — its POST/DELETE
@@ -68,6 +69,28 @@ describe('AuthProvider push wiring', () => {
 
     await act(async () => {
       await auth.logout();
+    });
+
+    expect(unregister).toHaveBeenCalledTimes(1);
+  });
+
+  it('unregisters the device token when the session is invalidated', async () => {
+    // Capture the callback the provider hands to onSessionInvalidated so we can
+    // fire it as an out-of-band refresh failure would.
+    let onInvalidated: (() => void) | undefined;
+    (onSessionInvalidated as jest.Mock).mockImplementation((cb: () => void) => {
+      onInvalidated = cb;
+      return () => undefined;
+    });
+    verify.mockResolvedValue(true);
+    await mount();
+    await act(async () => {
+      await auth.verify('magic-token');
+    });
+
+    await act(async () => {
+      onInvalidated?.();
+      await Promise.resolve();
     });
 
     expect(unregister).toHaveBeenCalledTimes(1);

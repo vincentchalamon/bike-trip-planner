@@ -27,6 +27,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Best-effort push-token unregister, shared by explicit logout and out-of-band
+// session invalidation (#1125). On invalidation the JWT may already be cleared,
+// so the DELETE can fail server-side — swallow it so it never blocks teardown.
+function dropPushToken(): Promise<void> {
+  return unregisterDeviceToken().catch(() => undefined);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -80,9 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => rotation.remove();
   }, [authenticated]);
 
-  // A refresh that definitively fails clears the tokens outside React; flip the
+  // A refresh that definitively fails clears the tokens outside React; unregister
+  // the push token (so an expired session stops receiving pushes) and flip the
   // state so the (tabs) guard redirects to /login instead of 401'ing forever.
-  useEffect(() => onSessionInvalidated(endSession), [endSession]);
+  useEffect(
+    () =>
+      onSessionInvalidated(() => {
+        void dropPushToken();
+        endSession();
+      }),
+    [endSession],
+  );
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
@@ -112,9 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async (): Promise<void> => {
     // Unregister the push token while the JWT is still valid, so a shared device
-    // stops receiving this account's pushes (#1125). Best-effort: a failure must
-    // not block logout.
-    await unregisterDeviceToken().catch(() => undefined);
+    // stops receiving this account's pushes (#1125).
+    await dropPushToken();
     await clearTokens();
     endSession();
   }, [endSession]);
