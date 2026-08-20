@@ -129,6 +129,22 @@ export const en: typeof fr = {
     faqTitle: 'FAQ',
     legalTitle: 'Legal notice',
     privacyTitle: 'Privacy',
+    emailChange: {
+      description:
+        'Enter your new email address. A confirmation link will be sent to it; the change only takes effect once you open that link.',
+      label: 'New email address',
+      placeholder: 'you@example.com',
+      submit: 'Send confirmation link',
+      submitting: 'Sending…',
+      error: 'Could not send the link. Check the address and try again.',
+      sentTitle: 'Link sent',
+      sent: 'A confirmation link was sent to {{email}}. Open it to confirm the change.',
+      verifying: 'Confirming the email change…',
+      verifyFailedTitle: 'Invalid or expired link',
+      verifyFailedBody:
+        'This confirmation link is no longer valid. Start a new email change from your account.',
+      backToAccount: 'Back to account',
+    },
   },
   trip: {
     title: 'Roadbook',

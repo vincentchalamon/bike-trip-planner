@@ -127,6 +127,22 @@ export const fr = {
     faqTitle: 'FAQ',
     legalTitle: 'Mentions légales',
     privacyTitle: 'Confidentialité',
+    emailChange: {
+      description:
+        'Saisissez votre nouvelle adresse e-mail. Un lien de confirmation y sera envoyé ; le changement ne prend effet qu’une fois ce lien ouvert.',
+      label: 'Nouvelle adresse e-mail',
+      placeholder: 'vous@exemple.com',
+      submit: 'Envoyer le lien de confirmation',
+      submitting: 'Envoi…',
+      error: 'Impossible d’envoyer le lien. Vérifiez l’adresse et réessayez.',
+      sentTitle: 'Lien envoyé',
+      sent: 'Un lien de confirmation a été envoyé à {{email}}. Ouvrez-le pour valider le changement.',
+      verifying: 'Validation du changement d’adresse…',
+      verifyFailedTitle: 'Lien invalide ou expiré',
+      verifyFailedBody:
+        'Ce lien de confirmation n’est plus valide. Relancez un changement d’adresse depuis votre compte.',
+      backToAccount: 'Retour au compte',
+    },
   },
   trip: {
     title: 'Roadbook',
