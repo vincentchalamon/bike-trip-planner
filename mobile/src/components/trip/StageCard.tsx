@@ -62,16 +62,14 @@ export function StageCard({
   const heading = date
     ? formatStageDate(date, i18n.language)
     : t('trip.day', { day: stage.dayNumber ?? '?' });
-  // Route title: both endpoints when known, else whichever single label is
-  // resolved, else fall back to the day label — never the "? → ?" placeholder
-  // when nothing is resolved yet.
+  // Route title = the stage's places (start → end), per 05-trip-roadbook. The day
+  // lives in the left badge (`heading`), so the title never repeats "Jour N": when
+  // no label is resolved yet (labels are reverse-geocoded async, ResolveStageLabels)
+  // it degrades to a neutral em-dash, not the day.
   const routeLabel =
     stage.startLabel && stage.endLabel
       ? `${stage.startLabel} → ${stage.endLabel}`
-      : (stage.startLabel ??
-        stage.endLabel ??
-        stage.label ??
-        t('trip.day', { day }));
+      : (stage.startLabel ?? stage.endLabel ?? stage.label ?? '—');
 
   const alertCount = stage.alerts?.length ?? 0;
 
