@@ -1986,6 +1986,14 @@ Fichiers partagés (arbitrage) :
 
 **Round de revue (bot claude-code-review).** Findings bloquants corrigés avant READY : #1127 email header (`GET /auth/session` cookie-only → nouvel endpoint `GET /users/me` JWT, #1116), #1132 (`deleteAccount` catch réseau), #1135 (rappels locaux one-shot re-déclenchés → set `delivered` persistant), #1136 (purge device-tokens seulement sur `UNREGISTERED` + retrait retry non-idempotent). Findings « issue » aussi corrigés : #1130 (bannière permission re-checkée au foreground), #1131 (email contact configurable `EXPO_PUBLIC_CONTACT_EMAIL`), #1128 (contrat OpenAPI 201 + race → 409). Suggestions laissées (notées) : couverture de tests hook `useEmailChange` (#1129) et repository DQL (#1136).
 
+**2e round de revue (correctness).** Aussi corrigés : #1129 (route verify `/account/email-change/verify` + catch verify/refreshEmail séparés + garde d'annulation `refreshEmail`), #1135 (reschedule sur changement d'heure + **annulation des notifs orphelines** d'un voyage supprimé), #1134 (garde du POST register + **désenregistrement device-token sur invalidation de session**), #1136 (logs d'échec FCM au niveau **error** — un `warning` ne franchit pas le `fingers_crossed action_level:error` de prod), #1128 (test race 409), #1130 (bannière **verte** quand accordée, compteur « N actives » pluralisé, tests denied/Allow), #1118 (mot-clé SUPPRIMER **monospace**, bouton **Annuler**, feedback succès export), #1116 (logout **outline**). Conformité maquettes 10-account/11-notifications + thème vérifiés (aucun hex brut dans les écrans).
+
+**⚠️ Conflit de merge attendu — `mobile/src/auth/store.tsx`.** #1117 (garde `refreshEmail` via `sessionGen`/`endSession` sur `onSessionInvalidated`) et #1125 (`dropPushToken` sur `onSessionInvalidated` + logout) modifient tous deux le handler `onSessionInvalidated`. Au merge : **garder les deux** — l'invalidation doit à la fois `dropPushToken()`, bumper `sessionGen` et `setAuthenticated(false)`.
+
+**Threads laissés ouverts (design assumé, non bloquants).** #1128 token dans l'URL du DELETE (identifiant naturel, bot le marque non-bloquant) ; #1130 `NOTIFICATION_CHANNELS` (groundwork consommé par #1121/#1125) et `request()` set-state-after-unmount (mineur) ; #1134 test de la garde `cancelled` (couvert par le test de #1117 dans la même stack).
+
+**Perf (~20s) — hors périmètre Sprint 57, localisé.** Cause n°1 : `mobile/src/api/client.ts` force `Accept-Encoding: identity` sur **toutes** les requêtes (contournement d'un bug de décodage okhttp br/zstd → accents cassés), désactivant la compression sur `GET /trips/{id}/route` (géométrie multi-Mo). Cause n°2 : aucun timeout de requête (une requête qui stalle pend jusqu'au timeout TCP OS). Fix compression **à valider sur device** (empirique, risque de réintroduire les accents cassés) ; fix timeout (AbortController) sûr. À traiter dans une PR perf dédiée.
+
 </details>
 
 <details><summary>
