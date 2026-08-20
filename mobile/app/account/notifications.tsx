@@ -146,7 +146,13 @@ function PermissionBanner() {
 
   const granted = state === 'granted';
   const Icon = granted ? CheckCircle2 : state === 'denied' ? BellOff : Bell;
-  const tint = granted ? theme.colors.brand : theme.colors.mutedIcon;
+  // Granted state reads as a green "all good" banner (maquette); denied/prompt
+  // keep the neutral surface with an action affordance.
+  const surface = granted ? theme.colors.successSoft : theme.colors.card;
+  const borderColor = granted ? theme.colors.successBorder : theme.colors.border;
+  const titleColor = granted ? theme.colors.successInk : theme.colors.foreground;
+  const hintColor = granted ? theme.colors.successInk : theme.colors.mutedForeground;
+  const tint = granted ? theme.colors.successInk : theme.colors.mutedIcon;
   const title = t(
     granted
       ? 'notifications.permissionGranted'
@@ -169,14 +175,14 @@ function PermissionBanner() {
   };
 
   return (
-    <Card>
+    <Card style={{ backgroundColor: surface, borderColor }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}>
         <Icon color={tint} size={22} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansSemibold, fontSize: 15 }}>
+          <Text style={{ color: titleColor, fontFamily: theme.fonts.sansSemibold, fontSize: 15 }}>
             {title}
           </Text>
-          <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}>
+          <Text style={{ color: hintColor, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}>
             {hint}
           </Text>
           {state === 'prompt' ? (

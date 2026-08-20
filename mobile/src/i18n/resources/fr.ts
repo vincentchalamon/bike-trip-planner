@@ -146,6 +146,8 @@ export const fr = {
   },
   notifications: {
     title: 'Notifications',
+    activeCount_one: '{{count}} active',
+    activeCount_other: '{{count}} actives',
     permissionGranted: 'Autorisées par le système',
     permissionGrantedHint: 'Gérer dans les réglages Android.',
     permissionDenied: 'Bloquées par le système',

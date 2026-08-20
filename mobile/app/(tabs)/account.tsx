@@ -130,7 +130,7 @@ export default function Account() {
       <Card style={CARD_ROWS}>
         <ListRow
           title={t('account.notifications')}
-          right={<RowRight value={String(notificationCount)} />}
+          right={<RowRight value={t('notifications.activeCount', { count: notificationCount })} />}
           onPress={() => router.push('/account/notifications')}
         />
         <ListRow

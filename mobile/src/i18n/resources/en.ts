@@ -148,6 +148,8 @@ export const en: typeof fr = {
   },
   notifications: {
     title: 'Notifications',
+    activeCount_one: '{{count}} active',
+    activeCount_other: '{{count}} active',
     permissionGranted: 'Allowed by the system',
     permissionGrantedHint: 'Manage in Android settings.',
     permissionDenied: 'Blocked by the system',

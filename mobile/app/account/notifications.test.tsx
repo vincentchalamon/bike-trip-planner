@@ -1,9 +1,10 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
-import { AppState, Text } from 'react-native';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import i18n from '../../src/i18n';
+import { lightColors } from '../../src/theme/tokens';
 import { NOTIFICATION_DEFAULTS, selectActiveCount, useNotificationPrefs } from '../../src/store/notification-prefs';
 import AccountNotifications from './notifications';
 
@@ -61,6 +62,32 @@ describe('AccountNotifications screen', () => {
     expect(labels).toContain('Voyage sans date');
     expect(labels).toContain("Ouverture d'une nouvelle zone");
     expect(labels).toContain('opt-in · désactivé par défaut');
+  });
+
+  it('paints the granted banner with the green success palette', async () => {
+    getPerms.mockResolvedValue({ granted: true, canAskAgain: false });
+    const tree = await render(<AccountNotifications />);
+
+    // Green surface (successSoft) on the banner card.
+    const greenCard = tree.root
+      .findAllByType(View)
+      .find((n: any) => StyleSheet.flatten(n.props.style)?.backgroundColor === lightColors.successSoft);
+    expect(greenCard).toBeDefined();
+
+    // Green ink (successInk) on the banner title.
+    const title = tree.root
+      .findAllByType(Text)
+      .find((n: any) => n.props.children === 'Autorisées par le système');
+    expect(StyleSheet.flatten(title.props.style)?.color).toBe(lightColors.successInk);
+  });
+
+  it('formats the active-count label per the maquette', async () => {
+    await i18n.changeLanguage('fr');
+    expect(i18n.t('notifications.activeCount', { count: 4 })).toBe('4 actives');
+    expect(i18n.t('notifications.activeCount', { count: 1 })).toBe('1 active');
+    await i18n.changeLanguage('en');
+    expect(i18n.t('notifications.activeCount', { count: 4 })).toBe('4 active');
+    await i18n.changeLanguage('fr');
   });
 
   it('re-checks the permission when the app returns to the foreground', async () => {
