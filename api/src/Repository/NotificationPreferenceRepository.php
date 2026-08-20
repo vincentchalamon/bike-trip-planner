@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Enum\NotificationCategory;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<NotificationPreference>
@@ -26,7 +27,10 @@ final class NotificationPreferenceRepository extends ServiceEntityRepository imp
         $preference = $this->createQueryBuilder('np')
             ->andWhere('IDENTITY(np.user) = :userId')
             ->andWhere('np.category = :category')
-            ->setParameter('userId', $userId)
+            // Wrap in Uuid so the parameter round-trips through the `uuid` DBAL type
+            // against the FK column; a raw string risks a type error or a silently-
+            // never-matching query (ADR-058: no silent no-op), like findByUserId.
+            ->setParameter('userId', Uuid::fromString($userId))
             ->setParameter('category', $category)
             ->getQuery()
             ->getOneOrNullResult();
