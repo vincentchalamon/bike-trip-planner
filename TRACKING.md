@@ -1977,9 +1977,8 @@ Fichiers partagés (arbitrage) :
 - `mobile/src/i18n/resources/{fr,en}.ts` : #1116 pose `account.*`, #1120 pose `notifications`, les enfants ajoutent leurs sous-clés. Conflits triviaux additifs à la fin de l'objet → résoudre en gardant les deux blocs.
 - `mobile/src/store/notification-prefs.ts` : défini par #1120 ; #1121 et #1125 le **lisent** seulement (ne pas redéfinir).
 - `mobile/package.json` + `package-lock.json` : `expo-notifications` ajouté par #1120 (gagne). #1125 réutilise, ne réajoute pas.
-- `core/schema.d.ts` : régénéré par #1122 (DTO device-token). #1123/#1124 rebasent dessus. (Chemin réel des types générés depuis ADR-053, pas `pwa/src/lib/api/schema.d.ts`.)
 - `compose.yaml` (php+worker) + `api/config/services.php` : secrets FCM ajoutés **uniquement** par #1123.
-- `core/schema.d.ts` : régénéré par **#1116** (nouvel endpoint `GET /users/me`, ajouté au round de revue) **et** par **#1122** (device-tokens). Conflit attendu quand le 2e des deux stacks merge sur main → **résoudre en régénérant** (`make typegen`), ne pas merger le fichier à la main.
+- `core/schema.d.ts` : régénéré par **#1116** (endpoint `GET /users/me`) **et** par **#1122** (DTO device-token), #1123/#1124 rebasent dessus. Conflit attendu quand le 2e des deux stacks merge sur main → **résoudre en régénérant** (`make typegen`), ne pas merger le fichier à la main. (Chemin réel des types générés depuis ADR-053, pas `pwa/src/lib/api/schema.d.ts`.)
 - `mobile/src/auth/store.tsx` : réécrit par #1116 (email via `GET /users/me`) ; #1117 (`refreshEmail`) et #1125 (register/unregister device-token) ajoutent des hunks additifs. Rebasés proprement, mais re-résoudre en régénérant si un futur rebase diverge.
 
 **#1125 (base reconstruite).** `feature/1125` = `feature/1120` (à jour) + merge `feature/1122` (à jour) + son commit propre. À merger **en dernier**, après l'atterrissage des deux stacks sur main, en rebasant sur main (le diff se réduira à la couche mobile push).
