@@ -28,3 +28,8 @@ function getWebDevFallback(): string {
 // The API is client-agnostic and negotiates on JSON-LD only (auth tokens travel in
 // the body). Every mutating call sends and accepts application/ld+json.
 export const LD_JSON = 'application/ld+json';
+
+// Contact email shown in the account help screens (FAQ/legal/privacy — #1119).
+// Mirrors the pwa's CONTACT_EMAIL (src/lib/constants.ts): each self-hosted
+// instance can override it, no fail-closed behaviour needed (display-only).
+export const CONTACT_EMAIL = process.env.EXPO_PUBLIC_CONTACT_EMAIL ?? 'contact@example.org';
