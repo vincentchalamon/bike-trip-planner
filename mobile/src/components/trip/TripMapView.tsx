@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { profileHighlightSegment } from '@btp/core/elevation';
 import { EmptyState } from '../ui';
-import { Bike } from '../ui/icons';
 import { TripMap } from '../TripMap';
-import { collectMarkers } from '../map/map-utils';
+import { buildStageLines, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
 import { computeProfileSummary, groupThousands } from './trip-map-summary';
 import { useTheme } from '../../theme';
@@ -17,26 +17,21 @@ import { useTripRoute } from '../../hooks/use-trip-route';
 // no geometry yet. #1040 adds base-map toggle, markers and fit-bounds; #1041
 // stacks the elevation profile below and shares the hover state so a touch on the
 // profile surlines the matching stretch on the map. The Spike-UX restyle frames
-// the map full-bleed with a fixed bottom profile panel and a floating ride CTA.
+// the map full-bleed with a fixed bottom profile panel (in-ride CTA lives on the
+// Roadbook tab, not here).
 export function TripMapView() {
   // The summary omits geometry (ADR-057); pull the route in so the map has a line.
   useTripRoute();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const stages = useTripStore((s) => s.stages);
   const [hover, setHover] = useState<{ coordIndex: number; stageIndex: number } | null>(
     null,
   );
 
-  const coordinates = useMemo<[number, number][]>(() => {
-    const coords: [number, number][] = [];
-    for (const stage of stages) {
-      for (const point of stage.geometry ?? []) {
-        coords.push([point.lon, point.lat]);
-      }
-    }
-    return coords;
-  }, [stages]);
+  // One colored polyline per stage so each stage is visually distinct on the map.
+  const stageSegments = useMemo(() => buildStageLines(stages), [stages]);
 
   const markers = useMemo(() => collectMarkers(stages), [stages]);
 
@@ -50,30 +45,23 @@ export function TripMapView() {
     [hover, stages],
   );
 
-  if (coordinates.length === 0) {
+  if (stageSegments.length === 0) {
     return <EmptyState title={t('trip.mapEmpty')} />;
   }
   return (
     <View style={styles.container}>
       <View style={styles.map}>
         <TripMap
-          coordinates={coordinates}
+          stageSegments={stageSegments}
           markers={markers}
           highlightedSegment={highlightedSegment}
         />
-        {/* In-ride FAB: the in-ride screen is out of scope (Sprint 58), so this is
-            a deliberate placeholder — disabled, icon-only, dispatches nothing,
-            like the roadbook FAB. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('trip.map.rideCta')}
-          accessibilityState={{ disabled: true }}
-          disabled
-          style={[styles.fab, { backgroundColor: theme.colors.brand }, theme.shadows.medium]}
-        >
-          <Bike size={22} color={theme.colors.primaryForeground} />
-        </Pressable>
       </View>
+      {/* Fixed bottom profile panel: the map (flex:1) takes the remaining height
+          and the panel keeps its intrinsic height (title + SVG + axis), so map +
+          profile + axis always fit without a ScrollView. The safe-area bottom
+          inset is added to the padding so the distance/elevation axis is never
+          hidden under the system navigation bar. */}
       <View
         style={[
           styles.profile,
@@ -82,7 +70,7 @@ export function TripMapView() {
             borderTopColor: theme.colors.border,
             paddingHorizontal: theme.spacing.base,
             paddingTop: theme.spacing.md,
-            paddingBottom: theme.spacing.base,
+            paddingBottom: theme.spacing.base + insets.bottom,
             gap: theme.spacing.sm,
           },
         ]}
@@ -150,16 +138,6 @@ export function TripMapView() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  fab: {
-    position: 'absolute',
-    right: 12,
-    bottom: 12,
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 999,
-  },
   profile: { borderTopWidth: StyleSheet.hairlineWidth },
   profileHeader: {
     flexDirection: 'row',

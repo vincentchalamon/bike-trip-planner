@@ -1,4 +1,5 @@
 export { StageCard } from './StageCard';
+export { StageInsertRow } from './StageInsertRow';
 export { SseStatusIndicator } from './SseStatusIndicator';
 export { DataBlock } from './DataBlock';
 export { AlertsBlock } from './AlertsBlock';

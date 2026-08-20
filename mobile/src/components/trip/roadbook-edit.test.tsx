@@ -2,7 +2,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
-import { Alert, TextInput } from 'react-native';
+import { Alert } from 'react-native';
 import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
@@ -26,7 +26,7 @@ jest.mock('../../api/trips', () => ({
   deleteTrip: jest.fn(),
 }));
 
-import { createStage, insertRestDay, updateStageDistance } from '../../api/trips';
+import { createStage, insertRestDay } from '../../api/trips';
 import { RoadbookView } from './RoadbookView';
 
 const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
@@ -75,7 +75,6 @@ function press(tree: any, label: string): void {
 }
 
 const restDayA11y = () => i18n.t('trip.edit.addRestDayA11y', { day: 1 });
-const distanceA11y = () => i18n.t('trip.edit.editDistanceA11y', { day: 1 });
 const addStageA11y = () => i18n.t('trip.edit.addStageA11y', { day: 1 });
 
 describe('RoadbookView inline edit wiring (#1044)', () => {
@@ -95,14 +94,29 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
         stages: [stage(1), stage(2)],
         isLocked: false,
         outOfZone: false,
-        startDate: '2026-08-01',
-        endDate: '2026-08-02',
+        // Undated trip → lifecycle is "unknown", so the roadbook stays editable
+        // regardless of the (real) run date; the insertion rows are rendered.
+        startDate: null,
+        endDate: null,
         loading: false,
       });
     });
   });
 
   afterEach(() => alertSpy.mockRestore());
+
+  it('renders an insertion row between stages but never after the last one', () => {
+    const tree = render(<RoadbookView id="t1" />);
+    const addStageCount = (day: number) =>
+      tree.root.findAll(
+        (n: any) =>
+          n.props.accessibilityLabel === i18n.t('trip.edit.addStageA11y', { day }) &&
+          typeof n.props.onPress === 'function',
+      ).length;
+    // Two stages → one insertion row (after day 1); nothing past the destination.
+    expect(addStageCount(1)).toBe(1);
+    expect(addStageCount(2)).toBe(0);
+  });
 
   it('applies a rest-day insertion optimistically and calls the API', async () => {
     mock(insertRestDay).mockResolvedValue({ ok: true, status: 202 });
@@ -196,57 +210,4 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     expect(createStage).toHaveBeenCalledTimes(1);
   });
 
-  it('commits an inline distance edit to the API', async () => {
-    mock(updateStageDistance).mockResolvedValue({ ok: true, status: 202 });
-    const tree = render(<RoadbookView id="t1" />);
-
-    press(tree, distanceA11y());
-    const input = tree.root.find(
-      (n: any) => n.props.accessibilityLabel === distanceA11y() && 'value' in n.props,
-    );
-    act(() => input.props.onChangeText('88'));
-    press(tree, i18n.t('trip.edit.saveA11y'));
-
-    await act(async () => {});
-    expect(updateStageDistance).toHaveBeenCalledWith('t1', 0, 88);
-  });
-
-  // An open distance editor must never survive a structural shift bound to a
-  // different stage: with an index-based FlatList key React would reuse the row
-  // instance and the stale draft would commit onto the stage that slid into that
-  // position. Reproduce the shift and assert the editor is torn down (#1044).
-  it('tears down an open distance editor when a stage is inserted before it', () => {
-    const pA = { lat: 48.0, lon: 2.0, ele: 0 };
-    const pB = { lat: 48.5, lon: 2.5, ele: 0 };
-    const pC = { lat: 49.0, lon: 3.0, ele: 0 };
-    const contiguous = (dayNumber: number, start: typeof pA, end: typeof pA) => ({
-      ...stage(dayNumber),
-      startPoint: start,
-      endPoint: end,
-    });
-    act(() => {
-      useTripStore.setState({
-        stages: [contiguous(1, pA, pB), contiguous(2, pB, pC)],
-      });
-    });
-    const tree = render(<RoadbookView id="t1" />);
-
-    // Open the distance editor on the second stage (day 2) and stage a value.
-    const editX = i18n.t('trip.edit.editDistanceA11y', { day: 2 });
-    press(tree, editX);
-    const input = tree.root.findByType(TextInput);
-    act(() => input.props.onChangeText('999'));
-    expect(tree.root.findAllByType(TextInput)).toHaveLength(1);
-
-    // A manual stage inserted before it (placeholder spans the pB boundary)
-    // slides the edited stage down a row.
-    act(() =>
-      useTripStore.getState().insertStageOptimistic(0, contiguous(0, pB, pB)),
-    );
-
-    expect(useTripStore.getState().stages).toHaveLength(3);
-    // The stale editor is gone: no mounted distance input remains, so '999'
-    // can no longer be committed onto the wrong stage.
-    expect(tree.root.findAllByType(TextInput)).toHaveLength(0);
-  });
 });

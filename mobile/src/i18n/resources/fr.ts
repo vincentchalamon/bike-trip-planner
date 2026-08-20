@@ -287,6 +287,7 @@ export const fr = {
       locked: 'Voyage démarré : lecture seule.',
       outOfZone: 'Itinéraire hors de la zone couverte.',
       noDates: 'Définissez les dates de votre voyage.',
+      noDatesA11y: 'Définir les dates du voyage',
     },
     delete: 'Supprimer',
     deleteA11y: 'Supprimer le jour {{day}}',

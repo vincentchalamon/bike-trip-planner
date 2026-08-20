@@ -118,7 +118,6 @@ function TripCard({
       accessibilityRole="button"
       onPress={onOpen}
       style={({ pressed }) => ({
-        flexDirection: 'row',
         overflow: 'hidden',
         borderRadius: theme.radius.xl,
         borderWidth: StyleSheet.hairlineWidth,
@@ -129,8 +128,8 @@ function TripCard({
     >
       <View
         style={{
-          width: 116,
-          alignSelf: 'stretch',
+          height: 92,
+          width: '100%',
           backgroundColor: theme.colors.secondary,
         }}
       >
@@ -168,10 +167,10 @@ function TripCard({
         </View>
       </View>
 
-      <View style={{ flex: 1, padding: theme.spacing.md, justifyContent: 'center' }}>
+      <View style={{ padding: theme.spacing.md }}>
         <Text
           numberOfLines={2}
-          style={{ color: theme.colors.foreground, fontFamily: theme.fonts.serif, fontSize: 17 }}
+          style={{ color: theme.colors.foreground, fontFamily: theme.fonts.serif, fontSize: 16 }}
         >
           {title}
         </Text>
