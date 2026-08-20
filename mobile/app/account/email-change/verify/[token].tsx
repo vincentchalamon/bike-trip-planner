@@ -8,11 +8,13 @@ import { useAuth } from '../../../../src/auth/store';
 import { verifyEmailChange } from '../../../../src/hooks/use-email-change';
 
 // Handles the email-change confirmation deep link, for both forms:
-//   App Link      : https://<host>/account/email/verify/<token>
-//   custom scheme : biketripplanner://account/email/verify/<token>
+//   App Link      : https://<host>/account/email-change/verify/<token>
+//   custom scheme : biketripplanner://account/email-change/verify/<token>
+// The path mirrors the backend link ({FRONTEND_URL}/account/email-change/verify/
+// {token}, RequestEmailChangeProcessor) and the PWA route of the same name.
 // The link is sent to the NEW address; opening it while authenticated commits the
 // change (single-use token, atomic server-side). On success the account email is
-// refreshed from the session so the account screen reflects the new address.
+// refreshed via GET /users/me so the account screen reflects the new address.
 export default function VerifyEmailChangeScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const { refreshEmail } = useAuth();

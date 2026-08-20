@@ -22,7 +22,10 @@ module.exports = ({ config }) => ({
       {
         action: 'VIEW',
         autoVerify: true,
-        data: [{ scheme: 'https', host: appLinkHost(), pathPrefix: '/auth/verify' }],
+        data: [
+          { scheme: 'https', host: appLinkHost(), pathPrefix: '/auth/verify' },
+          { scheme: 'https', host: appLinkHost(), pathPrefix: '/account/email-change/verify' },
+        ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ],
