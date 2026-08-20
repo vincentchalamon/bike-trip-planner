@@ -171,7 +171,7 @@ export default function Account() {
       </Card>
 
       <View style={{ height: theme.spacing.xl }} />
-      <Button label={t('account.logout')} variant="secondary" onPress={() => void logout()} />
+      <Button label={t('account.logout')} variant="outline" onPress={() => void logout()} />
 
       <Sheet visible={languageOpen} onClose={() => setLanguageOpen(false)} title={t('account.languageSheetTitle')}>
         <LocaleSwitcher />
