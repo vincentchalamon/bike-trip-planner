@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
+import { registerDeviceToken, subscribeTokenRotation, unregisterDeviceToken } from '../notifications/push';
 import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';
@@ -25,6 +26,14 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Best-effort push-token unregister for explicit logout, while the JWT is still
+// valid. Out-of-band session invalidation unregisters in doRefresh (before it
+// clears the tokens), not here — by the time onSessionInvalidated fires the JWT
+// is already gone, so a DELETE here would 401 (#1125).
+function dropPushToken(): Promise<void> {
+  return unregisterDeviceToken().catch(() => undefined);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -69,8 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [authenticated]);
 
-  // A refresh that definitively fails clears the tokens outside React; flip the
-  // state so the (tabs) guard redirects to /login instead of 401'ing forever.
+  // Register this device's push token once authenticated (fresh login or a
+  // restored session), and re-register on OS token rotation (#1125). Silent no-op
+  // when push permission is absent.
+  useEffect(() => {
+    if (!authenticated) return;
+    void registerDeviceToken();
+    const rotation = subscribeTokenRotation();
+    return () => rotation.remove();
+  }, [authenticated]);
+
+  // A refresh that definitively fails clears the tokens outside React (after
+  // unregistering the push token, in doRefresh). Flip the state so the (tabs)
+  // guard redirects to /login instead of 401'ing forever.
   useEffect(() => onSessionInvalidated(endSession), [endSession]);
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
@@ -100,6 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
+    // Unregister the push token while the JWT is still valid, so a shared device
+    // stops receiving this account's pushes (#1125).
+    await dropPushToken();
     await clearTokens();
     endSession();
   }, [endSession]);
