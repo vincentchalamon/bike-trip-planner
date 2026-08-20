@@ -36,6 +36,17 @@ function scheduledWith(identifiers: string[]): void {
   getAll.mockResolvedValue(identifiers.map((identifier) => ({ identifier })));
 }
 
+// Scheduled notifications carrying their DATE-trigger fire time (as the real API
+// returns), so reconcile can compare the desired time against the scheduled one.
+function scheduledWithDates(entries: Record<string, number>): void {
+  getAll.mockResolvedValue(
+    Object.entries(entries).map(([identifier, date]) => ({
+      identifier,
+      trigger: { type: 'date', date },
+    })),
+  );
+}
+
 const markDelivered = jest.fn();
 const clearDelivered = jest.fn();
 
@@ -159,5 +170,26 @@ describe('reconcileLocalNotifications', () => {
     );
     expect(clearDelivered).toHaveBeenCalledWith(OFFLINE_ID);
     expect(markDelivered).not.toHaveBeenCalled();
+  });
+
+  it('reschedules an already-scheduled reminder when its desired fire time moved', async () => {
+    // Scheduled at NOW+5d, but the dateless trip was created at NOW so the desired
+    // reminder time is NOW+2d — the stale schedule must be moved.
+    scheduledWithDates({ [NODATE_ID]: NOW + 5 * DAY });
+    await run({ startDate: null });
+    expect(cancel).toHaveBeenCalledWith(NODATE_ID);
+    expect(schedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identifier: NODATE_ID,
+        trigger: { type: 'date', date: NOW + 2 * DAY },
+      }),
+    );
+  });
+
+  it('leaves an already-scheduled reminder whose fire time is unchanged', async () => {
+    scheduledWithDates({ [NODATE_ID]: NOW + 2 * DAY }); // equals the desired time
+    await run({ startDate: null });
+    expect(cancel).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
   });
 });
