@@ -55,6 +55,12 @@ describe('registerDeviceToken', () => {
     await registerDeviceToken();
     expect(post).not.toHaveBeenCalled();
   });
+
+  it('resolves without throwing and skips the POST when the permission API itself throws', async () => {
+    getPerms.mockRejectedValue(new Error('no Google Play Services'));
+    await expect(registerDeviceToken()).resolves.toBeUndefined();
+    expect(post).not.toHaveBeenCalled();
+  });
 });
 
 describe('unregisterDeviceToken', () => {

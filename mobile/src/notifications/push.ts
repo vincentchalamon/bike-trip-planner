@@ -36,13 +36,17 @@ function devicePlatform(): DevicePlatform {
 // null when permission is absent or the OS cannot mint one (e.g. a simulator
 // without push support): registration is then a silent no-op.
 async function fetchDeviceToken(): Promise<string | null> {
-  const current = await Notifications.getPermissionsAsync();
-  const granted = current.granted || (await Notifications.requestPermissionsAsync()).granted;
-  if (!granted) return null;
   try {
+    const current = await Notifications.getPermissionsAsync();
+    const granted = current.granted || (await Notifications.requestPermissionsAsync()).granted;
+    if (!granted) return null;
     const { data } = await Notifications.getDevicePushTokenAsync();
     return typeof data === 'string' ? data : null;
   } catch {
+    // The permission API itself throws on some builds (Android without Google
+    // Play Services, custom ROMs, emulators), not just getDevicePushTokenAsync.
+    // register is fired fire-and-forget from the auth store, so an unhandled
+    // rejection would crash it — keep the whole path a silent no-op.
     return null;
   }
 }
