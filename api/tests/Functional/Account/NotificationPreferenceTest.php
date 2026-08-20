@@ -113,4 +113,19 @@ final class NotificationPreferenceTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(401);
     }
+
+    #[Test]
+    public function putWithoutAnEnabledFieldIsRejectedAndDoesNotSilentlyDisable(): void
+    {
+        // A body omitting `enabled` must 422 (Assert\NotNull), not default to false
+        // and silently opt the user out of a default-ON category.
+        $fixtures = $this->createUser('prefs-missing-enabled@example.com');
+
+        self::createClient()->request('PUT', '/users/me/notification-preferences/weatherSafety', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => [],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+    }
 }

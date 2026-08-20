@@ -47,11 +47,16 @@ final readonly class NotificationPreferenceUpdateProcessor implements ProcessorI
             throw new NotFoundHttpException();
         }
 
+        // Guaranteed non-null by the resource's #[Assert\NotNull] (validation runs
+        // before this processor): a PUT omitting `enabled` 422s and never reaches here.
+        $enabled = $data->enabled;
+        \assert(null !== $enabled);
+
         $preference = $this->preferences->findOne($user, $category);
         if ($preference instanceof NotificationPreference) {
-            $preference->setEnabled($data->enabled);
+            $preference->setEnabled($enabled);
         } else {
-            $preference = new NotificationPreference($user, $category, $data->enabled);
+            $preference = new NotificationPreference($user, $category, $enabled);
         }
 
         try {

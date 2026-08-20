@@ -1319,7 +1319,8 @@ export interface components {
          *     - GET /users/me/notification-preferences         the effective opt-in for every
          *       category (stored override, or the category default when unset).
          *     - PUT /users/me/notification-preferences/{category}  set the opt-in for one
-         *       category. Body: {"enabled": true|false}. An unknown category is 404.
+         *       category. Body: {"enabled": true|false} — `enabled` is required (a body
+         *       omitting it is 422, never a silent opt-out). An unknown category is 404.
          *
          *     Defaults: weatherSafety and analysisDone are ON, zoneOpening is OFF (opt-in).
          *     The current user is always resolved from the security token, never a URL id.
@@ -1327,7 +1328,7 @@ export interface components {
         NotificationPreference: {
             /** @enum {string|null} */
             category?: "weatherSafety" | "analysisDone" | "zoneOpening" | null;
-            enabled?: boolean;
+            enabled: boolean | null;
         };
         /**
          * @description Per-category server-push opt-in for the authenticated user (#1124).
@@ -1335,7 +1336,8 @@ export interface components {
          *     - GET /users/me/notification-preferences         the effective opt-in for every
          *       category (stored override, or the category default when unset).
          *     - PUT /users/me/notification-preferences/{category}  set the opt-in for one
-         *       category. Body: {"enabled": true|false}. An unknown category is 404.
+         *       category. Body: {"enabled": true|false} — `enabled` is required (a body
+         *       omitting it is 422, never a silent opt-out). An unknown category is 404.
          *
          *     Defaults: weatherSafety and analysisDone are ON, zoneOpening is OFF (opt-in).
          *     The current user is always resolved from the security token, never a URL id.
@@ -1343,7 +1345,7 @@ export interface components {
         "NotificationPreference.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             /** @enum {string|null} */
             category?: "weatherSafety" | "analysisDone" | "zoneOpening" | null;
-            enabled?: boolean;
+            enabled: boolean | null;
         };
         "PoiSuggestionDto.jsonld": {
             /** @description Display name of the POI. */
