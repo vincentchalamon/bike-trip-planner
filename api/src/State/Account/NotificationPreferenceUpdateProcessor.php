@@ -11,7 +11,9 @@ use App\Entity\NotificationPreference;
 use App\Entity\User;
 use App\Enum\NotificationCategory;
 use App\Repository\NotificationPreferenceRepositoryInterface;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -52,7 +54,13 @@ final readonly class NotificationPreferenceUpdateProcessor implements ProcessorI
             $preference = new NotificationPreference($user, $category, $data->enabled);
         }
 
-        $this->preferences->save($preference);
+        try {
+            $this->preferences->save($preference);
+        } catch (UniqueConstraintViolationException) {
+            // A concurrent PUT for the same (user, category) inserted between the
+            // lookup and this flush — same guard as DeviceTokenRegisterProcessor.
+            throw new ConflictHttpException('Notification preference update conflicted with a concurrent request; retry.');
+        }
 
         return new NotificationPreferenceResource($category, $preference->isEnabled());
     }
