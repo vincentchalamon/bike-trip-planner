@@ -9,10 +9,12 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use App\State\Account\AccountDeleteProcessor;
 use App\State\Account\AccountExportProvider;
+use App\State\Account\AccountMeProvider;
 
 /**
  * GDPR self-service operations for the authenticated user (#549).
  *
+ * - GET    /users/me        the current user's profile ({ userId, email, locale })
  * - DELETE /users/me        right to erasure: anonymise the account, purge
  *   trips and preferences, revoke refresh tokens
  * - GET    /users/me/export right to portability: download a JSON archive of
@@ -24,6 +26,12 @@ use App\State\Account\AccountExportProvider;
 #[ApiResource(
     shortName: 'Account',
     operations: [
+        new Get(
+            uriTemplate: '/users/me',
+            security: "is_granted('ROLE_USER')",
+            output: AccountMe::class,
+            provider: AccountMeProvider::class,
+        ),
         new Delete(
             uriTemplate: '/users/me',
             status: 204,
