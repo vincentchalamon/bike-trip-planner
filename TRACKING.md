@@ -1992,7 +1992,15 @@ Fichiers partagés (arbitrage) :
 
 **Threads laissés ouverts (design assumé, non bloquants).** #1128 token dans l'URL du DELETE (identifiant naturel, bot le marque non-bloquant) ; #1130 `NOTIFICATION_CHANNELS` (groundwork consommé par #1121/#1125) et `request()` set-state-after-unmount (mineur) ; #1134 test de la garde `cancelled` (couvert par le test de #1117 dans la même stack).
 
-**Perf (~20s) — hors périmètre Sprint 57, localisé.** Cause n°1 : `mobile/src/api/client.ts` force `Accept-Encoding: identity` sur **toutes** les requêtes (contournement d'un bug de décodage okhttp br/zstd → accents cassés), désactivant la compression sur `GET /trips/{id}/route` (géométrie multi-Mo). Cause n°2 : aucun timeout de requête (une requête qui stalle pend jusqu'au timeout TCP OS). Fix compression **à valider sur device** (empirique, risque de réintroduire les accents cassés) ; fix timeout (AbortController) sûr. À traiter dans une PR perf dédiée.
+**Perf (~20s) — QA device (hors périmètre Sprint 57).** Testé sur device Android (dev build) contre le backend réel :
+
+- **~20s NON reproduit** : le trip dispo (192 km, 2 étapes) charge sa carte (`GET /route` + rendu géométrie + profil) en **<3s**. Les ~20s viennent probablement d'un trip bien plus gros (géométrie volumineuse) ou d'autres conditions réseau — repro exact à préciser.
+- `mobile/src/api/client.ts` force `Accept-Encoding: identity` (contourne un bug okhttp br/zstd → accents en Latin-1). **`identity` est load-bearing pour les accents** (confirmé device : un build antérieur au fix affichait « SensÃ©e »), donc il désactive la compression sur `/route`. Réactiver la compression doit se faire **côté serveur** (Caddy : négociation charset/encoding par UA), PAS en retirant `identity` — sinon régression accents. À traiter en PR perf/serveur dédiée si les ~20s se confirment sur gros trip.
+
+**QA device — 2 bugs pré-existants sur `main` (pas Sprint 57) :**
+
+- **Menu ⋮ du détail voyage recouvrait son bouton** → corrigé + vérifié device, **PR [#1140](https://github.com/vincentchalamon/bike-trip-planner/pull/1140)** (`fix/trip-menu-overlap`) : dropdown ancré sous le header + bouton toggle.
+- **Mojibake « SensÃ©e » sur la liste** → **PAS un bug du `main` courant** : la carte reçoit le titre correct (é=U+00E9), le cold-start l'affiche « Sensée ». Le mojibake venait du **bundle de l'APK périmé du device** (build antérieur au fix `identity`). Aucun fix code ; réinstaller un build récent sur le device.
 
 </details>
 
