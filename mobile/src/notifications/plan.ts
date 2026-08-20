@@ -48,20 +48,13 @@ export interface CancelAction {
 }
 export type NotificationAction = ScheduleAction | CancelAction;
 
-// Namespace prefix for every identifier this feature schedules, so orphan cleanup
-// can target our own notifications and never touch another feature's.
+// Namespace prefix for every identifier this feature schedules, so its ids never
+// collide with another feature's.
 const ID_PREFIX = 'btp:';
 
 /** Stable, per-(category, trip) identifier so scheduling is idempotent. */
 export function notificationIdentifier(category: LocalCategory, tripId: string): string {
   return `${ID_PREFIX}${category}:${tripId}`;
-}
-
-/** True for identifiers this module owns (a `btp:<local-category>:<tripId>` id). */
-export function isManagedIdentifier(id: string): boolean {
-  if (!id.startsWith(ID_PREFIX)) return false;
-  const category = id.slice(ID_PREFIX.length, id.indexOf(':', ID_PREFIX.length));
-  return (LOCAL_CATEGORIES as readonly string[]).includes(category);
 }
 
 // A one-shot whose ideal fire time is already in the past (rawFireAt <= now) is

@@ -134,20 +134,15 @@ describe('reconcileLocalNotifications', () => {
     expect(cancel).toHaveBeenCalledWith(OFFLINE_ID);
   });
 
-  it('cancels a managed notification whose trip has left the list (deleted trip)', async () => {
-    const ORPHAN_ID = notificationIdentifier('tripNoDate', 't2');
-    scheduledWith([ORPHAN_ID]);
-    // Input carries only t1 (dated → no tripNoDate desired); t2 is gone, so its
-    // still-scheduled reminder would fire for a trip that no longer exists.
+  it('leaves a scheduled notification for a trip absent from the list (paged/filtered out)', async () => {
+    // reconcile only ever sees a partial list (paginated + search-filtered), so it
+    // must not cancel a reminder just because its trip is not in the current page:
+    // that would fire on plain browsing/search. Removal is handled at the delete site.
+    const ABSENT_ID = notificationIdentifier('tripNoDate', 't2');
+    scheduledWith([ABSENT_ID]);
     await run({ startDate: '2026-09-10T00:00:00Z' });
-    expect(cancel).toHaveBeenCalledWith(ORPHAN_ID);
-    expect(clearDelivered).toHaveBeenCalledWith(ORPHAN_ID);
-  });
-
-  it('leaves a foreign (non-managed) scheduled notification untouched', async () => {
-    scheduledWith(['other-feature:reminder']);
-    await run({ startDate: '2026-09-10T00:00:00Z' });
-    expect(cancel).not.toHaveBeenCalledWith('other-feature:reminder');
+    expect(cancel).not.toHaveBeenCalledWith(ABSENT_ID);
+    expect(clearDelivered).not.toHaveBeenCalledWith(ABSENT_ID);
   });
 
   it('marks a past-due one-shot delivered when it fires immediately', async () => {
