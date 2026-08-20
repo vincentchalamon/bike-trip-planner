@@ -51,7 +51,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Retrieves a Account resource.
+         * @description Retrieves a Account resource.
+         */
+        get: operations["api_usersme_get"];
         put?: never;
         post?: never;
         /**
@@ -837,6 +841,24 @@ export interface components {
         /**
          * @description GDPR self-service operations for the authenticated user (#549).
          *
+         *     - GET    /users/me        the current user's profile ({ userId, email, locale })
+         *     - DELETE /users/me        right to erasure: anonymise the account, purge
+         *       trips and preferences, revoke refresh tokens
+         *     - GET    /users/me/export right to portability: download a JSON archive of
+         *       the profile, trips and their preferences
+         *
+         *     The current user is always resolved from the security token, never from a
+         *     URL identifier, so there is no IDOR surface.
+         */
+        "Account.AccountMe.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            userId?: string;
+            email?: string;
+            locale?: string;
+        };
+        /**
+         * @description GDPR self-service operations for the authenticated user (#549).
+         *
+         *     - GET    /users/me        the current user's profile ({ userId, email, locale })
          *     - DELETE /users/me        right to erasure: anonymise the account, purge
          *       trips and preferences, revoke refresh tokens
          *     - GET    /users/me/export right to portability: download a JSON archive of
@@ -2169,6 +2191,48 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_usersme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Account.AccountMe.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

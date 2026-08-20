@@ -7,11 +7,12 @@ interface ListRowProps {
   subtitle?: string;
   left?: ReactNode;
   right?: ReactNode;
+  danger?: boolean;
   onPress?: () => void;
 }
 
 // Single tappable row: optional leading slot, title + subtitle, trailing slot.
-export function ListRow({ title, subtitle, left, right, onPress }: ListRowProps) {
+export function ListRow({ title, subtitle, left, right, danger, onPress }: ListRowProps) {
   const theme = useTheme();
   return (
     <Pressable
@@ -32,7 +33,11 @@ export function ListRow({ title, subtitle, left, right, onPress }: ListRowProps)
       <View style={styles.body}>
         <Text
           numberOfLines={1}
-          style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansMedium, fontSize: 16 }}
+          style={{
+            color: danger ? theme.colors.destructive : theme.colors.foreground,
+            fontFamily: theme.fonts.sansMedium,
+            fontSize: 16,
+          }}
         >
           {title}
         </Text>
