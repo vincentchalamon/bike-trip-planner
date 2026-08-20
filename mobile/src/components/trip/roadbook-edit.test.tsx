@@ -95,8 +95,10 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
         stages: [stage(1), stage(2)],
         isLocked: false,
         outOfZone: false,
-        startDate: '2026-08-01',
-        endDate: '2026-08-02',
+        // Undated trip → lifecycle is "unknown", so the roadbook stays editable
+        // regardless of the (real) run date; the insertion rows are rendered.
+        startDate: null,
+        endDate: null,
         loading: false,
       });
     });

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { Fragment, useCallback, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
 import { Bike } from '../ui/icons';
 import { StageCard, stageKey } from './StageCard';
+import { StageInsertRow } from './StageInsertRow';
 import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
 import {
@@ -24,7 +25,15 @@ import { useTripMutations } from '../../hooks/use-trip-mutations';
 // the lock / out-of-zone / no-dates banners, then the stage list (StageCard
 // rows) with per-stage dates and an "Aujourd'hui" pastille. #1039 wires each
 // row's tap-through to the stage detail.
-export function RoadbookView({ id }: { id: string }) {
+export function RoadbookView({
+  id,
+  onConfigureDates,
+}: {
+  id: string;
+  // Opens the config sheet scrolled to the dates section (maquette 05a). Wired
+  // to the "set your dates" banner so a rider fixes the missing dates in one tap.
+  onConfigureDates?: () => void;
+}) {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -39,6 +48,11 @@ export function RoadbookView({ id }: { id: string }) {
   const today = todayUtc();
   const state = tripStateFromDates(startDate, endDate, today);
   const hasDates = startDate !== null && endDate !== null;
+
+  // Read-only when the backend locked the trip (started, 423) OR the dates put
+  // it in progress / in the past (maquette 05e / 05f): every edit affordance
+  // (insertion pills, delete, distance edit, FAB) is hidden or disabled.
+  const readOnly = isLocked || state === 'ongoing' || state === 'past';
 
   // One failure surface for every inline edit: map the normalized reason to a
   // localized alert (#1044). The runners already handle optimistic apply +
@@ -115,7 +129,17 @@ export function RoadbookView({ id }: { id: string }) {
         <RoadbookBanner variant="outOfZone" message={t('trip.banners.outOfZone')} />
       ) : null}
       {!hasDates ? (
-        <RoadbookBanner variant="noDates" message={t('trip.banners.noDates')} />
+        onConfigureDates ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('trip.banners.noDatesA11y')}
+            onPress={onConfigureDates}
+          >
+            <RoadbookBanner variant="noDates" message={t('trip.banners.noDates')} />
+          </Pressable>
+        ) : (
+          <RoadbookBanner variant="noDates" message={t('trip.banners.noDates')} />
+        )
       ) : null}
     </View>
   );
@@ -137,33 +161,50 @@ export function RoadbookView({ id }: { id: string }) {
           const date = stageDateFor(startDate, item.dayNumber ?? index + 1);
           const key = stageKey(item);
           return (
-            <StageCard
-              stage={item}
-              index={index}
-              locked={isLocked}
-              outOfZone={outOfZone}
-              busy={busyKeys.has(key)}
-              onDelete={confirmDelete}
-              onAddStage={() => runGuarded(key, () => mutations.addStage(index))}
-              onAddRestDay={() =>
-                runGuarded(key, () => mutations.insertRestDay(index))
-              }
-              onEditDistance={(_, distance) =>
-                runGuarded(key, () => mutations.updateStageDistance(index, distance))
-              }
-              onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
-              date={date}
-              isToday={state === 'ongoing' && isStageToday(date, today)}
-              highlighted={stageDiffs.has(index)}
-            />
+            <Fragment>
+              <StageCard
+                stage={item}
+                index={index}
+                locked={readOnly}
+                outOfZone={outOfZone}
+                busy={busyKeys.has(key)}
+                onDelete={confirmDelete}
+                onEditDistance={(_, distance) =>
+                  runGuarded(key, () => mutations.updateStageDistance(index, distance))
+                }
+                onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
+                date={date}
+                isToday={state === 'ongoing' && isStageToday(date, today)}
+                highlighted={stageDiffs.has(index)}
+              />
+              {/* Insertion row between stages (and after the last, maquette 05):
+                  hidden when the trip is read-only. Keyed on the preceding
+                  stage's key so a rapid double-tap fires a single mutation. */}
+              {!readOnly ? (
+                <StageInsertRow
+                  afterIndex={index}
+                  day={item.dayNumber ?? index + 1}
+                  outOfZone={outOfZone}
+                  busy={busyKeys.has(key)}
+                  onAddStage={() =>
+                    runGuarded(key, () => mutations.addStage(index))
+                  }
+                  onAddRestDay={() =>
+                    runGuarded(key, () => mutations.insertRestDay(index))
+                  }
+                />
+              ) : null}
+            </Fragment>
           );
         }}
         style={{ backgroundColor: theme.colors.background }}
       />
       {/* In-ride FAB (Spike-UX): the in-ride screen is out of scope, so this is a
           deliberate placeholder — disabled, icon-only, dispatches nothing. Lifted
-          above the system nav bar via the bottom safe-area inset. */}
-      {stages.length > 0 ? (
+          above the system nav bar via the bottom safe-area inset. Lives in the
+          roadbook view only, so it never overlays the map/profile tab (#7);
+          hidden in the read-only (started / ongoing / past) view (#6). */}
+      {stages.length > 0 && !readOnly ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('trip.rideCtaA11y')}

@@ -5,10 +5,8 @@ import type { StageData } from '@btp/core';
 import {
   AlertTriangle,
   Check,
-  Coffee,
   CloudSun,
   Pencil,
-  Plus,
   Trash2,
   X,
 } from '../ui/icons';
@@ -44,9 +42,6 @@ interface StageCardProps {
   // dispatch the same insert/edit twice (#1044 review).
   busy?: boolean;
   onDelete: (index: number) => void;
-  // Insert a manual stage / rest day after this row (routing vs non-routing).
-  onAddStage?: (index: number) => void;
-  onAddRestDay?: (index: number) => void;
   // Commit an edited distance (km) for this stage; the backend re-splits and
   // streams the authoritative stages over SSE.
   onEditDistance?: (index: number, distanceKm: number) => void;
@@ -125,8 +120,6 @@ export function StageCard({
   outOfZone = false,
   busy = false,
   onDelete,
-  onAddStage,
-  onAddRestDay,
   onEditDistance,
   date = null,
   isToday = false,
@@ -141,6 +134,16 @@ export function StageCard({
   const heading = date
     ? formatStageDate(date, i18n.language)
     : t('trip.day', { day: stage.dayNumber ?? '?' });
+  // Route title: both endpoints when known, else whichever single label is
+  // resolved, else fall back to the day label — never the "? → ?" placeholder
+  // when nothing is resolved yet.
+  const routeLabel =
+    stage.startLabel && stage.endLabel
+      ? `${stage.startLabel} → ${stage.endLabel}`
+      : (stage.startLabel ??
+        stage.endLabel ??
+        stage.label ??
+        t('trip.day', { day }));
 
   // Belt-and-suspenders to the stable FlatList key: if the underlying stage this
   // row renders changes identity (a position shift reused the instance, or SSE
@@ -155,8 +158,7 @@ export function StageCard({
   // Distance re-splitting reroutes → hidden out of zone and on a rest day (0 km).
   const canEditDistance =
     !locked && !!onEditDistance && !stage.isRestDay && !outOfZone;
-  const showFooter =
-    !locked && (!!onAddStage || !!onAddRestDay || canEditDistance);
+  const showFooter = canEditDistance;
 
   function startEditDistance(): void {
     setDraft(String(Math.round(stage.distance ?? 0)));
@@ -253,7 +255,7 @@ export function StageCard({
                 flexShrink: 1,
               }}
             >
-              {stage.startLabel ?? '?'} → {stage.endLabel ?? stage.label ?? '?'}
+              {routeLabel}
             </Text>
             {isToday ? (
               <Text
@@ -397,35 +399,15 @@ export function StageCard({
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              {onAddStage ? (
-                <EditChip
-                  icon={<Plus color={theme.colors.accentBrand} size={14} />}
-                  label={t('trip.edit.addStage')}
-                  a11yLabel={t('trip.edit.addStageA11y', { day })}
-                  onPress={() => onAddStage(index)}
-                  disabled={outOfZone || busy}
-                />
-              ) : null}
-              {onAddRestDay ? (
-                <EditChip
-                  icon={<Coffee color={theme.colors.accentBrand} size={14} />}
-                  label={t('trip.edit.addRestDay')}
-                  a11yLabel={t('trip.edit.addRestDayA11y', { day })}
-                  onPress={() => onAddRestDay(index)}
-                  disabled={busy}
-                />
-              ) : null}
-              {canEditDistance ? (
-                <EditChip
-                  icon={<Pencil color={theme.colors.accentBrand} size={14} />}
-                  label={t('trip.blocks.distanceKm', {
-                    distance: Math.round(stage.distance ?? 0),
-                  })}
-                  a11yLabel={t('trip.edit.editDistanceA11y', { day })}
-                  onPress={startEditDistance}
-                  disabled={busy}
-                />
-              ) : null}
+              <EditChip
+                icon={<Pencil color={theme.colors.accentBrand} size={14} />}
+                label={t('trip.blocks.distanceKm', {
+                  distance: Math.round(stage.distance ?? 0),
+                })}
+                a11yLabel={t('trip.edit.editDistanceA11y', { day })}
+                onPress={startEditDistance}
+                disabled={busy}
+              />
             </View>
           )}
         </View>

@@ -104,8 +104,6 @@ function queryByLabel(tree: any, label: string): any {
 
 describe('StageCard inline edit controls (#1044)', () => {
   const handlers = () => ({
-    onAddStage: jest.fn(),
-    onAddRestDay: jest.fn(),
     onEditDistance: jest.fn(),
   });
 
@@ -116,41 +114,36 @@ describe('StageCard inline edit controls (#1044)', () => {
     );
     expect(queryByLabel(tree, fr.trip.deleteA11y.replace('{{day}}', '1'))).toBeNull();
     expect(
-      queryByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1')),
-    ).toBeNull();
-    expect(
-      queryByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')),
+      queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1')),
     ).toBeNull();
   });
 
-  it('calls onAddStage / onAddRestDay with the row index when tapped', () => {
-    const h = handlers();
-    const tree = render(
-      <StageCard stage={stage()} index={2} locked={false} onDelete={jest.fn()} {...h} />,
-    );
-    act(() =>
-      pressableByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1')).props.onPress(),
-    );
-    act(() =>
-      pressableByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')).props.onPress(),
-    );
-    expect(h.onAddStage).toHaveBeenCalledWith(2);
-    expect(h.onAddRestDay).toHaveBeenCalledWith(2);
-  });
-
-  it('disables ＋étape and hides the distance chip out of zone, keeps ＋repos', () => {
+  it('hides the distance chip out of zone', () => {
     const h = handlers();
     const tree = render(
       <StageCard stage={stage()} index={0} locked={false} outOfZone onDelete={jest.fn()} {...h} />,
     );
-    const addStage = queryByLabel(tree, fr.trip.edit.addStageA11y.replace('{{day}}', '1'));
-    expect(addStage.props.accessibilityState.disabled).toBe(true);
     expect(
       queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1')),
     ).toBeNull();
-    expect(
-      queryByLabel(tree, fr.trip.edit.addRestDayA11y.replace('{{day}}', '1')),
-    ).not.toBeNull();
+  });
+
+  it('never renders the "? → ?" placeholder when no labels are resolved', () => {
+    const t = texts(
+      render(
+        <StageCard
+          stage={stage({ startLabel: null, endLabel: null, label: null })}
+          index={0}
+          locked={false}
+          onDelete={jest.fn()}
+        />,
+      ),
+    );
+    const joined = t.join(' ');
+    expect(joined).not.toContain('? → ?');
+    expect(joined).not.toContain('?');
+    // Falls back to the day label for the route title.
+    expect(joined).toContain('Jour 1');
   });
 
   it('hides the distance chip on a rest day', () => {
