@@ -175,8 +175,9 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function deleteTokenOfAnotherUserReturns404AndDoesNotDeleteIt(): void
     {
-        // Object-level authorization is masked as 404, never 403 (ADR-038): a
-        // non-owner cannot distinguish a foreign token from a missing one.
+        // The delete is scoped to the caller's own tokens, so a foreign token is
+        // "not found" -> 404 (indistinguishable from a missing one) and is never
+        // touched.
         $owner = $this->createUser('token-owner@example.com');
         $attacker = $this->createUser('token-attacker@example.com');
         $this->persistToken($owner['user'], 'fcm-not-yours', DevicePlatform::ANDROID);

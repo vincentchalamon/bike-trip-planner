@@ -22,10 +22,13 @@ use Symfony\Component\Validator\Constraints as Assert;
  *   to the current user (re-registering the same token does not duplicate; a token
  *   held by another account is reassigned). 201 on create, 200 on update.
  * - DELETE /users/me/device-tokens/{token}  unregister a token owned by the current
- *   user (a token owned by someone else, or unknown, is masked as 404 per ADR-038).
+ *   user. The lookup is scoped to the caller's own tokens, so an unknown or foreign
+ *   token is simply "not found" -> 404 (no object-level authorization to mask).
  *
  * The current user is always resolved from the security token, never from a URL
- * identifier (no IDOR surface).
+ * identifier (no IDOR surface). The delete carries the token in the URL path as the
+ * resource identifier — a semi-sensitive value that lands in access logs, an
+ * accepted trade-off (see DeviceTokenDeleteProcessor).
  */
 #[ApiResource(
     shortName: 'DeviceToken',

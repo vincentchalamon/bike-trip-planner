@@ -20,10 +20,20 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * Unregisters an FCM device token owned by the current user (epic #1051).
  *
- * The token is resolved from the URL, never from a body. A token that does not
- * exist OR belongs to another account is masked as 404 (ADR-038): object-level
- * authorization failures are indistinguishable from a missing resource, so a
- * caller cannot probe which tokens exist for other users.
+ * Like every other `/users/me` operation, the resource is scoped to the current
+ * user resolved from the security token: the lookup only ever considers the
+ * caller's own tokens (`findOneOwnedByUser`), so a token that is unknown OR owned
+ * by someone else is simply "not among your tokens" -> 404. There is no
+ * object-level authorization decision here to mask, so this does not scatter the
+ * ADR-038 policy into a processor (which that ADR rejects); a non-owner still
+ * cannot tell a foreign token from a missing one, and a foreign token is never
+ * touched.
+ *
+ * The token rides in the URL path as the resource identifier. It is a
+ * semi-sensitive per-device value, so it lands in access logs — an accepted
+ * trade-off (there is no exposure without an attacker already holding the token);
+ * the alternative, a body-carrying unregister action, is not worth the divergence
+ * from REST identity here.
  *
  * @implements ProcessorInterface<DeviceTokenResource, JsonResponse>
  */
@@ -47,11 +57,11 @@ final readonly class DeviceTokenDeleteProcessor implements ProcessorInterface
 
         $token = $uriVariables['token'] ?? '';
         \assert(\is_string($token));
-        $deviceToken = $this->deviceTokenRepository->findOneByToken($token);
 
-        // Unknown token or one owned by another account: both masked as 404 so a
-        // non-owner cannot distinguish the two (ADR-038).
-        if (!$deviceToken instanceof DeviceToken || !$deviceToken->getUser()->getId()->equals($user->getId())) {
+        // Scoped to the caller's own tokens: unknown or foreign both resolve to null
+        // -> 404, without the processor ever comparing owners.
+        $deviceToken = $this->deviceTokenRepository->findOneOwnedByUser($token, $user);
+        if (!$deviceToken instanceof DeviceToken) {
             throw new NotFoundHttpException();
         }
 
