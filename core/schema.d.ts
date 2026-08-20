@@ -2647,12 +2647,35 @@ export interface operations {
             };
         };
         responses: {
-            /** @description DeviceToken resource created */
-            204: {
+            /** @description Device token re-registered (platform refreshed / reassigned) */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        token?: string;
+                        /** @enum {string} */
+                        platform?: "android" | "ios";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+            /** @description Device token registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        /** @enum {string} */
+                        platform?: "android" | "ios";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
             };
             /** @description Invalid input */
             400: {
@@ -2676,7 +2699,14 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description An error occurred */
+            /** @description Concurrent registration of the same token; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or unknown platform */
             422: {
                 headers: {
                     [name: string]: unknown;

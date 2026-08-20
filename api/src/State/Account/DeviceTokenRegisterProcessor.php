@@ -10,11 +10,13 @@ use App\ApiResource\Account\DeviceToken as DeviceTokenResource;
 use App\Entity\DeviceToken;
 use App\Entity\User;
 use App\Repository\DeviceTokenRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
  * Idempotent upsert of an FCM device token for the current user (epic #1051).
@@ -58,7 +60,16 @@ final readonly class DeviceTokenRegisterProcessor implements ProcessorInterface
             $status = Response::HTTP_CREATED;
         }
 
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            // A concurrent request inserted the same token between the lookup and
+            // this flush. The endpoint is idempotent, so a retry resolves to the
+            // update path — surface a 409 rather than a 500.
+            $this->logger->debug('Device token registration lost a concurrent-create race', ['user' => $user->getId()->toRfc4122()]);
+
+            throw new ConflictHttpException('Device token registration conflicted with a concurrent request; retry.');
+        }
 
         $this->logger->info('Device token registered', ['user' => $user->getId()->toRfc4122(), 'platform' => $data->platform->value]);
 
