@@ -50,6 +50,39 @@ final class MercureTokenIssuerTest extends TestCase
     }
 
     #[Test]
+    public function generateSubscriptionsTokenScopesSubscribeToSubscriptionsApiAndTripTopic(): void
+    {
+        $token = $this->issuer->generateSubscriptionsToken('trip-uuid-1234');
+
+        $parts = explode('.', $token);
+        self::assertCount(3, $parts);
+
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+        self::assertIsArray($payload);
+        self::assertArrayHasKey('mercure', $payload);
+        self::assertSame([
+            '/.well-known/mercure/subscriptions{/topic}{/subscriber}',
+            '/trips/trip-uuid-1234',
+        ], $payload['mercure']['subscribe']);
+    }
+
+    #[Test]
+    public function generateSubscriptionsTokenExpiresInAboutSixtySeconds(): void
+    {
+        $before = time();
+        $token = $this->issuer->generateSubscriptionsToken('trip-uuid-1234');
+        $after = time();
+
+        $parts = explode('.', $token);
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+
+        self::assertIsArray($payload);
+        self::assertArrayHasKey('exp', $payload);
+        self::assertGreaterThanOrEqual($before + 60, (int) $payload['exp']);
+        self::assertLessThanOrEqual($after + 61, (int) $payload['exp']);
+    }
+
+    #[Test]
     public function createSubscriberCookieReturnsHttpOnlyCookie(): void
     {
         $token = $this->issuer->generateSubscriberToken('trip-uuid-1234');
