@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { LocaleSwitcher } from '../../src/i18n/LocaleSwitcher';
 import { type Locale } from '../../src/i18n';
 import { useTheme } from '../../src/theme';
 import { useThemePrefs, type ThemeMode } from '../../src/store/theme-prefs';
+import { selectActiveCount, useNotificationPrefs } from '../../src/store/notification-prefs';
 import { useAuth } from '../../src/auth/store';
 import { initialsFromEmail } from '../../src/auth/initials';
 
@@ -103,9 +104,9 @@ export default function Account() {
   const [themeOpen, setThemeOpen] = useState(false);
 
   const currentLocale: Locale = i18n.language === 'en' ? 'en' : 'fr';
-  // Active notification-category count. The notif store lands in #1120; until then
-  // there is nothing enabled, so the counter reads 0.
-  const notificationCount = 0;
+  const notificationCount = useNotificationPrefs(selectActiveCount);
+  const loadNotifications = useNotificationPrefs((s) => s.load);
+  useEffect(() => void loadNotifications(), [loadNotifications]);
 
   const themeSegments: readonly Segment<ThemeMode>[] = (['system', 'light', 'dark'] as const).map((m) => ({
     value: m,
@@ -129,7 +130,7 @@ export default function Account() {
       <Card style={CARD_ROWS}>
         <ListRow
           title={t('account.notifications')}
-          right={<RowRight value={String(notificationCount)} />}
+          right={<RowRight value={t('notifications.activeCount', { count: notificationCount })} />}
           onPress={() => router.push('/account/notifications')}
         />
         <ListRow

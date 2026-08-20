@@ -29,7 +29,8 @@
       "expo-status-bar",
       "@maplibre/maplibre-react-native",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-notifications"
     ]
   }
 }

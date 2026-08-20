@@ -3,6 +3,7 @@ export { Button, type ButtonVariant, type ButtonSize } from './Button';
 export { Card } from './Card';
 export { ListRow } from './ListRow';
 export { SegmentedControl, type Segment } from './SegmentedControl';
+export { Switch } from './Switch';
 export { Sheet } from './Sheet';
 export { Input } from './Input';
 export { DateField } from './DateField';

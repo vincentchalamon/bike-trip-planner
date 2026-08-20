@@ -46,3 +46,5 @@ export {
 } from 'lucide-react-native';
 // Resupply block (#1105): sectioned food/water suggestions.
 export { ShoppingBag } from 'lucide-react-native';
+// Notifications screen (#1120): permission banner + per-category icons.
+export { Bell, BellOff, CheckCircle2 } from 'lucide-react-native';
