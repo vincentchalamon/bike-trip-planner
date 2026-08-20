@@ -45,6 +45,11 @@ export interface CancelAction {
   identifier: string;
   category: LocalCategory;
   tripId: string;
+  // True only when the reminder is STILL active but suppressed because a past-due
+  // one-shot already fired and is recorded in `delivered`. Distinguishes this from
+  // a genuine resolution (condition no longer active): reconcile must keep the
+  // delivered mark here, else the next pass would re-schedule and re-fire it.
+  suppressedDelivered: boolean;
 }
 export type NotificationAction = ScheduleAction | CancelAction;
 
@@ -74,9 +79,10 @@ function buildAction(
 ): NotificationAction {
   const identifier = notificationIdentifier(category, tripId);
   const pastDue = rawFireAt <= now;
-  const shouldSchedule = active && !(pastDue && delivered.has(identifier));
+  const suppressedDelivered = active && pastDue && delivered.has(identifier);
+  const shouldSchedule = active && !suppressedDelivered;
   if (!shouldSchedule) {
-    return { type: 'cancel', identifier, category, tripId };
+    return { type: 'cancel', identifier, category, tripId, suppressedDelivered };
   }
   return {
     type: 'schedule',

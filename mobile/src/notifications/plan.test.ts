@@ -114,6 +114,8 @@ describe('planLocalNotifications — offlineNotReady', () => {
       'offlineNotReady',
     );
     expect(a.type).toBe('cancel');
+    // Genuine resolution (condition no longer active): reconcile may clear the mark.
+    if (a.type === 'cancel') expect(a.suppressedDelivered).toBe(false);
   });
 
   it('cancels once the departure date has passed', () => {
@@ -157,6 +159,9 @@ describe('planLocalNotifications — delivered one-shot guard', () => {
       'tripNoDate',
     );
     expect(a.type).toBe('cancel');
+    // Still active, only suppressed by the delivered mark: reconcile must KEEP the
+    // mark (clearing it would re-schedule and re-fire on the next pass).
+    if (a.type === 'cancel') expect(a.suppressedDelivered).toBe(true);
   });
 
   it('re-arms a delivered offline reminder once its fire date is back in the future', () => {

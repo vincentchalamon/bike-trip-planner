@@ -168,6 +168,9 @@ describe('reconcileLocalNotifications', () => {
       expect.objectContaining({ identifier: NODATE_ID }),
     );
     expect(markDelivered).not.toHaveBeenCalled();
+    // Still active, only suppressed by the delivered mark: it must NOT be cleared,
+    // else the next pass would re-schedule and re-fire the one-shot.
+    expect(clearDelivered).not.toHaveBeenCalledWith(NODATE_ID);
   });
 
   it('clears the delivered mark when re-arming a future instance', async () => {
