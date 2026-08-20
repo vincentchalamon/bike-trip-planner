@@ -260,3 +260,26 @@ describe('ConfigSheet slider screen-reader actions', () => {
     expect(allTexts(tree.root)).toContain(t('config.valueKm', { value: 80 }));
   });
 });
+
+describe('ConfigSheet dates deep-link (maquette 05a)', () => {
+  it('schedules a scroll to the dates section when opened with initialSection', () => {
+    const raf = jest
+      .spyOn(global, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+    render(<ConfigSheet tripId="t1" visible initialSection="dates" onClose={jest.fn()} />);
+    expect(raf).toHaveBeenCalled();
+    raf.mockRestore();
+  });
+
+  it('does not scroll when opened without initialSection', () => {
+    const raf = jest
+      .spyOn(global, 'requestAnimationFrame')
+      .mockImplementation(() => 0);
+    render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
+    expect(raf).not.toHaveBeenCalled();
+    raf.mockRestore();
+  });
+});

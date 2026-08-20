@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   type AccessibilityActionEvent,
@@ -31,6 +31,9 @@ interface ConfigSheetProps {
   tripId: string;
   visible: boolean;
   onClose: () => void;
+  // Open scrolled to a given section. 'dates' brings the (last) dates section
+  // into view — wired to the roadbook "set your dates" banner (maquette 05a).
+  initialSection?: 'dates';
 }
 
 // The editable pacing slice held as a local draft while the sheet is open, so a
@@ -266,9 +269,15 @@ function SectionTitle({ title, description }: { title: string; description?: str
 // spot (they don't re-split the trip). Pacing and dates are destructive — they
 // regenerate the stage découpage — so committing them goes through a
 // confirmation and arms the post-recompute diff-highlight.
-export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
+export function ConfigSheet({
+  tripId,
+  visible,
+  onClose,
+  initialSection,
+}: ConfigSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
 
   const storeTitle = useTripStore((s) => s.title);
   const isLocked = useTripStore((s) => s.isLocked);
@@ -313,6 +322,12 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
       ebikeMode,
       departureHour,
     });
+    // Bring the dates section (rendered last) into view when the sheet was
+    // opened from the "set your dates" banner. Deferred so the ScrollView has
+    // laid out its content before scrolling.
+    if (initialSection === 'dates') {
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+    }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activePreset = getActivePresetKey(
@@ -406,7 +421,11 @@ export function ConfigSheet({ tripId, visible, onClose }: ConfigSheetProps) {
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('config.title')}>
-      <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        style={{ maxHeight: 460 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Title */}
         <SectionTitle title={t('config.titleSection')} />
         <Input

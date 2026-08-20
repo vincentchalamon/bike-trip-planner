@@ -288,6 +288,7 @@ export const en: typeof fr = {
       locked: 'Trip started: read-only.',
       outOfZone: 'Route outside the covered area.',
       noDates: 'Set your trip dates.',
+      noDatesA11y: 'Set the trip dates',
     },
     delete: 'Delete',
     deleteA11y: 'Delete day {{day}}',
