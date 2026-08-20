@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { Alert, Modal, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   ErrorState,
@@ -81,6 +82,7 @@ export default function TripRoadbook() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [view, setView] = useState<TripView>('roadbook');
   const [configOpen, setConfigOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -162,7 +164,7 @@ export default function TripRoadbook() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('trip.menu.open')}
-                onPress={() => setMenuOpen(true)}
+                onPress={() => setMenuOpen((open) => !open)}
                 hitSlop={8}
                 style={{ padding: theme.spacing.xs }}
               >
@@ -188,7 +190,10 @@ export default function TripRoadbook() {
           <View
             style={{
               position: 'absolute',
-              top: theme.spacing['3xl'],
+              // Sit just below the header (status bar + ~56dp nav bar). A fixed
+              // 48px from the screen top landed on the ⋮ button itself, so the
+              // button was covered and could never toggle the menu shut.
+              top: insets.top + 56,
               right: theme.spacing.base,
               minWidth: 220,
               backgroundColor: theme.colors.popover,
