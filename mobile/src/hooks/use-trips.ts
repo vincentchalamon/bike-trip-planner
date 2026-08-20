@@ -8,6 +8,9 @@ import {
   type TripListItem,
 } from '../api/trips';
 import { useOfflineStore } from '../store/offline-store';
+import { useDeliveredNotifications } from '../store/delivered-notifications';
+import { cancelLocalNotification } from '../notifications/native';
+import { LOCAL_CATEGORIES, notificationIdentifier } from '../notifications/plan';
 
 const DEBOUNCE_MS = 300;
 
@@ -33,10 +36,26 @@ export async function runLoadTrips(
 }
 
 // Delete a trip. Returns null on success, or a message on failure (a non-owner is
-// masked as 404 → still !ok, ADR-038). Never throws.
+// masked as 404 → still !ok, ADR-038). Never throws. On success, cancel the trip's
+// local reminders here — the delete site is the only place that can tell a removed
+// trip from one merely paged-out or filtered-out of the list. Best-effort: a cancel
+// failure never fails the delete.
 export async function runDeleteTrip(id: string): Promise<string | null> {
   const { ok } = await deleteTrip(id);
-  return ok ? null : 'La suppression a échoué.';
+  if (!ok) {
+    return 'La suppression a échoué.';
+  }
+  const { clearDelivered } = useDeliveredNotifications.getState();
+  await Promise.all(
+    LOCAL_CATEGORIES.map((category) => {
+      const identifier = notificationIdentifier(category, id);
+      // Forget any delivered mark too: without this the persisted set keeps an
+      // entry for every trip ever deleted, growing unbounded (SecureStore ceiling).
+      clearDelivered(identifier);
+      return cancelLocalNotification(identifier).catch(() => undefined);
+    }),
+  );
+  return null;
 }
 
 // Duplicate a trip from the list (deep clone, allowed on a started/out-of-zone

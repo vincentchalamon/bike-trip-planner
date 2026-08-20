@@ -19,10 +19,22 @@ jest.mock('../api/trips', () => ({
   deleteTrip: jest.fn(),
   duplicateTrip: jest.fn(),
 }));
+jest.mock('../notifications/native', () => ({
+  cancelLocalNotification: jest.fn().mockResolvedValue(undefined),
+}));
+const mockClearDelivered = jest.fn();
+jest.mock('../store/delivered-notifications', () => ({
+  useDeliveredNotifications: { getState: () => ({ clearDelivered: mockClearDelivered }) },
+}));
 import { deleteTrip, duplicateTrip, fetchTrips } from '../api/trips';
+import { cancelLocalNotification } from '../notifications/native';
+import { notificationIdentifier } from '../notifications/plan';
 const mockFetch = fetchTrips as jest.MockedFunction<typeof fetchTrips>;
 const mockDelete = deleteTrip as jest.MockedFunction<typeof deleteTrip>;
 const mockDuplicate = duplicateTrip as jest.MockedFunction<typeof duplicateTrip>;
+const mockCancel = cancelLocalNotification as jest.MockedFunction<
+  typeof cancelLocalNotification
+>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -57,6 +69,32 @@ describe('runDeleteTrip (#1036)', () => {
   it('resolves a message when the delete fails (incl. 404 non-owner masking)', async () => {
     mockDelete.mockResolvedValue({ ok: false, status: 404 });
     expect(await runDeleteTrip('t1')).toBe('La suppression a échoué.');
+  });
+
+  it('cancels the deleted trip local reminders (delete site, not list diff) (#1121)', async () => {
+    mockDelete.mockResolvedValue({ ok: true, status: 204 });
+    await runDeleteTrip('t1');
+    expect(mockCancel).toHaveBeenCalledWith(notificationIdentifier('offlineNotReady', 't1'));
+    expect(mockCancel).toHaveBeenCalledWith(notificationIdentifier('tripNoDate', 't1'));
+  });
+
+  it('forgets the deleted trip delivered marks so the persisted set does not leak (#1144)', async () => {
+    mockDelete.mockResolvedValue({ ok: true, status: 204 });
+    await runDeleteTrip('t1');
+    expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('offlineNotReady', 't1'));
+    expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('tripNoDate', 't1'));
+  });
+
+  it('does not cancel reminders when the delete fails (#1121)', async () => {
+    mockDelete.mockResolvedValue({ ok: false, status: 404 });
+    await runDeleteTrip('t1');
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
+  it('never fails the delete when a reminder cancel rejects (best-effort) (#1121)', async () => {
+    mockDelete.mockResolvedValue({ ok: true, status: 204 });
+    mockCancel.mockRejectedValueOnce(new Error('boom'));
+    expect(await runDeleteTrip('t1')).toBeNull();
   });
 });
 
