@@ -3,6 +3,7 @@
 // time is left as is, and a cancel only fires when the notification actually exists
 // — so re-running on every trip-data change is cheap and never duplicates.
 import {
+  isManagedIdentifier,
   planLocalNotifications,
   type LocalCategory,
   type LocalMessages,
@@ -34,6 +35,12 @@ export async function reconcileLocalNotifications(input: {
   const actions = planLocalNotifications({ ...input, now });
   const scheduled = await getScheduledFireTimes();
 
+  // Every identifier the current trips expect (one per category per present trip).
+  // A managed identifier that is scheduled but not expected belongs to a trip that
+  // has left the list (deleted, or paged out): its notification would fire for a
+  // trip that no longer exists, so cancel it. Only our own namespace is touched.
+  const expected = new Set(actions.map((action) => action.identifier));
+
   // A clamped-to-now schedule fires immediately: record it so the next pass (where
   // it is gone from the scheduled set) does not re-fire it. A genuinely future
   // schedule re-arms a previously delivered id, so clear its mark.
@@ -62,6 +69,14 @@ export async function reconcileLocalNotifications(input: {
       }
     } else if (scheduled.has(action.identifier)) {
       await cancelLocalNotification(action.identifier);
+    }
+  }
+
+  for (const identifier of scheduled.keys()) {
+    if (isManagedIdentifier(identifier) && !expected.has(identifier)) {
+      await cancelLocalNotification(identifier);
+      // Its trip is gone; forget any delivered mark so the set does not grow forever.
+      input.clearDelivered(identifier);
     }
   }
 }
