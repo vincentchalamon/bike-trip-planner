@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<DeviceToken>
  */
-final class DeviceTokenRepository extends ServiceEntityRepository
+final class DeviceTokenRepository extends ServiceEntityRepository implements DeviceTokenRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

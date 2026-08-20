@@ -9,7 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Account\DeviceToken as DeviceTokenResource;
 use App\Entity\DeviceToken;
 use App\Entity\User;
-use App\Repository\DeviceTokenRepository;
+use App\Repository\DeviceTokenRepositoryInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -33,7 +33,7 @@ final readonly class DeviceTokenRegisterProcessor implements ProcessorInterface
     public function __construct(
         private Security $security,
         private EntityManagerInterface $entityManager,
-        private DeviceTokenRepository $deviceTokenRepository,
+        private DeviceTokenRepositoryInterface $deviceTokenRepository,
         private LoggerInterface $logger,
     ) {
     }
