@@ -10,6 +10,14 @@ jest.mock('./tokens', () => ({
 }));
 jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => {}) }));
+// The provider registers / unregisters the push token as a side effect (#1125);
+// stub the push module so this stale-response-guard test never touches the native
+// notifications layer (its own behaviour is covered by store.push.test.tsx).
+jest.mock('../notifications/push', () => ({
+  registerDeviceToken: jest.fn().mockResolvedValue(undefined),
+  unregisterDeviceToken: jest.fn().mockResolvedValue(undefined),
+  subscribeTokenRotation: jest.fn(() => ({ remove: jest.fn() })),
+}));
 
 import { api } from '../api/client';
 import { loadTokens } from './tokens';

@@ -16,15 +16,19 @@ let registeredToken: string | null = null;
 
 // Foreground presentation: the OS suppresses banners while the app is in the
 // foreground unless a handler opts in. Service pushes (weather, analysis) are
-// worth showing; badges stay off (no unread-count model).
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// worth showing; badges stay off (no unread-count model). Called once at app
+// start (usePushRouting) rather than at import, so pulling this module in for
+// register/unregister carries no side effect (keeps the auth store unit-testable).
+export function configurePushPresentation(): void {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 function devicePlatform(): DevicePlatform {
   if (Platform.OS === 'android') return 'android';
