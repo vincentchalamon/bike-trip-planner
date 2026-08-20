@@ -29,17 +29,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  // Resolve the account email from the session once authenticated (the mobile
-  // app never sees it otherwise — tokens carry no email). Cleared on logout.
+  // Resolve the account email once authenticated (the mobile app never sees it
+  // otherwise — tokens carry no email). Uses GET /users/me: JWT Bearer, unlike
+  // GET /auth/session which is cookie-only (web transport). Cleared on logout;
+  // the cancel flag drops a response that lands after the effect re-ran (e.g. a
+  // logout mid-flight), so a stale email can never overwrite the cleared state.
   useEffect(() => {
     if (!authenticated) {
       setEmail(null);
       return;
     }
+    let cancelled = false;
     void (async () => {
-      const { data } = await api.GET('/auth/session', { headers: { Accept: LD_JSON } });
-      setEmail(data?.email ?? null);
+      const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
+      if (!cancelled) {
+        setEmail(data?.email ?? null);
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [authenticated]);
 
   // A refresh that definitively fails clears the tokens outside React; flip the
