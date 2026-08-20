@@ -202,6 +202,20 @@ export const en: typeof fr = {
       contactBody:
         'For any question about this privacy policy, write to us at: __CONTACT_EMAIL__.\n\nThis policy may be updated; the last-updated date is shown at the top of this page.',
     },
+    export: {
+      description: 'Download a JSON archive of your profile and trips (GDPR portability).',
+      action: 'Export my data',
+      success: 'Data exported via the share sheet.',
+      failed: 'Export failed. Try again.',
+    },
+    delete: {
+      warningBefore: 'Irreversible action: your trips and data will be anonymised. Type ',
+      keyword: 'DELETE',
+      warningAfter: ' to confirm.',
+      action: 'Permanently delete my account',
+      cancel: 'Cancel',
+      failed: 'Deletion failed. Try again.',
+    },
   },
   notifications: {
     title: 'Notifications',

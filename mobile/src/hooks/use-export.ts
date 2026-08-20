@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import {
   fetchStageExport,
   fetchTripExport,
@@ -9,6 +7,7 @@ import {
   tripExportFileName,
   type ExportFormat,
 } from '../api/trips';
+import { writeAndShareFile } from '../lib/fs-share';
 
 const MIME_TYPES: Record<ExportFormat, string> = {
   gpx: 'application/gpx+xml',
@@ -16,23 +15,13 @@ const MIME_TYPES: Record<ExportFormat, string> = {
 };
 
 // Write the fetched bytes to a cache file and hand it to the native share sheet
-// (save to Files / send to another app). Extracted so the write+share plumbing is
-// unit-testable without a device (mocks expo-file-system / expo-sharing). Awaits
-// the write before sharing: `File#write` is currently a synchronous JSI call in
-// expo-file-system, but awaiting it here is a no-op on that value and keeps the
-// write→share ordering correct if a future SDK makes it return a Promise.
+// (shared plumbing in fs-share.ts, same as the RGPD account export).
 export async function writeAndShare(
   bytes: ArrayBuffer,
   filename: string,
   format: ExportFormat,
 ): Promise<void> {
-  const file = new File(Paths.cache, filename);
-  file.create({ intermediates: true, overwrite: true });
-  await file.write(new Uint8Array(bytes));
-  if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Sharing is not available on this device');
-  }
-  await Sharing.shareAsync(file.uri, { mimeType: MIME_TYPES[format] });
+  return writeAndShareFile(bytes, filename, MIME_TYPES[format]);
 }
 
 // Fetch + write + share the whole trip. Never throws: resolves to false on
