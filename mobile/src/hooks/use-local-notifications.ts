@@ -14,11 +14,8 @@ export function useLocalNotifications(trips: TripListItem[]): void {
   const enabled = useNotificationPrefs((s) => s.enabled);
   const hydrated = useNotificationPrefs((s) => s.hydrated);
   const load = useNotificationPrefs((s) => s.load);
-  const delivered = useDeliveredNotifications((s) => s.delivered);
   const deliveredHydrated = useDeliveredNotifications((s) => s.hydrated);
   const loadDelivered = useDeliveredNotifications((s) => s.load);
-  const markDelivered = useDeliveredNotifications((s) => s.markDelivered);
-  const clearDelivered = useDeliveredNotifications((s) => s.clearDelivered);
 
   // The prefs store hydrates on the notifications screen; hydrate it here too so the
   // schedule honours persisted toggles even if that screen was never opened. The
@@ -49,6 +46,14 @@ export function useLocalNotifications(trips: TripListItem[]): void {
         body: t('notifications.tripNoDateNotifBody'),
       },
     };
+    // Read the delivered set and its mutators imperatively, NOT as reactive deps:
+    // reconcile calls markDelivered/clearDelivered, which replace the Set in the
+    // store. If `delivered` were a dependency, that mutation would re-run this very
+    // effect right after a past-due schedule — the id now looks delivered, the
+    // action flips to `cancel`, and the notification is cancelled before the OS ever
+    // presents it. getState() takes a one-shot snapshot with no feedback loop.
+    const { delivered, markDelivered, clearDelivered } =
+      useDeliveredNotifications.getState();
     void reconcileLocalNotifications({
       trips: inputs,
       prefs: {
@@ -60,15 +65,5 @@ export function useLocalNotifications(trips: TripListItem[]): void {
       markDelivered,
       clearDelivered,
     });
-  }, [
-    trips,
-    enabled.offlineNotReady,
-    enabled.tripNoDate,
-    hydrated,
-    deliveredHydrated,
-    delivered,
-    markDelivered,
-    clearDelivered,
-    t,
-  ]);
+  }, [trips, enabled.offlineNotReady, enabled.tripNoDate, hydrated, deliveredHydrated, t]);
 }
