@@ -49,6 +49,8 @@ final class FcmClient implements PushSenderInterface
 
         $accessToken = $this->accessToken();
         $endpoint = \sprintf('/v1/projects/%s/messages:send', $this->credentials->projectId());
+        $category = $data['category'] ?? null;
+        $targetedTokens = \count($tokens);
         $invalid = [];
 
         foreach ($tokens as $token) {
@@ -69,14 +71,43 @@ final class FcmClient implements PushSenderInterface
                     continue;
                 }
 
-                if ($this->isUnregistered($status, $response->getContent(false))) {
+                $responseBody = $response->getContent(false);
+
+                // A dead token is expected churn, not an incident: prune it and
+                // record it at info level so it stays distinct from a real failure.
+                if ($this->isUnregistered($status, $responseBody)) {
                     $invalid[] = $token;
+                    $this->logger->info('Pruning unregistered FCM token.', [
+                        'tokenRef' => $this->tokenRef($token),
+                        'category' => $category,
+                    ]);
                     continue;
                 }
 
-                $this->logger->warning('FCM push failed.', ['status' => $status, 'body' => $response->getContent(false)]);
+                // Any other non-200 (bad request, quota, auth/config, 5xx) is a real
+                // send failure the operator must see (ADR-058: never a silent no-op).
+                // Logged at error, not warning: prod's monolog `main` handler is
+                // fingers_crossed with action_level: error, so a warning never
+                // crosses the threshold and would be dropped. Best-effort: keep
+                // sending to the other tokens.
+                $error = $this->extractError($responseBody);
+                $this->logger->error('FCM push send failed.', [
+                    'httpStatus' => $status,
+                    'fcmStatus' => $error['status'],
+                    'fcmMessage' => $error['message'],
+                    'tokenRef' => $this->tokenRef($token),
+                    'category' => $category,
+                    'targetedTokens' => $targetedTokens,
+                ]);
             } catch (\Throwable $e) {
-                $this->logger->warning('FCM push transport error.', ['error' => $e->getMessage()]);
+                // Transport-level failure (timeout, DNS, TLS reset): surfaced at
+                // error (crosses prod fingers_crossed), not swallowed. Loop continues.
+                $this->logger->error('FCM push transport error.', [
+                    'error' => $e->getMessage(),
+                    'tokenRef' => $this->tokenRef($token),
+                    'category' => $category,
+                    'targetedTokens' => $targetedTokens,
+                ]);
             }
         }
 
@@ -93,6 +124,36 @@ final class FcmClient implements PushSenderInterface
     private function isUnregistered(int $status, string $body): bool
     {
         return 404 === $status && str_contains($body, 'UNREGISTERED');
+    }
+
+    /**
+     * A device token is semi-sensitive (it can push to a user's device), so logs
+     * never carry it whole — only a short, stable hash prefix to correlate lines.
+     */
+    private function tokenRef(string $token): string
+    {
+        return substr(hash('sha256', $token), 0, 12);
+    }
+
+    /**
+     * Pulls the FCM `error.status` / `error.message` out of the response body for
+     * logging. Returns nulls when the body is empty or not the expected shape.
+     *
+     * @return array{status: string|null, message: string|null}
+     */
+    private function extractError(string $body): array
+    {
+        try {
+            /** @var array{error?: array{status?: string, message?: string}} $decoded */
+            $decoded = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return ['status' => null, 'message' => null];
+        }
+
+        return [
+            'status' => $decoded['error']['status'] ?? null,
+            'message' => $decoded['error']['message'] ?? null,
+        ];
     }
 
     private function accessToken(): string
