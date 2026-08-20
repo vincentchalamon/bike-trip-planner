@@ -14,7 +14,8 @@ import { verifyEmailChange } from '../../../../src/hooks/use-email-change';
 // {token}, RequestEmailChangeProcessor) and the PWA route of the same name.
 // The link is sent to the NEW address; opening it while authenticated commits the
 // change (single-use token, atomic server-side). On success the account email is
-// refreshed via GET /users/me so the account screen reflects the new address.
+// refreshed via GET /users/me (best-effort) so the account screen reflects the
+// new address; a refresh failure never masks the successful verification.
 export default function VerifyEmailChangeScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const { refreshEmail } = useAuth();
@@ -30,16 +31,26 @@ export default function VerifyEmailChangeScreen() {
     }
     handled.current = true;
     void (async () => {
+      // Only a verify failure is a real error. A post-verify refreshEmail() throw
+      // (network) must NOT surface as "verification failed" — the email is already
+      // changed server-side; the stale display self-heals on the next mount.
+      let verified: boolean;
       try {
-        if (await verifyEmailChange(token)) {
-          await refreshEmail();
-          router.replace('/(tabs)/account');
-        } else {
-          setFailed(true);
-        }
+        verified = await verifyEmailChange(token);
       } catch {
         setFailed(true);
+        return;
       }
+      if (!verified) {
+        setFailed(true);
+        return;
+      }
+      try {
+        await refreshEmail();
+      } catch {
+        // best-effort, ignore
+      }
+      router.replace('/(tabs)/account');
     })();
   }, [token, refreshEmail, router]);
 

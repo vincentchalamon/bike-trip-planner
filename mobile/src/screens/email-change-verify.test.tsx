@@ -66,6 +66,17 @@ describe('VerifyEmailChangeScreen (#1117)', () => {
     expect(textInTree(tree, i18n.t('account.emailChange.verifyFailedTitle'))).toBe(true);
   });
 
+  it('still redirects (no error state) when refreshEmail throws after a successful verify', async () => {
+    mockVerify.mockResolvedValue(true);
+    mockRefreshEmail.mockRejectedValue(new Error('network'));
+
+    const tree = await render();
+
+    expect(mockVerify).toHaveBeenCalledWith('tok-123');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/account');
+    expect(textInTree(tree, i18n.t('account.emailChange.verifyFailedTitle'))).toBe(false);
+  });
+
   it('runs the verify exactly once even across re-renders (ref guard)', async () => {
     mockVerify.mockResolvedValue(true);
 
