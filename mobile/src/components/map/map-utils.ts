@@ -2,6 +2,7 @@ import type { StageData } from '@btp/core';
 import { resupplyPois } from '@btp/core';
 import type { StyleSpecification } from '@maplibre/maplibre-react-native';
 import type { FeatureCollection } from 'geojson';
+import { stageColor } from './stage-colors';
 
 // The two base maps the map tab can render. Persisted via the map-prefs store.
 export type MapBase = 'map' | 'satellite';
@@ -68,6 +69,25 @@ export function computeBounds(
     if (lat > north) north = lat;
   }
   return [west, south, east, north];
+}
+
+// One drawable stage: its ordered [lon, lat] geometry and the color that sets
+// it apart from its neighbours on the map (see stageColor).
+export interface StageLine {
+  color: string;
+  coordinates: [number, number][];
+}
+
+// Split the route into one colored polyline per stage (mirrors the web map).
+// Rest days and stages too short to draw (< 2 points) are skipped, exactly like
+// the web's buildRouteGeoJSON; the color keys on the stable 1-based `dayNumber`.
+export function buildStageLines(stages: StageData[]): StageLine[] {
+  return stages
+    .filter((s) => !s.isRestDay && (s.geometry?.length ?? 0) >= 2)
+    .map((s) => ({
+      color: stageColor(s.dayNumber),
+      coordinates: s.geometry.map((p) => [p.lon, p.lat] as [number, number]),
+    }));
 }
 
 export type MarkerKind = 'waypoint' | 'poi' | 'accommodation';

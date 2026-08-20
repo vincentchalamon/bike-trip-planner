@@ -23,7 +23,7 @@ import {
   X,
 } from '../ui/icons';
 import { TripMap } from '../TripMap';
-import { alertSegmentToCoords, collectMarkers } from '../map/map-utils';
+import { alertSegmentToCoords, buildStageLines, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
 import { StageDataBlocks, notifyFailure } from './StageDataBlocks';
@@ -99,6 +99,12 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
 
   const coordinates = useMemo(
     () => (stage ? stageGeometryCoords(stage) : []),
+    [stage],
+  );
+  // One colored line for this stage, keyed on its dayNumber, so its color
+  // matches the trip map's stage coloring (see stageColor).
+  const stageSegments = useMemo(
+    () => (stage ? buildStageLines([stage]) : []),
     [stage],
   );
   const markers = useMemo(() => (stage ? collectMarkers([stage]) : []), [stage]);
@@ -232,7 +238,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
       <View style={{ height: 220 }}>
         {coordinates.length > 0 ? (
           <TripMap
-            coordinates={coordinates}
+            stageSegments={stageSegments}
             markers={markers}
             highlightedSegment={highlightedSegment}
           />

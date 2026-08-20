@@ -7,6 +7,14 @@ import '../../i18n';
 import { useTripStore } from '../../store/trip-store';
 import { collectMarkers } from '../map/map-utils';
 
+// Drive the safe-area insets so the layout test can assert the bottom inset is
+// folded into the profile panel's padding (keeping the axis clear of the system
+// navigation bar). Overrides the global zero-inset mock from jest.setup.
+const mockInsets = { top: 0, bottom: 0, left: 0, right: 0 };
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => mockInsets,
+}));
+
 // Capture the props TripMap receives so we can assert the wired markers +
 // highlightedSegment.
 let lastTripMapProps: Record<string, unknown> | null = null;
@@ -105,6 +113,44 @@ describe('TripMapView', () => {
     render(<TripMapView />);
     expect(lastTripMapProps).not.toBeNull();
     expect(lastTripMapProps!.markers).toEqual(collectMarkers([routedStage]));
+  });
+
+  it('forwards one colored stage segment per drawable stage to TripMap', () => {
+    render(<TripMapView />);
+    const segments = lastTripMapProps!.stageSegments as {
+      color: string;
+      coordinates: [number, number][];
+    }[];
+    expect(segments).toHaveLength(1);
+    expect(segments[0]!.coordinates).toEqual([
+      [2, 48],
+      [2.01, 48.01],
+      [2.02, 48.02],
+    ]);
+    expect(segments[0]!.color).toMatch(/^hsl\(/);
+  });
+
+  it('lays out map + profile without a ScrollView and clears the nav bar with the bottom inset', () => {
+    mockInsets.bottom = 34;
+    render(<TripMapView />);
+    // No ScrollView anywhere: the axis must never be scrolled out of view.
+    expect(
+      current!.root.findAll((n: any) => n.type === 'ScrollView'),
+    ).toHaveLength(0);
+    // The profile panel folds the safe-area bottom inset into its padding so the
+    // distance/elevation axis sits above the system navigation bar.
+    const flatten = (style: unknown): Record<string, unknown> =>
+      (Array.isArray(style) ? style : [style])
+        .filter((s) => s && typeof s === 'object')
+        .reduce((acc, s) => Object.assign(acc, s), {} as Record<string, unknown>);
+    const panel = current!.root.findAll(
+      (n: any) => n.type === 'View' && flatten(n.props.style).borderTopColor,
+    )[0]!;
+    const style = flatten(panel.props.style);
+    // paddingBottom = spacing.base + inset(34); proving the inset is added means
+    // it must exceed the inset alone.
+    expect(style.paddingBottom as number).toBeGreaterThan(34);
+    mockInsets.bottom = 0;
   });
 
   it('feeds the profile hover into TripMap as highlightedSegment', () => {

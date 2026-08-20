@@ -20,6 +20,7 @@ import {
   markerCollection,
   segmentFeature,
   type MapMarker,
+  type StageLine,
 } from './map/map-utils';
 
 // Pixel inset kept around the fitted route so start/end markers are not flush
@@ -27,11 +28,13 @@ import {
 const FIT_PADDING = { top: 48, right: 48, bottom: 48, left: 48 };
 
 export function TripMap({
-  coordinates,
+  stageSegments,
   markers,
   highlightedSegment,
 }: {
-  coordinates: [number, number][];
+  // One colored polyline per stage; the route is drawn stage by stage so each
+  // stands out (see stageColor). Camera framing uses all points flattened.
+  stageSegments: StageLine[];
   markers?: MapMarker[];
   // Ordered [lon, lat] points of a road stretch to surline (e.g. from an alert
   // `navigate` action). Drawn on its own source/layer above the route. Detail /
@@ -63,24 +66,29 @@ export function TripMap({
   // once per input change: a fresh reference on each render would defeat the
   // upstream React.memo (Map/Camera/GeoJSONSource) and force a native re-diff.
   const mapStyle = useMemo(() => mapStyleFor(base), [base]);
+  const coordinates = useMemo(
+    () => stageSegments.flatMap((s) => s.coordinates),
+    [stageSegments],
+  );
   const bounds = useMemo(() => computeBounds(coordinates), [coordinates]);
   const markerData = useMemo(() => markerCollection(markers ?? []), [markers]);
   const segmentData = useMemo(
     () => segmentFeature(highlightedSegment ?? []),
     [highlightedSegment],
   );
+  // One LineString feature per stage, each carrying its color as a data-driven
+  // property so a single layer can paint them via ['get', 'color'] (like the web
+  // map) instead of one flat single-color line.
   const line = useMemo<FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: { type: 'LineString', coordinates },
-        },
-      ],
+      features: stageSegments.map((s) => ({
+        type: 'Feature',
+        properties: { color: s.color },
+        geometry: { type: 'LineString', coordinates: s.coordinates },
+      })),
     }),
-    [coordinates],
+    [stageSegments],
   );
   // maplibre-react-native v11: `initialViewState` is applied once at native
   // mount, whereas the top-level `CameraStop` `bounds`/`padding` are reactive —
@@ -102,7 +110,6 @@ export function TripMap({
     );
   }
 
-  const satellite = base === 'satellite';
   const hasSegment = (highlightedSegment?.length ?? 0) >= 2;
 
   return (
@@ -114,8 +121,10 @@ export function TripMap({
             id="route-line"
             type="line"
             layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+            // Per-stage color kept on both bases so stages stay distinguishable
+            // over satellite imagery too (matches the web map).
             paint={{
-              'line-color': satellite ? '#ffffff' : theme.colors.brand,
+              'line-color': ['get', 'color'],
               'line-width': 4,
             }}
           />

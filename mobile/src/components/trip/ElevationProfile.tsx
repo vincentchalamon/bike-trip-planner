@@ -10,6 +10,7 @@ import Svg, { Line, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
 import { buildProfilePoints, findClosestProfilePoint } from '@btp/core/elevation';
+import { stageColor } from '../map/stage-colors';
 import { useTheme } from '../../theme';
 
 // SVG viewport constants (mirrors the web profile). The Svg fills its container
@@ -80,6 +81,16 @@ export function ElevationProfile({
     [stages, focusedStageIndex],
   );
   const hasData = points.length >= 2;
+
+  // Map an active-stage index (what ProfilePoint.stageIndex carries) to the
+  // stage's 1-based dayNumber, so each stage's area is filled with the very same
+  // color the map draws its polyline in (see stageColor).
+  const activeDayNumbers = useMemo(
+    () => stages.filter((s) => !s.isRestDay).map((s) => s.dayNumber),
+    [stages],
+  );
+  const colorForStage = (stageIndex: number) =>
+    stageColor(activeDayNumbers[stageIndex] ?? stageIndex + 1);
 
   const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
     if (!hasData) return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
@@ -180,17 +191,20 @@ export function ElevationProfile({
         viewBox={`0 0 ${VW} ${VH}`}
         preserveAspectRatio="none"
       >
-        {stagePaths.map(({ stageIndex, d }) => (
-          <Path
-            key={stageIndex}
-            d={d}
-            fill={theme.colors.brand}
-            fillOpacity={0.35}
-            stroke={theme.colors.brand}
-            strokeWidth={1.5}
-            strokeOpacity={0.8}
-          />
-        ))}
+        {stagePaths.map(({ stageIndex, d }) => {
+          const color = colorForStage(stageIndex);
+          return (
+            <Path
+              key={stageIndex}
+              d={d}
+              fill={color}
+              fillOpacity={0.35}
+              stroke={color}
+              strokeWidth={1.5}
+              strokeOpacity={0.8}
+            />
+          );
+        })}
         {hover !== null ? (
           <Line
             testID="elevation-crosshair"

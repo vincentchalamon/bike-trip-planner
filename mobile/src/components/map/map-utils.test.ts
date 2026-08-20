@@ -5,6 +5,7 @@ import {
   alertSegmentToCoords,
   applyZoom,
   buildSatelliteStyle,
+  buildStageLines,
   collectMarkers,
   computeBounds,
   mapStyleFor,
@@ -52,6 +53,36 @@ describe('computeBounds', () => {
       [-1, 50],
     ]);
     expect(bounds).toEqual([-1, 45, 5, 50]);
+  });
+});
+
+describe('buildStageLines', () => {
+  const geom = [
+    { lat: 48, lon: 2, ele: 100 },
+    { lat: 48.1, lon: 2.1, ele: 150 },
+  ];
+
+  it('emits one colored line per drawable stage, in [lon, lat] order', () => {
+    const lines = buildStageLines([
+      stage({ dayNumber: 1, geometry: geom }),
+      stage({ dayNumber: 2, geometry: geom }),
+    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]!.coordinates).toEqual([
+      [2, 48],
+      [2.1, 48.1],
+    ]);
+    // Adjacent stages get distinct colors.
+    expect(lines[0]!.color).not.toBe(lines[1]!.color);
+  });
+
+  it('skips rest days and stages with fewer than two points', () => {
+    const lines = buildStageLines([
+      stage({ dayNumber: 1, geometry: geom }),
+      stage({ dayNumber: 2, isRestDay: true, geometry: geom }),
+      stage({ dayNumber: 3, geometry: [{ lat: 48, lon: 2, ele: 100 }] }),
+    ]);
+    expect(lines).toHaveLength(1);
   });
 });
 
