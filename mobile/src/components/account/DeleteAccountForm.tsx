@@ -6,10 +6,12 @@ import { useTheme } from '../../theme';
 interface DeleteAccountFormProps {
   keyword: string;
   confirmLabel: string;
+  cancelLabel: string;
   placeholder?: string;
   inputLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
+  onCancel: () => void;
 }
 
 // Keyword-confirmation form (maquette 10-account). The danger button stays
@@ -18,10 +20,12 @@ interface DeleteAccountFormProps {
 export function DeleteAccountForm({
   keyword,
   confirmLabel,
+  cancelLabel,
   placeholder,
   inputLabel,
   loading = false,
   onConfirm,
+  onCancel,
 }: DeleteAccountFormProps) {
   const theme = useTheme();
   const [value, setValue] = useState('');
@@ -38,13 +42,23 @@ export function DeleteAccountForm({
         autoCorrect={false}
         autoComplete="off"
       />
-      <Button
-        label={confirmLabel}
-        variant="destructive"
-        disabled={!armed}
-        loading={loading}
-        onPress={onConfirm}
-      />
+      <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+        <Button
+          label={cancelLabel}
+          variant="outline"
+          onPress={onCancel}
+          disabled={loading}
+          style={{ flex: 1 }}
+        />
+        <Button
+          label={confirmLabel}
+          variant="destructive"
+          disabled={!armed}
+          loading={loading}
+          onPress={onConfirm}
+          style={{ flex: 1 }}
+        />
+      </View>
     </View>
   );
 }

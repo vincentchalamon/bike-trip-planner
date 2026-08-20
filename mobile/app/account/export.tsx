@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Screen } from '../../src/components/ui';
@@ -9,12 +9,19 @@ import { useTheme } from '../../src/theme';
 export default function AccountExport() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const [exported, setExported] = useState(false);
 
   const onFailure = useCallback(() => {
     Alert.alert(t('account.exportTitle'), t('account.export.failed'));
   }, [t]);
 
   const { exporting, exportAccount } = useAccountExport(onFailure);
+
+  const onExport = useCallback(async () => {
+    setExported(false);
+    const ok = await exportAccount();
+    if (ok) setExported(true);
+  }, [exportAccount]);
 
   return (
     <Screen>
@@ -33,8 +40,27 @@ export default function AccountExport() {
         <Button
           label={t('account.export.action')}
           loading={exporting}
-          onPress={() => void exportAccount()}
+          onPress={() => void onExport()}
         />
+        {exported ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: theme.colors.successSoft,
+              borderColor: theme.colors.successBorder,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderRadius: theme.radius.md,
+              paddingVertical: theme.spacing.md,
+              paddingHorizontal: theme.spacing.base,
+            }}
+          >
+            <Text
+              style={{ color: theme.colors.successInk, fontFamily: theme.fonts.sansMedium, fontSize: 14 }}
+            >
+              {t('account.export.success')}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </Screen>
   );

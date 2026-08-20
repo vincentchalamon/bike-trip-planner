@@ -42,15 +42,17 @@ export default function AccountDelete() {
           }}
         >
           {t('account.delete.warningBefore')}
-          <Text style={{ fontFamily: theme.fonts.sansSemibold }}>{keyword}</Text>
+          <Text style={{ fontFamily: theme.fonts.mono }}>{keyword}</Text>
           {t('account.delete.warningAfter')}
         </Text>
         <DeleteAccountForm
           keyword={keyword}
           confirmLabel={t('account.delete.action')}
+          cancelLabel={t('account.delete.cancel')}
           placeholder={keyword}
           loading={loading}
           onConfirm={() => void onConfirm()}
+          onCancel={() => router.back()}
         />
       </View>
     </Screen>

@@ -34,20 +34,22 @@ export async function runAccountExport(): Promise<boolean> {
 
 export interface UseAccountExport {
   exporting: boolean;
-  exportAccount: () => Promise<void>;
+  exportAccount: () => Promise<boolean>;
 }
 
 // Tracks the single in-flight export so the button can show a spinner; calls
 // `onFailure` when the export could not complete (network error or no share
-// target on the device).
+// target on the device). Resolves to the outcome so the caller can also surface
+// an in-app success confirmation.
 export function useAccountExport(onFailure: () => void): UseAccountExport {
   const [exporting, setExporting] = useState(false);
 
-  const exportAccount = useCallback(async () => {
+  const exportAccount = useCallback(async (): Promise<boolean> => {
     setExporting(true);
     const ok = await runAccountExport();
     setExporting(false);
     if (!ok) onFailure();
+    return ok;
   }, [onFailure]);
 
   return { exporting, exportAccount };

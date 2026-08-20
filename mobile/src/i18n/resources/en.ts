@@ -205,6 +205,7 @@ export const en: typeof fr = {
     export: {
       description: 'Download a JSON archive of your profile and trips (GDPR portability).',
       action: 'Export my data',
+      success: 'Data exported via the share sheet.',
       failed: 'Export failed. Try again.',
     },
     delete: {
@@ -212,6 +213,7 @@ export const en: typeof fr = {
       keyword: 'DELETE',
       warningAfter: ' to confirm.',
       action: 'Permanently delete my account',
+      cancel: 'Cancel',
       failed: 'Deletion failed. Try again.',
     },
   },

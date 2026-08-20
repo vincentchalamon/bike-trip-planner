@@ -78,23 +78,27 @@ describe('useAccountExport', () => {
     return ref;
   }
 
-  it('calls onFailure when the export fails', async () => {
+  it('calls onFailure and resolves false when the export fails', async () => {
     mockFetch.mockRejectedValue(new Error('boom'));
     const onFailure = jest.fn();
     const hook = harness(onFailure);
+    let result: boolean | undefined;
     await act(async () => {
-      await hook.current.exportAccount();
+      result = await hook.current.exportAccount();
     });
+    expect(result).toBe(false);
     expect(onFailure).toHaveBeenCalledTimes(1);
     expect(hook.current.exporting).toBe(false);
   });
 
-  it('does not call onFailure on success', async () => {
+  it('resolves true and does not call onFailure on success', async () => {
     const onFailure = jest.fn();
     const hook = harness(onFailure);
+    let result: boolean | undefined;
     await act(async () => {
-      await hook.current.exportAccount();
+      result = await hook.current.exportAccount();
     });
+    expect(result).toBe(true);
     expect(onFailure).not.toHaveBeenCalled();
   });
 });

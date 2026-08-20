@@ -204,6 +204,7 @@ export const fr = {
       description:
         'Télécharge une archive JSON de ton profil et de tes voyages (portabilité RGPD).',
       action: 'Exporter mes données',
+      success: 'Données exportées via la feuille de partage.',
       failed: "L'export a échoué. Réessaie.",
     },
     delete: {
@@ -211,6 +212,7 @@ export const fr = {
       keyword: 'SUPPRIMER',
       warningAfter: ' pour confirmer.',
       action: 'Supprimer définitivement mon compte',
+      cancel: 'Annuler',
       failed: 'La suppression a échoué. Réessaie.',
     },
   },

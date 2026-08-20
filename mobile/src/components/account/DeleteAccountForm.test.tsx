@@ -1,10 +1,14 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
-import { TextInput } from 'react-native';
+import { Text, TextInput } from 'react-native';
 import { DeleteAccountForm } from './DeleteAccountForm';
 
 type Tree = ReturnType<typeof TestRenderer.create>;
+type Instance = ReturnType<Tree['root']['find']>;
+
+const CONFIRM = 'Supprimer';
+const CANCEL = 'Annuler';
 
 function render(element: ReactElement): Tree {
   let out!: Tree;
@@ -14,10 +18,23 @@ function render(element: ReactElement): Tree {
   return out;
 }
 
+// Locate a Button (Pressable) by the label text it renders, so the two buttons
+// (Cancel / Delete) are told apart without relying on order.
+function buttonByLabel(tree: Tree, label: string): Instance {
+  const btn = tree.root
+    .findAll((n: Instance) => n.props.accessibilityRole === 'button')
+    .find((b: Instance) =>
+      b.findAllByType(Text).some((t: Instance) => {
+        const kids = Array.isArray(t.props.children) ? t.props.children : [t.props.children];
+        return kids.includes(label);
+      }),
+    );
+  if (!btn) throw new Error(`button "${label}" not found`);
+  return btn;
+}
+
 function confirmDisabled(tree: Tree): boolean {
-  return Boolean(
-    tree.root.findByProps({ accessibilityRole: 'button' }).props.accessibilityState.disabled,
-  );
+  return Boolean(buttonByLabel(tree, CONFIRM).props.accessibilityState.disabled);
 }
 
 function type(tree: Tree, text: string): void {
@@ -26,12 +43,22 @@ function type(tree: Tree, text: string): void {
   });
 }
 
+function form(overrides: Partial<Parameters<typeof DeleteAccountForm>[0]> = {}): ReactElement {
+  return (
+    <DeleteAccountForm
+      keyword="SUPPRIMER"
+      confirmLabel={CONFIRM}
+      cancelLabel={CANCEL}
+      onConfirm={jest.fn()}
+      onCancel={jest.fn()}
+      {...overrides}
+    />
+  );
+}
+
 describe('DeleteAccountForm', () => {
   it('keeps the confirm button disabled until the keyword is typed exactly', () => {
-    const onConfirm = jest.fn();
-    const tree = render(
-      <DeleteAccountForm keyword="SUPPRIMER" confirmLabel="Supprimer" onConfirm={onConfirm} />,
-    );
+    const tree = render(form());
 
     // Empty input: disabled.
     expect(confirmDisabled(tree)).toBe(true);
@@ -51,14 +78,22 @@ describe('DeleteAccountForm', () => {
 
   it('fires onConfirm only once armed', () => {
     const onConfirm = jest.fn();
-    const tree = render(
-      <DeleteAccountForm keyword="SUPPRIMER" confirmLabel="Supprimer" onConfirm={onConfirm} />,
-    );
+    const tree = render(form({ onConfirm }));
 
     type(tree, 'SUPPRIMER');
     act(() => {
-      tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress();
+      buttonByLabel(tree, CONFIRM).props.onPress();
     });
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires onCancel from the cancel button without any input', () => {
+    const onCancel = jest.fn();
+    const tree = render(form({ onCancel }));
+
+    act(() => {
+      buttonByLabel(tree, CANCEL).props.onPress();
+    });
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
