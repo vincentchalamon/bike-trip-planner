@@ -70,10 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
-  // Re-read the account email from the session — called after an email change is
-  // committed so the account screen reflects the new address without a re-login.
+  // Re-read the account email from GET /users/me (JWT Bearer) — called after an
+  // email change is committed so the account screen reflects the new address
+  // without a re-login. (Not /auth/session, which is cookie-only web transport.)
   const refreshEmail = useCallback(async (): Promise<void> => {
-    const { data } = await api.GET('/auth/session', { headers: { Accept: LD_JSON } });
+    const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
     setEmail(data?.email ?? null);
   }, []);
 
