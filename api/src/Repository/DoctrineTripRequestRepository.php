@@ -191,10 +191,11 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
     /**
      * Owned trips whose date range covers the given day, for the weather-safety
-     * batch (#1124). Bounded by the trip's own date range (startDate <= day <=
-     * endDate), so it never silently drops a long-haul trip the way a fixed
-     * look-back window would; the caller checks a non-rest stage actually falls on
-     * that day.
+     * batch (#1124). Started on or before the day and not yet ended — a trip whose
+     * `endDate` is still unset counts as not-yet-ended, so an open-ended trip is
+     * kept rather than silently dropped. No fixed look-back window, so a long-haul
+     * trip is never excluded by length; the caller checks a non-rest stage actually
+     * falls on that day.
      *
      * @return list<TripRequest>
      */
@@ -203,15 +204,14 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         /** @var list<TripRequest> $trips */
         // Fetch-join the stages: stageOnDay() iterates t.stages per trip, so a lazy
         // OneToMany would fire one SELECT per trip (N+1) on a batch that runs twice
-        // a day. The endDate bound already keeps the scan to trips still running on
-        // the given day, regardless of how long ago they started.
+        // a day.
         $trips = $this->createQueryBuilder('t')
             ->leftJoin('t.stages', 's')
             ->addSelect('s')
             ->andWhere('t.user IS NOT NULL')
             ->andWhere('t.startDate IS NOT NULL')
             ->andWhere('t.startDate <= :date')
-            ->andWhere('t.endDate >= :date')
+            ->andWhere('t.endDate IS NULL OR t.endDate >= :date')
             ->setParameter('date', $date)
             ->getQuery()
             ->getResult();

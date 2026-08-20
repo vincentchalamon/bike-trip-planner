@@ -15,10 +15,10 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * Integration coverage for the weather-safety batch lookup (#1124): the coverage
- * logic of findOwnedTripsCoveringDate (startDate <= date <= endDate, including a
- * long-haul trip that started well over two months ago) and the exclusion of
- * ended, future, undated and anonymous trips. Only exercised through stubs
- * elsewhere, so a dropped filter would go undetected.
+ * logic of findOwnedTripsCoveringDate (started on/before the day and not yet ended,
+ * including a long-haul trip started months ago and an open-ended trip with no
+ * endDate) and the exclusion of ended, future, undated and anonymous trips. Only
+ * exercised through stubs elsewhere, so a dropped filter would go undetected.
  */
 final class OwnedTripFinderTest extends KernelTestCase
 {
@@ -48,10 +48,13 @@ final class OwnedTripFinderTest extends KernelTestCase
         // The regression case: a long-haul trip that started 90 days ago and still
         // runs — a fixed 60-day look-back would have silently dropped it.
         $longHaul = $this->persistTrip($owner, $date->modify('-90 days'), $date->modify('+10 days'));
+        // Open-ended (startDate set, endDate null) counts as not-yet-ended.
+        $openEnded = $this->persistTrip($owner, $date->modify('-2 days'), null);
 
         // Not covering the day, one reason each.
         $this->persistTrip($owner, $date->modify('-10 days'), $date->modify('-1 day')); // already ended
         $this->persistTrip($owner, $date->modify('+1 day'), $date->modify('+5 days'));  // starts tomorrow
+        $this->persistTrip($owner, $date->modify('+1 day'), null);                       // open-ended, future start
         $this->persistTrip($owner, null, null);                                          // undated
         $this->persistTrip(null, $date, $date->modify('+3 days'));                       // anonymous
 
@@ -61,7 +64,7 @@ final class OwnedTripFinderTest extends KernelTestCase
         );
         sort($ids);
 
-        $expected = [$startsOnDate->id, $midTrip->id, $endsOnDate->id, $longHaul->id];
+        $expected = [$startsOnDate->id, $midTrip->id, $endsOnDate->id, $longHaul->id, $openEnded->id];
         $expected = array_map(static fn (?Uuid $id): string => $id?->toRfc4122() ?? '', $expected);
         sort($expected);
 
