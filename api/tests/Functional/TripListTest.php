@@ -100,6 +100,35 @@ final class TripListTest extends ApiTestCase
     }
 
     #[Test]
+    public function listTripSerializesAccentedTitleAsByteCorrectUtf8(): void
+    {
+        // Device recette (#trips-list-title-encoding): "Entre Sensée et Escaut" showed
+        // up mojibaked ("Entre SensÃ©e et Escaut") on the mobile list. The corruption is
+        // introduced at the transport edge (Caddy zstd/br compression the RN HTTP stack
+        // cannot decode), not here — this locks the invariant that the collection
+        // provider + serializer emit the title as byte-for-byte UTF-8, so a future
+        // mb_convert/htmlentities slip in the serialization path is caught in CI.
+        $title = 'Entre Sensée et Escaut';
+        $this->seedTrip(self::TRIP_ID_1, title: $title);
+
+        $response = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $raw = $response->getContent();
+        // Byte-for-byte: the accented run "Sensée" must carry the raw UTF-8 bytes for é
+        // (0xC3 0xA9), never the double-encoded "Ã©" (0xC3 0x83 0xC2 0xA9).
+        $this->assertStringContainsString($title, $raw);
+        $this->assertStringContainsString(bin2hex('Sensée'), bin2hex($raw));
+        $this->assertStringNotContainsString('SensÃ©e', $raw);
+
+        $member = $response->toArray(false)['member'][0];
+        $this->assertSame($title, $member['title']);
+    }
+
+    #[Test]
     public function listTripItemContainsExpectedFields(): void
     {
         $this->seedTrip(

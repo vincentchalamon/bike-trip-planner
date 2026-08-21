@@ -25,7 +25,27 @@
     }
 
     root /app/public
-    encode zstd br gzip
+    # Compress only the large, browser-consumed web assets. JSON (application/json,
+    # application/ld+json) is deliberately excluded: React Native's okhttp advertises
+    # `zstd, br, gzip` but only transparently decodes gzip it added itself, so a
+    # zstd/br JSON body reaches the app raw and is read as Latin-1 — UTF-8 `é` (C3 A9)
+    # becomes "Ã©", mojibaking accented trip titles on the "Mes voyages" list (the
+    # collection payload is >512B so Caddy compresses it, unlike a small item body).
+    # The client's `Accept-Encoding: identity` (mobile #1090) is a forbidden request
+    # header and is not reliably honored by the native stack, so the durable fix lives
+    # here. text/event-stream (Mercure SSE) is excluded too — it must never be
+    # buffered/compressed. JSON payloads are small, so the extra bytes are negligible.
+    encode zstd br gzip {
+        match {
+            header Content-Type text/html*
+            header Content-Type text/css*
+            header Content-Type text/javascript*
+            header Content-Type application/javascript*
+            header Content-Type text/x-component*
+            header Content-Type image/svg+xml*
+            header Content-Type application/wasm*
+        }
+    }
 
     # Limit request body to 30 MB (GPX upload)
     request_body {
