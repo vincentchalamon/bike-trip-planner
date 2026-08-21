@@ -1,5 +1,12 @@
-import { type ComponentType } from 'react';
-import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
+import { type ComponentType, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme, type Theme } from '../../theme';
 import {
@@ -15,6 +22,7 @@ import type {
 import {
   AlertTriangle,
   Clock,
+  CornerUpLeft,
   Cross,
   Droplet,
   ExternalLink,
@@ -96,6 +104,14 @@ function formatClosingTime(iso: string | null | undefined): string {
 }
 
 /**
+ * True for the OSM `opening_hours` convention meaning "always open"
+ * (`24/7`), the "Accès libre 24 h/24" badge in the maquette.
+ */
+function isAlwaysOpen(hours: string | null | undefined): boolean {
+  return hours?.trim() === '24/7';
+}
+
+/**
  * Guided in-ride POI finder (ADR-048, #1150) — mounted in the `poiPanel` slot of
  * {@link InRideView}. Eight intent chips search from the rider's real GPS fix
  * (#1149); results render as themed cards with distance, opening status (+ an
@@ -116,6 +132,7 @@ export function InRidePanel({
   const theme = useTheme();
   const { isSearching, errorKey, recap, activeCategory, canWiden, search, widen } =
     useInRideSearch(tripId, stageDay);
+  const { width: windowWidth } = useWindowDimensions();
 
   const position = location.position;
   const coords: SearchPosition | null = position
@@ -123,12 +140,19 @@ export function InRidePanel({
     : null;
   const disabled = isSearching || coords === null;
 
+  // 4 columns x 2 rows (maquette 08-in-ride, #1094). A computed pixel width
+  // (rather than a percentage flexBasis) guarantees exactly 4 chips per row
+  // regardless of the `gap` rounding, since the panel is padded by
+  // `theme.spacing.base` on both sides with 3 inter-chip gaps.
+  const chipGap = theme.spacing.sm;
+  const chipWidth = (windowWidth - theme.spacing.base * 2 - chipGap * 3) / 4;
+
   return (
     <View style={{ paddingHorizontal: theme.spacing.base, gap: theme.spacing.md }}>
       <View
         accessibilityRole="menu"
         accessibilityLabel={t('trip.inRide.chipsGroupA11y')}
-        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: chipGap }}
       >
         {INTENTS.map(({ category, Icon }) => {
           const selected = activeCategory === category;
@@ -141,24 +165,27 @@ export function InRidePanel({
               disabled={disabled}
               onPress={() => coords && search(category, coords)}
               style={{
-                flexDirection: 'row',
+                width: chipWidth,
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: theme.spacing.xs,
-                paddingVertical: theme.spacing.sm,
-                paddingHorizontal: theme.spacing.md,
-                borderRadius: theme.radius.full,
+                paddingVertical: theme.spacing.md,
+                paddingHorizontal: theme.spacing.xs,
+                borderRadius: theme.radius.lg,
                 borderWidth: 1,
                 borderColor: selected ? theme.colors.brandFill : theme.colors.border,
-                backgroundColor: selected ? theme.colors.brandLight : theme.colors.card,
+                backgroundColor: selected ? theme.colors.brandFill : theme.colors.card,
                 opacity: disabled ? 0.5 : 1,
               }}
             >
-              <Icon color={theme.colors.brand} size={16} />
+              <Icon color={selected ? theme.colors.primaryForeground : theme.colors.brand} size={18} />
               <Text
+                numberOfLines={2}
                 style={{
-                  color: theme.colors.foreground,
-                  fontFamily: theme.fonts.sansMedium,
-                  fontSize: 13,
+                  textAlign: 'center',
+                  color: selected ? theme.colors.primaryForeground : theme.colors.foreground,
+                  fontFamily: selected ? theme.fonts.sansSemibold : theme.fonts.sansMedium,
+                  fontSize: 12,
                 }}
               >
                 {t(`trip.inRide.search.${category}`)}
@@ -245,6 +272,23 @@ function RecapBlock({
 
   return (
     <View style={{ gap: theme.spacing.sm }}>
+      {shown > 0 ? (
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sansSemibold,
+            fontSize: 11,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          {t('trip.inRide.resultsHeader', {
+            count: shown,
+            category: t(`trip.inRide.search.${recap.category}`),
+          })}
+        </Text>
+      ) : null}
+
       <Text
         accessibilityRole="text"
         style={{
@@ -268,12 +312,14 @@ function RecapBlock({
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            alignSelf: 'flex-start',
+            justifyContent: 'center',
+            alignSelf: 'stretch',
             gap: theme.spacing.xs,
             paddingVertical: theme.spacing.sm,
             paddingHorizontal: theme.spacing.md,
             borderRadius: theme.radius.full,
             borderWidth: 1,
+            borderStyle: 'dashed',
             borderColor: theme.colors.border,
             backgroundColor: theme.colors.card,
           }}
@@ -294,10 +340,47 @@ function RecapBlock({
   );
 }
 
+// A small pill: icon + label on a tinted background (mirrors the
+// `DifficultyPill` pattern in StageDetailView — reused visual language for the
+// maquette's "row of badges").
+function Badge({
+  icon,
+  label,
+  bg,
+  fg,
+}: {
+  icon?: ReactNode;
+  label: string;
+  bg: string;
+  fg: string;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.xs,
+        alignSelf: 'flex-start',
+        backgroundColor: bg,
+        borderRadius: theme.radius.full,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+      }}
+    >
+      {icon}
+      <Text style={{ color: fg, fontFamily: theme.fonts.sansMedium, fontSize: 12 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
   const { t } = useTranslation();
   const Icon = CATEGORY_ICON[poi.category] ?? Droplet;
   const closesAt = formatClosingTime(poi.closes_at);
+  const alwaysOpen = isAlwaysOpen(poi.opening_hours_today);
   const hasOpeningHours =
     !!poi.opening_hours_today && poi.opening_hours_today.trim() !== '';
   const detour = poi.detour_m;
@@ -307,9 +390,7 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
       ? t('trip.inRide.warning.closesSoon', { minutes: poi.warning_minutes ?? 0 })
       : poi.warning === 'far_from_route'
         ? t('trip.inRide.warning.farFromRoute')
-        : poi.warning === 'hours_unverified'
-          ? t('trip.inRide.noOpeningHours')
-          : null;
+        : null;
 
   return (
     <View
@@ -323,96 +404,76 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
         backgroundColor: theme.colors.card,
       }}
     >
+      {/* Title row: name (bold) + distance (muted, right-aligned). */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
         <Icon color={theme.colors.brand} size={18} />
-        <View style={{ flex: 1 }}>
-          <Text
-            numberOfLines={1}
-            style={{
-              color: theme.colors.foreground,
-              fontFamily: theme.fonts.sansSemibold,
-              fontSize: 14,
-            }}
-          >
-            {poi.name}
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.fonts.sans,
-              fontSize: 12,
-            }}
-          >
-            {formatDistance(poi.distance_m)}
-            {detour != null && detour > 0
-              ? `  ${t('trip.inRide.detourBadge', {
-                  km: (detour / 1000).toFixed(1).replace(/\.0$/, ''),
-                })}`
-              : ''}
-          </Text>
-        </View>
-      </View>
-
-      {hasOpeningHours ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
-          <Clock color={theme.colors.mutedForeground} size={13} />
-          <Text
-            numberOfLines={1}
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.fonts.sans,
-              fontSize: 12,
-            }}
-          >
-            {poi.opening_hours_today}
-          </Text>
-        </View>
-      ) : (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
-          <AlertTriangle color={theme.colors.accentBrand} size={13} />
-          <Text
-            style={{
-              color: theme.colors.accentBrand,
-              fontFamily: theme.fonts.sans,
-              fontSize: 12,
-            }}
-          >
-            {t('trip.inRide.noOpeningHours')}
-          </Text>
-        </View>
-      )}
-
-      {closesAt !== '' ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            color: theme.colors.foreground,
+            fontFamily: theme.fonts.sansSemibold,
+            fontSize: 14,
+          }}
+        >
+          {poi.name}
+        </Text>
         <Text
           style={{
-            color: theme.colors.accentInk,
-            fontFamily: theme.fonts.sansMedium,
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
             fontSize: 12,
           }}
         >
-          {t('trip.inRide.closesAt', { time: closesAt })}
+          {formatDistance(poi.distance_m)}
         </Text>
-      ) : null}
+      </View>
 
-      {poi.phone ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={poi.phone}
-          onPress={() => {
-            if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
-          }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}
-        >
-          <Phone color={theme.colors.brand} size={13} />
-          <Text
-            style={{ color: theme.colors.brand, fontFamily: theme.fonts.sans, fontSize: 12 }}
-          >
-            {poi.phone}
-          </Text>
-        </Pressable>
-      ) : null}
+      {/* Badges row: detour + opening status. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs }}>
+        {detour != null && detour > 0 ? (
+          <Badge
+            icon={<CornerUpLeft color={theme.colors.mutedForeground} size={12} />}
+            label={t('trip.inRide.detourBadge', {
+              km: (detour / 1000).toFixed(1).replace(/\.0$/, ''),
+            })}
+            bg={theme.colors.secondary}
+            fg={theme.colors.mutedForeground}
+          />
+        ) : null}
 
-      {poi.warning && poi.warning !== 'hours_unverified' && warningText ? (
+        {alwaysOpen ? (
+          <Badge
+            icon={<Clock color={theme.colors.successInk} size={12} />}
+            label={t('trip.inRide.openAllDay')}
+            bg={theme.colors.successSoft}
+            fg={theme.colors.successInk}
+          />
+        ) : closesAt !== '' ? (
+          <Badge
+            icon={<Clock color={theme.colors.accentInk} size={12} />}
+            label={t('trip.inRide.closesAt', { time: closesAt })}
+            bg={theme.colors.accentSoft}
+            fg={theme.colors.accentInk}
+          />
+        ) : hasOpeningHours ? (
+          <Badge
+            icon={<Clock color={theme.colors.mutedForeground} size={12} />}
+            label={poi.opening_hours_today ?? ''}
+            bg={theme.colors.secondary}
+            fg={theme.colors.mutedForeground}
+          />
+        ) : (
+          <Badge
+            icon={<AlertTriangle color={theme.colors.accentInk} size={12} />}
+            label={t('trip.inRide.noOpeningHours')}
+            bg={theme.colors.accentSoft}
+            fg={theme.colors.accentInk}
+          />
+        )}
+      </View>
+
+      {poi.warning && warningText ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
           <AlertTriangle color={theme.colors.accentBrand} size={13} />
           <Text
@@ -427,36 +488,68 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
         </View>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('trip.inRide.openInMaps')}
-        onPress={() => {
-          if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
-        }}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          alignSelf: 'flex-start',
-          gap: theme.spacing.xs,
-          paddingVertical: theme.spacing.sm,
-          paddingHorizontal: theme.spacing.md,
-          borderRadius: theme.radius.md,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.card,
-        }}
-      >
-        <ExternalLink color={theme.colors.foreground} size={13} />
-        <Text
+      {/* Actions row: call (secondary) + open in maps (primary/accent). */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+        {poi.phone ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={poi.phone}
+            onPress={() => {
+              if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.xs,
+              paddingVertical: theme.spacing.sm,
+              paddingHorizontal: theme.spacing.md,
+              borderRadius: theme.radius.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.secondary,
+            }}
+          >
+            <Phone color={theme.colors.secondaryForeground} size={13} />
+            <Text
+              style={{
+                color: theme.colors.secondaryForeground,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 13,
+              }}
+            >
+              {poi.phone}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('trip.inRide.openInMaps')}
+          onPress={() => {
+            if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
+          }}
           style={{
-            color: theme.colors.foreground,
-            fontFamily: theme.fonts.sansMedium,
-            fontSize: 13,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.xs,
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.brandFill,
           }}
         >
-          {t('trip.inRide.openInMaps')}
-        </Text>
-      </Pressable>
+          <ExternalLink color={theme.colors.primaryForeground} size={13} />
+          <Text
+            style={{
+              color: theme.colors.primaryForeground,
+              fontFamily: theme.fonts.sansSemibold,
+              fontSize: 13,
+            }}
+          >
+            {t('trip.inRide.openInMaps')}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

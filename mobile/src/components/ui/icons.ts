@@ -66,3 +66,5 @@ export {
   Wrench,
   Zap,
 } from 'lucide-react-native';
+// In-ride maquette conformity (#1094): disclaimer banner + detour badge.
+export { CornerUpLeft, Info } from 'lucide-react-native';

@@ -283,4 +283,140 @@ describe('InRidePanel (#1150)', () => {
     const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
     expect(texts(tree)).toContain(i18n.t('trip.inRide.errorRateLimit'));
   });
+
+  it('shows the uppercase results header (count + category, maquette 08-in-ride #1094)', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 2,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/1',
+          } as never,
+          {
+            name: 'Puits',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 200,
+            deeplink: 'https://maps.example/2',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain(
+      i18n.t('trip.inRide.resultsHeader', { count: 2, category: i18n.t('trip.inRide.search.water') }),
+    );
+  });
+
+  it('flags an always-open POI with the green "Accès libre 24 h/24" badge', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine publique',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/1',
+            opening_hours_today: '24/7',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.openAllDay'));
+  });
+
+  it('prefers the closes-at badge over the raw opening-hours text', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/1',
+            opening_hours_today: 'Mo-Su 09:00-18:00',
+            closes_at: '2026-08-21T18:00:00+02:00',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.closesAt', { time: '18:00' }));
+    expect(texts(tree)).not.toContain('Mo-Su 09:00-18:00');
+  });
+
+  it('shows the raw opening-hours text as a badge when no closes-at time is available', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/1',
+            opening_hours_today: 'Mo-Su 09:00-18:00',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain('Mo-Su 09:00-18:00');
+  });
+
+  it('shows the detour badge when the POI is off-route', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            detour_m: 300,
+            deeplink: 'https://maps.example/1',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.detourBadge', { km: '0.3' }));
+  });
 });

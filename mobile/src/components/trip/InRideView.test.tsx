@@ -93,4 +93,19 @@ describe('InRideView', () => {
     const tree = await render(<InRideView tripId="t1" poiPanel={slot} />);
     expect(queryByLabel(tree, 'poi-slot')).not.toBeNull();
   });
+
+  it('shows the disclaimer banner (maquette 08-in-ride, #1094)', async () => {
+    const tree = await render(<InRideView tripId="t1" />);
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.disclaimerStrong'));
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.disclaimer'));
+  });
+
+  it('shows the connectivity status text, online or offline', async () => {
+    const online = await render(<InRideView tripId="t1" />);
+    expect(texts(online)).toContain(i18n.t('trip.inRide.onlineBadge'));
+
+    useOfflineStore.setState({ isOnline: false });
+    const offline = await render(<InRideView tripId="t1" />);
+    expect(texts(offline)).toContain(i18n.t('trip.inRide.offlineBadge'));
+  });
 });

@@ -4,8 +4,10 @@ import { Screen } from '../../../src/components/ui';
 import { InRidePanel, InRideView } from '../../../src/components/trip';
 
 // In-ride route (#1149): reached from the roadbook "En selle" FAB. Thin wrapper —
-// the body (foreground GPS, offline badge, help bubble, #1150 POI slot) lives in
-// InRideView so it renders in tests without a mounted navigator.
+// the body (topbar connectivity dot, disclaimer, offline badge, help bubble,
+// #1150 POI slot) lives in InRideView so it renders in tests without a mounted
+// navigator. The chevron-back + title are the native Stack header, themed
+// globally in _layout.tsx (maquette 08-in-ride, #1094).
 export default function InRide() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
