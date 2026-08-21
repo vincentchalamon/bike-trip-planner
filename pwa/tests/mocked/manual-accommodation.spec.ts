@@ -127,11 +127,14 @@ test.describe("Manual (hors-app) accommodation", () => {
         "Adresse introuvable. Précise-la (ajoute une ville ou un code postal) et réessaie.",
       ),
     ).toBeVisible();
-    // …and nothing was selected: no manual card, no "Sélectionné" badge.
+    // …and nothing manual was selected: the scanned candidate (and its own OSM
+    // source badge) is still there, but no "Manuel" entry and no "Sélectionné".
     await expect(stageCard).not.toContainText("Sélectionné");
     await expect(stageCard).not.toContainText("HomeExchange Grenoble");
     await expect(
-      stageCard.getByTestId("accommodation-source-badge"),
+      stageCard
+        .getByTestId("accommodation-source-badge")
+        .filter({ hasText: "Manuel" }),
     ).toHaveCount(0);
   });
 
