@@ -213,4 +213,17 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(422);
     }
+
+    #[Test]
+    public function nonExistentStageReturns404(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID);
+
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/99/accommodations/manual', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            'json' => ['name' => 'Nowhere', 'address' => 'somewhere'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
 }
