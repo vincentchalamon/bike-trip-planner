@@ -25,7 +25,41 @@
     }
 
     root /app/public
-    encode zstd br gzip
+
+    # Native mobile clients opt out of compression. React Native's okhttp advertises
+    # `zstd, br, gzip` but only transparently decodes gzip it added itself, so a
+    # zstd/br body reaches the app raw and is read as Latin-1 — UTF-8 `é` (C3 A9)
+    # becomes "Ã©", mojibaking accented trip titles on the "Mes voyages" list. The
+    # native stack overrides the forbidden `Accept-Encoding` request header, so the
+    # app instead sends `X-Client-Platform: mobile` (a custom header okhttp keeps).
+    # We rewrite its incoming Accept-Encoding to `identity` here, BEFORE `encode`
+    # runs (`request_header` is ordered before `encode` in Caddy's handler chain, so
+    # `encode` reads the rewritten value and finds no acceptable encoding -> serves
+    # it uncompressed). Web/PWA clients decode zstd/br fine and keep compression.
+    @mobile header X-Client-Platform mobile
+    request_header @mobile Accept-Encoding identity
+
+    # Compress responses. JSON (application/json, application/ld+json) and GPX
+    # (application/gpx+xml) are included so browser/PWA clients get compressed
+    # transfers on the large geometry payloads too — GET /trips/{id}/route (ADR-057)
+    # and the GPX exports (/s/{code}.gpx, stage GPX). Native mobile is excluded via
+    # the Accept-Encoding rewrite above, not by dropping a content-type here.
+    # text/event-stream (Mercure SSE) is deliberately NOT whitelisted: it must never
+    # be buffered/compressed, for any client.
+    encode zstd br gzip {
+        match {
+            header Content-Type text/html*
+            header Content-Type text/css*
+            header Content-Type text/javascript*
+            header Content-Type application/javascript*
+            header Content-Type text/x-component*
+            header Content-Type image/svg+xml*
+            header Content-Type application/wasm*
+            header Content-Type application/json*
+            header Content-Type application/ld+json*
+            header Content-Type application/gpx+xml*
+        }
+    }
 
     # Limit request body to 30 MB (GPX upload)
     request_body {
