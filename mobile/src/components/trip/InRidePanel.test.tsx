@@ -343,6 +343,33 @@ describe('InRidePanel (#1150)', () => {
     expect(texts(tree)).toContain(i18n.t('trip.inRide.openAllDay'));
   });
 
+  it('prefers the closes-at badge over the raw opening-hours text', async () => {
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/1',
+            opening_hours_today: 'Mo-Su 09:00-18:00',
+            closes_at: '2026-08-21T18:00:00+02:00',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+    expect(texts(tree)).toContain(i18n.t('trip.inRide.closesAt', { time: '18:00' }));
+    expect(texts(tree)).not.toContain('Mo-Su 09:00-18:00');
+  });
+
   it('shows the detour badge when the POI is off-route', async () => {
     hookReturns({
       recap: {
