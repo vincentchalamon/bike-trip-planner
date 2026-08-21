@@ -75,4 +75,19 @@ describe('useForegroundLocation', () => {
     expect(last.position).toBeNull();
     expect(watch).not.toHaveBeenCalled();
   });
+
+  it('falls back to denied when the OS location API throws (e.g. Location Services off)', async () => {
+    requestPerm.mockResolvedValue({ status: 'granted' });
+    watch.mockRejectedValue(new Error('Location services disabled'));
+
+    const states: ForegroundLocation[] = [];
+    await act(async () => {
+      TestRenderer.create(createElement(Harness, { onRender: (v) => states.push(v) }));
+    });
+    await flush();
+
+    const last = states[states.length - 1];
+    expect(last.permission).toBe('denied');
+    expect(last.position).toBeNull();
+  });
 });

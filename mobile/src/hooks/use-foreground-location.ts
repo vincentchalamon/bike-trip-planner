@@ -26,24 +26,32 @@ export function useForegroundLocation(): ForegroundLocation {
     let subscription: Location.LocationSubscription | null = null;
 
     void (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (cancelled) return;
-      if (status !== 'granted') {
-        setPermission('denied');
-        return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        if (status !== 'granted') {
+          setPermission('denied');
+          return;
+        }
+        setPermission('granted');
+        const sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10, timeInterval: 5000 },
+          (loc) => {
+            if (!cancelled) setPosition(loc.coords);
+          },
+        );
+        if (cancelled) {
+          sub.remove();
+          return;
+        }
+        subscription = sub;
+      } catch {
+        // The permission/watch API itself can throw independently of granted/denied
+        // (e.g. Location Services toggled off at the OS level) — surface it as
+        // 'denied' so the screen falls back instead of hanging on "Recherche du
+        // signal GPS…" forever. Same class of guard as fetchDeviceToken (push.ts).
+        if (!cancelled) setPermission('denied');
       }
-      setPermission('granted');
-      const sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, distanceInterval: 10, timeInterval: 5000 },
-        (loc) => {
-          if (!cancelled) setPosition(loc.coords);
-        },
-      );
-      if (cancelled) {
-        sub.remove();
-        return;
-      }
-      subscription = sub;
     })();
 
     return () => {
