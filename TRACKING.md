@@ -2083,7 +2083,7 @@ Hébergement réservé **hors app** (HomeExchange, AirBnb, Booking, warmshowers,
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1097](https://github.com/vincentchalamon/bike-trip-planner/issues/1097) | feat(accommodations) : saisie manuelle d'un hébergement hors-app (titre, adresse, prix total, lien) — web + mobile | L | ⏳ À faire | — | — |
+| 1 | [#1097](https://github.com/vincentchalamon/bike-trip-planner/issues/1097) | feat(accommodations) : saisie manuelle d'un hébergement hors-app (titre, adresse, prix total, lien) — web + mobile | L | 🚧 En cours | [#1163](https://github.com/vincentchalamon/bike-trip-planner/pull/1163) (`feature/1097`) | — |
 
 **Décisions de conception (arrêtées avant exécution) :**
 
@@ -2093,5 +2093,10 @@ Hébergement réservé **hors app** (HomeExchange, AirBnb, Booking, warmshowers,
 - **Adresse géocodée (Nominatim)** côté backend → `lat/lon`, pour que l'hébergement manuel se comporte comme un vrai (déplace `endPoint` de l'étape + `startPoint` de la suivante, recalcul), plutôt qu'une métadonnée informative seule. Client HTTP scopé (contrainte SSRF : base URI dédiée, 2 redirects, 10 s) + cache ; échec géocodage → 422.
 - **Contrat** `Accommodation` : `address` ajouté comme champ **général et nullable** du modèle partagé (pas manuel-only : OSM `addr:*` / DataTourisme en portent aussi), `source` étendu à `manual`. Pas de champ prix parallèle : le « prix total » passe par le contrat standard `estimatedPriceMin = estimatedPriceMax` + `isExactPrice = true`. `make typegen` régénère `core/schema.d.ts`.
 - Socle réutilisé : pattern `StageSelectAccommodationProcessor` (Sprint 45/46 hébergements, Sprint 56 #1045 sélection/scan mobile). Le type `"other"` est déjà réservé aux hébergements manuels (`core/accommodation-constants.ts`).
+
+**Ordre de merge et conflits attendus :**
+
+- **Une seule PR** : [#1163](https://github.com/vincentchalamon/bike-trip-planner/pull/1163) (`feature/1097` → `main`). Pas de stack, aucun conflit inter-branches (sprint mono-ticket).
+- La branche est `BEHIND` (main a avancé depuis la création de `feature/1097`) : rebaser sur `main` avant merge si GitHub le demande. Aucun chevauchement de fichiers attendu — le diff est concentré sur la feature hébergements (nouveau processor/DTO/endpoint + composants d'ajout web/mobile), zones intactes ailleurs.
 
 </details>
