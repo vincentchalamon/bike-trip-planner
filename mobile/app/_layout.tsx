@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import '../src/i18n';
 import { AuthProvider } from '../src/auth/store';
 import { usePushRouting } from '../src/notifications/use-push-routing';
+import { useConnectivity } from '../src/store/use-connectivity';
 import { ThemeProvider, useTheme } from '../src/theme';
 
 function RootNavigator() {
@@ -11,6 +12,8 @@ function RootNavigator() {
   const theme = useTheme();
   // Route notification taps (warm + cold start) to the concerned screen (#1125).
   usePushRouting();
+  // Feed real NetInfo connectivity into the offline store / mutation gate (#1146).
+  useConnectivity();
   return (
     <Stack
       // The header integrates with the theme (light/dark) instead of the default

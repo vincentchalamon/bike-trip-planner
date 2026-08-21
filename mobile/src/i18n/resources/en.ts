@@ -499,6 +499,12 @@ export const en: typeof fr = {
     fr: 'Français',
     en: 'English',
   },
+  freshness: {
+    justNow: 'just now',
+    hoursAgo: '{{count}}h ago',
+    yesterday: 'yesterday',
+    daysAgo: '{{count}} days ago',
+  },
   export: {
     trip: 'Export',
     stage: 'Export',
