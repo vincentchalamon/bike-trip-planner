@@ -2032,11 +2032,12 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 
 **Spine = GitHub Stack #1157** (`gh stack`, `rerere` actif) : `feature/1146 → feature/1149 → feature/1150 → feature/1094`. Feuilles hors stack : #1148, #1147 (base `feature/1146`).
 
-Merger **de bas en haut**, dans cet ordre (squash) :
+Ordre retenu — **absorber les feuilles dans `feature/1146` avant de merger le socle sur `main`**, ce qui évite le `git rebase --onto origin/main <tip-avant-squash>` fragile des feuilles après un squash, et fait atterrir l'épic #1052 (1146+1147+1148) d'un bloc :
 
-1. **#1151** (`feature/1146`, base `main`) — socle. Après son squash-merge, GitHub retargete les enfants sur `main` ; pour le spine, `gh stack sync` bascule en `--onto` automatiquement. Pour les feuilles **#1153/#1154** (base `feature/1146`), rebaser à la main : `git rebase --onto origin/main <tip-1146-avant-squash> feature/<n>`.
-2. **#1153** (#1148, carte offline) et **#1154** (#1147, cache) — feuilles indépendantes, ordre libre entre elles.
-3. **#1152** (#1149) → **#1155** (#1150) → **#1156** (#1094) — le reste du spine, dans l'ordre. `gh stack sync` après chaque merge parent.
+1. Merger **#1153** (#1148, carte offline) et **#1154** (#1147, cache) **dans leur base `feature/1146`** (leur PR y pointe déjà) — merges normaux, ordre libre entre elles. Conflit i18n/icons **trivial** (additions adjacentes) le cas échéant.
+2. `gh stack sync` — rebase le spine restant `feature/1149 → feature/1150 → feature/1094` sur `feature/1146` mise à jour (`rerere` rejoue le conflit `InRidePanel`).
+3. Merger **#1151** (`feature/1146`, contient désormais l'épic #1052 complet) → `main` (squash).
+4. Après le squash de #1151, `gh stack sync` bascule le spine en mode `--onto main` ; merger **#1152** (#1149) → **#1155** (#1150) → **#1156** (#1094), `gh stack sync` après chaque merge parent.
 
 **Fichiers partagés (overlap) et arbitrage :**
 
