@@ -30,7 +30,15 @@
       "@maplibre/maplibre-react-native",
       "expo-secure-store",
       "expo-sharing",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Bike Trip Planner utilise votre position pour afficher votre localisation et trouver des points d'intérêt autour de vous pendant votre trajet.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ]
     ]
   }
 }

@@ -93,6 +93,16 @@ describe('RoadbookView navigation', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/trip/trip-42/stage/1');
   });
+
+  it('pushes the in-ride route when the "En selle" FAB is tapped', () => {
+    const tree = render(<RoadbookView id="trip-42" />);
+    const fab = queryByLabel(tree, i18n.t('trip.rideCtaA11y'));
+    expect(fab).not.toBeNull();
+
+    act(() => fab.props.onPress());
+
+    expect(mockPush).toHaveBeenCalledWith('/trip/trip-42/in-ride');
+  });
 });
 
 describe('RoadbookView edit affordances by lifecycle', () => {

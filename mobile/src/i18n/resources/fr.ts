@@ -418,6 +418,18 @@ export const fr = {
     deleteTripConfirmTitle: 'Supprimer ce voyage ?',
     deleteTripConfirmMessage: 'Ce voyage sera définitivement supprimé.',
     rideCtaA11y: 'Démarrer le voyage',
+    inRide: {
+      title: 'En selle',
+      offlineBadge: 'Hors ligne',
+      offlineHint: "La recherche de points d'intérêt nécessite une connexion.",
+      locationWaiting: 'Recherche du signal GPS…',
+      locationDeniedTitle: 'Localisation désactivée',
+      locationDenied:
+        'Autorisez la localisation pour afficher votre position et rechercher des points autour de vous.',
+      positionA11y: 'Position actuelle',
+      coords: '{{lat}}, {{lng}}',
+      helpA11y: 'Aide',
+    },
   },
   config: {
     title: 'Configuration',

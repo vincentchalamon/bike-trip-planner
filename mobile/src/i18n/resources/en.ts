@@ -418,6 +418,18 @@ export const en: typeof fr = {
     deleteTripConfirmTitle: 'Delete this trip?',
     deleteTripConfirmMessage: 'This trip will be permanently deleted.',
     rideCtaA11y: 'Start the trip',
+    inRide: {
+      title: 'On the ride',
+      offlineBadge: 'Offline',
+      offlineHint: 'Searching for points of interest requires a connection.',
+      locationWaiting: 'Searching for GPS signal…',
+      locationDeniedTitle: 'Location disabled',
+      locationDenied:
+        'Allow location access to show your position and find points of interest around you.',
+      positionA11y: 'Current position',
+      coords: '{{lat}}, {{lng}}',
+      helpA11y: 'Help',
+    },
   },
   config: {
     title: 'Settings',

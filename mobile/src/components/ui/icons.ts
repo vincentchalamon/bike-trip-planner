@@ -50,3 +50,5 @@ export { ShoppingBag } from 'lucide-react-native';
 export { Bell, BellOff, CheckCircle2 } from 'lucide-react-native';
 // Offline map degradation (#1148): discrete "offline map" indicator.
 export { CloudOff } from 'lucide-react-native';
+// In-ride mode (#1149): help bubble, offline badge, GPS position.
+export { HelpCircle, Navigation, WifiOff } from 'lucide-react-native';
