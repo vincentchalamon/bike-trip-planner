@@ -1614,13 +1614,13 @@ Le sprint porte aussi le ticket de suivi demandé par #927 et par la PR #928 : l
 | 1 | [#929](https://github.com/vincentchalamon/bike-trip-planner/issues/929) | refactor(in-ride)!: supprimer le chat IA de planification, l'in-ride IA et l'historique persisté | XL | ✅ Mergée | [#959](https://github.com/vincentchalamon/bike-trip-planner/pull/959) | PR #928 |
 | 2 | [#930](https://github.com/vincentchalamon/bike-trip-planner/issues/930) | feat(in-ride): enum de catégories et lecteur PostGIS 8 buckets | L | ✅ Mergée | [#960](https://github.com/vincentchalamon/bike-trip-planner/pull/960) | #929 |
 | 3 | [#931](https://github.com/vincentchalamon/bike-trip-planner/issues/931) | feat(in-ride): tri-état des horaires et libellés localisés des lieux sans nom | M | ✅ Mergée | [#961](https://github.com/vincentchalamon/bike-trip-planner/pull/961) | #929 |
-| 4 | [#932](https://github.com/vincentchalamon/bike-trip-planner/issues/932) | feat(in-ride): polyligne restante côté serveur pour le calcul de détour | M | 🚧 En cours | [#962](https://github.com/vincentchalamon/bike-trip-planner/pull/962) `feature/932` | #929 |
-| 5 | [#933](https://github.com/vincentchalamon/bike-trip-planner/issues/933) | feat(in-ride): orchestrateur de recherche de lieux sans IA | L | 🚧 En cours | [#963](https://github.com/vincentchalamon/bike-trip-planner/pull/963) `feature/933` | #930, #931, #932 |
-| 6 | [#934](https://github.com/vincentchalamon/bike-trip-planner/issues/934) | feat(api): endpoint POST /trips/{id}/nearby-pois | L | 🚧 En cours | [#965](https://github.com/vincentchalamon/bike-trip-planner/pull/965) `feature/934` | #933 |
-| 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | 🚧 En cours | [#968](https://github.com/vincentchalamon/bike-trip-planner/pull/968) `feature/935` | #934 |
-| 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | 🚧 En cours | [#966](https://github.com/vincentchalamon/bike-trip-planner/pull/966) `feature/936` | #934 |
+| 4 | [#932](https://github.com/vincentchalamon/bike-trip-planner/issues/932) | feat(in-ride): polyligne restante côté serveur pour le calcul de détour | M | ✅ Mergé | [#962](https://github.com/vincentchalamon/bike-trip-planner/pull/962) `feature/932` | #929 |
+| 5 | [#933](https://github.com/vincentchalamon/bike-trip-planner/issues/933) | feat(in-ride): orchestrateur de recherche de lieux sans IA | L | ✅ Mergé | [#963](https://github.com/vincentchalamon/bike-trip-planner/pull/963) `feature/933` | #930, #931, #932 |
+| 6 | [#934](https://github.com/vincentchalamon/bike-trip-planner/issues/934) | feat(api): endpoint POST /trips/{id}/nearby-pois | L | ✅ Mergé | [#965](https://github.com/vincentchalamon/bike-trip-planner/pull/965) `feature/934` | #933 |
+| 7 | [#935](https://github.com/vincentchalamon/bike-trip-planner/issues/935) | feat(pwa): panneau « en route » à questions prédéfinies | XL | ✅ Mergé | [#968](https://github.com/vincentchalamon/bike-trip-planner/pull/968) `feature/935` | #934 |
+| 8 | [#936](https://github.com/vincentchalamon/bike-trip-planner/issues/936) | docs(adr): add adr-048 in-ride assistance without ai | M | ✅ Mergé | [#966](https://github.com/vincentchalamon/bike-trip-planner/pull/966) `feature/936` | #934 |
 | 9 | [#938](https://github.com/vincentchalamon/bike-trip-planner/issues/938) | test(recette): recette sprint 51 - in-ride sans IA sur téléphone | M | ⏳ Manuelle | - | #935, #936 |
-| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | 🚧 En cours | [#971](https://github.com/vincentchalamon/bike-trip-planner/pull/971) `feature/937` | #929 (exception pré-lancement, addendum ADR-032) |
+| — | [#937](https://github.com/vincentchalamon/bike-trip-planner/issues/937) | chore(db)!: supprimer la table trip_chat_message | S | ✅ Mergé | [#971](https://github.com/vincentchalamon/bike-trip-planner/pull/971) `feature/937` | #929 (exception pré-lancement, addendum ADR-032) |
 
 Vagues `/sprint` : {#929} seule → {#930, #931, #932} → {#933} → {#934} seule → {#935, #936} → {#938} manuelle → release suivante {#937}.
 
@@ -1681,7 +1681,7 @@ Fichiers à **écrivain unique** dans le sprint (pas des recoupements, mais des 
 
 <details><summary>
 
-## Sprint 52 - Recette août 2026
+## ✅ Sprint 52 - Recette août 2026
 
 </summary>
 Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pure (#976-#983) et une feature qualité-données sur les événements (#975, #984, #985), ajoutée au sprint sur demande. Plan détaillé hors dépôt (`~/.claude/plans/`).
@@ -1698,17 +1698,17 @@ Batch de 11 retours de la recette du 10/08/2026. Deux périmètres : recette pur
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#976](https://github.com/vincentchalamon/bike-trip-planner/issues/976) | fix(early-access): message de succès illisible + email de vérification jamais envoyé | M | 🚧 En cours | [#988](https://github.com/vincentchalamon/bike-trip-planner/pull/988) `feature/976` | — |
+| 1 | [#976](https://github.com/vincentchalamon/bike-trip-planner/issues/976) | fix(early-access): message de succès illisible + email de vérification jamais envoyé | M | ✅ Mergé | [#988](https://github.com/vincentchalamon/bike-trip-planner/pull/988) `feature/976` | — |
 | 2 | [#977](https://github.com/vincentchalamon/bike-trip-planner/issues/977) | fix(i18n): erreurs NextIntlClientProvider en rendu statique | S | ❌ Non implémentée | [#989](https://github.com/vincentchalamon/bike-trip-planner/pull/989) (fermée) | — |
-| 3 | [#978](https://github.com/vincentchalamon/bike-trip-planner/issues/978) | fix(pwa): bouton d'aide présent sur tous les écrans du header | S | 🚧 En cours | [#990](https://github.com/vincentchalamon/bike-trip-planner/pull/990) `feature/978` | — |
-| 4 | [#979](https://github.com/vincentchalamon/bike-trip-planner/issues/979) | fix(pwa): bloc Assistant IA en opacité normale | S | 🚧 En cours | [#991](https://github.com/vincentchalamon/bike-trip-planner/pull/991) `feature/979` | — |
-| 5 | [#980](https://github.com/vincentchalamon/bike-trip-planner/issues/980) | fix(pwa): suppression d'un voyage possible même verrouillé | S | 🚧 En cours | [#992](https://github.com/vincentchalamon/bike-trip-planner/pull/992) `feature/980` | — |
-| 6 | [#981](https://github.com/vincentchalamon/bike-trip-planner/issues/981) | fix(events): affichage aligné comme les alertes + pagination | M | 🚧 En cours | [#993](https://github.com/vincentchalamon/bike-trip-planner/pull/993) `feature/981` | — |
-| 7 | [#982](https://github.com/vincentchalamon/bike-trip-planner/issues/982) | feat(alerts): surligner le segment concerné sur la carte interne | L | 🚧 En cours | [#994](https://github.com/vincentchalamon/bike-trip-planner/pull/994) `feature/982` | — |
-| 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | 🚧 En cours | [#995](https://github.com/vincentchalamon/bike-trip-planner/pull/995) `feature/983` | — |
-| 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | 🚧 En cours | [#987](https://github.com/vincentchalamon/bike-trip-planner/pull/987) `feature/975` | — |
-| 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | 🚧 En cours | [#996](https://github.com/vincentchalamon/bike-trip-planner/pull/996) `feature/984` (stack, base `feature/975`) | #975 |
-| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | 🚧 En cours | [#999](https://github.com/vincentchalamon/bike-trip-planner/pull/999) `feature/985` (stack, base `feature/984`) | #975, #984 |
+| 3 | [#978](https://github.com/vincentchalamon/bike-trip-planner/issues/978) | fix(pwa): bouton d'aide présent sur tous les écrans du header | S | ✅ Mergé | [#990](https://github.com/vincentchalamon/bike-trip-planner/pull/990) `feature/978` | — |
+| 4 | [#979](https://github.com/vincentchalamon/bike-trip-planner/issues/979) | fix(pwa): bloc Assistant IA en opacité normale | S | ✅ Mergé | [#991](https://github.com/vincentchalamon/bike-trip-planner/pull/991) `feature/979` | — |
+| 5 | [#980](https://github.com/vincentchalamon/bike-trip-planner/issues/980) | fix(pwa): suppression d'un voyage possible même verrouillé | S | ✅ Mergé | [#992](https://github.com/vincentchalamon/bike-trip-planner/pull/992) `feature/980` | — |
+| 6 | [#981](https://github.com/vincentchalamon/bike-trip-planner/issues/981) | fix(events): affichage aligné comme les alertes + pagination | M | ✅ Mergé | [#993](https://github.com/vincentchalamon/bike-trip-planner/pull/993) `feature/981` | — |
+| 7 | [#982](https://github.com/vincentchalamon/bike-trip-planner/issues/982) | feat(alerts): surligner le segment concerné sur la carte interne | L | ✅ Mergé | [#994](https://github.com/vincentchalamon/bike-trip-planner/pull/994) `feature/982` | — |
+| 8 | [#983](https://github.com/vincentchalamon/bike-trip-planner/issues/983) | docs: restructurer la documentation en MkDocs + GitHub Pages | M | ✅ Mergé | [#995](https://github.com/vincentchalamon/bike-trip-planner/pull/995) `feature/983` | — |
+| 9 | [#975](https://github.com/vincentchalamon/bike-trip-planner/issues/975) | feat(events): rendre les événements multi-source + filtrage + cap | L | ✅ Mergé | [#987](https://github.com/vincentchalamon/bike-trip-planner/pull/987) `feature/975` | — |
+| 10 | [#984](https://github.com/vincentchalamon/bike-trip-planner/issues/984) | feat(provisioning): ajouter OpenAgenda comme source d'événements | L | ✅ Mergé | [#996](https://github.com/vincentchalamon/bike-trip-planner/pull/996) `feature/984` (stack, base `feature/975`) | #975 |
+| 11 | [#985](https://github.com/vincentchalamon/bike-trip-planner/issues/985) | feat(events): commande de refresh dédiée (upsert + purge) + planification hebdo | L | ✅ Mergé | [#999](https://github.com/vincentchalamon/bike-trip-planner/pull/999) `feature/985` (stack, base `feature/984`) | #975, #984 |
 
 Vagues `/sprint` : {#976, #977, #978, #979, #980, #981, #982, #983, #975} en parallèle → {#984} après le merge de #975 → {#985} après le merge de #975 et #984.
 
@@ -1748,7 +1748,7 @@ Toutes les PRs sont vertes (CI + `claude-review`) et mergeables au 10/08/2026, s
 
 <details><summary>
 
-## Sprint 53 — Mobile : preuve d'architecture
+## ✅ Sprint 53 — Mobile : preuve d'architecture
 
 </summary>
 Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'architecture de bout en bout — **cœur partagé web+mobile `core/`** + **store RN mince** + **SSE Mercure par header** + **édition optimiste réconciliée** — sur **un seul chemin réel** (voir un voyage + faire une édition live) avant d'élargir. Décisions actées : cœur partagé maintenant (tranche `core/` de la Phase 3 tirée en avant, sans le rename `pwa→apps/web`) + planificateur complet. Chaîne **sérielle** (PRs stackées), **pas** un `/sprint` parallèle. Suivi : [#1016](https://github.com/vincentchalamon/bike-trip-planner/issues/1016).
@@ -1763,7 +1763,7 @@ Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'archit
 | 2 | [#1012](https://github.com/vincentchalamon/bike-trip-planner/issues/1012) | build(repo): workspace npm + core/ (Zod) + recâblage web minimal | L | ✅ Mergé | [#1021](https://github.com/vincentchalamon/bike-trip-planner/pull/1021) | #1018 |
 | 3 | [#1013](https://github.com/vincentchalamon/bike-trip-planner/issues/1013) | feat(core): réconciliation en réducteurs purs + tests vitest + store web | L | ✅ Mergé | [#1023](https://github.com/vincentchalamon/bike-trip-planner/pull/1023) | #1012 |
 | 4 | [#1014](https://github.com/vincentchalamon/bike-trip-planner/issues/1014) | feat(mobile): store mince (compose core) + SSE header + roadbook live | M | ✅ Mergé | [#1024](https://github.com/vincentchalamon/bike-trip-planner/pull/1024) | #1011, #1013 |
-| 5 | [#1015](https://github.com/vincentchalamon/bike-trip-planner/issues/1015) | feat(mobile): édition optimiste (supprimer étape) — preuve de bout en bout | M | 🚧 En cours | [#1025](https://github.com/vincentchalamon/bike-trip-planner/pull/1025) | #1014 |
+| 5 | [#1015](https://github.com/vincentchalamon/bike-trip-planner/issues/1015) | feat(mobile): édition optimiste (supprimer étape) — preuve de bout en bout | M | ✅ Mergé | [#1025](https://github.com/vincentchalamon/bike-trip-planner/pull/1025) | #1014 |
 
 **Ordre :** #1011 (indépendant) ‖ [merge fondation #1018 → #1012 → #1013] → #1014 → #1015 ; #1019 (backend, engendré par le spike #1011) inséré avant #1014.
 
@@ -1790,17 +1790,17 @@ Première tranche verticale du MVP mobile (Expo/RN). Objectif : prouver l'archit
 
 <details><summary>
 
-## Sprint 54 — Mobile : Fondation (UI + data)
+## ✅ Sprint 54 — Mobile : Fondation (UI + data)
 
 </summary>
 Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **data** (CI/jest). Design calqué sur les tokens du web (terracotta `#a8561a`/crème `#faf7f0`, Fraunces/Inter Tight/JetBrains Mono, dark mode). Doc tissée (ADR-054/055/056). Milestone : « Sprint 54 — Mobile : Fondation ».
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1028](https://github.com/vincentchalamon/bike-trip-planner/issues/1028) | design system — tokens + thème + dark mode + primitives UI | M | 🚧 En cours | [#1061](https://github.com/vincentchalamon/bike-trip-planner/pull/1061) `feature/1028` | — |
-| 2 | [#1029](https://github.com/vincentchalamon/bike-trip-planner/issues/1029) | i18n fr/en + shell navigation + migration écrans | M | 🚧 En cours | [#1062](https://github.com/vincentchalamon/bike-trip-planner/pull/1062) `feature/1029` (stack → #1028) | #1028 |
-| 3 | [#1030](https://github.com/vincentchalamon/bike-trip-planner/issues/1030) | core : réconciliation complète (tous events SSE) + garde de dérive | M | 🚧 En cours | [#1060](https://github.com/vincentchalamon/bike-trip-planner/pull/1060) `feature/1030` | — |
-| 4 | [#1031](https://github.com/vincentchalamon/bike-trip-planner/issues/1031) | store complet (mutations + batch + hooks) + gating | L | 🚧 En cours | [#1063](https://github.com/vincentchalamon/bike-trip-planner/pull/1063) `feature/1031` (stack → #1030) | #1030 |
+| 1 | [#1028](https://github.com/vincentchalamon/bike-trip-planner/issues/1028) | design system — tokens + thème + dark mode + primitives UI | M | ✅ Mergé | [#1061](https://github.com/vincentchalamon/bike-trip-planner/pull/1061) `feature/1028` | — |
+| 2 | [#1029](https://github.com/vincentchalamon/bike-trip-planner/issues/1029) | i18n fr/en + shell navigation + migration écrans | M | ✅ Mergé | [#1062](https://github.com/vincentchalamon/bike-trip-planner/pull/1062) `feature/1029` (stack → #1028) | #1028 |
+| 3 | [#1030](https://github.com/vincentchalamon/bike-trip-planner/issues/1030) | core : réconciliation complète (tous events SSE) + garde de dérive | M | ✅ Mergé | [#1060](https://github.com/vincentchalamon/bike-trip-planner/pull/1060) `feature/1030` | — |
+| 4 | [#1031](https://github.com/vincentchalamon/bike-trip-planner/issues/1031) | store complet (mutations + batch + hooks) + gating | L | ✅ Mergé | [#1063](https://github.com/vincentchalamon/bike-trip-planner/pull/1063) `feature/1031` (stack → #1030) | #1030 |
 | 5 | [#1032](https://github.com/vincentchalamon/bike-trip-planner/issues/1032) | App Links (Caddy + env + prefix https) + retry 401 | M | ✅ Mergé | [#1058](https://github.com/vincentchalamon/bike-trip-planner/pull/1058) `feature/1032` | — |
 | 6 | [#1033](https://github.com/vincentchalamon/bike-trip-planner/issues/1033) | build de preview installable + doc d'install | S | ✅ Mergé | [#1057](https://github.com/vincentchalamon/bike-trip-planner/pull/1057) `feature/1033` | — |
 | 7 | [#1034](https://github.com/vincentchalamon/bike-trip-planner/issues/1034) | docs ADR-054/055/056 + README/CLAUDE.md/MkDocs | M | ✅ Mergé | [#1059](https://github.com/vincentchalamon/bike-trip-planner/pull/1059) `feature/1034` | — |
@@ -1820,20 +1820,20 @@ Fondation de tous les écrans. Deux pistes : **UI** (device-vérifiée) et **dat
 
 <details><summary>
 
-## Sprint 55 — Mobile : Consultation (roadbook + données + carte)
+## ✅ Sprint 55 — Mobile : Consultation (roadbook + données + carte)
 
 </summary>
 Écrans de consultation (lecture seule). Composants partagés extraits d'abord. Jalon : **consultation complète**. Milestone : « Sprint 55 ».
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1035](https://github.com/vincentchalamon/bike-trip-planner/issues/1035) | composants trip-screen partagés (stage card, blocs data/jour, statut SSE) | M | 🚧 En cours | [#1068](https://github.com/vincentchalamon/bike-trip-planner/pull/1068) `feature/1035` | #1028, #1031 |
-| 2 | [#1036](https://github.com/vincentchalamon/bike-trip-planner/issues/1036) | liste des voyages (pagination + filtres titre/dates + suppression) | M | 🚧 En cours | [#1069](https://github.com/vincentchalamon/bike-trip-planner/pull/1069) `feature/1036` | #1031 |
-| 3 | [#1037](https://github.com/vincentchalamon/bike-trip-planner/issues/1037) | roadbook lecture — 3 états + dates + bannières + « Aujourd'hui » | M | 🚧 En cours | [#1070](https://github.com/vincentchalamon/bike-trip-planner/pull/1070) `feature/1037` | #1035 |
-| 4 | [#1038](https://github.com/vincentchalamon/bike-trip-planner/issues/1038) | données par jour — alertes (rejet + dédup) + événements + météo + POI + héberg. + ravito | L | 🚧 En cours | [#1071](https://github.com/vincentchalamon/bike-trip-planner/pull/1071) `feature/1038` | #1035, #1030 |
-| 5 | [#1039](https://github.com/vincentchalamon/bike-trip-planner/issues/1039) | détail d'étape plein écran + navigation | M | 🚧 En cours | [#1074](https://github.com/vincentchalamon/bike-trip-planner/pull/1074) `feature/1039` | #1035, #1040, #1041 |
-| 6 | [#1040](https://github.com/vincentchalamon/bike-trip-planner/issues/1040) | carte complète — tuiles/satellite + markers + fit-bounds + surlignage segment | L | 🚧 En cours | [#1072](https://github.com/vincentchalamon/bike-trip-planner/pull/1072) `feature/1040` | #1031 |
-| 7 | [#1041](https://github.com/vincentchalamon/bike-trip-planner/issues/1041) | profil altimétrique (react-native-svg) + hover synchronisé | M | 🚧 En cours | [#1073](https://github.com/vincentchalamon/bike-trip-planner/pull/1073) `feature/1041` | #1040 |
+| 1 | [#1035](https://github.com/vincentchalamon/bike-trip-planner/issues/1035) | composants trip-screen partagés (stage card, blocs data/jour, statut SSE) | M | ✅ Mergé | [#1068](https://github.com/vincentchalamon/bike-trip-planner/pull/1068) `feature/1035` | #1028, #1031 |
+| 2 | [#1036](https://github.com/vincentchalamon/bike-trip-planner/issues/1036) | liste des voyages (pagination + filtres titre/dates + suppression) | M | ✅ Mergé | [#1069](https://github.com/vincentchalamon/bike-trip-planner/pull/1069) `feature/1036` | #1031 |
+| 3 | [#1037](https://github.com/vincentchalamon/bike-trip-planner/issues/1037) | roadbook lecture — 3 états + dates + bannières + « Aujourd'hui » | M | ✅ Mergé | [#1070](https://github.com/vincentchalamon/bike-trip-planner/pull/1070) `feature/1037` | #1035 |
+| 4 | [#1038](https://github.com/vincentchalamon/bike-trip-planner/issues/1038) | données par jour — alertes (rejet + dédup) + événements + météo + POI + héberg. + ravito | L | ✅ Mergé | [#1071](https://github.com/vincentchalamon/bike-trip-planner/pull/1071) `feature/1038` | #1035, #1030 |
+| 5 | [#1039](https://github.com/vincentchalamon/bike-trip-planner/issues/1039) | détail d'étape plein écran + navigation | M | ✅ Mergé | [#1074](https://github.com/vincentchalamon/bike-trip-planner/pull/1074) `feature/1039` | #1035, #1040, #1041 |
+| 6 | [#1040](https://github.com/vincentchalamon/bike-trip-planner/issues/1040) | carte complète — tuiles/satellite + markers + fit-bounds + surlignage segment | L | ✅ Mergé | [#1072](https://github.com/vincentchalamon/bike-trip-planner/pull/1072) `feature/1040` | #1031 |
+| 7 | [#1041](https://github.com/vincentchalamon/bike-trip-planner/issues/1041) | profil altimétrique (react-native-svg) + hover synchronisé | M | ✅ Mergé | [#1073](https://github.com/vincentchalamon/bike-trip-planner/pull/1073) `feature/1041` | #1040 |
 
 ### Ordre de merge et conflits attendus
 
@@ -1864,7 +1864,7 @@ Livré en **stack GitHub linéaire unique** (`gh stack`, PRs #1068-#1074) : chaq
 
 <details><summary>
 
-## Sprint 56 — Mobile : Planificateur (création + édition + export)
+## ✅ Sprint 56 — Mobile : Planificateur (création + édition + export)
 
 </summary>
 Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)**. Milestone : « Sprint 56 ».
@@ -1875,9 +1875,9 @@ Le plus gros sprint (splittable). Jalon : **planificateur complet (parité web)*
 | 2 | [#1043](https://github.com/vincentchalamon/bike-trip-planner/issues/1043) | import GPX (file picker) + duplication | M | ✅ Mergé | [#1084](https://github.com/vincentchalamon/bike-trip-planner/pull/1084) (`feature/1043`, stack sur #1080) | #1031 |
 | 3 | [#1044](https://github.com/vincentchalamon/bike-trip-planner/issues/1044) | édition d'étape inline (＋étape/＋repos/suppression/distance) | L | ✅ Mergé | [#1081](https://github.com/vincentchalamon/bike-trip-planner/pull/1081) (`feature/1044`) | #1037 |
 | 4 | [#1045](https://github.com/vincentchalamon/bike-trip-planner/issues/1045) | hébergement (sélection + scan rayon) + POI-waypoint | M | ✅ Mergé | [#1082](https://github.com/vincentchalamon/bike-trip-planner/pull/1082) (`feature/1045`) | #1037 |
-| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | 🚧 En cours | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`, rebasée) | #1037 |
+| 5 | [#1046](https://github.com/vincentchalamon/bike-trip-planner/issues/1046) | config voyage — titre + pacing complet + types héberg. + dates (destructif + diff) | L | ✅ Mergé | [#1085](https://github.com/vincentchalamon/bike-trip-planner/pull/1085) (`feature/1046`, rebasée) | #1037 |
 | 6 | [#1047](https://github.com/vincentchalamon/bike-trip-planner/issues/1047) | export GPX/FIT (voyage + étape) | S | ✅ Mergé | [#1083](https://github.com/vincentchalamon/bike-trip-planner/pull/1083) (`feature/1047`) | #1037 |
-| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | 🚧 En cours | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`, rebasée) | #1037 |
+| 7 | [#1048](https://github.com/vincentchalamon/bike-trip-planner/issues/1048) | partage — lien public + PNG + texte | M | ✅ Mergé | [#1086](https://github.com/vincentchalamon/bike-trip-planner/pull/1086) (`feature/1048`, rebasée) | #1037 |
 
 ### Ordre de merge et conflits attendus (Sprint 56)
 
@@ -1911,7 +1911,7 @@ Ordre de merge recommandé pour les 4 restantes : **#1081 (#1044) → #1085 (#10
 
 <details><summary>
 
-## Sprint 56.b — Mobile + Web : Chargement progressif & perf (ADR-057)
+## ✅ Sprint 56.b — Mobile + Web : Chargement progressif & perf (ADR-057)
 
 </summary>
 Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un voyage (#1099) puis découpe le modèle de lecture monolithique en résumé / détail-étape / route, avec hydratation progressive du store (web + mobile). Voir [ADR-057](docs/adr/adr-057-progressive-trip-loading.md). Milestone : « Sprint 56.b ».
@@ -1933,7 +1933,7 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 
 <details><summary>
 
-## Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
+## ✅ Sprint 57 — Mobile : Compte + Notifications (+ push FCM)
 
 </summary>
 Épics **découpés** en 10 sous-issues (#1116-#1125). Backend Compte déjà en place (Sprint 52 : email-change, export/delete RGPD, access-requests) → #1049 = câblage UI mobile. Maquettes 10-account/11-notifications = projet Claude Design (récupérées via DesignSync, spec embarquée dans #1116/#1120). Push FCM (#1122-#1125) : le critère « push reçu app fermée » n'est **pas vérifiable en CI** (Firebase + device physique) → preuve manuelle hors sprint. Milestone : « Sprint 57 ».
@@ -1942,26 +1942,26 @@ Inséré entre 56 et 57 (sans renuméroter). Résout la latence d'ouverture d'un
 
 | ID | Titre | Sous-issues | Statut |
 |----|-------|-------------|--------|
-| [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte | #1116, #1117, #1118, #1119 | 🔨 Découpé |
-| [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales | #1120, #1121 | 🔨 Découpé |
-| [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM | #1122, #1123, #1124, #1125 | 🔨 Découpé |
-| [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design: écran Compte (maquette 10-account) | absorbé par #1116 | 🔀 Replié |
-| [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design: écran Notifications (maquette 11-notifications) | absorbé par #1120 | 🔀 Replié |
+| [#1049](https://github.com/vincentchalamon/bike-trip-planner/issues/1049) | [epic] écran Compte | #1116, #1117, #1118, #1119 | ✅ Mergé |
+| [#1050](https://github.com/vincentchalamon/bike-trip-planner/issues/1050) | [epic] notifications locales | #1120, #1121 | ✅ Mergé |
+| [#1051](https://github.com/vincentchalamon/bike-trip-planner/issues/1051) | [epic] push serveur FCM | #1122, #1123, #1124, #1125 | ✅ Mergé |
+| [#1092](https://github.com/vincentchalamon/bike-trip-planner/issues/1092) | design: écran Compte (maquette 10-account) | absorbé par #1116 | ✅ Replié |
+| [#1093](https://github.com/vincentchalamon/bike-trip-planner/issues/1093) | design: écran Notifications (maquette 11-notifications) | absorbé par #1120 | ✅ Replié |
 
 **Sous-issues (exécution) :**
 
 | Vague | ID | Titre | Modèle | Base | Statut | PR |
 |-------|----|-------|--------|------|--------|----|
-| 1 | [#1116](https://github.com/vincentchalamon/bike-trip-planner/issues/1116) | Compte : écran structuré + profil + thème (abs. #1092) | opus | main | 🚧 En cours | [#1127](https://github.com/vincentchalamon/bike-trip-planner/pull/1127) |
-| 1 | [#1122](https://github.com/vincentchalamon/bike-trip-planner/issues/1122) | api: enregistrement device-tokens | opus | main | 🚧 En cours | [#1128](https://github.com/vincentchalamon/bike-trip-planner/pull/1128) |
-| 2 | [#1117](https://github.com/vincentchalamon/bike-trip-planner/issues/1117) | Compte : flux changement d'email | opus | feature/1116 | 🚧 En cours | [#1129](https://github.com/vincentchalamon/bike-trip-planner/pull/1129) |
-| 2 | [#1118](https://github.com/vincentchalamon/bike-trip-planner/issues/1118) | Compte : RGPD export + suppression | opus | feature/1116 | 🚧 En cours | [#1132](https://github.com/vincentchalamon/bike-trip-planner/pull/1132) |
-| 2 | [#1119](https://github.com/vincentchalamon/bike-trip-planner/issues/1119) | Compte : écrans statiques FAQ/légal + onboarding | sonnet | feature/1116 | 🚧 En cours | [#1131](https://github.com/vincentchalamon/bike-trip-planner/pull/1131) |
-| 2 | [#1120](https://github.com/vincentchalamon/bike-trip-planner/issues/1120) | Notifs : écran + infra locale (abs. #1093) | opus | feature/1116 | 🚧 En cours | [#1130](https://github.com/vincentchalamon/bike-trip-planner/pull/1130) |
-| 2 | [#1123](https://github.com/vincentchalamon/bike-trip-planner/issues/1123) | api: sender FCM + secrets compose + ADR | opus | feature/1122 | 🚧 En cours | [#1136](https://github.com/vincentchalamon/bike-trip-planner/pull/1136) |
-| 3 | [#1121](https://github.com/vincentchalamon/bike-trip-planner/issues/1121) | Notifs : déclencheurs locaux | opus | feature/1120 | 🚧 En cours | [#1135](https://github.com/vincentchalamon/bike-trip-planner/pull/1135) |
-| 3 | [#1124](https://github.com/vincentchalamon/bike-trip-planner/issues/1124) | api: catégories push serveur | opus | feature/1123 | 🚧 En cours | [#1137](https://github.com/vincentchalamon/bike-trip-planner/pull/1137) |
-| 3 | [#1125](https://github.com/vincentchalamon/bike-trip-planner/issues/1125) | mobile: enregistrement + réception push | opus | feature/1120 (+#1122) | 🚧 En cours | [#1134](https://github.com/vincentchalamon/bike-trip-planner/pull/1134) |
+| 1 | [#1116](https://github.com/vincentchalamon/bike-trip-planner/issues/1116) | Compte : écran structuré + profil + thème (abs. #1092) | opus | main | ✅ Mergé | [#1127](https://github.com/vincentchalamon/bike-trip-planner/pull/1127) |
+| 1 | [#1122](https://github.com/vincentchalamon/bike-trip-planner/issues/1122) | api: enregistrement device-tokens | opus | main | ✅ Mergé | [#1128](https://github.com/vincentchalamon/bike-trip-planner/pull/1128) |
+| 2 | [#1117](https://github.com/vincentchalamon/bike-trip-planner/issues/1117) | Compte : flux changement d'email | opus | feature/1116 | ✅ Mergé | [#1129](https://github.com/vincentchalamon/bike-trip-planner/pull/1129) |
+| 2 | [#1118](https://github.com/vincentchalamon/bike-trip-planner/issues/1118) | Compte : RGPD export + suppression | opus | feature/1116 | ✅ Mergé | [#1132](https://github.com/vincentchalamon/bike-trip-planner/pull/1132) |
+| 2 | [#1119](https://github.com/vincentchalamon/bike-trip-planner/issues/1119) | Compte : écrans statiques FAQ/légal + onboarding | sonnet | feature/1116 | ✅ Mergé | [#1131](https://github.com/vincentchalamon/bike-trip-planner/pull/1131) |
+| 2 | [#1120](https://github.com/vincentchalamon/bike-trip-planner/issues/1120) | Notifs : écran + infra locale (abs. #1093) | opus | feature/1116 | ✅ Mergé | [#1141](https://github.com/vincentchalamon/bike-trip-planner/pull/1141) (a remplacé #1130 closed) |
+| 2 | [#1123](https://github.com/vincentchalamon/bike-trip-planner/issues/1123) | api: sender FCM + secrets compose + ADR | opus | feature/1122 | ✅ Mergé | [#1136](https://github.com/vincentchalamon/bike-trip-planner/pull/1136) |
+| 3 | [#1121](https://github.com/vincentchalamon/bike-trip-planner/issues/1121) | Notifs : déclencheurs locaux | opus | feature/1120 | ✅ Mergé | [#1144](https://github.com/vincentchalamon/bike-trip-planner/pull/1144) (a remplacé #1135 closed) |
+| 3 | [#1124](https://github.com/vincentchalamon/bike-trip-planner/issues/1124) | api: catégories push serveur | opus | feature/1123 | ✅ Mergé | [#1137](https://github.com/vincentchalamon/bike-trip-planner/pull/1137) |
+| 3 | [#1125](https://github.com/vincentchalamon/bike-trip-planner/issues/1125) | mobile: enregistrement + réception push | opus | feature/1120 (+#1122) | ✅ Mergé | [#1134](https://github.com/vincentchalamon/bike-trip-planner/pull/1134) |
 
 **Ordre de merge et conflits attendus :**
 
@@ -2005,7 +2005,7 @@ Fichiers partagés (arbitrage) :
 
 <details><summary>
 
-## Sprint 58 — Mobile : Terrain natif (offline + in-ride/GPS)
+## ✅ Sprint 58 — Mobile : Terrain natif (offline + in-ride/GPS)
 
 </summary>
 Jalon : **valeur native complète** (le différenciant du pivot). Milestone : « Sprint 58 ». Les 2 épics `[epic] à découper` #1052/#1053 ont été **décomposés** en sous-tickets scopés avant exécution (chaîne linéaire → vraie parallélisation en Vague 2).
@@ -2021,12 +2021,12 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 
 | Vague | ID | Titre | Modèle | Statut | PR | Branche | Dépend de |
 |-------|----|-------|--------|--------|-----|---------|-----------|
-| 1 | [#1146](https://github.com/vincentchalamon/bike-trip-planner/issues/1146) | fondation offline (ADR-059 + connectivité NetInfo + fraîcheur) | opus | 🚧 En cours | [#1151](https://github.com/vincentchalamon/bike-trip-planner/pull/1151) | `feature/1146` | Sprint 55 |
+| 1 | [#1146](https://github.com/vincentchalamon/bike-trip-planner/issues/1146) | fondation offline (ADR-059 + connectivité NetInfo + fraîcheur) | opus | ✅ Mergé | [#1151](https://github.com/vincentchalamon/bike-trip-planner/pull/1151) | `feature/1146` | Sprint 55 |
 | 2 | [#1147](https://github.com/vincentchalamon/bike-trip-planner/issues/1147) | cache offline + « synchronisé il y a Xh » + sync arrière-plan | opus | ✅ Mergé → `feature/1146` | [#1154](https://github.com/vincentchalamon/bike-trip-planner/pull/1154) | `feature/1147` | #1146 |
 | 2 | [#1148](https://github.com/vincentchalamon/bike-trip-planner/issues/1148) | dégradation offline de la carte | opus | ✅ Mergé → `feature/1146` | [#1153](https://github.com/vincentchalamon/bike-trip-planner/pull/1153) | `feature/1148` | #1146 |
-| 2 | [#1149](https://github.com/vincentchalamon/bike-trip-planner/issues/1149) | mode in-ride — GPS foreground + FAB + badge offline | opus | 🚧 En cours | [#1152](https://github.com/vincentchalamon/bike-trip-planner/pull/1152) | `feature/1149` | #1146 |
-| 3 | [#1150](https://github.com/vincentchalamon/bike-trip-planner/issues/1150) | nearby-pois in-ride (client + hook + 8 intents + widen + 429) | opus | 🚧 En cours | [#1155](https://github.com/vincentchalamon/bike-trip-planner/pull/1155) | `feature/1150` | #1149 |
-| 4 | [#1094](https://github.com/vincentchalamon/bike-trip-planner/issues/1094) | design In-ride conforme maquette 08-in-ride (+ thème) | sonnet | 🚧 En cours | [#1156](https://github.com/vincentchalamon/bike-trip-planner/pull/1156) | `feature/1094` | #1150 |
+| 2 | [#1149](https://github.com/vincentchalamon/bike-trip-planner/issues/1149) | mode in-ride — GPS foreground + FAB + badge offline | opus | ✅ Mergé | [#1152](https://github.com/vincentchalamon/bike-trip-planner/pull/1152) | `feature/1149` | #1146 |
+| 3 | [#1150](https://github.com/vincentchalamon/bike-trip-planner/issues/1150) | nearby-pois in-ride (client + hook + 8 intents + widen + 429) | opus | ✅ Mergé | [#1155](https://github.com/vincentchalamon/bike-trip-planner/pull/1155) | `feature/1150` | #1149 |
+| 4 | [#1094](https://github.com/vincentchalamon/bike-trip-planner/issues/1094) | design In-ride conforme maquette 08-in-ride (+ thème) | sonnet | ✅ Mergé | [#1156](https://github.com/vincentchalamon/bike-trip-planner/pull/1156) | `feature/1094` | #1150 |
 
 ### Ordre de merge et conflits attendus
 
