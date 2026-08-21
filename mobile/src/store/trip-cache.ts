@@ -59,7 +59,9 @@ function ensureDir(): void {
 function writeEntry(id: string, entry: CachedTrip): void {
   try {
     ensureDir();
-    cacheFile(id).write(JSON.stringify(entry));
+    const file = cacheFile(id);
+    if (!file.exists) file.create();
+    file.write(JSON.stringify(entry));
   } catch {
     // ignore: a failed cache write only costs a later offline miss.
   }

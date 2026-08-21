@@ -22,6 +22,10 @@ import {
 import { useTripStore } from './trip-store';
 import { useOfflineStore } from './offline-store';
 
+jest.mock('./trip-cache', () => ({
+  deleteTripCache: jest.fn(),
+}));
+
 jest.mock('../api/trips', () => ({
   updateTripConfig: jest.fn(),
   createStage: jest.fn(),
@@ -51,6 +55,7 @@ import {
   duplicateTrip,
   deleteTrip,
 } from '../api/trips';
+import { deleteTripCache } from './trip-cache';
 
 const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
   fn as unknown as jest.MockedFunction<T>;
@@ -491,5 +496,17 @@ describe('runAnalyze / lifecycle', () => {
     useOfflineStore.setState({ isOnline: true });
     mock(deleteTrip).mockResolvedValue({ ok: true, status: 204 });
     expect(await runDeleteTrip('t1', ctx(), jest.fn())).toBe(true);
+  });
+
+  it('runDeleteTrip evicts the offline cache on successful deletion, not on failure', async () => {
+    useOfflineStore.setState({ isOnline: true });
+
+    mock(deleteTrip).mockResolvedValue({ ok: false, status: 404 });
+    expect(await runDeleteTrip('t1', ctx(), jest.fn())).toBe(false);
+    expect(deleteTripCache).not.toHaveBeenCalled();
+
+    mock(deleteTrip).mockResolvedValue({ ok: true, status: 204 });
+    expect(await runDeleteTrip('t1', ctx(), jest.fn())).toBe(true);
+    expect(deleteTripCache).toHaveBeenCalledWith('t1');
   });
 });

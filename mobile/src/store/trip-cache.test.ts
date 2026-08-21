@@ -22,6 +22,11 @@ jest.mock('expo-file-system', () => {
       if (!mockFiles.has(this.uri)) mockFiles.set(this.uri, '');
     }
     write(content: string) {
+      // Faithful to expo-file-system's next API: write() requires the file to
+      // already exist (create() must be called first), it does not auto-create.
+      if (!mockFiles.has(this.uri)) {
+        throw new Error(`ENOENT: file does not exist, write '${this.uri}'`);
+      }
       mockFiles.set(this.uri, content);
     }
     text() {
@@ -98,6 +103,15 @@ describe('cacheTripDetail / readTripCache', () => {
     expect(cached?.detail.title).toBe('Trip');
     expect(cached?.syncedAt).toBe(1234);
     expect(cached?.route).toBeNull();
+  });
+
+  it('persists on the very first write for a trip id (no pre-existing file)', async () => {
+    // No prior create()/write() for this id: the mock File.write() throws unless
+    // the file was created first, so this only passes if writeEntry creates it.
+    expect(mockFiles.size).toBe(0);
+    await cacheTripDetail('brand-new', detail(), 999);
+    const cached = await readTripCache('brand-new');
+    expect(cached?.syncedAt).toBe(999);
   });
 
   it('does not cache a past trip', async () => {
