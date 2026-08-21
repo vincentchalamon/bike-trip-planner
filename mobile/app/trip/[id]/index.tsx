@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, PanResponder, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +33,8 @@ import { useTripLive } from '../../../src/hooks/use-trip-live';
 import { useTripMutations } from '../../../src/hooks/use-trip-mutations';
 import type { MutationFailure } from '../../../src/store/gating';
 import { useTripStore } from '../../../src/store/trip-store';
+import { readTripCache } from '../../../src/store/trip-cache';
+import { formatFreshness } from '../../../src/lib/freshness';
 import { swipeToView } from '../../../src/lib/swipe';
 
 type TripView = 'roadbook' | 'map';
@@ -120,6 +122,20 @@ export default function TripRoadbook() {
   const computing = useTripStore((s) => s.computing);
   const loading = useTripStore((s) => s.loading);
   const error = useTripStore((s) => s.error);
+
+  // Offline "synced X ago" indicator (#1147): read the cache timestamp once the
+  // trip has loaded (a fresh online load has just re-stamped it).
+  const [syncedAt, setSyncedAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    let cancelled = false;
+    void readTripCache(id).then((cached) => {
+      if (!cancelled) setSyncedAt(cached?.syncedAt ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, loading]);
 
   const onFailure = (reason: MutationFailure) =>
     Alert.alert(t('common.error'), t(`trip.edit.reason.${reason}`));
@@ -211,6 +227,21 @@ export default function TripRoadbook() {
         }}
       >
         <SegmentedControl segments={segments} value={view} onChange={setView} />
+        {syncedAt !== null ? (
+          <Text
+            style={{
+              marginTop: theme.spacing.xs,
+              color: theme.colors.mutedForeground,
+              fontFamily: theme.fonts.sans,
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
+            {t('freshness.synced', {
+              ago: formatFreshness(t, syncedAt, Date.now()),
+            })}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ flex: 1 }} {...panResponder.panHandlers}>

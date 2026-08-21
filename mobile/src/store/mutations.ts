@@ -25,6 +25,7 @@ import {
   type MutationFailure,
 } from './gating';
 import { useOfflineStore } from './offline-store';
+import { deleteTripCache } from './trip-cache';
 import type { Modification, TripConfig } from './trip-store';
 
 // The store slice + actions the mutation runners drive. `useTripStore.getState()`
@@ -543,6 +544,7 @@ export function runDeleteTrip(
         onFailure(normalizeStatus(status));
         return false;
       }
+      void deleteTripCache(tripId);
       return true;
     })
     .catch(() => {

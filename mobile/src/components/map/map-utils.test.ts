@@ -1,9 +1,11 @@
 /// <reference types="jest" />
+import type { StyleSpecification } from '@maplibre/maplibre-react-native';
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import {
   alertSegmentToCoords,
   applyZoom,
+  buildOfflineStyle,
   buildSatelliteStyle,
   buildStageLines,
   collectMarkers,
@@ -97,6 +99,40 @@ describe('buildSatelliteStyle / mapStyleFor', () => {
   it('returns the Positron URL for map and the satellite style object', () => {
     expect(mapStyleFor('map')).toBe(POSITRON_STYLE_URL);
     expect(typeof mapStyleFor('satellite')).toBe('object');
+  });
+
+  it('degrades offline to a tile-less style with no network source, whatever the base', () => {
+    for (const base of ['map', 'satellite'] as const) {
+      const style = mapStyleFor(base, true, '#123456');
+      expect(typeof style).toBe('object');
+      const spec = style as StyleSpecification;
+      // No tile source of any kind: nothing hits the network offline.
+      expect(spec.sources).toEqual({});
+      expect(spec.layers).toEqual([
+        { id: 'offline-background', type: 'background', paint: { 'background-color': '#123456' } },
+      ]);
+      // The Positron URL and the satellite raster tiles are both gone.
+      expect(JSON.stringify(spec)).not.toContain(SATELLITE_TILE_URL);
+      expect(JSON.stringify(spec)).not.toContain('cartocdn');
+    }
+  });
+
+  it('rebasculates to the tiled base once back online', () => {
+    expect(mapStyleFor('map', false, '#123456')).toBe(POSITRON_STYLE_URL);
+    const sat = mapStyleFor('satellite', false, '#123456') as StyleSpecification;
+    expect(sat.sources['esri-world-imagery']).toMatchObject({ type: 'raster' });
+  });
+});
+
+describe('buildOfflineStyle', () => {
+  it('paints only a background layer, keeping room for local GeoJSON sources', () => {
+    const style = buildOfflineStyle('#abcdef');
+    expect(style.sources).toEqual({});
+    expect(style.layers).toHaveLength(1);
+    expect(style.layers[0]).toMatchObject({
+      type: 'background',
+      paint: { 'background-color': '#abcdef' },
+    });
   });
 });
 

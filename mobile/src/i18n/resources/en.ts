@@ -338,6 +338,7 @@ export const en: typeof fr = {
     map: {
       layerMap: 'Map',
       layerSatellite: 'Satellite',
+      offline: 'Offline map',
       toggleA11y: 'Toggle base map',
       zoomInA11y: 'Zoom in',
       zoomOutA11y: 'Zoom out',
@@ -498,6 +499,13 @@ export const en: typeof fr = {
   language: {
     fr: 'Français',
     en: 'English',
+  },
+  freshness: {
+    justNow: 'just now',
+    hoursAgo: '{{count}}h ago',
+    yesterday: 'yesterday',
+    daysAgo: '{{count}} days ago',
+    synced: 'Synced {{ago}}',
   },
   export: {
     trip: 'Export',

@@ -338,6 +338,7 @@ export const fr = {
     map: {
       layerMap: 'Plan',
       layerSatellite: 'Satellite',
+      offline: 'Carte hors-ligne',
       toggleA11y: 'Changer le fond de carte',
       zoomInA11y: 'Zoomer',
       zoomOutA11y: 'Dézoomer',
@@ -498,6 +499,13 @@ export const fr = {
   language: {
     fr: 'Français',
     en: 'English',
+  },
+  freshness: {
+    justNow: "à l'instant",
+    hoursAgo: 'il y a {{count}} h',
+    yesterday: 'hier',
+    daysAgo: 'il y a {{count}} j',
+    synced: 'Synchronisé {{ago}}',
   },
   export: {
     trip: 'Exporter',
