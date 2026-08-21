@@ -152,6 +152,22 @@ describe('cacheTripRoute', () => {
     await cacheTripRoute('missing', route);
     expect(await readTripCache('missing')).toBeNull();
   });
+
+  it('does not drop the route when a route write races a detail refresh (#1148)', async () => {
+    // Trip already cached from a prior open.
+    await cacheTripDetail('race', detail(), 1);
+    // Route write and a detail refresh fire concurrently, route first. Without
+    // per-id serialization the detail refresh reads the pre-route entry and its
+    // write clobbers the freshly attached route (lost update) — the offline
+    // trace vanishes. The lock makes the detail write see the route write.
+    await Promise.all([
+      cacheTripRoute('race', route, 2),
+      cacheTripDetail('race', detail({ title: 'Refreshed' }), 3),
+    ]);
+    const cached = await readTripCache('race');
+    expect(cached?.route).toEqual(route);
+    expect(cached?.detail.title).toBe('Refreshed');
+  });
 });
 
 describe('listCachedTripIds / deleteTripCache', () => {

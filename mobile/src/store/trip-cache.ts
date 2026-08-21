@@ -41,6 +41,19 @@ export function isCacheableTrip(
   return tripStateFromDates(startDate, endDate, today) !== 'past';
 }
 
+// Per-id mutation lock: cacheTripDetail and cacheTripRoute are read-modify-write
+// on the same file, fired from independent unordered effects (roadbook vs map).
+// Without serialization a detail refresh can read the pre-route entry and clobber
+// a freshly attached route (lost update) — losing the offline trace. Chaining the
+// mutations per id makes each one see the previous write.
+const pending = new Map<string, Promise<unknown>>();
+function withLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  const prior = pending.get(id) ?? Promise.resolve();
+  const next = prior.then(fn, fn);
+  pending.set(id, next.catch(() => undefined));
+  return next;
+}
+
 function cacheDir(): Directory {
   return new Directory(Paths.document, CACHE_DIRNAME);
 }
@@ -105,12 +118,14 @@ export async function cacheTripDetail(
   syncedAt: number = Date.now(),
 ): Promise<void> {
   if (!SAFE_ID.test(id)) return;
-  if (!isCacheableTrip(detail.startDate ?? null, detail.endDate ?? null)) {
-    await deleteTripCache(id);
-    return;
-  }
-  const existing = await readTripCache(id);
-  writeEntry(id, { detail, route: existing?.route ?? null, syncedAt });
+  return withLock(id, async () => {
+    if (!isCacheableTrip(detail.startDate ?? null, detail.endDate ?? null)) {
+      await deleteTripCache(id);
+      return;
+    }
+    const existing = await readTripCache(id);
+    writeEntry(id, { detail, route: existing?.route ?? null, syncedAt });
+  });
 }
 
 /**
@@ -124,9 +139,11 @@ export async function cacheTripRoute(
   syncedAt: number = Date.now(),
 ): Promise<void> {
   if (!SAFE_ID.test(id)) return;
-  const existing = await readTripCache(id);
-  if (!existing) return;
-  writeEntry(id, { ...existing, route, syncedAt });
+  return withLock(id, async () => {
+    const existing = await readTripCache(id);
+    if (!existing) return;
+    writeEntry(id, { ...existing, route, syncedAt });
+  });
 }
 
 /** Ids of every currently cached trip (drives the background re-sync). */
