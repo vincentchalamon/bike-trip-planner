@@ -504,6 +504,7 @@ export const en: typeof fr = {
     hoursAgo: '{{count}}h ago',
     yesterday: 'yesterday',
     daysAgo: '{{count}} days ago',
+    synced: 'Synced {{ago}}',
   },
   export: {
     trip: 'Export',

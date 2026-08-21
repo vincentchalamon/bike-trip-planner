@@ -6,19 +6,27 @@ import type { EnrichedStagePayload, MercureEvent } from '@btp/core/mercure';
 import { runTripLive, useTripLive } from './use-trip-live';
 import { useTripStore } from '../store/trip-store';
 import { useDismissedAlerts } from '../store/dismissed-alerts';
+import { useOfflineStore } from '../store/offline-store';
 
 jest.mock('../api/trips', () => ({ fetchTripDetail: jest.fn() }));
 jest.mock('../api/mercure', () => ({
   fetchMercureToken: jest.fn(),
   subscribeToTrip: jest.fn(),
 }));
+jest.mock('../store/trip-cache', () => ({
+  cacheTripDetail: jest.fn(),
+  readTripCache: jest.fn(),
+}));
 
 import { fetchTripDetail } from '../api/trips';
 import { fetchMercureToken, subscribeToTrip } from '../api/mercure';
+import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
 const mockDetail = fetchTripDetail as jest.MockedFunction<typeof fetchTripDetail>;
 const mockToken = fetchMercureToken as jest.MockedFunction<typeof fetchMercureToken>;
 const mockSubscribe = subscribeToTrip as jest.MockedFunction<typeof subscribeToTrip>;
+const mockCache = cacheTripDetail as jest.MockedFunction<typeof cacheTripDetail>;
+const mockReadCache = readTripCache as jest.MockedFunction<typeof readTripCache>;
 
 const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
@@ -47,6 +55,10 @@ function apiStage(overrides: Record<string, unknown> = {}) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detail = (stages: unknown[]) => ({ title: 'Trip', stages }) as any;
+// A cached entry wrapping the same /detail shape (#1147).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const detailCache = (stages: unknown[]) =>
+  ({ detail: detail(stages), route: null, syncedAt: 1 }) as any;
 
 function enrichedPayload(): EnrichedStagePayload {
   return {
@@ -74,6 +86,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   useTripStore.getState().reset();
   useDismissedAlerts.getState().reset();
+  useOfflineStore.getState().setOnline(true);
+  mockReadCache.mockResolvedValue(null);
 });
 
 describe('runTripLive orchestration (#1014)', () => {
@@ -156,6 +170,41 @@ describe('runTripLive orchestration (#1014)', () => {
   it('aborts before subscribing when cancelled during the /detail fetch', async () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
     const sub = await runTripLive('t1', store(), () => true);
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    expect(sub).toBeUndefined();
+  });
+
+  it('caches the /detail payload after a successful online hydrate (#1147)', async () => {
+    mockDetail.mockResolvedValue(detail([apiStage()]));
+    mockToken.mockResolvedValue('jwt');
+    mockSubscribe.mockReturnValue({ close: jest.fn() });
+
+    await runTripLive('t1', store(), notCancelled);
+
+    expect(mockCache).toHaveBeenCalledWith('t1', expect.objectContaining({ title: 'Trip' }));
+  });
+
+  it('hydrates from cache and skips SSE while offline (#1147)', async () => {
+    useOfflineStore.getState().setOnline(false);
+    mockReadCache.mockResolvedValue(detailCache([apiStage()]));
+
+    const sub = await runTripLive('t1', store(), notCancelled);
+
+    expect(store().stages).toHaveLength(1);
+    expect(store().error).toBeNull();
+    expect(mockDetail).not.toHaveBeenCalled();
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    expect(sub).toBeUndefined();
+  });
+
+  it('falls back to cache when /detail fails, without surfacing an error (#1147)', async () => {
+    mockDetail.mockRejectedValue(new Error('offline'));
+    mockReadCache.mockResolvedValue(detailCache([apiStage()]));
+
+    const sub = await runTripLive('t1', store(), notCancelled);
+
+    expect(store().stages).toHaveLength(1);
+    expect(store().error).toBeNull();
     expect(mockSubscribe).not.toHaveBeenCalled();
     expect(sub).toBeUndefined();
   });

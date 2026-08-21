@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import '../src/i18n';
 import { AuthProvider } from '../src/auth/store';
 import { usePushRouting } from '../src/notifications/use-push-routing';
+import { useBackgroundTripSync } from '../src/hooks/use-background-sync';
 import { useConnectivity } from '../src/store/use-connectivity';
 import { ThemeProvider, useTheme } from '../src/theme';
 
@@ -14,6 +15,8 @@ function RootNavigator() {
   usePushRouting();
   // Feed real NetInfo connectivity into the offline store / mutation gate (#1146).
   useConnectivity();
+  // Keep the offline trip cache fresh on return-to-online / app foreground (#1147).
+  useBackgroundTripSync();
   return (
     <Stack
       // The header integrates with the theme (light/dark) instead of the default
