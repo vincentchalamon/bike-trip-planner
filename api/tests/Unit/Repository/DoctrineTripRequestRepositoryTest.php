@@ -422,6 +422,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             estimatedPriceMax: 18.0,
             isExactPrice: true,
             phone: '+33 4 66 37 82 00',
+            address: '1 chemin du Pont, 30000 Nîmes',
             osmType: 'way',
             osmId: 987654321,
         );
@@ -446,6 +447,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         foreach ([$stages[0]->accommodations[0], $stages[0]->selectedAccommodation] as $result) {
             self::assertNotNull($result);
             self::assertSame('+33 4 66 37 82 00', $result->phone);
+            self::assertSame('1 chemin du Pont, 30000 Nîmes', $result->address);
             self::assertSame('way', $result->osmType);
             self::assertSame(987654321, $result->osmId);
         }

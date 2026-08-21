@@ -14,6 +14,7 @@ import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
 import { useTripStore } from "@/store/trip-store";
 import type { StageData, AccommodationData } from "@btp/core";
+import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 
 const MIN_KM = 5;
 
@@ -27,7 +28,10 @@ interface StageDetailPanelProps {
   onAddStage?: (afterIndex: number) => void;
   onInsertRestDay?: (afterIndex: number) => void;
   onDistanceChange?: (index: number, distance: number) => void;
-  onAddAccommodation: (stageIndex: number) => void;
+  onSubmitManualAccommodation: (
+    stageIndex: number,
+    data: ManualAccommodationInput,
+  ) => Promise<boolean>;
   onUpdateAccommodation: (
     stageIndex: number,
     accIndex: number,
@@ -96,7 +100,7 @@ export function StageDetailPanel({
   onAddStage,
   onInsertRestDay,
   onDistanceChange,
-  onAddAccommodation,
+  onSubmitManualAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
   onSelectAccommodation,
@@ -281,7 +285,9 @@ export function StageDetailPanel({
                     ? (d) => onDistanceChange(i, d)
                     : undefined
                 }
-                onAddAccommodation={() => onAddAccommodation(i)}
+                onSubmitManualAccommodation={(data) =>
+                  onSubmitManualAccommodation(i, data)
+                }
                 onUpdateAccommodation={(accIdx, data) =>
                   onUpdateAccommodation(i, accIdx, data)
                 }

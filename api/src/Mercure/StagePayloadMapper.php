@@ -145,6 +145,7 @@ final readonly class StagePayloadMapper
             'wikipediaUrl' => $accommodation->wikipediaUrl,
             'openingHours' => $accommodation->openingHours,
             'phone' => $accommodation->phone,
+            'address' => $accommodation->address,
             'osmType' => $accommodation->osmType,
             'osmId' => $accommodation->osmId,
         ];

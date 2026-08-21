@@ -5,6 +5,10 @@ import { useTranslations } from "next-intl";
 import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
 import { AddAccommodationButton } from "@/components/add-accommodation-button";
+import {
+  ManualAccommodationForm,
+  type ManualAccommodationInput,
+} from "@/components/manual-accommodation-form";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/store/ui-store";
@@ -20,7 +24,8 @@ interface AccommodationPanelProps {
   selectedAccommodation?: AccommodationData | null;
   onUpdate: (accIndex: number, data: Partial<AccommodationData>) => void;
   onRemove: (accIndex: number) => void;
-  onAdd: () => void;
+  /** Submit a hors-app accommodation (title/address/price/link) to the backend. */
+  onSubmitManual: (data: ManualAccommodationInput) => Promise<boolean>;
   onSelect?: (accIndex: number) => void;
   onDeselect?: () => void;
   onExpandRadius?: (currentRadiusKm: number) => Promise<boolean>;
@@ -37,7 +42,7 @@ export function AccommodationPanel({
   selectedAccommodation,
   onUpdate,
   onRemove,
-  onAdd,
+  onSubmitManual,
   onSelect,
   onDeselect,
   onExpandRadius,
@@ -49,6 +54,7 @@ export function AccommodationPanel({
   readOnly = false,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
+  const [showManualForm, setShowManualForm] = useState(false);
   const isAccommodationScanning = useUiStore((s) => s.isAccommodationScanning);
   // isExpanding: derived from state + prop — no effect needed.
   // expandingFromRadius stores the radius at click time; when the SSE delivers
@@ -229,7 +235,18 @@ export function AccommodationPanel({
         )}
       {!readOnly && !selectedAccommodation && (
         <div className={accommodations.length > 0 ? "mt-3" : ""}>
-          <AddAccommodationButton onClick={onAdd} />
+          {showManualForm ? (
+            <ManualAccommodationForm
+              onSubmit={async (data) => {
+                const ok = await onSubmitManual(data);
+                if (ok) setShowManualForm(false);
+                return ok;
+              }}
+              onCancel={() => setShowManualForm(false)}
+            />
+          ) : (
+            <AddAccommodationButton onClick={() => setShowManualForm(true)} />
+          )}
         </div>
       )}
     </div>

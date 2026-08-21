@@ -345,6 +345,38 @@ export async function addPoiWaypointToRoute(
 }
 
 /**
+ * Add a manually-entered (hors-app) accommodation to a stage. The backend
+ * geocodes the address, makes the accommodation the stage's selected one and
+ * moves the stage boundary to it (same downstream as selecting a scanned entry).
+ * Returns the HTTP status so the caller can distinguish a 422 (address not
+ * geocodable) from a generic failure.
+ */
+export async function addManualAccommodation(
+  tripId: string,
+  stageIndex: number,
+  data: {
+    name: string;
+    address: string;
+    priceTotal: number | null;
+    url: string | null;
+  },
+): Promise<{ ok: boolean; status: number }> {
+  const { response } = await apiClient.POST(
+    "/trips/{tripId}/stages/{index}/accommodations/manual",
+    {
+      params: { path: { tripId, index: String(stageIndex) } },
+      body: {
+        name: data.name,
+        address: data.address,
+        priceTotal: data.priceTotal,
+        url: data.url,
+      },
+    },
+  );
+  return { ok: response.ok, status: response.status };
+}
+
+/**
  * Trigger an accommodation re-scan with a custom radius.
  * When `stageIndex` is provided, only that stage's endpoint is scanned.
  * Returns `true` on success, `false` when the trip is not found or the request fails.

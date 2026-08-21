@@ -30,6 +30,12 @@ final readonly class Accommodation
         public ?string $openingHours = null,
         #[ApiProperty(description: 'Contact phone number, from the OSM contact block or the DataTourisme flux.')]
         public ?string $phone = null,
+        // General, source-agnostic postal address. Carried by an OSM `addr:*`
+        // block or a DataTourisme entry (backfill out of scope), and set from the
+        // rider's input for a manually-added ("manual" source) accommodation, from
+        // which the coordinates are geocoded.
+        #[ApiProperty(description: 'Postal address. Null when the source carries none.')]
+        public ?string $address = null,
         // The (osmType, osmId) pair is the primary key of the Tier-1 index and the
         // only stable identity an OSM entry has: it is what lets the rider open the
         // object on openstreetmap.org to check it still exists — or fix it at the

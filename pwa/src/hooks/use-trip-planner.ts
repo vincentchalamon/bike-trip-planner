@@ -19,6 +19,7 @@ import {
   isNetworkError,
   uploadGpxFile,
   scanAccommodations,
+  addManualAccommodation,
   addPoiWaypointToRoute,
   duplicateTrip,
   deleteTrip,
@@ -33,8 +34,9 @@ import {
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@btp/core/constants";
 import { EMPTY_RESUPPLY } from "@btp/core";
-import type { AccommodationData, StageData } from "@btp/core";
+import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
+import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 
 /** Map a source URL to its Plausible import event (null if unrecognised). */
 export function importEventForUrl(url: string): PlausibleEvent | null {
@@ -880,23 +882,50 @@ export function useTripPlanner() {
     setShareModalOpen(true);
   }
 
-  function handleAddAccommodation(stageIndex: number) {
-    const stage = stages[stageIndex];
-    const accIndex = stage?.accommodations.length ?? 0;
-    const newAcc: AccommodationData = {
-      name: t("accommodation.new"),
-      type: "other",
-      lat: 0,
-      lon: 0,
-      estimatedPriceMin: 0,
-      estimatedPriceMax: 0,
-      isExactPrice: false,
-      possibleClosed: false,
-      distanceToEndPoint: 0,
-      source: "osm",
-    };
-    actions.addLocalAccommodation(stageIndex, newAcc);
-    setNewAccKey(`${stageIndex}-${accIndex}`);
+  /**
+   * Add a hors-app accommodation (title/address/price/link) to a stage. The
+   * address is geocoded backend-side into the coordinates the accommodation
+   * carries; it becomes the selected one and the stage is re-routed — so this is
+   * blocked out of zone like every other reroute (POI waypoint, selection).
+   * Returns true only when the backend accepted it (the form closes then).
+   */
+  async function handleAddManualAccommodation(
+    stageIndex: number,
+    data: ManualAccommodationInput,
+  ): Promise<boolean> {
+    if (!tripId) return false;
+
+    if (outOfZone) {
+      toast.error(t("outOfZone.editDisabled"));
+      return false;
+    }
+
+    try {
+      const { ok, status } = await addManualAccommodation(
+        tripId,
+        stageIndex,
+        data,
+      );
+      if (!ok) {
+        toast.error(
+          status === 422
+            ? t("errors.accommodationGeocodeFailed")
+            : t("errors.unexpectedError"),
+        );
+        return false;
+      }
+      setProcessing(true);
+      const affectedIndices = [stageIndex];
+      if (stageIndex + 1 < useTripStore.getState().stages.length) {
+        affectedIndices.push(stageIndex + 1);
+      }
+      actions.startStageRecomputation(affectedIndices);
+      trackEvent("accommodation_selected", { type: "other" });
+      return true;
+    } catch {
+      toast.error(t("errors.unexpectedError"));
+      return false;
+    }
   }
 
   async function handleSelectAccommodation(
@@ -1095,7 +1124,7 @@ export function useTripPlanner() {
     handlePacingCommit,
     handleEbikeModeChange,
     handleDepartureHourChange,
-    handleAddAccommodation,
+    handleAddManualAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,

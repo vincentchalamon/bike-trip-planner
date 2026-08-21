@@ -12,6 +12,7 @@ use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use ApiPlatform\OpenApi\Model\Response;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
@@ -19,6 +20,7 @@ use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\State\RestDayInsertProcessor;
+use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
 use App\State\StageDetailProvider;
@@ -142,6 +144,26 @@ use App\State\StageUpdateProcessor;
             output: StageResponse::class,
             provider: StageProvider::class,
             processor: StageSelectAccommodationProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{tripId}/stages/{index}/accommodations/manual{._format}',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            status: 202,
+            openapi: new Operation(
+                responses: [
+                    202 => new Response(description: 'Manual accommodation added and selected; recalculation dispatched.'),
+                    404 => new Response(description: 'Trip or stage not found.'),
+                    422 => new Response(description: 'The address could not be geocoded (not found or ambiguous); nothing is persisted.'),
+                ],
+                summary: 'Add a manually-entered accommodation to a stage. The address is geocoded, the accommodation becomes the selected one, and the stage endPoint plus the next stage startPoint move to it.',
+            ),
+            security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+            input: StageManualAccommodationRequest::class,
+            output: StageResponse::class,
+            processor: StageAddManualAccommodationProcessor::class,
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages/{index}/poi-waypoint{._format}',

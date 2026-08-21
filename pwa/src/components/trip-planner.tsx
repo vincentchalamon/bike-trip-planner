@@ -91,7 +91,7 @@ export function TripPlanner() {
     handlePacingCommit,
     handleEbikeModeChange,
     handleDepartureHourChange,
-    handleAddAccommodation,
+    handleAddManualAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,
@@ -503,7 +503,7 @@ export function TripPlanner() {
                       onAddStage={handleAddStage}
                       onInsertRestDay={handleInsertRestDay}
                       onDistanceChange={handleDistanceChange}
-                      onAddAccommodation={handleAddAccommodation}
+                      onSubmitManualAccommodation={handleAddManualAccommodation}
                       onUpdateAccommodation={updateLocalAccommodation}
                       onRemoveAccommodation={removeLocalAccommodation}
                       onSelectAccommodation={handleSelectAccommodation}

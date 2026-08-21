@@ -155,7 +155,12 @@
     "selected": "Sélectionné",
     "selectTooltip": "Sélectionner cet hébergement comme étape de nuit",
     "see_on_wikipedia": "Voir sur Wikipedia",
-    "see_on_osm": "Voir sur OpenStreetMap"
+    "see_on_osm": "Voir sur OpenStreetMap",
+    "addressLabel": "Adresse",
+    "addressPlaceholder": "Adresse (rue, ville)",
+    "priceTotalLabel": "Prix total",
+    "priceTotalPlaceholder": "Prix total (€)",
+    "sourceManual": "Manuel"
   },
   "addStage": {
     "add": "Ajouter une étape",
@@ -650,6 +655,7 @@
     "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur.",
     "failedSelectAccommodation": "Impossible de sélectionner l'hébergement.",
     "accommodationStale": "La liste des hébergements a été mise à jour. Réessaie.",
+    "accommodationGeocodeFailed": "Adresse introuvable. Précise-la (ajoute une ville ou un code postal) et réessaie.",
     "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement.",
     "failedUpdateAccommodationTypes": "Impossible de mettre à jour les filtres de types d'hébergements.",
     "failedInsertRestDay": "Impossible d'insérer le jour de repos."

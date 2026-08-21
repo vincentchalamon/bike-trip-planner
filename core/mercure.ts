@@ -96,13 +96,14 @@ export interface AccommodationPayload {
   isExactPrice: boolean;
   possibleClosed: boolean;
   distanceToEndPoint: number;
-  source: "osm" | "datatourisme";
+  source: "osm" | "datatourisme" | "manual";
   url?: string | null;
   description?: string | null;
   imageUrl?: string | null;
   wikipediaUrl?: string | null;
   openingHours?: string | null;
   phone?: string | null;
+  address?: string | null;
   osmType?: "node" | "way" | "relation" | null;
   osmId?: number | null;
 }

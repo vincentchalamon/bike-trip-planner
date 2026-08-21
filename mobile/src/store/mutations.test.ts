@@ -2,6 +2,7 @@
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import {
+  runAddManualAccommodation,
   runAddPoiWaypoint,
   runAddStage,
   runAnalyze,
@@ -33,6 +34,7 @@ jest.mock('../api/trips', () => ({
   moveStage: jest.fn(),
   insertRestDay: jest.fn(),
   setStageAccommodation: jest.fn(),
+  addManualAccommodation: jest.fn(),
   addPoiWaypoint: jest.fn(),
   scanAccommodations: jest.fn(),
   applyBatchRecompute: jest.fn(),
@@ -48,6 +50,7 @@ import {
   moveStage,
   insertRestDay,
   setStageAccommodation,
+  addManualAccommodation,
   addPoiWaypoint,
   scanAccommodations,
   applyBatchRecompute,
@@ -158,6 +161,45 @@ describe('runAddStage (routing) — gating', () => {
       't1',
       expect.objectContaining({ position: 1 }),
     );
+  });
+});
+
+describe('runAddManualAccommodation (routing)', () => {
+  const input = {
+    name: 'Chez Test',
+    address: '10 rue de la Paix, Paris',
+    priceTotal: 90,
+    url: 'https://booking.example/x',
+  };
+
+  it('calls the API with the full input when allowed', async () => {
+    mock(addManualAccommodation).mockResolvedValue({ ok: true, status: 202 });
+
+    const ok = await runAddManualAccommodation('t1', 0, input, ctx(), jest.fn());
+
+    expect(ok).toBe(true);
+    expect(addManualAccommodation).toHaveBeenCalledWith('t1', 0, input);
+  });
+
+  it('is refused out of zone without an API call (reroute gate)', async () => {
+    useTripStore.setState({ outOfZone: true });
+    const onFailure = jest.fn();
+
+    const ok = await runAddManualAccommodation('t1', 0, input, ctx(), onFailure);
+
+    expect(ok).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('out_of_zone');
+    expect(addManualAccommodation).not.toHaveBeenCalled();
+  });
+
+  it('reports "validation" on a 422 geocoding failure', async () => {
+    mock(addManualAccommodation).mockResolvedValue({ ok: false, status: 422 });
+    const onFailure = jest.fn();
+
+    const ok = await runAddManualAccommodation('t1', 0, input, ctx(), onFailure);
+
+    expect(ok).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('validation');
   });
 });
 
