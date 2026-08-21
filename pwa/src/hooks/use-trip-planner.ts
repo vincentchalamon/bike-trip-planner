@@ -126,7 +126,6 @@ export function useTripPlanner() {
       updateTitle: s.updateTitle,
       updateDates: s.updateDates,
       clearTrip: s.clearTrip,
-      addLocalAccommodation: s.addLocalAccommodation,
       removeLocalAccommodation: s.removeLocalAccommodation,
       updateLocalAccommodation: s.updateLocalAccommodation,
       selectAccommodation: s.selectAccommodation,
