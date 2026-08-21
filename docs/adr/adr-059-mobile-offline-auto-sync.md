@@ -18,8 +18,8 @@ a screen load with no network simply fails.
 
 We need to decide **what** is cached, **how fresh** the rider is told the cache
 is, **when** it syncs, and **how much** offline surface the app exposes — before
-building the persistence (#1147), the sync engine (#1148), and the offline map
-degradation (#1149) on top. This ADR fixes those boundaries and lands the first
+building the persistence (#1147), the sync engine (#1147), and the offline map
+degradation (#1148) on top. This ADR fixes those boundaries and lands the first
 brick: real connectivity feeding the store.
 
 ## Decision
@@ -51,12 +51,12 @@ is not a user-managed feature.
   `isInternetReachable`, emitted while NetInfo is still probing, is treated as
   online so the mutation gate does not flap). The store keeps its stable API
   (`isOnline` / `setOnline`) and stays transport-agnostic: no cache logic lives in
-  it, so #1147/#1148/#1149 consume the same store without reshaping it.
+  it, so #1147/#1148 consume the same store without reshaping it.
 - **Offline map is degraded, not interactive.** With no network the map shows the
   **route trace and the elevation profile** from cached data; it does **not**
   serve interactive raster/vector tiles (no pan-to-load, no satellite layer). Tile
   caching is out of scope — the rider gets orientation, not a full basemap. Full
-  degradation mechanics are #1149.
+  degradation mechanics are #1148.
 
 ## State architecture fit (ADR-055)
 
@@ -98,7 +98,7 @@ merged history sees the whole offline engine, not just the contract.
   the jest suite (no test imports it).
 - The offline perimeter (non-past trips), the freshness contract (pure helper +
   `freshness.*` i18n keys), and the stable `offline-store` API are now fixed
-  points that #1147 (persistence), #1148 (background sync), and #1149 (offline
+  points that #1147 (persistence), #1147 (background sync), and #1148 (offline
   map) build on without renegotiation.
 - Offline map is trace + profile only; a full offline basemap remains out of
   scope.
