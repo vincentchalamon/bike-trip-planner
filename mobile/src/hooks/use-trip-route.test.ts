@@ -114,10 +114,14 @@ describe('useTripRoute (ADR-057)', () => {
   it('leaves the geometry unloaded (never throws) when the fetch fails with no cache', async () => {
     useTripStore.setState({ tripId: 't1', geometryLoaded: false, loading: false });
     mockRoute.mockRejectedValue(new Error('boom'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await render();
 
     expect(store().geometryLoaded).toBe(false);
+    // A genuine failure (no cache to fall back to) keeps a diagnostic signal.
+    expect(warn).toHaveBeenCalledWith('Failed to load trip route geometry', expect.any(Error));
+    warn.mockRestore();
   });
 
   it('caches the route after a successful online fetch (#1147)', async () => {
@@ -147,9 +151,13 @@ describe('runLoadTripRoute offline cache (#1147)', () => {
   it('falls back to the cached tracé when the network fetch fails', async () => {
     mockRoute.mockRejectedValue(new Error('boom'));
     mockReadCache.mockResolvedValue({ detail: {}, route, syncedAt: 1 } as never);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     const result = await runLoadTripRoute('t1');
 
     expect(result).toEqual(route);
+    // Cache served the trace: this is not a genuine failure, no diagnostic.
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

@@ -17,9 +17,13 @@ export async function runLoadTripRoute(id: string): Promise<TripRoute | null> {
     const route = await fetchTripRoute(id);
     if (route) void cacheTripRoute(id, route);
     return route;
-  } catch {
+  } catch (error: unknown) {
     const cached = await readTripCache(id);
-    return cached?.route ?? null;
+    if (cached?.route) return cached.route;
+    // Genuine failure: online (or nothing cached) and the fetch threw. Surface a
+    // diagnostic so a real backend/network error is not swallowed silently.
+    console.warn('Failed to load trip route geometry', error);
+    return null;
   }
 }
 
