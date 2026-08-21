@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../../src/components/ui';
-import { InRideView } from '../../../src/components/trip';
+import { InRidePanel, InRideView } from '../../../src/components/trip';
 
 // In-ride route (#1149): reached from the roadbook "En selle" FAB. Thin wrapper —
 // the body (foreground GPS, offline badge, help bubble, #1150 POI slot) lives in
@@ -12,7 +12,10 @@ export default function InRide() {
   return (
     <Screen padded={false} edges={['left', 'right']}>
       <Stack.Screen options={{ headerShown: true, headerTitle: t('trip.inRide.title') }} />
-      <InRideView tripId={id} />
+      <InRideView
+        tripId={id}
+        poiPanel={(location) => <InRidePanel tripId={id} location={location} />}
+      />
     </Screen>
   );
 }

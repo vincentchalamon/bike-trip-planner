@@ -52,3 +52,17 @@ export { Bell, BellOff, CheckCircle2 } from 'lucide-react-native';
 export { CloudOff } from 'lucide-react-native';
 // In-ride mode (#1149): help bubble, offline badge, GPS position.
 export { HelpCircle, Navigation, WifiOff } from 'lucide-react-native';
+// In-ride nearby-pois (#1150): the 8 intent chips + POI card affordances
+// (Search/Tent/AlertTriangle already exported above).
+export {
+  Clock,
+  Cross,
+  Droplet,
+  ExternalLink,
+  Phone,
+  ShoppingCart,
+  TrainFront,
+  UtensilsCrossed,
+  Wrench,
+  Zap,
+} from 'lucide-react-native';
