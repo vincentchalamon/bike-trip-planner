@@ -8,6 +8,8 @@ import {
 } from '../api/mercure';
 import { useTripStore } from '../store/trip-store';
 import { useDismissedAlerts } from '../store/dismissed-alerts';
+import { useOfflineStore } from '../store/offline-store';
+import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
 // The store actions the orchestration drives.
 export interface TripLiveStore {
@@ -32,13 +34,32 @@ export async function runTripLive(
 ): Promise<TripSubscription | undefined> {
   store.setStatus({ loading: true, error: null });
 
+  // Offline (#1147): hydrate straight from the persisted cache and skip the live
+  // subscription — no network means no /detail and no Mercure token. The route
+  // geometry is pulled separately by useTripRoute (also cache-aware).
+  if (!useOfflineStore.getState().isOnline) {
+    const cached = await readTripCache(id);
+    if (isCancelled()) return undefined;
+    if (cached) {
+      store.hydrate(id, cached.detail);
+      useDismissedAlerts.getState().reset();
+      return undefined;
+    }
+  }
+
   let detail;
   try {
     detail = await fetchTripDetail(id);
   } catch {
-    if (!isCancelled()) {
-      store.setStatus({ loading: false, error: 'Impossible de charger le roadbook.' });
+    // Network failure: fall back to the cache before surfacing an error.
+    const cached = await readTripCache(id);
+    if (isCancelled()) return undefined;
+    if (cached) {
+      store.hydrate(id, cached.detail);
+      useDismissedAlerts.getState().reset();
+      return undefined;
     }
+    store.setStatus({ loading: false, error: 'Impossible de charger le roadbook.' });
     return undefined;
   }
   if (isCancelled()) return undefined;
@@ -46,6 +67,7 @@ export async function runTripLive(
     store.setStatus({ loading: false, error: 'Voyage introuvable.' });
     return undefined;
   }
+  void cacheTripDetail(id, detail);
   store.hydrate(id, detail);
   // Alert dismissals are keyed on dayNumber:code, which collide across trips;
   // clear them when a new trip is loaded so a dismissal on one trip does not hide

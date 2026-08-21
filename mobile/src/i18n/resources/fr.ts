@@ -504,6 +504,7 @@ export const fr = {
     hoursAgo: 'il y a {{count}} h',
     yesterday: 'hier',
     daysAgo: 'il y a {{count}} j',
+    synced: 'Synchronisé {{ago}}',
   },
   export: {
     trip: 'Exporter',

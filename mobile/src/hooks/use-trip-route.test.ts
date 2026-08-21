@@ -3,12 +3,20 @@ import { createElement } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
-import { useTripRoute } from './use-trip-route';
+import { runLoadTripRoute, useTripRoute } from './use-trip-route';
 import { useTripStore } from '../store/trip-store';
+import { useOfflineStore } from '../store/offline-store';
 
 jest.mock('../api/trips', () => ({ fetchTripRoute: jest.fn() }));
+jest.mock('../store/trip-cache', () => ({
+  cacheTripRoute: jest.fn(),
+  readTripCache: jest.fn(),
+}));
 import { fetchTripRoute } from '../api/trips';
+import { cacheTripRoute, readTripCache } from '../store/trip-cache';
 const mockRoute = fetchTripRoute as jest.MockedFunction<typeof fetchTripRoute>;
+const mockCacheRoute = cacheTripRoute as jest.MockedFunction<typeof cacheTripRoute>;
+const mockReadCache = readTripCache as jest.MockedFunction<typeof readTripCache>;
 
 const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
@@ -57,6 +65,8 @@ async function render(options?: { enabled?: boolean }): Promise<void> {
 beforeEach(() => {
   jest.clearAllMocks();
   useTripStore.getState().reset();
+  useOfflineStore.getState().setOnline(true);
+  mockReadCache.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -101,15 +111,45 @@ describe('useTripRoute (ADR-057)', () => {
     expect(mockRoute).not.toHaveBeenCalled();
   });
 
-  it('warns (but never throws) when the fetch fails', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('leaves the geometry unloaded (never throws) when the fetch fails with no cache', async () => {
     useTripStore.setState({ tripId: 't1', geometryLoaded: false, loading: false });
     mockRoute.mockRejectedValue(new Error('boom'));
 
     await render();
 
-    expect(warn).toHaveBeenCalled();
     expect(store().geometryLoaded).toBe(false);
-    warn.mockRestore();
+  });
+
+  it('caches the route after a successful online fetch (#1147)', async () => {
+    useTripStore.setState({ tripId: 't1', geometryLoaded: false, loading: false });
+    const route = { id: 't1', stages: [{ dayNumber: 1, geometry: [] }] };
+    mockRoute.mockResolvedValue(route as never);
+
+    await render();
+
+    expect(mockCacheRoute).toHaveBeenCalledWith('t1', route);
+  });
+});
+
+describe('runLoadTripRoute offline cache (#1147)', () => {
+  const route = { id: 't1', stages: [{ dayNumber: 1, geometry: [] }] };
+
+  it('serves the cached tracé without hitting the network while offline', async () => {
+    useOfflineStore.getState().setOnline(false);
+    mockReadCache.mockResolvedValue({ detail: {}, route, syncedAt: 1 } as never);
+
+    const result = await runLoadTripRoute('t1');
+
+    expect(result).toEqual(route);
+    expect(mockRoute).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the cached tracé when the network fetch fails', async () => {
+    mockRoute.mockRejectedValue(new Error('boom'));
+    mockReadCache.mockResolvedValue({ detail: {}, route, syncedAt: 1 } as never);
+
+    const result = await runLoadTripRoute('t1');
+
+    expect(result).toEqual(route);
   });
 });

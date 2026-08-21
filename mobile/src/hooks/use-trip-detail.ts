@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchTripDetail, type TripDetail } from '../api/trips';
+import { useOfflineStore } from '../store/offline-store';
+import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
 export interface TripDetailState {
   detail: TripDetail | null;
@@ -9,12 +11,23 @@ export interface TripDetailState {
 // Extracted for unit-testing the async/error branches (mirrors runTripLive).
 // One-shot fetch (no SSE): use it for a read-only preview; the live roadbook
 // hydration + Mercure subscription lives in useTripLive.
+//
+// Offline-aware (#1147): when the device is offline we serve the persisted cache
+// straight away, and a network failure falls back to it too. A successful online
+// load refreshes the cache (upcoming/ongoing trips only — see cacheTripDetail).
 export async function runLoadTripDetail(id: string): Promise<TripDetailState> {
+  if (!useOfflineStore.getState().isOnline) {
+    const cached = await readTripCache(id);
+    if (cached) return { detail: cached.detail, error: null };
+  }
   try {
     const detail = await fetchTripDetail(id);
     if (!detail) return { detail: null, error: 'Voyage introuvable.' };
+    void cacheTripDetail(id, detail);
     return { detail, error: null };
   } catch {
+    const cached = await readTripCache(id);
+    if (cached) return { detail: cached.detail, error: null };
     return { detail: null, error: 'Impossible de charger le voyage.' };
   }
 }
