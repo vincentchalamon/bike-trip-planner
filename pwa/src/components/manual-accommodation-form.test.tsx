@@ -83,6 +83,28 @@ describe("ManualAccommodationForm", () => {
     );
   });
 
+  it("drops a negative price to null instead of forwarding an invalid 422", async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByLabelText(fr.accommodation.nameLabel), {
+      target: { value: "Chez Test" },
+    });
+    fireEvent.change(screen.getByLabelText(fr.accommodation.addressLabel), {
+      target: { value: "10 rue de la Paix" },
+    });
+    fireEvent.change(screen.getByLabelText(fr.accommodation.priceTotalLabel), {
+      target: { value: "-50" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: fr.accommodation.save }),
+    );
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ priceTotal: null }),
+      ),
+    );
+  });
+
   it("cancels via the cancel button", () => {
     const { onCancel } = renderForm();
     fireEvent.click(

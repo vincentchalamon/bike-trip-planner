@@ -120,7 +120,8 @@ export function AccommodationBlock({
     const ok = await onAddManual({
       name: formName.trim(),
       address: formAddress.trim(),
-      priceTotal: Number.isFinite(parsedPrice) ? parsedPrice : null,
+      priceTotal:
+        Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
       url: formUrl.trim() === '' ? null : formUrl.trim(),
     });
     setSubmitting(false);

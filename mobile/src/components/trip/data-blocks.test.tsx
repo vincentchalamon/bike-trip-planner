@@ -527,6 +527,52 @@ describe('AccommodationBlock', () => {
     });
   });
 
+  it('drops a negative manual price to null instead of forwarding an invalid 422', async () => {
+    const onAddManual = jest.fn().mockResolvedValue(true);
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[]}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onAddManual={onAddManual}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
+        .props.onPress(),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualNamePlaceholder,
+        })
+        .props.onChangeText('Chez Test'),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualAddressPlaceholder,
+        })
+        .props.onChangeText('10 rue de la Paix'),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualPricePlaceholder,
+        })
+        .props.onChangeText('-50'),
+    );
+    await act(async () => {
+      await tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationManualSave })
+        .props.onPress();
+    });
+    expect(onAddManual).toHaveBeenCalledWith(
+      expect.objectContaining({ priceTotal: null }),
+    );
+  });
+
   it('keeps the manual save disabled until title and address are set', () => {
     const tree = render(
       <AccommodationBlock

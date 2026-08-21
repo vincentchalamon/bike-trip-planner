@@ -43,7 +43,8 @@ export function ManualAccommodationForm({
     const ok = await onSubmit({
       name: name.trim(),
       address: address.trim(),
-      priceTotal: Number.isFinite(parsedPrice) ? parsedPrice : null,
+      priceTotal:
+        Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
       url: url.trim() === "" ? null : url.trim(),
     });
     setSubmitting(false);
@@ -84,6 +85,7 @@ export function ManualAccommodationForm({
       />
       <Input
         type="number"
+        min="0"
         value={priceTotal}
         onChange={(e) => setPriceTotal(e.target.value)}
         onKeyDown={handleKeyDown}
