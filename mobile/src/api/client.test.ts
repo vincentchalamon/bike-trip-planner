@@ -26,12 +26,13 @@ beforeEach(() => {
 describe('authMiddleware request headers', () => {
   // Regression (#1090 device): RN advertises `zstd, br, gzip`; the server then
   // picks zstd/br which okhttp does not transparently decode, mojibaking accented
-  // titles. Pinning `identity` keeps bodies decodable — must not be refactored away.
-  it('pins Accept-Encoding to identity on every request', async () => {
+  // titles. The edge (Caddy) keys its compression opt-out on this header, so it
+  // must be sent on every request — must not be refactored away.
+  it('tags every request with X-Client-Platform: mobile', async () => {
     mockGetJwt.mockReturnValue('jwt');
     const request = new Request('https://api.test/trips');
     await onRequest(request);
-    expect(request.headers.get('Accept-Encoding')).toBe('identity');
+    expect(request.headers.get('X-Client-Platform')).toBe('mobile');
   });
 });
 

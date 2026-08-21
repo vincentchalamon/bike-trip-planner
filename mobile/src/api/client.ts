@@ -17,12 +17,15 @@ export const authMiddleware: Middleware = {
     if (jwt) {
       request.headers.set('Authorization', `Bearer ${jwt}`);
     }
-    // Force an uncompressed body. RN's networking advertises `zstd, br, gzip`, and
-    // the server (Caddy) then picks zstd/br — which okhttp does not transparently
-    // decode, leaving the body decoded as Latin-1 (UTF-8 `é` C3A9 -> "Ã©"). Pinning
-    // `identity` keeps accented titles intact; API payloads are small so the extra
-    // bytes are negligible.
-    request.headers.set('Accept-Encoding', 'identity');
+    // Identify the platform to the edge (Caddy) so it serves this client an
+    // uncompressed body. RN's okhttp advertises `zstd, br, gzip` but only
+    // transparently decodes gzip it added itself, so a zstd/br-compressed body is
+    // read as Latin-1 and accented titles mojibake (UTF-8 `é` C3A9 -> "Ã©").
+    // `Accept-Encoding` is a forbidden header okhttp overrides, so it cannot carry
+    // the opt-out; this custom header survives the native stack and Caddy rewrites
+    // the request's Accept-Encoding to `identity` when it sees it, disabling
+    // compression for mobile only (web/PWA clients keep it). See .docker/php/Caddyfile.
+    request.headers.set('X-Client-Platform', 'mobile');
     pendingRetries.set(request, request.clone());
     return request;
   },
