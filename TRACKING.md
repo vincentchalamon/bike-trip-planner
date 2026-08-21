@@ -2023,7 +2023,7 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 |-------|----|-------|--------|--------|-----|---------|-----------|
 | 1 | [#1146](https://github.com/vincentchalamon/bike-trip-planner/issues/1146) | fondation offline (ADR-059 + connectivité NetInfo + fraîcheur) | opus | 🚧 En cours | [#1151](https://github.com/vincentchalamon/bike-trip-planner/pull/1151) | `feature/1146` | Sprint 55 |
 | 2 | [#1147](https://github.com/vincentchalamon/bike-trip-planner/issues/1147) | cache offline + « synchronisé il y a Xh » + sync arrière-plan | opus | ✅ Mergé → `feature/1146` | [#1154](https://github.com/vincentchalamon/bike-trip-planner/pull/1154) | `feature/1147` | #1146 |
-| 2 | [#1148](https://github.com/vincentchalamon/bike-trip-planner/issues/1148) | dégradation offline de la carte | opus | 🚧 En cours | [#1153](https://github.com/vincentchalamon/bike-trip-planner/pull/1153) | `feature/1148` | #1146 |
+| 2 | [#1148](https://github.com/vincentchalamon/bike-trip-planner/issues/1148) | dégradation offline de la carte | opus | ✅ Mergé → `feature/1146` | [#1153](https://github.com/vincentchalamon/bike-trip-planner/pull/1153) | `feature/1148` | #1146 |
 | 2 | [#1149](https://github.com/vincentchalamon/bike-trip-planner/issues/1149) | mode in-ride — GPS foreground + FAB + badge offline | opus | 🚧 En cours | [#1152](https://github.com/vincentchalamon/bike-trip-planner/pull/1152) | `feature/1149` | #1146 |
 | 3 | [#1150](https://github.com/vincentchalamon/bike-trip-planner/issues/1150) | nearby-pois in-ride (client + hook + 8 intents + widen + 429) | opus | 🚧 En cours | [#1155](https://github.com/vincentchalamon/bike-trip-planner/pull/1155) | `feature/1150` | #1149 |
 | 4 | [#1094](https://github.com/vincentchalamon/bike-trip-planner/issues/1094) | design In-ride conforme maquette 08-in-ride (+ thème) | sonnet | 🚧 En cours | [#1156](https://github.com/vincentchalamon/bike-trip-planner/pull/1156) | `feature/1094` | #1150 |
@@ -2032,12 +2032,15 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 
 **Spine = GitHub Stack** (`gh stack`, `rerere` actif ; n° de stack local `gh stack`, non lié à une issue) : `feature/1146 → feature/1149 → feature/1150 → feature/1094`. Feuilles hors stack : #1148, #1147 (base `feature/1146`).
 
-Ordre retenu — **absorber les feuilles dans `feature/1146` avant de merger le socle sur `main`**, ce qui évite le `git rebase --onto origin/main <tip-avant-squash>` fragile des feuilles après un squash, et fait atterrir l'épic #1052 (1146+1147+1148) d'un bloc :
+Stratégie retenue — **absorber les feuilles dans `feature/1146`** (évite le `git rebase --onto origin/main <tip-avant-squash>` fragile des feuilles après un squash) ; l'épic #1052 (1146+1147+1148) atterrit d'un bloc.
 
-1. Merger **#1153** (#1148, carte offline) **dans sa base `feature/1146`** — merge normal (**#1154** / #1147 y est **déjà mergée**, 21/08 08:45). Conflit i18n/icons **trivial** (additions adjacentes) le cas échéant.
-2. `gh stack sync` — rebase le spine restant `feature/1149 → feature/1150 → feature/1094` sur `feature/1146` mise à jour (`rerere` rejoue le conflit `InRidePanel`).
-3. Merger **#1151** (`feature/1146`, contient désormais l'épic #1052 complet) → `main` (squash).
-4. Après le squash de #1151, `gh stack sync` bascule le spine en mode `--onto main` ; merger **#1152** (#1149) → **#1155** (#1150) → **#1156** (#1094), `gh stack sync` après chaque merge parent.
+**État au 21/08** (déjà fait) : #1154 (#1147) et #1153 (#1148) **mergées** dans `feature/1146` ; spine `feature/1149 → feature/1150 → feature/1094` **re-synchronisé** dessus (`gh stack rebase --no-trunk` ; conflit `icons.ts` résolu = union des exports, `InRidePanel` rejoué par `rerere`).
+
+**Reste à merger vers `main`** (de bas en haut, squash) :
+
+1. **#1151** (`feature/1146` = épic #1052 complet) → `main`. NB : `feature/1146` est basée sur `main` d'avant le bump dependabot #1158 (frankenphp, fichiers disjoints) → merge propre malgré le `BEHIND` affiché.
+2. Après le squash de #1151, `gh stack sync` bascule le spine en `--onto main` ; merger **#1152** (#1149) → **#1155** (#1150) → **#1156** (#1094), `gh stack sync` après chaque merge parent.
+3. **#1159** (ce doc) → `main`, à part.
 
 **Fichiers partagés (overlap) et arbitrage :**
 
