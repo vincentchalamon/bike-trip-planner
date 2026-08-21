@@ -18,10 +18,11 @@ import { test, expect } from "@playwright/test";
 // dropped from `encode`, so web clients also got uncompressed bodies) and passes
 // after.
 test.describe("Edge compression negotiation", () => {
-  // API Platform Hydra entrypoint: public (no auth) and lists every API resource,
-  // so it is well above Caddy's ~512-byte compression floor. `Accept: ld+json`
-  // keeps Caddy from routing it to the PWA (that path needs `Accept: text/html`).
-  const ENTRYPOINT = "/";
+  // API Platform Hydra documentation: PUBLIC_ACCESS (`^/docs` in security.php, no
+  // auth — the API entrypoint `/` is behind the firewall and 401s) and ~68KB of
+  // ld+json, well above Caddy's ~512-byte compression floor. The `.jsonld` suffix
+  // pins the format so Caddy never routes it to the PWA.
+  const ENTRYPOINT = "/docs.jsonld";
   const LDJSON = "application/ld+json";
   const NATIVE_ADVERTISED = "zstd, br, gzip";
 
