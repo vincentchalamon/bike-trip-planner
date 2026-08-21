@@ -48,3 +48,5 @@ export {
 export { ShoppingBag } from 'lucide-react-native';
 // Notifications screen (#1120): permission banner + per-category icons.
 export { Bell, BellOff, CheckCircle2 } from 'lucide-react-native';
+// Offline map degradation (#1148): discrete "offline map" indicator.
+export { CloudOff } from 'lucide-react-native';

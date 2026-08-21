@@ -33,7 +33,30 @@ export function buildSatelliteStyle(): StyleSpecification {
   };
 }
 
-export function mapStyleFor(base: MapBase): string | StyleSpecification {
+// Offline fallback style: a single flat background layer and no network tile
+// source, so the map still mounts and paints the local GeoJSON sources (route +
+// markers, added as children by TripMap) instead of a broken grey grid of failed
+// tile requests. `background` comes from the mobile theme (never a raw hex).
+export function buildOfflineStyle(background: string): StyleSpecification {
+  return {
+    version: 8,
+    sources: {},
+    layers: [
+      { id: 'offline-background', type: 'background', paint: { 'background-color': background } },
+    ],
+  };
+}
+
+// Resolve the MapLibre style for the current base. Offline (offline-store
+// isOnline === false) drops the network-tiled Positron/satellite bases for the
+// tile-less offline style; the local GeoJSON sources still render on top. Back
+// online rebasculates to the normal tiled style.
+export function mapStyleFor(
+  base: MapBase,
+  offline = false,
+  offlineBackground = 'transparent',
+): string | StyleSpecification {
+  if (offline) return buildOfflineStyle(offlineBackground);
   return base === 'satellite' ? buildSatelliteStyle() : POSITRON_STYLE_URL;
 }
 

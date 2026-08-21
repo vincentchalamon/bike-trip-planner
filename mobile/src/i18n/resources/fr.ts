@@ -338,6 +338,7 @@ export const fr = {
     map: {
       layerMap: 'Plan',
       layerSatellite: 'Satellite',
+      offline: 'Carte hors-ligne',
       toggleA11y: 'Changer le fond de carte',
       zoomInA11y: 'Zoomer',
       zoomOutA11y: 'Dézoomer',

@@ -4,12 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { profileHighlightSegment } from '@btp/core/elevation';
 import { EmptyState } from '../ui';
+import { CloudOff } from '../ui/icons';
 import { TripMap } from '../TripMap';
 import { buildStageLines, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
 import { computeProfileSummary, groupThousands } from './trip-map-summary';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
+import { useOfflineStore } from '../../store/offline-store';
 import { useTripRoute } from '../../hooks/use-trip-route';
 
 // The map tab: derives the route polyline and markers from the store's stages
@@ -26,6 +28,7 @@ export function TripMapView() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const stages = useTripStore((s) => s.stages);
+  const isOnline = useOfflineStore((s) => s.isOnline);
   const [hover, setHover] = useState<{ coordIndex: number; stageIndex: number } | null>(
     null,
   );
@@ -56,6 +59,37 @@ export function TripMapView() {
           markers={markers}
           highlightedSegment={highlightedSegment}
         />
+        {/* Discrete "offline map" indicator: when connectivity drops, TripMap
+            degrades to the tile-less style (route + profile stay local); this
+            badge tells the rider why the base imagery is gone. */}
+        {!isOnline ? (
+          <View
+            pointerEvents="none"
+            accessibilityRole="text"
+            style={[
+              styles.offlineBadge,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: theme.spacing.xs,
+                gap: theme.spacing.xs,
+                ...theme.shadows.soft,
+              },
+            ]}
+          >
+            <CloudOff size={14} color={theme.colors.mutedForeground} />
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 12,
+              }}
+            >
+              {t('trip.map.offline')}
+            </Text>
+          </View>
+        ) : null}
       </View>
       {/* Fixed bottom profile panel: the map (flex:1) takes the remaining height
           and the panel keeps its intrinsic height (title + SVG + axis), so map +
@@ -138,6 +172,15 @@ export function TripMapView() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  offlineBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   profile: { borderTopWidth: StyleSheet.hairlineWidth },
   profileHeader: {
     flexDirection: 'row',

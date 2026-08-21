@@ -3,8 +3,9 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
-import '../../i18n';
+import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
+import { useOfflineStore } from '../../store/offline-store';
 import { collectMarkers } from '../map/map-utils';
 
 // Drive the safe-area insets so the layout test can assert the bottom inset is
@@ -99,6 +100,13 @@ describe('TripMapView', () => {
     act(() => {
       useTripStore.getState().reset();
       useTripStore.setState({ stages: [routedStage] });
+      useOfflineStore.setState({ isOnline: true });
+    });
+  });
+
+  afterAll(() => {
+    act(() => {
+      useOfflineStore.setState({ isOnline: true });
     });
   });
 
@@ -168,6 +176,24 @@ describe('TripMapView', () => {
       [2, 48],
       [2.01, 48.01],
     ]);
+  });
+
+  it('shows the offline map badge only when connectivity is down', () => {
+    const label = i18n.t('trip.map.offline');
+    const hasBadge = (root: any): boolean =>
+      root.findAll(
+        (n: any) =>
+          n.type === 'Text' &&
+          [].concat(n.props.children).join('') === label,
+      ).length > 0;
+
+    const online = render(<TripMapView />);
+    expect(hasBadge(online!.root)).toBe(false);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: false });
+    });
+    expect(hasBadge(online!.root)).toBe(true);
   });
 
   it('clears the highlight when the profile reports a release', () => {
