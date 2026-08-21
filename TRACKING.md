@@ -2034,7 +2034,7 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 
 Ordre retenu — **absorber les feuilles dans `feature/1146` avant de merger le socle sur `main`**, ce qui évite le `git rebase --onto origin/main <tip-avant-squash>` fragile des feuilles après un squash, et fait atterrir l'épic #1052 (1146+1147+1148) d'un bloc :
 
-1. Merger **#1153** (#1148, carte offline) et **#1154** (#1147, cache) **dans leur base `feature/1146`** (leur PR y pointe déjà) — merges normaux, ordre libre entre elles. Conflit i18n/icons **trivial** (additions adjacentes) le cas échéant.
+1. Merger **#1153** (#1148, carte offline) **dans sa base `feature/1146`** — merge normal (**#1154** / #1147 y est **déjà mergée**, 21/08 08:45). Conflit i18n/icons **trivial** (additions adjacentes) le cas échéant.
 2. `gh stack sync` — rebase le spine restant `feature/1149 → feature/1150 → feature/1094` sur `feature/1146` mise à jour (`rerere` rejoue le conflit `InRidePanel`).
 3. Merger **#1151** (`feature/1146`, contient désormais l'épic #1052 complet) → `main` (squash).
 4. Après le squash de #1151, `gh stack sync` bascule le spine en mode `--onto main` ; merger **#1152** (#1149) → **#1155** (#1150) → **#1156** (#1094), `gh stack sync` après chaque merge parent.
