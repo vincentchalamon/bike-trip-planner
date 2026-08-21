@@ -392,6 +392,26 @@ export interface paths {
         patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
         trace?: never;
     };
+    "/trips/{tripId}/stages/{index}/accommodations/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a manually-entered accommodation to a stage. The address is geocoded, the accommodation becomes the selected one, and the stage endPoint plus the next stage startPoint move to it.
+         * @description Add a manually-entered accommodation to a stage. The address is geocoded, the accommodation becomes the selected one, and the stage endPoint plus the next stage startPoint move to it.
+         */
+        post: operations["api_trips_tripIdstages_indexaccommodationsmanual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages/{index}/detail": {
         parameters: {
             query?: never;
@@ -842,6 +862,8 @@ export interface components {
             openingHours?: string | null;
             /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
             phone?: string | null;
+            /** @description Postal address. Null when the source carries none. */
+            address?: string | null;
             /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
@@ -869,6 +891,8 @@ export interface components {
             openingHours?: string | null;
             /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
             phone?: string | null;
+            /** @description Postal address. Null when the source carries none. */
+            address?: string | null;
             /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
@@ -896,6 +920,8 @@ export interface components {
             openingHours?: string | null;
             /** @description Contact phone number, from the OSM contact block or the DataTourisme flux. */
             phone?: string | null;
+            /** @description Postal address. Null when the source carries none. */
+            address?: string | null;
             /** @description OpenStreetMap object type: node, way or relation. Null when the entry does not come from OSM. */
             osmType?: string | null;
             /** @description OpenStreetMap object id. Null when the entry does not come from OSM. */
@@ -1444,6 +1470,22 @@ export interface components {
             waterAfternoon?: components["schemas"]["PointOfInterest.jsonld"] | null;
             foodAtArrival?: components["schemas"]["PointOfInterest.jsonld"][];
             readonly empty?: boolean;
+        };
+        "Stage.StageManualAccommodationRequest": {
+            /**
+             * @description Accommodation title (required).
+             * @default
+             */
+            name: string;
+            /**
+             * @description Postal address (required); geocoded backend-side into coordinates.
+             * @default
+             */
+            address: string;
+            /** @description Optional total price in euros. Maps to estimatedPriceMin = estimatedPriceMax with isExactPrice = true. */
+            priceTotal?: number | null;
+            /** @description Optional booking/listing link. */
+            url?: string | null;
         };
         "Stage.StagePoiWaypointRequest": {
             /** @description POI latitude to insert as waypoint. */
@@ -3342,6 +3384,76 @@ export interface operations {
                 };
             };
             /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdstages_indexaccommodationsmanual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Stage resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Stage.StageManualAccommodationRequest"];
+            };
+        };
+        responses: {
+            /** @description Manual accommodation added and selected; recalculation dispatched. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Stage.StageResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Trip or stage not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The address could not be geocoded (not found or ambiguous); nothing is persisted. */
             422: {
                 headers: {
                     [name: string]: unknown;

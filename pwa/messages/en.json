@@ -155,7 +155,12 @@
     "selected": "Selected",
     "selectTooltip": "Select this accommodation as your stopover for this stage",
     "see_on_wikipedia": "See on Wikipedia",
-    "see_on_osm": "See on OpenStreetMap"
+    "see_on_osm": "See on OpenStreetMap",
+    "addressLabel": "Address",
+    "addressPlaceholder": "Address (street, city)",
+    "priceTotalLabel": "Total price",
+    "priceTotalPlaceholder": "Total price (€)",
+    "sourceManual": "Manual"
   },
   "addStage": {
     "add": "Add stage",
@@ -650,6 +655,7 @@
     "tripPlannerError": "Something went wrong while loading the trip planner.",
     "failedSelectAccommodation": "Failed to select accommodation.",
     "accommodationStale": "Accommodation list was refreshed. Please try again.",
+    "accommodationGeocodeFailed": "Address not found. Refine it (add a city or postcode) and try again.",
     "failedDeselectAccommodation": "Failed to deselect accommodation.",
     "failedUpdateAccommodationTypes": "Failed to update accommodation type filters.",
     "failedInsertRestDay": "Failed to insert rest day."

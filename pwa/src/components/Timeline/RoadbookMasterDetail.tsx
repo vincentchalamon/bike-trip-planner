@@ -5,6 +5,7 @@ import { StageDetailPanel } from "./StageDetailPanel";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData, AccommodationData } from "@btp/core";
+import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 
 interface RoadbookMasterDetailProps {
   stages: StageData[];
@@ -15,7 +16,10 @@ interface RoadbookMasterDetailProps {
   onAddStage?: (afterIndex: number) => void;
   onInsertRestDay?: (afterIndex: number) => void;
   onDistanceChange?: (index: number, distance: number) => void;
-  onAddAccommodation: (stageIndex: number) => void;
+  onSubmitManualAccommodation: (
+    stageIndex: number,
+    data: ManualAccommodationInput,
+  ) => Promise<boolean>;
   onUpdateAccommodation: (
     stageIndex: number,
     accIndex: number,
@@ -59,7 +63,7 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
     onAddStage,
     onInsertRestDay,
     onDistanceChange,
-    onAddAccommodation,
+    onSubmitManualAccommodation,
     onUpdateAccommodation,
     onRemoveAccommodation,
     onSelectAccommodation,
@@ -96,7 +100,7 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
           onAddStage={onAddStage}
           onInsertRestDay={onInsertRestDay}
           onDistanceChange={onDistanceChange}
-          onAddAccommodation={onAddAccommodation}
+          onSubmitManualAccommodation={onSubmitManualAccommodation}
           onUpdateAccommodation={onUpdateAccommodation}
           onRemoveAccommodation={onRemoveAccommodation}
           onSelectAccommodation={onSelectAccommodation}

@@ -2,6 +2,7 @@ import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import {
+  addManualAccommodation,
   addPoiWaypoint,
   analyzeTrip,
   applyBatchRecompute,
@@ -408,6 +409,34 @@ export function runDeselectAccommodation(
           DEFAULT_ACCOMMODATION_RADIUS_KM,
           stageIndex,
         ).catch(() => onFailure('network')),
+    },
+    onFailure,
+  );
+}
+
+export interface ManualAccommodationInput {
+  name: string;
+  address: string;
+  priceTotal: number | null;
+  url: string | null;
+}
+
+// Add a hors-app accommodation: the address is geocoded backend-side and the
+// stage is re-routed to it, so this requires routing (blocked out of zone),
+// exactly like selecting a scanned candidate. No optimistic apply — the
+// coordinates are only known after the backend geocodes.
+export function runAddManualAccommodation(
+  tripId: string,
+  stageIndex: number,
+  input: ManualAccommodationInput,
+  ctx: MutationContext,
+  onFailure: OnFailure,
+): Promise<boolean> {
+  return run(
+    ctx,
+    {
+      requiresRouting: true,
+      call: () => addManualAccommodation(tripId, stageIndex, input),
     },
     onFailure,
   );

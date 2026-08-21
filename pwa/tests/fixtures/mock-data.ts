@@ -835,6 +835,63 @@ export function stageUpdatedEventWithSelectedAccommodation(
 }
 
 /**
+ * Stage resolved after a manual (hors-app) accommodation was added: the geocoded
+ * accommodation is the stage's sole, selected one (source "manual", type "other",
+ * an exact total price and a postal address), and the endPoint has moved to it —
+ * the parity contract of issue #1097. Mirrors
+ * {@link stageUpdatedEventWithSelectedAccommodation} for a scanned entry.
+ */
+export function stageUpdatedEventWithManualAccommodation(
+  stageIndex: number,
+): MercureEvent {
+  const manual = {
+    name: "HomeExchange Grenoble",
+    type: "other",
+    lat: 44.52,
+    lon: 4.4,
+    estimatedPriceMin: 90,
+    estimatedPriceMax: 90,
+    isExactPrice: true,
+    possibleClosed: false,
+    distanceToEndPoint: 0,
+    source: "manual" as const,
+    address: "5 rue Test, Grenoble",
+    url: "https://homeexchange.example/xyz",
+  };
+  return {
+    type: "stage_updated",
+    data: {
+      stageIndex,
+      stage: {
+        dayNumber: stageIndex + 1,
+        distance: 55.0,
+        elevation: 720,
+        elevationLoss: 640,
+        startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+        endPoint: { lat: manual.lat, lon: manual.lon, ele: 0 },
+        geometry: [
+          { lat: 44.735, lon: 4.598, ele: 280 },
+          { lat: manual.lat, lon: manual.lon, ele: 0 },
+        ],
+        label: null,
+        isRestDay: false,
+        weather: null,
+        alerts: [],
+        resupply: {
+          foodAtLunch: [],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
+        accommodations: [manual],
+        selectedAccommodation: manual,
+        events: [],
+      },
+    },
+  };
+}
+
+/**
  * Wire shape of a single POI suggestion, matching `PoiSuggestionDto` (#934).
  */
 export interface NearbyPoiWire {

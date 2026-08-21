@@ -460,6 +460,138 @@ describe('AccommodationBlock', () => {
         .props.disabled,
     ).toBe(true);
   });
+
+  it('renders a manual accommodation like a scanned one: source label + address', () => {
+    const t = texts(
+      render(
+        <AccommodationBlock
+          accommodations={[
+            acc({
+              name: 'HomeExchange',
+              source: 'manual',
+              type: 'other',
+              address: '10 rue de la Paix, Paris',
+            }),
+          ]}
+        />,
+      ),
+    ).join(' ');
+    expect(t).toContain('HomeExchange');
+    expect(t).toContain(fr.trip.blocks.accommodationSourceManual);
+    expect(t).toContain('10 rue de la Paix, Paris');
+    // The manual entry must not be mislabelled as DataTourisme.
+    expect(t).not.toContain('DataTourisme');
+  });
+
+  it('opens the manual form and submits the trimmed input', async () => {
+    const onAddManual = jest.fn().mockResolvedValue(true);
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[]}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onAddManual={onAddManual}
+      />,
+    );
+    // The add button opens the form.
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
+        .props.onPress(),
+    );
+    // Fill title + address via their placeholders.
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualNamePlaceholder,
+        })
+        .props.onChangeText('  Chez Test  '),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualAddressPlaceholder,
+        })
+        .props.onChangeText(' 10 rue de la Paix '),
+    );
+    await act(async () => {
+      await tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationManualSave })
+        .props.onPress();
+    });
+    expect(onAddManual).toHaveBeenCalledWith({
+      name: 'Chez Test',
+      address: '10 rue de la Paix',
+      priceTotal: null,
+      url: null,
+    });
+  });
+
+  it('drops a negative manual price to null instead of forwarding an invalid 422', async () => {
+    const onAddManual = jest.fn().mockResolvedValue(true);
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[]}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onAddManual={onAddManual}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
+        .props.onPress(),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualNamePlaceholder,
+        })
+        .props.onChangeText('Chez Test'),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualAddressPlaceholder,
+        })
+        .props.onChangeText('10 rue de la Paix'),
+    );
+    act(() =>
+      tree.root
+        .findByProps({
+          placeholder: fr.trip.blocks.accommodationManualPricePlaceholder,
+        })
+        .props.onChangeText('-50'),
+    );
+    await act(async () => {
+      await tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationManualSave })
+        .props.onPress();
+    });
+    expect(onAddManual).toHaveBeenCalledWith(
+      expect.objectContaining({ priceTotal: null }),
+    );
+  });
+
+  it('keeps the manual save disabled until title and address are set', () => {
+    const tree = render(
+      <AccommodationBlock
+        accommodations={[]}
+        radiusKm={5}
+        onSelect={jest.fn()}
+        onAddManual={jest.fn().mockResolvedValue(true)}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
+        .props.onPress(),
+    );
+    expect(
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationManualSave })
+        .props.disabled,
+    ).toBe(true);
+  });
 });
 
 describe('ResupplyBlock', () => {

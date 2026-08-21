@@ -1,9 +1,14 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../store/trip-store';
-import type { MutationContext, OnFailure } from '../store/mutations';
+import type {
+  ManualAccommodationInput,
+  MutationContext,
+  OnFailure,
+} from '../store/mutations';
 import { runDeleteStage } from '../store/delete-stage';
 import type { TripConfig } from '../store/trip-store';
 import {
+  runAddManualAccommodation,
   runAddPoiWaypoint,
   runAddStage,
   runAnalyze,
@@ -65,6 +70,21 @@ export function useTripMutations(tripId: string, onFailure: OnFailure) {
         runDeselectAccommodation(tripId, stageIndex, ctx(), onFailure),
       scanAccommodations: (radiusKm: number, stageIndex?: number) =>
         runScanAccommodations(tripId, radiusKm, stageIndex, ctx(), onFailure),
+      // A geocoding failure (422 → 'validation') needs a manual-specific message,
+      // so this call accepts a failure override; other reasons still fall through
+      // to the shared handler.
+      addManualAccommodation: (
+        stageIndex: number,
+        data: ManualAccommodationInput,
+        onFailureOverride?: OnFailure,
+      ) =>
+        runAddManualAccommodation(
+          tripId,
+          stageIndex,
+          data,
+          ctx(),
+          onFailureOverride ?? onFailure,
+        ),
       addPoiWaypoint: (stageIndex: number, lat: number, lon: number) =>
         runAddPoiWaypoint(tripId, stageIndex, lat, lon, ctx(), onFailure),
       applyBatch: () => runApplyBatch(tripId, ctx(), onFailure),

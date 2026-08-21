@@ -216,6 +216,33 @@ export async function setStageAccommodation(
   return { ok: response.ok, status: response.status };
 }
 
+/**
+ * Add a manually-entered (hors-app) accommodation to a stage. The backend
+ * geocodes the address into coordinates, makes it the selected accommodation and
+ * moves the stage boundary to it (same downstream as selecting a scanned entry).
+ * A 422 status means the address could not be geocoded.
+ */
+export async function addManualAccommodation(
+  tripId: string,
+  index: number,
+  body: {
+    name: string;
+    address: string;
+    priceTotal: number | null;
+    url: string | null;
+  },
+): Promise<MutationResult> {
+  const { response } = await api.POST(
+    '/trips/{tripId}/stages/{index}/accommodations/manual',
+    {
+      params: { path: { tripId, index: String(index) } },
+      headers: ldBody,
+      body,
+    },
+  );
+  return { ok: response.ok, status: response.status };
+}
+
 /** Insert a cultural POI as a waypoint, re-routing the stage via Valhalla. */
 export async function addPoiWaypoint(
   tripId: string,

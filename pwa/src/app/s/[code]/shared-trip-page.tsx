@@ -309,7 +309,7 @@ function SharedTripLoader({ code }: { code: string }) {
                       isProcessing={false}
                       readOnly
                       onDeleteStage={noop}
-                      onAddAccommodation={noop}
+                      onSubmitManualAccommodation={() => Promise.resolve(false)}
                       onUpdateAccommodation={noop}
                       onRemoveAccommodation={noop}
                     />

@@ -359,13 +359,29 @@ export function AccommodationItem({
           </a>
         )}
         {accommodation.source && accommodation.source !== "osm" && (
-          <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+          <span
+            className="inline-flex items-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5"
+            data-testid="accommodation-source-badge"
+          >
             {accommodation.source === "datatourisme"
               ? "DataTourisme"
-              : accommodation.source}
+              : accommodation.source === "manual"
+                ? t("sourceManual")
+                : accommodation.source}
           </span>
         )}
       </div>
+
+      {/* Postal address (manual entries carry it; OSM/DataTourisme may too) */}
+      {accommodation.address && (
+        <div
+          className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"
+          data-testid="accommodation-address"
+        >
+          <MapPin className="h-3.5 w-3.5 shrink-0" />
+          <span>{accommodation.address}</span>
+        </div>
+      )}
 
       {/* Wikipedia + OpenStreetMap links */}
       {(wikipediaHref || osmHref) && (

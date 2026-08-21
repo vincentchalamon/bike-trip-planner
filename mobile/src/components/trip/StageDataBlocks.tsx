@@ -135,6 +135,17 @@ export function StageDataBlocks({
               stage.accommodationSearchRadiusKm + ACCOMMODATION_RADIUS_STEP_KM,
               stageIndex,
             ),
+          // A geocoding failure surfaces as 'validation'; map it to an actionable
+          // address message, delegating every other reason to the shared handler.
+          onAddManual: (data) =>
+            mutations.addManualAccommodation(stageIndex, data, (reason) =>
+              reason === 'validation'
+                ? Alert.alert(
+                    t('trip.accommodationGeocodeFailedTitle'),
+                    t('trip.accommodationGeocodeFailedMessage'),
+                  )
+                : notifyFailure(t, reason),
+            ),
         })}
       />
       <SupplyBlock supplyTimeline={stage.supplyTimeline} />

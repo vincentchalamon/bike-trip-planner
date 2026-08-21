@@ -152,12 +152,17 @@ export const AccommodationSchema = z.object({
   url: z.string().url().nullable().optional().catch(null),
   possibleClosed: z.boolean().default(false),
   distanceToEndPoint: z.number().default(0),
-  source: z.enum(["osm", "datatourisme"]).default("osm"),
+  // "manual" flags an accommodation the rider entered by hand (hors-app); it is a
+  // first-class Accommodation otherwise indistinguishable downstream (ADR-055).
+  source: z.enum(["osm", "datatourisme", "manual"]).default("osm"),
   description: z.string().nullable().optional(),
   imageUrl: z.string().url().nullable().optional().catch(null),
   wikipediaUrl: z.string().url().nullable().optional().catch(null),
   openingHours: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
+  // General postal address (OSM addr:*, DataTourisme, or the rider's input for a
+  // manual entry). Null when the source carries none.
+  address: z.string().nullable().optional(),
   // OSM identity of the entry: `null` on a DataTourisme one, and on anything the
   // rider added by hand, so the "see on OSM" link only renders when both are set.
   osmType: z

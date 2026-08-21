@@ -242,6 +242,34 @@ describe("AccommodationItem type rendering", () => {
   });
 });
 
+describe("manual (hors-app) accommodation", () => {
+  it("shows the localized manual source badge, not the raw source", () => {
+    renderItem(
+      accommodation({ source: "manual", type: "other", name: "Chez Test" }),
+    );
+    const badge = screen.getByTestId("accommodation-source-badge");
+    expect(badge).toHaveTextContent(fr.accommodation.sourceManual);
+    expect(badge).not.toHaveTextContent("manual");
+  });
+
+  it("renders the postal address when present", () => {
+    renderItem(
+      accommodation({
+        source: "manual",
+        address: "10 rue de la Paix, Paris",
+      }),
+    );
+    expect(screen.getByTestId("accommodation-address")).toHaveTextContent(
+      "10 rue de la Paix, Paris",
+    );
+  });
+
+  it("omits the address line when absent", () => {
+    renderItem(accommodation({ source: "osm", address: null }));
+    expect(screen.queryByTestId("accommodation-address")).toBeNull();
+  });
+});
+
 describe("ACCOMMODATION_TYPE_ICONS", () => {
   it.each(ACCOMMODATION_TYPES.filter((type) => type !== "other"))(
     "gives %s an icon distinct from the generic fallback",

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
 import type { StageData, AccommodationData } from "@btp/core";
+import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 
 interface TimelineProps {
   stages: StageData[];
@@ -24,7 +25,10 @@ interface TimelineProps {
   onAddStage: (afterIndex: number) => void;
   onInsertRestDay?: (afterIndex: number) => void;
   onDistanceChange?: (index: number, distance: number) => void;
-  onAddAccommodation: (stageIndex: number) => void;
+  onSubmitManualAccommodation: (
+    stageIndex: number,
+    data: ManualAccommodationInput,
+  ) => Promise<boolean>;
   onUpdateAccommodation: (
     stageIndex: number,
     accIndex: number,
@@ -74,7 +78,7 @@ export function Timeline({
   onAddStage,
   onInsertRestDay,
   onDistanceChange,
-  onAddAccommodation,
+  onSubmitManualAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
   onSelectAccommodation,
@@ -259,8 +263,8 @@ export function Timeline({
                             ? (d) => onDistanceChange(originalIndex, d)
                             : undefined
                         }
-                        onAddAccommodation={() =>
-                          onAddAccommodation(originalIndex)
+                        onSubmitManualAccommodation={(data) =>
+                          onSubmitManualAccommodation(originalIndex, data)
                         }
                         onUpdateAccommodation={(accIdx, data) =>
                           onUpdateAccommodation(originalIndex, accIdx, data)

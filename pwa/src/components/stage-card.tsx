@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageAlerts } from "@/components/stage-alerts";
 import { AccommodationPanel } from "@/components/accommodation-panel";
+import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { DiffHighlight } from "@/components/diff-highlight";
@@ -41,7 +42,9 @@ interface StageCardProps {
   isProcessing?: boolean;
   /** When true, all edit controls are hidden (trip is locked). */
   readOnly?: boolean;
-  onAddAccommodation: () => void;
+  onSubmitManualAccommodation: (
+    data: ManualAccommodationInput,
+  ) => Promise<boolean>;
   onUpdateAccommodation: (
     accIndex: number,
     data: Partial<AccommodationData>,
@@ -85,7 +88,7 @@ export function StageCard({
   onDistanceChange,
   isProcessing,
   readOnly = false,
-  onAddAccommodation,
+  onSubmitManualAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
   onSelectAccommodation,
@@ -265,7 +268,7 @@ export function StageCard({
               selectedAccommodation={stage.selectedAccommodation}
               onUpdate={onUpdateAccommodation}
               onRemove={onRemoveAccommodation}
-              onAdd={onAddAccommodation}
+              onSubmitManual={onSubmitManualAccommodation}
               onSelect={onSelectAccommodation}
               onDeselect={onDeselectAccommodation}
               onExpandRadius={onExpandAccommodationRadius}
