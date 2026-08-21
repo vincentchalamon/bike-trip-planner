@@ -167,6 +167,35 @@ describe('InRidePanel (#1150)', () => {
     openURL.mockRestore();
   });
 
+  it('does not call Linking.openURL for a non-http(s) deeplink', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true as never);
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'intent://evil',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+
+    const open = byLabel(tree, i18n.t('trip.inRide.openInMaps'))[0];
+    await press(open);
+    expect(openURL).not.toHaveBeenCalled();
+    openURL.mockRestore();
+  });
+
   it('shows the widen affordance and replays the search when tapped', async () => {
     const widen = jest.fn();
     hookReturns({

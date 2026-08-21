@@ -54,6 +54,18 @@ const CATEGORY_ICON: Record<InRidePoiCategory, IconType> = {
   charging: Zap,
 };
 
+/**
+ * Guard before any `Linking.openURL(poi.deeplink)` handoff — mirrors the web
+ * client's `safeUrlSchema` gate (`pwa/src/lib/api/client.ts`). `nearby-pois.ts`
+ * casts the response with no runtime validation, and on native a non-http(s)
+ * scheme (e.g. `intent://`) reaches `Intent.ACTION_VIEW` directly, which could
+ * resolve against another app's exported intent filter. Defence-in-depth
+ * against a tampered/corrupt persisted `deeplink` field only.
+ */
+function isSafeDeeplink(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
 /** Compact meters -> `450 m` / `2.3 km` (units are near-universal, no i18n). */
 function formatDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters < 0) return '—';
@@ -406,7 +418,9 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('trip.inRide.openInMaps')}
-        onPress={() => Linking.openURL(poi.deeplink)}
+        onPress={() => {
+          if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
+        }}
         style={{
           flexDirection: 'row',
           alignItems: 'center',

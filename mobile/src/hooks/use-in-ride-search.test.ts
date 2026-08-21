@@ -126,6 +126,35 @@ describe('useInRideSearch (#1150)', () => {
     unmount();
   });
 
+  it('drops a stale response when a newer search resolves first (sequence guard)', async () => {
+    let resolveFirst!: (v: NearbyPoiSearchResult) => void;
+    const first = new Promise<NearbyPoiSearchResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    mockSearch.mockReturnValueOnce(first);
+    mockSearch.mockResolvedValueOnce(makeOk({ category: 'food', totalFound: 2 }));
+
+    const { result, unmount } = renderHook();
+
+    // Tap 'water' (stays pending), then 'food' (resolves immediately).
+    act(() => {
+      result.current.search('water', POS);
+    });
+    await act(async () => {
+      result.current.search('food', POS);
+    });
+
+    expect(result.current.recap?.category).toBe('food');
+
+    // The stale 'water' response resolves after — must not override the recap.
+    await act(async () => {
+      resolveFirst(makeOk({ category: 'water', totalFound: 1 }));
+    });
+
+    expect(result.current.recap?.category).toBe('food');
+    unmount();
+  });
+
   it('surfaces the rate-limit error key on a 429', async () => {
     mockSearch.mockResolvedValue({ status: 'rate_limited' });
     const { result, unmount } = renderHook();
