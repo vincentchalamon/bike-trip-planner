@@ -143,6 +143,31 @@ describe('TripMap', () => {
     expect(style()).toBe(POSITRON_STYLE_URL);
   });
 
+  it('hides the layer toggle while offline (no tiles to switch)', () => {
+    // Offline, the map is stuck on the tile-less background style regardless of
+    // `base` (see the test above) — the pill would look interactive but do
+    // nothing, so it must not render at all while offline.
+    const out = render(<TripMap stageSegments={segsA} />);
+    const findToggle = () =>
+      out.root.findAll(
+        (n: any) =>
+          n.props.accessibilityRole === 'button' &&
+          n.props.accessibilityLabel === 'Satellite' &&
+          typeof n.props.onPress === 'function',
+      );
+    expect(findToggle()).toHaveLength(1);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: false });
+    });
+    expect(findToggle()).toHaveLength(0);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: true });
+    });
+    expect(findToggle()).toHaveLength(1);
+  });
+
   it('draws one colored LineString feature per stage', () => {
     const segs: StageLine[] = [
       { color: 'hsl(25.0, 72%, 48%)', coordinates: coordsA },

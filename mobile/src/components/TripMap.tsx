@@ -212,54 +212,56 @@ export function TripMap({
           <Minus size={20} color={theme.colors.foreground} />
         </Pressable>
       </View>
-      <View
-        accessibilityLabel={t('trip.map.toggleA11y')}
-        style={[
-          styles.layers,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            ...theme.shadows.soft,
-          },
-        ]}
-      >
-        {(['map', 'satellite'] as const).map((layer) => {
-          const active = base === layer;
-          return (
-            <Pressable
-              key={layer}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={
-                layer === 'map'
-                  ? t('trip.map.layerMap')
-                  : t('trip.map.layerSatellite')
-              }
-              onPress={() => setBase(layer)}
-              style={[
-                styles.layerSegment,
-                active && { backgroundColor: theme.colors.brand },
-              ]}
-            >
-              <Text
-                style={{
-                  color: active
-                    ? theme.colors.primaryForeground
-                    : theme.colors.foreground,
-                  fontFamily: active
-                    ? theme.fonts.sansSemibold
-                    : theme.fonts.sansMedium,
-                  fontSize: 13,
-                }}
+      {isOnline ? (
+        <View
+          accessibilityLabel={t('trip.map.toggleA11y')}
+          style={[
+            styles.layers,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+              ...theme.shadows.soft,
+            },
+          ]}
+        >
+          {(['map', 'satellite'] as const).map((layer) => {
+            const active = base === layer;
+            return (
+              <Pressable
+                key={layer}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={
+                  layer === 'map'
+                    ? t('trip.map.layerMap')
+                    : t('trip.map.layerSatellite')
+                }
+                onPress={() => setBase(layer)}
+                style={[
+                  styles.layerSegment,
+                  active && { backgroundColor: theme.colors.brand },
+                ]}
               >
-                {layer === 'map'
-                  ? t('trip.map.layerMap')
-                  : t('trip.map.layerSatellite')}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={{
+                    color: active
+                      ? theme.colors.primaryForeground
+                      : theme.colors.foreground,
+                    fontFamily: active
+                      ? theme.fonts.sansSemibold
+                      : theme.fonts.sansMedium,
+                    fontSize: 13,
+                  }}
+                >
+                  {layer === 'map'
+                    ? t('trip.map.layerMap')
+                    : t('trip.map.layerSatellite')}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
