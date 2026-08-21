@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../ui';
-import { HelpCircle, Navigation, WifiOff } from '../ui/icons';
+import { HelpCircle, Info, Navigation, WifiOff } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { useOfflineStore } from '../../store/offline-store';
 import {
@@ -11,11 +11,12 @@ import {
   type ForegroundLocation,
 } from '../../hooks/use-foreground-location';
 
-// The in-ride screen body (#1149). Structure only — maquette 08-in-ride + theme
-// pass belong to #1094. It hosts the foreground GPS status, an offline badge
-// (nearby-pois needs the network), a floating help bubble, and a `poiPanel` slot
-// that #1150 fills with the deterministic POI finder (ADR-048). Kept as a plain
-// component (not the route) so it renders in tests without a mounted navigator.
+// The in-ride screen body (#1149, maquette 08-in-ride + theme pass in #1094).
+// It hosts the topbar connectivity dot, the "route unchanged / OSM data"
+// disclaimer, the foreground GPS status, an offline badge (nearby-pois needs
+// the network), a floating help bubble, and a `poiPanel` slot that #1150 fills
+// with the deterministic POI finder (ADR-048). Kept as a plain component (not
+// the route) so it renders in tests without a mounted navigator.
 export function InRideView({
   tripId: _tripId,
   poiPanel,
@@ -38,6 +39,77 @@ export function InRideView({
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      {/* Connectivity status (maquette 08-in-ride topbar, #1094) — the chevron
+          + title live in the native Stack header (themed globally, see
+          _layout.tsx); this is the third topbar element, kept here so it stays
+          covered by this component's tests. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: theme.spacing.xs,
+          paddingHorizontal: theme.spacing.base,
+          paddingTop: theme.spacing.sm,
+        }}
+      >
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: theme.radius.full,
+            backgroundColor: isOnline ? theme.colors.successInk : theme.colors.destructive,
+          }}
+        />
+        <Text
+          style={{
+            color: isOnline ? theme.colors.successInk : theme.colors.destructive,
+            fontFamily: theme.fonts.sansMedium,
+            fontSize: 12,
+          }}
+        >
+          {isOnline ? t('trip.inRide.onlineBadge') : t('trip.inRide.offlineBadge')}
+        </Text>
+      </View>
+
+      {/* Disclaimer banner (maquette 08-in-ride, #1094) — always shown, the
+          bold first sentence carries the reassurance, the rest points at the
+          OSM data-quality caveat. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: theme.spacing.sm,
+          margin: theme.spacing.base,
+          marginTop: theme.spacing.xs,
+          padding: theme.spacing.md,
+          backgroundColor: theme.colors.muted,
+          borderRadius: theme.radius.lg,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        }}
+      >
+        <Info color={theme.colors.mutedIcon} size={18} />
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+            color: theme.colors.mutedForeground,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: theme.fonts.sansSemibold,
+              color: theme.colors.foreground,
+            }}
+          >
+            {t('trip.inRide.disclaimerStrong')}
+          </Text>{' '}
+          {t('trip.inRide.disclaimer')}
+        </Text>
+      </View>
+
       {!isOnline ? (
         <View
           accessibilityRole="alert"

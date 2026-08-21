@@ -419,9 +419,13 @@ export const fr = {
     deleteTripConfirmMessage: 'Ce voyage sera définitivement supprimé.',
     rideCtaA11y: 'Démarrer le voyage',
     inRide: {
-      title: 'En selle',
+      title: 'À proximité',
+      onlineBadge: 'En ligne',
       offlineBadge: 'Hors ligne',
       offlineHint: "La recherche de points d'intérêt nécessite une connexion.",
+      disclaimerStrong: "Ton itinéraire n'est pas modifié.",
+      disclaimer:
+        'Données OSM — à vérifier sur place (horaires, ouverture).',
       locationWaiting: 'Recherche du signal GPS…',
       locationDeniedTitle: 'Localisation désactivée',
       locationDenied:
@@ -431,12 +435,14 @@ export const fr = {
       helpA11y: 'Aide',
       chipsGroupA11y: 'Que cherches-tu ?',
       searching: 'Recherche à proximité...',
+      resultsHeader: '{{count}} résultats · {{category}}',
       widenSearch: 'Élargir la recherche',
       errorNetwork: 'Pas de connexion. Vérifie ton réseau et réessaie.',
       errorRateLimit: 'Trop de recherches. Patiente un instant et réessaie.',
       errorGeneric: 'La recherche a échoué. Réessaie.',
       openInMaps: 'Ouvrir dans Google Maps',
-      detourBadge: '+{{km}} km',
+      detourBadge: '+{{km}} km de détour',
+      openAllDay: 'Accès libre 24 h/24',
       closesAt: 'Ferme à {{time}}',
       noOpeningHours: 'Horaires non vérifiés — confirme sur place.',
       search: {
