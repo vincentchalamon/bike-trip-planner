@@ -499,6 +499,12 @@ export const fr = {
     fr: 'Français',
     en: 'English',
   },
+  freshness: {
+    justNow: "à l'instant",
+    hoursAgo: 'il y a {{count}} h',
+    yesterday: 'hier',
+    daysAgo: 'il y a {{count}} j',
+  },
   export: {
     trip: 'Exporter',
     stage: 'Exporter',
