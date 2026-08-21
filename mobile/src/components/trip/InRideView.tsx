@@ -6,7 +6,10 @@ import { EmptyState } from '../ui';
 import { HelpCircle, Navigation, WifiOff } from '../ui/icons';
 import { useTheme } from '../../theme';
 import { useOfflineStore } from '../../store/offline-store';
-import { useForegroundLocation } from '../../hooks/use-foreground-location';
+import {
+  useForegroundLocation,
+  type ForegroundLocation,
+} from '../../hooks/use-foreground-location';
 
 // The in-ride screen body (#1149). Structure only — maquette 08-in-ride + theme
 // pass belong to #1094. It hosts the foreground GPS status, an offline badge
@@ -20,8 +23,11 @@ export function InRideView({
 }: {
   // Carried for #1150 (POST /trips/{id}/nearby-pois); unused in this structural pass.
   tripId: string;
-  // Extension slot for the #1150 POI finder panel.
-  poiPanel?: ReactNode;
+  // Extension slot for the #1150 POI finder panel. A render function receives the
+  // screen's single foreground-GPS fix so the panel searches from the real
+  // position without opening a second location subscription; a plain node is
+  // still accepted (kept for the structural #1149 tests).
+  poiPanel?: ReactNode | ((location: ForegroundLocation) => ReactNode);
   onHelp?: () => void;
 }) {
   const { t } = useTranslation();
@@ -107,7 +113,7 @@ export function InRideView({
         )}
 
         {/* #1150 mounts its nearby-pois finder here. */}
-        {poiPanel}
+        {typeof poiPanel === 'function' ? poiPanel({ permission, position }) : poiPanel}
       </View>
 
       <Pressable
