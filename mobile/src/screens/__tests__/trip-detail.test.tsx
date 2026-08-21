@@ -1,9 +1,9 @@
 /// <reference types="jest" />
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
-import i18n from '../../../src/i18n';
-import { useTripStore } from '../../../src/store/trip-store';
-import TripRoadbook from './index';
+import i18n from '../../i18n';
+import { useTripStore } from '../../store/trip-store';
+import TripRoadbook from '../../../app/trip/[id]/index';
 
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
@@ -11,9 +11,9 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
 }));
 
-jest.mock('../../../src/hooks/use-trip-live', () => ({ useTripLive: jest.fn() }));
+jest.mock('../../hooks/use-trip-live', () => ({ useTripLive: jest.fn() }));
 
-jest.mock('../../../src/components/trip', () => ({
+jest.mock('../../components/trip', () => ({
   ConfigSheet: () => null,
   RoadbookView: () => null,
   ShareSheet: () => null,
@@ -22,8 +22,8 @@ jest.mock('../../../src/components/trip', () => ({
   TripTitleHeader: () => null,
 }));
 
-jest.mock('../../../src/store/trip-cache', () => ({ readTripCache: jest.fn() }));
-import { readTripCache } from '../../../src/store/trip-cache';
+jest.mock('../../store/trip-cache', () => ({ readTripCache: jest.fn() }));
+import { readTripCache } from '../../store/trip-cache';
 const mockReadCache = readTripCache as jest.MockedFunction<typeof readTripCache>;
 
 function texts(node: any): string[] {
