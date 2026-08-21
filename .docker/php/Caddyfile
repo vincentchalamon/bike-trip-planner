@@ -39,10 +39,11 @@
     @mobile header X-Client-Platform mobile
     request_header @mobile Accept-Encoding identity
 
-    # Compress responses. JSON (application/json, application/ld+json) is included so
-    # browser/PWA clients get compressed transfers on API payloads too — notably the
-    # large decimated-geometry body of GET /trips/{id}/route (ADR-057). Native mobile
-    # is excluded via the Accept-Encoding rewrite above, not by dropping JSON here.
+    # Compress responses. JSON (application/json, application/ld+json) and GPX
+    # (application/gpx+xml) are included so browser/PWA clients get compressed
+    # transfers on the large geometry payloads too — GET /trips/{id}/route (ADR-057)
+    # and the GPX exports (/s/{code}.gpx, stage GPX). Native mobile is excluded via
+    # the Accept-Encoding rewrite above, not by dropping a content-type here.
     # text/event-stream (Mercure SSE) is deliberately NOT whitelisted: it must never
     # be buffered/compressed, for any client.
     encode zstd br gzip {
@@ -56,6 +57,7 @@
             header Content-Type application/wasm*
             header Content-Type application/json*
             header Content-Type application/ld+json*
+            header Content-Type application/gpx+xml*
         }
     }
 
