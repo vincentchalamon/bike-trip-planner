@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import '../i18n';
 import { useMapPrefs } from '../store/map-prefs';
+import { useOfflineStore } from '../store/offline-store';
 import { TripMap } from './TripMap';
 import { computeBounds, POSITRON_STYLE_URL, type StageLine } from './map/map-utils';
 
@@ -66,6 +67,10 @@ beforeEach(() => {
   act(() => {
     useMapPrefs.setState({ base: 'map', hydrated: true });
   });
+  // Reset so an offline flip in one test never leaks into the next.
+  act(() => {
+    useOfflineStore.setState({ isOnline: true });
+  });
 });
 
 describe('TripMap', () => {
@@ -119,6 +124,23 @@ describe('TripMap', () => {
       'get',
       'color',
     ]);
+  });
+
+  it('degrades to the offline style when useOfflineStore flips offline, then restores online', () => {
+    const out = render(<TripMap stageSegments={segsA} />);
+    const style = () => findAll(out.root, 'Map')[0].props.mapStyle;
+    expect(style()).toBe(POSITRON_STYLE_URL);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: false });
+    });
+    // Tile-less offline style: no network sources, just a flat background layer.
+    expect(style()).toMatchObject({ sources: {}, layers: [{ type: 'background' }] });
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: true });
+    });
+    expect(style()).toBe(POSITRON_STYLE_URL);
   });
 
   it('draws one colored LineString feature per stage', () => {
