@@ -195,17 +195,15 @@ export function RoadbookView({
         }}
         style={{ backgroundColor: theme.colors.background }}
       />
-      {/* In-ride FAB (Spike-UX): the in-ride screen is out of scope, so this is a
-          deliberate placeholder — disabled, icon-only, dispatches nothing. Lifted
-          above the system nav bar via the bottom safe-area inset. Lives in the
-          roadbook view only, so it never overlays the map/profile tab (#7);
-          hidden in the read-only (started / ongoing / past) view (#6). */}
+      {/* In-ride FAB (#1149): opens the in-ride screen (foreground GPS + POI
+          finder). Lifted above the system nav bar via the bottom safe-area inset.
+          Lives in the roadbook view only, so it never overlays the map/profile tab
+          (#7); hidden in the read-only (started / ongoing / past) view (#6). */}
       {stages.length > 0 && !readOnly ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('trip.rideCtaA11y')}
-          accessibilityState={{ disabled: true }}
-          disabled
+          onPress={() => router.push(`/trip/${id}/in-ride`)}
           style={{
             position: 'absolute',
             right: theme.spacing.lg,
