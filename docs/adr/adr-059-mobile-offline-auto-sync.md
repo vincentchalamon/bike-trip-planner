@@ -64,10 +64,12 @@ The connectivity flag stays in its own single-purpose store, separate from the
 trip store, so it survives trip switches and is readable from the mutation
 runners with no trip loaded — consistent with ADR-055's split of transient
 device state from trip state. The freshness helper is a pure `lib` function like
-`dates.ts`: no store coupling, injectable clock, fully testable. Persistence of
-the cached trips themselves is deliberately **not** decided here (it is #1147);
-this ADR only guarantees the store API and the freshness contract those tickets
-build on.
+`dates.ts`: no store coupling, injectable clock, fully testable. This ADR fixes
+the store API and the freshness contract; the persistence of the cached trips
+themselves is implemented by #1147 (expo-file-system) and the offline map
+degradation by #1148, both building on this foundation. The three land together
+as epic #1052 (the sub-tickets share the `feature/1146` base), so a reader of the
+merged history sees the whole offline engine, not just the contract.
 
 ## Alternatives considered
 
