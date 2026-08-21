@@ -66,6 +66,16 @@ function isSafeDeeplink(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+/**
+ * Guard before `Linking.openURL(`tel:${poi.phone}`)` — `poi.phone` is
+ * verbatim, publicly-editable OSM tag text (`OsmContactTags::phone()` does
+ * not reformat it), so it reaches the dialer's `Intent.ACTION_VIEW` sink
+ * unsanitized. Accepts only digits and common phone punctuation.
+ */
+function isSafePhone(phone: string): boolean {
+  return /^[\d\s+()-]+$/.test(phone);
+}
+
 /** Compact meters -> `450 m` / `2.3 km` (units are near-universal, no i18n). */
 function formatDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters < 0) return '—';
@@ -388,7 +398,9 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={poi.phone}
-          onPress={() => Linking.openURL(`tel:${poi.phone}`)}
+          onPress={() => {
+            if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
+          }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}
         >
           <Phone color={theme.colors.brand} size={13} />

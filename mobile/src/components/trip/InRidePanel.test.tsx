@@ -196,6 +196,66 @@ describe('InRidePanel (#1150)', () => {
     openURL.mockRestore();
   });
 
+  it('calls Linking.openURL for a plain phone number', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true as never);
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/go',
+            phone: '+33 4 00 00 00 00',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+
+    const call = byLabel(tree, '+33 4 00 00 00 00')[0];
+    await press(call);
+    expect(openURL).toHaveBeenCalledWith('tel:+33 4 00 00 00 00');
+    openURL.mockRestore();
+  });
+
+  it('does not call Linking.openURL for a phone field carrying a non-phone payload', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true as never);
+    hookReturns({
+      recap: {
+        category: 'water',
+        radiusMeters: 3000,
+        totalFound: 1,
+        capReached: false,
+        outOfCoverage: false,
+        pois: [
+          {
+            name: 'Fontaine',
+            category: 'water',
+            lat: 45,
+            lon: 6,
+            distance_m: 100,
+            deeplink: 'https://maps.example/go',
+            phone: '*#06#',
+          } as never,
+        ],
+      },
+    });
+    const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
+
+    const call = byLabel(tree, '*#06#')[0];
+    await press(call);
+    expect(openURL).not.toHaveBeenCalled();
+    openURL.mockRestore();
+  });
+
   it('shows the widen affordance and replays the search when tapped', async () => {
     const widen = jest.fn();
     hookReturns({
