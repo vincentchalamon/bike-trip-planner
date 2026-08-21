@@ -2030,7 +2030,7 @@ Jalon : **valeur native complète** (le différenciant du pivot). Milestone : «
 
 ### Ordre de merge et conflits attendus
 
-**Spine = GitHub Stack #1157** (`gh stack`, `rerere` actif) : `feature/1146 → feature/1149 → feature/1150 → feature/1094`. Feuilles hors stack : #1148, #1147 (base `feature/1146`).
+**Spine = GitHub Stack** (`gh stack`, `rerere` actif ; n° de stack local `gh stack`, non lié à une issue) : `feature/1146 → feature/1149 → feature/1150 → feature/1094`. Feuilles hors stack : #1148, #1147 (base `feature/1146`).
 
 Ordre retenu — **absorber les feuilles dans `feature/1146` avant de merger le socle sur `main`**, ce qui évite le `git rebase --onto origin/main <tip-avant-squash>` fragile des feuilles après un squash, et fait atterrir l'épic #1052 (1146+1147+1148) d'un bloc :
 
