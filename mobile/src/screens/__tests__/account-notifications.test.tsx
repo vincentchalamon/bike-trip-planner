@@ -3,10 +3,10 @@ import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import i18n from '../../src/i18n';
-import { lightColors } from '../../src/theme/tokens';
-import { NOTIFICATION_DEFAULTS, selectActiveCount, useNotificationPrefs } from '../../src/store/notification-prefs';
-import AccountNotifications from './notifications';
+import i18n from '../../i18n';
+import { lightColors } from '../../theme/tokens';
+import { NOTIFICATION_DEFAULTS, selectActiveCount, useNotificationPrefs } from '../../store/notification-prefs';
+import AccountNotifications from '../../../app/account/notifications';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn().mockResolvedValue(null),
