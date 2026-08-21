@@ -338,6 +338,7 @@ export const en: typeof fr = {
     map: {
       layerMap: 'Map',
       layerSatellite: 'Satellite',
+      offline: 'Offline map',
       toggleA11y: 'Toggle base map',
       zoomInA11y: 'Zoom in',
       zoomOutA11y: 'Zoom out',

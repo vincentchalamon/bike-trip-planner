@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from './ui/icons';
 import { useTheme } from '../theme/context';
 import { useMapPrefs } from '../store/map-prefs';
+import { useOfflineStore } from '../store/offline-store';
 import {
   applyZoom,
   computeBounds,
@@ -47,6 +48,7 @@ export function TripMap({
   const base = useMapPrefs((s) => s.base);
   const setBase = useMapPrefs((s) => s.setBase);
   const load = useMapPrefs((s) => s.load);
+  const isOnline = useOfflineStore((s) => s.isOnline);
   const mapRef = useRef<MapRef>(null);
   const cameraRef = useRef<CameraRef>(null);
 
@@ -65,7 +67,13 @@ export function TripMap({
   // Every object/collection handed to the memoized native components is derived
   // once per input change: a fresh reference on each render would defeat the
   // upstream React.memo (Map/Camera/GeoJSONSource) and force a native re-diff.
-  const mapStyle = useMemo(() => mapStyleFor(base), [base]);
+  // Offline: fall back to the tile-less style (theme neutral background) so the
+  // route + markers still render instead of a broken grid of failed tile
+  // requests; back online rebasculates to the normal tiled base.
+  const mapStyle = useMemo(
+    () => mapStyleFor(base, !isOnline, theme.colors.muted),
+    [base, isOnline, theme.colors.muted],
+  );
   const lineCoords = useMemo(
     () => stageSegments.flatMap((s) => s.coordinates),
     [stageSegments],
@@ -204,54 +212,56 @@ export function TripMap({
           <Minus size={20} color={theme.colors.foreground} />
         </Pressable>
       </View>
-      <View
-        accessibilityLabel={t('trip.map.toggleA11y')}
-        style={[
-          styles.layers,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            ...theme.shadows.soft,
-          },
-        ]}
-      >
-        {(['map', 'satellite'] as const).map((layer) => {
-          const active = base === layer;
-          return (
-            <Pressable
-              key={layer}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={
-                layer === 'map'
-                  ? t('trip.map.layerMap')
-                  : t('trip.map.layerSatellite')
-              }
-              onPress={() => setBase(layer)}
-              style={[
-                styles.layerSegment,
-                active && { backgroundColor: theme.colors.brand },
-              ]}
-            >
-              <Text
-                style={{
-                  color: active
-                    ? theme.colors.primaryForeground
-                    : theme.colors.foreground,
-                  fontFamily: active
-                    ? theme.fonts.sansSemibold
-                    : theme.fonts.sansMedium,
-                  fontSize: 13,
-                }}
+      {isOnline ? (
+        <View
+          accessibilityLabel={t('trip.map.toggleA11y')}
+          style={[
+            styles.layers,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+              ...theme.shadows.soft,
+            },
+          ]}
+        >
+          {(['map', 'satellite'] as const).map((layer) => {
+            const active = base === layer;
+            return (
+              <Pressable
+                key={layer}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={
+                  layer === 'map'
+                    ? t('trip.map.layerMap')
+                    : t('trip.map.layerSatellite')
+                }
+                onPress={() => setBase(layer)}
+                style={[
+                  styles.layerSegment,
+                  active && { backgroundColor: theme.colors.brand },
+                ]}
               >
-                {layer === 'map'
-                  ? t('trip.map.layerMap')
-                  : t('trip.map.layerSatellite')}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={{
+                    color: active
+                      ? theme.colors.primaryForeground
+                      : theme.colors.foreground,
+                    fontFamily: active
+                      ? theme.fonts.sansSemibold
+                      : theme.fonts.sansMedium,
+                    fontSize: 13,
+                  }}
+                >
+                  {layer === 'map'
+                    ? t('trip.map.layerMap')
+                    : t('trip.map.layerSatellite')}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }

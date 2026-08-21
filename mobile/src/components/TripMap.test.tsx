@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import '../i18n';
 import { useMapPrefs } from '../store/map-prefs';
+import { useOfflineStore } from '../store/offline-store';
 import { TripMap } from './TripMap';
 import { computeBounds, POSITRON_STYLE_URL, type StageLine } from './map/map-utils';
 
@@ -66,6 +67,10 @@ beforeEach(() => {
   act(() => {
     useMapPrefs.setState({ base: 'map', hydrated: true });
   });
+  // Reset so an offline flip in one test never leaks into the next.
+  act(() => {
+    useOfflineStore.setState({ isOnline: true });
+  });
 });
 
 describe('TripMap', () => {
@@ -119,6 +124,48 @@ describe('TripMap', () => {
       'get',
       'color',
     ]);
+  });
+
+  it('degrades to the offline style when useOfflineStore flips offline, then restores online', () => {
+    const out = render(<TripMap stageSegments={segsA} />);
+    const style = () => findAll(out.root, 'Map')[0].props.mapStyle;
+    expect(style()).toBe(POSITRON_STYLE_URL);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: false });
+    });
+    // Tile-less offline style: no network sources, just a flat background layer.
+    expect(style()).toMatchObject({ sources: {}, layers: [{ type: 'background' }] });
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: true });
+    });
+    expect(style()).toBe(POSITRON_STYLE_URL);
+  });
+
+  it('hides the layer toggle while offline (no tiles to switch)', () => {
+    // Offline, the map is stuck on the tile-less background style regardless of
+    // `base` (see the test above) — the pill would look interactive but do
+    // nothing, so it must not render at all while offline.
+    const out = render(<TripMap stageSegments={segsA} />);
+    const findToggle = () =>
+      out.root.findAll(
+        (n: any) =>
+          n.props.accessibilityRole === 'button' &&
+          n.props.accessibilityLabel === 'Satellite' &&
+          typeof n.props.onPress === 'function',
+      );
+    expect(findToggle()).toHaveLength(1);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: false });
+    });
+    expect(findToggle()).toHaveLength(0);
+
+    act(() => {
+      useOfflineStore.setState({ isOnline: true });
+    });
+    expect(findToggle()).toHaveLength(1);
   });
 
   it('draws one colored LineString feature per stage', () => {
