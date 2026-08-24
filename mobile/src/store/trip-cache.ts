@@ -176,10 +176,6 @@ export async function cacheTripDetail(
       await deleteTripCache(id);
       return;
     }
-    // Migrate a legacy embedded route (pre-split mono-file cache) into the
-    // split route file before overwriting the meta, so a detail-only refresh
-    // never silently drops a previously-cached geometry (readTripCache's
-    // "compat mono-fichier" fallback stays honoured).
     // Migrate a legacy embedded route into the split file, and only drop it from
     // the meta once that write actually landed (writeFile's return, not `.exists`
     // — create() makes an empty file appear even when the write then fails). If
