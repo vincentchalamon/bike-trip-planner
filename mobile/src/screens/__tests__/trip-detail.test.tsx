@@ -18,7 +18,7 @@ jest.mock('../../components/trip', () => ({
   RoadbookView: () => null,
   ShareSheet: () => null,
   SseStatusIndicator: () => null,
-  TripMapView: () => null,
+  TripMapView: jest.fn(() => null),
   TripTitleHeader: () => null,
 }));
 
@@ -74,5 +74,33 @@ describe('TripRoadbook screen — synced freshness badge (#1147)', () => {
 
     const tree = await render();
     expect(texts(tree).some((label) => label.startsWith('Synchronisé'))).toBe(false);
+  });
+});
+
+describe('TripRoadbook screen — lazy map mount (#1176, ADR-057)', () => {
+  it('mounts TripMapView only after the Map tab is opened, then keeps it mounted', async () => {
+    mockReadCache.mockResolvedValue(null);
+    const { TripMapView } = jest.requireMock('../../components/trip');
+    TripMapView.mockClear();
+
+    const tree = await render();
+    // Roadbook is the default view: the map — and its eager useTripRoute() /route
+    // fetch — must NOT mount for a rider who never taps "Carte" (ADR-057).
+    expect(TripMapView).not.toHaveBeenCalled();
+    expect(tree.root.findAllByType(TripMapView).length).toBe(0);
+
+    // Open the Map tab via the SegmentedControl.
+    const segmented = tree.root.findAll((n: any) => Array.isArray(n.props?.segments))[0];
+    await act(async () => {
+      segmented.props.onChange('map');
+    });
+    expect(TripMapView).toHaveBeenCalled();
+    expect(tree.root.findAllByType(TripMapView).length).toBe(1);
+
+    // Switch back to Roadbook: the map stays mounted (never torn down / re-mounted).
+    await act(async () => {
+      segmented.props.onChange('roadbook');
+    });
+    expect(tree.root.findAllByType(TripMapView).length).toBe(1);
   });
 });
