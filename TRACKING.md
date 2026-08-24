@@ -2062,6 +2062,41 @@ Stratégie retenue — **absorber les feuilles dans `feature/1146`** (évite le 
 
 <details><summary>
 
+## Sprint 58.b — Recette mobile
+
+</summary>
+Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B) : conformité aux maquettes (diff écran par écran vs DesignSync « Mobile — Spike UX »), parité web, bugs, performances, sécurité, offline et **mode dégradé** (offline + API indisponible). Milestone : « Sprint 58.b — Recette » (#12).
+
+**Priorité produit** : le **mode dégradé** (#1166/#1167/#1168) — l'app doit rester utilisable en lecture seule avec un bandeau discret nommant la raison (Internet/API indisponible) et les écritures désactivées.
+
+| Thème | ID | Titre | Type | Effort | Statut |
+|-------|----|-------|------|--------|--------|
+| Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | ⏳ À faire |
+| Offline | [#1167](https://github.com/vincentchalamon/bike-trip-planner/issues/1167) | fallback cache liste des voyages + fix rejet de promesse cold-start | Bug | M | ⏳ À faire |
+| Offline | [#1168](https://github.com/vincentchalamon/bike-trip-planner/issues/1168) | carte hors-ligne en visuel simple (image statique / placeholder) | Task | M | ⏳ À faire |
+| Bug | [#1169](https://github.com/vincentchalamon/bike-trip-planner/issues/1169) | i18n : chaîne EN « View the rough section on the map » | Bug | S | ⏳ À faire |
+| Bug | [#1170](https://github.com/vincentchalamon/bike-trip-planner/issues/1170) | libellé localisé du type d'hébergement (enum brut affiché) | Bug | S | ⏳ À faire |
+| Bug | [#1171](https://github.com/vincentchalamon/bike-trip-planner/issues/1171) | formulaire hébergement manuel masqué par le clavier | Bug | S | ⏳ À faire |
+| Bug | [#1172](https://github.com/vincentchalamon/bike-trip-planner/issues/1172) | mojibake intermittent accents (confirmer prod hors ngrok) | Bug | M | ⏳ À faire |
+| Bug | [#1173](https://github.com/vincentchalamon/bike-trip-planner/issues/1173) | require cycle + keyExtractor instable (Math.random) | Task | S | ⏳ À faire |
+| Sécurité | [#1174](https://github.com/vincentchalamon/bike-trip-planner/issues/1174) | purge cache offline au logout + suppression export RGPD + durcissements | Task | M | ⏳ À faire |
+| Perf | [#1175](https://github.com/vincentchalamon/bike-trip-planner/issues/1175) | écriture cache async + route inchangée non ré-sérialisée | Task | M | ⏳ À faire |
+| Perf | [#1176](https://github.com/vincentchalamon/bike-trip-planner/issues/1176) | mémoïsation listes + tree-shake lucide + carte maintenue montée | Task | M | ⏳ À faire |
+| Parité | [#1177](https://github.com/vincentchalamon/bike-trip-planner/issues/1177) | consultation in-app d'un voyage partagé /s/&lt;code&gt; | Feature | M | ⏳ À faire |
+| Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ⏳ À faire |
+| Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ⏳ À faire |
+| Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ⏳ À faire |
+| Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | ⏳ À faire |
+| Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | 🚧 En cours (tests fournis dans la PR de recette) |
+
+**Recette — ce qui a été vérifié en live (device) :** liste, roadbook, détail d'étape, carte + profil, configuration, compte, notifications, in-ride (8 intents + GPS réel), création ; formulaire hébergement manuel #1097 (entrée + champs). Mode dégradé testé : offline (mode avion, cold + warm) et API indisponible (backend arrêté, Internet OK).
+
+**Note maquettes :** conformité globalement élevée (notifications quasi pixel-parfaites). La maquette `09-trip-config` est **périmée** (liste encore Refuge/Location, retirés au sprint 45 #927) — le device est correct ; mettre à jour la maquette, pas l'app.
+
+</details>
+
+<details><summary>
+
 ## Sprint 59 — Mobile : Release Android + doc
 
 </summary>
@@ -2076,14 +2111,14 @@ Stratégie retenue — **absorber les feuilles dans `feature/1146`** (évite le 
 
 <details><summary>
 
-## Sprint 60 — Hébergement hors-app
+## ✅ Sprint 60 — Hébergement hors-app
 
 </summary>
 Hébergement réservé **hors app** (HomeExchange, AirBnb, Booking, warmshowers, chez l'habitant…) : l'utilisateur le renseigne lui-même. Feature transverse **web + mobile + backend**. Milestone : « Sprint 60 — Hébergement hors-app ».
 
 | Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1097](https://github.com/vincentchalamon/bike-trip-planner/issues/1097) | feat(accommodations) : saisie manuelle d'un hébergement hors-app (titre, adresse, prix total, lien) — web + mobile | L | 🚧 En cours | [#1163](https://github.com/vincentchalamon/bike-trip-planner/pull/1163) (`feature/1097`) | — |
+| 1 | [#1097](https://github.com/vincentchalamon/bike-trip-planner/issues/1097) | feat(accommodations) : saisie manuelle d'un hébergement hors-app (titre, adresse, prix total, lien) — web + mobile | L | ✅ Mergée | [#1163](https://github.com/vincentchalamon/bike-trip-planner/pull/1163) (`feature/1097`) | — |
 
 **Décisions de conception (arrêtées avant exécution) :**
 
