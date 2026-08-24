@@ -605,4 +605,27 @@ export const en: typeof fr = {
     failedTitle: 'Export failed',
     failedMessage: 'The export failed. Try again.',
   },
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    start: 'Get started',
+    progress: 'Step {{current}} / {{total}}',
+    steps: {
+      create: {
+        title: 'Create your trip',
+        description:
+          'Paste a Komoot, Strava or RideWithGPS link, or import a GPX. We split your route into daily stages automatically.',
+      },
+      roadbook: {
+        title: 'Follow your roadbook',
+        description:
+          'For each day: distance, elevation, weather, accommodation and alerts. Tweak a stage and the following days recompute.',
+      },
+      ride: {
+        title: 'Get in the saddle',
+        description:
+          'Out on the road, "In the saddle" shows your position and the useful points around you (water, shelter, resupply), even offline.',
+      },
+    },
+  },
 };
