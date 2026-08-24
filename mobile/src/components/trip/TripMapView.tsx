@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { profileHighlightSegment } from '@btp/core/elevation';
 import { EmptyState } from '../ui';
-import { CloudOff } from '../ui/icons';
 import { TripMap } from '../TripMap';
+import { StaticRouteMap } from './StaticRouteMap';
 import { buildStageLines, collectMarkers } from '../map/map-utils';
 import { ElevationProfile } from './ElevationProfile';
 import { computeProfileSummary, groupThousands } from './trip-map-summary';
@@ -54,42 +54,18 @@ export function TripMapView() {
   return (
     <View style={styles.container}>
       <View style={styles.map}>
-        <TripMap
-          stageSegments={stageSegments}
-          markers={markers}
-          highlightedSegment={highlightedSegment}
-        />
-        {/* Discrete "offline map" indicator: when connectivity drops, TripMap
-            degrades to the tile-less style (route + profile stay local); this
-            badge tells the rider why the base imagery is gone. */}
-        {!isOnline ? (
-          <View
-            pointerEvents="none"
-            accessibilityRole="text"
-            style={[
-              styles.offlineBadge,
-              {
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
-                paddingHorizontal: theme.spacing.sm,
-                paddingVertical: theme.spacing.xs,
-                gap: theme.spacing.xs,
-                ...theme.shadows.soft,
-              },
-            ]}
-          >
-            <CloudOff size={14} color={theme.colors.mutedForeground} />
-            <Text
-              style={{
-                color: theme.colors.mutedForeground,
-                fontFamily: theme.fonts.sansMedium,
-                fontSize: 12,
-              }}
-            >
-              {t('trip.map.offline')}
-            </Text>
-          </View>
-        ) : null}
+        {/* Offline: base-map tiles need the network, so swap the interactive
+            MapLibre view for a static route thumbnail (#1168) rather than a blank
+            tile-less canvas. The elevation profile below stays live. */}
+        {isOnline ? (
+          <TripMap
+            stageSegments={stageSegments}
+            markers={markers}
+            highlightedSegment={highlightedSegment}
+          />
+        ) : (
+          <StaticRouteMap stageSegments={stageSegments} markers={markers} />
+        )}
       </View>
       {/* Fixed bottom profile panel: the map (flex:1) takes the remaining height
           and the panel keeps its intrinsic height (title + SVG + axis), so map +

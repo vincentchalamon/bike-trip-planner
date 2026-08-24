@@ -342,6 +342,7 @@ export const fr = {
       layerMap: 'Plan',
       layerSatellite: 'Satellite',
       offline: 'Carte hors-ligne',
+      offlineStatic: 'Carte indisponible hors-ligne — tracé affiché.',
       toggleA11y: 'Changer le fond de carte',
       zoomInA11y: 'Zoomer',
       zoomOutA11y: 'Dézoomer',
