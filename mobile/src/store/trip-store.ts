@@ -8,6 +8,7 @@ import {
 } from '@btp/core/reconciliation';
 import type { TripDetail, TripRoute } from '../api/trips';
 import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
+import { createTemporalStore } from './temporal-middleware';
 
 type ApiStage = NonNullable<TripDetail['stages']>[number];
 
@@ -219,7 +220,9 @@ export const useTripStore = create<TripState>((set, get) => ({
   loading: true,
   error: null,
   ...DEFAULT_CONFIG,
-  hydrate: (tripId, detail) =>
+  hydrate: (tripId, detail) => {
+    // A fresh trip has no undoable history (mirrors the web clearTrip).
+    useTripTemporalStore.getState().clear();
     set({
       tripId,
       title: detail.title ?? null,
@@ -247,7 +250,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       diffConsumedToken: 0,
       loading: false,
       error: null,
-    }),
+    });
+  },
   applyTripReady: (stages) =>
     set((state) => {
       const reconciled = reconcileTripReady(state.stages, stages);
@@ -436,7 +440,8 @@ export const useTripStore = create<TripState>((set, get) => ({
   cancelAllModifications: () => set({ pendingModifications: [] }),
   clearPendingModifications: () => set({ pendingModifications: [] }),
   setStatus: (patch) => set(patch),
-  reset: () =>
+  reset: () => {
+    useTripTemporalStore.getState().clear();
     set({
       tripId: null,
       title: null,
@@ -454,5 +459,59 @@ export const useTripStore = create<TripState>((set, get) => ({
       loading: true,
       error: null,
       ...DEFAULT_CONFIG,
-    }),
+    });
+  },
 }));
+
+/**
+ * The slice tracked by undo/redo: the roadbook stages plus the editable
+ * dates/pacing config. Mirrors the web {@link getUndoableSlice} — deep-cloned
+ * via JSON so no live store reference leaks into the history stack.
+ */
+export interface UndoableSlice {
+  stages: StageData[];
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
+}
+
+export function getUndoableSlice(state: UndoableSlice): UndoableSlice {
+  return JSON.parse(
+    JSON.stringify({
+      stages: state.stages,
+      startDate: state.startDate,
+      endDate: state.endDate,
+      fatigueFactor: state.fatigueFactor,
+      elevationPenalty: state.elevationPenalty,
+      maxDistancePerDay: state.maxDistancePerDay,
+      averageSpeed: state.averageSpeed,
+    }),
+  ) as UndoableSlice;
+}
+
+/**
+ * Companion temporal store providing undo/redo for the roadbook (#1178, parity
+ * with the web). Undoable mutations push a pre-edit {@link UndoableSlice} via
+ * `_push()` before applying; `undo()` restores it through `setStages` /
+ * `setConfig` (neither re-pushes), reverting the local optimistic state without
+ * re-hitting the API — same semantics as the web temporal store.
+ */
+export const useTripTemporalStore = createTemporalStore(
+  () => getUndoableSlice(useTripStore.getState()),
+  (snapshot) => {
+    const s = snapshot as UndoableSlice;
+    const store = useTripStore.getState();
+    store.setStages(s.stages);
+    store.setConfig({
+      startDate: s.startDate,
+      endDate: s.endDate,
+      fatigueFactor: s.fatigueFactor,
+      elevationPenalty: s.elevationPenalty,
+      maxDistancePerDay: s.maxDistancePerDay,
+      averageSpeed: s.averageSpeed,
+    });
+  },
+);
