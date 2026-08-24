@@ -2,7 +2,18 @@
 // documented in README). In dev only, falls back to the shared ngrok tunnel; a
 // non-dev build without the var fails closed rather than shipping a stale ngrok
 // host that a third party could later claim (magic-link tokens / JWTs at stake).
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? getDevFallback();
+export const API_BASE_URL = resolveApiBaseUrl();
+
+function resolveApiBaseUrl(): string {
+  const url = process.env.EXPO_PUBLIC_API_URL ?? getDevFallback();
+  // Fail closed on a plaintext base URL in a shipped build: magic-link tokens and
+  // JWTs travel over this origin, so a non-https host must never ship (#1174). Dev
+  // is exempt (localhost / http tunnels).
+  if (!__DEV__ && !url.startsWith('https://')) {
+    throw new Error('EXPO_PUBLIC_API_URL must be an https URL for non-development builds');
+  }
+  return url;
+}
 
 function getDevFallback(): string {
   if (!__DEV__) {

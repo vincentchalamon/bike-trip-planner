@@ -2,6 +2,7 @@ import { API_BASE_URL, LD_JSON } from '../api/config';
 import { unregisterDeviceToken } from '../notifications/push';
 import { notifySessionInvalidated } from './session';
 import { clearTokens, getRefresh, setTokens } from './tokens';
+import { clearAllTripCache } from '../store/trip-cache';
 
 // verify / refresh use plain fetch rather than the typed client: both return the
 // token pair ({ token, refresh_token }) in the body, and refresh posts the refresh
@@ -67,6 +68,9 @@ async function doRefresh(): Promise<boolean> {
   // DELETE would 401, leaving the token alive server-side (#1125).
   await unregisterDeviceToken().catch(() => undefined);
   await clearTokens();
+  // Purge the offline trip cache too, so an invalidated session leaves no
+  // roadbook / manual accommodation on the device (#1174).
+  await clearAllTripCache();
   notifySessionInvalidated();
   return false;
 }
