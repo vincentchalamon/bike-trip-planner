@@ -60,17 +60,22 @@ export const authMiddleware: Middleware = {
     if (jwt) {
       retry.headers.set('Authorization', `Bearer ${jwt}`);
     }
-    // Rebuild the retried response with the global `Response` constructor so it
-    // passes openapi-fetch's `instanceof Response` check (same realm as the check).
-    // Read via arrayBuffer(), not text(): a text round-trip re-encodes the body as
-    // UTF-8, corrupting any binary payload (e.g. a #1047 FIT export retried after
-    // a mid-download token refresh). arrayBuffer preserves the raw bytes for both
-    // binary and text content.
     const retried = await fetch(retry);
     // Re-evaluate on the retried response — it, not the original 401, is what
     // surfaces to the caller and drives the degraded-mode banner (#1166).
     useOfflineStore.getState().setApiReachable(retried.status < 500);
-    const body = await retried.arrayBuffer();
+    // Rebuild the retried response with the global `Response` constructor so it
+    // passes openapi-fetch's `instanceof Response` check (same realm as the check).
+    // Rebuild TEXT payloads (JSON/LD+JSON/text) from a UTF-8 STRING via `.text()`:
+    // rebuilding them from an ArrayBuffer makes RN's `Response.json()/.text()` decode
+    // the bytes as Latin-1, mojibaking accented content on a retried request — a
+    // cold-start GET /trips whose expired token triggers this path renders "Sensée"
+    // as "SensÃ©e" (#1172). BINARY payloads (e.g. a #1047 FIT / GPX export retried
+    // after a mid-download token refresh) must keep their raw bytes, so those keep
+    // the ArrayBuffer round-trip, which a `.text()` decode would corrupt.
+    const contentType = retried.headers.get('Content-Type') ?? '';
+    const isText = /^(application\/(json|ld\+json)|text\/)/i.test(contentType);
+    const body = isText ? await retried.text() : await retried.arrayBuffer();
     return new Response(body, {
       status: retried.status,
       statusText: retried.statusText,

@@ -119,6 +119,34 @@ describe('authMiddleware 401 retry (#1032)', () => {
     expect(resultBytes).toEqual(bytes);
   });
 
+  // Regression (#1172): a JSON body retried after a 401 must be rebuilt from a
+  // UTF-8 STRING (`.text()`), not an ArrayBuffer — rebuilding from bytes makes RN's
+  // Response.json() decode UTF-8 as Latin-1, mojibaking accented titles
+  // ("Entre Sensée et Escaut" -> "Entre SensÃ©e et Escaut") on a cold-start
+  // GET /trips whose expired token triggers this retry path.
+  it('rebuilds a JSON retry body from text so accented UTF-8 survives (#1172)', async () => {
+    mockGetJwt.mockReturnValue('fresh-jwt');
+    mockRefresh.mockResolvedValue(true);
+    const textSpy = jest.fn().mockResolvedValue(JSON.stringify({ title: 'Entre Sensée et Escaut' }));
+    const arrayBufferSpy = jest.fn();
+    (globalThis.fetch as jest.Mock).mockResolvedValue({
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'Content-Type': 'application/ld+json; charset=utf-8' }),
+      text: textSpy,
+      arrayBuffer: arrayBufferSpy,
+    });
+
+    const request = new Request('https://api.test/trips');
+    await onRequest(request);
+    const result = await onResponse(request, new Response(null, { status: 401 }));
+
+    // JSON is decoded as text, never through the byte round-trip that mojibakes it.
+    expect(textSpy).toHaveBeenCalledTimes(1);
+    expect(arrayBufferSpy).not.toHaveBeenCalled();
+    expect(await result!.json()).toEqual({ title: 'Entre Sensée et Escaut' });
+  });
+
   it('does not replay when the refresh fails', async () => {
     mockGetJwt.mockReturnValue('stale-jwt');
     mockRefresh.mockResolvedValue(false);
