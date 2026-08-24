@@ -2071,7 +2071,7 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 
 | Thème | ID | Titre | Type | Effort | Statut |
 |-------|----|-------|------|--------|--------|
-| Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | 🚧 En cours ([#1197](https://github.com/vincentchalamon/bike-trip-planner/pull/1197)) |
+| Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | ✅ Mergée ([#1197](https://github.com/vincentchalamon/bike-trip-planner/pull/1197)) |
 | Offline | [#1167](https://github.com/vincentchalamon/bike-trip-planner/issues/1167) | fallback cache liste des voyages + fix rejet de promesse cold-start | Bug | M | ✅ Mergée ([#1198](https://github.com/vincentchalamon/bike-trip-planner/pull/1198)) |
 | Offline | [#1168](https://github.com/vincentchalamon/bike-trip-planner/issues/1168) | carte hors-ligne en visuel simple (image statique / placeholder) | Task | M | ✅ Mergée ([#1199](https://github.com/vincentchalamon/bike-trip-planner/pull/1199)) |
 | Bug | [#1169](https://github.com/vincentchalamon/bike-trip-planner/issues/1169) | i18n : chaîne EN « View the rough section on the map » | Bug | S | ✅ Mergée ([#1184](https://github.com/vincentchalamon/bike-trip-planner/pull/1184)) |
