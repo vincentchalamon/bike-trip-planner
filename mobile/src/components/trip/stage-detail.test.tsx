@@ -302,8 +302,9 @@ describe('StageDetailView inline distance edit', () => {
 
   beforeEach(() => {
     mockUpdateStageDistance.mockClear();
-    // canEditDistance = tripId set, not locked, online (store default), in zone,
+    // canEditDistance = tripId set, not locked, online, API reachable, in zone,
     // not a rest day.
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
     useTripStore.setState({
       tripId: 't1',
       stages: [stage({ distance: 50 })],
@@ -331,6 +332,15 @@ describe('StageDetailView inline distance edit', () => {
       navButton(tree, i18n.t('trip.edit.saveA11y')).props.onPress();
     });
   }
+
+  it('hides the distance-edit affordance when the API is unreachable while online (#1166)', () => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const tree = render(<StageDetailView initialIndex={0} />);
+    // No edit pencil to tap: the affordance is gated on apiReachable, like the
+    // accommodation block, so a down API can't present a misleading control.
+    expect(navButton(tree, editLabel())).toBeUndefined();
+    useOfflineStore.setState({ apiReachable: true });
+  });
 
   it('commits a valid distance to the API', () => {
     const tree = render(<StageDetailView initialIndex={0} />);
