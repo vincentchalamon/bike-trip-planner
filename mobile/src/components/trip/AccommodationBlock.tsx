@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { AccommodationData } from '@btp/core';
 import {
   ACCOMMODATION_RADIUS_STEP_KM,
+  FILTERABLE_ACCOMMODATION_TYPES,
   MAX_ACCOMMODATION_RADIUS_KM,
+  type FilterableAccommodationType,
 } from '@btp/core/constants';
 import { DataBlock } from './DataBlock';
 import { Button, Input } from '../ui';
@@ -20,6 +22,19 @@ export interface ManualAccommodationInput {
 
 // Candidates are revealed a page at a time (#1105).
 const ACCOMMODATION_PAGE_SIZE = 5;
+
+// The wire type is a raw string (backend contract, ADR-055) — "other" flags a
+// manually-added entry and is excluded from FILTERABLE_ACCOMMODATION_TYPES
+// (reserved for backend filtering), so it is listed separately here. Mirrors
+// pwa/src/lib/accommodation-types.ts.
+type KnownAccommodationType = FilterableAccommodationType | 'other';
+const KNOWN_ACCOMMODATION_TYPES: readonly string[] = [
+  ...FILTERABLE_ACCOMMODATION_TYPES,
+  'other',
+];
+function isKnownAccommodationType(type: string): type is KnownAccommodationType {
+  return KNOWN_ACCOMMODATION_TYPES.includes(type);
+}
 
 interface AccommodationBlockProps {
   accommodations: AccommodationData[];
@@ -154,8 +169,11 @@ export function AccommodationBlock({
       ) : null}
       {items.map(({ acc, originalIndex }, i) => {
         const price = priceLabel(acc);
+        const typeLabel = isKnownAccommodationType(acc.type)
+          ? t(`config.type_${acc.type}` as const)
+          : t('config.type_other');
         const meta = [
-          acc.type,
+          typeLabel,
           price,
           acc.distanceToEndPoint != null
             ? t('trip.blocks.distanceKm', { distance: Math.round(acc.distanceToEndPoint) })

@@ -511,6 +511,7 @@ export const en: typeof fr = {
     type_guest_house: 'Guest house',
     type_alpine_hut: 'Alpine hut',
     type_wilderness_hut: 'Wilderness hut',
+    type_other: 'Other',
     datesTitle: 'Dates',
     datesDescription: 'Changing the dates regenerates the stage split.',
     startDate: 'Departure',
