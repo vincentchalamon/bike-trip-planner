@@ -21,8 +21,9 @@ export async function runLoadTripRoute(id: string): Promise<TripRoute | null> {
     const cached = await readTripCache(id);
     if (cached?.route) return cached.route;
     // Genuine failure: online (or nothing cached) and the fetch threw. Surface a
-    // diagnostic so a real backend/network error is not swallowed silently.
-    console.warn('Failed to load trip route geometry', error);
+    // diagnostic (dev only) so a real backend/network error is not swallowed
+    // silently, without leaking it to a shipped build's logs.
+    if (__DEV__) console.warn('Failed to load trip route geometry', error);
     return null;
   }
 }

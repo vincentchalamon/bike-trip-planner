@@ -239,6 +239,16 @@ export async function cacheTripRoute(
   });
 }
 
+/**
+ * Delete every cached trip. Called on logout and on out-of-band session
+ * invalidation so a shared device leaves no offline roadbook / manual
+ * accommodation (title, address, price, link) behind for the next account (#1174).
+ */
+export async function clearAllTripCache(): Promise<void> {
+  const ids = await listCachedTripIds();
+  await Promise.all(ids.map((id) => deleteTripCache(id)));
+}
+
 /** Ids of every currently cached trip (drives the background re-sync). */
 export async function listCachedTripIds(): Promise<string[]> {
   try {

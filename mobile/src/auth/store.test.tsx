@@ -10,6 +10,7 @@ jest.mock('./tokens', () => ({
 }));
 jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => {}) }));
+jest.mock('../store/trip-cache', () => ({ clearAllTripCache: jest.fn().mockResolvedValue(undefined) }));
 // The provider registers / unregisters the push token as a side effect (#1125);
 // stub the push module so this stale-response-guard test never touches the native
 // notifications layer (its own behaviour is covered by store.push.test.tsx).
@@ -21,7 +22,10 @@ jest.mock('../notifications/push', () => ({
 
 import { api } from '../api/client';
 import { loadTokens } from './tokens';
+import { clearAllTripCache } from '../store/trip-cache';
 import { AuthProvider, useAuth } from './store';
+
+const mockClearAllTripCache = clearAllTripCache as jest.MockedFunction<typeof clearAllTripCache>;
 
 type AuthContextValue = ReturnType<typeof useAuth>;
 
@@ -80,6 +84,21 @@ describe('AuthProvider stale-response guard (#1117)', () => {
     });
 
     expect(captured.email).toBeNull();
+  });
+
+  it('purges the offline trip cache on logout (#1174)', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    mockGet.mockResolvedValue({ data: { email: 'me@example.com' } } as never);
+
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+
+    expect(mockClearAllTripCache).not.toHaveBeenCalled();
+    await act(async () => {
+      await captured.logout();
+    });
+    expect(mockClearAllTripCache).toHaveBeenCalledTimes(1);
   });
 
   it('sets the email from GET /users/me while authenticated', async () => {

@@ -20,5 +20,16 @@ export async function writeAndShareFile(
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error('Sharing is not available on this device');
   }
-  await Sharing.shareAsync(file.uri, { mimeType });
+  try {
+    await Sharing.shareAsync(file.uri, { mimeType });
+  } finally {
+    // Delete the temp export once the share sheet is done. It matters most for the
+    // RGPD account archive (profile, email, every trip) which must not linger in
+    // the cache dir, but GPX/FIT exports are cleaned up the same way (#1174).
+    try {
+      file.delete();
+    } catch {
+      // ignore: best-effort cleanup of the temp export file.
+    }
+  }
 }

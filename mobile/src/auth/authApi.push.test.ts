@@ -19,13 +19,20 @@ jest.mock('./tokens', () => ({
     order.push('clear');
   }),
 }));
+jest.mock('../store/trip-cache', () => ({
+  clearAllTripCache: jest.fn(async () => {
+    order.push('purge-cache');
+  }),
+}));
 
 import { refreshTokens } from './authApi';
 import { unregisterDeviceToken } from '../notifications/push';
 import { clearTokens } from './tokens';
+import { clearAllTripCache } from '../store/trip-cache';
 
 const unregister = unregisterDeviceToken as jest.Mock;
 const clear = clearTokens as jest.Mock;
+const purge = clearAllTripCache as jest.Mock;
 
 beforeEach(() => {
   order.length = 0;
@@ -41,6 +48,11 @@ describe('doRefresh definitive failure (#1125)', () => {
     expect(ok).toBe(false);
     expect(unregister).toHaveBeenCalledTimes(1);
     expect(clear).toHaveBeenCalledTimes(1);
-    expect(order).toEqual(['unregister', 'clear']);
+    expect(order).toEqual(['unregister', 'clear', 'purge-cache']);
+  });
+
+  it('purges the offline trip cache on session invalidation (#1174)', async () => {
+    await refreshTokens();
+    expect(purge).toHaveBeenCalledTimes(1);
   });
 });

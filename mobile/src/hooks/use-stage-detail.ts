@@ -25,8 +25,9 @@ export function useStageDetail(index: number): void {
         }
       })
       .catch((error: unknown) => {
-        // Graceful degradation (mini-map/profile stay empty) but not silent.
-        console.warn('Failed to load stage detail geometry', error);
+        // Graceful degradation (mini-map/profile stay empty) but not silent in
+        // dev; kept out of a shipped build's logs.
+        if (__DEV__) console.warn('Failed to load stage detail geometry', error);
       });
     return () => {
       cancelled = true;

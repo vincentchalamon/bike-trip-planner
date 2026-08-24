@@ -71,6 +71,7 @@ import { writeAsStringAsync } from 'expo-file-system/legacy';
 import {
   cacheTripDetail,
   cacheTripRoute,
+  clearAllTripCache,
   deleteTripCache,
   isCacheableTrip,
   listCachedTripIds,
@@ -324,6 +325,24 @@ describe('listCachedTripIds / deleteTripCache', () => {
     expect((await listCachedTripIds()).sort()).toEqual(['a', 'b']);
     await deleteTripCache('a');
     expect(await listCachedTripIds()).toEqual(['b']);
+  });
+});
+
+describe('clearAllTripCache (#1174)', () => {
+  it('purges every cached trip', async () => {
+    await cacheTripDetail('a', detail());
+    await cacheTripDetail('b', detail());
+    await cacheTripRoute('b', route);
+    expect((await listCachedTripIds()).length).toBe(2);
+    await clearAllTripCache();
+    expect(await listCachedTripIds()).toEqual([]);
+    expect(await readTripCache('a')).toBeNull();
+    expect(await readTripCache('b')).toBeNull();
+  });
+
+  it('is a no-op when nothing is cached', async () => {
+    await expect(clearAllTripCache()).resolves.toBeUndefined();
+    expect(await listCachedTripIds()).toEqual([]);
   });
 });
 
