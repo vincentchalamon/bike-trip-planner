@@ -2,7 +2,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
-import { Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput } from 'react-native';
 import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
@@ -196,6 +196,33 @@ describe('StageDetailView', () => {
     expect(t).toContain('800 m'); // D+
     expect(t).toContain('600 m'); // D-
     expect(t).toContain('Étape 1 / 2');
+  });
+
+  it('sets KeyboardAvoidingView behavior per platform, with tap-through (#1171)', () => {
+    // jest-expo runs the whole suite under a single (iOS) Platform.OS, so assert
+    // both branches by overriding it: padding on iOS, none on Android (adjustResize
+    // already handles it — a regression reintroducing behavior="height" is caught).
+    useTripStore.setState({ tripId: 't1', stages: [stage()], startDate: null, loading: false });
+    const inspect = (os: 'ios' | 'android') => {
+      const replaced = jest.replaceProperty(Platform, 'OS', os);
+      let t!: ReturnType<typeof TestRenderer.create>;
+      act(() => {
+        t = TestRenderer.create(<StageDetailView initialIndex={0} />);
+      });
+      const behavior = t.root.findByType(KeyboardAvoidingView).props.behavior;
+      const tapThrough = t.root
+        .findAllByType(ScrollView)
+        .some((s: any) => s.props.keyboardShouldPersistTaps === 'handled');
+      act(() => t.unmount());
+      replaced.restore();
+      return { behavior, tapThrough };
+    };
+    const ios = inspect('ios');
+    const android = inspect('android');
+    expect(ios.behavior).toBe('padding');
+    expect(android.behavior).toBeUndefined();
+    expect(ios.tapThrough).toBe(true);
+    expect(android.tapThrough).toBe(true);
   });
 
   it('advances to the next stage and bounds prev/next at the extremities', () => {
