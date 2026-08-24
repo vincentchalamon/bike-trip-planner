@@ -1,6 +1,6 @@
 // Icon parity with the web (lucide). Re-export the curated set the mobile
 // screens use so call sites import from one place. Add icons here as needed.
-// TODO(perf #1176): the barrel re-export pulls the whole `lucide-react-native`
+// TODO(perf #1194): the barrel re-export pulls the whole `lucide-react-native`
 // icon set (~3300 icons) into the bundle; deep imports would shrink it, but
 // they are not a mechanical rewrite — many names here are legacy aliases
 // resolved through the package's alias map, not the file each icon actually
