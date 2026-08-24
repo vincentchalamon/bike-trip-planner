@@ -533,8 +533,8 @@ export function runAnalyze(
 
 /**
  * Duplicate the trip. Allowed on a started (locked) or out-of-zone trip — it
- * clones rather than edits — but not offline. Returns the new id, or null with
- * the failure reported.
+ * clones rather than edits — but not while offline or with the API unreachable.
+ * Returns the new id, or null with the failure reported.
  */
 export async function runDuplicateTrip(
   tripId: string,
@@ -559,7 +559,7 @@ export async function runDuplicateTrip(
   }
 }
 
-/** Delete the whole trip. Blocked only while offline (a lock does not apply). */
+/** Delete the whole trip. Blocked while offline or API-down (a lock does not apply). */
 export function runDeleteTrip(
   tripId: string,
   ctx: MutationContext,

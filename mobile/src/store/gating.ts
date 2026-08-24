@@ -18,7 +18,7 @@ export type MutationFailure =
   | 'network'
   | 'error';
 
-/** The three transversal conditions every mutation is gated on. */
+/** The four transversal conditions every mutation is gated on. */
 export interface GateState {
   /** Trip started (startDate <= today): the backend rejects edits with 423. */
   isLocked: boolean;
