@@ -15,11 +15,13 @@ export async function writeAndShareFile(
   mimeType: string,
 ): Promise<void> {
   const file = new File(Paths.cache, filename);
-  file.create({ intermediates: true, overwrite: true });
-  await file.write(new Uint8Array(bytes));
   try {
-    // Checked inside the try so the finally still deletes the (already-written)
-    // temp file when sharing is unavailable — the normal case on some emulators.
+    // create()/write() are inside the try so the finally still deletes a
+    // partially-written temp file if write() throws (quota/IO), and the
+    // isAvailableAsync() check is here too so an unavailable platform (the normal
+    // case on some emulators) still triggers cleanup of the already-written file.
+    file.create({ intermediates: true, overwrite: true });
+    await file.write(new Uint8Array(bytes));
     if (!(await Sharing.isAvailableAsync())) {
       throw new Error('Sharing is not available on this device');
     }

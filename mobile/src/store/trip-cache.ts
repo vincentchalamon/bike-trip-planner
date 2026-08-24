@@ -74,6 +74,12 @@ function withLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+// Set while clearAllTripCache runs so a write that has already passed its per-id
+// lock — e.g. a first-time cache for an id not yet in listCachedTripIds() — still
+// no-ops instead of resurrecting data for an account that was just purged on a
+// shared device (#1174).
+let purging = false;
+
 function cacheDir(): Directory {
   return new Directory(Paths.document, CACHE_DIRNAME);
 }
@@ -98,6 +104,9 @@ function ensureDir(): void {
 // synchronously, so `.exists` can't tell a successful write from a swallowed
 // failure — callers that must confirm a write (route migration) need this signal.
 async function writeFile(file: File, content: string): Promise<boolean> {
+  // A purge in progress wins over any in-flight write, including one already past
+  // its per-id lock, so logout leaves nothing behind (#1174).
+  if (purging) return false;
   try {
     ensureDir();
     if (!file.exists) file.create();
@@ -245,11 +254,17 @@ export async function cacheTripRoute(
  * accommodation (title, address, price, link) behind for the next account (#1174).
  */
 export async function clearAllTripCache(): Promise<void> {
-  const ids = await listCachedTripIds();
-  // Go through the same per-id lock as cacheTripDetail/cacheTripRoute: an
-  // in-flight write from an unordered effect must not land after the delete and
-  // resurrect a purged account's data on a shared device (#1174).
-  await Promise.all(ids.map((id) => withLock(id, () => deleteTripCache(id))));
+  // `purging` blocks writes that are already past their per-id lock (incl. a
+  // first-time cache for an id not yet listed); the per-id `withLock` chains the
+  // deletes after any write that hasn't started yet. Together they guarantee no
+  // cache file survives logout on a shared device (#1174).
+  purging = true;
+  try {
+    const ids = await listCachedTripIds();
+    await Promise.all(ids.map((id) => withLock(id, () => deleteTripCache(id))));
+  } finally {
+    purging = false;
+  }
 }
 
 /** Ids of every currently cached trip (drives the background re-sync). */

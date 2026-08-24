@@ -79,4 +79,21 @@ describe('writeAndShareFile temp-file cleanup (#1174)', () => {
     expect(mockShare).not.toHaveBeenCalled();
     expect(fileOps).toContain('delete');
   });
+
+  it('deletes the temp file when write() itself throws (quota/IO)', async () => {
+    mockIsAvailable.mockResolvedValue(true);
+    const { File } = jest.requireMock('expo-file-system');
+    jest.spyOn(File.prototype, 'write').mockImplementationOnce(() => {
+      fileOps.push('write');
+      throw new Error('quota exceeded');
+    });
+
+    await expect(
+      writeAndShareFile(new ArrayBuffer(4), 'account-export.json', 'application/json'),
+    ).rejects.toThrow('quota exceeded');
+
+    // The (partially) created file must be cleaned up even though the write failed.
+    expect(mockShare).not.toHaveBeenCalled();
+    expect(fileOps).toContain('delete');
+  });
 });
