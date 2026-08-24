@@ -32,7 +32,10 @@ export function StaticRouteMap({ stageSegments, markers }: StaticRouteMapProps) 
   // since latitude grows upward), so the trace keeps its real shape rather than
   // stretching to fill.
   const projected = useMemo(() => {
-    const all = stageSegments.flatMap((s) => s.coordinates);
+    const all = [
+      ...stageSegments.flatMap((s) => s.coordinates),
+      ...markers.map((m) => [m.lon, m.lat] as [number, number]),
+    ];
     const bounds = computeBounds(all);
     if (!bounds) return null;
     const [west, south, east, north] = bounds;
@@ -59,12 +62,14 @@ export function StaticRouteMap({ stageSegments, markers }: StaticRouteMapProps) 
     };
   }, [stageSegments, markers]);
 
+  // Match TripMap's circle-color tokens so a marker keeps its color between the
+  // live map and this offline thumbnail (#1168 review).
   const markerColor = (kind: MapMarker['kind']): string =>
     kind === 'accommodation'
-      ? theme.colors.accentBrand
+      ? theme.colors.brand
       : kind === 'poi'
-        ? theme.colors.successInk
-        : theme.colors.foreground;
+        ? theme.colors.accentInk
+        : theme.colors.primary;
 
   return (
     <View

@@ -2,7 +2,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import { Text } from 'react-native';
-import { Polyline } from 'react-native-svg';
+import { Circle, Polyline } from 'react-native-svg';
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import i18n from '../../i18n';
@@ -74,5 +74,24 @@ describe('StaticRouteMap (#1168)', () => {
         Array.isArray(n.props.children) ? n.props.children : [n.props.children],
       );
     expect(texts).toContain(i18n.t('trip.map.offlineStatic'));
+  });
+
+  it('draws a Circle per marker, including one off the route bbox (#1168 review)', () => {
+    const stages = [stage()]; // route roughly 48..48.1 / 2..2.1
+    const markers = [
+      { kind: 'accommodation' as const, lon: 2.5, lat: 48.5, name: 'A' }, // outside bbox
+      { kind: 'poi' as const, lon: 2.05, lat: 48.05, name: 'P' },
+    ];
+    const tree = render(
+      <StaticRouteMap stageSegments={buildStageLines(stages)} markers={markers} />,
+    );
+    expect(tree.root.findAllByType(Circle)).toHaveLength(2);
+  });
+
+  it('still frames and draws markers when there is no drawable geometry (rest day)', () => {
+    const markers = [{ kind: 'waypoint' as const, lon: 2, lat: 48, name: 'W' }];
+    const tree = render(<StaticRouteMap stageSegments={[]} markers={markers} />);
+    expect(tree.root.findAllByType(Polyline)).toHaveLength(0);
+    expect(tree.root.findAllByType(Circle)).toHaveLength(1);
   });
 });
