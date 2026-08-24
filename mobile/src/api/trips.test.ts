@@ -2,6 +2,9 @@
 jest.mock('./client', () => ({ api: { GET: jest.fn(), POST: jest.fn() } }));
 import { api } from './client';
 import {
+  fetchSharedTrip,
+  fetchSharedTripExport,
+  fetchSharedTripRoute,
   fetchStageExport,
   fetchTripExport,
   fetchTrips,
@@ -156,5 +159,49 @@ describe('fetchStageExport (#1047)', () => {
       response: { ok: false },
     } as never);
     await expect(fetchStageExport('trip-1', 2, 'gpx')).rejects.toThrow('Failed to export stage');
+  });
+});
+
+describe('anonymous share fetches (#1177)', () => {
+  it('fetchSharedTrip requests /s/{shortCode} and returns the payload, null on error', async () => {
+    mockGet.mockResolvedValueOnce({ data: { title: 't' }, error: undefined } as never);
+    await expect(fetchSharedTrip('AB12cd')).resolves.toEqual({ title: 't' });
+    expect(mockGet).toHaveBeenCalledWith('/s/{shortCode}', {
+      params: { path: { shortCode: 'AB12cd' } },
+      headers: { Accept: 'application/ld+json' },
+    });
+
+    mockGet.mockResolvedValueOnce({ data: undefined, error: { detail: 'boom' } } as never);
+    await expect(fetchSharedTrip('AB12cd')).resolves.toBeNull();
+  });
+
+  it('fetchSharedTripRoute requests /s/{shortCode}/route and returns null on error', async () => {
+    mockGet.mockResolvedValueOnce({ data: { points: [] }, error: undefined } as never);
+    await expect(fetchSharedTripRoute('AB12cd')).resolves.toEqual({ points: [] });
+    expect(mockGet).toHaveBeenCalledWith('/s/{shortCode}/route', {
+      params: { path: { shortCode: 'AB12cd' } },
+      headers: { Accept: 'application/ld+json' },
+    });
+
+    mockGet.mockResolvedValueOnce({ data: undefined, error: { detail: 'boom' } } as never);
+    await expect(fetchSharedTripRoute('AB12cd')).resolves.toBeNull();
+  });
+
+  it('fetchSharedTripExport hits the literal .gpx/.fit path and throws on failure', async () => {
+    const bytes = new ArrayBuffer(4);
+    mockGet.mockResolvedValueOnce({ data: bytes, error: undefined, response: { ok: true } } as never);
+    await expect(fetchSharedTripExport('AB12cd', 'gpx')).resolves.toBe(bytes);
+    expect(mockGet).toHaveBeenCalledWith('/s/{shortCode}.gpx', {
+      params: { path: { shortCode: 'AB12cd' } },
+      headers: { Accept: 'application/gpx+xml' },
+      parseAs: 'arrayBuffer',
+    });
+
+    mockGet.mockResolvedValueOnce({
+      data: undefined,
+      error: { detail: 'boom' },
+      response: { ok: false },
+    } as never);
+    await expect(fetchSharedTripExport('AB12cd', 'fit')).rejects.toThrow('Failed to export shared trip');
   });
 });

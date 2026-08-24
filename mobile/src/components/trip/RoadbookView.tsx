@@ -29,11 +29,15 @@ import { useTripMutations } from '../../hooks/use-trip-mutations';
 export function RoadbookView({
   id,
   onConfigureDates,
+  readOnly: forceReadOnly = false,
 }: {
   id: string;
   // Opens the config sheet scrolled to the dates section (maquette 05a). Wired
   // to the "set your dates" banner so a rider fixes the missing dates in one tap.
   onConfigureDates?: () => void;
+  // Force the whole view read-only regardless of lock/date/connectivity state —
+  // the single high-level gate the anonymous shared consultation flips (#1177).
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -64,7 +68,11 @@ export function RoadbookView({
       ? 'apiUnavailable'
       : null;
   const readOnly =
-    isLocked || state === 'ongoing' || state === 'past' || degradedReason !== null;
+    forceReadOnly ||
+    isLocked ||
+    state === 'ongoing' ||
+    state === 'past' ||
+    degradedReason !== null;
 
   // One failure surface for every inline edit: map the normalized reason to a
   // localized alert (#1044). The runners already handle optimistic apply +
@@ -199,7 +207,7 @@ export function RoadbookView({
                 index={index}
                 locked={readOnly}
                 onDelete={confirmDelete}
-                onPress={openStage}
+                onPress={forceReadOnly ? undefined : openStage}
                 date={date}
                 isToday={state === 'ongoing' && isStageToday(date, today)}
                 highlighted={stageDiffs.has(index)}
