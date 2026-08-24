@@ -145,6 +145,21 @@ describe('cacheTripDetail / readTripCache', () => {
     expect(cached?.syncedAt).toBe(7);
   });
 
+  it('migrates a legacy embedded route into the split file on a detail-only refresh (no drop)', async () => {
+    // Pre-split cache: route embedded in <id>.json, no <id>.route.json yet.
+    mockFiles.set(
+      META_URI('mig'),
+      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
+    );
+    expect(mockFiles.has(ROUTE_URI('mig'))).toBe(false);
+    // A detail-only refresh must NOT drop the previously-cached geometry.
+    await cacheTripDetail('mig', detail(), 8);
+    expect(mockFiles.has(ROUTE_URI('mig'))).toBe(true);
+    const cached = await readTripCache('mig');
+    expect(cached?.route).toEqual(route);
+    expect(cached?.syncedAt).toBe(8);
+  });
+
   it('does not cache a past trip', async () => {
     await cacheTripDetail('past-1', detail({ startDate: '2000-01-01', endDate: '2000-01-05' }));
     expect(await readTripCache('past-1')).toBeNull();

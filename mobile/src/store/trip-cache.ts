@@ -171,6 +171,14 @@ export async function cacheTripDetail(
       await deleteTripCache(id);
       return;
     }
+    // Migrate a legacy embedded route (pre-split mono-file cache) into the
+    // split route file before overwriting the meta, so a detail-only refresh
+    // never silently drops a previously-cached geometry (readTripCache's
+    // "compat mono-fichier" fallback stays honoured).
+    const existing = await readMeta(id);
+    if (existing?.route && !routeFile(id).exists) {
+      await writeFile(routeFile(id), JSON.stringify(existing.route));
+    }
     await writeFile(metaFile(id), JSON.stringify({ detail, syncedAt } satisfies CachedMeta));
   });
 }
