@@ -8,6 +8,8 @@ import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { StageDetailView } from './StageDetailView';
 import { useTripStore } from '../../store/trip-store';
+import { useOfflineStore } from '../../store/offline-store';
+import { AccommodationBlock } from './AccommodationBlock';
 import {
   activeStageIndex,
   clampIndex,
@@ -280,6 +282,17 @@ describe('StageDetailView', () => {
     useTripStore.setState({ tripId: 't1', stages: [], loading: false });
     const t = texts(render(<StageDetailView initialIndex={0} />));
     expect(t).toContain(fr.trip.stageDetail.notFound);
+  });
+
+  it('disables the accommodation block when the API is unreachable, re-enables when reachable (#1166)', () => {
+    useTripStore.setState({ tripId: 't1', stages: [stage()], startDate: null, loading: false });
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const down = render(<StageDetailView initialIndex={0} />);
+    expect(down.root.findByType(AccommodationBlock).props.disabled).toBe(true);
+
+    useOfflineStore.setState({ apiReachable: true });
+    const up = render(<StageDetailView initialIndex={0} />);
+    expect(up.root.findByType(AccommodationBlock).props.disabled).toBe(false);
   });
 });
 

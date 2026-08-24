@@ -20,6 +20,7 @@ import {
   type TripConfigPatch,
 } from '../api/trips';
 import {
+  connectivityRefusal,
   evaluateGate,
   normalizeStatus,
   type GateState,
@@ -540,13 +541,9 @@ export async function runDuplicateTrip(
   _ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<string | null> {
-  const off = useOfflineStore.getState();
-  if (!off.isOnline) {
-    onFailure('offline');
-    return null;
-  }
-  if (!off.apiReachable) {
-    onFailure('api_unavailable');
+  const refusal = connectivityRefusal(useOfflineStore.getState());
+  if (refusal) {
+    onFailure(refusal);
     return null;
   }
   try {
@@ -568,13 +565,9 @@ export function runDeleteTrip(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const off = useOfflineStore.getState();
-  if (!off.isOnline) {
-    onFailure('offline');
-    return Promise.resolve(false);
-  }
-  if (!off.apiReachable) {
-    onFailure('api_unavailable');
+  const refusal = connectivityRefusal(useOfflineStore.getState());
+  if (refusal) {
+    onFailure(refusal);
     return Promise.resolve(false);
   }
   return deleteTrip(tripId)

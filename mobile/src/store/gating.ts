@@ -37,12 +37,26 @@ export interface GateState {
  * `null` when the mutation may proceed. Offline wins over lock wins over zone so
  * the most fundamental obstacle is reported first.
  */
+/**
+ * Connectivity-only refusal, shared by {@link evaluateGate} and the
+ * duplicate/delete runners (which allow a locked / out-of-zone trip — a clone or
+ * delete is not an edit — so they can't use the full gate but must still refuse
+ * offline / API-down). Offline wins over api_unavailable.
+ */
+export function connectivityRefusal(
+  state: Pick<GateState, 'isOnline' | 'apiReachable'>,
+): 'offline' | 'api_unavailable' | null {
+  if (!state.isOnline) return 'offline';
+  if (!state.apiReachable) return 'api_unavailable';
+  return null;
+}
+
 export function evaluateGate(
   state: GateState,
   requiresRouting: boolean,
 ): 'offline' | 'api_unavailable' | 'locked' | 'out_of_zone' | null {
-  if (!state.isOnline) return 'offline';
-  if (!state.apiReachable) return 'api_unavailable';
+  const connectivity = connectivityRefusal(state);
+  if (connectivity) return connectivity;
   if (state.isLocked) return 'locked';
   if (requiresRouting && state.outOfZone) return 'out_of_zone';
   return null;
