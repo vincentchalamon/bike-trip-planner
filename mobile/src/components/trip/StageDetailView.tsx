@@ -156,9 +156,11 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
 
   // Adding a POI as a route waypoint reroutes the stage via Valhalla, so it needs
   // the same live-write conditions as a distance edit (and the trip zone). A rest
-  // day has no route to reroute — it renders no map, so no gating needed there.
+  // day has no route to reroute, yet its own point(s) still render on this map
+  // (stageSegments is built directly, not via buildStageLines), so exclude it
+  // explicitly — otherwise a POI tap on a rest day would fire addPoiWaypoint.
   const canAddWaypoint =
-    tripId !== null && !isLocked && isOnline && apiReachable && !outOfZone;
+    tripId !== null && !isLocked && isOnline && apiReachable && !outOfZone && !stage.isRestDay;
 
   function startEditDistance(): void {
     setDraft(String(stats.distanceKm));

@@ -369,7 +369,6 @@ export const en: typeof fr = {
     poiWaypoint: {
       type: 'Point of interest',
       add: 'Add to itinerary',
-      addA11y: 'Add {{name}} to itinerary',
       close: 'Close',
     },
     blocks: {

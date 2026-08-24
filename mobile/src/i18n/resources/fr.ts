@@ -369,7 +369,6 @@ export const fr = {
     poiWaypoint: {
       type: "Point d'intérêt",
       add: "Ajouter à l'itinéraire",
-      addA11y: "Ajouter {{name}} à l'itinéraire",
       close: 'Fermer',
     },
     blocks: {

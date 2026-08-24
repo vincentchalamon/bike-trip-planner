@@ -281,4 +281,15 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
     expect(markersSource(tree).props.onPress).toBeUndefined();
     expect(addPoiWaypoint).not.toHaveBeenCalled();
   });
+
+  it('offers no POI affordance on a rest day (no route to reroute) (#1179 review)', () => {
+    // A rest day still renders its own point on this map, but has no route to
+    // reroute — canAddWaypoint must exclude it, leaving the markers inert.
+    act(() =>
+      useTripStore.setState({ stages: [{ ...stageWithGeometry(), isRestDay: true }] }),
+    );
+    const tree = render(<StageDetailView initialIndex={0} />);
+    expect(markersSource(tree).props.onPress).toBeUndefined();
+    expect(addPoiWaypoint).not.toHaveBeenCalled();
+  });
 });
