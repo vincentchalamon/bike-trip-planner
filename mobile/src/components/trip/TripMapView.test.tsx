@@ -178,8 +178,8 @@ describe('TripMapView', () => {
     ]);
   });
 
-  it('shows the offline map badge only when connectivity is down', () => {
-    const label = i18n.t('trip.map.offline');
+  it('swaps in the static route map with an offline note when connectivity drops (#1168)', () => {
+    const label = i18n.t('trip.map.offlineStatic');
     const hasBadge = (root: any): boolean =>
       root.findAll(
         (n: any) =>
