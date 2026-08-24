@@ -275,10 +275,11 @@ export async function syncCachedTrips(deps: SyncDeps): Promise<void> {
         const detail = await deps.fetchDetail(id);
         if (!detail) return;
         await cacheTripDetail(id, detail);
-        // Only pull the (large) geometry back if the trip is still cached after
-        // the detail refresh — a now-past trip was just evicted. Check the meta
-        // file directly rather than reading (and parsing) the whole entry.
-        if (metaFile(id).exists) {
+        // Only pull the (large) geometry back if the trip is still validly cached
+        // after the detail refresh — a now-past trip was just evicted, and a failed
+        // meta write leaves an empty stub whose `.exists` lies. readMeta validates
+        // the content (syncedAt/detail), so we don't fetch a route for a non-entry.
+        if (await readMeta(id)) {
           const route = await deps.fetchRoute(id);
           if (route) await cacheTripRoute(id, route);
         }
