@@ -148,15 +148,6 @@ export function TripMapView() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  offlineBadge: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   profile: { borderTopWidth: StyleSheet.hairlineWidth },
   profileHeader: {
     flexDirection: 'row',
