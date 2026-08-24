@@ -176,27 +176,29 @@ export async function cacheTripDetail(
       await deleteTripCache(id);
       return;
     }
-    // Migrate a legacy embedded route into the split file, and only drop it from
-    // the meta once the write actually landed. Confirm via the route file's
-    // CONTENT, not `.exists`: create() leaves an empty stub behind when a prior
-    // write failed, so `.exists` would falsely report the route as migrated and
-    // let a later refresh drop it from the meta too (data lost from both places).
-    // Mirrors cacheTripRoute's content check; keep the route in the meta otherwise.
+    // Migrate a legacy embedded route into the split file (only when one is
+    // actually present — the steady-state, post-split path never touches the large
+    // route file). Confirm the migration via the route file's CONTENT, not
+    // `.exists`: create() leaves an empty stub behind when a prior write failed, so
+    // `.exists` would falsely report it migrated and let a later refresh drop it
+    // from the meta too. Keep the route in the meta as a fallback until it lands.
     const existing = await readMeta(id);
-    const routeHandle = routeFile(id);
-    const serialized = existing?.route ? JSON.stringify(existing.route) : null;
-    const previousRoute = routeHandle.exists ? await routeHandle.text() : null;
-    const migrated =
-      serialized === null ||
-      previousRoute === serialized ||
-      (await writeFile(routeHandle, serialized));
-    const legacyRoute = migrated ? undefined : existing?.route;
+    const legacyRoute = existing?.route;
+    let survivingLegacyRoute: TripRoute | null | undefined;
+    if (legacyRoute) {
+      const routeHandle = routeFile(id);
+      const serialized = JSON.stringify(legacyRoute);
+      const previousRoute = routeHandle.exists ? await routeHandle.text() : null;
+      const migrated =
+        previousRoute === serialized || (await writeFile(routeHandle, serialized));
+      survivingLegacyRoute = migrated ? undefined : legacyRoute;
+    }
     await writeFile(
       metaFile(id),
       JSON.stringify({
         detail,
         syncedAt,
-        ...(legacyRoute ? { route: legacyRoute } : {}),
+        ...(survivingLegacyRoute ? { route: survivingLegacyRoute } : {}),
       } satisfies CachedMeta),
     );
   });

@@ -266,6 +266,21 @@ describe('cacheTripRoute', () => {
     expect(cached?.detail.title).toBe('Refreshed');
   });
 
+  it('does not READ the large route file on a steady-state detail refresh (#1175 perf)', async () => {
+    await cacheTripDetail('t', detail(), 1);
+    await cacheTripRoute('t', route, 2); // split-file cache, no legacy route in meta
+    const { File } = jest.requireMock('expo-file-system');
+    const textSpy = jest.spyOn(File.prototype, 'text');
+    await cacheTripDetail('t', detail({ title: 'Refreshed' }), 3);
+    // The migration path must stay gated on a legacy route: a post-split refresh
+    // reads only the meta, never the (~6300-point) route file.
+    const routeReads = (textSpy.mock.instances as { uri: string }[]).filter((f) =>
+      f.uri.endsWith('.route.json'),
+    ).length;
+    textSpy.mockRestore();
+    expect(routeReads).toBe(0);
+  });
+
   it('skips the route write when the geometry is unchanged but re-stamps syncedAt (#1175)', async () => {
     await cacheTripDetail('t', detail(), 1);
     await cacheTripRoute('t', route, 2);
