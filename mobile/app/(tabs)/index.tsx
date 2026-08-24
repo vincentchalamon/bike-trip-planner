@@ -342,7 +342,7 @@ export default function Trips() {
       ) : (
         <FlatList
           data={trips}
-          keyExtractor={(item) => item.id ?? String(Math.random())}
+          keyExtractor={(item, index) => item.id ?? String(index)}
           contentContainerStyle={{
             padding: theme.spacing.base,
             paddingTop: theme.spacing.md,
