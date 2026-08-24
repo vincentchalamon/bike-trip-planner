@@ -1,12 +1,20 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { api } from '../api/client';
-import { LD_JSON } from '../api/config';
+import { API_BASE_URL, LD_JSON } from '../api/config';
+import { getJwt } from '../auth/tokens';
 
 // Server-driven push (#1125): register this device's native FCM (Android) / APNs
 // (iOS) token with the backend so it can target the user, and route an incoming
 // notification to the right screen. Distinct from on-device local triggers
 // (#1121, `notifications/local.*` if present) — this file only owns the push leg.
+//
+// Uses plain fetch rather than the typed API client (../api/client): that module
+// imports authApi.ts for its 401-retry middleware, and authApi.ts imports this
+// file's unregisterDeviceToken for its own definitive-failure cleanup (#1125) —
+// routing through the typed client here would close the three into a require
+// cycle (#1173). Both calls below run right after a login/rotation or with a
+// still-valid JWT just before logout, so the typed client's refresh-and-retry
+// middleware has nothing to add.
 
 type DevicePlatform = 'android' | 'ios' | null;
 
@@ -55,6 +63,11 @@ async function fetchDeviceToken(): Promise<string | null> {
   }
 }
 
+function authHeader(): Record<string, string> {
+  const jwt = getJwt();
+  return jwt ? { Authorization: `Bearer ${jwt}` } : {};
+}
+
 // Idempotent upsert of this device's token for the current user. Safe to call on
 // every login and on rotation: the backend dedupes by token (schema comment) and
 // reassigns a token held by another account.
@@ -63,9 +76,10 @@ export async function registerDeviceToken(): Promise<void> {
   if (!token) return;
   registeredToken = token;
   try {
-    await api.POST('/users/me/device-tokens', {
-      body: { token, platform: devicePlatform() },
-      headers: { 'Content-Type': LD_JSON, Accept: LD_JSON },
+    await fetch(`${API_BASE_URL}/users/me/device-tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': LD_JSON, Accept: LD_JSON, ...authHeader() },
+      body: JSON.stringify({ token, platform: devicePlatform() }),
     });
   } catch {
     // Best-effort: register is fired fire-and-forget from the auth store, so a
@@ -81,9 +95,9 @@ export async function unregisterDeviceToken(): Promise<void> {
   const token = registeredToken;
   if (!token) return;
   registeredToken = null;
-  await api.DELETE('/users/me/device-tokens/{token}', {
-    params: { path: { token } },
-    headers: { Accept: LD_JSON },
+  await fetch(`${API_BASE_URL}/users/me/device-tokens/${encodeURIComponent(token)}`, {
+    method: 'DELETE',
+    headers: { Accept: LD_JSON, ...authHeader() },
   });
 }
 
