@@ -37,6 +37,9 @@ export function notifyFailure(t: TFunction, reason: MutationFailure): void {
     case 'offline':
       Alert.alert(t('trip.offlineTitle'), t('trip.offlineMessage'));
       return;
+    case 'api_unavailable':
+      Alert.alert(t('trip.apiUnavailableTitle'), t('trip.apiUnavailableMessage'));
+      return;
     default:
       Alert.alert(t('trip.editFailedTitle'), t('trip.editFailedMessage'));
   }
@@ -100,13 +103,14 @@ export function StageDataBlocks({
   const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
   const isOnline = useOfflineStore((s) => s.isOnline);
+  const apiReachable = useOfflineStore((s) => s.apiReachable);
   const onFailure = useCallback(
     (reason: MutationFailure) => notifyFailure(t, reason),
     [t],
   );
   const mutations = useTripMutations(tripId ?? '', onFailure);
   const editable = stageIndex !== undefined && tripId !== null;
-  const disabled = isLocked || !isOnline;
+  const disabled = isLocked || !isOnline || !apiReachable;
   // Order mirrors the Spike-UX stage-detail mockup: weather, then alerts,
   // events, arrival accommodation, supply and finally the sectioned resupply
   // suggestions (#1105).

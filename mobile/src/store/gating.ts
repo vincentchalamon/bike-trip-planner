@@ -11,13 +11,14 @@ export type MutationFailure =
   | 'locked'
   | 'out_of_zone'
   | 'offline'
+  | 'api_unavailable'
   | 'validation'
   | 'not_found'
   | 'conflict'
   | 'network'
   | 'error';
 
-/** The three transversal conditions every mutation is gated on. */
+/** The four transversal conditions every mutation is gated on. */
 export interface GateState {
   /** Trip started (startDate <= today): the backend rejects edits with 423. */
   isLocked: boolean;
@@ -25,20 +26,38 @@ export interface GateState {
   outOfZone: boolean;
   /** Device connectivity — mutations are disabled while offline. */
   isOnline: boolean;
+  /** API health — false after a network error / 5xx; disables writes even online. */
+  apiReachable: boolean;
 }
 
 /**
- * Pre-flight gate shared by all mutations. Offline blocks everything; a started
- * trip (423) is fully read-only; an out-of-zone trip blocks only mutations that
- * need Valhalla rerouting (`requiresRouting`). Returns the blocking reason, or
- * `null` when the mutation may proceed. Offline wins over lock wins over zone so
+ * Connectivity-only refusal, shared by {@link evaluateGate} and the
+ * duplicate/delete runners (which allow a locked / out-of-zone trip — a clone or
+ * delete is not an edit — so they can't use the full gate but must still refuse
+ * offline / API-down). Offline wins over api_unavailable.
+ */
+export function connectivityRefusal(
+  state: Pick<GateState, 'isOnline' | 'apiReachable'>,
+): 'offline' | 'api_unavailable' | null {
+  if (!state.isOnline) return 'offline';
+  if (!state.apiReachable) return 'api_unavailable';
+  return null;
+}
+
+/**
+ * Pre-flight gate shared by all mutations. Connectivity blocks everything
+ * (offline, then API-down); a started trip (423) is fully read-only; an
+ * out-of-zone trip blocks only mutations that need Valhalla rerouting
+ * (`requiresRouting`). Returns the blocking reason, or `null` when the mutation
+ * may proceed. Precedence: offline > api_unavailable > locked > out_of_zone, so
  * the most fundamental obstacle is reported first.
  */
 export function evaluateGate(
   state: GateState,
   requiresRouting: boolean,
-): 'offline' | 'locked' | 'out_of_zone' | null {
-  if (!state.isOnline) return 'offline';
+): 'offline' | 'api_unavailable' | 'locked' | 'out_of_zone' | null {
+  const connectivity = connectivityRefusal(state);
+  if (connectivity) return connectivity;
   if (state.isLocked) return 'locked';
   if (requiresRouting && state.outOfZone) return 'out_of_zone';
   return null;

@@ -66,6 +66,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
   const isOnline = useOfflineStore((s) => s.isOnline);
+  const apiReachable = useOfflineStore((s) => s.apiReachable);
   const [index, setIndex] = useState(initialIndex);
   // Stretch highlighted by an alert `navigate` action ([lon, lat] for the map).
   const [highlightedSegment, setHighlightedSegment] = useState<
@@ -141,6 +142,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
     tripId !== null &&
     !isLocked &&
     isOnline &&
+    apiReachable &&
     !outOfZone &&
     !stage.isRestDay;
 

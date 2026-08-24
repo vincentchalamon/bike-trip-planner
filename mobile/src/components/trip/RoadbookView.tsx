@@ -9,6 +9,7 @@ import { StageCard, stageKey } from './StageCard';
 import { StageInsertRow } from './StageInsertRow';
 import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
+import { useOfflineStore } from '../../store/offline-store';
 import {
   isStageToday,
   stageDateFor,
@@ -42,6 +43,8 @@ export function RoadbookView({
   const stageDiffs = useTripStore((s) => s.stageDiffs);
   const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
+  const isOnline = useOfflineStore((s) => s.isOnline);
+  const apiReachable = useOfflineStore((s) => s.apiReachable);
   const startDate = useTripStore((s) => s.startDate);
   const endDate = useTripStore((s) => s.endDate);
 
@@ -52,7 +55,16 @@ export function RoadbookView({
   // Read-only when the backend locked the trip (started, 423) OR the dates put
   // it in progress / in the past (maquette 05e / 05f): every edit affordance
   // (insertion pills, delete, distance edit, FAB) is hidden or disabled.
-  const readOnly = isLocked || state === 'ongoing' || state === 'past';
+  // Degraded mode (#1166): the device is offline, or the API is unreachable while
+  // online. Either forces read-only with a discreet banner naming the reason, on
+  // top of the existing lock/date read-only conditions.
+  const degradedReason: 'offline' | 'apiUnavailable' | null = !isOnline
+    ? 'offline'
+    : !apiReachable
+      ? 'apiUnavailable'
+      : null;
+  const readOnly =
+    isLocked || state === 'ongoing' || state === 'past' || degradedReason !== null;
 
   // One failure surface for every inline edit: map the normalized reason to a
   // localized alert (#1044). The runners already handle optimistic apply +
@@ -137,7 +149,12 @@ export function RoadbookView({
           {t(`trip.states.${state}`)}
         </Text>
       ) : null}
-      {isLocked ? (
+      {degradedReason ? (
+        <RoadbookBanner
+          variant={degradedReason}
+          message={t(`trip.banners.${degradedReason}`)}
+        />
+      ) : isLocked ? (
         <RoadbookBanner variant="locked" message={t('trip.banners.locked')} />
       ) : null}
       {outOfZone ? (

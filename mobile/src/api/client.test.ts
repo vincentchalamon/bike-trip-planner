@@ -6,6 +6,7 @@ jest.mock('../auth/authApi', () => ({ refreshTokens: jest.fn() }));
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
 import i18n from '../i18n';
+import { useOfflineStore } from '../store/offline-store';
 
 const mockGetJwt = getJwt as jest.MockedFunction<typeof getJwt>;
 const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
@@ -13,6 +14,8 @@ const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
 // The middleware callback params carry many fields openapi-fetch fills in; only
 // `request`/`response` matter here, so cast the partial shapes.
 const onRequest = (request: Request) => (authMiddleware.onRequest as never as (p: { request: Request }) => unknown)({ request });
+const onError = () =>
+  (authMiddleware.onError as never as () => unknown)();
 const onResponse = (request: Request, response: Response) =>
   (authMiddleware.onResponse as never as (p: { request: Request; response: Response }) => Promise<Response | undefined>)({
     request,
@@ -74,6 +77,23 @@ describe('authMiddleware 401 retry (#1032)', () => {
     expect(retried.headers.get('X-Native-Retry')).toBe('1');
     expect(result).toBeInstanceOf(Response);
     expect(result?.status).toBe(200);
+  });
+
+  // Regression (#1166 review): a 5xx on the *retried* request must mark the API
+  // down — the original 401 (< 500) would otherwise leave apiReachable true even
+  // though a 5xx surfaces to the caller, defeating the degraded-mode banner.
+  it('marks the API unreachable when the retried request returns a 5xx (#1166)', async () => {
+    mockGetJwt.mockReturnValue('fresh-jwt');
+    mockRefresh.mockResolvedValue(true);
+    useOfflineStore.setState({ apiReachable: true });
+    (globalThis.fetch as jest.Mock).mockResolvedValue(new Response(null, { status: 503 }));
+
+    const request = new Request('https://api.test/trips/1');
+    await onRequest(request);
+    const result = await onResponse(request, new Response(null, { status: 401 }));
+
+    expect(result?.status).toBe(503);
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
   });
 
   // Regression (#1047 review): a FIT export retried after a 401 must come back
@@ -143,5 +163,35 @@ describe('authMiddleware 401 retry (#1032)', () => {
 
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
+  });
+});
+
+describe('authMiddleware API health wiring (#1166)', () => {
+  const req = () => new Request('https://api.test/trips');
+
+  it('marks the API reachable on any response below 500 (even a 4xx)', async () => {
+    useOfflineStore.setState({ apiReachable: false });
+    await onResponse(req(), new Response(null, { status: 200 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(true);
+
+    useOfflineStore.setState({ apiReachable: false });
+    await onResponse(req(), new Response(null, { status: 404 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(true);
+  });
+
+  it('marks the API unreachable on a 5xx', async () => {
+    useOfflineStore.setState({ apiReachable: true });
+    await onResponse(req(), new Response(null, { status: 503 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
+  });
+
+  it('marks the API unreachable on a network error (onError)', () => {
+    useOfflineStore.setState({ apiReachable: true });
+    onError();
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
+  });
+
+  afterAll(() => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
   });
 });

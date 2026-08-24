@@ -7,9 +7,11 @@ import type {
   AlertData,
   EventData,
   PoiData,
+  StageData,
   SupplyMarkerData,
   WeatherData,
 } from '@btp/core';
+import { EMPTY_RESUPPLY } from '@btp/core';
 import {
   ACCOMMODATION_RADIUS_STEP_KM,
   MAX_ACCOMMODATION_RADIUS_KM,
@@ -24,6 +26,15 @@ import { AccommodationBlock } from './AccommodationBlock';
 import { ResupplyBlock } from './ResupplyBlock';
 import { SupplyBlock } from './SupplyBlock';
 import { EventsBlock } from './EventsBlock';
+import { StageDataBlocks } from './StageDataBlocks';
+import { useOfflineStore } from '../../store/offline-store';
+import { useTripStore } from '../../store/trip-store';
+
+// StageDataBlocks pulls a mutations bag from this hook; a Proxy of jest.fns keeps
+// every method callable without wiring the real API.
+jest.mock('../../hooks/use-trip-mutations', () => ({
+  useTripMutations: () => new Proxy({}, { get: () => jest.fn() }),
+}));
 
 function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap((t: any) => {
@@ -706,5 +717,60 @@ describe('EventsBlock', () => {
     expect(t).toContain('E4'); // 5th soonest is shown
     expect(t).not.toContain('E5'); // 6th and 7th are capped out
     expect(t).not.toContain('E6');
+  });
+});
+
+describe('StageDataBlocks disabled gating (#1166)', () => {
+  function stageData(): StageData {
+    const p = { lat: 0, lon: 0, ele: 0 };
+    return {
+      dayNumber: 1,
+      distance: 50,
+      elevation: 100,
+      elevationLoss: 0,
+      startPoint: p,
+      endPoint: p,
+      geometry: [],
+      label: null,
+      startLabel: 'A',
+      endLabel: 'B',
+      weather: null,
+      alerts: [],
+      resupply: EMPTY_RESUPPLY,
+      accommodations: [],
+      selectedAccommodation: null,
+      accommodationSearchRadiusKm: 10,
+      isRestDay: false,
+      supplyTimeline: [],
+      events: [],
+    } as StageData;
+  }
+
+  const disabledOf = (): boolean => {
+    const tree = render(<StageDataBlocks stage={stageData()} stageIndex={0} />);
+    return tree.root.findByType(AccommodationBlock).props.disabled === true;
+  };
+
+  beforeEach(() => {
+    useTripStore.setState({ tripId: 't1', isLocked: false, outOfZone: false });
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
+  });
+  afterEach(() => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
+    useTripStore.getState().reset();
+  });
+
+  it('enables accommodation edits when online and the API is reachable', () => {
+    expect(disabledOf()).toBe(false);
+  });
+
+  it('disables accommodation edits when offline', () => {
+    useOfflineStore.setState({ isOnline: false });
+    expect(disabledOf()).toBe(true);
+  });
+
+  it('disables accommodation edits when the API is unreachable while online (#1166)', () => {
+    useOfflineStore.setState({ apiReachable: false });
+    expect(disabledOf()).toBe(true);
   });
 });

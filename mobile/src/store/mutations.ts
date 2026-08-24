@@ -20,6 +20,7 @@ import {
   type TripConfigPatch,
 } from '../api/trips';
 import {
+  connectivityRefusal,
   evaluateGate,
   normalizeStatus,
   type GateState,
@@ -64,6 +65,7 @@ function gateOf(ctx: Pick<MutationContext, 'isLocked' | 'outOfZone'>): GateState
     isLocked: ctx.isLocked,
     outOfZone: ctx.outOfZone,
     isOnline: useOfflineStore.getState().isOnline,
+    apiReachable: useOfflineStore.getState().apiReachable,
   };
 }
 
@@ -531,16 +533,17 @@ export function runAnalyze(
 
 /**
  * Duplicate the trip. Allowed on a started (locked) or out-of-zone trip — it
- * clones rather than edits — but not offline. Returns the new id, or null with
- * the failure reported.
+ * clones rather than edits — but not while offline or with the API unreachable.
+ * Returns the new id, or null with the failure reported.
  */
 export async function runDuplicateTrip(
   tripId: string,
   _ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<string | null> {
-  if (!useOfflineStore.getState().isOnline) {
-    onFailure('offline');
+  const refusal = connectivityRefusal(useOfflineStore.getState());
+  if (refusal) {
+    onFailure(refusal);
     return null;
   }
   try {
@@ -556,15 +559,15 @@ export async function runDuplicateTrip(
   }
 }
 
-/** Delete the whole trip. Blocked only while offline (a lock does not apply). */
+/** Delete the whole trip. Blocked while offline or API-down (a lock does not apply). */
 export function runDeleteTrip(
   tripId: string,
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const online = useOfflineStore.getState().isOnline;
-  if (!online) {
-    onFailure('offline');
+  const refusal = connectivityRefusal(useOfflineStore.getState());
+  if (refusal) {
+    onFailure(refusal);
     return Promise.resolve(false);
   }
   return deleteTrip(tripId)

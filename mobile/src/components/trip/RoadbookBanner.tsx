@@ -2,7 +2,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AlertTriangle } from '../ui/icons';
 import { useTheme } from '../../theme';
 
-export type RoadbookBannerVariant = 'locked' | 'outOfZone' | 'noDates';
+export type RoadbookBannerVariant =
+  | 'locked'
+  | 'outOfZone'
+  | 'noDates'
+  | 'offline'
+  | 'apiUnavailable';
 
 interface RoadbookBannerProps {
   variant: RoadbookBannerVariant;

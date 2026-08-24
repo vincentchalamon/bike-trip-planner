@@ -8,6 +8,8 @@ import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { StageDetailView } from './StageDetailView';
 import { useTripStore } from '../../store/trip-store';
+import { useOfflineStore } from '../../store/offline-store';
+import { AccommodationBlock } from './AccommodationBlock';
 import {
   activeStageIndex,
   clampIndex,
@@ -281,6 +283,17 @@ describe('StageDetailView', () => {
     const t = texts(render(<StageDetailView initialIndex={0} />));
     expect(t).toContain(fr.trip.stageDetail.notFound);
   });
+
+  it('disables the accommodation block when the API is unreachable, re-enables when reachable (#1166)', () => {
+    useTripStore.setState({ tripId: 't1', stages: [stage()], startDate: null, loading: false });
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const down = render(<StageDetailView initialIndex={0} />);
+    expect(down.root.findByType(AccommodationBlock).props.disabled).toBe(true);
+
+    useOfflineStore.setState({ apiReachable: true });
+    const up = render(<StageDetailView initialIndex={0} />);
+    expect(up.root.findByType(AccommodationBlock).props.disabled).toBe(false);
+  });
 });
 
 describe('StageDetailView inline distance edit', () => {
@@ -289,8 +302,9 @@ describe('StageDetailView inline distance edit', () => {
 
   beforeEach(() => {
     mockUpdateStageDistance.mockClear();
-    // canEditDistance = tripId set, not locked, online (store default), in zone,
+    // canEditDistance = tripId set, not locked, online, API reachable, in zone,
     // not a rest day.
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
     useTripStore.setState({
       tripId: 't1',
       stages: [stage({ distance: 50 })],
@@ -318,6 +332,15 @@ describe('StageDetailView inline distance edit', () => {
       navButton(tree, i18n.t('trip.edit.saveA11y')).props.onPress();
     });
   }
+
+  it('hides the distance-edit affordance when the API is unreachable while online (#1166)', () => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const tree = render(<StageDetailView initialIndex={0} />);
+    // No edit pencil to tap: the affordance is gated on apiReachable, like the
+    // accommodation block, so a down API can't present a misleading control.
+    expect(navButton(tree, editLabel())).toBeUndefined();
+    useOfflineStore.setState({ apiReachable: true });
+  });
 
   it('commits a valid distance to the API', () => {
     const tree = render(<StageDetailView initialIndex={0} />);
