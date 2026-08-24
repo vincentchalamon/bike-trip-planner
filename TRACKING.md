@@ -2071,9 +2071,9 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 
 | Thème | ID | Titre | Type | Effort | Statut |
 |-------|----|-------|------|--------|--------|
-| Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | ⏳ À faire |
-| Offline | [#1167](https://github.com/vincentchalamon/bike-trip-planner/issues/1167) | fallback cache liste des voyages + fix rejet de promesse cold-start | Bug | M | ⏳ À faire |
-| Offline | [#1168](https://github.com/vincentchalamon/bike-trip-planner/issues/1168) | carte hors-ligne en visuel simple (image statique / placeholder) | Task | M | ⏳ À faire |
+| Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | 🚧 En cours ([#1197](https://github.com/vincentchalamon/bike-trip-planner/pull/1197)) |
+| Offline | [#1167](https://github.com/vincentchalamon/bike-trip-planner/issues/1167) | fallback cache liste des voyages + fix rejet de promesse cold-start | Bug | M | 🚧 En cours ([#1198](https://github.com/vincentchalamon/bike-trip-planner/pull/1198)) |
+| Offline | [#1168](https://github.com/vincentchalamon/bike-trip-planner/issues/1168) | carte hors-ligne en visuel simple (image statique / placeholder) | Task | M | 🚧 En cours ([#1199](https://github.com/vincentchalamon/bike-trip-planner/pull/1199)) |
 | Bug | [#1169](https://github.com/vincentchalamon/bike-trip-planner/issues/1169) | i18n : chaîne EN « View the rough section on the map » | Bug | S | ✅ Mergée ([#1184](https://github.com/vincentchalamon/bike-trip-planner/pull/1184)) |
 | Bug | [#1170](https://github.com/vincentchalamon/bike-trip-planner/issues/1170) | libellé localisé du type d'hébergement (enum brut affiché) | Bug | S | ✅ Mergée ([#1185](https://github.com/vincentchalamon/bike-trip-planner/pull/1185)) |
 | Bug | [#1171](https://github.com/vincentchalamon/bike-trip-planner/issues/1171) | formulaire hébergement manuel masqué par le clavier | Bug | S | ✅ Mergée ([#1186](https://github.com/vincentchalamon/bike-trip-planner/pull/1186)) |
