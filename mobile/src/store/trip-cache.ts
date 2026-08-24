@@ -94,13 +94,18 @@ function ensureDir(): void {
 // Asynchronous write, wrapped so a filesystem error never propagates: the cache is
 // best-effort and the live network path is authoritative. create() is kept because
 // it is a known offline fix (#1147) that guarantees the target exists before write.
-async function writeFile(file: File, content: string): Promise<void> {
+// Returns whether the write actually landed: create() puts an empty file on disk
+// synchronously, so `.exists` can't tell a successful write from a swallowed
+// failure — callers that must confirm a write (route migration) need this signal.
+async function writeFile(file: File, content: string): Promise<boolean> {
   try {
     ensureDir();
     if (!file.exists) file.create();
     await writeAsStringAsync(file.uri, content);
+    return true;
   } catch {
     // ignore: a failed cache write only costs a later offline miss.
+    return false;
   }
 }
 
@@ -175,15 +180,16 @@ export async function cacheTripDetail(
     // split route file before overwriting the meta, so a detail-only refresh
     // never silently drops a previously-cached geometry (readTripCache's
     // "compat mono-fichier" fallback stays honoured).
+    // Migrate a legacy embedded route into the split file, and only drop it from
+    // the meta once that write actually landed (writeFile's return, not `.exists`
+    // — create() makes an empty file appear even when the write then fails). If
+    // the migration write didn't land, keep the route in the meta as a fallback.
     const existing = await readMeta(id);
-    if (existing?.route && !routeFile(id).exists) {
-      await writeFile(routeFile(id), JSON.stringify(existing.route));
-    }
-    // Only drop the legacy embedded route from the meta once the migration write
-    // is confirmed on disk: writeFile swallows errors, so re-check existence and
-    // keep the route in the meta as a fallback if the split-file write didn't land.
-    const legacyRoute =
-      existing?.route && !routeFile(id).exists ? existing.route : undefined;
+    const migrated =
+      !existing?.route ||
+      routeFile(id).exists ||
+      (await writeFile(routeFile(id), JSON.stringify(existing.route)));
+    const legacyRoute = migrated ? undefined : existing?.route;
     await writeFile(
       metaFile(id),
       JSON.stringify({

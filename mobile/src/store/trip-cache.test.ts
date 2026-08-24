@@ -160,6 +160,25 @@ describe('cacheTripDetail / readTripCache', () => {
     expect(cached?.syncedAt).toBe(8);
   });
 
+  it('keeps the legacy route in the meta when the migration write fails (no silent drop)', async () => {
+    mockFiles.set(
+      META_URI('mig2'),
+      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
+    );
+    // Fail the route-file migration write specifically (disk full / native error).
+    // create() still leaves an empty file on disk, so `.exists` would lie —
+    // only writeFile's return value can confirm the write actually landed.
+    writeMock.mockImplementationOnce((uri: string, content: string) => {
+      if (uri === ROUTE_URI('mig2')) return Promise.reject(new Error('disk full'));
+      mockFiles.set(uri, content);
+      return Promise.resolve();
+    });
+    await cacheTripDetail('mig2', detail(), 8);
+    // Route not persisted to the split file, but preserved via the meta fallback.
+    const cached = await readTripCache('mig2');
+    expect(cached?.route).toEqual(route);
+  });
+
   it('does not cache a past trip', async () => {
     await cacheTripDetail('past-1', detail({ startDate: '2000-01-01', endDate: '2000-01-05' }));
     expect(await readTripCache('past-1')).toBeNull();
