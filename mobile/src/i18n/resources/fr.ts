@@ -582,4 +582,27 @@ export const fr = {
     failedTitle: 'Export impossible',
     failedMessage: "L'export a échoué. Réessayez.",
   },
+  onboarding: {
+    skip: 'Passer',
+    next: 'Suivant',
+    start: 'Commencer',
+    progress: 'Étape {{current}} / {{total}}',
+    steps: {
+      create: {
+        title: 'Crée ton voyage',
+        description:
+          'Colle un lien Komoot, Strava ou RideWithGPS, ou importe un GPX. On découpe automatiquement ton itinéraire en étapes journalières.',
+      },
+      roadbook: {
+        title: 'Suis ton roadbook',
+        description:
+          'Pour chaque jour : distance, dénivelé, météo, hébergements et alertes. Ajuste une étape et les jours suivants se recalculent.',
+      },
+      ride: {
+        title: 'Passe en selle',
+        description:
+          "Sur le terrain, « En selle » affiche ta position et les points utiles autour de toi (eau, abri, ravito), même hors-ligne.",
+      },
+    },
+  },
 };
