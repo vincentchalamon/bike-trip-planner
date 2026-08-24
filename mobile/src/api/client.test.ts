@@ -6,6 +6,7 @@ jest.mock('../auth/authApi', () => ({ refreshTokens: jest.fn() }));
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
 import i18n from '../i18n';
+import { useOfflineStore } from '../store/offline-store';
 
 const mockGetJwt = getJwt as jest.MockedFunction<typeof getJwt>;
 const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
@@ -13,6 +14,8 @@ const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
 // The middleware callback params carry many fields openapi-fetch fills in; only
 // `request`/`response` matter here, so cast the partial shapes.
 const onRequest = (request: Request) => (authMiddleware.onRequest as never as (p: { request: Request }) => unknown)({ request });
+const onError = () =>
+  (authMiddleware.onError as never as () => unknown)();
 const onResponse = (request: Request, response: Response) =>
   (authMiddleware.onResponse as never as (p: { request: Request; response: Response }) => Promise<Response | undefined>)({
     request,
@@ -143,5 +146,35 @@ describe('authMiddleware 401 retry (#1032)', () => {
 
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
+  });
+});
+
+describe('authMiddleware API health wiring (#1166)', () => {
+  const req = () => new Request('https://api.test/trips');
+
+  it('marks the API reachable on any response below 500 (even a 4xx)', async () => {
+    useOfflineStore.setState({ apiReachable: false });
+    await onResponse(req(), new Response(null, { status: 200 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(true);
+
+    useOfflineStore.setState({ apiReachable: false });
+    await onResponse(req(), new Response(null, { status: 404 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(true);
+  });
+
+  it('marks the API unreachable on a 5xx', async () => {
+    useOfflineStore.setState({ apiReachable: true });
+    await onResponse(req(), new Response(null, { status: 503 }));
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
+  });
+
+  it('marks the API unreachable on a network error (onError)', () => {
+    useOfflineStore.setState({ apiReachable: true });
+    onError();
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
+  });
+
+  afterAll(() => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: true });
   });
 });
