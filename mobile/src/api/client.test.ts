@@ -79,6 +79,23 @@ describe('authMiddleware 401 retry (#1032)', () => {
     expect(result?.status).toBe(200);
   });
 
+  // Regression (#1166 review): a 5xx on the *retried* request must mark the API
+  // down — the original 401 (< 500) would otherwise leave apiReachable true even
+  // though a 5xx surfaces to the caller, defeating the degraded-mode banner.
+  it('marks the API unreachable when the retried request returns a 5xx (#1166)', async () => {
+    mockGetJwt.mockReturnValue('fresh-jwt');
+    mockRefresh.mockResolvedValue(true);
+    useOfflineStore.setState({ apiReachable: true });
+    (globalThis.fetch as jest.Mock).mockResolvedValue(new Response(null, { status: 503 }));
+
+    const request = new Request('https://api.test/trips/1');
+    await onRequest(request);
+    const result = await onResponse(request, new Response(null, { status: 401 }));
+
+    expect(result?.status).toBe(503);
+    expect(useOfflineStore.getState().apiReachable).toBe(false);
+  });
+
   // Regression (#1047 review): a FIT export retried after a 401 must come back
   // byte-for-byte — a `.text()` round-trip re-encodes as UTF-8 and corrupts
   // binary content.

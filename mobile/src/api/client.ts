@@ -67,6 +67,9 @@ export const authMiddleware: Middleware = {
     // a mid-download token refresh). arrayBuffer preserves the raw bytes for both
     // binary and text content.
     const retried = await fetch(retry);
+    // Re-evaluate on the retried response — it, not the original 401, is what
+    // surfaces to the caller and drives the degraded-mode banner (#1166).
+    useOfflineStore.getState().setApiReachable(retried.status < 500);
     const body = await retried.arrayBuffer();
     return new Response(body, {
       status: retried.status,
