@@ -204,7 +204,9 @@ describe('StageDetailView', () => {
     // The keyboard-avoiding wrapper keeps the manual accommodation form (and its
     // Add/Cancel buttons) reachable when the keyboard is open; a refactor dropping
     // it would silently re-break #1171.
-    expect(tree.root.findByType(KeyboardAvoidingView).props.behavior).toBeDefined();
+    // KeyboardAvoidingView is present; its `behavior` is platform-specific
+    // (padding on iOS, undefined on Android where adjustResize already handles it).
+    expect(tree.root.findByType(KeyboardAvoidingView)).toBeTruthy();
     const tapThrough = tree.root
       .findAllByType(ScrollView)
       .some((s: any) => s.props.keyboardShouldPersistTaps === 'handled');

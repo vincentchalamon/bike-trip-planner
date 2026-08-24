@@ -164,7 +164,10 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
     // without the keyboard eating it first.
     <KeyboardAvoidingView
       style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // Android already resizes the window (Expo default softwareKeyboardLayoutMode
+      // = adjustResize), so a `behavior` there would double-compensate; only iOS
+      // needs padding. keyboardShouldPersistTaps on the ScrollView covers both.
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         style={{ backgroundColor: theme.colors.background }}
