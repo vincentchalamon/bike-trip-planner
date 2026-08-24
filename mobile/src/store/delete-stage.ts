@@ -20,6 +20,7 @@ export function runDeleteStage(
       // Deleting merges into the adjacent day (no Valhalla reroute): a lock or
       // offline blocks it, but an out-of-zone trip does not.
       requiresRouting: false,
+      undoable: true,
       optimistic: () => store.deleteStageOptimistic(index),
       rollback: () => store.setStages(snapshot),
       call: () => apiDeleteStage(tripId, index),

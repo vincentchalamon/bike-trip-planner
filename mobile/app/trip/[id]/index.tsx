@@ -14,9 +14,11 @@ import {
   Copy,
   Download,
   MoreVertical,
+  Redo2,
   Settings,
   Share2,
   Trash2,
+  Undo2,
 } from '../../../src/components/ui/icons';
 import {
   ConfigSheet,
@@ -31,6 +33,7 @@ import { useExport } from '../../../src/hooks/use-export';
 import { confirmDeleteTrip } from '../../../src/hooks/use-trips';
 import { useTripLive } from '../../../src/hooks/use-trip-live';
 import { useTripMutations } from '../../../src/hooks/use-trip-mutations';
+import { useUndoRedo } from '../../../src/hooks/use-undo-redo';
 import type { MutationFailure } from '../../../src/store/gating';
 import { useTripStore } from '../../../src/store/trip-store';
 import { readTripCache } from '../../../src/store/trip-cache';
@@ -46,17 +49,21 @@ function MenuItem({
   label,
   onPress,
   danger = false,
+  disabled = false,
 }: {
   icon: ReactNode;
   label: string;
   onPress: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   const theme = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={{
         flexDirection: 'row',
@@ -64,6 +71,7 @@ function MenuItem({
         gap: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         paddingHorizontal: theme.spacing.md,
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       {icon}
@@ -148,6 +156,7 @@ export default function TripRoadbook() {
   const onFailure = (reason: MutationFailure) =>
     Alert.alert(t('common.error'), t(`trip.edit.reason.${reason}`));
   const mutations = useTripMutations(id, onFailure);
+  const { canUndo, canRedo, undo, redo } = useUndoRedo();
   const { exportTrip } = useExport(() =>
     Alert.alert(t('export.failedTitle'), t('export.failedMessage')),
   );
@@ -292,6 +301,35 @@ export default function TripRoadbook() {
               ...theme.shadows.strong,
             }}
           >
+            {/* Undo/redo (#1178, maquette roadbook ⋯): restore the previous /
+                next roadbook state. Disabled with empty history and, per the
+                #1166 write gate, while the trip is started or the connection is
+                degraded (offline / API-down). */}
+            <MenuItem
+              icon={<Undo2 color={theme.colors.foreground} size={18} />}
+              label={t('trip.menu.undo')}
+              disabled={!canUndo}
+              onPress={() => {
+                setMenuOpen(false);
+                undo();
+              }}
+            />
+            <MenuItem
+              icon={<Redo2 color={theme.colors.foreground} size={18} />}
+              label={t('trip.menu.redo')}
+              disabled={!canRedo}
+              onPress={() => {
+                setMenuOpen(false);
+                redo();
+              }}
+            />
+            <View
+              style={{
+                height: 1,
+                backgroundColor: theme.colors.border,
+                marginVertical: theme.spacing.xs,
+              }}
+            />
             <MenuItem
               icon={<Settings color={theme.colors.foreground} size={18} />}
               label={t('trip.menu.config')}

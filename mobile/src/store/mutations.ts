@@ -29,6 +29,11 @@ import {
 import { useOfflineStore } from './offline-store';
 import { deleteTripCache } from './trip-cache';
 import type { Modification, TripConfig } from './trip-store';
+import {
+  getUndoableSlice,
+  useTripStore,
+  useTripTemporalStore,
+} from './trip-store';
 
 // The store slice + actions the mutation runners drive. `useTripStore.getState()`
 // satisfies it structurally, so a runner takes a live snapshot (the actions are
@@ -86,6 +91,10 @@ export async function run(
     // accommodation runners use it to trigger a re-scan of the stale candidate
     // list rather than leaving the user stuck on it.
     onConflict?: () => void;
+    // Push a pre-edit undo snapshot before the optimistic apply (roadbook
+    // structural/dates/pacing edits, #1178). Popped on rollback so a failed
+    // mutation leaves no phantom undo entry.
+    undoable?: boolean;
   },
   onFailure: OnFailure,
 ): Promise<boolean> {
@@ -94,11 +103,17 @@ export async function run(
     onFailure(blocked);
     return false;
   }
+  if (opts.undoable) {
+    useTripTemporalStore
+      .getState()
+      ._push(getUndoableSlice(useTripStore.getState()));
+  }
   opts.optimistic?.();
   try {
     const { ok, status } = await opts.call();
     if (!ok) {
       opts.rollback?.();
+      if (opts.undoable) useTripTemporalStore.getState()._pop();
       const reason = normalizeStatus(status);
       if (reason === 'conflict') opts.onConflict?.();
       onFailure(reason);
@@ -107,6 +122,7 @@ export async function run(
     return true;
   } catch {
     opts.rollback?.();
+    if (opts.undoable) useTripTemporalStore.getState()._pop();
     onFailure('network');
     return false;
   }
@@ -146,6 +162,7 @@ export function runUpdateDates(
     ctx,
     {
       requiresRouting: false,
+      undoable: true,
       optimistic: () => ctx.setConfig({ startDate, endDate }),
       rollback: () => ctx.setConfig(snapshot),
       call: () =>
@@ -181,6 +198,7 @@ export function runUpdatePacing(
     ctx,
     {
       requiresRouting: false,
+      undoable: true,
       optimistic: () => ctx.setConfig(pacing),
       rollback: () => ctx.setConfig(snapshot),
       call: () => updateTripConfig(tripId, configPatch(ctx, pacing)),
@@ -247,6 +265,7 @@ export function runInsertRestDay(
     {
       // Inserting a rest day keeps the next startPoint identical: no reroute.
       requiresRouting: false,
+      undoable: true,
       optimistic: () => ctx.insertRestDayOptimistic(afterIndex),
       rollback: () => ctx.setStages(snapshot),
       call: () => insertRestDay(tripId, afterIndex),
@@ -298,6 +317,7 @@ export function runAddStage(
     {
       // A manual stage is routed via Valhalla → blocked out of zone.
       requiresRouting: true,
+      undoable: true,
       optimistic: () => ctx.insertStageOptimistic(afterIndex, placeholder),
       rollback: () => ctx.setStages(snapshot),
       call: () =>
@@ -342,6 +362,7 @@ export function runMoveStage(
     ctx,
     {
       requiresRouting: true,
+      undoable: true,
       optimistic: () => ctx.moveStageOptimistic(fromIndex, toIndex),
       rollback: () => ctx.setStages(snapshot),
       call: () => moveStage(tripId, fromIndex, toIndex),

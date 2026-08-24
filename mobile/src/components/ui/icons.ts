@@ -81,3 +81,6 @@ export { default as CornerUpLeft } from 'lucide-react-native/dist/esm/icons/corn
 export { default as Info } from 'lucide-react-native/dist/esm/icons/info.js';
 // Shared read-only trip view (#1177): read-only banner marker.
 export { default as Eye } from 'lucide-react-native/dist/esm/icons/eye.js';
+// Roadbook undo/redo (#1178): ↶ Annuler / ↷ Rétablir menu items.
+export { default as Undo2 } from 'lucide-react-native/dist/esm/icons/undo-2.js';
+export { default as Redo2 } from 'lucide-react-native/dist/esm/icons/redo-2.js';

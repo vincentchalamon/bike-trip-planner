@@ -437,6 +437,8 @@ export const fr = {
     },
     menu: {
       open: 'Menu du voyage',
+      undo: 'Annuler',
+      redo: 'Rétablir',
       config: 'Configuration',
       share: 'Partager',
       exportGpx: 'Télécharger GPX',

@@ -437,6 +437,8 @@ export const en: typeof fr = {
     },
     menu: {
       open: 'Trip menu',
+      undo: 'Undo',
+      redo: 'Redo',
       config: 'Settings',
       share: 'Share',
       exportGpx: 'Download GPX',
