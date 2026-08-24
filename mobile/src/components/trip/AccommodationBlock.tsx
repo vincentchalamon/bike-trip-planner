@@ -171,7 +171,7 @@ export function AccommodationBlock({
         const price = priceLabel(acc);
         const typeLabel = isKnownAccommodationType(acc.type)
           ? t(`config.type_${acc.type}` as const)
-          : acc.type;
+          : acc.type.replace(/_/g, ' ');
         const meta = [
           typeLabel,
           price,

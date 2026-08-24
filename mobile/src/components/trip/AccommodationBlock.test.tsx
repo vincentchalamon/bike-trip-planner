@@ -91,6 +91,6 @@ describe('AccommodationBlock — localized type label #1170', () => {
         />,
       ),
     );
-    expect(t.join(' ')).toContain('unknown_future_type');
+    expect(t.join(' ')).toContain('unknown future type');
   });
 });
