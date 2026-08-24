@@ -2074,24 +2074,40 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 | Mode dégradé | [#1166](https://github.com/vincentchalamon/bike-trip-planner/issues/1166) | read-only proactif + bandeau discret (offline & API indisponible) | Task | L | ⏳ À faire |
 | Offline | [#1167](https://github.com/vincentchalamon/bike-trip-planner/issues/1167) | fallback cache liste des voyages + fix rejet de promesse cold-start | Bug | M | ⏳ À faire |
 | Offline | [#1168](https://github.com/vincentchalamon/bike-trip-planner/issues/1168) | carte hors-ligne en visuel simple (image statique / placeholder) | Task | M | ⏳ À faire |
-| Bug | [#1169](https://github.com/vincentchalamon/bike-trip-planner/issues/1169) | i18n : chaîne EN « View the rough section on the map » | Bug | S | ⏳ À faire |
-| Bug | [#1170](https://github.com/vincentchalamon/bike-trip-planner/issues/1170) | libellé localisé du type d'hébergement (enum brut affiché) | Bug | S | ⏳ À faire |
-| Bug | [#1171](https://github.com/vincentchalamon/bike-trip-planner/issues/1171) | formulaire hébergement manuel masqué par le clavier | Bug | S | ⏳ À faire |
+| Bug | [#1169](https://github.com/vincentchalamon/bike-trip-planner/issues/1169) | i18n : chaîne EN « View the rough section on the map » | Bug | S | 🚧 En cours ([#1184](https://github.com/vincentchalamon/bike-trip-planner/pull/1184)) |
+| Bug | [#1170](https://github.com/vincentchalamon/bike-trip-planner/issues/1170) | libellé localisé du type d'hébergement (enum brut affiché) | Bug | S | 🚧 En cours ([#1185](https://github.com/vincentchalamon/bike-trip-planner/pull/1185)) |
+| Bug | [#1171](https://github.com/vincentchalamon/bike-trip-planner/issues/1171) | formulaire hébergement manuel masqué par le clavier | Bug | S | 🚧 En cours ([#1186](https://github.com/vincentchalamon/bike-trip-planner/pull/1186)) |
 | Bug | [#1172](https://github.com/vincentchalamon/bike-trip-planner/issues/1172) | mojibake intermittent accents (confirmer prod hors ngrok) | Bug | M | ⏳ À faire |
-| Bug | [#1173](https://github.com/vincentchalamon/bike-trip-planner/issues/1173) | require cycle + keyExtractor instable (Math.random) | Task | S | ⏳ À faire |
-| Sécurité | [#1174](https://github.com/vincentchalamon/bike-trip-planner/issues/1174) | purge cache offline au logout + suppression export RGPD + durcissements | Task | M | ⏳ À faire |
-| Perf | [#1175](https://github.com/vincentchalamon/bike-trip-planner/issues/1175) | écriture cache async + route inchangée non ré-sérialisée | Task | M | ⏳ À faire |
-| Perf | [#1176](https://github.com/vincentchalamon/bike-trip-planner/issues/1176) | mémoïsation listes + tree-shake lucide + carte maintenue montée | Task | M | ⏳ À faire |
+| Bug | [#1173](https://github.com/vincentchalamon/bike-trip-planner/issues/1173) | require cycle + keyExtractor instable (Math.random) | Task | S | 🚧 En cours ([#1187](https://github.com/vincentchalamon/bike-trip-planner/pull/1187)) |
+| Sécurité | [#1174](https://github.com/vincentchalamon/bike-trip-planner/issues/1174) | purge cache offline au logout + suppression export RGPD + durcissements | Task | M | 🚧 En cours ([#1188](https://github.com/vincentchalamon/bike-trip-planner/pull/1188) stack↑#1189) |
+| Perf | [#1175](https://github.com/vincentchalamon/bike-trip-planner/issues/1175) | écriture cache async + route inchangée non ré-sérialisée | Task | M | 🚧 En cours ([#1189](https://github.com/vincentchalamon/bike-trip-planner/pull/1189)) |
+| Perf | [#1176](https://github.com/vincentchalamon/bike-trip-planner/issues/1176) | mémoïsation listes + tree-shake lucide + carte maintenue montée | Task | M | 🚧 En cours ([#1190](https://github.com/vincentchalamon/bike-trip-planner/pull/1190) stack↑#1187) |
 | Parité | [#1177](https://github.com/vincentchalamon/bike-trip-planner/issues/1177) | consultation in-app d'un voyage partagé /s/&lt;code&gt; | Feature | M | ⏳ À faire |
 | Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ⏳ À faire |
 | Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ⏳ À faire |
 | Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ⏳ À faire |
 | Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | ⏳ À faire |
-| Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | 🚧 En cours (tests fournis dans la PR de recette) |
+| Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | ✅ Tests initiaux mergés (#1183), couverture à compléter |
 
 **Recette — ce qui a été vérifié en live (device) :** liste, roadbook, détail d'étape, carte + profil, configuration, compte, notifications, in-ride (8 intents + GPS réel), création ; formulaire hébergement manuel #1097 (entrée + champs). Mode dégradé testé : offline (mode avion, cold + warm) et API indisponible (backend arrêté, Internet OK).
 
 **Note maquettes :** conformité globalement élevée (notifications quasi pixel-parfaites). La maquette `09-trip-config` est **périmée** (liste encore Refuge/Location, retirés au sprint 45 #927) — le device est correct ; mettre à jour la maquette, pas l'app.
+
+### Ordre de merge et conflits attendus
+
+Lot **bugs + perf** implémenté en parallèle (worktree agents, tous mobile-only → CI = tsc + jest). 7 PRs, une seule vague (aucune dépendance inter-tickets), mais **overlaps de fichiers** gérés en 2 mini-stacks + 3 PRs indépendantes :
+
+| PR | Ticket | Base | Fichiers clés | Overlap / arbitrage |
+|----|--------|------|---------------|---------------------|
+| [#1184](https://github.com/vincentchalamon/bike-trip-planner/pull/1184) | #1169 | `main` | `api/client.ts` (+ test) | — (indépendante) |
+| [#1185](https://github.com/vincentchalamon/bike-trip-planner/pull/1185) | #1170 | `main` | `AccommodationBlock.tsx` (zone `meta`) + i18n | zone `meta` uniquement ; formulaire (#1171) intact ; i18n additif |
+| [#1186](https://github.com/vincentchalamon/bike-trip-planner/pull/1186) | #1171 | `main` | `StageDetailView.tsx` | AccommodationBlock **non touché** (fix au niveau ScrollView) → pas de conflit avec #1170 |
+| [#1189](https://github.com/vincentchalamon/bike-trip-planner/pull/1189) | #1175 | `main` | `trip-cache.ts` (write path) | **parent** ; possède le chemin d'écriture (split meta/route, async) |
+| [#1188](https://github.com/vincentchalamon/bike-trip-planner/pull/1188) | #1174 | `feature/1175` | `trip-cache.ts` (purge additive) + auth/fs-share/config | **stacké sur #1189** ; purge additive, rebasée sans conflit |
+| [#1187](https://github.com/vincentchalamon/bike-trip-planner/pull/1187) | #1173 | `main` | `push.ts`, `index.tsx` (ligne `keyExtractor`) | **parent** ; casse le require cycle via `push.ts` (pas `client.ts` → pas de conflit avec #1169) |
+| [#1190](https://github.com/vincentchalamon/bike-trip-planner/pull/1190) | #1176 | `feature/1173` | `index.tsx` (TripCard/renderItem), StageCard, RoadbookView, trip/[id] | **stacké sur #1187** ; régions disjointes de la ligne `keyExtractor` |
+
+**Ordre de merge conseillé** : d'abord les 3 indépendantes (#1184, #1185, #1186) dans n'importe quel ordre ; puis chaque stack de bas en haut — **#1189 → #1188** et **#1187 → #1190**. Après le squash-merge d'un parent, rebaser l'enfant avec `git rebase --onto origin/main <tip-parent-avant-squash>` (GitHub retargette l'enfant sur `main` mais la branche porte encore les commits pré-squash du parent).
 
 </details>
 
