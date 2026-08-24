@@ -512,6 +512,7 @@ export const fr = {
     type_guest_house: "Maison d'hôtes",
     type_alpine_hut: 'Refuge de montagne',
     type_wilderness_hut: 'Cabane',
+    type_other: 'Autre',
     datesTitle: 'Dates',
     datesDescription: 'Modifier les dates régénère le découpage des étapes.',
     startDate: 'Départ',
