@@ -207,7 +207,7 @@ export function RoadbookView({
                 index={index}
                 locked={readOnly}
                 onDelete={confirmDelete}
-                onPress={openStage}
+                onPress={forceReadOnly ? undefined : openStage}
                 date={date}
                 isToday={state === 'ongoing' && isStageToday(date, today)}
                 highlighted={stageDiffs.has(index)}

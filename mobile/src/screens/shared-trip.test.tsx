@@ -132,6 +132,18 @@ describe('Shared trip screen (#1177) — read-only consultation', () => {
     expect(findByA11yLabel(root, i18n.t('trip.rideCtaA11y'))).toHaveLength(0);
   });
 
+  it('does not let a stage row tap through to the auth-gated live flow (#1177 review)', async () => {
+    // A shared stage card must be inert: no onPress → no button role, no
+    // open-stage a11y label. Otherwise tapping pushes /trip/<shareCode>/stage/...
+    // and hits the authenticated /trips/{id}/detail with the share code as an id.
+    mockFetch.mockResolvedValue(SHARED_DETAIL);
+
+    const root = await render();
+
+    expect(findByA11yLabel(root, i18n.t('trip.openStageA11y', { day: 1 }))).toHaveLength(0);
+    expect(findByA11yLabel(root, i18n.t('trip.openStageA11y', { day: 2 }))).toHaveLength(0);
+  });
+
   it('renders the invalid/revoked error copy when the link does not resolve', async () => {
     mockFetch.mockResolvedValue(null);
 
