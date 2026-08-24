@@ -1,5 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -155,10 +157,20 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: theme.colors.background }}
-      contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
+    // The manual-accommodation form (AccommodationBlock) sits deep in this
+    // scroll; without a KeyboardAvoidingView the keyboard covers its fields
+    // and the "Ajouter" button on both platforms (#1171). `keyboardShouldPersistTaps`
+    // lets the still-visible "Ajouter"/"Annuler" buttons register a tap
+    // without the keyboard eating it first.
+    <KeyboardAvoidingView
+      style={styles.fill}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <ScrollView
+        style={{ backgroundColor: theme.colors.background }}
+        contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
+        keyboardShouldPersistTaps="handled"
+      >
       <View
         style={[
           styles.topbar,
@@ -386,7 +398,8 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
           }
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -749,6 +762,7 @@ function SurfaceBar({
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   topbar: {
     flexDirection: 'row',
     alignItems: 'center',
