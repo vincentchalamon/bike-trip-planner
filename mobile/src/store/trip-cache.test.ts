@@ -57,6 +57,17 @@ jest.mock('expo-file-system', () => {
   return { File, Directory, Paths: { document: { uri: 'file:///doc' } } };
 });
 
+// trip-cache now writes via the legacy async writer; back it with the same
+// in-memory filesystem and expose it as a jest.fn so tests can assert what got
+// (re)written.
+jest.mock('expo-file-system/legacy', () => ({
+  writeAsStringAsync: jest.fn((uri: string, content: string) => {
+    mockFiles.set(uri, content);
+    return Promise.resolve();
+  }),
+}));
+
+import { writeAsStringAsync } from 'expo-file-system/legacy';
 import {
   cacheTripDetail,
   cacheTripRoute,
@@ -77,10 +88,14 @@ function detail(over: Partial<TripDetail> = {}): TripDetail {
 }
 
 const route = { stages: [{ dayNumber: 1, geometry: [] }] } as unknown as TripRoute;
+const writeMock = writeAsStringAsync as jest.Mock;
+const ROUTE_URI = (id: string) => `file:///doc/trip-cache/${id}.route.json`;
+const META_URI = (id: string) => `file:///doc/trip-cache/${id}.json`;
 
 beforeEach(() => {
   mockFiles.clear();
   mockDirExists = true;
+  writeMock.mockClear();
 });
 
 describe('isCacheableTrip', () => {
@@ -106,12 +121,28 @@ describe('cacheTripDetail / readTripCache', () => {
   });
 
   it('persists on the very first write for a trip id (no pre-existing file)', async () => {
-    // No prior create()/write() for this id: the mock File.write() throws unless
-    // the file was created first, so this only passes if writeEntry creates it.
+    // No prior create()/write() for this id: writeFile must create the file
+    // before the async write for the entry to land.
     expect(mockFiles.size).toBe(0);
     await cacheTripDetail('brand-new', detail(), 999);
     const cached = await readTripCache('brand-new');
     expect(cached?.syncedAt).toBe(999);
+  });
+
+  it('writes asynchronously via writeAsStringAsync', async () => {
+    await cacheTripDetail('async-1', detail(), 1);
+    expect(writeMock).toHaveBeenCalledWith(META_URI('async-1'), expect.any(String));
+  });
+
+  it('reads back a legacy single-file entry with an embedded route', async () => {
+    // Cache written before the detail/route split embedded the route in <id>.json.
+    mockFiles.set(
+      META_URI('legacy'),
+      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
+    );
+    const cached = await readTripCache('legacy');
+    expect(cached?.route).toEqual(route);
+    expect(cached?.syncedAt).toBe(7);
   });
 
   it('does not cache a past trip', async () => {
@@ -151,6 +182,36 @@ describe('cacheTripRoute', () => {
   it('is a no-op when the trip is not already cached', async () => {
     await cacheTripRoute('missing', route);
     expect(await readTripCache('missing')).toBeNull();
+  });
+
+  it('does not rewrite the route file on a detail-only refresh (#1175)', async () => {
+    await cacheTripDetail('t', detail(), 1);
+    await cacheTripRoute('t', route, 2);
+    writeMock.mockClear();
+    await cacheTripDetail('t', detail({ title: 'Refreshed' }), 3);
+    expect(writeMock.mock.calls.some(([uri]) => uri === ROUTE_URI('t'))).toBe(false);
+    const cached = await readTripCache('t');
+    expect(cached?.route).toEqual(route);
+    expect(cached?.detail.title).toBe('Refreshed');
+  });
+
+  it('skips the route write when the geometry is unchanged but re-stamps syncedAt (#1175)', async () => {
+    await cacheTripDetail('t', detail(), 1);
+    await cacheTripRoute('t', route, 2);
+    writeMock.mockClear();
+    await cacheTripRoute('t', route, 3); // identical geometry
+    expect(writeMock.mock.calls.some(([uri]) => uri === ROUTE_URI('t'))).toBe(false);
+    expect((await readTripCache('t'))?.syncedAt).toBe(3);
+  });
+
+  it('rewrites the route file when the geometry actually changed', async () => {
+    await cacheTripDetail('t', detail(), 1);
+    await cacheTripRoute('t', route, 2);
+    writeMock.mockClear();
+    const other = { stages: [{ dayNumber: 1, geometry: [[1, 2]] }] } as unknown as TripRoute;
+    await cacheTripRoute('t', other, 3);
+    expect(writeMock.mock.calls.some(([uri]) => uri === ROUTE_URI('t'))).toBe(true);
+    expect((await readTripCache('t'))?.route).toEqual(other);
   });
 
   it('does not drop the route when a route write races a detail refresh (#1148)', async () => {
