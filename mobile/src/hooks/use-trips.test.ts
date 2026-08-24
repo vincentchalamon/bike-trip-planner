@@ -22,12 +22,20 @@ jest.mock('../api/trips', () => ({
 jest.mock('../notifications/native', () => ({
   cancelLocalNotification: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../store/trips-list-cache', () => ({
+  cacheTripList: jest.fn(),
+  readCachedTripList: jest.fn().mockResolvedValue(null),
+  clearCachedTripList: jest.fn(),
+}));
 const mockClearDelivered = jest.fn();
 jest.mock('../store/delivered-notifications', () => ({
   useDeliveredNotifications: { getState: () => ({ clearDelivered: mockClearDelivered }) },
 }));
 import { deleteTrip, duplicateTrip, fetchTrips } from '../api/trips';
 import { cancelLocalNotification } from '../notifications/native';
+import { cacheTripList, readCachedTripList } from '../store/trips-list-cache';
+const mockCacheList = cacheTripList as jest.MockedFunction<typeof cacheTripList>;
+const mockReadCachedList = readCachedTripList as jest.MockedFunction<typeof readCachedTripList>;
 import { notificationIdentifier } from '../notifications/plan';
 const mockFetch = fetchTrips as jest.MockedFunction<typeof fetchTrips>;
 const mockDelete = deleteTrip as jest.MockedFunction<typeof deleteTrip>;
@@ -57,6 +65,44 @@ describe('runLoadTrips (#1036)', () => {
     expect(res.items).toEqual([]);
     expect(res.totalItems).toBe(0);
     expect(res.error).toBe('Impossible de charger les voyages.');
+  });
+
+  it('caches the first unfiltered page on success (#1167)', async () => {
+    mockFetch.mockResolvedValue({ items: [{ id: 't1' }], totalItems: 3 } as never);
+    await runLoadTrips(1, {});
+    expect(mockCacheList).toHaveBeenCalledWith([{ id: 't1' }]);
+  });
+
+  it('does not cache a filtered page or a later page (#1167)', async () => {
+    mockFetch.mockResolvedValue({ items: [{ id: 't1' }], totalItems: 3 } as never);
+    await runLoadTrips(1, { title: 'foo' });
+    await runLoadTrips(2, {});
+    expect(mockCacheList).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the cached list when the fetch throws, page 1 unfiltered (#1167)', async () => {
+    mockFetch.mockRejectedValue(new Error('offline'));
+    mockReadCachedList.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }] as never);
+    const res = await runLoadTrips(1, {});
+    expect(res.items).toEqual([{ id: 'c1' }, { id: 'c2' }]);
+    expect(res.totalItems).toBe(2);
+    expect(res.error).toBeNull();
+  });
+
+  it('surfaces the error only when there is NO cache at all (null), not an empty one (#1167)', async () => {
+    mockFetch.mockRejectedValue(new Error('offline'));
+    mockReadCachedList.mockResolvedValue(null);
+    const res = await runLoadTrips(1, {});
+    expect(res.items).toEqual([]);
+    expect(res.error).toBe('Impossible de charger les voyages.');
+  });
+
+  it('shows an empty (cached) list without the error screen when the user has no trips (#1167)', async () => {
+    mockFetch.mockRejectedValue(new Error('offline'));
+    mockReadCachedList.mockResolvedValue([]);
+    const res = await runLoadTrips(1, {});
+    expect(res.items).toEqual([]);
+    expect(res.error).toBeNull();
   });
 });
 

@@ -15,6 +15,7 @@ import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';
 import { clearAllTripCache } from '../store/trip-cache';
+import { clearCachedTripList } from '../store/trips-list-cache';
 
 type AuthContextValue = {
   ready: boolean;
@@ -69,9 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     let cancelled = false;
     void (async () => {
-      const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
-      if (!cancelled) {
-        setEmail(data?.email ?? null);
+      try {
+        const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
+        if (!cancelled) {
+          setEmail(data?.email ?? null);
+        }
+      } catch {
+        // Offline / API down: leave the email unresolved rather than letting the
+        // fetch reject unhandled (the "Uncaught (in promise)" cold-start #1167).
       }
     })();
     return () => {
@@ -113,10 +119,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // without a re-login. (Not /auth/session, which is cookie-only web transport.)
   const refreshEmail = useCallback(async (): Promise<void> => {
     const gen = sessionGen.current;
-    const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
-    // Drop a response that outlived its session (a logout raced this fetch).
-    if (sessionGen.current === gen) {
-      setEmail(data?.email ?? null);
+    try {
+      const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
+      // Drop a response that outlived its session (a logout raced this fetch).
+      if (sessionGen.current === gen) {
+        setEmail(data?.email ?? null);
+      }
+    } catch {
+      // Offline / API down: keep the current email rather than reject.
     }
   }, []);
 
@@ -128,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Purge the offline trip cache so no roadbook / manual accommodation of this
     // account survives on a shared device (#1174).
     await clearAllTripCache();
+    await clearCachedTripList();
     endSession();
   }, [endSession]);
 

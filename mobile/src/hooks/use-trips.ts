@@ -8,6 +8,7 @@ import {
   type TripListItem,
 } from '../api/trips';
 import { useOfflineStore } from '../store/offline-store';
+import { cacheTripList, readCachedTripList } from '../store/trips-list-cache';
 import { useDeliveredNotifications } from '../store/delivered-notifications';
 import { cancelLocalNotification } from '../notifications/native';
 import { LOCAL_CATEGORIES, notificationIdentifier } from '../notifications/plan';
@@ -27,10 +28,25 @@ export async function runLoadTrips(
   page: number,
   filters: TripFilters,
 ): Promise<TripsPageResult> {
+  const cacheable = page === 1 && !hasActiveFilter(filters);
   try {
     const { items, totalItems } = await fetchTrips(page, filters);
+    // Snapshot the first unfiltered page so it can be replayed offline (#1167).
+    if (cacheable) void cacheTripList(items);
     return { items, totalItems, error: null };
   } catch {
+    // Offline / API down: fall back to the last cached list rather than a bare
+    // error, so the rider can still reach their trips (their details are cached
+    // too). Only for the first unfiltered page — the server owns pagination and
+    // filtering. An empty/absent cache still surfaces the error.
+    if (cacheable) {
+      // Distinguish a genuinely empty cached list ([] — the user has no trips) from
+      // "never cached" (null): the former is a valid state, not the error screen.
+      const cached = await readCachedTripList();
+      if (cached !== null) {
+        return { items: cached, totalItems: cached.length, error: null };
+      }
+    }
     return { items: [], totalItems: 0, error: 'Impossible de charger les voyages.' };
   }
 }

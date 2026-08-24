@@ -11,6 +11,7 @@ jest.mock('./tokens', () => ({
 jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => {}) }));
 jest.mock('../store/trip-cache', () => ({ clearAllTripCache: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../store/trips-list-cache', () => ({ clearCachedTripList: jest.fn().mockResolvedValue(undefined) }));
 // The provider registers / unregisters the push token as a side effect (#1125);
 // stub the push module so this stale-response-guard test never touches the native
 // notifications layer (its own behaviour is covered by store.push.test.tsx).
@@ -23,9 +24,13 @@ jest.mock('../notifications/push', () => ({
 import { api } from '../api/client';
 import { loadTokens } from './tokens';
 import { clearAllTripCache } from '../store/trip-cache';
+import { clearCachedTripList } from '../store/trips-list-cache';
 import { AuthProvider, useAuth } from './store';
 
 const mockClearAllTripCache = clearAllTripCache as jest.MockedFunction<typeof clearAllTripCache>;
+const mockClearCachedTripList = clearCachedTripList as jest.MockedFunction<
+  typeof clearCachedTripList
+>;
 
 type AuthContextValue = ReturnType<typeof useAuth>;
 
@@ -99,6 +104,8 @@ describe('AuthProvider stale-response guard (#1117)', () => {
       await captured.logout();
     });
     expect(mockClearAllTripCache).toHaveBeenCalledTimes(1);
+    // The trips-list snapshot (trip titles) is purged too (#1167 PII parity).
+    expect(mockClearCachedTripList).toHaveBeenCalledTimes(1);
   });
 
   it('sets the email from GET /users/me while authenticated', async () => {
@@ -109,6 +116,33 @@ describe('AuthProvider stale-response guard (#1117)', () => {
       renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
     });
 
+    expect(captured.email).toBe('me@example.com');
+  });
+
+  it('does not reject and leaves email null when the boot GET /users/me fails (offline cold start #1167)', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    mockGet.mockRejectedValue(new Error('fetch failed'));
+
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+
+    // No 'Uncaught (in promise) fetch failed'; the effect swallows it.
+    expect(captured.email).toBeNull();
+  });
+
+  it('does not reject and keeps the email when refreshEmail() fails offline (#1167)', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    mockGet.mockResolvedValueOnce({ data: { email: 'me@example.com' } } as never);
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+    expect(captured.email).toBe('me@example.com');
+
+    mockGet.mockRejectedValueOnce(new Error('fetch failed'));
+    await act(async () => {
+      await expect(captured.refreshEmail()).resolves.toBeUndefined();
+    });
     expect(captured.email).toBe('me@example.com');
   });
 
