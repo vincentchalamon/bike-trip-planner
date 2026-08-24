@@ -95,7 +95,7 @@ const ctx = () => useTripStore.getState();
 beforeEach(() => {
   jest.clearAllMocks();
   useTripStore.getState().reset();
-  useOfflineStore.setState({ isOnline: true });
+  useOfflineStore.setState({ isOnline: true, apiReachable: true });
   useTripStore.setState({
     stages: [stage({ dayNumber: 1 }), stage({ dayNumber: 2 })],
     isLocked: false,
@@ -538,6 +538,23 @@ describe('runAnalyze / lifecycle', () => {
     useOfflineStore.setState({ isOnline: true });
     mock(deleteTrip).mockResolvedValue({ ok: true, status: 204 });
     expect(await runDeleteTrip('t1', ctx(), jest.fn())).toBe(true);
+  });
+
+  it('runDuplicateTrip is refused when the API is unreachable while online (#1166)', async () => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const onFailure = jest.fn();
+    const id = await runDuplicateTrip('t1', ctx(), onFailure);
+    expect(id).toBeNull();
+    expect(onFailure).toHaveBeenCalledWith('api_unavailable');
+    expect(duplicateTrip).not.toHaveBeenCalled();
+  });
+
+  it('runDeleteTrip is refused when the API is unreachable while online (#1166)', async () => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const onFailure = jest.fn();
+    expect(await runDeleteTrip('t1', ctx(), onFailure)).toBe(false);
+    expect(onFailure).toHaveBeenCalledWith('api_unavailable');
+    expect(deleteTrip).not.toHaveBeenCalled();
   });
 
   it('runDeleteTrip evicts the offline cache on successful deletion, not on failure', async () => {
