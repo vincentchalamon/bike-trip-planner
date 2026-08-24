@@ -172,6 +172,22 @@ export function collectMarkers(stages: StageData[]): MapMarker[] {
   return markers;
 }
 
+// Pick the tapped POI out of a marker-source press event's features (the ordered
+// GeoJSON features under the touch, highest z-index first). Only POI markers are
+// addable as a route waypoint (#1179), so accommodation/waypoint taps resolve to
+// null and no popover opens. Kept pure so TripMap's native onPress stays a
+// one-liner and this is unit-testable without a native map.
+export function poiFromPressFeatures(
+  features: GeoJSON.Feature[] | undefined,
+): MapMarker | null {
+  const poi = (features ?? []).find(
+    (f) => f.properties?.kind === 'poi' && f.geometry?.type === 'Point',
+  );
+  if (!poi || poi.geometry.type !== 'Point') return null;
+  const [lon, lat] = poi.geometry.coordinates as [number, number];
+  return { kind: 'poi', lon, lat, name: String(poi.properties?.name ?? '') };
+}
+
 export function markerCollection(markers: MapMarker[]): FeatureCollection {
   return {
     type: 'FeatureCollection',

@@ -356,6 +356,21 @@ export const fr = {
       profileAxisPoint: '{{distance}} km · {{ele}} m',
       profileAxisMax: '{{ele}} m max',
     },
+    modificationQueue: {
+      panelA11y: 'Modifications en attente',
+      title_one: '1 modification en attente',
+      title_other: '{{count}} modifications en attente',
+      estimatedSeconds: 'Temps estimé : ~{{seconds}} s',
+      estimatedMinute: 'Temps estimé : ~1 min',
+      applyAll: 'Appliquer et recalculer',
+      cancel: 'Annuler',
+      applying: 'Application…',
+    },
+    poiWaypoint: {
+      type: "Point d'intérêt",
+      add: "Ajouter à l'itinéraire",
+      close: 'Fermer',
+    },
     blocks: {
       distanceKm: '{{distance}} km',
       alerts: 'Alertes',

@@ -356,6 +356,21 @@ export const en: typeof fr = {
       profileAxisPoint: '{{distance}} km · {{ele}} m',
       profileAxisMax: '{{ele}} m max',
     },
+    modificationQueue: {
+      panelA11y: 'Pending modifications',
+      title_one: '1 pending modification',
+      title_other: '{{count}} pending modifications',
+      estimatedSeconds: 'Estimated time: ~{{seconds}} s',
+      estimatedMinute: 'Estimated time: ~1 min',
+      applyAll: 'Apply and recompute',
+      cancel: 'Cancel',
+      applying: 'Applying…',
+    },
+    poiWaypoint: {
+      type: 'Point of interest',
+      add: 'Add to itinerary',
+      close: 'Close',
+    },
     blocks: {
       distanceKm: '{{distance}} km',
       alerts: 'Alerts',

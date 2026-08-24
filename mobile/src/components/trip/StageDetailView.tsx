@@ -25,7 +25,12 @@ import {
   X,
 } from '../ui/icons';
 import { TripMap } from '../TripMap';
-import { alertSegmentToCoords, collectMarkers } from '../map/map-utils';
+import { PoiWaypointPopover } from './PoiWaypointPopover';
+import {
+  alertSegmentToCoords,
+  collectMarkers,
+  type MapMarker,
+} from '../map/map-utils';
 import { stageColor } from '../map/stage-colors';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
@@ -74,6 +79,8 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   >(undefined);
   const [editingDistance, setEditingDistance] = useState(false);
   const [draft, setDraft] = useState('');
+  // POI marker tapped on the stage map → its "add to itinerary" popover (#1179).
+  const [selectedPoi, setSelectedPoi] = useState<MapMarker | null>(null);
 
   // Keep the index valid as stages hydrate / change under us.
   const count = stages.length;
@@ -91,6 +98,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
     setHighlightedSegment(undefined);
     setEditingDistance(false);
     setDraft('');
+    setSelectedPoi(null);
   }, [safeIndex]);
 
   const onFailure = useCallback(
@@ -145,6 +153,14 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
     apiReachable &&
     !outOfZone &&
     !stage.isRestDay;
+
+  // Adding a POI as a route waypoint reroutes the stage via Valhalla, so it needs
+  // the same live-write conditions as a distance edit (and the trip zone). A rest
+  // day has no route to reroute, yet its own point(s) still render on this map
+  // (stageSegments is built directly, not via buildStageLines), so exclude it
+  // explicitly — otherwise a POI tap on a rest day would fire addPoiWaypoint.
+  const canAddWaypoint =
+    tripId !== null && !isLocked && isOnline && apiReachable && !outOfZone && !stage.isRestDay;
 
   function startEditDistance(): void {
     setDraft(String(stats.distanceKm));
@@ -260,11 +276,29 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
 
       <View style={{ height: 220 }}>
         {coordinates.length > 0 ? (
-          <TripMap
-            stageSegments={stageSegments}
-            markers={markers}
-            highlightedSegment={highlightedSegment}
-          />
+          <>
+            <TripMap
+              stageSegments={stageSegments}
+              markers={markers}
+              highlightedSegment={highlightedSegment}
+              onSelectPoi={canAddWaypoint ? setSelectedPoi : undefined}
+            />
+            {selectedPoi ? (
+              <PoiWaypointPopover
+                poi={selectedPoi}
+                disabled={!canAddWaypoint}
+                onAdd={() => {
+                  void mutations.addPoiWaypoint(
+                    safeIndex,
+                    selectedPoi.lat,
+                    selectedPoi.lon,
+                  );
+                  setSelectedPoi(null);
+                }}
+                onClose={() => setSelectedPoi(null)}
+              />
+            ) : null}
+          </>
         ) : (
           <View style={{ flex: 1 }}>
             <EmptyState title={t('trip.mapEmpty')} />
