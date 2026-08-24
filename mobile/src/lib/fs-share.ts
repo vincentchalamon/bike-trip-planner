@@ -17,10 +17,12 @@ export async function writeAndShareFile(
   const file = new File(Paths.cache, filename);
   file.create({ intermediates: true, overwrite: true });
   await file.write(new Uint8Array(bytes));
-  if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Sharing is not available on this device');
-  }
   try {
+    // Checked inside the try so the finally still deletes the (already-written)
+    // temp file when sharing is unavailable — the normal case on some emulators.
+    if (!(await Sharing.isAvailableAsync())) {
+      throw new Error('Sharing is not available on this device');
+    }
     await Sharing.shareAsync(file.uri, { mimeType });
   } finally {
     // Delete the temp export once the share sheet is done. It matters most for the

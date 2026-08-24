@@ -246,7 +246,10 @@ export async function cacheTripRoute(
  */
 export async function clearAllTripCache(): Promise<void> {
   const ids = await listCachedTripIds();
-  await Promise.all(ids.map((id) => deleteTripCache(id)));
+  // Go through the same per-id lock as cacheTripDetail/cacheTripRoute: an
+  // in-flight write from an unordered effect must not land after the delete and
+  // resurrect a purged account's data on a shared device (#1174).
+  await Promise.all(ids.map((id) => withLock(id, () => deleteTripCache(id))));
 }
 
 /** Ids of every currently cached trip (drives the background re-sync). */

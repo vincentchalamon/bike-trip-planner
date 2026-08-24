@@ -66,14 +66,17 @@ describe('writeAndShareFile temp-file cleanup (#1174)', () => {
     expect(fileOps).toContain('delete');
   });
 
-  it('does not share (nor delete) when the platform cannot share', async () => {
+  it('deletes the temp file (without sharing) when the platform cannot share', async () => {
     mockIsAvailable.mockResolvedValue(false);
 
     await expect(
       writeAndShareFile(new ArrayBuffer(4), 'trip.gpx', 'application/gpx+xml'),
     ).rejects.toThrow('Sharing is not available on this device');
 
+    // The file is already written to the cache by this point, so it must be
+    // cleaned up even though sharing never happened (#1174 — no unencrypted
+    // RGPD/GPX export left lingering on emulators where sharing is unavailable).
     expect(mockShare).not.toHaveBeenCalled();
-    expect(fileOps).not.toContain('delete');
+    expect(fileOps).toContain('delete');
   });
 });
