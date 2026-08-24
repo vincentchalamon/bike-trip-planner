@@ -179,7 +179,19 @@ export async function cacheTripDetail(
     if (existing?.route && !routeFile(id).exists) {
       await writeFile(routeFile(id), JSON.stringify(existing.route));
     }
-    await writeFile(metaFile(id), JSON.stringify({ detail, syncedAt } satisfies CachedMeta));
+    // Only drop the legacy embedded route from the meta once the migration write
+    // is confirmed on disk: writeFile swallows errors, so re-check existence and
+    // keep the route in the meta as a fallback if the split-file write didn't land.
+    const legacyRoute =
+      existing?.route && !routeFile(id).exists ? existing.route : undefined;
+    await writeFile(
+      metaFile(id),
+      JSON.stringify({
+        detail,
+        syncedAt,
+        ...(legacyRoute ? { route: legacyRoute } : {}),
+      } satisfies CachedMeta),
+    );
   });
 }
 
