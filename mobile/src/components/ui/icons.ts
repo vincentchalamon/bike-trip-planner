@@ -79,3 +79,5 @@ export { default as Zap } from 'lucide-react-native/dist/esm/icons/zap.js';
 // In-ride maquette conformity (#1094): disclaimer banner + detour badge.
 export { default as CornerUpLeft } from 'lucide-react-native/dist/esm/icons/corner-up-left.js';
 export { default as Info } from 'lucide-react-native/dist/esm/icons/info.js';
+// Shared read-only trip view (#1177): read-only banner marker.
+export { default as Eye } from 'lucide-react-native/dist/esm/icons/eye.js';

@@ -565,6 +565,13 @@ export const en: typeof fr = {
     fr: 'Français',
     en: 'English',
   },
+  sharePage: {
+    title: 'Shared trip',
+    loading: 'Loading shared trip...',
+    error: 'This share link is invalid or has been revoked.',
+    readOnlyBanner: 'Shared view — read only',
+    download: 'Download',
+  },
   freshness: {
     justNow: 'just now',
     hoursAgo: '{{count}}h ago',

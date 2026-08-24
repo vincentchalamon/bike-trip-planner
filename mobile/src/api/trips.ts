@@ -510,3 +510,63 @@ export function buildShareUrl(shortCode: string): string {
   const base = WEB_BASE_URL.replace(/\/+$/, '');
   return `${base}/s/${encodeURIComponent(shortCode)}`;
 }
+
+// ---------------------------------------------------------------------------
+// Anonymous shared-trip consultation (#1177). The `/s/<code>` endpoints require
+// no auth (the JWT header, when present, is simply ignored server-side), and
+// serve a read-only projection of the trip. Mirrors the web's fetchSharedTrip /
+// fetchSharedTripRoute / downloadSharedTripFile (pwa's api/client).
+// ---------------------------------------------------------------------------
+
+export type SharedTripDetail = components['schemas']['TripShare.TripDetail.jsonld'];
+
+/** Fetch a shared trip via its short code. Null when invalid / revoked. */
+export async function fetchSharedTrip(
+  shortCode: string,
+): Promise<SharedTripDetail | null> {
+  const { data, error } = await api.GET('/s/{shortCode}', {
+    params: { path: { shortCode } },
+    headers: ld,
+  });
+  if (error) {
+    return null;
+  }
+  return data ?? null;
+}
+
+/** Fetch a shared trip's all-stages geometry (ADR-057), by short code. */
+export async function fetchSharedTripRoute(
+  shortCode: string,
+): Promise<TripRoute | null> {
+  const { data, error } = await api.GET('/s/{shortCode}/route', {
+    params: { path: { shortCode } },
+    headers: ld,
+  });
+  if (error) {
+    return null;
+  }
+  return data ?? null;
+}
+
+// The share downloads sit at `/s/{shortCode}.gpx` / `.fit` (literal suffix in the
+// OpenAPI paths, unlike the auth'd exports which negotiate on Accept).
+const SHARED_EXPORT_PATH: Record<ExportFormat, '/s/{shortCode}.gpx' | '/s/{shortCode}.fit'> = {
+  gpx: '/s/{shortCode}.gpx',
+  fit: '/s/{shortCode}.fit',
+};
+
+/** Download a shared trip as GPX/FIT via short code (all stages merged). */
+export async function fetchSharedTripExport(
+  shortCode: string,
+  format: ExportFormat,
+): Promise<ArrayBuffer> {
+  const { data, error, response } = await api.GET(SHARED_EXPORT_PATH[format], {
+    params: { path: { shortCode } },
+    headers: { Accept: EXPORT_ACCEPT[format] },
+    parseAs: 'arrayBuffer',
+  });
+  if (error || !response.ok) {
+    throw new Error('Failed to export shared trip');
+  }
+  return data;
+}

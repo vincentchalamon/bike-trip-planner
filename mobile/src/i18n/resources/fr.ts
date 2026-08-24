@@ -566,6 +566,13 @@ export const fr = {
     fr: 'Français',
     en: 'English',
   },
+  sharePage: {
+    title: 'Voyage partagé',
+    loading: 'Chargement du voyage partagé...',
+    error: 'Ce lien de partage est invalide ou a été révoqué.',
+    readOnlyBanner: 'Vue partagée — lecture seule',
+    download: 'Télécharger',
+  },
   freshness: {
     justNow: "à l'instant",
     hoursAgo: 'il y a {{count}} h',
