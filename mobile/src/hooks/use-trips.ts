@@ -40,8 +40,10 @@ export async function runLoadTrips(
     // too). Only for the first unfiltered page — the server owns pagination and
     // filtering. An empty/absent cache still surfaces the error.
     if (cacheable) {
+      // Distinguish a genuinely empty cached list ([] — the user has no trips) from
+      // "never cached" (null): the former is a valid state, not the error screen.
       const cached = await readCachedTripList();
-      if (cached && cached.length > 0) {
+      if (cached !== null) {
         return { items: cached, totalItems: cached.length, error: null };
       }
     }

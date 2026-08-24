@@ -89,12 +89,20 @@ describe('runLoadTrips (#1036)', () => {
     expect(res.error).toBeNull();
   });
 
-  it('surfaces the error when the fetch throws and the cache is empty (#1167)', async () => {
+  it('surfaces the error only when there is NO cache at all (null), not an empty one (#1167)', async () => {
     mockFetch.mockRejectedValue(new Error('offline'));
     mockReadCachedList.mockResolvedValue(null);
     const res = await runLoadTrips(1, {});
     expect(res.items).toEqual([]);
     expect(res.error).toBe('Impossible de charger les voyages.');
+  });
+
+  it('shows an empty (cached) list without the error screen when the user has no trips (#1167)', async () => {
+    mockFetch.mockRejectedValue(new Error('offline'));
+    mockReadCachedList.mockResolvedValue([]);
+    const res = await runLoadTrips(1, {});
+    expect(res.items).toEqual([]);
+    expect(res.error).toBeNull();
   });
 });
 
