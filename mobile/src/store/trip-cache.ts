@@ -177,14 +177,19 @@ export async function cacheTripDetail(
       return;
     }
     // Migrate a legacy embedded route into the split file, and only drop it from
-    // the meta once that write actually landed (writeFile's return, not `.exists`
-    // — create() makes an empty file appear even when the write then fails). If
-    // the migration write didn't land, keep the route in the meta as a fallback.
+    // the meta once the write actually landed. Confirm via the route file's
+    // CONTENT, not `.exists`: create() leaves an empty stub behind when a prior
+    // write failed, so `.exists` would falsely report the route as migrated and
+    // let a later refresh drop it from the meta too (data lost from both places).
+    // Mirrors cacheTripRoute's content check; keep the route in the meta otherwise.
     const existing = await readMeta(id);
+    const routeHandle = routeFile(id);
+    const serialized = existing?.route ? JSON.stringify(existing.route) : null;
+    const previousRoute = routeHandle.exists ? await routeHandle.text() : null;
     const migrated =
-      !existing?.route ||
-      routeFile(id).exists ||
-      (await writeFile(routeFile(id), JSON.stringify(existing.route)));
+      serialized === null ||
+      previousRoute === serialized ||
+      (await writeFile(routeHandle, serialized));
     const legacyRoute = migrated ? undefined : existing?.route;
     await writeFile(
       metaFile(id),

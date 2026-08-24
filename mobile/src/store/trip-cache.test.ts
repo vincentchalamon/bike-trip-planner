@@ -179,6 +179,26 @@ describe('cacheTripDetail / readTripCache', () => {
     expect(cached?.route).toEqual(route);
   });
 
+  it('re-attempts a failed migration on the next refresh (empty stub is not "migrated")', async () => {
+    mockFiles.set(
+      META_URI('stub'),
+      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
+    );
+    // 1st refresh: migration write fails → empty stub left on disk, route kept in meta.
+    writeMock.mockImplementationOnce((uri: string, content: string) => {
+      if (uri === ROUTE_URI('stub')) return Promise.reject(new Error('disk full'));
+      mockFiles.set(uri, content);
+      return Promise.resolve();
+    });
+    await cacheTripDetail('stub', detail(), 8);
+    expect(mockFiles.get(ROUTE_URI('stub'))).toBe(''); // empty stub from create()
+    expect((await readTripCache('stub'))?.route).toEqual(route);
+    // 2nd refresh: the stub's content ('') != the route, so migration retries and
+    // now succeeds — the route must NOT be dropped by trusting `.exists`.
+    await cacheTripDetail('stub', detail(), 9);
+    expect((await readTripCache('stub'))?.route).toEqual(route);
+  });
+
   it('does not cache a past trip', async () => {
     await cacheTripDetail('past-1', detail({ startDate: '2000-01-01', endDate: '2000-01-05' }));
     expect(await readTripCache('past-1')).toBeNull();
