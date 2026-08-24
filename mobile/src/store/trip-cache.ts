@@ -220,8 +220,19 @@ export async function cacheTripRoute(
     const serialized = JSON.stringify(route);
     const file = routeFile(id);
     const previous = file.exists ? await file.text() : null;
-    if (previous !== serialized) await writeFile(file, serialized);
-    await writeFile(metaFile(id), JSON.stringify({ detail: meta.detail, syncedAt } satisfies CachedMeta));
+    // Same confirm-before-drop as cacheTripDetail: only clear a legacy embedded
+    // route from the meta once the split-file write actually landed, so a failed
+    // route write on a pre-split cache doesn't lose the geometry from both places.
+    const landed = previous === serialized || (await writeFile(file, serialized));
+    const legacyRoute = landed ? undefined : meta.route;
+    await writeFile(
+      metaFile(id),
+      JSON.stringify({
+        detail: meta.detail,
+        syncedAt,
+        ...(legacyRoute ? { route: legacyRoute } : {}),
+      } satisfies CachedMeta),
+    );
   });
 }
 

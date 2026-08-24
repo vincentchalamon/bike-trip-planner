@@ -218,6 +218,23 @@ describe('cacheTripRoute', () => {
     expect(await readTripCache('missing')).toBeNull();
   });
 
+  it('keeps the legacy route in the meta when its own route write fails (no silent drop)', async () => {
+    // Pre-split cache (route embedded in the meta), then a map open triggers
+    // cacheTripRoute whose split-file write fails: the geometry must survive.
+    mockFiles.set(
+      META_URI('r2'),
+      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
+    );
+    const other = { stages: [{ dayNumber: 2, geometry: [[3, 4]] }] } as unknown as TripRoute;
+    writeMock.mockImplementationOnce((uri: string, content: string) => {
+      if (uri === ROUTE_URI('r2')) return Promise.reject(new Error('disk full'));
+      mockFiles.set(uri, content);
+      return Promise.resolve();
+    });
+    await cacheTripRoute('r2', other, 8);
+    expect((await readTripCache('r2'))?.route).toEqual(route);
+  });
+
   it('does not rewrite the route file on a detail-only refresh (#1175)', async () => {
     await cacheTripDetail('t', detail(), 1);
     await cacheTripRoute('t', route, 2);
