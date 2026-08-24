@@ -3,6 +3,7 @@ import type { paths } from '@btp/core/schema';
 import { API_BASE_URL } from './config';
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
+import { useOfflineStore } from '../store/offline-store';
 import i18n from '../i18n';
 
 const RETRY_HEADER = 'X-Native-Retry';
@@ -35,6 +36,9 @@ export const authMiddleware: Middleware = {
     return request;
   },
   async onResponse({ request, response }) {
+    // Track API health for the degraded-mode gate (#1166): a response that reached
+    // the backend (even 4xx) means it's up; a 5xx means it's failing.
+    useOfflineStore.getState().setApiReachable(response.status < 500);
     // RN's fetch returns a Response from a different realm than openapi-fetch's
     // global `Response`, so `response instanceof Response` is false on device.
     // Return `undefined` to keep the response unchanged (never return the original
@@ -69,6 +73,13 @@ export const authMiddleware: Middleware = {
       statusText: retried.statusText,
       headers: Object.fromEntries(retried.headers.entries()),
     });
+  },
+  onError() {
+    // A network error (connection refused / DNS / timeout) means the API is
+    // unreachable — mark it down so the app degrades to read-only (#1166). Return
+    // undefined so openapi-fetch still surfaces the error to the caller.
+    useOfflineStore.getState().setApiReachable(false);
+    return undefined;
   },
 };
 

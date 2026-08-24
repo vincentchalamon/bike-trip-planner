@@ -11,6 +11,7 @@ export type MutationFailure =
   | 'locked'
   | 'out_of_zone'
   | 'offline'
+  | 'api_unavailable'
   | 'validation'
   | 'not_found'
   | 'conflict'
@@ -25,6 +26,8 @@ export interface GateState {
   outOfZone: boolean;
   /** Device connectivity — mutations are disabled while offline. */
   isOnline: boolean;
+  /** API health — false after a network error / 5xx; disables writes even online. */
+  apiReachable: boolean;
 }
 
 /**
@@ -37,8 +40,9 @@ export interface GateState {
 export function evaluateGate(
   state: GateState,
   requiresRouting: boolean,
-): 'offline' | 'locked' | 'out_of_zone' | null {
+): 'offline' | 'api_unavailable' | 'locked' | 'out_of_zone' | null {
   if (!state.isOnline) return 'offline';
+  if (!state.apiReachable) return 'api_unavailable';
   if (state.isLocked) return 'locked';
   if (requiresRouting && state.outOfZone) return 'out_of_zone';
   return null;

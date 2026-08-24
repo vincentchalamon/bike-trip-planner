@@ -64,6 +64,7 @@ function gateOf(ctx: Pick<MutationContext, 'isLocked' | 'outOfZone'>): GateState
     isLocked: ctx.isLocked,
     outOfZone: ctx.outOfZone,
     isOnline: useOfflineStore.getState().isOnline,
+    apiReachable: useOfflineStore.getState().apiReachable,
   };
 }
 
@@ -539,8 +540,13 @@ export async function runDuplicateTrip(
   _ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<string | null> {
-  if (!useOfflineStore.getState().isOnline) {
+  const off = useOfflineStore.getState();
+  if (!off.isOnline) {
     onFailure('offline');
+    return null;
+  }
+  if (!off.apiReachable) {
+    onFailure('api_unavailable');
     return null;
   }
   try {
@@ -562,9 +568,13 @@ export function runDeleteTrip(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const online = useOfflineStore.getState().isOnline;
-  if (!online) {
+  const off = useOfflineStore.getState();
+  if (!off.isOnline) {
     onFailure('offline');
+    return Promise.resolve(false);
+  }
+  if (!off.apiReachable) {
+    onFailure('api_unavailable');
     return Promise.resolve(false);
   }
   return deleteTrip(tripId)

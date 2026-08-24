@@ -3,6 +3,12 @@ import { create } from 'zustand';
 interface OfflineState {
   isOnline: boolean;
   setOnline: (value: boolean) => void;
+  // Whether the API answered recently: false after a network error or a 5xx,
+  // true again after any response that reached the backend (even a 4xx). Lets the
+  // app degrade to read-only when the device has connectivity but the API is down
+  // (#1166), distinct from `isOnline` (device connectivity via NetInfo).
+  apiReachable: boolean;
+  setApiReachable: (value: boolean) => void;
 }
 
 // Connectivity flag consulted by the mutation gate (see gating.ts). Mirrors the
@@ -13,4 +19,7 @@ interface OfflineState {
 export const useOfflineStore = create<OfflineState>((set) => ({
   isOnline: true,
   setOnline: (value) => set({ isOnline: value }),
+  apiReachable: true,
+  setApiReachable: (value) =>
+    set((s) => (s.apiReachable === value ? s : { apiReachable: value })),
 }));

@@ -2,7 +2,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
@@ -89,7 +89,7 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     act(() => {
       useTripStore.getState().reset();
-      useOfflineStore.setState({ isOnline: true });
+      useOfflineStore.setState({ isOnline: true, apiReachable: true });
       useTripStore.setState({
         stages: [stage(1), stage(2)],
         isLocked: false,
@@ -153,26 +153,37 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     );
   });
 
-  it('gates edits while offline: no API call, offline alert', async () => {
+  const bannerTexts = (tree: any): string[] =>
+    tree.root
+      .findAllByType(Text)
+      .flatMap((n: any) =>
+        Array.isArray(n.props.children) ? n.props.children : [n.props.children],
+      )
+      .filter((c: unknown): c is string => typeof c === 'string');
+
+  const insertRows = (tree: any): unknown[] =>
+    tree.root.findAll(
+      (n: any) =>
+        n.props.accessibilityLabel === restDayA11y() &&
+        typeof n.props.onPress === 'function',
+    );
+
+  it('goes read-only while offline: hides edit affordances, shows the offline banner (#1166)', () => {
     useOfflineStore.setState({ isOnline: false });
     const tree = render(<RoadbookView id="t1" />);
-
-    await act(async () => {
-      (
-        tree.root.find(
-          (n: any) =>
-            n.props.accessibilityLabel === restDayA11y() &&
-            typeof n.props.onPress === 'function',
-        ) as any
-      ).props.onPress();
-    });
-
+    // Read-only: no insertion affordance to tap, so no mutation can be dispatched.
+    expect(insertRows(tree)).toHaveLength(0);
     expect(insertRestDay).not.toHaveBeenCalled();
-    expect(useTripStore.getState().stages).toHaveLength(2);
-    expect(alertSpy).toHaveBeenCalledWith(
-      i18n.t('trip.edit.failedTitle'),
-      i18n.t('trip.edit.reason.offline'),
-    );
+    // A discreet banner names the reason.
+    expect(bannerTexts(tree)).toContain(i18n.t('trip.banners.offline'));
+  });
+
+  it('goes read-only when the API is unreachable while online (#1166)', () => {
+    useOfflineStore.setState({ isOnline: true, apiReachable: false });
+    const tree = render(<RoadbookView id="t1" />);
+    expect(insertRows(tree)).toHaveLength(0);
+    expect(insertRestDay).not.toHaveBeenCalled();
+    expect(bannerTexts(tree)).toContain(i18n.t('trip.banners.apiUnavailable'));
   });
 
   it('commits an inline add-stage to the API with the boundary payload', async () => {
