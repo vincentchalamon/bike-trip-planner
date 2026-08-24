@@ -344,6 +344,14 @@ describe('clearAllTripCache (#1174)', () => {
     await expect(clearAllTripCache()).resolves.toBeUndefined();
     expect(await listCachedTripIds()).toEqual([]);
   });
+
+  it('does not resurrect a first-time write racing a concurrent purge (#1174)', async () => {
+    // 'fresh' is not yet on disk, so it's not in listCachedTripIds() and its
+    // write is only stopped by the `purging` flag in writeFile — deleting that
+    // guard makes this fail.
+    await Promise.all([cacheTripDetail('fresh', detail()), clearAllTripCache()]);
+    expect(await readTripCache('fresh')).toBeNull();
+  });
 });
 
 describe('syncCachedTrips', () => {
