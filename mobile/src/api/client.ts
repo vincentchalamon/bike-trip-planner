@@ -3,6 +3,7 @@ import type { paths } from '@btp/core/schema';
 import { API_BASE_URL } from './config';
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
+import i18n from '../i18n';
 
 const RETRY_HEADER = 'X-Native-Retry';
 
@@ -26,6 +27,10 @@ export const authMiddleware: Middleware = {
     // the request's Accept-Encoding to `identity` when it sees it, disabling
     // compression for mobile only (web/PWA clients keep it). See .docker/php/Caddyfile.
     request.headers.set('X-Client-Platform', 'mobile');
+    // Without this, the server falls back to its own default (en) for every
+    // backend-rendered string (alert messages/actions) regardless of the app's
+    // own French UI (#1169) — RN's fetch does not send Accept-Language itself.
+    request.headers.set('Accept-Language', i18n.language);
     pendingRetries.set(request, request.clone());
     return request;
   },

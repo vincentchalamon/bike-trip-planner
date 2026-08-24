@@ -5,6 +5,7 @@ jest.mock('../auth/tokens', () => ({ getJwt: jest.fn() }));
 jest.mock('../auth/authApi', () => ({ refreshTokens: jest.fn() }));
 import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
+import i18n from '../i18n';
 
 const mockGetJwt = getJwt as jest.MockedFunction<typeof getJwt>;
 const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
@@ -33,6 +34,22 @@ describe('authMiddleware request headers', () => {
     const request = new Request('https://api.test/trips');
     await onRequest(request);
     expect(request.headers.get('X-Client-Platform')).toBe('mobile');
+  });
+
+  // Regression (#1169): RN's fetch never sends Accept-Language on its own, so a
+  // trip created from the app was always analyzed server-side in the backend's
+  // default locale (en) regardless of the app's own French UI.
+  it('carries the app locale as Accept-Language so backend-rendered alert text matches the UI language', async () => {
+    mockGetJwt.mockReturnValue('jwt');
+    await i18n.changeLanguage('fr');
+    const request = new Request('https://api.test/trips');
+    await onRequest(request);
+    expect(request.headers.get('Accept-Language')).toBe('fr');
+    await i18n.changeLanguage('en');
+    const englishRequest = new Request('https://api.test/trips');
+    await onRequest(englishRequest);
+    expect(englishRequest.headers.get('Accept-Language')).toBe('en');
+    await i18n.changeLanguage('fr');
   });
 });
 
