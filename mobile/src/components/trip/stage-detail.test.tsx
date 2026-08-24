@@ -2,7 +2,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
-import { Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
 import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
@@ -196,6 +196,19 @@ describe('StageDetailView', () => {
     expect(t).toContain('800 m'); // D+
     expect(t).toContain('600 m'); // D-
     expect(t).toContain('Étape 1 / 2');
+  });
+
+  it('wraps the screen scroll in a KeyboardAvoidingView with tap-through (#1171)', () => {
+    useTripStore.setState({ tripId: 't1', stages: [stage()], startDate: null, loading: false });
+    const tree = render(<StageDetailView initialIndex={0} />);
+    // The keyboard-avoiding wrapper keeps the manual accommodation form (and its
+    // Add/Cancel buttons) reachable when the keyboard is open; a refactor dropping
+    // it would silently re-break #1171.
+    expect(tree.root.findByType(KeyboardAvoidingView).props.behavior).toBeDefined();
+    const tapThrough = tree.root
+      .findAllByType(ScrollView)
+      .some((s: any) => s.props.keyboardShouldPersistTaps === 'handled');
+    expect(tapThrough).toBe(true);
   });
 
   it('advances to the next stage and bounds prev/next at the extremities', () => {
