@@ -1,4 +1,9 @@
 import { Directory, File, Paths } from 'expo-file-system';
+// The next File API's write() is synchronous (blocks the JS thread while the whole
+// ~6300-point geometry is serialized and flushed). The legacy writeAsStringAsync is
+// the only async writer expo-file-system exposes, so heavy cache writes run off the
+// UI thread (#1175).
+import { writeAsStringAsync } from 'expo-file-system/legacy';
 import type { TripDetail, TripRoute } from '../api/trips';
 import { todayUtc, tripStateFromDates } from '../components/trip/roadbook-dates';
 
@@ -7,6 +12,11 @@ import { todayUtc, tripStateFromDates } from '../components/trip/roadbook-dates'
 // rides on expo-file-system's document directory (survives restarts, not evicted
 // under storage pressure) rather than SecureStore — the route geometry is far too
 // large for SecureStore's small-value ceiling, and none of this is sensitive.
+//
+// Detail and route live in two separate files per trip (`<id>.json` and
+// `<id>.route.json`): a /detail refresh must not re-parse and re-serialize the
+// large geometry just to preserve it, and a re-sync must not rewrite an unchanged
+// route (#1175).
 //
 // Only upcoming / ongoing (and still-undated) trips are cached; a trip that has
 // turned *past* is evicted and served online-only, which bounds on-device storage
@@ -22,7 +32,17 @@ export interface CachedTrip {
   syncedAt: number;
 }
 
+// On-disk shape of the `<id>.json` file. `route` is only present in legacy
+// single-file caches written before the detail/route split; new writes never
+// embed it (it lives in `<id>.route.json`).
+interface CachedMeta {
+  detail: TripDetail;
+  syncedAt: number;
+  route?: TripRoute | null;
+}
+
 const CACHE_DIRNAME = 'trip-cache';
+const ROUTE_SUFFIX = '.route.json';
 // Trip ids are backend-issued UUID/ULID-like; reject anything else so a crafted id
 // can never escape the cache directory via the filename.
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
@@ -58,8 +78,12 @@ function cacheDir(): Directory {
   return new Directory(Paths.document, CACHE_DIRNAME);
 }
 
-function cacheFile(id: string): File {
+function metaFile(id: string): File {
   return new File(cacheDir(), `${id}.json`);
+}
+
+function routeFile(id: string): File {
+  return new File(cacheDir(), `${id}${ROUTE_SUFFIX}`);
 }
 
 function ensureDir(): void {
@@ -67,26 +91,30 @@ function ensureDir(): void {
   if (!dir.exists) dir.create({ intermediates: true });
 }
 
-// Synchronous write, wrapped so a filesystem error never propagates: the cache is
-// best-effort and the live network path is authoritative.
-function writeEntry(id: string, entry: CachedTrip): void {
+// Asynchronous write, wrapped so a filesystem error never propagates: the cache is
+// best-effort and the live network path is authoritative. create() is kept because
+// it is a known offline fix (#1147) that guarantees the target exists before write.
+// Returns whether the write actually landed: create() puts an empty file on disk
+// synchronously, so `.exists` can't tell a successful write from a swallowed
+// failure — callers that must confirm a write (route migration) need this signal.
+async function writeFile(file: File, content: string): Promise<boolean> {
   try {
     ensureDir();
-    const file = cacheFile(id);
     if (!file.exists) file.create();
-    file.write(JSON.stringify(entry));
+    await writeAsStringAsync(file.uri, content);
+    return true;
   } catch {
     // ignore: a failed cache write only costs a later offline miss.
+    return false;
   }
 }
 
-/** Read a trip's cached entry, or null when it is absent or corrupt. */
-export async function readTripCache(id: string): Promise<CachedTrip | null> {
-  if (!SAFE_ID.test(id)) return null;
+/** Read a trip's `<id>.json` metadata (detail + syncedAt), without the geometry. */
+async function readMeta(id: string): Promise<CachedMeta | null> {
   try {
-    const file = cacheFile(id);
+    const file = metaFile(id);
     if (!file.exists) return null;
-    const parsed = JSON.parse(await file.text()) as CachedTrip;
+    const parsed = JSON.parse(await file.text()) as CachedMeta;
     if (!parsed || typeof parsed.syncedAt !== 'number' || !parsed.detail) {
       return null;
     }
@@ -96,12 +124,36 @@ export async function readTripCache(id: string): Promise<CachedTrip | null> {
   }
 }
 
+/** Read a trip's `<id>.route.json` geometry, or null when absent or corrupt. */
+async function readRoute(id: string): Promise<TripRoute | null> {
+  try {
+    const file = routeFile(id);
+    if (!file.exists) return null;
+    return JSON.parse(await file.text()) as TripRoute;
+  } catch {
+    return null;
+  }
+}
+
+/** Read a trip's cached entry, or null when it is absent or corrupt. */
+export async function readTripCache(id: string): Promise<CachedTrip | null> {
+  if (!SAFE_ID.test(id)) return null;
+  const meta = await readMeta(id);
+  if (!meta) return null;
+  // Prefer the split route file; fall back to a legacy embedded route so a cache
+  // written before the split still surfaces its geometry.
+  const route = (await readRoute(id)) ?? meta.route ?? null;
+  return { detail: meta.detail, route, syncedAt: meta.syncedAt };
+}
+
 /** Delete a trip's cache entry (e.g. once it turns past, or on trip deletion). */
 export async function deleteTripCache(id: string): Promise<void> {
   if (!SAFE_ID.test(id)) return;
   try {
-    const file = cacheFile(id);
-    if (file.exists) file.delete();
+    const meta = metaFile(id);
+    if (meta.exists) meta.delete();
+    const route = routeFile(id);
+    if (route.exists) route.delete();
   } catch {
     // ignore
   }
@@ -109,8 +161,9 @@ export async function deleteTripCache(id: string): Promise<void> {
 
 /**
  * Persist (or refresh) a trip's /detail payload and stamp the sync time. A trip
- * that is no longer cacheable (turned past) is evicted instead. Any existing
- * route geometry is preserved.
+ * that is no longer cacheable (turned past) is evicted instead. The route file is
+ * left untouched, so a detail refresh never re-parses or re-serializes the
+ * geometry (#1175).
  */
 export async function cacheTripDetail(
   id: string,
@@ -123,15 +176,40 @@ export async function cacheTripDetail(
       await deleteTripCache(id);
       return;
     }
-    const existing = await readTripCache(id);
-    writeEntry(id, { detail, route: existing?.route ?? null, syncedAt });
+    // Migrate a legacy embedded route into the split file (only when one is
+    // actually present — the steady-state, post-split path never touches the large
+    // route file). Confirm the migration via the route file's CONTENT, not
+    // `.exists`: create() leaves an empty stub behind when a prior write failed, so
+    // `.exists` would falsely report it migrated and let a later refresh drop it
+    // from the meta too. Keep the route in the meta as a fallback until it lands.
+    const existing = await readMeta(id);
+    const legacyRoute = existing?.route;
+    let survivingLegacyRoute: TripRoute | null | undefined;
+    if (legacyRoute) {
+      const routeHandle = routeFile(id);
+      const serialized = JSON.stringify(legacyRoute);
+      const previousRoute = routeHandle.exists ? await routeHandle.text() : null;
+      const migrated =
+        previousRoute === serialized || (await writeFile(routeHandle, serialized));
+      survivingLegacyRoute = migrated ? undefined : legacyRoute;
+    }
+    await writeFile(
+      metaFile(id),
+      JSON.stringify({
+        detail,
+        syncedAt,
+        ...(survivingLegacyRoute ? { route: survivingLegacyRoute } : {}),
+      } satisfies CachedMeta),
+    );
   });
 }
 
 /**
  * Attach freshly fetched route geometry to a trip's cache entry and re-stamp the
  * sync time. No-op when the trip is not already cached (its /detail must be
- * cached first, which classifies it as cacheable).
+ * cached first, which classifies it as cacheable). The (large) geometry is only
+ * rewritten when it actually changed; the sync time is re-stamped regardless
+ * (#1175).
  */
 export async function cacheTripRoute(
   id: string,
@@ -140,9 +218,24 @@ export async function cacheTripRoute(
 ): Promise<void> {
   if (!SAFE_ID.test(id)) return;
   return withLock(id, async () => {
-    const existing = await readTripCache(id);
-    if (!existing) return;
-    writeEntry(id, { ...existing, route, syncedAt });
+    const meta = await readMeta(id);
+    if (!meta) return;
+    const serialized = JSON.stringify(route);
+    const file = routeFile(id);
+    const previous = file.exists ? await file.text() : null;
+    // Same confirm-before-drop as cacheTripDetail: only clear a legacy embedded
+    // route from the meta once the split-file write actually landed, so a failed
+    // route write on a pre-split cache doesn't lose the geometry from both places.
+    const landed = previous === serialized || (await writeFile(file, serialized));
+    const legacyRoute = landed ? undefined : meta.route;
+    await writeFile(
+      metaFile(id),
+      JSON.stringify({
+        detail: meta.detail,
+        syncedAt,
+        ...(legacyRoute ? { route: legacyRoute } : {}),
+      } satisfies CachedMeta),
+    );
   });
 }
 
@@ -154,7 +247,7 @@ export async function listCachedTripIds(): Promise<string[]> {
     return dir
       .list()
       .map((entry) => entry.name)
-      .filter((name) => name.endsWith('.json'))
+      .filter((name) => name.endsWith('.json') && !name.endsWith(ROUTE_SUFFIX))
       .map((name) => name.slice(0, -'.json'.length))
       .filter((id) => SAFE_ID.test(id));
   } catch {
@@ -184,9 +277,11 @@ export async function syncCachedTrips(deps: SyncDeps): Promise<void> {
         const detail = await deps.fetchDetail(id);
         if (!detail) return;
         await cacheTripDetail(id, detail);
-        // Only pull the (large) geometry back if the trip is still cached after
-        // the detail refresh — a now-past trip was just evicted.
-        if (await readTripCache(id)) {
+        // Only pull the (large) geometry back if the trip is still validly cached
+        // after the detail refresh — a now-past trip was just evicted, and a failed
+        // meta write leaves an empty stub whose `.exists` lies. readMeta validates
+        // the content (syncedAt/detail), so we don't fetch a route for a non-entry.
+        if (await readMeta(id)) {
           const route = await deps.fetchRoute(id);
           if (route) await cacheTripRoute(id, route);
         }
