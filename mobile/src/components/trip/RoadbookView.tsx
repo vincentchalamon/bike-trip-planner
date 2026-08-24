@@ -9,6 +9,7 @@ import { StageCard, stageKey } from './StageCard';
 import { StageInsertRow } from './StageInsertRow';
 import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
+import { ModificationQueue } from './ModificationQueue';
 import { useOfflineStore } from '../../store/offline-store';
 import {
   isStageToday,
@@ -21,6 +22,10 @@ import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import type { MutationFailure } from '../../store/gating';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
+
+// Stable in-flight key for the grouped "apply and recompute" action, so a
+// double-tap on it fires a single runApplyBatch (same guard as the insert rows).
+const BATCH_KEY = 'apply-batch';
 
 // The roadbook tab: a lifecycle summary header (upcoming / ongoing / past),
 // the lock / out-of-zone / no-dates banners, then the stage list (StageCard
@@ -51,6 +56,7 @@ export function RoadbookView({
   const apiReachable = useOfflineStore((s) => s.apiReachable);
   const startDate = useTripStore((s) => s.startDate);
   const endDate = useTripStore((s) => s.endDate);
+  const cancelAllModifications = useTripStore((s) => s.cancelAllModifications);
 
   const today = todayUtc();
   const state = tripStateFromDates(startDate, endDate, today);
@@ -260,6 +266,17 @@ export function RoadbookView({
           <Bike color={theme.colors.primaryForeground} size={22} />
         </Pressable>
       ) : null}
+      {/* Grouped modification queue (#1179): surfaces when edits are queued in the
+          store, applies them in one recompute (runApplyBatch) or clears them.
+          Auto-hides when empty; the apply is disabled in the read-only / degraded
+          state so the batch write never fires offline / API-down (#1166). */}
+      <ModificationQueue
+        applying={busyKeys.has(BATCH_KEY)}
+        disabled={readOnly}
+        bottomOffset={insets.bottom + theme.spacing.lg}
+        onApply={() => runGuarded(BATCH_KEY, () => mutations.applyBatch())}
+        onCancel={cancelAllModifications}
+      />
     </View>
   );
 }

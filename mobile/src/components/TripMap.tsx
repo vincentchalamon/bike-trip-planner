@@ -19,6 +19,7 @@ import {
   computeBounds,
   mapStyleFor,
   markerCollection,
+  poiFromPressFeatures,
   segmentFeature,
   type MapMarker,
   type StageLine,
@@ -32,6 +33,7 @@ export function TripMap({
   stageSegments,
   markers,
   highlightedSegment,
+  onSelectPoi,
 }: {
   // One colored polyline per stage; the route is drawn stage by stage so each
   // stands out (see stageColor). Camera framing uses all points flattened.
@@ -42,6 +44,10 @@ export function TripMap({
   // alerts pilot this later; use alertSegmentToCoords() to adapt an alert
   // action's [lat, lon] segment.
   highlightedSegment?: [number, number][];
+  // Tap on a POI marker → the tapped POI (name + coords), so the caller can open
+  // the "add to itinerary" popover (#1179). Omitted where the map is read-only:
+  // the marker source then carries no onPress and taps are inert.
+  onSelectPoi?: (poi: MapMarker) => void;
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -159,7 +165,16 @@ export function TripMap({
           </GeoJSONSource>
         ) : null}
         {markerData.features.length > 0 ? (
-          <GeoJSONSource id="markers" data={markerData}>
+          <GeoJSONSource
+            id="markers"
+            data={markerData}
+            {...(onSelectPoi && {
+              onPress: (e: { nativeEvent: { features: GeoJSON.Feature[] } }) => {
+                const poi = poiFromPressFeatures(e.nativeEvent.features);
+                if (poi) onSelectPoi(poi);
+              },
+            })}
+          >
             <Layer
               id="markers-circle"
               type="circle"
