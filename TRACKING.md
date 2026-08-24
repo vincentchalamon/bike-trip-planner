@@ -2082,13 +2082,13 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 | Sécurité | [#1174](https://github.com/vincentchalamon/bike-trip-planner/issues/1174) | purge cache offline au logout + suppression export RGPD + durcissements | Task | M | ✅ Mergée ([#1188](https://github.com/vincentchalamon/bike-trip-planner/pull/1188) stack↑#1189) |
 | Perf | [#1175](https://github.com/vincentchalamon/bike-trip-planner/issues/1175) | écriture cache async + route inchangée non ré-sérialisée | Task | M | ✅ Mergée ([#1189](https://github.com/vincentchalamon/bike-trip-planner/pull/1189)) |
 | Perf | [#1176](https://github.com/vincentchalamon/bike-trip-planner/issues/1176) | mémoïsation listes + tree-shake lucide + carte maintenue montée | Task | M | ✅ Mergée ([#1190](https://github.com/vincentchalamon/bike-trip-planner/pull/1190) stack↑#1187) |
-| Perf | [#1194](https://github.com/vincentchalamon/bike-trip-planner/issues/1194) | tree-shake lucide-react-native (suivi #1176) | Task | S | ⏳ À faire |
-| Parité | [#1177](https://github.com/vincentchalamon/bike-trip-planner/issues/1177) | consultation in-app d'un voyage partagé /s/&lt;code&gt; | Feature | M | ⏳ À faire |
-| Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ⏳ À faire |
-| Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ⏳ À faire |
-| Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ⏳ À faire |
+| Perf | [#1194](https://github.com/vincentchalamon/bike-trip-planner/issues/1194) | tree-shake lucide-react-native (suivi #1176) | Task | S | ✅ Mergée ([#1204](https://github.com/vincentchalamon/bike-trip-planner/pull/1204)) |
+| Parité | [#1177](https://github.com/vincentchalamon/bike-trip-planner/issues/1177) | consultation in-app d'un voyage partagé /s/&lt;code&gt; | Feature | M | ✅ Mergée ([#1205](https://github.com/vincentchalamon/bike-trip-planner/pull/1205)) |
+| Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ✅ Mergée ([#1207](https://github.com/vincentchalamon/bike-trip-planner/pull/1207)) |
+| Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ✅ Mergée ([#1206](https://github.com/vincentchalamon/bike-trip-planner/pull/1206)) |
+| Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ✅ Mergée ([#1202](https://github.com/vincentchalamon/bike-trip-planner/pull/1202)) |
 | Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | ⏳ À faire |
-| Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | ✅ Tests initiaux mergés (#1183), couverture à compléter |
+| Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | ✅ Couverture mergée ([#1203](https://github.com/vincentchalamon/bike-trip-planner/pull/1203)) — initiaux #1183 |
 
 **Recette — ce qui a été vérifié en live (device) :** liste, roadbook, détail d'étape, carte + profil, configuration, compte, notifications, in-ride (8 intents + GPS réel), création ; formulaire hébergement manuel #1097 (entrée + champs). Mode dégradé testé : offline (mode avion, cold + warm) et API indisponible (backend arrêté, Internet OK).
 
@@ -2109,6 +2109,35 @@ Lot **bugs + perf** implémenté en parallèle (worktree agents, tous mobile-onl
 | [#1190](https://github.com/vincentchalamon/bike-trip-planner/pull/1190) | #1176 | `feature/1173` | `index.tsx` (TripCard/renderItem), StageCard, RoadbookView, trip/[id] | **stacké sur #1187** ; régions disjointes de la ligne `keyExtractor` |
 
 **Ordre de merge conseillé** : d'abord les 3 indépendantes (#1184, #1185, #1186) dans n'importe quel ordre ; puis chaque stack de bas en haut — **#1189 → #1188** et **#1187 → #1190**. Après le squash-merge d'un parent, rebaser l'enfant avec `git rebase --onto origin/main <tip-parent-avant-squash>` (GitHub retargette l'enfant sur `main` mais la branche porte encore les commits pré-squash du parent).
+
+#### Vague 2 — parité + closers (#1194/#1182/#1177/#1179/#1180/#1178)
+
+6 PRs, mobile-only (CI = tsc + jest). 2 mini-stacks (overlap `icons.ts` et store/menu roadbook), 2 indépendantes.
+
+| PR | Ticket | Base | Fichiers clés | Overlap / arbitrage |
+|----|--------|------|---------------|---------------------|
+| [#1204](https://github.com/vincentchalamon/bike-trip-planner/pull/1204) | #1194 | `main` | `components/ui/icons.ts` (réécriture deep-import), `theme/shims.d.ts`, `jest.config.js` | **parent** ; possède la réécriture d'`icons.ts` |
+| [#1205](https://github.com/vincentchalamon/bike-trip-planner/pull/1205) | #1177 | `feature/1194` | `app/s/[code].tsx`, `use-shared-trip.ts`, `RoadbookView.tsx` (prop `readOnly`), `icons.ts` (`Eye`) | **stacké sur #1204** ; conflit `icons.ts` déjà résolu dans la branche (`Eye` en deep-import) |
+| [#1203](https://github.com/vincentchalamon/bike-trip-planner/pull/1203) | #1182 | `main` | `manual-accommodation.test.tsx` (test-only) | — (indépendante) |
+| [#1206](https://github.com/vincentchalamon/bike-trip-planner/pull/1206) | #1179 | `main` | `ModificationQueue.tsx`, `PoiWaypointPopover.tsx`, `TripMap.tsx`, `StageDetailView.tsx`, `RoadbookView.tsx` | **parent** ; ModificationQueue montée près du FAB, régions distinctes du menu ⋯ |
+| [#1207](https://github.com/vincentchalamon/bike-trip-planner/pull/1207) | #1178 | `feature/1179` | `temporal-middleware.ts`, `trip-store.ts`, `mutations.ts`, `app/trip/[id]/index.tsx` (menu ⋯), `icons.ts` (`Undo2`/`Redo2`) | **stacké sur #1206** ; **conflit `icons.ts` attendu vs #1204** (voir ci-dessous) |
+| [#1202](https://github.com/vincentchalamon/bike-trip-planner/pull/1202) | #1180 | `main` | `onboarding/*` (fichiers neufs), `(tabs)/_layout.tsx` (montage) | — (indépendante) |
+
+**Ordre de merge conseillé** :
+
+1. **#1204** (#1194) en premier — c'est lui qui réécrit `icons.ts`.
+2. **#1205** (#1177) juste après #1204 (stack, `icons.ts` déjà cohérent).
+3. **#1206** (#1179) puis **#1207** (#1178) — stack de bas en haut.
+4. **#1203** (#1182) et **#1202** (#1180) — indépendantes, n'importe quand.
+
+**Conflit `icons.ts` — #1207 (#1178) vs #1204 (#1194)** : les deux chaînes sont indépendantes et touchent `icons.ts`. Quand la 2e chaîne merge (typiquement #1206→#1207 après #1204), `icons.ts` conflit sur l'ajout barrel `export { Redo2, Undo2 } from 'lucide-react-native'`. **Résolution** : garder le fichier deep-import de #1204 et remplacer cet ajout par deux imports profonds :
+
+```ts
+export { default as Undo2 } from 'lucide-react-native/dist/esm/icons/undo-2.js';
+export { default as Redo2 } from 'lucide-react-native/dist/esm/icons/redo-2.js';
+```
+
+Après squash-merge d'un parent, rebaser l'enfant avec `git rebase --onto origin/main <tip-parent-avant-squash>`.
 
 </details>
 
