@@ -82,7 +82,7 @@ describe('AccommodationBlock — localized type label #1170', () => {
     expect(meta).not.toContain(' other ');
   });
 
-  it('falls back to the raw value for a type the catalog does not know, instead of crashing', () => {
+  it('labels a type the catalog does not know as "Autre" (mirrors pwa), never the raw enum', () => {
     const t = texts(
       render(
         <AccommodationBlock
@@ -91,6 +91,8 @@ describe('AccommodationBlock — localized type label #1170', () => {
         />,
       ),
     );
-    expect(t.join(' ')).toContain('unknown future type');
+    expect(t.join(' ')).toContain(fr.config.type_other);
+    expect(t.join(' ')).not.toContain('unknown_future_type');
+    expect(t.join(' ')).not.toContain('unknown future type');
   });
 });
