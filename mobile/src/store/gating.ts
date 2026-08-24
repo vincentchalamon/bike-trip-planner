@@ -31,13 +31,6 @@ export interface GateState {
 }
 
 /**
- * Pre-flight gate shared by all mutations. Offline blocks everything; a started
- * trip (423) is fully read-only; an out-of-zone trip blocks only mutations that
- * need Valhalla rerouting (`requiresRouting`). Returns the blocking reason, or
- * `null` when the mutation may proceed. Offline wins over lock wins over zone so
- * the most fundamental obstacle is reported first.
- */
-/**
  * Connectivity-only refusal, shared by {@link evaluateGate} and the
  * duplicate/delete runners (which allow a locked / out-of-zone trip — a clone or
  * delete is not an edit — so they can't use the full gate but must still refuse
@@ -51,6 +44,14 @@ export function connectivityRefusal(
   return null;
 }
 
+/**
+ * Pre-flight gate shared by all mutations. Connectivity blocks everything
+ * (offline, then API-down); a started trip (423) is fully read-only; an
+ * out-of-zone trip blocks only mutations that need Valhalla rerouting
+ * (`requiresRouting`). Returns the blocking reason, or `null` when the mutation
+ * may proceed. Precedence: offline > api_unavailable > locked > out_of_zone, so
+ * the most fundamental obstacle is reported first.
+ */
 export function evaluateGate(
   state: GateState,
   requiresRouting: boolean,
