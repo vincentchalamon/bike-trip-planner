@@ -119,6 +119,33 @@ describe('AuthProvider stale-response guard (#1117)', () => {
     expect(captured.email).toBe('me@example.com');
   });
 
+  it('does not reject and leaves email null when the boot GET /users/me fails (offline cold start #1167)', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    mockGet.mockRejectedValue(new Error('fetch failed'));
+
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+
+    // No 'Uncaught (in promise) fetch failed'; the effect swallows it.
+    expect(captured.email).toBeNull();
+  });
+
+  it('does not reject and keeps the email when refreshEmail() fails offline (#1167)', async () => {
+    mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
+    mockGet.mockResolvedValueOnce({ data: { email: 'me@example.com' } } as never);
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Wrapper, null, createElement(Consumer)));
+    });
+    expect(captured.email).toBe('me@example.com');
+
+    mockGet.mockRejectedValueOnce(new Error('fetch failed'));
+    await act(async () => {
+      await expect(captured.refreshEmail()).resolves.toBeUndefined();
+    });
+    expect(captured.email).toBe('me@example.com');
+  });
+
   it('drops a refreshEmail() response that lands after logout(): email stays null', async () => {
     mockLoadTokens.mockResolvedValue({ jwt: 'jwt', refresh: 'refresh' });
     // Mount effect resolves immediately with the current email.
