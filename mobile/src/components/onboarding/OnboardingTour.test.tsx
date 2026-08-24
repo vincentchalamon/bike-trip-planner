@@ -31,6 +31,10 @@ function findSkip(root: any): any {
       n.props?.accessibilityLabel === i18n.t('onboarding.skip'),
   );
 }
+// The bottom CTA is a Button rendered with a `label` prop (Suivant / Commencer).
+function findCta(root: any): any {
+  return root.find((n: any) => typeof n.props?.label === 'string' && !!n.props?.onPress);
+}
 
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
@@ -56,6 +60,25 @@ describe('OnboardingTour', () => {
   it('does not render once the flag is already set', async () => {
     useOnboarding.setState({ seen: true, hydrated: true });
     const root = await render();
+    expect(isVisible(root)).toBe(false);
+  });
+
+  it('advances through the steps via Next and finishes (markSeen) on the last (#1202 review)', async () => {
+    const root = await render();
+    // Step 1/3, CTA reads "Suivant".
+    expect(findCta(root).props.label).toBe(i18n.t('onboarding.next'));
+
+    await act(async () => findCta(root).props.onPress()); // -> step 2
+    expect(findCta(root).props.label).toBe(i18n.t('onboarding.next'));
+    await act(async () => findCta(root).props.onPress()); // -> step 3 (last)
+
+    // On the last step the CTA becomes "Commencer" and does not mark seen yet.
+    expect(findCta(root).props.label).toBe(i18n.t('onboarding.start'));
+    expect(useOnboarding.getState().seen).toBe(false);
+
+    await act(async () => findCta(root).props.onPress()); // finish
+    expect(useOnboarding.getState().seen).toBe(true);
+    expect(setItem).toHaveBeenCalledWith('btp_onboarding_seen', 'true');
     expect(isVisible(root)).toBe(false);
   });
 
