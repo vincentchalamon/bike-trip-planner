@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -78,9 +78,9 @@ interface TripCardProps {
   item: TripListItem;
   theme: Theme;
   duplicatingId: string | null;
-  onOpen: () => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
+  onOpen: (item: TripListItem) => void;
+  onDelete: (item: TripListItem) => void;
+  onDuplicate: (item: TripListItem) => void | Promise<void>;
   duplicateA11y: string;
   deleteA11y: string;
   statusLabel: string;
@@ -88,7 +88,11 @@ interface TripCardProps {
   subtitle: string;
 }
 
-function TripCard({
+// Memoized (perf #1176): `renderItem` passes stable top-level callbacks
+// (bound by the parent to the item they act on internally, not re-wrapped
+// per row) so a row skips re-rendering when an unrelated part of the trips
+// list re-renders.
+const TripCard = memo(function TripCard({
   item,
   theme,
   duplicatingId,
@@ -117,7 +121,7 @@ function TripCard({
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onOpen}
+      onPress={() => onOpen(item)}
       style={({ pressed }) => ({
         overflow: 'hidden',
         borderRadius: theme.radius.xl,
@@ -151,7 +155,7 @@ function TripCard({
             accessibilityState={{ disabled: duplicating }}
             disabled={duplicating}
             hitSlop={8}
-            onPress={onDuplicate}
+            onPress={() => void onDuplicate(item)}
             style={iconBtn}
           >
             <Copy color={theme.colors.mutedForeground} size={16} />
@@ -160,7 +164,7 @@ function TripCard({
             accessibilityRole="button"
             accessibilityLabel={deleteA11y}
             hitSlop={8}
-            onPress={onDelete}
+            onPress={() => onDelete(item)}
             style={iconBtn}
           >
             <Trash2 color={theme.colors.destructive} size={16} />
@@ -189,7 +193,7 @@ function TripCard({
       </View>
     </Pressable>
   );
-}
+});
 
 export default function Trips() {
   const { t, i18n } = useTranslation();
@@ -223,30 +227,51 @@ export default function Trips() {
   // firing two POST /trips/{id}/duplicate (each would clone the trip again).
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
-  function onDelete(item: TripListItem): void {
-    confirmDeleteTrip({
-      title: t('trips.deleteConfirmTitle'),
-      message: t('trips.deleteConfirmMessage', {
-        title: item.title ?? t('trips.untitled'),
-      }),
-      cancel: t('trips.cancel'),
-      confirm: t('trips.delete'),
-      onConfirm: () => {
-        void remove(item.id ?? '');
-      },
-    });
-  }
+  // Stable across renders (perf #1176): passed straight through as `TripCard`
+  // props so a memoized row doesn't re-render just because these closures got
+  // recreated.
+  const onOpen = useCallback(
+    (item: TripListItem) =>
+      router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } }),
+    [router],
+  );
 
-  async function onDuplicate(item: TripListItem): Promise<void> {
-    const id = item.id ?? '';
-    if (duplicatingId === id) return; // re-entrance guard: a duplication is in flight
-    setDuplicatingId(id);
-    const newId = await duplicate(id);
-    setDuplicatingId(null);
-    if (!newId) {
-      Alert.alert(t('trips.duplicateFailedTitle'), t('trips.duplicateFailed'));
-    }
-  }
+  const onDelete = useCallback(
+    (item: TripListItem): void => {
+      confirmDeleteTrip({
+        title: t('trips.deleteConfirmTitle'),
+        message: t('trips.deleteConfirmMessage', {
+          title: item.title ?? t('trips.untitled'),
+        }),
+        cancel: t('trips.cancel'),
+        confirm: t('trips.delete'),
+        onConfirm: () => {
+          void remove(item.id ?? '');
+        },
+      });
+    },
+    [t, remove],
+  );
+
+  // Note: unlike `onOpen`/`onDelete`, this one is *not* fully stable — it
+  // depends on `duplicatingId` for the re-entrance guard (a `setState`
+  // functional updater cannot double as a synchronous read: the updater runs
+  // on React's next flush, not inline, so checking a flag it sets right after
+  // calling `setDuplicatingId` would always see the pre-update value).
+  // Correctness over the last bit of memoization here.
+  const onDuplicate = useCallback(
+    async (item: TripListItem): Promise<void> => {
+      const id = item.id ?? '';
+      if (duplicatingId === id) return; // a duplication for this trip is already in flight
+      setDuplicatingId(id);
+      const newId = await duplicate(id);
+      setDuplicatingId(null);
+      if (!newId) {
+        Alert.alert(t('trips.duplicateFailedTitle'), t('trips.duplicateFailed'));
+      }
+    },
+    [duplicatingId, duplicate, t],
+  );
 
   function subtitleOf(item: TripListItem): string {
     const parts = [
@@ -387,11 +412,9 @@ export default function Trips() {
                 statusLabel={t(`trips.status.${statusOf(item)}`)}
                 duplicateA11y={t('trips.duplicateA11y', { title: displayTitle })}
                 deleteA11y={t('trips.deleteA11y', { title: displayTitle })}
-                onOpen={() =>
-                  router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } })
-                }
-                onDelete={() => onDelete(item)}
-                onDuplicate={() => void onDuplicate(item)}
+                onOpen={onOpen}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
               />
             );
           }}

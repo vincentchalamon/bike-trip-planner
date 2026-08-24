@@ -87,6 +87,14 @@ export default function TripRoadbook() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [view, setView] = useState<TripView>('roadbook');
+  // Mount TripMapView only once the Map tab is first opened, then keep it mounted
+  // (never re-mount). Gating the first mount preserves ADR-057's "route fetched
+  // only when the map is actually viewed" — TripMapView calls useTripRoute()
+  // unconditionally — while still avoiding the expensive native re-mount (#1176).
+  const [hasViewedMap, setHasViewedMap] = useState(view === 'map');
+  useEffect(() => {
+    if (view === 'map') setHasViewedMap(true);
+  }, [view]);
   const [configOpen, setConfigOpen] = useState(false);
   const [configSection, setConfigSection] = useState<'dates' | undefined>(undefined);
   const [shareOpen, setShareOpen] = useState(false);
@@ -245,11 +253,19 @@ export default function TripRoadbook() {
       </View>
 
       <View style={{ flex: 1 }} {...panResponder.panHandlers}>
-        {view === 'map' ? (
-          <TripMapView />
-        ) : (
+        {/* Once opened, both tabs stay mounted (perf #1176): MapLibre's native
+            view is expensive to tear down and recreate (GPU textures, tile
+            cache), so swapping it out on every Roadbook<->Carte toggle re-pays
+            that cost each time. Hiding the inactive one via `display: none`
+            keeps a single long-lived map instance. The map is only mounted
+            after its first open (`hasViewedMap`) so a rider who never taps
+            "Carte" never triggers TripMapView's eager /route fetch (ADR-057). */}
+        <View style={{ flex: 1, display: view === 'map' ? 'flex' : 'none' }}>
+          {hasViewedMap ? <TripMapView /> : null}
+        </View>
+        <View style={{ flex: 1, display: view === 'roadbook' ? 'flex' : 'none' }}>
           <RoadbookView id={id} onConfigureDates={openDatesConfig} />
-        )}
+        </View>
       </View>
 
       <Modal

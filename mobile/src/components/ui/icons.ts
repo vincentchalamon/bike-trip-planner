@@ -1,5 +1,16 @@
 // Icon parity with the web (lucide). Re-export the curated set the mobile
 // screens use so call sites import from one place. Add icons here as needed.
+// TODO(perf #1194): the barrel re-export pulls the whole `lucide-react-native`
+// icon set (~3300 icons) into the bundle; deep imports would shrink it, but
+// they are not a mechanical rewrite — many names here are legacy aliases
+// resolved through the package's alias map, not the file each icon actually
+// lives in (e.g. `AlertTriangle` -> `dist/esm/icons/triangle-alert.js`,
+// `HelpCircle` -> `dist/esm/icons/circle-question-mark.js`, `MoreVertical` ->
+// `dist/esm/icons/ellipsis-vertical.js`), and that mapping is an internal,
+// version-fragile implementation detail (checked against v0.545.0), not a
+// published contract. Left alone for now; revisit if bundle size becomes a
+// measured problem, ideally with a codemod driven off the package's own
+// alias table rather than a hand-maintained one.
 export {
   AlertTriangle,
   ArrowLeft,

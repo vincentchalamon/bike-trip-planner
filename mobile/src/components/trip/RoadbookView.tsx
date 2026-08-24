@@ -86,16 +86,31 @@ export function RoadbookView({
     [],
   );
 
-  function confirmDelete(index: number): void {
-    Alert.alert(t('trip.deleteConfirmTitle'), t('trip.deleteConfirmMessage'), [
-      { text: t('trip.cancel'), style: 'cancel' },
-      {
-        text: t('trip.delete'),
-        style: 'destructive',
-        onPress: () => void mutations.deleteStage(index),
-      },
-    ]);
-  }
+  // Stable across renders (perf #1176): passed straight through as `StageCard`'s
+  // `onDelete` prop, so a memoized row doesn't re-render just because this
+  // closure got recreated.
+  const confirmDelete = useCallback(
+    (index: number): void => {
+      Alert.alert(t('trip.deleteConfirmTitle'), t('trip.deleteConfirmMessage'), [
+        { text: t('trip.cancel'), style: 'cancel' },
+        {
+          text: t('trip.delete'),
+          style: 'destructive',
+          onPress: () => void mutations.deleteStage(index),
+        },
+      ]);
+    },
+    [t, mutations],
+  );
+
+  // Stable across renders (perf #1176): same reasoning as `confirmDelete`,
+  // for `StageCard`'s `onPress` (tap-through to the stage detail).
+  const openStage = useCallback(
+    (index: number): void => {
+      router.push(`/trip/${id}/stage/${index}`);
+    },
+    [router, id],
+  );
 
   const header = (
     <View
@@ -167,7 +182,7 @@ export function RoadbookView({
                 index={index}
                 locked={readOnly}
                 onDelete={confirmDelete}
-                onPress={(i) => router.push(`/trip/${id}/stage/${i}`)}
+                onPress={openStage}
                 date={date}
                 isToday={state === 'ongoing' && isStageToday(date, today)}
                 highlighted={stageDiffs.has(index)}
