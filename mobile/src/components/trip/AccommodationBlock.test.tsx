@@ -3,6 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import { Text } from 'react-native';
 import type { AccommodationData } from '@btp/core';
+import { FILTERABLE_ACCOMMODATION_TYPES } from '@btp/core/constants';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { AccommodationBlock } from './AccommodationBlock';
@@ -94,5 +95,15 @@ describe('AccommodationBlock — localized type label #1170', () => {
     expect(t.join(' ')).toContain(fr.config.type_other);
     expect(t.join(' ')).not.toContain('unknown_future_type');
     expect(t.join(' ')).not.toContain('unknown future type');
+  });
+
+  it('has a translation key for every known accommodation type (no silent key miss)', () => {
+    // A filterable type added upstream would make isKnownAccommodationType return
+    // true and call t(`config.type_${type}`); without a matching fr/en key i18next
+    // prints the raw key, silently reopening #1170 for the next type. Mirrors
+    // pwa/src/lib/accommodation-types.test.ts.
+    for (const type of [...FILTERABLE_ACCOMMODATION_TYPES, 'other']) {
+      expect(fr.config[`type_${type}` as keyof typeof fr.config]).toBeDefined();
+    }
   });
 });
