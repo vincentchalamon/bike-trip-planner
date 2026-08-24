@@ -4,12 +4,13 @@ import type { TripListItem } from '../api/trips';
 
 // Last-known snapshot of the trips list (page 1, unfiltered), so the home screen
 // still lists the rider's trips offline / when the API is down instead of a bare
-// error (#1167). Stored as one JSON file alongside the per-trip detail cache
-// (trip-cache), but kept separate: the list item shape (Trip.TripListItem) is not
+// error (#1167). Stored as one JSON file in its OWN directory (never trip-cache/, whose
+// id-based file enumeration would otherwise pick up trips-list.json as a bogus
+// trip id and GET /trips/trips-list/detail forever), kept separate because: the list item shape (Trip.TripListItem) is not
 // the detail payload, and reconstructing it from per-trip detail caches would be
 // lossy (only opened trips are cached, and stageCount/totalDistance/status differ).
 
-const CACHE_DIRNAME = 'trip-cache';
+const CACHE_DIRNAME = 'trips-list-cache';
 const LIST_FILENAME = 'trips-list.json';
 
 interface CachedList {
