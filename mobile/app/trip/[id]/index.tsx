@@ -245,11 +245,19 @@ export default function TripRoadbook() {
       </View>
 
       <View style={{ flex: 1 }} {...panResponder.panHandlers}>
-        {view === 'map' ? (
+        {/* Both tabs stay mounted (perf #1176): MapLibre's native view is
+            expensive to tear down and recreate (GPU textures, tile cache), so
+            swapping it out on every Roadbook<->Carte toggle re-pays that cost
+            each time. Hiding the inactive one via `display: none` keeps a
+            single long-lived map instance for the trip's lifetime, at the
+            cost of the roadbook's FlatList also staying mounted (and
+            subscribed) while the map tab is active. */}
+        <View style={{ flex: 1, display: view === 'map' ? 'flex' : 'none' }}>
           <TripMapView />
-        ) : (
+        </View>
+        <View style={{ flex: 1, display: view === 'roadbook' ? 'flex' : 'none' }}>
           <RoadbookView id={id} onConfigureDates={openDatesConfig} />
-        )}
+        </View>
       </View>
 
       <Modal

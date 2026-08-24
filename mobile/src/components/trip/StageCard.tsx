@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
@@ -46,7 +47,13 @@ interface StageCardProps {
 // through to the stage detail, where per-stage edits (distance) live (#1045);
 // only the delete stays on the card. Rendered by RoadbookView; #1039 wires the
 // tap-through.
-export function StageCard({
+// Memoized (perf #1176): the roadbook FlatList re-renders every row on any
+// store update unless the row's own props are referentially stable. `stage`
+// is structurally shared by the store's Immer reducers (unchanged stages
+// keep their object identity), so a plain shallow-prop memo skips the rows
+// the update didn't touch — as long as the callers pass stable callbacks
+// (see RoadbookView).
+export const StageCard = memo(function StageCard({
   stage,
   index,
   locked,
@@ -240,4 +247,4 @@ export function StageCard({
       </View>
     </View>
   );
-}
+});
