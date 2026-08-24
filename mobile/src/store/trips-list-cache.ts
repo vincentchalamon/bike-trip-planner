@@ -13,6 +13,18 @@ import type { TripListItem } from '../api/trips';
 const CACHE_DIRNAME = 'trips-list-cache';
 const LIST_FILENAME = 'trips-list.json';
 
+// Serialize cache writes and the logout purge so they never interleave: an
+// in-flight write always completes before the purge runs, and the purge then
+// deletes whatever it wrote — so no trip title survives logout on a shared device
+// (#1174 parity). A plain flag wouldn't help: clearCachedTripList has no await, so
+// its window would be empty.
+let chain: Promise<unknown> = Promise.resolve();
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = chain.then(fn, fn);
+  chain = next.catch(() => undefined);
+  return next;
+}
+
 interface CachedList {
   items: TripListItem[];
   syncedAt: number;
@@ -31,18 +43,20 @@ export async function cacheTripList(
   items: TripListItem[],
   syncedAt: number = Date.now(),
 ): Promise<void> {
-  try {
-    const dir = cacheDir();
-    if (!dir.exists) dir.create({ intermediates: true });
-    const file = listFile();
-    if (!file.exists) file.create();
-    await writeAsStringAsync(
-      file.uri,
-      JSON.stringify({ items, syncedAt } satisfies CachedList),
-    );
-  } catch {
-    // ignore: a failed cache write only costs a later offline miss.
-  }
+  return withLock(async () => {
+    try {
+      const dir = cacheDir();
+      if (!dir.exists) dir.create({ intermediates: true });
+      const file = listFile();
+      if (!file.exists) file.create();
+      await writeAsStringAsync(
+        file.uri,
+        JSON.stringify({ items, syncedAt } satisfies CachedList),
+      );
+    } catch {
+      // ignore: a failed cache write only costs a later offline miss.
+    }
+  });
 }
 
 /** Read the cached trips list, or null when absent or corrupt. */
@@ -59,10 +73,12 @@ export async function readCachedTripList(): Promise<TripListItem[] | null> {
 
 /** Drop the cached list (called on logout so no trip titles survive — #1174). */
 export async function clearCachedTripList(): Promise<void> {
-  try {
-    const file = listFile();
-    if (file.exists) file.delete();
-  } catch {
-    // ignore
-  }
+  return withLock(async () => {
+    try {
+      const file = listFile();
+      if (file.exists) file.delete();
+    } catch {
+      // ignore
+    }
+  });
 }
