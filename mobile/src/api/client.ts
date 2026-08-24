@@ -66,15 +66,18 @@ export const authMiddleware: Middleware = {
     useOfflineStore.getState().setApiReachable(retried.status < 500);
     // Rebuild the retried response with the global `Response` constructor so it
     // passes openapi-fetch's `instanceof Response` check (same realm as the check).
-    // Rebuild TEXT payloads (JSON/LD+JSON/text) from a UTF-8 STRING via `.text()`:
-    // rebuilding them from an ArrayBuffer makes RN's `Response.json()/.text()` decode
-    // the bytes as Latin-1, mojibaking accented content on a retried request — a
-    // cold-start GET /trips whose expired token triggers this path renders "Sensée"
-    // as "SensÃ©e" (#1172). BINARY payloads (e.g. a #1047 FIT / GPX export retried
-    // after a mid-download token refresh) must keep their raw bytes, so those keep
-    // the ArrayBuffer round-trip, which a `.text()` decode would corrupt.
+    // Rebuild TEXT payloads (any JSON flavor or text/*) from a UTF-8 STRING via
+    // `.text()`: rebuilding them from an ArrayBuffer makes RN's `Response.json()/
+    // .text()` decode the bytes as Latin-1, mojibaking accented content on a retried
+    // request — a cold-start GET /trips whose expired token triggers this path
+    // renders "Sensée" as "SensÃ©e" (#1172). The `+json` suffix match also covers
+    // `application/problem+json` (RFC 7807 errors — a 422/409 replayed on the retry
+    // carries accented French constraint messages) and `application/merge-patch+json`.
+    // BINARY payloads (e.g. a #1047 FIT / GPX export retried after a mid-download
+    // token refresh) must keep their raw bytes, so those keep the ArrayBuffer
+    // round-trip, which a `.text()` decode would corrupt.
     const contentType = retried.headers.get('Content-Type') ?? '';
-    const isText = /^(application\/(json|ld\+json)|text\/)/i.test(contentType);
+    const isText = /^(text\/|application\/(?:[\w.-]+\+)?json)/i.test(contentType);
     const body = isText ? await retried.text() : await retried.arrayBuffer();
     return new Response(body, {
       status: retried.status,

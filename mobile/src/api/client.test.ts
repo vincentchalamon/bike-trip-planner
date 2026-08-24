@@ -147,6 +147,33 @@ describe('authMiddleware 401 retry (#1032)', () => {
     expect(await result!.json()).toEqual({ title: 'Entre Sensée et Escaut' });
   });
 
+  // Regression (#1172 review): RFC 7807 errors come back as application/problem+json
+  // (rfc_7807_compliant_errors is on). A 422/409 replayed on the retry carries an
+  // accented French constraint message, so it must take the text branch too.
+  it('rebuilds an application/problem+json retry body from text (#1172)', async () => {
+    mockGetJwt.mockReturnValue('fresh-jwt');
+    mockRefresh.mockResolvedValue(true);
+    const textSpy = jest
+      .fn()
+      .mockResolvedValue(JSON.stringify({ detail: "L'adresse est déjà utilisée" }));
+    const arrayBufferSpy = jest.fn();
+    (globalThis.fetch as jest.Mock).mockResolvedValue({
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      headers: new Headers({ 'Content-Type': 'application/problem+json; charset=utf-8' }),
+      text: textSpy,
+      arrayBuffer: arrayBufferSpy,
+    });
+
+    const request = new Request('https://api.test/trips');
+    await onRequest(request);
+    const result = await onResponse(request, new Response(null, { status: 401 }));
+
+    expect(textSpy).toHaveBeenCalledTimes(1);
+    expect(arrayBufferSpy).not.toHaveBeenCalled();
+    expect(await result!.json()).toEqual({ detail: "L'adresse est déjà utilisée" });
+  });
+
   it('does not replay when the refresh fails', async () => {
     mockGetJwt.mockReturnValue('stale-jwt');
     mockRefresh.mockResolvedValue(false);
