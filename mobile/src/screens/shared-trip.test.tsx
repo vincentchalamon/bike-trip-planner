@@ -132,6 +132,21 @@ describe('Shared trip screen (#1177) — read-only consultation', () => {
     expect(findByA11yLabel(root, i18n.t('trip.rideCtaA11y'))).toHaveLength(0);
   });
 
+  it('opts its Screen out of the bottom safe-area inset (#1217): reuses TripMap, would double-inset', async () => {
+    // The shared view renders TripMapView/RoadbookView like the roadbook, whose
+    // FAB owns insets.bottom — so its Screen must not also pad the bottom. Guard
+    // the opt-out: the SafeAreaView `edges` must exclude 'bottom'.
+    mockFetch.mockResolvedValue(SHARED_DETAIL);
+
+    const root = await render();
+
+    const safeAreas = root.findAll((n: any) => Array.isArray(n.props?.edges));
+    expect(safeAreas.length).toBeGreaterThan(0);
+    for (const node of safeAreas) {
+      expect(node.props.edges).not.toContain('bottom');
+    }
+  });
+
   it('does not let a stage row tap through to the auth-gated live flow (#1177 review)', async () => {
     // A shared stage card must be inert: no onPress → no button role, no
     // open-stage a11y label. Otherwise tapping pushes /trip/<shareCode>/stage/...
