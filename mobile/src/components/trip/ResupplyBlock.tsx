@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PoiData, ResupplyData } from '@btp/core';
 import { DataBlock } from './DataBlock';
+import { poiCategoryLabel } from './poi-category';
 import { ShoppingBag } from '../ui/icons';
 import { useTheme } from '../../theme';
 
@@ -77,7 +78,7 @@ export function ResupplyBlock({ resupply }: { resupply: ResupplyData }) {
                   fontSize: 13,
                 }}
               >
-                {poi.category}
+                {poiCategoryLabel(t, poi.category)}
                 {poi.distanceFromStart != null
                   ? ` · ${t('trip.blocks.distanceKm', { distance: Math.round(poi.distanceFromStart) })}`
                   : ''}
