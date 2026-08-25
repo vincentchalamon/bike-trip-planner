@@ -197,7 +197,11 @@ export function RoadbookView({
         extraData={stageDiffs}
         keyExtractor={(item) => stageKey(item)}
         ListHeaderComponent={header}
-        contentContainerStyle={{ paddingBottom: theme.spacing['4xl'] }}
+        // Clear the bottom nav/gesture bar (#1217): the screen opts out of the
+        // Screen bottom inset (the FAB owns it), but when readOnly the FAB is
+        // hidden — so fold insets.bottom in here to keep the last stage above the
+        // bar in every state (FAB present or not, incl. the shared /s/ view).
+        contentContainerStyle={{ paddingBottom: theme.spacing['4xl'] + insets.bottom }}
         ListEmptyComponent={
           <View style={{ height: 300 }}>
             <EmptyState title={t('trip.empty')} />

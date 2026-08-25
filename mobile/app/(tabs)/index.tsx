@@ -287,7 +287,7 @@ export default function Trips() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} edges={['top', 'left', 'right']}>
       <Text
         style={{
           color: theme.colors.foreground,

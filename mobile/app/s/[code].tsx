@@ -74,7 +74,7 @@ export default function SharedTrip() {
 
   if (loading) {
     return (
-      <Screen padded={false}>
+      <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <LoadingState />
       </Screen>
@@ -85,7 +85,7 @@ export default function SharedTrip() {
   // there is nothing the visitor can do but head back, so a single copy covers it.
   if (error) {
     return (
-      <Screen padded={false}>
+      <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ title: t('sharePage.title') }} />
         <ErrorState
           title={t('sharePage.title')}
@@ -96,7 +96,7 @@ export default function SharedTrip() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} edges={['top', 'left', 'right']}>
       <Stack.Screen
         options={{
           headerShown: true,

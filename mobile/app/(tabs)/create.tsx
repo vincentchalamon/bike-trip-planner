@@ -183,7 +183,7 @@ export default function Create() {
 
   if (createdId) {
     return (
-      <Screen scroll style={{ gap: theme.spacing.lg }}>
+      <Screen scroll edges={['top', 'left', 'right']} style={{ gap: theme.spacing.lg }}>
         {title}
         <View style={{ gap: theme.spacing.md }}>
           <Text
@@ -234,7 +234,7 @@ export default function Create() {
   }
 
   return (
-    <Screen scroll style={{ gap: theme.spacing.xl }}>
+    <Screen scroll edges={['top', 'left', 'right']} style={{ gap: theme.spacing.xl }}>
       {title}
       <View style={{ gap: theme.spacing.md }}>
         {sectionLabel(t('create.linkSection'))}

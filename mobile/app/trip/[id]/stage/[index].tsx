@@ -32,7 +32,7 @@ export default function StageDetailScreen() {
   }
 
   return (
-    <Screen padded={false} edges={['left', 'right']}>
+    <Screen padded={false} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{ headerTitle: () => <TripTitleHeader tripId={id} /> }}
       />

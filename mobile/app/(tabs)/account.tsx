@@ -125,7 +125,7 @@ export default function Account() {
   }));
 
   return (
-    <Screen scroll>
+    <Screen scroll edges={['top', 'left', 'right']}>
       {/* Page title, consistent with the other tabs (Mes voyages / Nouveau
           voyage) and the 10-account maquette, which the account screen was
           missing (#1181). */}
