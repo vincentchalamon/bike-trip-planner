@@ -638,7 +638,10 @@ describe('ResupplyBlock', () => {
     ).join(' ');
     expect(t).toContain(fr.trip.blocks.resupplyLunch);
     expect(t).toContain('Boulangerie');
-    expect(t).toContain('bakery');
+    // Category is localized, never the raw OSM enum (#1196).
+    expect(t).not.toContain('bakery');
+    expect(t).toContain('Eau potable');
+    expect(t).not.toContain('drinking_water');
     expect(t).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '5'));
     expect(t).toContain(fr.trip.blocks.resupplyWaterMorning);
     expect(t).toContain('Fontaine');
