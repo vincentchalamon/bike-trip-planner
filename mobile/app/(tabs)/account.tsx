@@ -115,6 +115,19 @@ export default function Account() {
 
   return (
     <Screen scroll>
+      {/* Page title, consistent with the other tabs (Mes voyages / Nouveau
+          voyage) and the 10-account maquette, which the account screen was
+          missing (#1181). */}
+      <Text
+        style={{
+          color: theme.colors.foreground,
+          fontFamily: theme.fonts.serif,
+          fontSize: 26,
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        {t('account.title')}
+      </Text>
       <ProfileHeader email={email} />
 
       <SectionLabel>{t('account.sectionAccount')}</SectionLabel>

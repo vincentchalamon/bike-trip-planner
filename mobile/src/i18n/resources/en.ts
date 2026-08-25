@@ -99,7 +99,7 @@ export const en: typeof fr = {
     },
   },
   account: {
-    title: 'Account',
+    title: 'My account',
     betaSubtitle: 'Private beta · early access',
     sectionAccount: 'Account',
     sectionPreferences: 'Preferences',

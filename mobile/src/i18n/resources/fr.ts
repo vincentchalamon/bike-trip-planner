@@ -97,7 +97,7 @@ export const fr = {
     },
   },
   account: {
-    title: 'Compte',
+    title: 'Mon compte',
     betaSubtitle: 'Bêta privée · accès anticipé',
     sectionAccount: 'Compte',
     sectionPreferences: 'Préférences',
