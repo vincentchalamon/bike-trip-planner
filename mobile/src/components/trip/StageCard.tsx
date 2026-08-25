@@ -116,7 +116,8 @@ export const StageCard = memo(function StageCard({
           style={{
             minWidth: 56,
             alignItems: 'center',
-            backgroundColor: theme.colors.accentSoft,
+            // Green day badge, per the 05-trip-roadbook maquette (#1214 palette B).
+            backgroundColor: theme.colors.successSoft,
             borderRadius: theme.radius.md,
             paddingHorizontal: theme.spacing.sm,
             paddingVertical: theme.spacing.xs,
@@ -124,7 +125,7 @@ export const StageCard = memo(function StageCard({
         >
           <Text
             style={{
-              color: theme.colors.accentInk,
+              color: theme.colors.successInk,
               fontFamily: theme.fonts.sansSemibold,
               fontSize: 13,
               textAlign: 'center',
@@ -135,7 +136,7 @@ export const StageCard = memo(function StageCard({
           {stage.isRestDay ? (
             <Text
               style={{
-                color: theme.colors.accentInk,
+                color: theme.colors.successInk,
                 fontFamily: theme.fonts.sansMedium,
                 fontSize: 11,
                 marginTop: 2,

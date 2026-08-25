@@ -71,12 +71,13 @@ function ProfileHeader({ email }: { email: string | null }) {
             width: 52,
             height: 52,
             borderRadius: theme.radius.full,
-            backgroundColor: theme.colors.brand,
+            // Green avatar, per the 10-account maquette (#1214 palette B).
+            backgroundColor: theme.colors.forest,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text style={{ color: theme.colors.primaryForeground, fontFamily: theme.fonts.sansSemibold, fontSize: 18 }}>
+          <Text style={{ color: theme.colors.heroForeground, fontFamily: theme.fonts.sansSemibold, fontSize: 18 }}>
             {initialsFromEmail(email)}
           </Text>
         </View>
