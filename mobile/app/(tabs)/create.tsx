@@ -280,8 +280,8 @@ export default function Create() {
           onPress={() => void onImportGpx()}
           loading={uploading}
           disabled={submitting}
-          variant="outline"
-          icon={<FileUp color={theme.colors.brand} size={18} />}
+          variant="outlineForest"
+          icon={<FileUp color={theme.colors.forest} size={18} />}
           fullWidth
         />
         <Text

@@ -10,7 +10,13 @@ import {
 import { useTheme } from '../../theme/context';
 import type { Theme } from '../../theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'outlineForest'
+  | 'ghost'
+  | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -32,6 +38,9 @@ function colorsFor(theme: Theme, variant: ButtonVariant) {
       return { bg: c.secondary, fg: c.secondaryForeground, border: c.border };
     case 'outline':
       return { bg: 'transparent', fg: c.brand, border: c.brand };
+    // Green-outlined secondary action (03-create-trip GPX button, #1214 palette B).
+    case 'outlineForest':
+      return { bg: 'transparent', fg: c.forest, border: c.forest };
     case 'ghost':
       return { bg: 'transparent', fg: c.foreground, border: 'transparent' };
     case 'destructive':
