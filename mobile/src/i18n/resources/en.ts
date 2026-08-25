@@ -318,7 +318,7 @@ export const en: typeof fr = {
       'Refine the address (add a city or postcode) and try again.',
     edit: {
       addStage: 'Stage',
-      addRestDay: 'Rest',
+      addRestDay: 'Rest day',
       addStageA11y: 'Add a stage after day {{day}}',
       addRestDayA11y: 'Add a rest day after day {{day}}',
       editDistanceA11y: 'Edit day {{day}} distance',

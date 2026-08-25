@@ -84,3 +84,6 @@ export { default as Eye } from 'lucide-react-native/dist/esm/icons/eye.js';
 // Roadbook undo/redo (#1178): ↶ Annuler / ↷ Rétablir menu items.
 export { default as Undo2 } from 'lucide-react-native/dist/esm/icons/undo-2.js';
 export { default as Redo2 } from 'lucide-react-native/dist/esm/icons/redo-2.js';
+// Account row leading icons (#1214, 10-account maquette): language + theme.
+export { default as Globe } from 'lucide-react-native/dist/esm/icons/globe.js';
+export { default as Palette } from 'lucide-react-native/dist/esm/icons/palette.js';

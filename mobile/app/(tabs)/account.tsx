@@ -3,7 +3,18 @@ import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, ListRow, Screen, SegmentedControl, Sheet, type Segment } from '../../src/components/ui';
-import { ChevronRight } from '../../src/components/ui/icons';
+import {
+  Bell,
+  ChevronRight,
+  Download,
+  FileText,
+  Globe,
+  HelpCircle,
+  Lock,
+  Mail,
+  Palette,
+  Trash2,
+} from '../../src/components/ui/icons';
 import { LocaleSwitcher } from '../../src/i18n/LocaleSwitcher';
 import { type Locale } from '../../src/i18n';
 import { useTheme } from '../../src/theme';
@@ -134,6 +145,7 @@ export default function Account() {
       <Card style={CARD_ROWS}>
         <ListRow
           title={t('account.email')}
+          left={<Mail color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight />}
           onPress={() => router.push('/account/email')}
         />
@@ -143,16 +155,19 @@ export default function Account() {
       <Card style={CARD_ROWS}>
         <ListRow
           title={t('account.notifications')}
+          left={<Bell color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight value={t('notifications.activeCount', { count: notificationCount })} />}
           onPress={() => router.push('/account/notifications')}
         />
         <ListRow
           title={t('account.language')}
+          left={<Globe color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight value={t(`language.${currentLocale}`)} />}
           onPress={() => setLanguageOpen(true)}
         />
         <ListRow
           title={t('account.theme')}
+          left={<Palette color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight value={t(themeModeLabelKey(mode))} />}
           onPress={() => setThemeOpen(true)}
         />
@@ -162,11 +177,13 @@ export default function Account() {
       <Card style={CARD_ROWS}>
         <ListRow
           title={t('account.exportData')}
+          left={<Download color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight value={t('account.exportDataValue')} />}
           onPress={() => router.push('/account/export')}
         />
         <ListRow
           title={t('account.deleteAccount')}
+          left={<Trash2 color={theme.colors.destructive} size={20} />}
           danger
           right={<RowRight />}
           onPress={() => router.push('/account/delete')}
@@ -175,10 +192,13 @@ export default function Account() {
 
       <SectionLabel>{t('account.sectionHelp')}</SectionLabel>
       <Card style={CARD_ROWS}>
-        <ListRow title={t('account.faq')} right={<RowRight />} onPress={() => router.push('/account/faq')} />
-        <ListRow title={t('account.legal')} right={<RowRight />} onPress={() => router.push('/account/legal')} />
+        <ListRow title={t('account.faq')}
+          left={<HelpCircle color={theme.colors.mutedIcon} size={20} />} right={<RowRight />} onPress={() => router.push('/account/faq')} />
+        <ListRow title={t('account.legal')}
+          left={<FileText color={theme.colors.mutedIcon} size={20} />} right={<RowRight />} onPress={() => router.push('/account/legal')} />
         <ListRow
           title={t('account.privacy')}
+          left={<Lock color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight />}
           onPress={() => router.push('/account/privacy')}
         />
