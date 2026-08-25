@@ -21,7 +21,13 @@ export function Screen({
   style,
 }: ScreenProps) {
   const theme = useTheme();
-  const inner: ViewStyle = padded ? { padding: theme.spacing.base } : {};
+  // A slight breathing gap between the last (often a button) row and the bottom
+  // nav/gesture bar, on top of the safe-area inset (#1217 review).
+  const bottomGap = edges.includes('bottom') ? theme.spacing.sm : 0;
+  const inner: ViewStyle = {
+    ...(padded ? { padding: theme.spacing.base } : {}),
+    ...(bottomGap ? { paddingBottom: (padded ? theme.spacing.base : 0) + bottomGap } : {}),
+  };
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.colors.background }]} edges={edges}>

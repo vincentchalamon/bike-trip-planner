@@ -27,8 +27,9 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
               borderTopLeftRadius: theme.radius['3xl'],
               borderTopRightRadius: theme.radius['3xl'],
               padding: theme.spacing.base,
-              // Keep the last row clear of the bottom nav/gesture bar (#1217).
-              paddingBottom: theme.spacing.base + insets.bottom,
+              // Keep the last row clear of the bottom nav/gesture bar, with a
+              // slight breathing gap on top of the inset (#1217).
+              paddingBottom: theme.spacing.base + insets.bottom + theme.spacing.sm,
             },
           ]}
         >
