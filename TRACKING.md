@@ -2087,8 +2087,9 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 | Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ✅ Mergée ([#1207](https://github.com/vincentchalamon/bike-trip-planner/pull/1207)) |
 | Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ✅ Mergée ([#1206](https://github.com/vincentchalamon/bike-trip-planner/pull/1206)) |
 | Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ✅ Mergée ([#1202](https://github.com/vincentchalamon/bike-trip-planner/pull/1202)) |
-| Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | ⏳ À faire |
+| Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | 🚧 En cours ([#1213](https://github.com/vincentchalamon/bike-trip-planner/pull/1213)) |
 | Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | ✅ Couverture mergée ([#1203](https://github.com/vincentchalamon/bike-trip-planner/pull/1203)) — initiaux #1183 |
+| Design | [#1214](https://github.com/vincentchalamon/bike-trip-planner/issues/1214) | lot de divergences maquettes (copies, palette, icônes) — recette #1181 | Task | M | ⏳ À faire |
 
 **Recette — ce qui a été vérifié en live (device) :** liste, roadbook, détail d'étape, carte + profil, configuration, compte, notifications, in-ride (8 intents + GPS réel), création ; formulaire hébergement manuel #1097 (entrée + champs). Mode dégradé testé : offline (mode avion, cold + warm) et API indisponible (backend arrêté, Internet OK).
 
