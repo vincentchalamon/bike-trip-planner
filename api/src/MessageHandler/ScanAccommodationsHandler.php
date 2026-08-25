@@ -210,7 +210,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
                 $alertsToPublish = [];
                 // Warn if all detected accommodations are likely closed during this period
-                if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => true === $a['possibleClosed'])) {
+                if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => $a['possibleClosed'])) {
                     $alert = new Alert(
                         code: AlertCode::ACCOMMODATION_SEASONAL_CLOSURE,
                         type: AlertType::WARNING,
