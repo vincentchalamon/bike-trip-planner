@@ -51,7 +51,7 @@ export default function Login() {
   };
 
   return (
-    <Screen scroll padded={false} edges={['left', 'right']}>
+    <Screen scroll padded={false} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={{ height: HERO_HEIGHT }}>

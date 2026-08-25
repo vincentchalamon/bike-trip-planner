@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/context';
 
 interface SheetProps {
@@ -12,6 +13,7 @@ interface SheetProps {
 // Bottom sheet: a slide-up panel over a dimmed, tap-to-dismiss backdrop.
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Fermer">
@@ -25,6 +27,8 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
               borderTopLeftRadius: theme.radius['3xl'],
               borderTopRightRadius: theme.radius['3xl'],
               padding: theme.spacing.base,
+              // Keep the last row clear of the bottom nav/gesture bar (#1217).
+              paddingBottom: theme.spacing.base + insets.bottom,
             },
           ]}
         >

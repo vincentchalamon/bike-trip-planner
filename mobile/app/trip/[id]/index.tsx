@@ -192,7 +192,7 @@ export default function TripRoadbook() {
   // ⋯ menu) appears only once the trip is loaded.
   if (loading) {
     return (
-      <Screen padded={false}>
+      <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <LoadingState />
       </Screen>
@@ -201,7 +201,7 @@ export default function TripRoadbook() {
 
   if (error) {
     return (
-      <Screen padded={false}>
+      <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <ErrorState title={t('common.error')} description={error} />
       </Screen>
@@ -209,7 +209,7 @@ export default function TripRoadbook() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} edges={['top', 'left', 'right']}>
       <Stack.Screen
         options={{
           headerShown: true,
