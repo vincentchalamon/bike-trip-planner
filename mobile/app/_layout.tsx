@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useTranslation } from 'react-i18next';
 import '../src/i18n';
 import { AuthProvider } from '../src/auth/store';
@@ -17,6 +20,21 @@ function RootNavigator() {
   useConnectivity();
   // Keep the offline trip cache fresh on return-to-online / app foreground (#1147).
   useBackgroundTripSync();
+  // Harmonize the Android system navigation bar with the active theme (#1222):
+  // otherwise it stays light/white under a dark UI. Reacts to system + in-app
+  // toggle via theme.scheme; guarded so a binary without the native module (or
+  // iOS) is a no-op.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    try {
+      // 'dark' = dark bar + light content, 'light' = light bar + dark content.
+      // Needs the plugin's `enforceContrast: false` (app.json) to take effect —
+      // otherwise Android keeps a light contrast scrim (the "white" bar).
+      NavigationBar.setStyle(theme.scheme === 'dark' ? 'dark' : 'light');
+    } catch {
+      // No-op on iOS or a dev binary built without expo-navigation-bar.
+    }
+  }, [theme.scheme]);
   return (
     <Stack
       // The header integrates with the theme (light/dark) instead of the default

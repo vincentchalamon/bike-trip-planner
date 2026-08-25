@@ -41,6 +41,12 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ],
       "@maplibre/maplibre-react-native",
       "expo-secure-store",
       "expo-sharing",
