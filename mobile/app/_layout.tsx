@@ -7,6 +7,7 @@ import { usePushRouting } from '../src/notifications/use-push-routing';
 import { useBackgroundTripSync } from '../src/hooks/use-background-sync';
 import { useConnectivity } from '../src/store/use-connectivity';
 import { ThemeProvider, useTheme } from '../src/theme';
+import { useSystemNavigationBar } from '../src/theme/use-navigation-bar';
 
 function RootNavigator() {
   const { t } = useTranslation();
@@ -17,6 +18,8 @@ function RootNavigator() {
   useConnectivity();
   // Keep the offline trip cache fresh on return-to-online / app foreground (#1147).
   useBackgroundTripSync();
+  // Harmonize the Android system navigation bar with the active theme (#1222).
+  useSystemNavigationBar(theme.scheme);
   return (
     <Stack
       // The header integrates with the theme (light/dark) instead of the default
