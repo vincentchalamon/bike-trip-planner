@@ -42,7 +42,7 @@ export const fr = {
     noResultsHint: 'Aucun voyage ne correspond à ces filtres.',
     untitled: 'Voyage sans titre',
     meta: '{{stages}} étapes · {{distance}} km · {{status}}',
-    searchPlaceholder: 'Rechercher un titre',
+    searchPlaceholder: 'Rechercher par titre',
     startDate: 'Début',
     endDate: 'Fin',
     clearDate: 'Effacer la date',
@@ -318,7 +318,7 @@ export const fr = {
       "Précisez l'adresse (ajoutez une ville ou un code postal) et réessayez.",
     edit: {
       addStage: 'Étape',
-      addRestDay: 'Repos',
+      addRestDay: 'Jour de repos',
       addStageA11y: 'Ajouter une étape après le jour {{day}}',
       addRestDayA11y: 'Ajouter un jour de repos après le jour {{day}}',
       editDistanceA11y: 'Modifier la distance du jour {{day}}',

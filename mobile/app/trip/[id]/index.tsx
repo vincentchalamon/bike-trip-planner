@@ -305,24 +305,33 @@ export default function TripRoadbook() {
                 next roadbook state. Disabled with empty history and, per the
                 #1166 write gate, while the trip is started or the connection is
                 degraded (offline / API-down). */}
-            <MenuItem
-              icon={<Undo2 color={theme.colors.foreground} size={18} />}
-              label={t('trip.menu.undo')}
-              disabled={!canUndo}
-              onPress={() => {
-                setMenuOpen(false);
-                undo();
-              }}
-            />
-            <MenuItem
-              icon={<Redo2 color={theme.colors.foreground} size={18} />}
-              label={t('trip.menu.redo')}
-              disabled={!canRedo}
-              onPress={() => {
-                setMenuOpen(false);
-                redo();
-              }}
-            />
+            {/* Undo and redo sit side by side (10-account roadbook maquette
+                `.undo` row), split by a vertical divider (#1214). */}
+            <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+              <View style={{ flex: 1 }}>
+                <MenuItem
+                  icon={<Undo2 color={theme.colors.foreground} size={18} />}
+                  label={t('trip.menu.undo')}
+                  disabled={!canUndo}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    undo();
+                  }}
+                />
+              </View>
+              <View style={{ width: 1, backgroundColor: theme.colors.border }} />
+              <View style={{ flex: 1 }}>
+                <MenuItem
+                  icon={<Redo2 color={theme.colors.foreground} size={18} />}
+                  label={t('trip.menu.redo')}
+                  disabled={!canRedo}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    redo();
+                  }}
+                />
+              </View>
+            </View>
             <View
               style={{
                 height: 1,
