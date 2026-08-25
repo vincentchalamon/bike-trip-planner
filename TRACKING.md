@@ -2062,7 +2062,7 @@ Stratégie retenue — **absorber les feuilles dans `feature/1146`** (évite le 
 
 <details><summary>
 
-## Sprint 58.b — Recette mobile
+## ✅ Sprint 58.b — Recette mobile
 
 </summary>
 Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B) : conformité aux maquettes (diff écran par écran vs DesignSync « Mobile — Spike UX »), parité web, bugs, performances, sécurité, offline et **mode dégradé** (offline + API indisponible). Milestone : « Sprint 58.b — Recette » (#12).
@@ -2087,12 +2087,12 @@ Findings de la recette mobile complète (24/08/2026, sur device Samsung SM-A556B
 | Parité | [#1178](https://github.com/vincentchalamon/bike-trip-planner/issues/1178) | undo/redo (parité web + maquette) | Feature | M | ✅ Mergée ([#1207](https://github.com/vincentchalamon/bike-trip-planner/pull/1207)) |
 | Parité | [#1179](https://github.com/vincentchalamon/bike-trip-planner/issues/1179) | câbler applyBatch (file de modifs) + addPoiWaypoint à l'UI | Task | M | ✅ Mergée ([#1206](https://github.com/vincentchalamon/bike-trip-planner/pull/1206)) |
 | Parité | [#1180](https://github.com/vincentchalamon/bike-trip-planner/issues/1180) | onboarding / tour guidé | Feature | M | ✅ Mergée ([#1202](https://github.com/vincentchalamon/bike-trip-planner/pull/1202)) |
-| Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | 🚧 En cours ([#1213](https://github.com/vincentchalamon/bike-trip-planner/pull/1213)) |
+| Design | [#1181](https://github.com/vincentchalamon/bike-trip-planner/issues/1181) | écarts de conformité aux maquettes (diff écran par écran) | Task | M | ✅ Mergée ([#1213](https://github.com/vincentchalamon/bike-trip-planner/pull/1213)) |
 | Tests | [#1182](https://github.com/vincentchalamon/bike-trip-planner/issues/1182) | couverture jest du flux hébergement manuel #1097 | Task | S | ✅ Couverture mergée ([#1203](https://github.com/vincentchalamon/bike-trip-planner/pull/1203)) — initiaux #1183 |
 | Design | [#1214](https://github.com/vincentchalamon/bike-trip-planner/issues/1214) | lot de divergences maquettes (copies, palette, icônes) — recette #1181 | Task | M | ✅ Mergée ([#1216](https://github.com/vincentchalamon/bike-trip-planner/pull/1216) A+C, [#1221](https://github.com/vincentchalamon/bike-trip-planner/pull/1221) palette B) |
 | Bug | [#1217](https://github.com/vincentchalamon/bike-trip-planner/issues/1217) | contenu sous la barre de navigation (safe-area bas) — recette #1181 | Bug | S | ✅ Mergée ([#1218](https://github.com/vincentchalamon/bike-trip-planner/pull/1218)) |
-| Bug | [#1222](https://github.com/vincentchalamon/bike-trip-planner/issues/1222) | nav bar système blanche en thème sombre (Android) — recette #1181 | Bug | S | 🚧 En cours ([#1223](https://github.com/vincentchalamon/bike-trip-planner/pull/1223)) |
-| Bug | [#1196](https://github.com/vincentchalamon/bike-trip-planner/issues/1196) | i18n : libellé localisé des catégories POI (bakery/water/fuel bruts) | Bug | S | ⏳ À faire |
+| Bug | [#1222](https://github.com/vincentchalamon/bike-trip-planner/issues/1222) | nav bar système blanche en thème sombre (Android) — recette #1181 | Bug | S | ✅ Mergée ([#1223](https://github.com/vincentchalamon/bike-trip-planner/pull/1223)) |
+| Bug | [#1196](https://github.com/vincentchalamon/bike-trip-planner/issues/1196) | i18n : libellé localisé des catégories POI (bakery/water/fuel bruts) | Bug | S | ✅ Mergée ([#1225](https://github.com/vincentchalamon/bike-trip-planner/pull/1225)) |
 
 **Recette — ce qui a été vérifié en live (device) :** liste, roadbook, détail d'étape, carte + profil, configuration, compte, notifications, in-ride (8 intents + GPS réel), création ; formulaire hébergement manuel #1097 (entrée + champs). Mode dégradé testé : offline (mode avion, cold + warm) et API indisponible (backend arrêté, Internet OK).
 
@@ -2142,6 +2142,13 @@ export { default as Redo2 } from 'lucide-react-native/dist/esm/icons/redo-2.js';
 ```
 
 Après squash-merge d'un parent, rebaser l'enfant avec `git rebase --onto origin/main <tip-parent-avant-squash>`.
+
+### Clôture (25/08/2026)
+
+22/22 tickets mergés, milestone #12 fermé. Rétro :
+
+- **MAJ dépendances (#1226)** : demande « tous les majeurs » → aucun faisable. Symfony 8.1 casse 48 tests fonctionnels (`polyfill-deepclone` exécute les hooks `set` de `TripRequest`), TS 7 / jest 30 / lucide 1 / maplibre 6 / eslint 10 tous bloqués écosystème. Seuls patch/minor backend livrés. Détail : mémoire `dependency-ceilings-2026-07`.
+- **`git push --force-with-lease` après `reset --hard`** : la ref de suivi `origin/<branch>` était périmée → « Everything up-to-date » trompeur + un vieux SHA re-poussé. Toujours `git fetch` puis vérifier `origin==HEAD` par SHA après un force-push de rewind.
 
 </details>
 
