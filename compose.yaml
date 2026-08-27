@@ -23,6 +23,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      # Writable cache on the read-only rootfs. cache.app already goes to Redis
+      # (cache.php), but cache.system (serializer/validator/API-Platform metadata)
+      # stays on the filesystem; without this the runtime writes it needs fail on
+      # the RO rootfs — recomputing the metadata on every request and logging a
+      # warning each time. tmpfs makes those writes land and persist per-container.
+      - /app/var/cache
     # Memory budget for the beta profile on a single 24 GB VM (#566). AI inference
     # is an external per-user cloud provider (ADR-042), so it is not counted here.
     deploy:
@@ -122,6 +128,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      # Writable cache on the read-only rootfs. cache.app already goes to Redis
+      # (cache.php), but cache.system (serializer/validator/API-Platform metadata)
+      # stays on the filesystem; without this the runtime writes it needs fail on
+      # the RO rootfs — recomputing the metadata on every request and logging a
+      # warning each time. tmpfs makes those writes land and persist per-container.
+      - /app/var/cache
     # Per-replica memory limit (#566). With 2 replicas the async workers cap at
     # ~1 GB total, matching the ADR-019 RAM estimate for async processing.
     deploy:
