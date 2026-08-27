@@ -58,7 +58,10 @@ export function InRideView({
             width: 8,
             height: 8,
             borderRadius: theme.radius.full,
-            backgroundColor: isOnline ? theme.colors.successInk : theme.colors.destructive,
+            // Status dot: a stable vivid green (forest) reads as "online" in both
+            // themes. successInk is a text ink that goes near-black in light mode,
+            // so it stays on the label below (which needs readable, adapting ink).
+            backgroundColor: isOnline ? theme.colors.forest : theme.colors.destructive,
           }}
         />
         <Text

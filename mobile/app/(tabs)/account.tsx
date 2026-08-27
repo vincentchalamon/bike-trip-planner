@@ -82,12 +82,25 @@ function ProfileHeader({ email }: { email: string | null }) {
           </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text
-            numberOfLines={1}
-            style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansSemibold, fontSize: 16 }}
-          >
-            {email ?? ''}
-          </Text>
+          {email ? (
+            <Text
+              numberOfLines={1}
+              style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansSemibold, fontSize: 16 }}
+            >
+              {email}
+            </Text>
+          ) : (
+            // Skeleton while /users/me resolves (offline / cold start), so the row
+            // isn't a bare blank line under the avatar.
+            <View
+              style={{
+                width: 160,
+                height: 16,
+                borderRadius: theme.radius.sm,
+                backgroundColor: theme.colors.muted,
+              }}
+            />
+          )}
           <Text
             style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}
           >
