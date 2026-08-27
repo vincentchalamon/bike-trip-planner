@@ -24,6 +24,9 @@ jest.mock('../hooks/use-trips', () => {
   const actual = jest.requireActual('../hooks/use-trips');
   return { ...actual, useTrips: jest.fn() };
 });
+// The notification scheduler fetches every trip; stub it so the screen renders
+// without hitting the network.
+jest.mock('../hooks/use-all-trips', () => ({ useAllTrips: () => [] }));
 import { useTrips } from '../hooks/use-trips';
 import Trips from '../../app/(tabs)/index';
 
