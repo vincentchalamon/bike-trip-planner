@@ -122,6 +122,39 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
     }
 
     /**
+     * Rebuilds the full decimated route from the persisted per-stage geometry, used
+     * as a fallback when the transient Redis copy has expired. The stages are
+     * contiguous segments of that route sharing their boundary point
+     * (stage[i].end == stage[i+1].start), so the first point of every stage after
+     * the first is dropped to avoid duplicating the previous stage's last point.
+     * Rest days carry no geometry and simply contribute nothing.
+     *
+     * @param list<Stage> $stages
+     *
+     * @return list<Coordinate>
+     */
+    private function reconstructDecimatedPoints(array $stages): array
+    {
+        $points = [];
+        $first = true;
+        foreach ($stages as $stage) {
+            foreach ($stage->geometry as $offset => $point) {
+                if (!$first && 0 === $offset) {
+                    continue;
+                }
+
+                $points[] = $point;
+            }
+
+            if ([] !== $stage->geometry) {
+                $first = false;
+            }
+        }
+
+        return $points;
+    }
+
+    /**
      * Walks along the decimated route to split stages based on the requested distance.
      *
      * @param list<Stage> $stages
@@ -130,14 +163,21 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
     {
         $rawPoints = $this->tripStateManager->getDecimatedPoints($tripId);
         if (null === $rawPoints || [] === $rawPoints) {
-            return;
+            // The transient Redis copy has expired (TTL): rebuild the route from the
+            // persisted per-stage geometry (ADR-057) so a distance edit on an older
+            // trip still applies instead of silently no-op'ing.
+            $decimatedPoints = $this->reconstructDecimatedPoints($stages);
+        } else {
+            /** @var list<Coordinate> $decimatedPoints */
+            $decimatedPoints = array_map(
+                static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
+                $rawPoints,
+            );
         }
 
-        /** @var list<Coordinate> $decimatedPoints */
-        $decimatedPoints = array_map(
-            static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
-            $rawPoints,
-        );
+        if (\count($decimatedPoints) < 2) {
+            return;
+        }
 
         // Find where the current stage starts in the decimated points
         $startIdx = $this->distanceCalculator->findClosestIndex($decimatedPoints, $stages[$index]->startPoint);
