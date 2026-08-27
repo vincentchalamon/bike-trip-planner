@@ -21,6 +21,15 @@ case "${MERCURE_JWT_SECRET:-}" in
 		;;
 esac
 
+# HS256 (Lcobucci JWT) rejects a key shorter than 256 bits at signing time. Left
+# unchecked, a too-short-but-non-default key passes the guard above, boots "healthy",
+# then 500s at runtime on every Mercure-token mint (e.g. GET /trips/{id}/detail).
+# Fail closed at boot instead — MERCURE_JWT_SECRET is ASCII, so ${#..} is its byte length.
+if [ "${#MERCURE_JWT_SECRET}" -lt 32 ]; then
+	echo 'FATAL: MERCURE_JWT_KEY must be at least 32 bytes (256 bits) for HS256; refusing to boot (SEC-004).' >&2
+	exit 1
+fi
+
 # Fail closed (SEC-003): REFRESH_TOKEN_ENC_KEY encrypts refresh tokens at rest.
 # Unset, it falls back to the committed dev default in services.php, so the bearer
 # credential would be "encrypted" under a key anyone with the source can read.

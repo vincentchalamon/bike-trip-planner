@@ -641,7 +641,7 @@ jobs:
       MAILER_DSN: "null://null"
       # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
       # refuses to boot on the public Mercure skeleton default).
-      MERCURE_JWT_KEY: "ci-test-mercure-key"
+      MERCURE_JWT_KEY: "ci-test-mercure-key-min-32-bytes-long"
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
       REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
@@ -715,7 +715,7 @@ jobs:
       MAILER_DSN: "null://null"
       # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
       # refuses to boot on the public Mercure skeleton default).
-      MERCURE_JWT_KEY: "ci-test-mercure-key"
+      MERCURE_JWT_KEY: "ci-test-mercure-key-min-32-bytes-long"
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
       REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
