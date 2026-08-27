@@ -43,7 +43,7 @@ build: ## Build the Docker environment in production mode
 # So `make start` supplies non-default local placeholders + the generated keypair to
 # boot, mirroring the CI env and the compose.recette.yaml overlay.
 start: ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
-	@MERCURE_JWT_KEY=local-iso-prod-mercure-key \
+	@MERCURE_JWT_KEY=local-iso-prod-mercure-key-min-32-bytes \
 		REFRESH_TOKEN_ENC_KEY=local-iso-prod-refresh-enc-key \
 		JWT_PASSPHRASE=recette \
 		JWT_PRIVATE_KEY_PATH=.docker/jwt-recette/private.pem \

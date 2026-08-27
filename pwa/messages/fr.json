@@ -6,7 +6,8 @@
   },
   "gpxUpload": {
     "ariaLabel": "Importer un fichier GPX",
-    "dropZone": "Dépose ton fichier GPX ici"
+    "dropZone": "Dépose ton fichier GPX ici",
+    "invalidFileType": "Format non supporté. Dépose un fichier .gpx."
   },
   "gpxDropZone": {
     "ariaLabel": "Zone de dépôt GPX",

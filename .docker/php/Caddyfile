@@ -110,7 +110,11 @@
 
     route {
         # Matches requests for HTML documents, for static files and for Next.js files,
-        # except for known API paths and paths with extensions handled by API Platform
+        # except for known API paths and paths with extensions handled by API Platform.
+        # /api/auth/* are the Next.js BFF auth route handlers (ADR-053), hit by JSON fetch
+        # (Accept: */*) so they miss the text/html branch and must be forced to the PWA.
+        # Scoped to /api/auth/* on purpose: the backend serves /api/health and /api/healthz
+        # (HealthController), which must stay on PHP.
         @pwa expression `(
                 header({'Accept': '*text/html*'})
                 && !path(
@@ -119,7 +123,8 @@
                 )
             )
             || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*', '/.well-known/assetlinks.json')
-            || query({'_rsc': '*'})`
+            || query({'_rsc': '*'})
+            || path('/api/auth/*')`
 
         # Content-Security-Policy (audit 35.2 SEC-001), scoped to the PWA so the
         # API docs UI is untouched. Shipped as Report-Only first: it never blocks,

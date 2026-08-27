@@ -100,7 +100,7 @@ The generated types land in the **`@btp/core`** workspace (`core/schema.d.ts`, r
   - Strava route: `^https://www\.strava\.com/routes/\d+`
   - RideWithGPS route: `^https://ridewithgps\.com/routes/\d+`
 - HTTP clients scoped to specific base URIs, max 2 redirects, 10s timeout
-- XMLReader hardened with `LIBXML_NONET` + `LIBXML_NOENT` (XXE prevention)
+- XMLReader hardened with `LIBXML_NONET` (WITHOUT `LIBXML_NOENT`) + `DOCTYPE` rejected outright (XXE prevention)
 - Upload limits: 30MB (Caddy + PHP), 128MB PHP memory limit
 
 ## ADR Documentation

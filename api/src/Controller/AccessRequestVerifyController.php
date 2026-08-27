@@ -54,10 +54,14 @@ final readonly class AccessRequestVerifyController
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
 
+        // Log a truncated hash rather than the email itself (no PII in logs); at
+        // this stage there is no User to key on except the already-exists branch.
+        $emailHash = substr(hash('sha256', $email), 0, 12);
+
         // Silently ignore if user already exists
         $existingUser = $this->userRepository->findOneBy(['email' => $email]);
         if (null !== $existingUser) {
-            $this->logger->debug('Access request verify: user already exists — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request verify: user already exists — silently ignored', ['user' => $existingUser->getId()->toRfc4122()]);
 
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
@@ -66,7 +70,7 @@ final readonly class AccessRequestVerifyController
 
         // Silently ignore if already verified
         if ($accessRequest instanceof AccessRequest && $accessRequest->isVerified()) {
-            $this->logger->debug('Access request verify: already verified — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request verify: already verified — silently ignored', ['emailHash' => $emailHash]);
 
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
@@ -83,12 +87,12 @@ final readonly class AccessRequestVerifyController
         try {
             $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
-            $this->logger->debug('Access request verify: race condition — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request verify: race condition — silently ignored', ['emailHash' => $emailHash]);
 
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
 
-        $this->logger->debug('Access request verified', ['email' => $email]);
+        $this->logger->debug('Access request verified', ['emailHash' => $emailHash]);
 
         return new RedirectResponse($landingUrl.'?access=confirmed');
     }

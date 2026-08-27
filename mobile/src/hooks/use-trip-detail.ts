@@ -22,13 +22,14 @@ export async function runLoadTripDetail(id: string): Promise<TripDetailState> {
   }
   try {
     const detail = await fetchTripDetail(id);
-    if (!detail) return { detail: null, error: 'Voyage introuvable.' };
+    // `error` carries an i18n key, translated at the display site.
+    if (!detail) return { detail: null, error: 'trip.notFound' };
     void cacheTripDetail(id, detail);
     return { detail, error: null };
   } catch {
     const cached = await readTripCache(id);
     if (cached) return { detail: cached.detail, error: null };
-    return { detail: null, error: 'Impossible de charger le voyage.' };
+    return { detail: null, error: 'trip.detailLoadError' };
   }
 }
 

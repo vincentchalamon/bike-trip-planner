@@ -32,7 +32,14 @@ import { badgeColors, statusOf, type TripStatus } from '../../src/screens/trips-
 // standing in for a route trace (the trip list carries no geometry).
 function RouteThumbnail({ theme }: { theme: Theme }) {
   return (
-    <Svg width="100%" height="100%" viewBox="0 0 112 96" preserveAspectRatio="xMidYMid slice">
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 112 96"
+      preserveAspectRatio="xMidYMid slice"
+      accessible={false}
+      importantForAccessibility="no"
+    >
       <Path
         d="M8 78 C 26 70, 24 44, 44 40 S 74 48, 84 30 S 100 16, 106 12"
         stroke={theme.colors.mutedIcon}

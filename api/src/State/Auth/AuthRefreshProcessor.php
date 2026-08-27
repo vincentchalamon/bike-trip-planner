@@ -56,7 +56,19 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $existing = $this->refreshTokenRepository->findValidByToken($token);
 
         if (!$existing instanceof RefreshToken) {
-            $this->logger->debug('Auth refresh invalid token');
+            // Reuse detection (OAuth BCP): a token that is no longer valid but was
+            // already rotated (replaced_by_token set) is being replayed past its
+            // 30s grace window — treat it as a leaked/stolen token and revoke the
+            // whole family so the attacker's successor (if any) dies too. A token
+            // that merely expired without ever rotating is a normal 401.
+            $reused = $this->refreshTokenRepository->findAnyByToken($token);
+            if ($reused instanceof RefreshToken && null !== $reused->getReplacedByToken()) {
+                $this->refreshTokenRepository->removeAllForUser($reused->getUser());
+                $this->entityManager->flush();
+                $this->logger->warning('Auth refresh token reuse detected — revoked the token family', ['user' => $reused->getUser()->getId()->toRfc4122()]);
+            } else {
+                $this->logger->debug('Auth refresh invalid token');
+            }
 
             return $this->unauthorized();
         }
@@ -100,7 +112,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $jwt = $this->jwtManager->create($user);
 
-        $this->logger->debug('Auth refresh success', ['user' => $user->getEmail()]);
+        $this->logger->debug('Auth refresh success', ['user' => $user->getId()->toRfc4122()]);
 
         return new JsonResponse(['token' => $jwt, 'refresh_token' => $livePlain]);
     }

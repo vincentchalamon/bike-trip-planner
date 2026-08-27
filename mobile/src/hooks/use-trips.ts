@@ -47,7 +47,8 @@ export async function runLoadTrips(
         return { items: cached, totalItems: cached.length, error: null };
       }
     }
-    return { items: [], totalItems: 0, error: 'Impossible de charger les voyages.' };
+    // `error` carries an i18n key, translated at the display site.
+    return { items: [], totalItems: 0, error: 'trips.error' };
   }
 }
 
@@ -59,7 +60,7 @@ export async function runLoadTrips(
 export async function runDeleteTrip(id: string): Promise<string | null> {
   const { ok } = await deleteTrip(id);
   if (!ok) {
-    return 'La suppression a échoué.';
+    return 'trips.deleteFailed';
   }
   const { clearDelivered } = useDeliveredNotifications.getState();
   await Promise.all(

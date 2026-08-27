@@ -57,7 +57,6 @@ export interface InRideMessage {
 interface UiState {
   isProcessing: boolean;
   isAccommodationScanning: boolean;
-  sseConnected: boolean;
   expandedCalendar: boolean;
   isConfigPanelOpen: boolean;
   /** Whether the keyboard shortcuts help modal is open. */
@@ -106,7 +105,6 @@ interface UiState {
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
-  setSseConnected: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
   setConfigPanelOpen: (value: boolean) => void;
   setHelpModalOpen: (value: boolean) => void;
@@ -156,7 +154,6 @@ function writeBubbleSeenToStorage(): void {
  *
  * Tracks global UI concerns that are orthogonal to the trip model:
  * - `isProcessing` — whether an async backend computation is in flight
- * - `sseConnected` — whether the Mercure SSE connection is active
  * - `expandedCalendar` — whether the date picker panel is open
  * - `isConfigPanelOpen` — whether the configuration sidebar is open
  * - `isHelpModalOpen` — whether the keyboard shortcuts help modal is open
@@ -179,7 +176,6 @@ export const useUiStore = create<UiState>()(
   immer((set) => ({
     isProcessing: false,
     isAccommodationScanning: false,
-    sseConnected: false,
     expandedCalendar: false,
     isConfigPanelOpen: false,
     isHelpModalOpen: false,
@@ -204,11 +200,6 @@ export const useUiStore = create<UiState>()(
     setAccommodationScanning: (value) =>
       set((state) => {
         state.isAccommodationScanning = value;
-      }),
-
-    setSseConnected: (value) =>
-      set((state) => {
-        state.sseConnected = value;
       }),
 
     setExpandedCalendar: (value) =>

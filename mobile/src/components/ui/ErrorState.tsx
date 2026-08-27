@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/context';
 import { Button } from './Button';
 
@@ -13,13 +14,16 @@ interface ErrorStateProps {
 
 // Error placeholder with a destructive-toned title and an optional retry CTA.
 export function ErrorState({
-  title = 'Une erreur est survenue',
+  title,
   description,
   icon,
   onRetry,
-  retryLabel = 'Réessayer',
+  retryLabel,
 }: ErrorStateProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('common.error');
+  const resolvedRetryLabel = retryLabel ?? t('common.retry');
   return (
     <View style={styles.container}>
       {icon ? <View style={{ marginBottom: theme.spacing.base }}>{icon}</View> : null}
@@ -31,7 +35,7 @@ export function ErrorState({
           textAlign: 'center',
         }}
       >
-        {title}
+        {resolvedTitle}
       </Text>
       {description ? (
         <Text
@@ -48,7 +52,7 @@ export function ErrorState({
       ) : null}
       {onRetry ? (
         <View style={{ marginTop: theme.spacing.lg }}>
-          <Button label={retryLabel} variant="secondary" onPress={onRetry} />
+          <Button label={resolvedRetryLabel} variant="secondary" onPress={onRetry} />
         </View>
       ) : null}
     </View>

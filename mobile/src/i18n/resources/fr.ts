@@ -37,6 +37,7 @@ export const fr = {
   trips: {
     title: 'Mes voyages',
     error: 'Impossible de charger les voyages.',
+    deleteFailed: 'La suppression a échoué.',
     empty: 'Aucun voyage pour le moment.',
     noResults: 'Aucun résultat',
     noResultsHint: 'Aucun voyage ne correspond à ces filtres.',
@@ -255,6 +256,9 @@ export const fr = {
     segmentMap: 'Carte',
     empty: 'Aucune étape calculée.',
     mapEmpty: 'Aucun tracé disponible pour ce voyage.',
+    loadError: 'Impossible de charger le roadbook.',
+    notFound: 'Voyage introuvable.',
+    detailLoadError: 'Impossible de charger le voyage.',
     day: 'Jour {{day}}',
     rest: 'repos',
     today: "Aujourd'hui",

@@ -21,6 +21,7 @@ import {
   reconcileStageUpdate,
   pruneStaleRecomputing as corePruneStaleRecomputing,
   dropStaleDateAlerts as coreDropStaleDateAlerts,
+  type ReconciledState,
   type StageAlert,
 } from "@btp/core/reconciliation";
 
@@ -216,6 +217,13 @@ interface TripState {
    */
   applyStageUpdate: (stageIndex: number, stage: StageData) => void;
   /**
+   * Apply a full {@link ReconciledState} from the shared SSE reducer in one
+   * mutation. Used by the Mercure hook for every event except `stage_updated`
+   * (which keeps {@link applyStageUpdate} for the endDate bookkeeping core leaves
+   * to the store), so web and mobile share one reconciliation source (ADR-055).
+   */
+  applyReconciled: (next: ReconciledState) => void;
+  /**
    * Mark a set of stage indices as "recomputing" — their cards show a shimmer
    * skeleton until the corresponding `stage_updated` events arrive. Also bumps
    * {@link recomputeVersion} so overlapping edits can be disambiguated (#840).
@@ -325,18 +333,22 @@ export function getUndoableSlice(state: {
   maxDistancePerDay: number;
   averageSpeed: number;
 }): UndoableSlice {
-  // Deep clone via JSON to ensure Immer draft proxies are not captured.
-  return JSON.parse(
-    JSON.stringify({
-      stages: state.stages,
-      startDate: state.startDate,
-      endDate: state.endDate,
-      fatigueFactor: state.fatigueFactor,
-      elevationPenalty: state.elevationPenalty,
-      maxDistancePerDay: state.maxDistancePerDay,
-      averageSpeed: state.averageSpeed,
-    }),
-  ) as UndoableSlice;
+  // Deep clone so a later mutation never bleeds into a stored snapshot. Use
+  // structuredClone rather than JSON.parse(JSON.stringify(...)): the store's
+  // committed state is plain (post-Immer) objects, so the string round-trip only
+  // adds serialize+parse cost — heavy on stages carrying decimated geometry, which
+  // this runs on every undoable edit. NOT projected to drop geometry: undo restores
+  // stages wholesale (setStages), including structural add/delete undo, so the full
+  // stage shape must survive the snapshot.
+  return structuredClone({
+    stages: state.stages,
+    startDate: state.startDate,
+    endDate: state.endDate,
+    fatigueFactor: state.fatigueFactor,
+    elevationPenalty: state.elevationPenalty,
+    maxDistancePerDay: state.maxDistancePerDay,
+    averageSpeed: state.averageSpeed,
+  });
 }
 
 /**
@@ -744,6 +756,25 @@ export const useTripStore = create<TripState>()(
             .add(state.stages.length - 1, "day")
             .format("YYYY-MM-DD");
         }
+      }),
+
+    applyReconciled: (next) =>
+      set((state) => {
+        // Trip-level bookkeeping (endDate on a trailing append) stays in
+        // applyStageUpdate; the transient stage-diff and the block/processing
+        // spinners stay in the Mercure hook — everything else is the reducer's.
+        state.stages = next.stages;
+        // Title lives on the identity object and is only carried by route_parsed
+        // / trip_ready; mirror updateRouteData's guard (set only when present).
+        if (next.title !== null && state.trip) {
+          state.trip.title = next.title;
+        }
+        state.totalDistance = next.totalDistance;
+        state.totalElevation = next.totalElevation;
+        state.totalElevationLoss = next.totalElevationLoss;
+        state.sourceType = next.sourceType;
+        state.computationStatus = next.computationStatus;
+        state.recomputingStages = next.recomputingStages;
       }),
 
     startStageRecomputation: (indices) =>
