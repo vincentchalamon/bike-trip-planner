@@ -218,6 +218,7 @@ export default function Trips() {
     endDate,
     hasActiveFilter,
     canLoadMore,
+    notifVersion,
     setTitle,
     setStartDate,
     setEndDate,
@@ -229,8 +230,10 @@ export default function Trips() {
 
   // Re-plan the on-device local notifications (offline-not-ready, trip-without-date)
   // off EVERY trip, not just the paginated first page — a trip on page 2+ must
-  // still get its reminders. The visible list drives the refetch (create/delete).
-  useLocalNotifications(useAllTrips(trips));
+  // still get its reminders. Keyed on notifVersion (create/delete/duplicate/reload)
+  // so filtering/scrolling don't cascade a full all-pages refetch; paused while a
+  // filter is active.
+  useLocalNotifications(useAllTrips(hasActiveFilter ? null : notifVersion));
 
   // Id of the trip whose duplication is in flight — guards against a double-tap
   // firing two POST /trips/{id}/duplicate (each would clone the trip again).

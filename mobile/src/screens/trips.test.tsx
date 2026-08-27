@@ -51,6 +51,7 @@ const baseTrips: UseTrips = {
   endDate: '',
   hasActiveFilter: false,
   canLoadMore: false,
+  notifVersion: 0,
   setTitle: jest.fn(),
   setStartDate: jest.fn(),
   setEndDate: jest.fn(),

@@ -125,6 +125,7 @@ export interface UseTrips {
   endDate: string;
   hasActiveFilter: boolean;
   canLoadMore: boolean;
+  notifVersion: number;
   setTitle: (v: string) => void;
   setStartDate: (v: string) => void;
   setEndDate: (v: string) => void;
@@ -158,6 +159,10 @@ export function useTrips(): UseTrips {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
+  // Bumped only when the trip SET changes (create/delete/duplicate/reload), NOT on
+  // filtering or loadMore — drives the local-notification scheduler's all-trips
+  // refetch so it doesn't cascade on every keystroke or scroll page.
+  const [notifVersion, setNotifVersion] = useState(0);
 
   // Bumped on every page-1 (re)load; a loadMore captures it and drops its response
   // if it no longer matches, i.e. the filter/context changed mid-flight.
@@ -216,6 +221,7 @@ export function useTrips(): UseTrips {
   const reload = useCallback(() => {
     setRefreshing(true);
     setNonce((n) => n + 1);
+    setNotifVersion((n) => n + 1);
   }, []);
 
   const remove = useCallback(async (id: string): Promise<string | null> => {
@@ -223,6 +229,7 @@ export function useTrips(): UseTrips {
     if (!err) {
       setTrips((prev) => prev.filter((t) => t.id !== id));
       setTotalItems((n) => Math.max(0, n - 1));
+      setNotifVersion((n) => n + 1);
     }
     return err;
   }, []);
@@ -233,6 +240,7 @@ export function useTrips(): UseTrips {
     const newId = await runDuplicateTrip(id);
     if (newId) {
       setNonce((n) => n + 1);
+      setNotifVersion((n) => n + 1);
     }
     return newId;
   }, []);
@@ -248,6 +256,7 @@ export function useTrips(): UseTrips {
     endDate,
     hasActiveFilter: hasActiveFilter(debouncedFilters),
     canLoadMore,
+    notifVersion,
     setTitle,
     setStartDate,
     setEndDate,
