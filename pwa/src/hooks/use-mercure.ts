@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
 import type { MercureEvent } from "@btp/core/mercure";
 import { useTripStore } from "@/store/trip-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
@@ -28,8 +29,6 @@ function resolveMercureHubUrl(): string {
   }
   return "https://localhost/.well-known/mercure";
 }
-
-const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
 /**
  * Dispatches a Mercure SSE event to the appropriate Zustand store action.
@@ -56,7 +55,16 @@ const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
  * - `trip_complete` — final computation status, stops processing spinner (legacy)
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
-function dispatchEvent(event: MercureEvent): void {
+function dispatchEvent(
+  event: MercureEvent,
+  // Aborted when the subscription tears down (unmount / trip-switch), so a late
+  // reverse-geocode reply cannot overwrite another trip's labels (#787). Scoped
+  // per subscription rather than module-global.
+  signal: AbortSignal,
+  // Per-subscription stage-diff timers, keyed by stage index. Owned by useMercure
+  // and cleared on teardown so a timer from trip A never fires against trip B.
+  timers: Map<number, ReturnType<typeof setTimeout>>,
+): void {
   const store = useTripStore.getState();
 
   switch (event.type) {
@@ -122,7 +130,7 @@ function dispatchEvent(event: MercureEvent): void {
         // Only resolve labels for affected stages
         const affectedStages = merged.filter((_, i) => affected.has(i));
         if (affectedStages.length > 0) {
-          resolveStageLabels(affectedStages, affectedIndices);
+          resolveStageLabels(affectedStages, affectedIndices, signal);
         }
       } else {
         // Full replace: initial generation or no affectedIndices
@@ -168,6 +176,7 @@ function dispatchEvent(event: MercureEvent): void {
           resolveStageLabels(
             needsLabels.map(({ s }) => s),
             needsLabels.map(({ i }) => i),
+            signal,
           );
         }
       }
@@ -544,6 +553,7 @@ function dispatchEvent(event: MercureEvent): void {
         resolveStageLabels(
           needsLabels.map(({ s }) => s),
           needsLabels.map(({ i }) => i),
+          signal,
         );
       }
       break;
@@ -562,14 +572,14 @@ function dispatchEvent(event: MercureEvent): void {
       if (prevStage) {
         const changed = computeStageDiff(prevStage, incoming);
         if (changed.size > 0) {
-          const existingTimer = stageDiffTimers.get(event.data.stageIndex);
+          const existingTimer = timers.get(event.data.stageIndex);
           if (existingTimer !== undefined) clearTimeout(existingTimer);
           store.setStageDiff(event.data.stageIndex, changed);
           const timer = setTimeout(() => {
             useTripStore.getState().clearStageDiff(event.data.stageIndex);
-            stageDiffTimers.delete(event.data.stageIndex);
+            timers.delete(event.data.stageIndex);
           }, 3000);
-          stageDiffTimers.set(event.data.stageIndex, timer);
+          timers.set(event.data.stageIndex, timer);
         }
       }
 
@@ -594,7 +604,7 @@ function dispatchEvent(event: MercureEvent): void {
         updated &&
         (updated.startLabel === null || updated.endLabel === null)
       ) {
-        resolveStageLabels([updated], [event.data.stageIndex]);
+        resolveStageLabels([updated], [event.data.stageIndex], signal);
       }
       break;
     }
@@ -690,8 +700,7 @@ export async function resolveStageLabels(
  *
  * Opens a persistent SSE connection to the Mercure hub on mount, routing all
  * incoming events through {@link dispatchEvent}. The connection is torn down
- * on unmount or when the `tripId` changes. SSE connectivity state is tracked
- * in {@link useUiStore} (`sseConnected`).
+ * on unmount or when the `tripId` changes.
  *
  * In E2E tests, the real Mercure connection is aborted via `page.route()` and
  * events are injected through `CustomEvent('__test_mercure_event')` instead.
@@ -704,22 +713,36 @@ export function useMercure(tripId: string | null): void {
   useEffect(() => {
     if (!tripId) return;
 
-    // TODO: wire authHeaderFactory when auth store is implemented (#78)
+    // One AbortController + one diff-timer map per subscription (per tripId), so a
+    // late geocode reply or a pending diff timer from this trip can never land on
+    // the next one after a fast switch.
+    const controller = new AbortController();
+    const timers = new Map<number, ReturnType<typeof setTimeout>>();
+
+    // Re-authenticate the Mercure cookie when it expires on a long-open tab: the
+    // client calls /trips/{id}/detail with this Bearer to have the backend re-pin
+    // the subscriber cookie. Reuses the in-memory JWT (refreshed if needed).
     const client = new MercureClient(
       resolveMercureHubUrl(),
       `/trips/${tripId}`,
+      async () => {
+        await useAuthStore.getState().ensureResolved();
+        const { accessToken } = useAuthStore.getState();
+        return accessToken ? `Bearer ${accessToken}` : null;
+      },
     );
     clientRef.current = client;
-    useUiStore.getState().setSseConnected(true);
 
     client.onEvent((event) => {
-      dispatchEvent(event);
+      dispatchEvent(event, controller.signal, timers);
     });
 
     return () => {
+      controller.abort();
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
       client.close();
       clientRef.current = null;
-      useUiStore.getState().setSseConnected(false);
     };
   }, [tripId]);
 }
