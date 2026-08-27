@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
+import type { MercureEvent } from '@btp/core/mercure';
 import {
+  type ReconciledState,
+  reduceMercureEvent,
   reconcileStageUpdate,
   reconcileTripReady,
 } from '@btp/core/reconciliation';
@@ -155,6 +158,10 @@ interface TripState extends TripConfig {
   applyTripReady: (stages: StageData[]) => void;
   // Mode 2 per-stage event: reconcile a single slice via the shared core reducer.
   applyStageUpdate: (index: number, stage: StageData) => void;
+  // Reconcile one SSE enrichment/segment event through the shared core reducer
+  // (weather, POIs, accommodations, alerts, route_segment_recalculated, …) that
+  // trip_ready/stage_updated do not cover, so mobile reflects them live (ADR-055).
+  applyMercureEvent: (event: MercureEvent) => void;
   // Merge the on-demand route geometry (GET /route) into the matching stages.
   applyRoute: (route: TripRoute) => void;
   // Merge one stage's on-demand geometry (GET /stages/{index}/detail) into that
@@ -295,6 +302,28 @@ export const useTripStore = create<TripState>((set, get) => ({
       return appendedTrailingStage
         ? { stages, ...endDatePatch(state.startDate, stages.length) }
         : { stages };
+    }),
+  applyMercureEvent: (event) =>
+    set((state) => {
+      // Feed the reducer the current stages/title; the trip-level fields it also
+      // tracks (totals, computationStatus, recomputingStages) are not consumed on
+      // mobile — the summary derives totals from stages, and the computing spinner
+      // stays in setComputing — so they start empty each event and their output is
+      // dropped. Only stages (+ title when set) are written back.
+      const prev: ReconciledState = {
+        totalDistance: null,
+        totalElevation: null,
+        totalElevationLoss: null,
+        sourceType: null,
+        title: state.title,
+        stages: state.stages,
+        computationStatus: {},
+        recomputingStages: new Set(),
+      };
+      const next = reduceMercureEvent(prev, event);
+      return next.title !== null
+        ? { stages: next.stages, title: next.title }
+        : { stages: next.stages };
     }),
   applyRoute: (route) =>
     set((state) => {

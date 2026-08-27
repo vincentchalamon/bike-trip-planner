@@ -16,6 +16,7 @@ export interface TripLiveStore {
   hydrate: ReturnType<typeof useTripStore.getState>['hydrate'];
   applyTripReady: ReturnType<typeof useTripStore.getState>['applyTripReady'];
   applyStageUpdate: ReturnType<typeof useTripStore.getState>['applyStageUpdate'];
+  applyMercureEvent: ReturnType<typeof useTripStore.getState>['applyMercureEvent'];
   setStatus: ReturnType<typeof useTripStore.getState>['setStatus'];
   setComputing: ReturnType<typeof useTripStore.getState>['setComputing'];
 }
@@ -106,6 +107,15 @@ export async function runTripLive(
         // arrives; disarming here would drop the highlight for that common
         // partial-failure case.
         if (!event.data.retryable) store.setComputing(false);
+      } else {
+        // Every other event — the enrichment stream (weather, POIs,
+        // accommodations, every alert category, supply timeline, events) and
+        // route_segment_recalculated (#1179) — is applied live via the shared
+        // core reducer, so mobile no longer waits for the terminal trip_ready to
+        // show them (matching the web). trip_ready / stage_updated keep their
+        // dedicated actions above for the diff-baseline / endDate bookkeeping the
+        // core reducer leaves to the store.
+        store.applyMercureEvent(event);
       }
     });
   } catch {
@@ -125,6 +135,7 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
   const hydrate = useTripStore((s) => s.hydrate);
   const applyTripReady = useTripStore((s) => s.applyTripReady);
   const applyStageUpdate = useTripStore((s) => s.applyStageUpdate);
+  const applyMercureEvent = useTripStore((s) => s.applyMercureEvent);
   const setStatus = useTripStore((s) => s.setStatus);
   const setComputing = useTripStore((s) => s.setComputing);
   const reset = useTripStore((s) => s.reset);
@@ -140,6 +151,7 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
         hydrate,
         applyTripReady,
         applyStageUpdate,
+        applyMercureEvent,
         setStatus,
         setComputing,
       },
@@ -160,6 +172,7 @@ export function useTripLive(id: string, options?: { enabled?: boolean }): void {
     hydrate,
     applyTripReady,
     applyStageUpdate,
+    applyMercureEvent,
     setStatus,
     setComputing,
     reset,

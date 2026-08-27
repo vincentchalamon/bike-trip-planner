@@ -300,6 +300,59 @@ describe('computing state machine driven by SSE', () => {
     // Still running → the recompute may yet produce a trip_ready that diffs.
     expect(store().diffBaseline).not.toBeNull();
   });
+
+  it('applies route_segment_recalculated to the stage live (#1179)', async () => {
+    // Adding a POI waypoint re-routes one segment via route_segment_recalculated
+    // (no terminal trip_ready). Mobile used to ignore it; it now flows through the
+    // shared reducer so the stage's distance/geometry update in place.
+    const dispatch = await connect();
+    expect(store().stages[0].distance).toBe(50);
+
+    dispatch({
+      type: 'route_segment_recalculated',
+      data: {
+        stageIndex: 0,
+        reason: 'waypoint_added',
+        distance: 42000,
+        elevationGain: 99,
+        duration: 3600,
+        coordinates: [A, B, A],
+      },
+    });
+
+    expect(store().stages[0].distance).toBe(42);
+    expect(store().stages[0].geometry).toHaveLength(3);
+  });
+
+  it('applies a weather enrichment event to the stage live', async () => {
+    const dispatch = await connect();
+    expect(store().stages[0].weather).toBeNull();
+
+    dispatch({
+      type: 'weather_fetched',
+      data: {
+        stages: [
+          {
+            dayNumber: 1,
+            weather: {
+              icon: 'sun',
+              description: 'Clear',
+              tempMin: 8,
+              tempMax: 17,
+              windSpeed: 12,
+              windDirection: 'S',
+              precipitationProbability: 20,
+              humidity: 60,
+              comfortIndex: 4,
+              relativeWindDirection: 'tailwind',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(store().stages[0].weather).not.toBeNull();
+  });
 });
 
 // Minimal renderHook on react-test-renderer (the mobile convention, no RTL).
