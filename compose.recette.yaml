@@ -27,10 +27,10 @@ x-recette-env: &recette-env
   JWT_PASSPHRASE: recette
   # Non-default Mercure key so the SEC-004 fail-closed boot guard passes locally.
   # Publisher/subscriber/secret must match for the embedded hub to verify the
-  # app-issued subscriber tokens (HS256).
-  MERCURE_PUBLISHER_JWT_KEY: recette-mercure-jwt-secret
-  MERCURE_SUBSCRIBER_JWT_KEY: recette-mercure-jwt-secret
-  MERCURE_JWT_SECRET: recette-mercure-jwt-secret
+  # app-issued subscriber tokens (HS256, which needs a >=256-bit / >=32-byte key).
+  MERCURE_PUBLISHER_JWT_KEY: recette-mercure-jwt-secret-min-32-bytes
+  MERCURE_SUBSCRIBER_JWT_KEY: recette-mercure-jwt-secret-min-32-bytes
+  MERCURE_JWT_SECRET: recette-mercure-jwt-secret-min-32-bytes
   # Non-default token-encryption key so the SEC-003 fail-closed boot guard passes
   # locally (encrypts refresh tokens at rest).
   REFRESH_TOKEN_ENC_KEY: recette-refresh-token-enc-key
