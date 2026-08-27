@@ -283,7 +283,19 @@ export const useTripStore = create<TripState>((set, get) => ({
       return { stages: reconciled, stageDiffs, diffConsumedToken: consumed };
     }),
   applyStageUpdate: (index, stage) =>
-    set({ stages: reconcileStageUpdate(get().stages, index, stage).stages }),
+    set((state) => {
+      const { stages, appendedTrailingStage } = reconcileStageUpdate(
+        state.stages,
+        index,
+        stage,
+      );
+      // A trailing-day split (#840) grows the stage count by one, so the trip's
+      // end date must extend by a day too (core delegates this bookkeeping to the
+      // store — reconciliation.ts). Same patch as the optimistic structural edits.
+      return appendedTrailingStage
+        ? { stages, ...endDatePatch(state.startDate, stages.length) }
+        : { stages };
+    }),
   applyRoute: (route) =>
     set((state) => {
       const geometryByDay = new Map(
