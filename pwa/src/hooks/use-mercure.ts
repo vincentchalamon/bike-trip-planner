@@ -8,10 +8,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
-import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
-import { enrichedPayloadToStageData } from "@btp/core/reconciliation";
-import { EMPTY_RESUPPLY } from "@btp/core";
-import type { AlertData, StageData } from "@btp/core";
+import {
+  enrichedPayloadToStageData,
+  reduceMercureEvent,
+} from "@btp/core/reconciliation";
+import type { StageData } from "@btp/core";
 
 /**
  * The Mercure hub the browser subscribes to. An explicit
@@ -66,110 +67,62 @@ function dispatchEvent(
   timers: Map<number, ReturnType<typeof setTimeout>>,
 ): void {
   const store = useTripStore.getState();
+  const ui = useUiStore.getState();
+  // Snapshot the pre-mutation stages for the stage_updated diff below.
+  const prevStages = store.stages;
 
+  // STATE — one source of truth via the shared core reducer (ADR-055), the same
+  // path mobile now takes; #1030 pins its output against this hook for every
+  // event. `stage_updated` keeps its dedicated action for the endDate bookkeeping
+  // core leaves to the store, and its recompute marker is settled right after.
+  if (event.type === "stage_updated") {
+    store.applyStageUpdate(
+      event.data.stageIndex,
+      enrichedPayloadToStageData(event.data.stage),
+    );
+    store.finishStageRecomputation(event.data.stageIndex);
+  } else {
+    store.applyReconciled(
+      reduceMercureEvent(
+        {
+          totalDistance: store.totalDistance,
+          totalElevation: store.totalElevation,
+          totalElevationLoss: store.totalElevationLoss,
+          sourceType: store.sourceType,
+          title: store.trip?.title ?? null,
+          stages: store.stages,
+          computationStatus: store.computationStatus,
+          recomputingStages: store.recomputingStages,
+        },
+        event,
+      ),
+    );
+  }
+
+  // Post-mutation stages, for label resolution and the diff.
+  const postStages = useTripStore.getState().stages;
+
+  // UI SIDE EFFECTS — kept OUT of core (ADR-043): toasts, block/processing
+  // spinners, reverse-geocoding and the transient stage-diff highlight. The
+  // recompute markers and computationStatus are already settled by the reducer
+  // (validation_error / computation_error / terminals clear them there).
   switch (event.type) {
-    case "route_parsed":
-      store.updateRouteData(event.data);
-      break;
-
     case "stages_computed": {
       const { affectedIndices } = event.data;
-      const existingStages = store.stages;
-
       if (
         affectedIndices &&
         affectedIndices.length > 0 &&
-        existingStages.length > 0
+        prevStages.length > 0
       ) {
-        // Partial update: merge only affected stages, preserve unaffected
+        // Partial update: only the affected stages had their labels reset.
         const affected = new Set(affectedIndices);
-        const merged = event.data.stages.map((s, i) => {
-          const existing = existingStages[i];
-          if (existing && !affected.has(i)) {
-            // Preserve derived data for unaffected stages, update core fields
-            return {
-              ...existing,
-              dayNumber: s.dayNumber,
-              distance: s.distance,
-              elevation: s.elevation,
-              elevationLoss: s.elevationLoss ?? 0,
-              startPoint: s.startPoint,
-              endPoint: s.endPoint,
-              geometry: s.geometry ?? existing.geometry,
-              label: s.label ?? existing.label,
-            };
-          }
-          // Reset derived data for affected or new stages,
-          // but preserve accommodations: if a new scan is needed,
-          // accommodations_found will arrive and replace them
-          return {
-            ...s,
-            elevationLoss: s.elevationLoss ?? 0,
-            geometry: s.geometry ?? [],
-            label: s.label ?? null,
-            isRestDay: s.isRestDay ?? false,
-            startLabel: null,
-            endLabel: null,
-            weather: null,
-            // Preserve the existing alerts (like the accommodations below) until
-            // the recompute's fresh per-category alert events replace them, so a
-            // stage's alerts don't flash empty between `stages_computed` and those
-            // follow-up events (e.g. after selecting an accommodation) (recette #649).
-            alerts: existing?.alerts ?? [],
-            resupply: EMPTY_RESUPPLY,
-            supplyTimeline: [],
-            events: [],
-            accommodations: existing?.accommodations ?? [],
-            selectedAccommodation: existing?.selectedAccommodation ?? null,
-            accommodationSearchRadiusKm:
-              existing?.accommodationSearchRadiusKm ??
-              DEFAULT_ACCOMMODATION_RADIUS_KM,
-          };
-        });
-        store.setStages(merged);
-        // Only resolve labels for affected stages
-        const affectedStages = merged.filter((_, i) => affected.has(i));
+        const affectedStages = postStages.filter((_, i) => affected.has(i));
         if (affectedStages.length > 0) {
           resolveStageLabels(affectedStages, affectedIndices, signal);
         }
       } else {
-        // Full replace: initial generation or no affectedIndices
-        // Preserve accommodations/labels for stages whose endpoints didn't move
-        const stages = event.data.stages.map((s, i) => {
-          const prev = existingStages[i];
-          const endMatch =
-            prev &&
-            prev.endPoint.lat === s.endPoint.lat &&
-            prev.endPoint.lon === s.endPoint.lon;
-          const startMatch =
-            prev &&
-            prev.startPoint.lat === s.startPoint.lat &&
-            prev.startPoint.lon === s.startPoint.lon;
-
-          return {
-            ...s,
-            elevationLoss: s.elevationLoss ?? 0,
-            geometry: s.geometry ?? [],
-            label: s.label ?? null,
-            isRestDay: s.isRestDay ?? false,
-            startLabel: startMatch ? prev.startLabel : null,
-            endLabel: endMatch ? prev.endLabel : null,
-            weather: null,
-            alerts: [],
-            resupply: EMPTY_RESUPPLY,
-            supplyTimeline: [],
-            events: [],
-            accommodations: endMatch ? prev.accommodations : [],
-            accommodationSearchRadiusKm: endMatch
-              ? (prev.accommodationSearchRadiusKm ??
-                DEFAULT_ACCOMMODATION_RADIUS_KM)
-              : DEFAULT_ACCOMMODATION_RADIUS_KM,
-          };
-        });
-        store.setStages(stages);
-
-        // Only resolve labels for stages that need them
-        const needsLabels = stages
+        // Full replace: geocode every stage still missing a label.
+        const needsLabels = postStages
           .map((s, i) => ({ s, i }))
           .filter(({ s }) => s.startLabel === null || s.endLabel === null);
         if (needsLabels.length > 0) {
@@ -184,369 +137,36 @@ function dispatchEvent(
     }
 
     case "weather_fetched":
-      for (const s of event.data.stages) {
-        if (s.weather) {
-          store.updateStageWeather(s.dayNumber, s.weather);
-        }
-      }
       // Weather enrichment landed — resolve its per-block spinner (ADR-043).
-      useUiStore.getState().setBlockStatus("weather", "done");
-      break;
-
-    case "pois_scanned":
-      store.updateStageResupply(event.data.stageIndex, event.data.resupply);
-      if (event.data.alerts && event.data.alerts.length > 0) {
-        store.updateStageAlerts(
-          event.data.stageIndex,
-          event.data.alerts,
-          "pois",
-        );
-      }
-      break;
-
-    case "supply_timeline":
-      store.updateStageSupplyTimeline(
-        event.data.stageIndex,
-        event.data.markers,
-      );
+      ui.setBlockStatus("weather", "done");
       break;
 
     case "accommodations_found":
-      store.updateStageAccommodations(
-        event.data.stageIndex,
-        event.data.accommodations,
-        event.data.searchRadiusKm,
-      );
-      if (event.data.alerts && event.data.alerts.length > 0) {
-        store.updateStageAlerts(
-          event.data.stageIndex,
-          event.data.alerts,
-          "accommodations",
-        );
-      }
-      // Settle the "Recherche d'hébergements" spinner as soon as results land.
-      // A standalone scan (expand-radius / 409 re-scan) never emits a terminal
-      // trip_ready/trip_complete, so without this the spinner spins forever even
-      // though the accommodations are already shown (recette #649).
-      useUiStore.getState().setAccommodationScanning(false);
+      // Settle the "Recherche d'hébergements" spinner as soon as results land: a
+      // standalone scan (expand-radius / 409 re-scan) never emits a terminal
+      // trip_ready/trip_complete (recette #649).
+      ui.setAccommodationScanning(false);
       break;
 
-    case "events_found":
-      store.setStageEvents(event.data.stageIndex, event.data.events);
+    case "route_segment_recalculated":
+      ui.setProcessing(false);
       break;
-
-    case "terrain_alerts":
-      for (const [indexStr, alerts] of Object.entries(
-        event.data.alertsByStage,
-      )) {
-        const idx = Number(indexStr);
-        if (!isNaN(idx)) {
-          store.updateStageAlerts(idx, alerts, "terrain");
-        }
-      }
-      break;
-
-    case "calendar_alerts": {
-      const calendarByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = calendarByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        calendarByStage.set(alert.stageIndex, existing);
-      }
-      // The payload is a full replacement of the calendar alerts: clear the
-      // group on EVERY stage first, otherwise a stage that dropped out of the
-      // new set (e.g. no longer a Sunday after a rest-day insert) keeps its
-      // stale alert because the loop below only visits stages present in the
-      // payload (recette bug: "L'étape 3 tombe un dimanche" on a Tuesday).
-      for (let i = 0; i < store.stages.length; i++) {
-        store.updateStageAlerts(i, [], "calendar");
-      }
-      for (const [stageIndex, alerts] of calendarByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type as AlertData["type"],
-            message: a.message,
-            lat: null,
-            lon: null,
-          })),
-          "calendar",
-        );
-      }
-      break;
-    }
-
-    case "wind_alerts":
-      store.updateStageAlerts(0, event.data.alerts, "wind");
-      break;
-
-    case "bike_shop_alerts": {
-      const bikeShopByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = bikeShopByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        bikeShopByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of bikeShopByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type as "nudge",
-            message: a.message,
-            lat: null,
-            lon: null,
-          })),
-          "bike_shop",
-        );
-      }
-      break;
-    }
-
-    case "water_point_alerts": {
-      // Note: event.data.waterPointsByStage is available but not yet consumed — reserved for future map layer display
-      const waterByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = waterByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        waterByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of waterByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type as "nudge",
-            message: a.message,
-            lat: null,
-            lon: null,
-            source: "water_point",
-          })),
-          "water_point",
-        );
-      }
-      break;
-    }
-
-    case "health_service_alerts": {
-      const healthByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = healthByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        healthByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of healthByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type as "nudge",
-            message: a.message,
-          })),
-          "health_service",
-        );
-      }
-      break;
-    }
-
-    case "cultural_poi_alerts": {
-      const culturalPoiByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = culturalPoiByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        culturalPoiByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of culturalPoiByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: "nudge" as const,
-            message: a.message,
-            lat: a.lat,
-            lon: a.lon,
-            source: "cultural_poi",
-            poiName: a.poiName,
-            poiType: a.poiType,
-            poiLat: a.poiLat,
-            poiLon: a.poiLon,
-            distanceFromRoute: a.distanceFromRoute,
-            // Enrichment fields (Wikidata / DataTourisme) — forwarded so the
-            // map popover can render variant A (issue #398).
-            description: a.description,
-            openingHours: a.openingHours,
-            estimatedPrice: a.estimatedPrice,
-            imageUrl: a.imageUrl,
-            wikidataId: a.wikidataId,
-            wikipediaUrl: a.wikipediaUrl,
-          })),
-          "cultural_poi",
-        );
-      }
-      break;
-    }
-
-    case "railway_station_alerts": {
-      const railwayByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = railwayByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        railwayByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of railwayByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: "nudge" as const,
-            message: a.message,
-            lat: a.lat ?? null,
-            lon: a.lon ?? null,
-            source: "railway_station",
-            // The action (and its translated label) is built server-side.
-            ...(a.action ? { action: a.action } : {}),
-          })),
-          "railway_station",
-        );
-      }
-      break;
-    }
-
-    case "border_crossing_alerts": {
-      const borderByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = borderByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        borderByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of borderByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type,
-            message: a.message,
-            lat: a.lat,
-            lon: a.lon,
-            source: "border_crossing",
-            // The action (and its translated label) is built server-side.
-            action: a.action,
-          })),
-          "border_crossing",
-        );
-      }
-      break;
-    }
-
-    case "ferry_alerts": {
-      const ferryByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = ferryByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        ferryByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of ferryByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type,
-            message: a.message,
-            lat: a.lat,
-            lon: a.lon,
-            source: "ferry",
-            action: {
-              kind: a.action.kind,
-              label: a.action.label,
-              payload: a.action.payload,
-            },
-          })),
-          "ferry",
-        );
-      }
-      break;
-    }
-
-    case "ford_alerts": {
-      const fordByStage = new Map<number, typeof event.data.alerts>();
-      for (const alert of event.data.alerts) {
-        const existing = fordByStage.get(alert.stageIndex) ?? [];
-        existing.push(alert);
-        fordByStage.set(alert.stageIndex, existing);
-      }
-      for (const [stageIndex, alerts] of fordByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          alerts.map((a) => ({
-            code: a.code,
-            type: a.type,
-            message: a.message,
-            lat: a.lat,
-            lon: a.lon,
-            source: "ford",
-            action: {
-              kind: a.action.kind,
-              label: a.action.label,
-              payload: a.action.payload,
-            },
-          })),
-          "ford",
-        );
-      }
-      break;
-    }
-
-    case "route_segment_recalculated": {
-      store.updateStageAfterRouteRecalculation(event.data.stageIndex, {
-        distance: event.data.distance,
-        elevationGain: event.data.elevationGain,
-        coordinates: event.data.coordinates,
-      });
-      store.updateStageAlerts(event.data.stageIndex, [], "cultural_poi");
-      store.clearRecomputingStages();
-      useUiStore.getState().setProcessing(false);
-      break;
-    }
 
     case "trip_complete":
-      store.setComputationStatus(event.data.computationStatus);
-      // Terminal completion — settle the global processing/scanning overlays
-      // and the weather enrichment spinner (ADR-043). Weather is marked done
-      // here as a safety net in case its dedicated event (or the detail-status
-      // hydration) did not flip it.
-      useUiStore.getState().setBlockStatus("weather", "done");
-      store.clearRecomputingStages();
-      useUiStore.getState().setProcessing(false);
-      useUiStore.getState().setAccommodationScanning(false);
-      break;
-
-    case "computation_step_completed":
-      // Mode 1 — progress tick only. With the synchronous structural flow
-      // there is no narrative progress screen to drive (ADR-043); the tick is
-      // a no-op kept for wire-compatibility with the existing backend events.
+      // Terminal completion — settle the global overlays and the weather block
+      // spinner (safety net in case weather_fetched never fired).
+      ui.setBlockStatus("weather", "done");
+      ui.setProcessing(false);
+      ui.setAccommodationScanning(false);
       break;
 
     case "trip_ready": {
-      // Mode 1 — atomic swap of the whole trip. We intentionally replace the
-      // stage array in a single mutation (instead of the legacy 10+ partial
-      // events) to avoid the cumulative layout shift observed in Acte 2.
-      const incomingStages = event.data.stages.map(enrichedPayloadToStageData);
-      store.applyTripReady(incomingStages);
-      store.setComputationStatus(event.data.computationStatus);
-      // The terminal enrichment payload landed — resolve the weather block
-      // spinner (ADR-043). Weather rides along in the atomic swap, so mark it
-      // done in case `weather_fetched` never fired separately.
-      useUiStore.getState().setBlockStatus("weather", "done");
-      store.clearRecomputingStages();
-      useUiStore.getState().setProcessing(false);
-      useUiStore.getState().setAccommodationScanning(false);
-
-      // Re-read the store to capture the freshly applied stages.
-      const snapshotStore = useTripStore.getState();
-
-      // Resolve labels for any stage that still lacks them.
-      const needsLabels = snapshotStore.stages
+      // The terminal enrichment payload landed — settle the overlays and the
+      // weather block spinner, then geocode any stage still missing a label.
+      ui.setBlockStatus("weather", "done");
+      ui.setProcessing(false);
+      ui.setAccommodationScanning(false);
+      const needsLabels = postStages
         .map((s, i) => ({ s, i }))
         .filter(({ s }) => s.startLabel === null || s.endLabel === null);
       if (needsLabels.length > 0) {
@@ -560,76 +180,61 @@ function dispatchEvent(
     }
 
     case "stage_updated": {
-      // Mode 2 — per-stage update. Replace the single slice; preserved
-      // fields (labels, search radius) are handled by the store.
-      const incoming = enrichedPayloadToStageData(event.data.stage);
+      const index = event.data.stageIndex;
+      const prevStage = prevStages[index];
+      const nextStage = postStages[index];
 
-      // Capture previous state before applying the update to compute the diff.
-      const prevStage = store.stages[event.data.stageIndex];
-      store.applyStageUpdate(event.data.stageIndex, incoming);
-
-      // Compute the set of changed fields for transient diff highlighting.
-      if (prevStage) {
-        const changed = computeStageDiff(prevStage, incoming);
+      // Transient diff-highlight of the changed fields (reads pre vs post state).
+      if (prevStage && nextStage) {
+        const changed = computeStageDiff(prevStage, nextStage);
         if (changed.size > 0) {
-          const existingTimer = timers.get(event.data.stageIndex);
+          const existingTimer = timers.get(index);
           if (existingTimer !== undefined) clearTimeout(existingTimer);
-          store.setStageDiff(event.data.stageIndex, changed);
+          store.setStageDiff(index, changed);
           const timer = setTimeout(() => {
-            useTripStore.getState().clearStageDiff(event.data.stageIndex);
-            timers.delete(event.data.stageIndex);
+            useTripStore.getState().clearStageDiff(index);
+            timers.delete(index);
           }, 3000);
-          timers.set(event.data.stageIndex, timer);
+          timers.set(index, timer);
         }
       }
 
-      // Remove this stage from the recomputing set — the shimmer skeleton
-      // can now be replaced by the real card.
-      store.finishStageRecomputation(event.data.stageIndex);
-
-      // A batch/inline recompute (Mode 2) re-publishes per-stage `stage_updated`
-      // events but never the terminal `trip_complete`/`trip_ready`: the enrichment
-      // gate only fires once EVERY initialised computation has settled, and the
-      // computations a trip never runs (e.g. weather/calendar without dates) stay
-      // "pending" forever. So once the last recomputing stage settles, clear the
-      // global processing overlay here — otherwise it spins forever (recette #649,
-      // "profil expert"). Tied to `recomputingStages` so the initial full analysis
-      // (which never populates that set) keeps relying on `trip_ready`.
+      // A batch/inline recompute (Mode 2) never emits a terminal trip_complete,
+      // so once the last recomputing stage settles, clear the global processing
+      // overlay here — otherwise it spins forever (recette #649). Tied to
+      // recomputingStages so the initial full analysis keeps relying on trip_ready.
       if (useTripStore.getState().recomputingStages.size === 0) {
-        useUiStore.getState().setProcessing(false);
+        ui.setProcessing(false);
       }
+
       // Labels may have been wiped if endpoints moved — refresh if needed.
-      const updated = useTripStore.getState().stages[event.data.stageIndex];
       if (
-        updated &&
-        (updated.startLabel === null || updated.endLabel === null)
+        nextStage &&
+        (nextStage.startLabel === null || nextStage.endLabel === null)
       ) {
-        resolveStageLabels([updated], [event.data.stageIndex], signal);
+        resolveStageLabels([nextStage], [index], signal);
       }
       break;
     }
 
     case "validation_error":
       toast.error(event.data.message);
-      store.clearRecomputingStages();
-      useUiStore.getState().setProcessing(false);
-      useUiStore.getState().setAccommodationScanning(false);
+      ui.setProcessing(false);
+      ui.setAccommodationScanning(false);
       break;
 
     case "computation_error": {
       toast.error(`Computation failed: ${event.data.message}`);
       // Map the failed computation onto its per-block spinner so the matching
       // block surfaces an error + retry affordance (ADR-043). Weather/wind →
-      // weather. Other computations have no dedicated block and only settle
-      // the global processing flag below.
+      // weather. Other computations have no dedicated block.
       const computation = event.data.computation;
       if (computation === "weather" || computation === "wind") {
-        useUiStore.getState().setBlockStatus("weather", "failed");
+        ui.setBlockStatus("weather", "failed");
       }
       if (!event.data.retryable) {
-        store.clearRecomputingStages();
-        useUiStore.getState().setProcessing(false);
-        useUiStore.getState().setAccommodationScanning(false);
+        ui.setProcessing(false);
+        ui.setAccommodationScanning(false);
       }
       break;
     }

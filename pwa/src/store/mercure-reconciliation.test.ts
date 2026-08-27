@@ -772,19 +772,22 @@ describe("Mercure contract drift guard (#1030)", () => {
   );
   const canonical = new Set<string>(MERCURE_EVENT_TYPES);
 
-  it("every event dispatched by use-mercure.ts is a canonical core event", () => {
+  it("every event the hook still switches on is a canonical core event", () => {
+    // The hook no longer needs a case per event: it routes state through
+    // reduceMercureEvent and only keeps cases for the events with UI side effects
+    // (spinners, geocoding, diff). Those explicit cases must still be canonical.
     const orphanInHook = [...handledInHook].filter((t) => !canonical.has(t));
     expect(orphanInHook, "web hook handles events not in @btp/core").toEqual(
       [],
     );
   });
 
-  it("every canonical core event is dispatched by use-mercure.ts", () => {
-    const missingFromHook = [...canonical].filter((t) => !handledInHook.has(t));
-    expect(
-      missingFromHook,
-      "@btp/core events not handled by the web hook",
-    ).toEqual([]);
+  it("the hook delegates state reconciliation to the shared core reducer", () => {
+    // Convergence (ADR-055): rather than a per-event switch that could drift from
+    // the reducer, the hook feeds every event through reduceMercureEvent (whose
+    // exhaustiveness is pinned by the runtime test below), so drift is impossible
+    // by construction. stage_updated keeps applyStageUpdate for endDate bookkeeping.
+    expect(source).toMatch(/reduceMercureEvent\(/);
   });
 
   it("the core reducer handles every canonical event at runtime (no fallthrough)", () => {
