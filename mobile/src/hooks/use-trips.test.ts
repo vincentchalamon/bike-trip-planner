@@ -64,7 +64,7 @@ describe('runLoadTrips (#1036)', () => {
     const res = await runLoadTrips(2, {});
     expect(res.items).toEqual([]);
     expect(res.totalItems).toBe(0);
-    expect(res.error).toBe('Impossible de charger les voyages.');
+    expect(res.error).toBe('trips.error');
   });
 
   it('caches the first unfiltered page on success (#1167)', async () => {
@@ -94,7 +94,7 @@ describe('runLoadTrips (#1036)', () => {
     mockReadCachedList.mockResolvedValue(null);
     const res = await runLoadTrips(1, {});
     expect(res.items).toEqual([]);
-    expect(res.error).toBe('Impossible de charger les voyages.');
+    expect(res.error).toBe('trips.error');
   });
 
   it('shows an empty (cached) list without the error screen when the user has no trips (#1167)', async () => {
@@ -114,7 +114,7 @@ describe('runDeleteTrip (#1036)', () => {
 
   it('resolves a message when the delete fails (incl. 404 non-owner masking)', async () => {
     mockDelete.mockResolvedValue({ ok: false, status: 404 });
-    expect(await runDeleteTrip('t1')).toBe('La suppression a échoué.');
+    expect(await runDeleteTrip('t1')).toBe('trips.deleteFailed');
   });
 
   it('cancels the deleted trip local reminders (delete site, not list diff) (#1121)', async () => {

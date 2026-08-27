@@ -144,7 +144,7 @@ describe('runTripLive orchestration (#1014)', () => {
   it('surfaces an error and does not subscribe when /detail fails', async () => {
     mockDetail.mockRejectedValue(new Error('boom'));
     const sub = await runTripLive('t1', store(), notCancelled);
-    expect(store().error).toBe('Impossible de charger le roadbook.');
+    expect(store().error).toBe('trip.loadError');
     expect(mockSubscribe).not.toHaveBeenCalled();
     expect(sub).toBeUndefined();
   });
@@ -152,7 +152,7 @@ describe('runTripLive orchestration (#1014)', () => {
   it('reports "Voyage introuvable." when /detail returns null', async () => {
     mockDetail.mockResolvedValue(null);
     await runTripLive('t1', store(), notCancelled);
-    expect(store().error).toBe('Voyage introuvable.');
+    expect(store().error).toBe('trip.notFound');
   });
 
   it('still renders the hydrated trip when the SSE token fetch fails (swallowed)', async () => {

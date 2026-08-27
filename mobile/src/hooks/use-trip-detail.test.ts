@@ -32,13 +32,13 @@ describe('runLoadTripDetail (#1031)', () => {
     mockDetail.mockResolvedValue(null);
     const { detail, error } = await runLoadTripDetail('t1');
     expect(detail).toBeNull();
-    expect(error).toBe('Voyage introuvable.');
+    expect(error).toBe('trip.notFound');
   });
 
   it('reports a load error when the fetch throws and no cache exists', async () => {
     mockDetail.mockRejectedValue(new Error('boom'));
     const { error } = await runLoadTripDetail('t1');
-    expect(error).toBe('Impossible de charger le voyage.');
+    expect(error).toBe('trip.detailLoadError');
   });
 });
 

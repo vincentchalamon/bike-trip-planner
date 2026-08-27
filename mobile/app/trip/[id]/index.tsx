@@ -203,7 +203,10 @@ export default function TripRoadbook() {
     return (
       <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ErrorState title={t('common.error')} description={error} />
+        <ErrorState
+          title={t('common.error')}
+          description={t(error, { defaultValue: error })}
+        />
       </Screen>
     );
   }

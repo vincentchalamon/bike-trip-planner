@@ -39,6 +39,7 @@ export const en: typeof fr = {
   trips: {
     title: 'My trips',
     error: 'Could not load trips.',
+    deleteFailed: 'The deletion failed.',
     empty: 'No trips yet.',
     noResults: 'No results',
     noResultsHint: 'No trip matches these filters.',
@@ -255,6 +256,9 @@ export const en: typeof fr = {
     segmentMap: 'Map',
     empty: 'No stage computed.',
     mapEmpty: 'No route available for this trip.',
+    loadError: 'Could not load the roadbook.',
+    notFound: 'Trip not found.',
+    detailLoadError: 'Could not load the trip.',
     day: 'Day {{day}}',
     rest: 'rest',
     today: 'Today',

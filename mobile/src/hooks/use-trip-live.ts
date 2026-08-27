@@ -59,12 +59,14 @@ export async function runTripLive(
       useDismissedAlerts.getState().reset();
       return undefined;
     }
-    store.setStatus({ loading: false, error: 'Impossible de charger le roadbook.' });
+    // `error` carries an i18n key (translated at the display site), like the
+    // 'notFound' code use-shared-trip stores — never a pre-translated string.
+    store.setStatus({ loading: false, error: 'trip.loadError' });
     return undefined;
   }
   if (isCancelled()) return undefined;
   if (!detail) {
-    store.setStatus({ loading: false, error: 'Voyage introuvable.' });
+    store.setStatus({ loading: false, error: 'trip.notFound' });
     return undefined;
   }
   void cacheTripDetail(id, detail);

@@ -1,5 +1,6 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ErrorState, Screen } from '../../../../src/components/ui';
 import { StageDetailView, TripTitleHeader } from '../../../../src/components/trip';
 import { ownsTripLive, parseStageIndex } from '../../../../src/components/trip/stage-detail';
@@ -14,6 +15,7 @@ import { useTripStore } from '../../../../src/store/trip-store';
 // that would blank the roadbook underneath on back-navigation. Ownership is
 // decided once, at mount.
 export default function StageDetailScreen() {
+  const { t } = useTranslation();
   const { id, index } = useLocalSearchParams<{ id: string; index: string }>();
   const error = useTripStore((s) => s.error);
 
@@ -26,7 +28,7 @@ export default function StageDetailScreen() {
   if (error) {
     return (
       <Screen padded={false}>
-        <ErrorState title={error} />
+        <ErrorState title={t(error, { defaultValue: error })} />
       </Screen>
     );
   }
