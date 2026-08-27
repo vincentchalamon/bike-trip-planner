@@ -14,6 +14,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
+import { useAllTrips } from '../../src/hooks/use-all-trips';
 import { useLocalNotifications } from '../../src/hooks/use-local-notifications';
 import type { TripListItem } from '../../src/api/trips';
 import {
@@ -217,6 +218,7 @@ export default function Trips() {
     endDate,
     hasActiveFilter,
     canLoadMore,
+    notifVersion,
     setTitle,
     setStartDate,
     setEndDate,
@@ -227,8 +229,11 @@ export default function Trips() {
   } = useTrips();
 
   // Re-plan the on-device local notifications (offline-not-ready, trip-without-date)
-  // off the loaded trip list, gated by the per-category toggles.
-  useLocalNotifications(trips);
+  // off EVERY trip, not just the paginated first page — a trip on page 2+ must
+  // still get its reminders. Keyed on notifVersion (create/delete/duplicate/reload)
+  // so filtering/scrolling don't cascade a full all-pages refetch; paused while a
+  // filter is active.
+  useLocalNotifications(useAllTrips(hasActiveFilter ? null : notifVersion));
 
   // Id of the trip whose duplication is in flight — guards against a double-tap
   // firing two POST /trips/{id}/duplicate (each would clone the trip again).

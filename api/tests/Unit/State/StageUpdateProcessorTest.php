@@ -149,6 +149,90 @@ final class StageUpdateProcessorTest extends TestCase
     }
 
     #[Test]
+    public function distanceEditRebuildsRouteFromGeometryWhenDecimatedPointsExpired(): void
+    {
+        // Same edit as above, but the transient Redis decimated points have expired
+        // (getDecimatedPoints → null). The processor must rebuild the route from the
+        // persisted per-stage geometry so the edit still applies instead of silently
+        // no-op'ing. The stage geometries are contiguous segments of the route,
+        // sharing their boundary point.
+        $p = $this->decimatedPoints;
+
+        $stages = [
+            new Stage(tripId: 't', dayNumber: 1, distance: 30.0, elevation: 10.0, startPoint: $p[0], endPoint: $p[1], geometry: [$p[0], $p[1]]),
+            new Stage(tripId: 't', dayNumber: 2, distance: 60.0, elevation: 20.0, startPoint: $p[1], endPoint: $p[3], geometry: [$p[1], $p[2], $p[3]]),
+            new Stage(tripId: 't', dayNumber: 3, distance: 30.0, elevation: 10.0, startPoint: $p[3], endPoint: $p[4], geometry: [$p[3], $p[4]]),
+        ];
+
+        $splitPoint = new Coordinate(48.05, 2.05, 5.0);
+        $remaining = [$splitPoint, $p[1], $p[2], $p[3], $p[4]];
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('splitAtDistance')->willReturn([
+            [$p[0], $splitPoint],
+            $remaining,
+            15.0,
+        ]);
+        $distanceCalculator->method('findClosestIndex')->willReturnCallback(
+            function (array $points, Coordinate $target): int {
+                foreach ($this->decimatedPoints as $i => $point) {
+                    if ($point->lat === $target->lat && $point->lon === $target->lon) {
+                        return $i;
+                    }
+                }
+
+                return 0;
+            },
+        );
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(15.0);
+
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        $elevationCalculator->method('calculateTotalAscent')->willReturn(5.0);
+        $elevationCalculator->method('calculateTotalDescent')->willReturn(3.0);
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $storedStages = null;
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        // Expired: the fallback must rebuild from the stage geometry.
+        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
+        $tripStateManager->method('storeStages')->willReturnCallback(
+            static function (string $tripId, array $stages) use (&$storedStages): void {
+                $storedStages = $stages;
+            },
+        );
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
+        $processor = new StageUpdateProcessor(
+            $tripStateManager,
+            $messageBus,
+            $distanceCalculator,
+            $elevationCalculator,
+            $routeSimplifier,
+            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            $generationTracker,
+            new TripLocker(),
+        );
+
+        $request = new StageRequest();
+        $request->distance = 15.0;
+
+        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+
+        self::assertNotNull($storedStages);
+        // The edit applied (not a silent no-op): the next stage was recalculated.
+        self::assertNotSame($p[1], $storedStages[1]->startPoint, 'Stage 1 startPoint should have changed via the geometry fallback');
+    }
+
+    #[Test]
     public function shorteningLastStageCreatesNewStage(): void
     {
         // 2 stages: [0→2], [2→4]

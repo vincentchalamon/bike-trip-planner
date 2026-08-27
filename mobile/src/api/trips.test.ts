@@ -7,6 +7,7 @@ import {
   fetchSharedTripRoute,
   fetchStageExport,
   fetchTripExport,
+  fetchAllTrips,
   fetchTrips,
   stageExportFileName,
   tripExportFileName,
@@ -33,6 +34,34 @@ describe('fetchTrips (#1036)', () => {
       headers: { Accept: 'application/ld+json' },
     });
     expect(res).toEqual({ items: [{ id: 't1' }], totalItems: 20 });
+  });
+
+  it('fetchAllTrips pages through every trip, unfiltered, for the notification scheduler', async () => {
+    const page1 = Array.from({ length: TRIPS_PAGE_SIZE }, (_, i) => ({ id: `t${i}` }));
+    const page2 = [{ id: 'x1' }, { id: 'x2' }, { id: 'x3' }];
+    mockGet
+      .mockResolvedValueOnce({ data: { member: page1, totalItems: 15 }, error: undefined } as never)
+      .mockResolvedValueOnce({ data: { member: page2, totalItems: 15 }, error: undefined } as never);
+
+    const all = await fetchAllTrips();
+
+    expect(mockGet).toHaveBeenCalledTimes(2);
+    expect(mockGet).toHaveBeenNthCalledWith(1, '/trips', {
+      params: { query: { page: 1, itemsPerPage: TRIPS_PAGE_SIZE } },
+      headers: { Accept: 'application/ld+json' },
+    });
+    expect(mockGet).toHaveBeenNthCalledWith(2, '/trips', {
+      params: { query: { page: 2, itemsPerPage: TRIPS_PAGE_SIZE } },
+      headers: { Accept: 'application/ld+json' },
+    });
+    expect(all).toHaveLength(15);
+  });
+
+  it('fetchAllTrips does a single request when everything fits on page 1', async () => {
+    mockGet.mockResolvedValue({ data: { member: [{ id: 't1' }], totalItems: 1 }, error: undefined } as never);
+    const all = await fetchAllTrips();
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(all).toEqual([{ id: 't1' }]);
   });
 
   it('defaults to page 1 with no filters', async () => {

@@ -67,6 +67,22 @@ export async function fetchTrips(
   return { items: data?.member ?? [], totalItems: data?.totalItems ?? 0 };
 }
 
+/**
+ * Every trip (all pages), unfiltered. Used only to schedule local notifications,
+ * which must cover trips beyond the paginated list's first page — a trip on page
+ * 2+ would otherwise never get its reminders. The UI list stays paginated.
+ */
+export async function fetchAllTrips(): Promise<TripListItem[]> {
+  const first = await fetchTrips(1, {});
+  const all = [...first.items];
+  const totalPages = Math.max(1, Math.ceil(first.totalItems / TRIPS_PAGE_SIZE));
+  for (let page = 2; page <= totalPages; page += 1) {
+    const { items } = await fetchTrips(page, {});
+    all.push(...items);
+  }
+  return all;
+}
+
 export async function fetchTripDetail(id: string): Promise<TripDetail | null> {
   const { data, error } = await api.GET('/trips/{id}/detail', {
     params: { path: { id } },
