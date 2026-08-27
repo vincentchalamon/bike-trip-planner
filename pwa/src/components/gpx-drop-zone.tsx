@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Upload } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 interface GpxDropZoneProps {
   onDrop: (file: File) => Promise<void>;
@@ -60,11 +61,14 @@ export function GpxDropZone({ onDrop, disabled, children }: GpxDropZoneProps) {
       if (!file) return;
 
       const isGpx = file.name.toLowerCase().endsWith(".gpx");
-      if (!isGpx) return;
+      if (!isGpx) {
+        toast.error(t("invalidFileType"));
+        return;
+      }
 
       void onDrop(file);
     },
-    [disabled, onDrop],
+    [disabled, onDrop, t],
   );
 
   useEffect(() => {

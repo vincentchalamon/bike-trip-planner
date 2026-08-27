@@ -315,13 +315,19 @@ export function AccommodationItem({
         )}
       </div>
 
-      {/* Wikidata thumbnail */}
-      {accommodation.imageUrl && (
+      {/* Wikidata thumbnail — https-only (mirrors poi-popover), with fixed
+          dimensions to avoid layout shift and a hide-on-error fallback. */}
+      {accommodation.imageUrl?.startsWith("https://") && (
         <div className="mt-2">
           <img
             src={accommodation.imageUrl}
             alt={accommodation.name}
             loading="lazy"
+            width={180}
+            height={120}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
             className="rounded aspect-[3/2] object-cover w-full max-w-[180px]"
           />
         </div>

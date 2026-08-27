@@ -43,7 +43,8 @@
   },
   "gpxUpload": {
     "ariaLabel": "Upload GPX file",
-    "dropZone": "Drop your GPX file here"
+    "dropZone": "Drop your GPX file here",
+    "invalidFileType": "Unsupported format. Drop a .gpx file."
   },
   "tripSummary": {
     "totalDistance": "Total distance:",

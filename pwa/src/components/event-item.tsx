@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { EventData } from "@btp/core";
+import { normalizeExternalUrl } from "@/lib/validation/url";
 
 const EVENT_TYPE_KEYS: Record<string, string> = {
   "schema:Festival": "type_festival",
@@ -40,6 +41,11 @@ export function EventItem({ event }: EventItemProps) {
   const typeKey = EVENT_TYPE_KEYS[event.type];
   const typeLabel = typeKey ? t(typeKey) : event.type;
   const dateRange = formatDateRange(event.startDate, event.endDate, locale);
+  // DataTourisme is a less-trusted external source than our own backend, so gate
+  // its links through the same http(s)-only normalizer the rest of the app uses
+  // (alert-list, PoiCard) — React does not strip javascript:/data: hrefs.
+  const wikipediaHref = normalizeExternalUrl(event.wikipediaUrl);
+  const websiteHref = normalizeExternalUrl(event.url);
 
   return (
     <div className="py-2 first:pt-0 last:pb-0">
@@ -62,11 +68,11 @@ export function EventItem({ event }: EventItemProps) {
           {event.openingHours}
         </p>
       )}
-      {(event.wikipediaUrl || event.url) && (
+      {(wikipediaHref || websiteHref) && (
         <div className="mt-0.5 flex items-center gap-3 flex-wrap">
-          {event.wikipediaUrl && (
+          {wikipediaHref && (
             <a
-              href={event.wikipediaUrl}
+              href={wikipediaHref}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-0.5 text-xs text-primary hover:underline"
@@ -76,9 +82,9 @@ export function EventItem({ event }: EventItemProps) {
               {t("see_on_wikipedia")}
             </a>
           )}
-          {event.url && (
+          {websiteHref && (
             <a
-              href={event.url}
+              href={websiteHref}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-0.5 text-xs text-primary hover:underline"
