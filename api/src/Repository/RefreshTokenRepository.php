@@ -53,6 +53,16 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     }
 
     /**
+     * Finds a refresh token by plaintext INCLUDING expired/rotated ones. Used to
+     * tell a replay of an already-rotated token (reuse) from a merely-unknown
+     * token, so the processor can revoke the whole family on reuse.
+     */
+    public function findAnyByToken(#[\SensitiveParameter] string $token): ?RefreshToken
+    {
+        return $this->findOneBy(['tokenDigest' => RefreshTokenEncryptor::digest($token)]);
+    }
+
+    /**
      * Finds a valid (non-expired) refresh token by its digest (used to follow a
      * rotation chain, where the predecessor stores its successor's digest).
      */

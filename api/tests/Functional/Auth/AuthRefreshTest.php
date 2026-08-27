@@ -264,4 +264,39 @@ final class AuthRefreshTest extends ApiTestCase
         // No refreshed session for a deleted account: no refresh token issued.
         $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
     }
+
+    #[Test]
+    public function reusingARotatedTokenPastGraceRevokesTheWholeFamily(): void
+    {
+        // OAuth reuse detection: replaying an already-rotated token AFTER its grace
+        // window is treated as theft — the whole family is revoked so the
+        // attacker's live successor dies too (not just a 401 on the stale token).
+        $em = $this->getEntityManager();
+        $encryptor = self::getContainer()->get(RefreshTokenEncryptor::class);
+        $user = new User('reuse-theft@example.com');
+        $past = new \DateTimeImmutable('-1 second');
+
+        $successor = RefreshToken::issue($user, $encryptor, 'successor-live', new \DateTimeImmutable('+30 days'));
+        $predecessor = RefreshToken::issue($user, $encryptor, 'stolen-predecessor', $past);
+        $predecessor->replaceWith(RefreshTokenEncryptor::digest('successor-live'), $past);
+
+        $em->persist($user);
+        $em->persist($successor);
+        $em->persist($predecessor);
+        $em->flush();
+        $em->clear();
+
+        $this->sendRefreshRequest('stolen-predecessor');
+        $this->assertResponseStatusCodeSame(401);
+
+        $repo = $em->getRepository(RefreshToken::class);
+        $this->assertNull(
+            $repo->findOneBy(['tokenDigest' => RefreshTokenEncryptor::digest('stolen-predecessor')]),
+            'The replayed token is revoked',
+        );
+        $this->assertNull(
+            $repo->findOneBy(['tokenDigest' => RefreshTokenEncryptor::digest('successor-live')]),
+            'The live successor is revoked too (whole-family revocation)',
+        );
+    }
 }
