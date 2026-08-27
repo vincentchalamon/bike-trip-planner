@@ -325,18 +325,22 @@ export function getUndoableSlice(state: {
   maxDistancePerDay: number;
   averageSpeed: number;
 }): UndoableSlice {
-  // Deep clone via JSON to ensure Immer draft proxies are not captured.
-  return JSON.parse(
-    JSON.stringify({
-      stages: state.stages,
-      startDate: state.startDate,
-      endDate: state.endDate,
-      fatigueFactor: state.fatigueFactor,
-      elevationPenalty: state.elevationPenalty,
-      maxDistancePerDay: state.maxDistancePerDay,
-      averageSpeed: state.averageSpeed,
-    }),
-  ) as UndoableSlice;
+  // Deep clone so a later mutation never bleeds into a stored snapshot. Use
+  // structuredClone rather than JSON.parse(JSON.stringify(...)): the store's
+  // committed state is plain (post-Immer) objects, so the string round-trip only
+  // adds serialize+parse cost — heavy on stages carrying decimated geometry, which
+  // this runs on every undoable edit. NOT projected to drop geometry: undo restores
+  // stages wholesale (setStages), including structural add/delete undo, so the full
+  // stage shape must survive the snapshot.
+  return structuredClone({
+    stages: state.stages,
+    startDate: state.startDate,
+    endDate: state.endDate,
+    fatigueFactor: state.fatigueFactor,
+    elevationPenalty: state.elevationPenalty,
+    maxDistancePerDay: state.maxDistancePerDay,
+    averageSpeed: state.averageSpeed,
+  });
 }
 
 /**
