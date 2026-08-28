@@ -22,9 +22,11 @@ const mobileTokens = readFileSync(
 // Light values are the first occurrence in each file (light on :root / lightColors;
 // dark overrides come later).
 function firstHex(source: string, pattern: RegExp): string {
-  const match = source.match(pattern);
-  if (!match) throw new Error(`no light-mode hex matched ${pattern}`);
-  return match[1].toLowerCase();
+  const hex = source.match(pattern)?.[1];
+  if (hex === undefined) {
+    throw new Error(`no light-mode hex matched ${pattern}`);
+  }
+  return hex.toLowerCase();
 }
 
 describe("light-mode color-token parity between web and mobile", () => {
