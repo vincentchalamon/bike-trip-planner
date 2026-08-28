@@ -1,5 +1,9 @@
 # Supported OSM accommodation tags
 
+Reference for the accommodation types the planner discovers near each stage, the
+OpenStreetMap tags they map to, and the pricing heuristic applied to each. For the
+data sources behind these results, see [external data sources](external-data-sources.md).
+
 | Logical type | OSM query | Pricing heuristic |
 |---|---|---|
 | `hotel` | `tourism=hotel` | €50–€120 |
@@ -19,8 +23,8 @@ because `tourism=motel` is a north-American concept, empty in France; and `renta
 carries a minimum-stay field.
 
 Since #884, a bookable accommodation that arrives without a name is **not imported**
-rather than filtered out when read. The provisioner first tries to complete it — the
-a geometric match against the curated DataTourisme flux (same category, within 50 m), then
+rather than filtered out when read. The provisioner first tries to complete it — a
+geometric match against the curated DataTourisme flux (same category, within 50 m), then
 the Wikidata label when the row carries a Q-ID, then `operator`, then `brand`, the tag-based
 ones qualified by the commune resolved offline from the imported boundaries ("Camping
 municipal — Sarlat") — and a per-category `CHECK` refuses what is left.

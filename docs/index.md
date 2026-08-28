@@ -31,7 +31,7 @@ See [Getting Started](getting-started.md) for prerequisites and detailed setup i
 Browser (Next.js 16)           PHP Backend (API Platform 4.3)
   Zustand + Immer (in-memory)    Stateless computation
   Zod validation                 GPX parsing + pacing engine
-  openapi-fetch (typed)          Local PostGIS reference index + weather
+  openapi-fetch (typed)          Valhalla routing + PostGIS + weather
   Mercure SSE (real-time)  <--   Async workers (Symfony Messenger)
                                  Redis cache + Mercure publisher
 ```

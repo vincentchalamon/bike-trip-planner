@@ -51,7 +51,7 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 ### 1.5 Docker MCP / Portainer MCP (OPTIONAL)
 
-**Purpose:** Interact with Docker containers (logs, exec, inspect) using natural language. Useful for debugging the project's 3 containers (php, pwa).
+**Purpose:** Interact with Docker containers (logs, exec, inspect) using natural language. Useful for debugging the project's containers (php, pwa, worker, redis, database, valhalla).
 
 - **Source:** <https://github.com/portainer/portainer-mcp>
 - **Alternative:** Docker Desktop MCP — <https://www.docker.com/blog/introducing-docker-hub-mcp-server/>
@@ -91,7 +91,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 ---
 
-### 2.4 PreToolUse — Protect sensitive files ⭐ RECOMMENDED
+### 2.2 PreToolUse — Protect sensitive files ⭐ RECOMMENDED
 
 **Purpose:** Prevents Claude from modifying `.env`, `.env.local`, `compose.override.yml`, or generated files (`schema.d.ts`).
 
@@ -115,7 +115,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 ---
 
-### 2.5 SessionStart — Context reminder after compaction (OPTIONAL)
+### 2.3 SessionStart — Context reminder after compaction (OPTIONAL)
 
 **Purpose:** When context is compacted (long sessions), reinjects critical project reminders.
 
