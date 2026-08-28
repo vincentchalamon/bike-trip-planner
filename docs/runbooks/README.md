@@ -27,6 +27,9 @@ Every runbook follows the same four sections:
 | [zone-opening-corrections.md](zone-opening-corrections.md) | Read what the completeness gate refused and correct it by hand |
 | [events-refresh.md](events-refresh.md) | Refresh the perishable events layer (upsert + purge) and set up the weekly scheduled task |
 | [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md) | Oracle Always Free instance reclaimed |
+| [mobile-dev-build-install.md](mobile-dev-build-install.md) | Build the mobile dev client and install it on a device/emulator |
+| [mobile-release-build.md](mobile-release-build.md) | Produce a release-signed, sideloadable Android APK |
+| [mobile-push-notifications.md](mobile-push-notifications.md) | FCM configuration and push delivery troubleshooting |
 | [incident-template.md](incident-template.md) | Post-mortem template |
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
 | [release-checklist.md](release-checklist.md) | Pre-release checklist |
