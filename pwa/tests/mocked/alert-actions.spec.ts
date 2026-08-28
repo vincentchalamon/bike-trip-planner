@@ -72,7 +72,7 @@ test.describe("Alert actions", () => {
     await expect(stage1.getByText("Got it")).not.toBeVisible();
   });
 
-  test("auto_fix action button is displayed on critical alerts", async ({
+  test("auto_fix action is not surfaced on critical alerts (unwired kind)", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -85,12 +85,12 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
-    // Stage 2 has a critical alert with auto_fix action — critical group is
-    // expanded by default, so no extra click is needed.
+    // Stage 2 has a critical alert with an auto_fix action — critical group is
+    // expanded by default. The alert renders, but the unwired action does not.
     const stage2 = mockedPage.getByTestId("stage-card-2");
     await expect(stage2).toContainText("E-bike range exceeded");
-    await expect(stage2.getByText("Split stage")).toBeVisible();
-    await expect(stage2.getByText("Split stage")).toBeDisabled();
+    await expect(stage2.getByText("Split stage")).toHaveCount(0);
+    await expect(stage2.getByTestId("alert-action-button")).toHaveCount(0);
   });
 
   test("alerts without actions do not show action buttons", async ({
@@ -208,7 +208,7 @@ test.describe("Alert actions", () => {
     await expect(mapView).toHaveAttribute("data-alert-segment", "");
   });
 
-  test("detour action button is displayed and disabled", async ({
+  test("detour action is not surfaced (unwired kind)", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -221,12 +221,13 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
-    // Stage 3 has a warning with detour action — expand the warning group
+    // Stage 3 has a warning with a detour action — expand the warning group.
+    // The alert renders, but the unwired action does not.
     const stage3 = mockedPage.getByTestId("stage-card-3");
     await stage3.getByTestId("alert-group-toggle-warning").click();
 
     await expect(stage3).toContainText("Difficult terrain ahead");
-    await expect(stage3.getByText("Take detour")).toBeVisible();
-    await expect(stage3.getByText("Take detour")).toBeDisabled();
+    await expect(stage3.getByText("Take detour")).toHaveCount(0);
+    await expect(stage3.getByTestId("alert-action-button")).toHaveCount(0);
   });
 });

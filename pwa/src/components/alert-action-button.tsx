@@ -8,9 +8,9 @@ import type { AlertActionData } from "@btp/core";
 
 /**
  * Maps each contextual action kind (defined backend-side, see #281/#282) to
- * its Lucide icon. The four kinds — `auto_fix`, `detour`, `navigate`,
- * `dismiss` — are exposed as visual buttons replacing the dot indicators
- * previously displayed next to each alert.
+ * its Lucide icon. The map stays exhaustive over the backend `kind` union;
+ * only the wired kinds (`navigate`, `dismiss`) are ever rendered as a button
+ * (see `AlertList`), the others are omitted upstream.
  */
 const ACTION_ICON: Record<AlertActionData["kind"], LucideIcon> = {
   auto_fix: Sparkles,
@@ -24,8 +24,6 @@ const ACTION_ICON: Record<AlertActionData["kind"], LucideIcon> = {
 interface AlertActionButtonProps {
   action: AlertActionData;
   onClick: () => void;
-  /** When true, the button is rendered disabled (e.g. handler not wired yet). */
-  disabled?: boolean;
   /** Optional override for the accessible label (defaults to action.label). */
   ariaLabel?: string;
   className?: string;
@@ -37,13 +35,12 @@ interface AlertActionButtonProps {
  * `action` field returned by the backend.
  *
  * The handler is opaque to this component: callers wire it up to the
- * appropriate behaviour (dismiss in component state, auto-fix backend call,
- * external navigation, on-map detour preview, etc.).
+ * appropriate behaviour (dismiss in component state, navigate to highlight the
+ * concerned road stretch on the map).
  */
 export function AlertActionButton({
   action,
   onClick,
-  disabled = false,
   ariaLabel,
   className,
 }: AlertActionButtonProps) {
@@ -58,7 +55,6 @@ export function AlertActionButton({
         trackEvent("alert_action_clicked", { kind: action.kind });
         onClick();
       }}
-      disabled={disabled}
       aria-label={ariaLabel ?? action.label}
       data-testid="alert-action-button"
       data-action-kind={action.kind}
