@@ -85,12 +85,11 @@ function groupBySeverity(
  * expanded by default while Warning and Nudge start collapsed, mirroring the
  * roadbook UX defined in #397.
  *
- * Each alert exposes its contextual action — when the backend provides one —
- * via an `AlertActionButton` (replacing the previous dot indicators). The
- * `dismiss` action is handled in-component via session-only state and reduces
- * the alert opacity. The other action kinds are stubbed for now and surface
- * as disabled buttons (`auto_fix`, `detour`) or open an OSM map view
- * (`navigate`); wiring them to backend handlers is tracked separately.
+ * Each alert exposes its contextual action — when the backend provides one
+ * that is wired — via an `AlertActionButton` (replacing the previous dot
+ * indicators). Only two kinds are wired: `dismiss` (handled in-component via
+ * session-only state, reducing the alert opacity) and `navigate` (highlights
+ * the concerned road stretch on the internal map). Any other kind is omitted.
  */
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
   const t = useTranslations("alertList");
@@ -124,12 +123,6 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
           }
           break;
         }
-        case "auto_fix":
-          // TODO(#397): wire to backend auto-fix handler (e.g. split-stage call).
-          break;
-        case "detour":
-          // TODO(#397): wire to detour preview on the map.
-          break;
       }
     },
     [handleDismiss, setFocusedAlertSegment],
@@ -150,7 +143,14 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
             {bucket.map((alert, index) => {
               const key = alertKey(alert, index);
               const isDismissed = dismissedKeys.has(key);
+              // Only wired action kinds are surfaced; any other kind (e.g. an
+              // unwired backend action) is omitted rather than shown as inert.
               const action = alert.action ?? null;
+              const actionableAction =
+                action &&
+                (action.kind === "dismiss" || action.kind === "navigate")
+                  ? action
+                  : null;
               const category = resolveCategory(alert.source);
               // Uniform alert template: only cultural POIs keep a leading
               // category icon (their dedicated enriched card). Every other
@@ -173,13 +173,6 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 alert.osmType && alert.osmId
                   ? `https://www.openstreetmap.org/${alert.osmType}/${alert.osmId}`
                   : null;
-
-              // Some action kinds are not wired yet; surface them as disabled.
-              const isActionDisabled = Boolean(
-                action &&
-                action.kind !== "dismiss" &&
-                action.kind !== "navigate",
-              );
 
               return (
                 <div
@@ -217,11 +210,10 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
 
                   {/* Below the alert text, not on the badge row (recette point
                       5): the action reads as a follow-up to the message. */}
-                  {action && !isDismissed && (
+                  {actionableAction && !isDismissed && (
                     <AlertActionButton
-                      action={action}
-                      disabled={isActionDisabled}
-                      onClick={() => handleAction(key, action)}
+                      action={actionableAction}
+                      onClick={() => handleAction(key, actionableAction)}
                       className="self-start"
                     />
                   )}

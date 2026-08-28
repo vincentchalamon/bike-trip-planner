@@ -7,8 +7,8 @@
  * - Critical group is expanded by default; warning and nudge are collapsed.
  * - Each severity group toggles independently via its chevron.
  * - The whole section can still be collapsed via the parent toggle.
- * - Individual alert actions (auto_fix, navigate, dismiss, detour) work
- *   as expected.
+ * - Individual alert actions: navigate and dismiss are wired and rendered;
+ *   unwired kinds (auto_fix, detour) are not surfaced at all.
  * - Transition from Acte 2 ProcessingProgress (trip_ready) to Acte 3.
  */
 
@@ -478,7 +478,7 @@ test.describe("StageAlerts — section collapse/expand", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Alert actions (auto_fix, navigate, dismiss, detour)
+// Alert actions (navigate + dismiss wired; auto_fix + detour not surfaced)
 // ---------------------------------------------------------------------------
 
 test.describe("StageAlerts — alert actions", () => {
@@ -533,7 +533,7 @@ test.describe("StageAlerts — alert actions", () => {
     await expect(stageCard.getByText("Zoom to location")).not.toBeDisabled();
   });
 
-  test("auto_fix action button is disabled (not yet implemented)", async ({
+  test("auto_fix action is not surfaced (unwired kind)", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -550,13 +550,13 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "Split stage" is the auto_fix action on "Critical alert C" — critical
-    // group is expanded by default, so the button is immediately visible.
-    await expect(stageCard.getByText("Split stage")).toBeVisible();
-    await expect(stageCard.getByText("Split stage")).toBeDisabled();
+    // "Critical alert C" carries an auto_fix action — the critical group is
+    // expanded by default. The alert renders, but the unwired action does not.
+    await expect(stageCard.getByText("Critical alert C")).toBeVisible();
+    await expect(stageCard.getByText("Split stage")).toHaveCount(0);
   });
 
-  test("detour action button is disabled (not yet implemented)", async ({
+  test("detour action is not surfaced (unwired kind)", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -573,11 +573,11 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "Warning alert D" carries the detour action — expand the warning group
+    // "Warning alert D" carries the detour action — expand the warning group.
+    // The alert renders, but the unwired action does not.
     await stageCard.getByTestId("alert-group-toggle-warning").click();
-
-    await expect(stageCard.getByText("Take detour")).toBeVisible();
-    await expect(stageCard.getByText("Take detour")).toBeDisabled();
+    await expect(stageCard.getByText("Warning alert D")).toBeVisible();
+    await expect(stageCard.getByText("Take detour")).toHaveCount(0);
   });
 });
 
