@@ -309,6 +309,10 @@ function RecapBlock({
           accessibilityRole="button"
           accessibilityLabel={t('trip.inRide.widenSearch')}
           onPress={onWiden}
+          // ~29pt tall (padding sm + 13pt text), under the 44pt minimum; it
+          // stretches full-width alone on its row, so hitSlop is safe on
+          // every side (#1233 a11y).
+          hitSlop={8}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -497,6 +501,10 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
             onPress={() => {
               if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
             }}
+            // ~29pt tall (padding sm + 13pt text), under the 44pt minimum.
+            // Vertical-only: it sits next to "open in maps" on the same row
+            // (#1233 a11y).
+            hitSlop={{ top: 6, bottom: 6 }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -528,6 +536,8 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
           onPress={() => {
             if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
           }}
+          // Same reasoning as the "call" button above (#1233 a11y).
+          hitSlop={{ top: 6, bottom: 6 }}
           style={{
             flexDirection: 'row',
             alignItems: 'center',

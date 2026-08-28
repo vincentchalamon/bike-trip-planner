@@ -39,6 +39,12 @@ export interface ThemeColors {
   // `summary*` are the same green under two names (hero vs card); keep both.
   forest: string;
   forestDeep: string;
+  // `forest` as *text/border* (Button's outlineForest variant, #1233 a11y pass):
+  // on the dark background `forest` alone reads at ~2.4:1 (fails WCAG AA
+  // non-text 3:1 and text 4.5:1). Same value as `forest` in light (already
+  // 7:1+), lightened only for dark so the button stays legible without
+  // touching the fixed badge/hero surfaces above.
+  forestText: string;
   heroForeground: string;
   summary: string;
   summaryEnd: string;
@@ -65,13 +71,18 @@ export const lightColors: ThemeColors = {
   secondaryForeground: '#1a1814',
   muted: '#faf2ec',
   mutedForeground: '#755e4c',
-  mutedIcon: '#9da5a7',
+  // Darkened from #9da5a7 (2.34:1 on background, fails WCAG 1.4.11's 3:1
+  // non-text minimum — e.g. DateField's icon-only clear button) to 3.20:1.
+  mutedIcon: '#858c8e',
   accent: '#faf2ec',
   accentForeground: '#1a1814',
   accentBrand: '#a8561a',
   accentSoft: '#fdf0e6',
   accentInk: '#6b2d00',
-  destructive: '#e7000b',
+  // Darkened from #e7000b (4.46:1 on background, just under WCAG AA's 4.5:1
+  // for normal text — ListRow danger rows, Input/ErrorState error text) to
+  // 5.32:1; white-on-destructive (Button destructive variant) stays >=4.5:1.
+  destructive: '#d0000a',
   destructiveForeground: '#ffffff',
   border: '#ecdfd4',
   input: '#ecdfd4',
@@ -83,6 +94,7 @@ export const lightColors: ThemeColors = {
   brandFillHover: '#8c4716',
   forest: '#3e5c3a',
   forestDeep: '#2f4a34',
+  forestText: '#3e5c3a',
   heroForeground: '#f5f0e8',
   summary: '#3e5c3a',
   summaryEnd: '#2f4a34',
@@ -126,6 +138,9 @@ export const darkColors: ThemeColors = {
   brandFillHover: '#8c4716',
   forest: '#3e5c3a',
   forestDeep: '#2f4a34',
+  // Lightened for dark-mode legibility (5.49:1 on the dark background vs
+  // 2.36:1 for `forest`) — see the ThemeColors comment on `forestText`.
+  forestText: '#6f9a68',
   heroForeground: '#f5f0e8',
   summary: '#3e5c3a',
   summaryEnd: '#2f4a34',
