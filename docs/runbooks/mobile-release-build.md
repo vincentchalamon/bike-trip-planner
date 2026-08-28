@@ -4,6 +4,14 @@ How to produce a **release-signed, sideloadable Android APK** of the mobile app
 using a **local keystore**. This is the free, local, no-cloud path: no Expo cloud
 build, no Google Play account, no Store submission.
 
+!!! note "CI already attaches a debug-signed APK to every release"
+    The [`Mobile APK`](../../.github/workflows/mobile-apk.yml) workflow builds
+    `bike-trip-planner.apk` (`expo prebuild` + `./gradlew assembleRelease`) and
+    attaches it to each published GitHub Release. It is signed with the Expo
+    template's deterministic **debug** keystore, so it needs no secret and is fine
+    for sideloading a beta build. Follow the procedure below when you need a build
+    signed with a **real** release keystore instead.
+
 ## Symptômes (when to use)
 
 - You need a standalone APK to install on a real device or hand to a tester.
