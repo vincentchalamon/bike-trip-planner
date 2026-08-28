@@ -32,12 +32,15 @@ A green release is one where every line below is checked. If any line is unknown
 - [ ] `curl https://staging.../api/healthz` returns 200 (the commit SHA is no longer exposed publicly — SEC-011; check the deployed SHA via the image label / deployment logs instead)
 - [ ] `curl https://staging.../api/health | jq` reports every dependency `ok`
 - [ ] End-to-end trip creation through the PWA succeeded on staging (`make test-e2e` against staging if applicable)
+- [ ] Fail-closed secrets are set in the Coolify environment for **both** `php` and `worker`: `ACCESS_REQUEST_HMAC_SECRET`, `REFRESH_TOKEN_ENC_KEY`, `MERCURE_JWT_KEY` (see [secrets-inventory.md](secrets-inventory.md)). Any of these empty makes the guarded service throw a 500 on every request — `compose.yaml` forwards them, but the Coolify env must actually carry a value
 
 ### 4. Observability
 
-- [ ] GlitchTip baseline event rate on staging matches main (no new fingerprint introduced by this PR)
+During the beta, error tracking is **Sentry SaaS** (ADR-039); GlitchTip is the post-beta self-hosted target (ADR-031). Read the Sentry dashboard here.
+
+- [ ] Sentry baseline event rate on staging matches main (no new fingerprint introduced by this PR)
 - [ ] No new `console.error` added without going through `logger.error`
-- [ ] PR description references any GlitchTip event ID or incident issue it closes
+- [ ] PR description references any Sentry issue ID or incident issue it closes
 
 ### 5. Documentation
 
@@ -55,7 +58,7 @@ A green release is one where every line below is checked. If any line is unknown
 
 - Merge → `deploy.yml` runs → Coolify pulls the new image → smoke test fires.
 - If smoke fails, `incident-create.yml` opens a P1 issue automatically; follow `release-rollback.md`.
-- Confirm the GlitchTip release page lists the new SHA with `environment: production`.
+- Confirm the Sentry release page lists the new SHA with `environment: production` (GlitchTip post-beta).
 - Note the deploy in the channel or issue tracker for visibility.
 
 ## References

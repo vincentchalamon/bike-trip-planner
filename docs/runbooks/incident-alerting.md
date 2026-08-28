@@ -4,6 +4,14 @@ End-to-end documentation for the auto-incident pipeline that turns external
 monitoring alerts into deduplicated GitHub issues, pushed to maintainers via
 the official GitHub mobile app.
 
+> **Beta posture (ADR-039):** during the restricted beta, error tracking runs on
+> **Sentry SaaS** (free tier), not self-hosted GlitchTip. Sentry emits the same
+> Sentry-compatible webhook this pipeline already parses, so the `error_alert`
+> path is unchanged: read every "GlitchTip" step below as "Sentry" while the beta
+> profile is active. GlitchTip stays the post-beta self-hosted target
+> ([ADR-031](../adr/adr-031-error-tracking-strategy.md)); uptime has the parallel
+> UptimeRobot-only posture ([uptime-monitoring.md](./uptime-monitoring.md)).
+
 ## Architecture
 
 ```text
