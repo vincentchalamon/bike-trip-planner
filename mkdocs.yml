@@ -161,3 +161,6 @@ nav:
       - runbooks/zone-opening.md
       - runbooks/zone-opening-corrections.md
       - runbooks/events-refresh.md
+      - runbooks/mobile-dev-build-install.md
+      - runbooks/mobile-release-build.md
+      - runbooks/mobile-push-notifications.md

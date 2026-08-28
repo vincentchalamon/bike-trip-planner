@@ -34,6 +34,16 @@ PHP DTOs define the schema -> API Platform exports an OpenAPI spec -> `make type
 change intentionally breaks the frontend build, preventing data drift. See
 [ADR-002](adr/adr-002-interface-contract-and-strict-typing.md).
 
+The generated types land in `core/schema.d.ts`, in the framework-free **`@btp/core`** workspace
+that both `pwa` and `mobile` import (ADR-053) -- there is no mobile-local schema copy. The CI job
+`openapi-typegen-drift` (`.github/workflows/ci.yml`) regenerates the types from the exported
+OpenAPI spec and fails the build if `core/schema.d.ts` differs from what is committed, so schema
+drift between backend and either frontend is caught automatically, never by hand. `@btp/core` also
+carries the Mercure wire types (`core/mercure.ts`) and the pure SSE reconciliation reducers
+(`core/reconciliation.ts`): web and mobile compose the same reducers rather than each
+re-implementing reconciliation, so a race or field-preservation fix lands once for both platforms.
+See [ADR-055](adr/adr-055-mobile-state-architecture.md).
+
 ## Async computation pipeline
 
 A trip request fans out into independent computations (route, stages, OSM scan, POIs, weather,
