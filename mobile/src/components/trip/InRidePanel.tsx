@@ -502,9 +502,9 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
               if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
             }}
             // ~29pt tall (padding sm + 13pt text), under the 44pt minimum.
-            // Vertical-only: it sits next to "open in maps" on the same row
-            // (#1233 a11y).
-            hitSlop={{ top: 6, bottom: 6 }}
+            // Vertical-only (+16pt -> ~45pt): it sits next to "open in maps"
+            // on the same row, so no horizontal slop (#1233 a11y).
+            hitSlop={{ top: 8, bottom: 8 }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -536,8 +536,8 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
           onPress={() => {
             if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
           }}
-          // Same reasoning as the "call" button above (#1233 a11y).
-          hitSlop={{ top: 6, bottom: 6 }}
+          // Same reasoning as the "call" button above: +16pt -> ~45pt (#1233 a11y).
+          hitSlop={{ top: 8, bottom: 8 }}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
