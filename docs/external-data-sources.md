@@ -1,5 +1,9 @@
 # External data sources
 
+Reference for every external dataset the planner ingests: its role, licence, coverage, and the
+configuration it needs. The summary table lists all four sources; the sections below detail how
+each is imported, cached, and refreshed.
+
 | Source | Role | Licence | Coverage | Prerequisite |
 |--------|------|---------|----------|-------------|
 | **OpenStreetMap** | Primary: roads, bike infra, water points, bike shops, resupply, base POIs & accommodations | [ODbL](https://opendatacommons.org/licenses/odbl/) | Global | None |

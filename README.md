@@ -38,8 +38,8 @@ backend (API Platform on Symfony 8) provides stateless computation via async wor
 Next.js 16 frontend manages presentation and state. It imports a route from Komoot, Strava,
 RideWithGPS, or a GPX upload, then builds a day-by-day roadbook with a smart pacing engine,
 a rule-based safety/comfort [alert engine](docs/alert-engine.md), accommodation and
-cultural-POI discovery, real-time processing over Mercure SSE, optional bring-your-own-token
-AI analysis, and multi-format export. See the [feature overview](docs/features.md).
+cultural-POI discovery, real-time processing over Mercure SSE, an in-ride nearby-search
+assistant, and multi-format export. See the [feature overview](docs/features.md).
 
 ## Quick start
 
@@ -99,10 +99,10 @@ Full documentation is published with MkDocs Material at
 | [Supported route sources](docs/route-sources.md) | Accepted Komoot / Strava / RideWithGPS / GPX inputs |
 | [Supported accommodation tags](docs/accommodations.md) | OSM logical types and pricing heuristics |
 | [Alert engine](docs/alert-engine.md) | Canonical alert-rule table (severity, priority, trigger) |
-| [External data sources](docs/external-data-sources.md) | OpenStreetMap, DataTourisme, Wikidata |
+| [External data sources](docs/external-data-sources.md) | OpenStreetMap, DataTourisme, OpenAgenda, Wikidata |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
-| [Architecture Decisions](docs/adr/) | 56 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 59 ADRs explaining every major technical choice |
 | [Runbooks](docs/runbooks/) | On-call playbooks: workers, DB, Redis, Mercure, releases |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 | [Legal & Licensing](docs/legal-and-licensing.md) | Project licence, data attribution, and GDPR posture |

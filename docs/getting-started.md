@@ -32,7 +32,7 @@ make --version
 Clone the repository:
 
 ```bash
-git clone <repo-url> bike-trip-planner
+git clone https://github.com/vincentchalamon/bike-trip-planner.git
 cd bike-trip-planner
 ```
 
