@@ -85,7 +85,7 @@ function StatusBadge({ theme, status, label }: { theme: Theme; status: TripStatu
 interface TripCardProps {
   item: TripListItem;
   theme: Theme;
-  duplicatingId: string | null;
+  duplicating: boolean;
   onOpen: (item: TripListItem) => void;
   onDelete: (item: TripListItem) => void;
   onDuplicate: (item: TripListItem) => void | Promise<void>;
@@ -100,10 +100,15 @@ interface TripCardProps {
 // (bound by the parent to the item they act on internally, not re-wrapped
 // per row) so a row skips re-rendering when an unrelated part of the trips
 // list re-renders.
+// Perf #1232: the row takes a per-row `duplicating` boolean, not the
+// list-wide `duplicatingId` — the latter changed on every card whenever any
+// one trip started/finished duplicating, forcing React.memo to re-render the
+// whole visible list. As a boolean, only the row whose value actually flips
+// re-renders.
 const TripCard = memo(function TripCard({
   item,
   theme,
-  duplicatingId,
+  duplicating,
   onOpen,
   onDelete,
   onDuplicate,
@@ -113,7 +118,6 @@ const TripCard = memo(function TripCard({
   title,
   subtitle,
 }: TripCardProps) {
-  const duplicating = duplicatingId === item.id;
   const iconBtn = {
     width: 30,
     height: 30,
@@ -385,6 +389,14 @@ export default function Trips() {
             paddingTop: theme.spacing.md,
             gap: theme.spacing.md,
           }}
+          // Perf #1232: bound the retained window. removeClippedSubviews unmounts
+          // off-screen rows (each carries an inline SVG thumbnail); a smaller
+          // windowSize caps how many off-screen rows stay mounted (memory), and a
+          // smaller initial batch shortens first paint on the app's landing tab.
+          removeClippedSubviews
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
@@ -418,7 +430,7 @@ export default function Trips() {
               <TripCard
                 item={item}
                 theme={theme}
-                duplicatingId={duplicatingId}
+                duplicating={duplicatingId === item.id}
                 title={displayTitle}
                 subtitle={subtitleOf(item)}
                 statusLabel={t(`trips.status.${statusOf(item)}`)}

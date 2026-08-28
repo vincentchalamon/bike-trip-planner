@@ -140,3 +140,45 @@ describe('Trips list — Duplicate re-entrance guard (#1043)', () => {
     spy.mockRestore();
   });
 });
+
+// Perf #1232: the row's in-flight state is a per-row `duplicating` boolean
+// (duplicatingId === item.id), not the list-wide id. A regression that fed the
+// wrong value (e.g. a truthy list-wide flag) would disable every row's button
+// at once, so assert the disabled state stays scoped to the duplicating row.
+describe('Trips list — duplication in-flight state is per-row (#1232)', () => {
+  const twoTrips = [
+    { id: 'a', title: 'Alpha', stageCount: 1, totalDistance: 10, status: 'draft' },
+    { id: 'b', title: 'Beta', stageCount: 1, totalDistance: 10, status: 'draft' },
+  ] as never;
+
+  function findDuplicateButtonFor(root: any, title: string): any {
+    return root.find(
+      (n: any) =>
+        n.props?.accessibilityRole === 'button' &&
+        typeof n.props?.onPress === 'function' &&
+        n.props?.accessibilityLabel === i18n.t('trips.duplicateA11y', { title }),
+    );
+  }
+
+  it('disables only the duplicating row, leaving the others tappable', async () => {
+    const dup = deferred<string | null>();
+    const duplicate = jest.fn(() => dup.promise);
+    mockUseTrips.mockReturnValue({ ...baseTrips, trips: twoTrips, duplicate });
+
+    const root = render();
+    expect(findDuplicateButtonFor(root, 'Alpha').props.disabled).toBe(false);
+    expect(findDuplicateButtonFor(root, 'Beta').props.disabled).toBe(false);
+
+    await act(async () => {
+      findDuplicateButtonFor(root, 'Alpha').props.onPress();
+    });
+
+    // Alpha's row is in flight; Beta's must stay enabled.
+    expect(findDuplicateButtonFor(root, 'Alpha').props.disabled).toBe(true);
+    expect(findDuplicateButtonFor(root, 'Beta').props.disabled).toBe(false);
+
+    await act(async () => {
+      dup.resolve('c');
+    });
+  });
+});
