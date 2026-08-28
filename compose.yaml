@@ -288,7 +288,7 @@ services:
   # enabled by `make start-dev`.
   # See docs/runbooks/valhalla-routing-graph.md and ADR-036.
   valhalla:
-    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:3.5.1@sha256:d154396aa2499f463f3d5419ef3f107063247a4ffbed80dbcdf952aa53172d97
     restart: unless-stopped
     profiles: ["routing"]
     # Requalified in #881. The former 2 GB covered one container doing two
@@ -343,7 +343,7 @@ services:
   # routing-build <slug> [slug...]` always passes it explicitly and refuses to run
   # without an argument.
   valhalla-builder:
-    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:3.5.1@sha256:d154396aa2499f463f3d5419ef3f107063247a4ffbed80dbcdf952aa53172d97
     profiles: ["routing-build"]
     restart: "no"
     entrypoint: ["/bin/bash", "/routing/build-routing-graph.sh"]
