@@ -678,12 +678,14 @@ jobs:
       - name: Start services
         run: docker compose up -d database php pwa worker redis mailcatcher --no-build --wait
       - name: Seed the smoke user (magic-link login)
-        # The integration smoke logs in as this user via the real magic-link flow.
-        # AuthRequestLinkProcessor only mails existing users (no auto-signup), so
-        # the account must be pre-created. Tolerate only "already exists" (reruns);
-        # any other seeding failure must fail the job fast here, not later at login.
+        # AuthRequestLinkProcessor only mails existing users (no auto-signup), so the
+        # account must be pre-created. --no-invite skips the invitation magic link:
+        # an active invitation would short-circuit /auth/request-link (anti-enumeration
+        # neutral 202, no mail), so the smoke's own request-link call is what actually
+        # creates and mails the link it reads back. Tolerate only "already exists"
+        # (reruns); any other seeding failure must fail the job fast here, not at login.
         run: |
-          if docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr 2>&1 | tee /tmp/create-user.log; then
+          if docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr --no-invite 2>&1 | tee /tmp/create-user.log; then
             echo 'smoke user created'
           else
             grep -q 'already exists' /tmp/create-user.log

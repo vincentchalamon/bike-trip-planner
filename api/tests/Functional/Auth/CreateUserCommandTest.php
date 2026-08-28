@@ -96,6 +96,23 @@ final class CreateUserCommandTest extends ApiTestCase
     }
 
     #[Test]
+    public function noInviteSkipsMagicLinkCreation(): void
+    {
+        $tester = $this->createCommandTester();
+        $tester->execute(['email' => 'noinvite@example.com', '--no-invite' => true]);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        /** @var UserRepository $userRepo */
+        $userRepo = self::getContainer()->get(UserRepository::class);
+        $this->assertInstanceOf(User::class, $userRepo->findByEmail('noinvite@example.com'));
+
+        /** @var MagicLinkRepository $magicLinkRepo */
+        $magicLinkRepo = self::getContainer()->get(MagicLinkRepository::class);
+        $this->assertEmpty($magicLinkRepo->findAll(), 'No magic link should be created with --no-invite');
+    }
+
+    #[Test]
     public function duplicateEmailReturnsFailure(): void
     {
         $em = $this->getEntityManager();

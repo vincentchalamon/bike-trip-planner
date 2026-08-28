@@ -52,7 +52,8 @@ final class CreateUserCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
-            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr');
+            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr')
+            ->addOption('no-invite', null, InputOption::VALUE_NONE, 'Create the user without an invitation magic link or email (e.g. so a caller can drive /auth/request-link itself)');
     }
 
     #[\Override]
@@ -96,6 +97,17 @@ final class CreateUserCommand extends Command
         $accessRequest = $this->accessRequestRepository->findByEmail($email);
         if ($accessRequest instanceof AccessRequest) {
             $this->entityManager->remove($accessRequest);
+        }
+
+        // --no-invite: create the account only. An invitation magic link stays active
+        // for 30 min and short-circuits AuthRequestLinkProcessor (hasActiveLinkForUser),
+        // so a caller wanting to exercise /auth/request-link itself must skip it here.
+        if (true === $input->getOption('no-invite')) {
+            $this->entityManager->flush();
+            $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
+            $io->info('Skipped invitation (--no-invite): no magic link created or emailed.');
+
+            return Command::SUCCESS;
         }
 
         // Create magic link for invitation
