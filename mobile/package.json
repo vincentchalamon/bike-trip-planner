@@ -52,6 +52,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build:preview": "npx --yes eas-cli build --local --platform android --profile preview",
+    "build:release": "npx --yes eas-cli build --local --platform android --profile release",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest"
