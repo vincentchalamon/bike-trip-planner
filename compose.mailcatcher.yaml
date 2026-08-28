@@ -1,0 +1,32 @@
+# CI/E2E overlay: adds Mailcatcher on top of compose.yaml (iso-prod) so the
+# integration smoke can exercise the REAL magic-link auth flow — capture the
+# outgoing email and read the /auth/verify token from Mailcatcher's HTTP API.
+#
+# ONLY adds a service; it overrides nothing in the prod topology (unlike
+# compose.recette.yaml, which also re-wires JWT secrets). MAILER_DSN is set from
+# the job env (compose.yaml already forwards it as ${MAILER_DSN:-}).
+#
+# Load EXPLICITLY: docker compose -f compose.yaml -f compose.mailcatcher.yaml ...
+services:
+  mailcatcher:
+    # Pinned by digest: schickling/mailcatcher has no versioned tags, and the
+    # mutable tag would let an upstream rebuild change the HTTP API the smoke
+    # test relies on (same pin as compose.dev.yaml / compose.recette.yaml).
+    image: schickling/mailcatcher@sha256:55ed289525a565f7587b138a423705267eb34eda1ec8d35acd6dc7966a933e84
+    restart: unless-stopped
+    networks:
+      - default
+    ports:
+      - target: 1080
+        published: ${MAILCATCHER_PORT:-1080}
+        protocol: tcp
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'ruby -e "require ''net/http''; Net::HTTP.get(URI(''http://localhost:1080''))" || exit 1',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
