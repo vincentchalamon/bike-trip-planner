@@ -492,8 +492,17 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
         </View>
       ) : null}
 
-      {/* Actions row: call (secondary) + open in maps (primary/accent). */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+      {/* Actions row: call (secondary) + open in maps (primary/accent).
+          rowGap >= the buttons' combined vertical hitSlop (8+8) so their tap
+          regions don't overlap when the row wraps onto two lines (#1233 a11y). */}
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          columnGap: theme.spacing.sm,
+          rowGap: theme.spacing.base,
+        }}
+      >
         {poi.phone ? (
           <Pressable
             accessibilityRole="button"
