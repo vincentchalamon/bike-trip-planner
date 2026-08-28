@@ -73,6 +73,9 @@ export const lightColors: ThemeColors = {
   mutedForeground: '#755e4c',
   // Darkened from #9da5a7 (2.34:1 on background, fails WCAG 1.4.11's 3:1
   // non-text minimum — e.g. DateField's icon-only clear button) to 3.20:1.
+  // NOTE: intentionally diverges from pwa/src/app/globals.css `--muted-icon`
+  // (still #9da5a7) — mobile-only a11y pass (#1233); web contrast not yet
+  // fixed (tracked in #1242). Do not "sync" this value back down to match web.
   mutedIcon: '#858c8e',
   accent: '#faf2ec',
   accentForeground: '#1a1814',
@@ -82,6 +85,9 @@ export const lightColors: ThemeColors = {
   // Darkened from #e7000b (4.46:1 on background, just under WCAG AA's 4.5:1
   // for normal text — ListRow danger rows, Input/ErrorState error text) to
   // 5.32:1; white-on-destructive (Button destructive variant) stays >=4.5:1.
+  // NOTE: intentionally diverges from pwa/src/app/globals.css `--destructive`
+  // (still ~#e7000b) — mobile-only a11y pass (#1233); web contrast not yet
+  // fixed (tracked in #1242). Do not "sync" this value back down to match web.
   destructive: '#d0000a',
   destructiveForeground: '#ffffff',
   border: '#ecdfd4',
