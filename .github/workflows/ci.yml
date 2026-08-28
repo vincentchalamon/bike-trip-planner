@@ -634,11 +634,14 @@ jobs:
       (needs.changes.outputs.e2e == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     env:
-      COMPOSE_FILE: compose.yaml
+      # Add the Mailcatcher overlay so the integration smoke can exercise the
+      # real magic-link auth flow (capture the mail, read the /auth/verify token).
+      COMPOSE_FILE: compose.yaml:compose.mailcatcher.yaml
       WORKER_REPLICAS: 1
       JWT_PASSPHRASE: "ci-test-passphrase"
       FRONTEND_URL: "https://localhost"
-      MAILER_DSN: "null://null"
+      # Route outgoing mail to Mailcatcher (compose.yaml forwards ${MAILER_DSN}).
+      MAILER_DSN: "smtp://mailcatcher:1025"
       # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
       # refuses to boot on the public Mercure skeleton default).
       MERCURE_JWT_KEY: "ci-test-mercure-key-min-32-bytes-long"
@@ -673,7 +676,12 @@ jobs:
             pwa.cache-to=type=gha,scope=pwa,mode=max
             pwa.args.NEXT_PUBLIC_ENABLE_TEST_HOOKS=true
       - name: Start services
-        run: docker compose up -d database php pwa worker redis --no-build --wait
+        run: docker compose up -d database php pwa worker redis mailcatcher --no-build --wait
+      - name: Seed the smoke user (magic-link login)
+        # The integration smoke logs in as this user via the real magic-link flow.
+        # AuthRequestLinkProcessor only mails existing users (no auto-signup), so
+        # the account must be pre-created. Idempotent across reruns (|| true).
+        run: docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr || true
       - name: Dump PHP logs on failure
         if: failure()
         run: docker compose logs php --tail 50
