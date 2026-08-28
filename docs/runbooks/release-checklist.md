@@ -32,7 +32,7 @@ A green release is one where every line below is checked. If any line is unknown
 - [ ] `curl https://staging.../api/healthz` returns 200 (the commit SHA is no longer exposed publicly — SEC-011; check the deployed SHA via the image label / deployment logs instead)
 - [ ] `curl https://staging.../api/health | jq` reports every dependency `ok`
 - [ ] End-to-end trip creation through the PWA succeeded on staging (`make test-e2e` against staging if applicable)
-- [ ] Fail-closed secrets are set in the Coolify environment for **both** `php` and `worker`: `ACCESS_REQUEST_HMAC_SECRET`, `REFRESH_TOKEN_ENC_KEY`, `MERCURE_JWT_KEY` (see [secrets-inventory.md](secrets-inventory.md)). Any of these empty makes the guarded service throw a 500 on every request — `compose.yaml` forwards them, but the Coolify env must actually carry a value
+- [ ] Fail-closed secrets are set in the Coolify environment for **both** `php` and `worker`: `ACCESS_REQUEST_HMAC_SECRET`, `REFRESH_TOKEN_ENC_KEY`, `MERCURE_JWT_KEY` (see [secrets-inventory.md](secrets-inventory.md)). `MERCURE_JWT_KEY`/`REFRESH_TOKEN_ENC_KEY` missing or default makes the container refuse to boot (SEC-004/SEC-003, `entrypoint.sh`); `ACCESS_REQUEST_HMAC_SECRET` empty 500s every access-request call once the app is up — `compose.yaml` forwards them, but the Coolify env must actually carry a value
 
 ### 4. Observability
 
