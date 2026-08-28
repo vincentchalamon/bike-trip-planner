@@ -52,6 +52,14 @@
       "expo-sharing",
       "expo-notifications",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#E6F4FE",
+          "resizeMode": "contain"
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Bike Trip Planner utilise votre position pour afficher votre localisation et trouver des points d'intérêt autour de vous pendant votre trajet.",
