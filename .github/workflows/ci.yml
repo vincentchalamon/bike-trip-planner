@@ -680,8 +680,14 @@ jobs:
       - name: Seed the smoke user (magic-link login)
         # The integration smoke logs in as this user via the real magic-link flow.
         # AuthRequestLinkProcessor only mails existing users (no auto-signup), so
-        # the account must be pre-created. Idempotent across reruns (|| true).
-        run: docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr || true
+        # the account must be pre-created. Tolerate only "already exists" (reruns);
+        # any other seeding failure must fail the job fast here, not later at login.
+        run: |
+          if docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr 2>&1 | tee /tmp/create-user.log; then
+            echo 'smoke user created'
+          else
+            grep -q 'already exists' /tmp/create-user.log
+          fi
       - name: Dump PHP logs on failure
         if: failure()
         run: docker compose logs php --tail 50
