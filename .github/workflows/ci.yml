@@ -70,7 +70,10 @@ jobs:
           # core/ is a workspace the web app imports, and the root workspace
           # manifests (package.json/-lock, .npmrc) affect the web build, so any of
           # them exercises the pwa jobs (and, via e2e below, Playwright).
-          pwa=$(flag '^pwa/|^core/|^package\.json$|^package-lock\.json$|^\.npmrc$')
+          # mobile/src/theme/ carries the design tokens the pwa vitest suite guards
+          # for web/mobile parity (theme-token-parity.test.ts), so a mobile-only
+          # token edit must exercise the pwa jobs too or the guard never runs.
+          pwa=$(flag '^pwa/|^core/|^mobile/src/theme/|^package\.json$|^package-lock\.json$|^\.npmrc$')
           # mobile consumes core/ and the shared schema, and the root workspace
           # manifests drive its install, so any of them exercises the mobile job.
           mobile=$(flag '^mobile/|^core/|^package\.json$|^package-lock\.json$|^\.npmrc$')

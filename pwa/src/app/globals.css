@@ -100,7 +100,10 @@
   /* (vs the lighter accent --brand #e08040 which fails white-on-fill at 2.86) */
   --brand-fill: #a8561a;
   --brand-fill-hover: #8c4716;
-  --muted-icon: #9da5a7;
+  /* Darkened from #9da5a7 (2.34:1 on --background, fails WCAG 1.4.11's 3:1     */
+  /* non-text minimum for icon-only controls) to 3.20:1. Parity with mobile     */
+  /* tokens.ts mutedIcon (#1233 / #1242).                                       */
+  --muted-icon: #858c8e;
   --diff-highlight: oklch(0.97 0.12 60);
 
   /* ── Semantic tokens ──────────────────────────────────────────────────── */
@@ -130,7 +133,11 @@
   --muted-foreground: oklch(0.5 0.04 60);
   --accent: oklch(0.965 0.012 60);
   --accent-foreground: #1a1814;
-  --destructive: oklch(0.577 0.245 27.325);
+  /* Darkened from oklch(0.577 0.245 27.325) (~#e7000b, 4.46:1 on --background,  */
+  /* just under WCAG AA's 4.5:1 for normal text) to #d0000a (5.32:1). White on   */
+  /* this stays AA for filled destructive buttons (5.70:1). Parity with mobile   */
+  /* tokens.ts destructive (#1233 / #1242).                                      */
+  --destructive: #d0000a;
   --border: oklch(0.91 0.02 60);
   --input: oklch(0.91 0.02 60);
   --ring: oklch(0.65 0.1 60);
