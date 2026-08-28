@@ -213,6 +213,10 @@ export function TripMap({
           accessibilityRole="button"
           accessibilityLabel={t('trip.map.zoomInA11y')}
           onPress={() => void zoomBy(1)}
+          // 40x40 is under the 44x44 minimum; grow horizontally (nothing
+          // adjacent) and only upward — never across the shared divider into
+          // the zoom-out button below, else the hit regions overlap (#1233 a11y).
+          hitSlop={{ top: 4, bottom: 0, left: 6, right: 6 }}
           style={styles.zoomButton}
         >
           <Plus size={20} color={theme.colors.foreground} />
@@ -222,6 +226,8 @@ export function TripMap({
           accessibilityRole="button"
           accessibilityLabel={t('trip.map.zoomOutA11y')}
           onPress={() => void zoomBy(-1)}
+          // Mirror of zoom-in: extend only downward, away from the divider.
+          hitSlop={{ top: 0, bottom: 4, left: 6, right: 6 }}
           style={styles.zoomButton}
         >
           <Minus size={20} color={theme.colors.foreground} />
@@ -252,6 +258,10 @@ export function TripMap({
                     : t('trip.map.layerSatellite')
                 }
                 onPress={() => setBase(layer)}
+                // ~29pt tall (padding 6 + 13pt text), under the 44pt minimum.
+                // Vertical-only, same reasoning as SegmentedControl: the two
+                // segments are flush horizontally (#1233 a11y).
+                hitSlop={{ top: 8, bottom: 8 }}
                 style={[
                   styles.layerSegment,
                   active && { backgroundColor: theme.colors.brand },

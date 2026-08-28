@@ -309,6 +309,10 @@ function RecapBlock({
           accessibilityRole="button"
           accessibilityLabel={t('trip.inRide.widenSearch')}
           onPress={onWiden}
+          // ~29pt tall (padding sm + 13pt text), under the 44pt minimum; it
+          // stretches full-width alone on its row, so hitSlop is safe on
+          // every side (#1233 a11y).
+          hitSlop={8}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -488,8 +492,17 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
         </View>
       ) : null}
 
-      {/* Actions row: call (secondary) + open in maps (primary/accent). */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+      {/* Actions row: call (secondary) + open in maps (primary/accent).
+          rowGap >= the buttons' combined vertical hitSlop (8+8) so their tap
+          regions don't overlap when the row wraps onto two lines (#1233 a11y). */}
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          columnGap: theme.spacing.sm,
+          rowGap: theme.spacing.base,
+        }}
+      >
         {poi.phone ? (
           <Pressable
             accessibilityRole="button"
@@ -497,6 +510,10 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
             onPress={() => {
               if (isSafePhone(poi.phone ?? '')) Linking.openURL(`tel:${poi.phone}`);
             }}
+            // ~29pt tall (padding sm + 13pt text), under the 44pt minimum.
+            // Vertical-only (+16pt -> ~45pt): it sits next to "open in maps"
+            // on the same row, so no horizontal slop (#1233 a11y).
+            hitSlop={{ top: 8, bottom: 8 }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -528,6 +545,8 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
           onPress={() => {
             if (isSafeDeeplink(poi.deeplink)) Linking.openURL(poi.deeplink);
           }}
+          // Same reasoning as the "call" button above: +16pt -> ~45pt (#1233 a11y).
+          hitSlop={{ top: 8, bottom: 8 }}
           style={{
             flexDirection: 'row',
             alignItems: 'center',

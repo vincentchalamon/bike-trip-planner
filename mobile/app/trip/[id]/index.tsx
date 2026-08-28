@@ -69,7 +69,10 @@ function MenuItem({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
+        // `md` (not `sm`): consecutive rows have no gap between them, so
+        // hitSlop would overlap into the neighbouring row — grow the row
+        // itself instead to get closer to the 44pt touch-target min (#1233).
+        paddingVertical: theme.spacing.md,
         paddingHorizontal: theme.spacing.md,
         opacity: disabled ? 0.4 : 1,
       }}

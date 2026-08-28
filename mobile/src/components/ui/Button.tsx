@@ -38,9 +38,12 @@ function colorsFor(theme: Theme, variant: ButtonVariant) {
       return { bg: c.secondary, fg: c.secondaryForeground, border: c.border };
     case 'outline':
       return { bg: 'transparent', fg: c.brand, border: c.brand };
-    // Green-outlined secondary action (03-create-trip GPX button, #1214 palette B).
+    // Green-outlined secondary action (03-create-trip GPX button, #1214 palette
+    // B). Uses `forestText` (not `forest`) for both fg and border: `forest` is
+    // fixed across schemes for badges/hero surfaces and reads at ~2.4:1 on the
+    // dark background — `forestText` is the accessible (AA) text/border pair.
     case 'outlineForest':
-      return { bg: 'transparent', fg: c.forest, border: c.forest };
+      return { bg: 'transparent', fg: c.forestText, border: c.forestText };
     case 'ghost':
       return { bg: 'transparent', fg: c.foreground, border: 'transparent' };
     case 'destructive':
@@ -73,6 +76,9 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
+      // 'sm' is 36pt tall, under the 44x44 touch-target minimum; pad the tap
+      // area with hitSlop rather than growing the visible pill (#1233 a11y).
+      hitSlop={size === 'sm' ? 4 : undefined}
       style={({ pressed }) => [
         styles.base,
         {

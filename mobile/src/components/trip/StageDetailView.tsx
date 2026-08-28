@@ -509,6 +509,11 @@ function DayStrip({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             onPress={() => onSelect(i)}
+            // ~28pt tall (padding xs + 13pt text), under the 44pt minimum.
+            // Vertical-only: chips sit side by side in a horizontal
+            // ScrollView, so a horizontal hitSlop would steal taps from the
+            // next/previous chip (#1233 a11y).
+            hitSlop={{ top: 9, bottom: 9 }}
             style={{
               paddingHorizontal: theme.spacing.md,
               paddingVertical: theme.spacing.xs,

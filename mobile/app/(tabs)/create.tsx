@@ -281,7 +281,7 @@ export default function Create() {
           loading={uploading}
           disabled={submitting}
           variant="outlineForest"
-          icon={<FileUp color={theme.colors.forest} size={18} />}
+          icon={<FileUp color={theme.colors.forestText} size={18} />}
           fullWidth
         />
         <Text

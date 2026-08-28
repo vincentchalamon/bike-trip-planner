@@ -35,6 +35,11 @@ export function SegmentedControl<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(seg.value)}
+            // The pill is ~33pt tall (padding sm + 14pt text), under the 44pt
+            // touch-target minimum. Vertical-only hitSlop: segments sit flush
+            // against each other horizontally, so a horizontal hitSlop would
+            // steal taps from the neighbouring segment (#1233 a11y).
+            hitSlop={{ top: 6, bottom: 6 }}
             style={[
               styles.segment,
               {
