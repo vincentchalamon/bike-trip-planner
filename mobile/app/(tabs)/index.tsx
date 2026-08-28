@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -242,6 +242,11 @@ export default function Trips() {
   // Id of the trip whose duplication is in flight — guards against a double-tap
   // firing two POST /trips/{id}/duplicate (each would clone the trip again).
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  // Re-entrance guard read from a ref, not from `duplicatingId` state, so
+  // `onDuplicate`'s identity stays stable across duplication start/stop — a
+  // `duplicatingId` dependency would hand every `TripCard` a new closure and
+  // defeat `memo()` for the whole list, the exact re-render this file avoids.
+  const duplicatingIdRef = useRef<string | null>(null);
 
   // Stable across renders (perf #1176): passed straight through as `TripCard`
   // props so a memoized row doesn't re-render just because these closures got
@@ -269,24 +274,23 @@ export default function Trips() {
     [t, remove],
   );
 
-  // Note: unlike `onOpen`/`onDelete`, this one is *not* fully stable — it
-  // depends on `duplicatingId` for the re-entrance guard (a `setState`
-  // functional updater cannot double as a synchronous read: the updater runs
-  // on React's next flush, not inline, so checking a flag it sets right after
-  // calling `setDuplicatingId` would always see the pre-update value).
-  // Correctness over the last bit of memoization here.
+  // Stable like `onOpen`/`onDelete`: the re-entrance guard reads the ref (a
+  // synchronous inline read a `setState` updater cannot provide), while
+  // `duplicatingId` state drives only the per-row `duplicating` boolean.
   const onDuplicate = useCallback(
     async (item: TripListItem): Promise<void> => {
       const id = item.id ?? '';
-      if (duplicatingId === id) return; // a duplication for this trip is already in flight
+      if (duplicatingIdRef.current === id) return; // a duplication for this trip is already in flight
+      duplicatingIdRef.current = id;
       setDuplicatingId(id);
       const newId = await duplicate(id);
+      duplicatingIdRef.current = null;
       setDuplicatingId(null);
       if (!newId) {
         Alert.alert(t('trips.duplicateFailedTitle'), t('trips.duplicateFailed'));
       }
     },
-    [duplicatingId, duplicate, t],
+    [duplicate, t],
   );
 
   function subtitleOf(item: TripListItem): string {
