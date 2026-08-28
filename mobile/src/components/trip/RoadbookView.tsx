@@ -196,6 +196,14 @@ export function RoadbookView({
         data={stages}
         extraData={stageDiffs}
         keyExtractor={(item) => stageKey(item)}
+        // Perf #1232: a long trip is a long list of tall stage cards (each with
+        // its own data blocks). Bound the retained window so off-screen stages
+        // don't all stay mounted (memory) and first paint renders only the first
+        // few. removeClippedSubviews unmounts clipped rows on scroll.
+        removeClippedSubviews
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={7}
         ListHeaderComponent={header}
         // Clear the bottom nav/gesture bar (#1217): the screen opts out of the
         // Screen bottom inset (the FAB owns it), but when readOnly the FAB is
