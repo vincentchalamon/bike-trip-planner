@@ -2157,12 +2157,35 @@ Après squash-merge d'un parent, rebaser l'enfant avec `git rebase --onto origin
 ## Sprint 59 — Mobile : Release Android + doc
 
 </summary>
-Épics à découper. Jalon : **shippable Android**. Milestone : « Sprint 59 ».
+Jalon : **shippable Android** (sideload). Milestone : « Sprint 59 ».
 
-| Ordre | ID | Titre | Effort | Statut | PRs | Dépend de |
+**Décisions utilisateur (arrêtées avant exécution) :**
+
+- **Pas de publication Store** ce sprint → #1054 réduit à un **pass qualité** (icône/splash + perf + a11y) **+ APK release sideloadable** (keystore local, runbook). Keystore de prod / assetlinks SHA-256 / distribution Store = **hors périmètre, différés**.
+- **Rename monorepo `pwa → apps/web` : skip** (cosmétique, coût transverse élevé pour zéro gain fonctionnel).
+- **Maestro : différé** → issue backlog [#1236](https://github.com/vincentchalamon/bike-trip-planner/issues/1236) (nice-to-have, non-bloquant).
+- **Garde `@btp/core` : documentée** (le job CI `openapi-typegen-drift` couvre déjà le drift `schema.d.ts` ; règle ADR-055 documentée), pas de nouvelle CI spéculative.
+
+Les 2 épics ont été **découpés** en 5 tickets d'implémentation + 1 backlog. Contraste web (parité tokens) → follow-up [#1242](https://github.com/vincentchalamon/bike-trip-planner/issues/1242).
+
+| Ordre | ID | Titre | Modèle | Statut | PRs | Dépend de |
 |-------|----|-------|--------|--------|-----|-----------|
-| 1 | [#1054](https://github.com/vincentchalamon/bike-trip-planner/issues/1054) | [epic] release Android signé + icône/splash + perf/a11y + E2E | L | ⏳ À faire | — | fin Sprint 58 |
-| 2 | [#1055](https://github.com/vincentchalamon/bike-trip-planner/issues/1055) | [epic] docs : consolidation (runbooks + MkDocs nav + monorepo cosmétique) | M | ⏳ À faire | — | #1054 |
+| 1 | [#1231](https://github.com/vincentchalamon/bike-trip-planner/issues/1231) | feat(mobile): splash screen (expo-splash-screen) + icône | sonnet | 🟢 READY | [#1237](https://github.com/vincentchalamon/bike-trip-planner/pull/1237) `feature/1231` | #1054 |
+| 2 | [#1234](https://github.com/vincentchalamon/bike-trip-planner/issues/1234) | build(mobile): APK release sideloadable (keystore local) + runbook | opus | 🟢 READY | [#1239](https://github.com/vincentchalamon/bike-trip-planner/pull/1239) `feature/1234` | #1231 |
+| 3 | [#1235](https://github.com/vincentchalamon/bike-trip-planner/issues/1235) | docs: runbooks mobile + nav MkDocs --strict + garde @btp/core | sonnet | 🟢 READY | [#1240](https://github.com/vincentchalamon/bike-trip-planner/pull/1240) `feature/1235` | #1234 |
+| 4 | [#1232](https://github.com/vincentchalamon/bike-trip-planner/issues/1232) | perf(mobile): virtualisation listes + mémoire + tuiles | opus | 🟢 READY | [#1238](https://github.com/vincentchalamon/bike-trip-planner/pull/1238) `feature/1232` | #1054 |
+| 5 | [#1233](https://github.com/vincentchalamon/bike-trip-planner/issues/1233) | fix(mobile): passe a11y (labels, tailles tactiles, contraste) | sonnet | 🟢 READY | [#1241](https://github.com/vincentchalamon/bike-trip-planner/pull/1241) `feature/1233` | #1232 |
+| — | [#1236](https://github.com/vincentchalamon/bike-trip-planner/issues/1236) | test(mobile): smoke Maestro golden-path (nice-to-have) | — | 📋 Backlog | — | — |
+
+Épics parents : [#1054](https://github.com/vincentchalamon/bike-trip-planner/issues/1054) (splash/perf/a11y/release) et [#1055](https://github.com/vincentchalamon/bike-trip-planner/issues/1055) (docs) — à clore une fois les enfants mergés.
+
+**Ordre de merge et conflits attendus :**
+
+Deux stacks indépendants, à merger **bottom-up** dans chaque stack. `claude-review` de #1239/#1240 tombe sur un **faux-échec infra** (permission-denial du sandbox du bot, aucun finding) — les deux sont **APPROVED** et mergeable.
+
+- **Stack A** (release, épic #1054) : `#1237` (→ main) → `#1239` (→ feature/1231) → `#1240` (→ feature/1234). Overlaps gérés par le stack : `mobile/app.json` (#1231 splash/icône ; #1234 versionCode/signature — hunks disjoints), `docs/runbooks` + `mkdocs.yml` (#1234 crée `mobile-release-build.md` ; #1240 seul câble la nav MkDocs).
+- **Stack B** (qualité UI, épic #1054) : `#1238` (→ main) → `#1241` (→ feature/1232). Overlap composants mobile (perf vs a11y) évité par le stack ; diffs disjoints.
+- Après chaque squash-merge d'un parent, rebaser l'enfant en `--onto origin/main` (ou `gh stack rebase`) avant de le merger — GitHub le retargette mais garde les commits pré-squash du parent.
 
 </details>
 
