@@ -1,0 +1,147 @@
+# Per-PR preview overlay on top of compose.yaml (iso-prod base) — ADR-061, W3.
+#
+# Layered EXPLICITLY on the VM by the deploy-preview job (never auto-loaded), one
+# isolated stack per open PR:
+#   PR_NUMBER=<n> DOMAIN=<domain> \
+#     docker compose -p pr-<n> -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
+# Torn down (with its volumes) by teardown-preview: docker compose -p pr-<n> down -v
+#
+# Isolation model — what a preview OWNS vs SHARES on the single 24 GB / 4-core VM:
+#  - OWNS (per stack, disposable): its own empty `database` (PG-app) + `redis`,
+#    living on the project-scoped `pr-<n>_default` network. No DataFixtures exist
+#    in the repo, so the PG-app boots empty and users sign up via magic-link.
+#  - SHARES (read-only, never per-preview): the Ansible-managed Valhalla and
+#    PG-référence on `btp-shared`. The preview bundles NO valhalla/valhalla-builder/
+#    provisioner — those stay behind their profiles (never enabled here), so the
+#    `valhalla-tiles` volume is never mounted and thus never created for a preview.
+#    LIMIT (W2.10): a PR that changes reference (osm/tourism) DDL is NOT
+#    previewable in isolation — the shared PG-référence keeps the prod schema.
+#  - Per-preview origin envs (SERVER_NAME/FRONTEND_URL/MERCURE_PUBLIC_URL/CORS/
+#    TRUSTED_HOSTS) all point at pr-<n>.${DOMAIN}; getting any of them wrong breaks
+#    SSE (Mercure CORS) or trips Symfony's trusted-host guard.
+#
+# Resource caps: strict `cpus` + `mem_limit` on every long-lived service so a
+# preview can never starve prod. Budget per preview ~2 GB / ~2 vCPU; the
+# deploy-preview job documents the concurrent-preview cap that keeps the sum of
+# (prod + all previews) inside the VM.
+#
+# Only PR_NUMBER + DOMAIN (and the shared reference DB / Mercure secrets) need to
+# reach the containers; the GHA job injects PR_NUMBER/DOMAIN, the VM `.env`
+# carries the rest.
+
+# Shared preview env for php + worker (YAML anchor to avoid duplicating the block).
+x-preview-env: &preview-env
+  FRONTEND_URL: "https://pr-${PR_NUMBER}.${DOMAIN}"
+  MERCURE_PUBLIC_URL: "https://pr-${PR_NUMBER}.${DOMAIN}/.well-known/mercure"
+  # Host forwarded by Cloudflare -> Traefik is pr-<n>.${DOMAIN}; php also answers to
+  # the internal `php` name (worker -> Mercure). Anything else Symfony rejects.
+  TRUSTED_HOSTS: "^(pr-${PR_NUMBER}\\.${DOMAIN}|php)$$"
+  # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
+  VALHALLA_BASE_URI: http://valhalla:8002
+  # Shared read-only PG-référence (osm/tourism reads, ADR-060), reached on btp-shared.
+  # Same default as the prod overlay; overridable wholesale from the VM `.env`.
+  REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://reference_ro:${REFERENCE_DB_PASSWORD:-}@pg-reference:5432/reference?serverVersion=18&charset=utf8}"
+
+services:
+  php:
+    # TLS is terminated at the Cloudflare edge; Traefik reverse-proxies plain HTTP
+    # to php. Drop the base's published 80/443 entirely — previews share the VM,
+    # so a host port would collide with prod and with every other preview.
+    ports: !reset []
+    # Merged additively onto the base `default`: php stays on pr-<n>_default (its
+    # own database/redis/pwa) and also joins edge (Traefik) + btp-shared (shared infra).
+    networks:
+      - edge
+      - btp-shared
+    # Strict caps so a preview cannot starve prod on the shared 4-core VM. Uses the
+    # base's deploy.resources.limits style (honored by `docker compose up`), not the
+    # service-level cpus/mem_limit fields — mixing the two on one service is rejected.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    environment:
+      <<: *preview-env
+      # Serve plain HTTP (no FrankenPHP auto-TLS) on the public host + internal name.
+      SERVER_NAME: "http://pr-${PR_NUMBER}.${DOMAIN}, http://php"
+      MERCURE_EXTRA_DIRECTIVES: "cors_origins https://pr-${PR_NUMBER}.${DOMAIN}"
+    labels:
+      - "traefik.enable=true"
+      # Bind the router to the edge network (php is multi-homed).
+      - "traefik.docker.network=edge"
+      # Per-PR router/service names so previews never collide with prod or each other.
+      - "traefik.http.routers.pr-${PR_NUMBER}.rule=Host(`pr-${PR_NUMBER}.${DOMAIN}`)"
+      # HTTP entrypoint only: no ACME on Traefik (edge TLS via Cloudflare Tunnel).
+      - "traefik.http.routers.pr-${PR_NUMBER}.entrypoints=web"
+      - "traefik.http.services.pr-${PR_NUMBER}.loadbalancer.server.port=80"
+
+  worker:
+    # One async consumer is plenty for a preview (base runs 2 in prod).
+    # Merged onto the base `default` (database/redis) + btp-shared (Valhalla + osm reads).
+    networks:
+      - btp-shared
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
+    environment:
+      <<: *preview-env
+
+  pwa:
+    # The prod pwa bundle is origin-agnostic (NEXT_PUBLIC_API_URL empty -> same
+    # origin), so no per-preview rebuild is needed — only a resource cap.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 384M
+
+  database:
+    # Dedicated, disposable PG-app per preview: empty on boot (no fixtures), dropped
+    # by `down -v` at teardown. Isolated from prod on pr-<n>_default.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  redis:
+    # Dedicated, disposable transient store per preview. Override the base command:
+    # the base sets --maxmemory 384mb, which sits ABOVE this 256M cgroup, so the
+    # kernel would OOM-kill redis before it ever enforced its own eviction. Cap
+    # maxmemory well under the limit (previews are small + throwaway).
+    command:
+      - redis-server
+      - --maxmemory
+      - 192mb
+      - --maxmemory-policy
+      - volatile-lru
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+# Override the base top-level secrets so previews NEVER mount the prod JWT signing
+# keys. lexik validates a bearer by signature alone (no audience claim), so a token
+# signed with the prod private key by any preview (less-trusted PR code) would be
+# accepted by the prod API — a major blast radius. Point both at a dedicated
+# preview keypair, provisioned once on the VM (PR-I), shared across previews but
+# distinct from prod. `:?` fails the deploy closed if the paths are not supplied.
+secrets:
+  jwt_private_key:
+    file: "${PREVIEW_JWT_PRIVATE_KEY_PATH:?PREVIEW_JWT_PRIVATE_KEY_PATH must be set for preview stacks}"
+  jwt_public_key:
+    file: "${PREVIEW_JWT_PUBLIC_KEY_PATH:?PREVIEW_JWT_PUBLIC_KEY_PATH must be set for preview stacks}"
+
+networks:
+  # Both created by Ansible ahead of any deploy (W5); shared with prod + every preview.
+  # Traefik <-> php.
+  edge:
+    external: true
+  # Shared infra (Valhalla + PG-référence).
+  btp-shared:
+    external: true

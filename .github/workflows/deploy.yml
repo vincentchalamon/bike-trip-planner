@@ -5,9 +5,13 @@ on:
   # and a clear rollback point (deploy-prod is gated on github.ref_type == 'tag').
   push:
     tags: ['v*']
-  # PRs build (and, same-repo, push) a pr-<n> image for the preview stacks (W3).
+  # PRs build (and, same-repo, push) a pr-<n> image for the preview stacks (W3),
+  # then deploy-preview rolls the per-PR stack. `closed` is included so
+  # teardown-preview can drop the stack when the PR is closed/merged; build-images
+  # and deploy-preview guard themselves off the `closed` action.
   # Restricted to same-repo PRs at the job level so forks never build or push.
   pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: read
@@ -29,10 +33,12 @@ jobs:
     # this repo, fall back to `runs-on: ubuntu-latest` + the setup-qemu-action
     # step (removed below) with `platforms: arm64`.
     runs-on: ubuntu-24.04-arm
-    # Same-repo only: a fork PR must never build or push to our GHCR.
+    # Same-repo only: a fork PR must never build or push to our GHCR. Never on a
+    # `closed` PR (that event only drives teardown-preview — nothing to build).
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.action != 'closed' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -295,3 +301,155 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${INCIDENT_TOKEN}" \
             -d "{\"event_type\":\"uptime_alert\",\"client_payload\":{\"source\":\"deploy-smoke\",\"sha\":\"${SHA}\",\"status\":\"down\"}}"
+
+  deploy-preview:
+    name: Deploy PR preview to the VM over SSH
+    runs-on: ubuntu-latest
+    needs: build-images
+    # Same-repo PRs only (a fork must never reach the VM), and never on `closed`
+    # (that action is teardown-preview's). deploy-preview shares the shared Valhalla
+    # + PG-référence on btp-shared with prod; each PR gets its own isolated PG-app +
+    # redis and its own pr-<n>.${DOMAIN} host.
+    #
+    # OPERATIONAL GUARD — concurrent-preview cap. Each preview budgets ~2 GB / ~2
+    # vCPU (deploy/preview/compose.yaml caps). On the shared 24 GB / 4-core VM, prod
+    # (~6-7 GB) leaves room for roughly 4-5 concurrent previews before contention.
+    # There is no auto-eviction here: keep the count in check by closing stale PRs
+    # (teardown-preview reclaims on close) and, if needed, cap open previews via
+    # branch-protection / a manual review gate. Raising the cap means shrinking the
+    # per-preview limits or growing the VM.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Pinned host key (optional), same secret as deploy-prod — the VM is the same
+      # SSH_HOST. Trusted instead of a live TOFU scan when set.
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      # Root for the per-PR checkouts, kept OUTSIDE the prod canonical dir so a
+      # preview deploy never shares a working tree / .git index with prod.
+      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
+      # Dedicated NON-PROD env file for previews (see the deploy step). Never the
+      # prod .env — previews must not inherit prod secrets.
+      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
+      PR_NUMBER: ${{ github.event.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Deploy preview over SSH
+        # No-op when SSH secrets are absent — same transition-safety contract as
+        # deploy-prod. Until the Ansible/SSH infra is in place, a PR builds+pushes
+        # its pr-<n> images and this job cleanly skips, so merges to main (and the
+        # old Coolify prod) are never disturbed.
+        run: |
+          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USER}" ] || [ -z "${SSH_KEY}" ]; then
+            echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview deploy."
+            exit 0
+          fi
+          canonical_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          # Dedicated checkout per PR, distinct from prod and from every other
+          # preview: concurrent preview/prod deploys never race on one working tree.
+          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
+          # NON-PROD env file for previews. MUST NOT be the prod .env: compose.yaml
+          # interpolates MAILER_DSN / REFRESH_TOKEN_ENC_KEY / ACCESS_REQUEST_HMAC_SECRET
+          # / FCM_SERVICE_ACCOUNT_JSON / JWT_* / DB creds from it, and an ephemeral PR
+          # preview must never inherit prod secrets.
+          # TODO(PR-I / Ansible): provision this preview.env on the VM with
+          #   preview-scoped, NON-PROD values — a dedicated Mercure key, dedicated
+          #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET, a null/sink MAILER_DSN,
+          #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds, and the
+          #   dedicated preview JWT keypair paths (PREVIEW_JWT_PRIVATE_KEY_PATH /
+          #   PREVIEW_JWT_PUBLIC_KEY_PATH — distinct from prod, see deploy/preview
+          #   secrets override) — plus the shared read-only values
+          #   (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI, DOMAIN). Defaults to a single
+          #   shared file at the previews root (outside
+          #   any pr-<n> dir, so teardown's rm -rf never deletes it); until it exists
+          #   the deploy fails closed on the missing file rather than leak prod secrets.
+          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
+          # Pull the pr-<n> images this run's build-images just pushed to GHCR.
+          php_image="${REGISTRY}/${IMAGE_OWNER}-php:pr-${PR_NUMBER}"
+          pwa_image="${REGISTRY}/${IMAGE_OWNER}-pwa:pr-${PR_NUMBER}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
+          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
+          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          # First deploy clones the PR's own checkout (independent .git, seeded from
+          # the canonical clone's origin remote); later deploys just fetch+checkout in
+          # it. PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
+          # preview-scoped secrets come from the NON-PROD preview env file (never the
+          # prod .env). Public migrations run at container boot (MIGRATIONS_ON_BOOT).
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
+          if [ ! -d "${preview_dir}/.git" ]; then
+            mkdir -p "\$(dirname "${preview_dir}")"
+            git clone "\$(git -C "${canonical_dir}" remote get-url origin)" "${preview_dir}"
+          fi
+          cd "${preview_dir}"
+          git fetch origin --force
+          git checkout --force "${HEAD_SHA}"
+          PR_NUMBER="${PR_NUMBER}" PHP_IMAGE="${php_image}" PWA_IMAGE="${pwa_image}" \
+            docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
+              -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
+          EOF
+
+  teardown-preview:
+    name: Tear down PR preview on the VM over SSH
+    runs-on: ubuntu-latest
+    # Runs on PR close/merge only. No `needs: build-images` — that job is skipped on
+    # `closed`, and a skipped need would cascade-skip this teardown.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Pinned host key (optional), same secret as deploy-prod / deploy-preview.
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
+      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - name: Tear down preview over SSH
+        # Same no-op guard as deploy-preview: nothing to reclaim without SSH secrets.
+        run: |
+          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USER}" ] || [ -z "${SSH_KEY}" ]; then
+            echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview teardown."
+            exit 0
+          fi
+          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
+          # Same NON-PROD preview env file as the deploy — never the prod .env.
+          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
+          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
+          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          # Tear the pr-<n> stack down from its own checkout, then remove that
+          # checkout dir. `down -v` drops the isolated PG-app + redis volumes (no data
+          # to keep); --remove-orphans in case a service was renamed between deploys.
+          # `|| true` so a stack already gone (deploy never ran) still reclaims the dir.
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
+          if [ -d "${preview_dir}/.git" ]; then
+            cd "${preview_dir}"
+            PR_NUMBER="${PR_NUMBER}" \
+              docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
+                -f compose.yaml -f deploy/preview/compose.yaml down -v --remove-orphans || true
+          fi
+          rm -rf "${preview_dir}"
+          EOF
