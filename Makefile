@@ -273,7 +273,7 @@ routing-publish: ## Ship the built routing graph to a server (e.g. make routing-
 	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz" && \
 	rm -f "$$ARTIFACT" && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) stop valhalla' && \
-	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst' && \
+	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f /tmp/valhalla-tiles.tar.gz' && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) restart valhalla'
 
 ## --- 🗄️ Database ---
