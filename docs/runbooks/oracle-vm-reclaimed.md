@@ -1,6 +1,8 @@
 # Oracle VM Reclaimed
 
-Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutive days where p95 CPU < 20 %, network < 20 %, and memory < 20 % (ADR-019). The application stack is sized to stay above the threshold, but a long quiet period plus a worker crash can trip it.
+Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutive days where p95 CPU < 20 %, network < 20 %, and memory < 20 % (ADR-019). The application stack is sized to stay above the threshold (steady-state ~29 % memory), but a long quiet period plus a worker crash can trip it.
+
+**Recovery is now a single `ansible-playbook` run — there is no Coolify (ADR-061).** The whole VM (Docker, Traefik, cloudflared, shared Valhalla + PG-reference, `.env` + JWT from Vault) is described in [`../../ansible/`](../../ansible/README.md); bootstrapping a fresh VM and recovering a reclaimed one are the same command.
 
 ## Symptômes
 
@@ -26,31 +28,30 @@ In the OCI console:
 
 ## Procédure
 
-1. **If the instance is `STOPPED`**, just start it from the OCI console (Compute → Instances → Start). Coolify auto-starts on boot; the stack comes back in 5-10 min.
+1. **If the instance is `STOPPED`**, just start it from the OCI console (Compute → Instances → Start). Docker services (`restart: unless-stopped`) come back on boot; the stack is up in a few minutes. No action needed beyond confirming health.
 
 2. **If the instance was terminated but the boot volume is preserved** (the common reclaim path):
    - OCI console → Compute → Create Instance
    - Shape: `VM.Standard.A1.Flex`, 4 OCPU / 24 GB RAM
    - Image source: "Boot volume" → select the preserved volume
-   - Subnet: same VCN as before (keep the existing reserved public IP if available)
-   - Launch — the VM boots with Docker + Coolify already configured
-   - Reattach the reserved public IP (Networking → Public IPs)
+   - Subnet: same VCN as before. **No reserved public IP** — ingress is the outbound Cloudflare Tunnel (ADR-061); nothing to reattach.
+   - Launch — the VM boots with everything already configured. Confirm `cloudflared` reconnected and `/api/healthz` is green.
 
-3. **If the boot volume is also gone** (rare — full reclaim after long inactivity):
-   - Provision a fresh ARM Ampere A1 instance (Ubuntu 22.04 LTS, 4 OCPU / 24 GB, 150 GB boot volume) per ADR-019
-   - Install Coolify: `curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash`
-   - Restore PostgreSQL from the most recent backup (see backups plan — out of scope of this ADR but referenced)
-   - In Coolify, re-import the project from the GitHub repository; environment variables must be re-entered (publisher/JWT secrets, OAuth credentials, `INCIDENT_DISPATCH_TOKEN`)
-   - Re-run `make provision` to rebuild Valhalla tiles for the configured regions
-   - Update FreeDNS A record to point to the new public IP
+3. **If the boot volume is also gone** (rare — full reclaim after long inactivity) — **re-run the Ansible playbook**:
+   - Provision a fresh `VM.Standard.A1.Flex` (Ubuntu ARM64, 4 OCPU / 24 GB) with **no public IP**. On `Out of host capacity`, retry / change availability domain or region (plan W5.3). First SSH via the OCI serial console or a temporary public IP.
+   - From a workstation: `cd ansible && ansible-galaxy collection install -r requirements.yml && ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`. This reinstalls Docker + Traefik + cloudflared + shared Valhalla/PG-reference and renders `.env` + JWT from Vault. See [`ansible/README.md`](../../ansible/README.md).
+   - Ship the Valhalla tiles tar (`make routing-publish …`, plan W6) and set `valhalla_tiles_tar`, or seed the volume manually, then re-run so Valhalla can serve.
+   - Restore PostgreSQL (PG-app) from the most recent backup (backup role = PR-G / W10; runbook TBD). PG-reference is reproducible — re-run `make provision <zone>` per opened zone.
+   - Deploy the app: GHA `deploy-prod` on the current tag, or SSH in and run `/opt/bike-trip-planner/deploy-prod.sh <tag>`.
+   - Cloudflare DNS already points `www` + `*` at the tunnel CNAME (`<UUID>.cfargotunnel.com`); no A record to update.
 
-4. **Notify users** — the status page (`status.biketrip.mooo.com`) is also down. Use the GitHub repository issue or a pinned banner once the PWA is back.
+4. **Notify users** — use a GitHub repository issue or a pinned PWA banner once the app is back.
 
 ## Post-action
 
 - `/api/healthz` green from UptimeRobot and a manual curl.
 - A new incident issue with severity P1 documenting the reclaim cause (likely "VM idle for 7 d").
-- Add a synthetic load job (cron pinging `/api/health` from the VM itself) to keep the instance above the reclaim threshold. Document the cron in ADR-019 follow-up.
+- If reclaim recurs, enable the optional anti-reclaim heartbeat timer (`enable_reclaim_heartbeat: true` in `ansible/group_vars/all.yml`; it hits `/api/healthz` through the tunnel). The steady-state footprint already clears the 20 % threshold, so this is belt-and-braces.
 - File a post-mortem using `incident-template.md` — even if recovery was quick, the data loss risk warrants the analysis.
 
 ## References

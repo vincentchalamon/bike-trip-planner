@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Run bike-trip-planner events-refresh periodically
+
+[Timer]
+OnCalendar={{ events_refresh_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

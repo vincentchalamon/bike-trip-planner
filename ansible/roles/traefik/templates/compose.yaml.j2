@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Traefik reverse proxy. No published host ports -> no open public port on the
+# VM (plan W5). App stacks attach to `edge` and declare their routes with
+# Traefik labels (Host(`www.${DOMAIN}`), Host(`pr-N.${DOMAIN}`)).
+services:
+  traefik:
+    image: {{ traefik_image }}
+    restart: unless-stopped
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    networks:
+      - edge
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - {{ traefik_dir }}/traefik.yml:/etc/traefik/traefik.yml:ro
+
+networks:
+  edge:
+    external: true

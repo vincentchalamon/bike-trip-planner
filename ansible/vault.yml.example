@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# vault.yml.example — PLAINTEXT PLACEHOLDERS ONLY. DO NOT PUT REAL SECRETS HERE.
+# =============================================================================
+# This file is committed as a template. The real secrets live in `vault.yml`,
+# which is git-ignored and Ansible-Vault-encrypted. To create it:
+#
+#   cp vault.yml.example vault.yml
+#   # edit vault.yml with the real values, then encrypt it in place:
+#   ansible-vault encrypt vault.yml
+#   # edit later with: ansible-vault edit vault.yml
+#
+# Every runtime secret that used to live in Coolify (docs/runbooks/secrets-inventory.md)
+# is relocated here (plan W9 / ADR-061). Resend is replaced by Brevo (plan W8).
+# -----------------------------------------------------------------------------
+
+# --- JWT (LexikJWT, ADR-023) -------------------------------------------------
+# Generate off-VM:
+#   openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:4096 -aes256
+#   openssl rsa -pubout -in private.pem -out public.pem
+# Paste the full PEM blocks (keep the BEGIN/END lines) as block scalars.
+vault_jwt_private_key: |
+  -----BEGIN ENCRYPTED PRIVATE KEY-----
+  REPLACE_ME
+  -----END ENCRYPTED PRIVATE KEY-----
+vault_jwt_public_key: |
+  -----BEGIN PUBLIC KEY-----
+  REPLACE_ME
+  -----END PUBLIC KEY-----
+vault_jwt_passphrase: "REPLACE_ME"
+
+# --- Mercure / tokens / HMAC -------------------------------------------------
+vault_mercure_jwt_key: "REPLACE_ME"               # MERCURE_JWT_KEY (HS256)
+vault_refresh_token_enc_key: "REPLACE_ME"         # REFRESH_TOKEN_ENC_KEY (SEC-003)
+vault_access_request_hmac_secret: "REPLACE_ME"    # ACCESS_REQUEST_HMAC_SECRET (SEC-004)
+
+# --- FCM push (epic #1051) ---------------------------------------------------
+# The service-account JSON, COMPACTED TO A SINGLE LINE (e.g. `jq -c . key.json`).
+# It is written verbatim into .env, which is line-oriented — no newlines allowed.
+vault_fcm_service_account_json: '{"type":"service_account","project_id":"REPLACE_ME"}'
+
+# --- Mailer (Brevo, plan W8) -------------------------------------------------
+vault_mailer_dsn: "brevo+api://REPLACE_ME@default"
+
+# --- PG-app (per-stack app database; consumed by the prod compose stack) ------
+vault_database_username: "app"
+vault_database_password: "REPLACE_ME"
+vault_database_name: "bike_trip_planner"
+
+# --- PG-reference (shared PostGIS; osm/tourism/provisioner, ADR-060) ---------
+# Superuser owns the reference DB (used by the provisioner for DDL + imports).
+vault_reference_db_user: "reference"
+vault_reference_db_password: "REPLACE_ME"
+vault_reference_db_name: "reference"
+# DSN the app uses to READ the reference DB. Point it at a read-only role in
+# production (created during data provisioning, plan W2.3). `pg-reference` is the
+# service alias on the btp-shared network.
+vault_reference_database_url: "postgresql://reference_ro:REPLACE_ME@pg-reference:5432/reference?serverVersion=18&charset=utf8"
+
+# --- Sentry (ADR-031) --------------------------------------------------------
+vault_sentry_dsn: ""                              # empty = disabled
+vault_next_public_sentry_dsn: ""
+
+# --- Cloudflare Tunnel (locally-managed, plan W5.1) --------------------------
+# Locally-managed config.yml requires a credentials file (NOT the run-token),
+# because the wildcard `*.${DOMAIN}` ingress must be declared locally.
+# Create the named tunnel off-VM:
+#   cloudflared tunnel login
+#   cloudflared tunnel create bike-trip-planner
+# That writes ~/.cloudflared/<UUID>.json. Put the UUID in group_vars/all.yml
+# (cloudflared_tunnel_id) and paste the JSON contents below.
+vault_cloudflared_tunnel_credentials: |
+  {"AccountTag":"REPLACE_ME","TunnelID":"REPLACE_ME","TunnelName":"bike-trip-planner","TunnelSecret":"REPLACE_ME"}
+
+# --- GHCR pull auth (optional; only if the images are private) ---------------
+vault_ghcr_username: ""
+vault_ghcr_token: ""                              # PAT with read:packages

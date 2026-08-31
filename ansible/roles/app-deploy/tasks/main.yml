@@ -1,0 +1,85 @@
+---
+- name: Create the app directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+
+# The checkout exists so `docker compose` bind mounts (Caddyfile, conf.d,
+# overlays, deploy/valhalla/compose.yaml) resolve. The actual prod stack
+# `up -d` is done by GHA deploy-prod at cutover (plan W4 / PR-C) via the
+# rendered deploy-prod.sh hook below — Ansible does NOT bring the app stack up.
+- name: Clone / checkout the application repository
+  become: true
+  become_user: "{{ deploy_user }}"
+  ansible.builtin.git:
+    repo: "{{ app_repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ app_deploy_ref }}"
+    force: true
+
+- name: Write the JWT private key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_jwt_private_key }}"
+    dest: "{{ jwt_dir }}/private.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Write the JWT public key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_jwt_public_key }}"
+    dest: "{{ jwt_dir }}/public.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Render the prod .env (all runtime secrets relocated from Coolify)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Render the prod deploy hook
+  ansible.builtin.template:
+    src: deploy-prod.sh.j2
+    dest: "{{ app_dir }}/deploy-prod.sh"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+
+# --- events-refresh timer (optional in beta, plan W5.1) ----------------------
+- name: Install the events-refresh service
+  ansible.builtin.template:
+    src: events-refresh.service.j2
+    dest: /etc/systemd/system/btp-events-refresh.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_events_refresh_timer | bool
+  notify: Reload systemd
+
+- name: Install the events-refresh timer
+  ansible.builtin.template:
+    src: events-refresh.timer.j2
+    dest: /etc/systemd/system/btp-events-refresh.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_events_refresh_timer | bool
+  notify: Reload systemd
+
+- name: Enable the events-refresh timer
+  ansible.builtin.systemd_service:
+    name: btp-events-refresh.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: enable_events_refresh_timer | bool

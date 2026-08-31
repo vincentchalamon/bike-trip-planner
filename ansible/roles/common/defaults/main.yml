@@ -1,0 +1,8 @@
+---
+common_base_packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - jq
+  - unattended-upgrades

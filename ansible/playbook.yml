@@ -1,0 +1,27 @@
+---
+# Bootstrap + reclaim recovery for the Oracle ARM VM (plan W5).
+# Idempotent: re-running it re-converges the VM. A full reclaim recovery
+# (fresh VM) is exactly this same playbook — see docs/runbooks/oracle-vm-reclaimed.md.
+#
+#   ansible-galaxy collection install -r requirements.yml
+#   ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
+#
+- name: Bootstrap the Oracle ARM VM for bike-trip-planner
+  hosts: btp
+  become: true
+  vars_files:
+    # Vault-encrypted; not committed. Create it from vault.yml.example (see README).
+    - vault.yml
+  roles:
+    - role: common
+    - role: docker
+    - role: traefik
+    - role: cloudflared
+    # app-deploy clones the repo before shared-infra, which needs
+    # deploy/valhalla/compose.yaml from the checkout.
+    - role: app-deploy
+    - role: shared-infra
+    # TODO(PR-G / W10): add `- role: backup` here once the backup role lands in
+    # PR-G (pg_dump PG-app -> age -> rclone to B2/OCI, GFS retention, systemd
+    # timer + `make backup-now`). Left out on purpose so PR-I and PR-G do not
+    # collide on this file. See plan W10 and docs/adr/adr-038.

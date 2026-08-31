@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# cloudflared connects OUTBOUND to Cloudflare and forwards to Traefik over the
+# `edge` network. No published ports (plan W5).
+services:
+  cloudflared:
+    image: {{ cloudflared_image }}
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    networks:
+      - edge
+    volumes:
+      - {{ cloudflared_dir }}:/etc/cloudflared:ro
+
+networks:
+  edge:
+    external: true

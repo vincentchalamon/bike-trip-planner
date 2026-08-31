@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Prod deploy hook. Documents (and can perform) what GHA `deploy-prod` runs over
+# SSH at cutover (plan W4 / PR-C). The prod overlay deploy/prod/compose.yaml is
+# delivered by PR-C; this hook assumes it is present in the checkout.
+set -euo pipefail
+
+cd "{{ app_dir }}"
+TAG="${1:?usage: deploy-prod.sh <tag>}"
+
+git fetch --tags --prune
+git checkout "refs/tags/${TAG}"
+
+docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml pull
+docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d

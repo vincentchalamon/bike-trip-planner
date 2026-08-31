@@ -1,0 +1,81 @@
+---
+- name: Set the system timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_base_packages }}"
+    state: present
+
+- name: Enable unattended security upgrades
+  ansible.builtin.service:
+    name: unattended-upgrades
+    enabled: true
+    state: started
+
+- name: Create the deploy user
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Install the deploy authorized_keys (GHA SSH)
+  ansible.posix.authorized_key:
+    user: "{{ deploy_user }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false
+  loop: "{{ deploy_ssh_public_keys }}"
+  when: deploy_ssh_public_keys | length > 0
+
+- name: Create the secrets root directory
+  ansible.builtin.file:
+    path: "{{ etc_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Create the JWT keypair directory
+  ansible.builtin.file:
+    path: "{{ jwt_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+# --- Anti-reclaim heartbeat (optional, plan W5.1) ----------------------------
+- name: Install the anti-reclaim heartbeat service
+  ansible.builtin.template:
+    src: reclaim-heartbeat.service.j2
+    dest: /etc/systemd/system/btp-reclaim-heartbeat.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_reclaim_heartbeat | bool
+  notify: Reload systemd
+
+- name: Install the anti-reclaim heartbeat timer
+  ansible.builtin.template:
+    src: reclaim-heartbeat.timer.j2
+    dest: /etc/systemd/system/btp-reclaim-heartbeat.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_reclaim_heartbeat | bool
+  notify: Reload systemd
+
+- name: Enable the anti-reclaim heartbeat timer
+  ansible.builtin.systemd_service:
+    name: btp-reclaim-heartbeat.timer
+    enabled: "{{ enable_reclaim_heartbeat | bool }}"
+    state: "{{ 'started' if enable_reclaim_heartbeat | bool else 'stopped' }}"
+    daemon_reload: true
+  when: enable_reclaim_heartbeat | bool

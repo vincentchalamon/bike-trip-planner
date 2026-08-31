@@ -1,0 +1,9 @@
+# Real, Vault-encrypted secrets — never committed (ship vault.yml.example only).
+vault.yml
+# Real inventory — ship inventory.example only.
+inventory.ini
+# Vault password files.
+.vault-pass
+*.vault-pass
+# Ansible retry files.
+*.retry

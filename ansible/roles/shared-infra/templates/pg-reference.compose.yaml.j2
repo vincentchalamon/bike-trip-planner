@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+# Shared PostGIS reference DB (ADR-060). Holds osm / tourism / provisioner
+# schemas, read by every app stack (prod + previews) over btp-shared as
+# `pg-reference`. Deployed by Ansible, NOT by any app stack or PaaS.
+# The read-only app role and the schema DDL are created during data
+# provisioning (plan W2); this only stands the server up.
+services:
+  pg-reference:
+    image: {{ pg_reference_image }}
+    restart: unless-stopped
+    networks:
+      btp-shared:
+        aliases:
+          - pg-reference
+    environment:
+      POSTGRES_DB: {{ vault_reference_db_name }}
+      POSTGRES_USER: {{ vault_reference_db_user }}
+      POSTGRES_PASSWORD: {{ vault_reference_db_password }}
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - pg-reference-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+networks:
+  btp-shared:
+    external: true
+
+volumes:
+  pg-reference-data: ~

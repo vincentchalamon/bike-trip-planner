@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# Traefik static config — single reverse proxy, Docker provider, plain HTTP.
+# NO ACME: TLS is terminated at Cloudflare's edge; the origin is reached only
+# through the Cloudflare Tunnel (plan W5). Traefik publishes no host port; it is
+# reached by cloudflared over the `edge` docker network.
+
+entryPoints:
+  web:
+    address: ":80"
+    # cloudflared sets X-Forwarded-For to the real client IP; trust the docker
+    # bridge ranges so Traefik preserves it end-to-end (plan W5.2).
+    forwardedHeaders:
+      trustedIPs:
+        - 127.0.0.1/32
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+
+providers:
+  docker:
+    exposedByDefault: false
+    # Only containers on the `edge` network are routable.
+    network: edge
+
+api:
+  dashboard: false
+
+log:
+  level: INFO
+
+accessLog: {}

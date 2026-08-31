@@ -1,0 +1,72 @@
+---
+# --- PG-reference (shared PostGIS: osm / tourism / provisioner, ADR-060) ------
+- name: Create the PG-reference directory
+  ansible.builtin.file:
+    path: "{{ shared_infra_dir }}/pg-reference"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Render the PG-reference compose file
+  ansible.builtin.template:
+    src: pg-reference.compose.yaml.j2
+    dest: "{{ shared_infra_dir }}/pg-reference/compose.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Deploy PG-reference (btp-shared)
+  community.docker.docker_compose_v2:
+    project_src: "{{ shared_infra_dir }}/pg-reference"
+    project_name: "{{ pg_reference_project }}"
+    state: present
+
+# --- Valhalla (shared, serve-only) — from the repo checkout (PR-A) -----------
+# Pre-create the tiles volume with the deterministic name the valhalla-shared
+# project uses, so we can seed it BEFORE the serve-only container starts (an
+# empty volume makes the gis-ops entrypoint exit with "Nothing to do", #881).
+- name: Create the valhalla tiles volume
+  community.docker.docker_volume:
+    name: "{{ valhalla_tiles_volume }}"
+    state: present
+
+- name: Check whether the tiles volume is already seeded
+  ansible.builtin.command:
+    cmd: >-
+      docker run --rm -v {{ valhalla_tiles_volume }}:/custom_files
+      alpine test -f /custom_files/valhalla_tiles.tar
+  register: valhalla_tiles_present
+  changed_when: false
+  failed_when: false
+
+- name: Seed the tiles volume from the shipped tar
+  ansible.builtin.command:
+    cmd: >-
+      docker run --rm
+      -v {{ valhalla_tiles_volume }}:/custom_files
+      -v {{ valhalla_tiles_tar | dirname }}:/seed:ro
+      alpine tar -xf /seed/{{ valhalla_tiles_tar | basename }} -C /custom_files
+  when:
+    - valhalla_tiles_tar | length > 0
+    - (valhalla_tiles_present.rc != 0) or (valhalla_tiles_seed_force | bool)
+  changed_when: true
+
+- name: Warn when the tiles volume is empty and no tar was provided
+  ansible.builtin.debug:
+    msg: >-
+      valhalla-tiles volume has no valhalla_tiles.tar and valhalla_tiles_tar is
+      unset. Valhalla will not serve routes until `make routing-publish` ships a
+      tar and this playbook is re-run with valhalla_tiles_tar set (plan W6).
+  when:
+    - valhalla_tiles_present.rc != 0
+    - valhalla_tiles_tar | length == 0
+
+- name: Deploy the shared Valhalla service
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}/deploy/valhalla"
+    project_name: "{{ valhalla_project }}"
+    files:
+      - compose.yaml
+    state: present

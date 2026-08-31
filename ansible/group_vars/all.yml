@@ -1,0 +1,93 @@
+---
+# Non-secret configuration for the whole inventory. Secrets are in vault.yml
+# (see vault.yml.example). Override per host in host_vars/ if ever needed.
+
+# --- Identity / domain -------------------------------------------------------
+domain: "example.com"                 # ${DOMAIN} — the Cloudflare-managed zone
+timezone: "Europe/Paris"
+
+# --- Deploy user (GHA deploy-prod / deploy-preview SSH in as this user) -------
+deploy_user: "deploy"
+# authorized_keys for that user. Put the PUBLIC key(s) whose private half the
+# GHA `SSH_KEY` secret holds. List of strings.
+deploy_ssh_public_keys: []
+
+# --- Paths -------------------------------------------------------------------
+etc_dir: "/etc/bike-trip-planner"
+jwt_dir: "/etc/bike-trip-planner/jwt"
+app_dir: "/opt/bike-trip-planner"
+traefik_dir: "/opt/traefik"
+cloudflared_dir: "/etc/cloudflared"
+shared_infra_dir: "/opt/shared-infra"
+
+# --- Repo checkout (app-deploy) ----------------------------------------------
+# Bind mounts in compose.yaml (Caddyfile, conf.d, overlays, valhalla compose)
+# resolve from this checkout. The actual prod stack `up -d` is done by GHA
+# deploy-prod (plan W4 / PR-C); Ansible only guarantees the checkout is present.
+app_repo_url: "https://github.com/vincentchalamon/bike-trip-planner.git"
+# Cutover (plan): set this to the deployed tag (e.g. "v1.0.0"). Until the first
+# tag exists, "main" keeps the checkout resolvable for bind mounts.
+app_deploy_ref: "main"
+
+# --- Docker ------------------------------------------------------------------
+docker_networks:
+  - edge          # Traefik <-> app php containers, and cloudflared -> Traefik
+  - btp-shared    # Valhalla + PG-reference, shared by prod + previews
+
+# --- Traefik (single reverse proxy; Docker provider; HTTP; NO ACME) ----------
+traefik_image: "traefik:v3.3"
+# Traefik binds container port 80 only and is reached by cloudflared over the
+# `edge` docker network. It publishes NO host port -> no open public port.
+
+# --- cloudflared (Cloudflare Tunnel, locally-managed config.yml) -------------
+cloudflared_image: "cloudflare/cloudflared:2025.7.0"
+# UUID of the pre-created named tunnel (see vault.yml.example for how to create
+# it). Not itself a secret; the TunnelSecret in the credentials JSON is.
+cloudflared_tunnel_id: "REPLACE_ME"
+
+# --- Shared infra ------------------------------------------------------------
+valhalla_project: "valhalla-shared"
+valhalla_compose_path: "{{ app_dir }}/deploy/valhalla/compose.yaml"
+# Named volume created by the valhalla-shared project: <project>_valhalla-tiles.
+valhalla_tiles_volume: "valhalla-shared_valhalla-tiles"
+# Path ON THE VM to the tiles tar shipped off-VM by `make routing-publish`
+# (plan W6). Empty = skip seeding (e.g. tiles already present). Seeding is
+# idempotent: skipped when the volume already holds valhalla_tiles.tar unless
+# valhalla_tiles_seed_force is true.
+valhalla_tiles_tar: ""
+valhalla_tiles_seed_force: false
+
+pg_reference_project: "pg-reference"
+pg_reference_image: "postgis/postgis:18-3.6-alpine"
+
+# --- App runtime env (non-secret half of prod .env) --------------------------
+server_name: "www.{{ domain }}"
+frontend_url: "https://www.{{ domain }}"
+mercure_public_url: "https://www.{{ domain }}/.well-known/mercure"
+# Real client IP (plan W5.2): cloudflared and Traefik both live on docker
+# bridge networks, so trust the private ranges. Symfony then reads the real IP
+# from the X-Forwarded-For that cloudflared sets and Traefik forwards, for
+# rate-limiting, logs and AccessRequestHmac.
+trusted_proxies: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+trusted_hosts: "^(www\\.{{ domain | regex_escape }}|php)$"
+valhalla_base_uri: "http://valhalla:8002"
+app_release: ""
+
+# Prod images (arm64) pushed to GHCR by GHA (plan W4). Consumed by the prod
+# compose stack that GHA brings up; kept here so the deploy hook can reference them.
+php_image: "ghcr.io/vincentchalamon/bike-trip-planner-php:latest"
+pwa_image: "ghcr.io/vincentchalamon/bike-trip-planner-pwa:latest"
+# GHCR login on the VM (only needed if the packages are private).
+ghcr_login_enabled: false
+
+# --- Optional crons (plan W5.1) ----------------------------------------------
+# Anti-reclaim heartbeat. OPTIONAL: the ~29% memory footprint already clears the
+# 20% reclaim threshold (plan Context), so this is belt-and-braces only.
+enable_reclaim_heartbeat: false
+reclaim_heartbeat_calendar: "*:0/10"          # every 10 min
+
+# events-refresh timer (plan W5.1). OPTIONAL in beta. Runs the provisioner
+# `events-refresh` entrypoint against the prod stack.
+enable_events_refresh_timer: false
+events_refresh_zone: ""                        # e.g. "bretagne"
+events_refresh_calendar: "Mon *-*-* 04:00:00"
