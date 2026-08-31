@@ -7,7 +7,7 @@ both a first bootstrap and a full reclaim recovery are the same single command.
 
 ## Topology
 
-```
+```text
 Internet ──TLS──> Cloudflare edge ──Tunnel (outbound only)──> cloudflared
                                                                   │  (edge network)
                                                                   ▼
