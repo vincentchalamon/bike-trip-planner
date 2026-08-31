@@ -1,18 +1,14 @@
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/constants";
 
 /**
- * robots.txt (audit 35.2 SEO-002). Crawlers may index the public pages; the
- * authenticated app (`/trips`, `/account`) and the unguessable share links
- * (`/s/`) are disallowed so they are neither crawled nor indexed.
+ * robots.txt (W7.1, private beta). Prod and previews must stay out of
+ * search indexes entirely, so every user-agent is disallowed site-wide.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
-      disallow: ["/trips", "/account", "/s/"],
+      disallow: "/",
     },
-    sitemap: new URL("/sitemap.xml", SITE_URL).toString(),
   };
 }
