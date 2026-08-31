@@ -5,7 +5,7 @@
 - **Amends:** [ADR-019](adr-019-deployment-infrastructure-strategy.md) (Deployment Infrastructure Strategy — replaces the Coolify control plane)
 - **Impacts:** [ADR-037](adr-037-docker-dev-prod-convergence.md) (the FrankenPHP edge now serves plain HTTP behind Traefik, auto-HTTPS disabled)
 - **Depends on:** [ADR-060](adr-060-pg-split-app-reference.md) (PG split app/référence), ADR-032 (migrations at boot)
-- **Related:** [ADR-062](adr-062-backup-dr.md) (Backup & DR, runtime without Coolify)
+- **Related:** ADR-062 (Backup & DR, runtime without Coolify)
 
 ## Context and Problem Statement
 
@@ -58,4 +58,4 @@ There is no Coolify "Redeploy" button. Rollback = **redeploy the previous tag**:
 ### Neutral
 
 - The `compose.yaml` base is still read as-is (now by CI and the SSH deploy, no longer by Coolify); the prod-only deltas live in `deploy/prod/compose.yaml`, layered explicitly on the VM.
-- Backup & DR is decoupled from Coolify and finalised in [ADR-062](adr-062-backup-dr.md).
+- Backup & DR is decoupled from Coolify and finalised in ADR-062 (Backup & DR).
