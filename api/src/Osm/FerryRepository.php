@@ -15,7 +15,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class FerryRepository implements FerryRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -28,7 +28,7 @@ final readonly class FerryRepository implements FerryRepositoryInterface
         $line = WktGeometry::lineStringOrPoint($stagePoints);
 
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT f.name,
                        ST_Y(ST_ClosestPoint(f.geom, s.line)) AS lat,

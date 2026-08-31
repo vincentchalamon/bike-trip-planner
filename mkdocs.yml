@@ -139,6 +139,7 @@ nav:
       - adr/adr-057-progressive-trip-loading.md
       - adr/adr-058-push-fcm.md
       - adr/adr-059-mobile-offline-auto-sync.md
+      - adr/adr-060-pg-split-app-reference.md
   - Runbooks:
       - runbooks/README.md
       - runbooks/severity-levels.md

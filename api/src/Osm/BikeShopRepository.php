@@ -14,7 +14,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class BikeShopRepository implements BikeShopRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -32,7 +32,7 @@ final readonly class BikeShopRepository implements BikeShopRepositoryInterface
         }
 
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT name, ST_Y(geom) AS lat, ST_X(geom) AS lon,
                        (category = 'repair_station' OR COALESCE(tags->>'service:bicycle:repair', '') = 'yes')::int AS has_repair

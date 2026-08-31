@@ -15,7 +15,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class FoodPoiRepository implements FoodPoiRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -30,7 +30,7 @@ final readonly class FoodPoiRepository implements FoodPoiRepositoryInterface
         // KNN cap (nearest 100) mirrors the OSM/cultural reads so the merged
         // result stays bounded after the registry combines both sources.
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT name, category, opening_hours, description, wikidata,
                        ST_Y(geom) AS lat, ST_X(geom) AS lon

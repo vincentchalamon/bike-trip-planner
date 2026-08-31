@@ -675,16 +675,17 @@ final class DataTourismeImporterTest extends TestCase
      * provisioner container; CI runs this suite from the repository root, where it
      * is the real gate.
      *
-     * Since the sprint-51 baseline reset (#972) the `CREATE TABLE` DDL lives in
-     * `migrations/schema/baseline_schema.sql`, a `pg_dump --schema-only`; any
-     * column added afterwards ships as an `ALTER` migration whose `COLUMNS`
+     * Since the sprint-51 baseline reset (#972) the `CREATE TABLE` DDL lives in a
+     * baseline SQL file; the PG split (ADR-060) moved the reference schemas —
+     * `tourism.accommodations` among them — into `migrations/schema/reference_schema.sql`.
+     * Any column added afterwards ships as an `ALTER` migration whose `COLUMNS`
      * constant this test still reads back.
      */
     #[Test]
     public function theStagingDdlIsASubsetOfTheAccommodationMigrations(): void
     {
         $migrationsDir = __DIR__.'/../../api/migrations';
-        $baselineSchema = $migrationsDir.'/schema/baseline_schema.sql';
+        $baselineSchema = $migrationsDir.'/schema/reference_schema.sql';
         if (!is_file($baselineSchema)) {
             self::markTestSkipped('api/migrations is not reachable from here (provisioner container mounts ./provisioner alone)');
         }
@@ -695,7 +696,7 @@ final class DataTourismeImporterTest extends TestCase
         $staging = $this->columnNames($stagingDdl['accommodations']);
 
         $migrated = [];
-        if (1 === preg_match('/CREATE TABLE tourism\.accommodations \((.*?)\n\);/s', (string) file_get_contents($baselineSchema), $matches)) {
+        if (1 === preg_match('/CREATE TABLE (?:IF NOT EXISTS )?tourism\.accommodations \((.*?)\n\);/s', (string) file_get_contents($baselineSchema), $matches)) {
             $migrated = array_merge($migrated, $this->columnNames($matches[1]));
         }
 

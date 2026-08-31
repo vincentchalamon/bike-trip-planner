@@ -20,7 +20,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class InRidePoiRepository implements InRidePoiRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -53,7 +53,7 @@ final readonly class InRidePoiRepository implements InRidePoiRepositoryInterface
             SQL;
 
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative($sql, [
+        $rows = $this->referenceConnection->fetchAllAssociative($sql, [
             'lat' => $lat,
             'lon' => $lon,
             'radius' => $radiusMeters,

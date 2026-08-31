@@ -18,7 +18,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class EventRepository implements EventRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -30,7 +30,7 @@ final readonly class EventRepository implements EventRepositoryInterface
     public function findActiveNear(float $lat, float $lon, int $radiusMeters, string $date): array
     {
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT name, category, url, description, price_min, source,
                        to_char(start_date, 'YYYY-MM-DD') AS start_date,

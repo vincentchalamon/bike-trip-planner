@@ -16,12 +16,12 @@ use Doctrine\Migrations\AbstractMigration;
  * pre-launch rationale as the #937 exception recorded in ADR-032, and recorded
  * itself in that ADR's "pre-launch migration baseline reset" addendum.
  *
- * `up()` executes `schema/baseline_schema.sql`, a `pg_dump --schema-only` of a
- * database with every pre-reset migration applied. The dump was verified to
- * reproduce that schema byte-for-byte (a fresh DB loaded from the SQL re-dumps
- * identically). It carries the full DDL the ORM mappings do not describe — the
- * PostGIS extension, the `osm` / `tourism` / `provisioner` schemas, GiST indexes
- * and CHECK constraints — which a schema:create/diff baseline would have lost.
+ * `up()` executes `schema/public_schema.sql`, the `public` (PG-app) half of the
+ * former single baseline: trips, stages and auth. Since the PG split (ADR-060) the
+ * `osm` / `tourism` / `provisioner` schemas + the PostGIS extension no longer live
+ * here — they moved to `schema/reference_schema.sql` on the shared read-only
+ * PG-référence, applied by the provisioner (and by the reference Doctrine migration
+ * in test/CI). This connection carries NO PostGIS dependency.
  *
  * Operational note: existing local dev databases predate this reset and still
  * record the 43 old versions, so they cannot adopt the baseline incrementally.
@@ -32,12 +32,12 @@ final class Version20260807130000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Baseline schema: pre-launch reset collapsing the 43 development migrations into one';
+        return 'Baseline public (PG-app) schema: pre-launch reset, split from the reference schema (ADR-060)';
     }
 
     public function up(Schema $schema): void
     {
-        $sql = file_get_contents(__DIR__.'/schema/baseline_schema.sql');
+        $sql = file_get_contents(__DIR__.'/schema/public_schema.sql');
         \assert(false !== $sql);
 
         // DBAL runs each addSql() as a prepared statement, which rejects a
@@ -57,15 +57,12 @@ final class Version20260807130000 extends AbstractMigration
     }
 
     /**
-     * Reverts to an empty database. The baseline creates the whole schema, so
-     * its inverse drops the custom schemas and resets `public` — no data is at
-     * stake pre-launch.
+     * Reverts to an empty PG-app database. This baseline now owns only the
+     * `public` schema (the reference schemas belong to the reference migration),
+     * so its inverse resets `public` alone — no data is at stake pre-launch.
      */
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP SCHEMA IF EXISTS osm CASCADE');
-        $this->addSql('DROP SCHEMA IF EXISTS tourism CASCADE');
-        $this->addSql('DROP SCHEMA IF EXISTS provisioner CASCADE');
         $this->addSql('DROP SCHEMA public CASCADE');
         $this->addSql('CREATE SCHEMA public');
     }

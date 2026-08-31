@@ -42,10 +42,17 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
+# Reference schema + entrypoint (ADR-060). Baked under /opt/btp so the dev bind
+# mount of ./provisioner over /app cannot shadow it. The entrypoint applies the
+# schema to PG-référence before running bin/provision.
+COPY api/migrations/schema/reference_schema.sql /opt/btp/reference_schema.sql
+COPY .docker/provisioner/docker-entrypoint.sh /usr/local/bin/provisioner-entrypoint.sh
+RUN chmod +x /usr/local/bin/provisioner-entrypoint.sh
+
 # Cap PHP memory so a regression in the streaming/enrichment paths fails with a
 # clean PHP fatal instead of a silent container OOM-kill (ADR-041 R4). osm2pgsql
 # and psql run as separate processes, bounded by --cache and the DB config.
-ENTRYPOINT ["php", "-d", "memory_limit=512M", "bin/provision"]
+ENTRYPOINT ["/usr/local/bin/provisioner-entrypoint.sh"]
 
 # Stage 3: Production
 FROM php:8.5-cli-bookworm AS prod
@@ -67,7 +74,14 @@ RUN install-php-extensions zip
 WORKDIR /app
 COPY --from=deps /app/ ./
 
+# Reference schema + entrypoint (ADR-060): applied to PG-référence before the first
+# import so the osm/tourism live tables exist. Same file the API reference migration
+# runs in test/CI.
+COPY api/migrations/schema/reference_schema.sql /opt/btp/reference_schema.sql
+COPY .docker/provisioner/docker-entrypoint.sh /usr/local/bin/provisioner-entrypoint.sh
+RUN chmod +x /usr/local/bin/provisioner-entrypoint.sh
+
 # Cap PHP memory so a regression in the streaming/enrichment paths fails with a
 # clean PHP fatal instead of a silent container OOM-kill (ADR-041 R4). osm2pgsql
 # and psql run as separate processes, bounded by --cache and the DB config.
-ENTRYPOINT ["php", "-d", "memory_limit=512M", "bin/provision"]
+ENTRYPOINT ["/usr/local/bin/provisioner-entrypoint.sh"]

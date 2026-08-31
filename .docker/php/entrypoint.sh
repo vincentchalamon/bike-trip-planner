@@ -70,6 +70,27 @@ if [ "${MIGRATIONS_ON_BOOT:-false}" = "true" ]; then
 
 	echo 'Running Doctrine migrations...' >&2
 	bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration >&2
+
+	# Reference schema on a single-database deployment (ADR-060). The public boot
+	# migrate above owns only the `public` (PG-app) schema; the osm/tourism reference
+	# schema is normally owned by the provisioner on a SEPARATE PG-référence. But dev,
+	# CI, the E2E integration smoke and the recette all run one Postgres for both
+	# connections and never launch the provisioner, so the reference tables (empty)
+	# would be missing and any reference read — e.g. storeStages()'s on-cycle-network /
+	# out-of-zone scans against osm.* during a plain GPX import — would 500.
+	#
+	# Detect that single-database case by REFERENCE_DATABASE_URL being unset or equal to
+	# DATABASE_URL, and then also run the reference history (its own version table) on
+	# the reference connection. On a real split (the two URLs differ) this is skipped:
+	# the app stays read-only on the shared PG-référence, which the provisioner owns.
+	# Separate `bin/console` invocation on purpose — two migrate configs in one process
+	# is unreliable with the bundle (the second is ignored).
+	if [ -z "${REFERENCE_DATABASE_URL:-}" ] || [ "${REFERENCE_DATABASE_URL}" = "${DATABASE_URL:-}" ]; then
+		echo 'Single-database deployment: running reference migrations on the reference connection...' >&2
+		bin/console doctrine:migrations:migrate --configuration=config/migrations_reference.php --conn reference --no-interaction --allow-no-migration >&2
+	else
+		echo 'Split deployment (REFERENCE_DATABASE_URL != DATABASE_URL): reference schema is owned by the provisioner, skipping.' >&2
+	fi
 fi
 
 exec docker-php-entrypoint "$@"

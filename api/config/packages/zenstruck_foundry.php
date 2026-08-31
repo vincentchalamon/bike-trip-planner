@@ -12,6 +12,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
             'orm' => [
                 'reset' => [
+                    // The reference migration is registered into the default history
+                    // in dev/test (see doctrine_migrations.php), so this single
+                    // `migrate` reset creates the osm/tourism tables the functional
+                    // tests read (HealthControllerTest) on the one test database that
+                    // backs both connections (ADR-060).
                     'mode' => 'migrate',
                 ],
             ],

@@ -39,7 +39,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      */
     private const array NON_LODGING_CATEGORIES = ['shelter'];
 
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -91,7 +91,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
         // (point_index, distance, point_rank, primary key); the mapping below reads
         // named keys and ignores them.
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT ranked.*
                 FROM (

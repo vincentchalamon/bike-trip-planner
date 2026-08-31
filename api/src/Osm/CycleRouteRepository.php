@@ -17,7 +17,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class CycleRouteRepository implements CycleRouteRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -37,7 +37,7 @@ final readonly class CycleRouteRepository implements CycleRouteRepositoryInterfa
         // For each stage line, buffer (geography, metres) the cycle routes running
         // within the tolerance, then measure the stage length inside that buffer
         // over the total stage length.
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT t.idx AS idx, CASE
                     WHEN ST_Length(stage.g::geography) = 0 THEN 0

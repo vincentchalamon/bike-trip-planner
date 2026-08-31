@@ -75,7 +75,7 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertArrayHasKey('deps', $data);
-        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'reference_data'] as $dep) {
+        foreach (['postgres', 'postgres_reference', 'redis', 'mercure', 'valhalla', 'reference_data'] as $dep) {
             $this->assertArrayHasKey($dep, $data['deps'], \sprintf('Missing dep %s', $dep));
             $this->assertArrayHasKey('status', $data['deps'][$dep]);
             $this->assertArrayHasKey('latency_ms', $data['deps'][$dep]);
@@ -167,6 +167,38 @@ final class HealthControllerTest extends ApiTestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function readinessReportsReferencePostgresDownWithoutFlippingStatus(): void
+    {
+        // The shared read-only PG-référence (ADR-060) backs feature enrichment, not
+        // the core trip flow, so it is non-required: an unreachable reference DB is
+        // reported as down but never takes readiness below 200 (ADR-040).
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $brokenReference = $this->createMock(Connection::class);
+        $brokenReference->method('executeStatement')->willThrowException(
+            new \RuntimeException('connection refused')
+        );
+        $brokenReference->method('executeQuery')->willThrowException(
+            new \RuntimeException('connection refused')
+        );
+        self::getContainer()->set('doctrine.dbal.reference_connection', $brokenReference);
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertSame('down', $data['deps']['postgres_reference']['status']);
+        $this->assertSame('RuntimeException', $data['deps']['postgres_reference']['error']);
+        // The reference-data read runs on the same broken connection, so it is down too.
+        $this->assertSame('down', $data['deps']['reference_data']['status']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function readinessReturns503WhenRedisIsDown(): void
     {
         $this->mockHealthHttpClients(
@@ -217,7 +249,7 @@ final class HealthControllerTest extends ApiTestCase
     public function readinessReportsReferenceDataFreshnessCountsAndCompleteness(): void
     {
         $this->truncateProvisioningMetadata();
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        $connection = self::getContainer()->get('doctrine.dbal.reference_connection');
         \assert($connection instanceof Connection);
         $connection->executeStatement(<<<'SQL'
             INSERT INTO osm.metadata (refreshed_at, feature_counts, completeness, rejections)
@@ -259,7 +291,7 @@ final class HealthControllerTest extends ApiTestCase
     public function readinessReportsTheReferenceIndexAgeWithoutAStalenessVerdict(): void
     {
         $this->truncateProvisioningMetadata();
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        $connection = self::getContainer()->get('doctrine.dbal.reference_connection');
         \assert($connection instanceof Connection);
         // OSM refreshed 100 days ago. No scheduler refreshes these sources
         // (ADR-036) and obsolescence is assumed, so age carries no verdict: any
@@ -292,7 +324,7 @@ final class HealthControllerTest extends ApiTestCase
         // A metadata row written by the previous provisioner (counts only) must keep
         // reporting its counts, not read as unprovisioned.
         $this->truncateProvisioningMetadata();
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        $connection = self::getContainer()->get('doctrine.dbal.reference_connection');
         \assert($connection instanceof Connection);
         $connection->executeStatement(<<<'SQL'
             INSERT INTO osm.metadata (refreshed_at, feature_counts)
@@ -388,7 +420,7 @@ final class HealthControllerTest extends ApiTestCase
      */
     private function seedZones(array $zones, array $perimeter): void
     {
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        $connection = self::getContainer()->get('doctrine.dbal.reference_connection');
         \assert($connection instanceof Connection);
         $connection->executeStatement('TRUNCATE osm.zones, osm.routing_perimeter');
 
@@ -406,7 +438,7 @@ final class HealthControllerTest extends ApiTestCase
 
     private function truncateProvisioningMetadata(): void
     {
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        $connection = self::getContainer()->get('doctrine.dbal.reference_connection');
         \assert($connection instanceof Connection);
         $connection->executeStatement('TRUNCATE osm.metadata, tourism.metadata');
     }
