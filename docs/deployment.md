@@ -24,6 +24,7 @@ Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-
 | `SSH_HOST` | prod deploy | Hostname/IP of the prod VM reached by `deploy-prod` over SSH. |
 | `SSH_USER` | prod deploy | SSH user with rights to the repo checkout and Docker on the VM. |
 | `SSH_KEY` | prod deploy | Private SSH key for the deploy user; its public key is provisioned into `authorized_keys` by Ansible. |
+| `SSH_KNOWN_HOSTS` | prod deploy (recommended) | Pinned VM host key; when set it is trusted instead of a live `ssh-keyscan` (TOFU), closing the first-contact MITM window. Populate once the Ansible/SSH infra is in place. |
 | `PROD_HEALTH_URL` | prod deploy | Base URL the smoke-test probes (`https://www.${DOMAIN}`); defaults to the current host until cutover. |
 | `INCIDENT_DISPATCH_TOKEN` | smoke-test failure | Fine-grained PAT (`Contents: write`, `Issues: write`) used to trigger `repository_dispatch` (see P1.3 / ADR-031). Rotate every 90 days. |
 

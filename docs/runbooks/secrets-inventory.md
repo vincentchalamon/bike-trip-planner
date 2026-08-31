@@ -44,6 +44,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `SSH_HOST` | Hôte SSH de la VM prod | GitHub repo secret | `deploy.yml` (`deploy-prod` / `deploy-preview`) | On-compromise | ADR-061 |
 | `SSH_USER` | Utilisateur SSH de déploiement | GitHub repo secret | `deploy.yml` | On-compromise | ADR-061 |
 | `SSH_KEY` | Clé privée SSH de déploiement | GitHub repo secret | `deploy.yml` | On-compromise (paire régénérée + `authorized_keys` re-provisionnée par Ansible) | ADR-061 |
+| `SSH_KNOWN_HOSTS` | Clé d'hôte SSH épinglée (facultative ; sinon `ssh-keyscan` TOFU) | GitHub repo secret | `deploy.yml` (`deploy-prod`) | On-changement d'hôte VM | ADR-061 |
 | `PROD_HEALTH_URL` | URL prod du smoke-test (`https://www.${DOMAIN}`) | GitHub repo secret | `deploy.yml` (smoke-test) | Statique | ADR-061 |
 | `SENTRY_AUTH_TOKEN` | Org token GlitchTip | GitHub repo secret | `deploy.yml` (source-map upload) | On-compromise | ADR-031 |
 | `SENTRY_URL` / `SENTRY_ORG` / `SENTRY_PROJECT` | Métadonnées (non sensibles) | GitHub repo secret | `deploy.yml` | Statiques | ADR-031 |
