@@ -20,7 +20,6 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_OWNER: vincentchalamon/bike-trip-planner
-  HEALTH_URL: https://biketrip.mooo.com
 
 jobs:
   build-images:
@@ -111,12 +110,16 @@ jobs:
       # Keep the registry tidy: retain the 10 most recent versions of each
       # image (enough rollback targets) and prune the rest. GHCR storage is
       # free for this public repo, so this is hygiene, not a cost control.
+      # ignore-versions protects the vX.Y.Z release images from PR-build churn:
+      # deploy-prod's rollback story ("re-run on an earlier tag") needs them to
+      # survive even after >10 pr-<n>/sha builds between two releases.
       - name: Prune old image versions
         uses: actions/delete-package-versions@v5
         with:
           package-name: bike-trip-planner-${{ matrix.service }}
           package-type: container
           min-versions-to-keep: 10
+          ignore-versions: '^v[0-9]+\.[0-9]+\.[0-9]+$'
 
   upload-sourcemaps:
     name: Upload PWA source maps to GlitchTip
@@ -234,7 +237,9 @@ jobs:
     name: Smoke test post-deploy
     runs-on: ubuntu-latest
     needs: deploy-prod
-    if: success()
+    # A tag-skipped deploy-prod counts as "success" for needs, so pin to tags:
+    # never probe real prod (nor dispatch an incident) on a PR build.
+    if: success() && github.ref_type == 'tag'
     # Prod host to probe. Defaults to the current value so nothing breaks before
     # cutover; set PROD_HEALTH_URL to https://www.${DOMAIN} at cutover.
     env:
