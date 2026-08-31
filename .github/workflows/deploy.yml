@@ -360,9 +360,12 @@ jobs:
           # TODO(PR-I / Ansible): provision this preview.env on the VM with
           #   preview-scoped, NON-PROD values — a dedicated Mercure key, dedicated
           #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET, a null/sink MAILER_DSN,
-          #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds — plus
-          #   the shared read-only values (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI,
-          #   DOMAIN). Defaults to a single shared file at the previews root (outside
+          #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds, and the
+          #   dedicated preview JWT keypair paths (PREVIEW_JWT_PRIVATE_KEY_PATH /
+          #   PREVIEW_JWT_PUBLIC_KEY_PATH — distinct from prod, see deploy/preview
+          #   secrets override) — plus the shared read-only values
+          #   (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI, DOMAIN). Defaults to a single
+          #   shared file at the previews root (outside
           #   any pr-<n> dir, so teardown's rm -rf never deletes it); until it exists
           #   the deploy fails closed on the missing file rather than leak prod secrets.
           preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"

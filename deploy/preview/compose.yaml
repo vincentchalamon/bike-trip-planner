@@ -125,6 +125,18 @@ services:
           cpus: "0.25"
           memory: 256M
 
+# Override the base top-level secrets so previews NEVER mount the prod JWT signing
+# keys. lexik validates a bearer by signature alone (no audience claim), so a token
+# signed with the prod private key by any preview (less-trusted PR code) would be
+# accepted by the prod API — a major blast radius. Point both at a dedicated
+# preview keypair, provisioned once on the VM (PR-I), shared across previews but
+# distinct from prod. `:?` fails the deploy closed if the paths are not supplied.
+secrets:
+  jwt_private_key:
+    file: "${PREVIEW_JWT_PRIVATE_KEY_PATH:?PREVIEW_JWT_PRIVATE_KEY_PATH must be set for preview stacks}"
+  jwt_public_key:
+    file: "${PREVIEW_JWT_PUBLIC_KEY_PATH:?PREVIEW_JWT_PUBLIC_KEY_PATH must be set for preview stacks}"
+
 networks:
   # Both created by Ansible ahead of any deploy (W5); shared with prod + every preview.
   # Traefik <-> php.
