@@ -253,19 +253,26 @@ routing-up: ## Start the Valhalla routing service (requires a graph built by `ma
 # name the artifact (must match what `make routing-build` already produced) and
 # do not touch what gets rebuilt. Only valhalla_tiles.tar is packaged (not the
 # unpacked valhalla_tiles/ dir, nor the *.osm.pbf extracts), matching runbook §3.
+# The shared Valhalla on the server is its own compose project (Ansible-deployed,
+# no Coolify — ADR-061), not the app stack: `docker compose -p valhalla-shared -f
+# $(ROUTING_REMOTE_COMPOSE)` targets it. Override ROUTING_REMOTE_COMPOSE if the
+# repo clone on the host (W5/ansible) lands somewhere other than the default.
+# Every step is &&-chained so a failed tar/rsync/volume-lookup aborts before the
+# remote stop + wipe ever runs.
 ROUTING_HOST := $(word 1,$(ARGS))
 ROUTING_PUBLISH_SLUGS := $(wordlist 2,$(words $(ARGS)),$(ARGS))
+ROUTING_REMOTE_COMPOSE ?= /opt/bike-trip-planner/deploy/valhalla/compose.yaml
 
 routing-publish: ## Ship the built routing graph to a server (e.g. make routing-publish deploy@prod-host france belgium)
 	@test -n "$(ARGS)" || { echo "Usage: make routing-publish <user@host> <slug> [slug...] (e.g. make routing-publish deploy@prod-host france belgium)"; exit 1; }
-	@ARTIFACT="valhalla-$$(echo $(ROUTING_PUBLISH_SLUGS) | tr ' ' '-')-$$(date +%Y%m).tar.gz"; \
-	VOL=$$(docker volume ls -q | grep valhalla-tiles); \
-	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar; \
-	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz"; \
-	rm -f "$$ARTIFACT"; \
-	ssh "$(ROUTING_HOST)" 'docker compose stop valhalla'; \
-	ssh "$(ROUTING_HOST)" 'VOL=$$(docker volume ls -q | grep valhalla-tiles); docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles"; docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst'; \
-	ssh "$(ROUTING_HOST)" 'docker compose restart valhalla'
+	@ARTIFACT="valhalla-$$(echo $(ROUTING_PUBLISH_SLUGS) | tr ' ' '-')-$$(date +%Y%m).tar.gz" && \
+	VOL=$$(docker volume ls -q | grep valhalla-tiles) && \
+	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar && \
+	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz" && \
+	rm -f "$$ARTIFACT" && \
+	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) stop valhalla' && \
+	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst' && \
+	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) restart valhalla'
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration
