@@ -1,5 +1,5 @@
 ---
-# --- PG-reference (shared PostGIS: osm / tourism / provisioner, ADR-060) ------
+# --- PG-reference (shared PostGIS: osm / tourism / provisioner, split PG W2) --
 - name: Create the PG-reference directory
   ansible.builtin.file:
     path: "{{ shared_infra_dir }}/pg-reference"

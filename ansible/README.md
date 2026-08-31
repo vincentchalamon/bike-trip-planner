@@ -1,7 +1,8 @@
 # Ansible — Oracle ARM VM provisioning
 
 Reproducible, idempotent bootstrap of the single Oracle Cloud Always-Free ARM
-VM that runs bike-trip-planner **without Coolify** (ADR-061). Replaces the
+VM that runs bike-trip-planner **without Coolify** (per the deployment plan,
+Coolify removal / W9). Replaces the
 manual procedure in [`../docs/runbooks/oracle-vm-reclaimed.md`](../docs/runbooks/oracle-vm-reclaimed.md):
 both a first bootstrap and a full reclaim recovery are the same single command.
 
@@ -33,8 +34,8 @@ and cloudflared publish no host ports.
 | `docker` | Docker Engine + compose plugin (arm64), `edge` + `btp-shared` networks, optional GHCR login |
 | `traefik` | Traefik as the single reverse proxy — Docker provider, plain HTTP, **no ACME**, no published ports |
 | `cloudflared` | Cloudflare Tunnel with a **locally-managed `config.yml`** (wildcard `*.${DOMAIN}` + `www.${DOMAIN}` -> `http://traefik:80`), credentials from Vault |
-| `app-deploy` | Repo checkout (for compose bind mounts), prod `.env` + JWT PEM from Vault, `deploy-prod.sh` hook, optional events-refresh timer |
-| `shared-infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared`, seed `valhalla-tiles` volume from a shipped tar |
+| `app_deploy` | Repo checkout (for compose bind mounts), prod `.env` + JWT PEM from Vault, `deploy-prod.sh` hook, optional events-refresh timer |
+| `shared_infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared`, seed `valhalla-tiles` volume from a shipped tar |
 
 > **Backup role = PR-G / W10.** The `playbook.yml` carries a
 > `TODO(PR-G / W10)` where `- role: backup` will be added (pg_dump PG-app ->

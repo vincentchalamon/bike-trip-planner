@@ -1,5 +1,5 @@
 # {{ ansible_managed }}
-# Shared PostGIS reference DB (ADR-060). Holds osm / tourism / provisioner
+# Shared PostGIS reference DB (split PG, deployment plan W2). Holds osm / tourism / provisioner
 # schemas, read by every app stack (prod + previews) over btp-shared as
 # `pg-reference`. Deployed by Ansible, NOT by any app stack or PaaS.
 # The read-only app role and the schema DDL are created during data

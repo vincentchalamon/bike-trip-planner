@@ -17,11 +17,11 @@
     - role: docker
     - role: traefik
     - role: cloudflared
-    # app-deploy clones the repo before shared-infra, which needs
+    # app_deploy clones the repo before shared_infra, which needs
     # deploy/valhalla/compose.yaml from the checkout.
-    - role: app-deploy
-    - role: shared-infra
+    - role: app_deploy
+    - role: shared_infra
     # TODO(PR-G / W10): add `- role: backup` here once the backup role lands in
     # PR-G (pg_dump PG-app -> age -> rclone to B2/OCI, GFS retention, systemd
     # timer + `make backup-now`). Left out on purpose so PR-I and PR-G do not
-    # collide on this file. See plan W10 and docs/adr/adr-038.
+    # collide on this file. See plan W10 / ADR-062 (Backup & DR), created by PR-G.

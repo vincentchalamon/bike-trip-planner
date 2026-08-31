@@ -2,7 +2,7 @@
 
 Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutive days where p95 CPU < 20 %, network < 20 %, and memory < 20 % (ADR-019). The application stack is sized to stay above the threshold (steady-state ~29 % memory), but a long quiet period plus a worker crash can trip it.
 
-**Recovery is now a single `ansible-playbook` run — there is no Coolify (ADR-061).** The whole VM (Docker, Traefik, cloudflared, shared Valhalla + PG-reference, `.env` + JWT from Vault) is described in [`../../ansible/`](../../ansible/README.md); bootstrapping a fresh VM and recovering a reclaimed one are the same command.
+**Recovery is now a single `ansible-playbook` run — there is no Coolify (per the deployment plan, Coolify removal).** The whole VM (Docker, Traefik, cloudflared, shared Valhalla + PG-reference, `.env` + JWT from Vault) is described in [`../../ansible/`](../../ansible/README.md); bootstrapping a fresh VM and recovering a reclaimed one are the same command.
 
 ## Symptômes
 
@@ -34,7 +34,7 @@ In the OCI console:
    - OCI console → Compute → Create Instance
    - Shape: `VM.Standard.A1.Flex`, 4 OCPU / 24 GB RAM
    - Image source: "Boot volume" → select the preserved volume
-   - Subnet: same VCN as before. **No reserved public IP** — ingress is the outbound Cloudflare Tunnel (ADR-061); nothing to reattach.
+   - Subnet: same VCN as before. **No reserved public IP** — ingress is the outbound Cloudflare Tunnel (per the deployment plan); nothing to reattach.
    - Launch — the VM boots with everything already configured. Confirm `cloudflared` reconnected and `/api/healthz` is green.
 
 3. **If the boot volume is also gone** (rare — full reclaim after long inactivity) — **re-run the Ansible playbook**:

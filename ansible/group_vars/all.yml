@@ -20,7 +20,7 @@ traefik_dir: "/opt/traefik"
 cloudflared_dir: "/etc/cloudflared"
 shared_infra_dir: "/opt/shared-infra"
 
-# --- Repo checkout (app-deploy) ----------------------------------------------
+# --- Repo checkout (app_deploy) ----------------------------------------------
 # Bind mounts in compose.yaml (Caddyfile, conf.d, overlays, valhalla compose)
 # resolve from this checkout. The actual prod stack `up -d` is done by GHA
 # deploy-prod (plan W4 / PR-C); Ansible only guarantees the checkout is present.

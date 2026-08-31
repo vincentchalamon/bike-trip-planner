@@ -11,7 +11,8 @@
 #   # edit later with: ansible-vault edit vault.yml
 #
 # Every runtime secret that used to live in Coolify (docs/runbooks/secrets-inventory.md)
-# is relocated here (plan W9 / ADR-061). Resend is replaced by Brevo (plan W8).
+# is relocated here (per the deployment plan, W9 — Coolify removal). Resend is
+# replaced by Brevo (plan W8).
 # -----------------------------------------------------------------------------
 
 # --- JWT (LexikJWT, ADR-023) -------------------------------------------------
@@ -47,7 +48,7 @@ vault_database_username: "app"
 vault_database_password: "REPLACE_ME"
 vault_database_name: "bike_trip_planner"
 
-# --- PG-reference (shared PostGIS; osm/tourism/provisioner, ADR-060) ---------
+# --- PG-reference (shared PostGIS; osm/tourism/provisioner, split PG plan W2) -
 # Superuser owns the reference DB (used by the provisioner for DDL + imports).
 vault_reference_db_user: "reference"
 vault_reference_db_password: "REPLACE_ME"
