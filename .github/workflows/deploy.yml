@@ -192,6 +192,9 @@ jobs:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Pinned host key (optional). When set, it is trusted instead of scanning
+      # the host live (TOFU). Populate once W5 (Ansible/SSH infra) is in place.
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       # Repo checkout path on the VM (Ansible-provisioned). Defaults if unset.
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
       TAG: ${{ github.ref_name }}
@@ -219,10 +222,15 @@ jobs:
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # TOFU host-key trust for the beta. Harden once W5 (Ansible/SSH infra)
-          # is in place by pinning an SSH_KNOWN_HOSTS secret straight into
-          # ~/.ssh/known_hosts instead of scanning the host live.
-          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Prefer a pinned host key (SSH_KNOWN_HOSTS secret) over TOFU: written
+          # straight to known_hosts, it forbids the MITM window a live scan leaves
+          # open on first contact. Falls back to ssh-keyscan when unset (beta
+          # tradeoff, documented) — populate the secret once W5 (Ansible) lands.
+          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
           # Check out the tag on the VM and roll the stack, pulling the images
           # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
           # the runner; the remote shell receives a fully-resolved script.
