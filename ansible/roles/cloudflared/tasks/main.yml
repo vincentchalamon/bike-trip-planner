@@ -11,12 +11,13 @@
   ansible.builtin.copy:
     content: "{{ vault_cloudflared_tunnel_credentials }}"
     dest: "{{ cloudflared_dir }}/credentials.json"
-    owner: root
-    group: root
-    # The official cloudflared image runs as the distroless nonroot user
-    # (UID 65532); it must be able to read this file, and the only local
-    # principals on the VM are root and deploy. Same rationale as config.yml.
-    mode: "0644"
+    # The cloudflared image runs as the distroless nonroot user (UID/GID 65532,
+    # numeric — no matching name on the host). Own the file by that UID so the
+    # container reads it while keeping mode 0600: the tunnel token stays private
+    # to the cloudflared process, not world-readable on the host.
+    owner: "65532"
+    group: "65532"
+    mode: "0600"
   no_log: true
   notify: Restart cloudflared
 
@@ -24,8 +25,9 @@
   ansible.builtin.template:
     src: config.yml.j2
     dest: "{{ cloudflared_dir }}/config.yml"
-    owner: root
-    group: root
+    # Not secret, but owned by the container UID (65532) for consistency.
+    owner: "65532"
+    group: "65532"
     mode: "0644"
   notify: Restart cloudflared
 
