@@ -1,4 +1,4 @@
-# Prod overlay on top of compose.yaml (iso-prod base) — ADR-061, W4.
+# Prod overlay on top of compose.yaml (iso-prod base) — W4 of the deploy plan.
 #
 # Layered EXPLICITLY on the VM by the deploy-prod job (never auto-loaded):
 #   docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
@@ -7,7 +7,7 @@
 #  - php no longer publishes 80/443 (ports: !reset []): prod is fronted by Traefik
 #    over the `edge` network; the base keeps the published ports for dev/recette.
 #  - php + worker join `btp-shared` to reach the shared Valhalla and the shared
-#    PG-référence (both Ansible-managed, external to every app stack — ADR-061).
+#    PG-référence (both Ansible-managed, external to every app stack).
 #  - The in-stack `valhalla`/`valhalla-builder` (base, `routing` profile) stay
 #    DORMANT in prod: the profile is never enabled here, so routing is served only
 #    by the shared resource on btp-shared.

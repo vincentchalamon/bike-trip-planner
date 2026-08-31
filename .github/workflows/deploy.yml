@@ -205,6 +205,14 @@ jobs:
             exit 0
           fi
           repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          # TAG is github.ref_name (the pushed tag). It is expanded on the runner
+          # and re-parsed by the remote bash, so reject anything that isn't a plain
+          # vMAJOR.MINOR.PATCH tag before it is ever interpolated — git tag names
+          # may contain $(), backticks, etc., which would otherwise be RCE.
+          case "${TAG}" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Refusing to deploy: TAG '${TAG}' is not a plain version tag" >&2; exit 1 ;;
+          esac
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
