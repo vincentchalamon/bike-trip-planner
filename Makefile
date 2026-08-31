@@ -253,10 +253,12 @@ routing-up: ## Start the Valhalla routing service (requires a graph built by `ma
 # name the artifact (must match what `make routing-build` already produced) and
 # do not touch what gets rebuilt. Only valhalla_tiles.tar is packaged (not the
 # unpacked valhalla_tiles/ dir, nor the *.osm.pbf extracts), matching runbook §3.
-# The shared Valhalla on the server is its own compose project (Ansible-deployed,
-# no Coolify — ADR-061), not the app stack: `docker compose -p valhalla-shared -f
-# $(ROUTING_REMOTE_COMPOSE)` targets it. Override ROUTING_REMOTE_COMPOSE if the
-# repo clone on the host (W5/ansible) lands somewhere other than the default.
+# The shared Valhalla on the server is its own compose project, deployed
+# standalone by Ansible outside the app stack (see deploy/valhalla/compose.yaml,
+# "Deploy: docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml up
+# -d"): `docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE)` targets
+# it. Override ROUTING_REMOTE_COMPOSE if the repo clone on the host (W5/ansible)
+# lands somewhere other than the default.
 # Every step is &&-chained so a failed tar/rsync/volume-lookup aborts before the
 # remote stop + wipe ever runs.
 ROUTING_HOST := $(word 1,$(ARGS))
