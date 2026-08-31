@@ -1,10 +1,13 @@
 name: Deploy
 
 on:
-  # Deploy only on a version tag: a tag marks a deliberate stable release and a
-  # clear rollback point, and avoids a slow QEMU arm64 build on every main push.
+  # Prod deploys only on a version tag: a tag marks a deliberate stable release
+  # and a clear rollback point (deploy-prod is gated on github.ref_type == 'tag').
   push:
     tags: ['v*']
+  # PRs build (and, same-repo, push) a pr-<n> image for the preview stacks (W3).
+  # Restricted to same-repo PRs at the job level so forks never build or push.
+  pull_request:
 
 permissions:
   contents: read
@@ -22,7 +25,15 @@ env:
 jobs:
   build-images:
     name: Build & push ${{ matrix.service }} image
-    runs-on: ubuntu-latest
+    # Native arm64 hosted runner (GA, free for public repos) — replaces the slow
+    # QEMU emulation on ubuntu-latest. If these runners are ever unavailable for
+    # this repo, fall back to `runs-on: ubuntu-latest` + the setup-qemu-action
+    # step (removed below) with `platforms: arm64`.
+    runs-on: ubuntu-24.04-arm
+    # Same-repo only: a fork PR must never build or push to our GHCR.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -40,11 +51,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
-
+      # No QEMU: the runner is natively arm64, so buildx builds linux/arm64 directly.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -58,8 +65,10 @@ jobs:
       - name: Compute image tags
         id: tags
         env:
+          EVENT_NAME: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.number }}
           SHA: ${{ github.sha }}
           SERVICE: ${{ matrix.service }}
         run: |
@@ -67,6 +76,9 @@ jobs:
           TAGS="${IMAGE}:${SHA}"
           if [ "${REF_TYPE}" = "tag" ]; then
             TAGS="${TAGS},${IMAGE}:${REF_NAME}"
+          elif [ "${EVENT_NAME}" = "pull_request" ]; then
+            # Preview stacks (W3) pull this by the deterministic pr-<n> tag.
+            TAGS="${TAGS},${IMAGE}:pr-${PR_NUMBER}"
           fi
           {
             echo "tags=${TAGS}"
@@ -110,6 +122,8 @@ jobs:
     name: Upload PWA source maps to GlitchTip
     runs-on: ubuntu-latest
     needs: build-images
+    # Source maps track a released bundle only — skip on PR builds.
+    if: github.ref_type == 'tag'
     env:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_URL: ${{ secrets.SENTRY_URL }}
@@ -162,37 +176,60 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: npm run build
 
-  trigger-coolify:
-    name: Trigger Coolify deploy webhook
+  deploy-prod:
+    name: Deploy tag to the prod VM over SSH
     runs-on: ubuntu-latest
     # Source-map upload is a diagnostic aid, not a deploy gate: GlitchTip shares
     # the Oracle VM and is most likely degraded during a heavy deploy, so a
     # transient @sentry/cli failure must not block shipping the new images.
     needs: build-images
+    # Prod = version tags only. Rollback = re-run this job on an earlier tag.
+    if: github.ref_type == 'tag'
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Repo checkout path on the VM (Ansible-provisioned). Defaults if unset.
+      REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      TAG: ${{ github.ref_name }}
     steps:
-      - name: POST to Coolify webhook
-        env:
-          WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
-          DEPLOY_SECRET: ${{ secrets.COOLIFY_DEPLOY_SECRET }}
-          SHA: ${{ github.sha }}
-          REF: ${{ github.ref }}
+      - name: Deploy over SSH
+        # No-op when SSH secrets are absent — same transition-safety contract as
+        # the former Coolify webhook. Until the Ansible/SSH infra is in place, a
+        # tag push builds+pushes images and this job cleanly skips the deploy, so
+        # merging to main (and the old Coolify prod) is never disturbed. Cutover
+        # is the first `v*` tag after the SSH secrets exist.
         run: |
-          if [ -z "${WEBHOOK_URL}" ]; then
-            echo "COOLIFY_WEBHOOK_URL secret not configured — skipping deploy trigger."
+          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USER}" ] || [ -z "${SSH_KEY}" ]; then
+            echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping prod deploy."
             exit 0
           fi
-          curl -fsS -X POST "${WEBHOOK_URL}" \
-            -H "Authorization: Bearer ${DEPLOY_SECRET}" \
-            -H "Content-Type: application/json" \
-            -d "{\"sha\":\"${SHA}\",\"ref\":\"${REF}\"}"
+          repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Check out the tag on the VM and roll the stack, pulling the images
+          # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
+          # the runner; the remote shell receives a fully-resolved script.
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
+          cd "${repo_dir}"
+          git fetch --tags --force
+          git checkout --force "${TAG}"
+          docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+          EOF
 
   smoke-test:
     name: Smoke test post-deploy
     runs-on: ubuntu-latest
-    needs: trigger-coolify
+    needs: deploy-prod
     if: success()
+    # Prod host to probe. Defaults to the current value so nothing breaks before
+    # cutover; set PROD_HEALTH_URL to https://www.${DOMAIN} at cutover.
+    env:
+      HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || env.HEALTH_URL }}
     steps:
-      - name: Wait for Coolify to roll the new image
+      - name: Wait for the new image to roll
         run: sleep 60
 
       - name: Probe /api/healthz with retry
