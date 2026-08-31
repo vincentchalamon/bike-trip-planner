@@ -13,7 +13,10 @@
     dest: "{{ cloudflared_dir }}/credentials.json"
     owner: root
     group: root
-    mode: "0600"
+    # The official cloudflared image runs as the distroless nonroot user
+    # (UID 65532); it must be able to read this file, and the only local
+    # principals on the VM are root and deploy. Same rationale as config.yml.
+    mode: "0644"
   no_log: true
   notify: Restart cloudflared
 
