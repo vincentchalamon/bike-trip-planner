@@ -326,6 +326,9 @@ jobs:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Pinned host key (optional), same secret as deploy-prod — the VM is the same
+      # SSH_HOST. Trusted instead of a live TOFU scan when set.
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
       # Root for the per-PR checkouts, kept OUTSIDE the prod canonical dir so a
       # preview deploy never shares a working tree / .git index with prod.
@@ -369,7 +372,13 @@ jobs:
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
+          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
+          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
           # First deploy clones the PR's own checkout (independent .git, seeded from
           # the canonical clone's origin remote); later deploys just fetch+checkout in
           # it. PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
@@ -401,6 +410,8 @@ jobs:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Pinned host key (optional), same secret as deploy-prod / deploy-preview.
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
       PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
       PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
@@ -419,7 +430,13 @@ jobs:
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
+          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
+          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
           # Tear the pr-<n> stack down from its own checkout, then remove that
           # checkout dir. `down -v` drops the isolated PG-app + redis volumes (no data
           # to keep); --remove-orphans in case a service was renamed between deploys.

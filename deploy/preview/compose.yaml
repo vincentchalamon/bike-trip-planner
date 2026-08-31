@@ -109,7 +109,16 @@ services:
           memory: 512M
 
   redis:
-    # Dedicated, disposable transient store per preview.
+    # Dedicated, disposable transient store per preview. Override the base command:
+    # the base sets --maxmemory 384mb, which sits ABOVE this 256M cgroup, so the
+    # kernel would OOM-kill redis before it ever enforced its own eviction. Cap
+    # maxmemory well under the limit (previews are small + throwaway).
+    command:
+      - redis-server
+      - --maxmemory
+      - 192mb
+      - --maxmemory-policy
+      - volatile-lru
     deploy:
       resources:
         limits:
