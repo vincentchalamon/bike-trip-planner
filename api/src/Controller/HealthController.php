@@ -28,7 +28,12 @@ final readonly class HealthController
     private const float CHECK_TIMEOUT = 1.0;
 
     public function __construct(
+        // Default PG-app connection (`public` schema): the `postgres` liveness check.
         private Connection $connection,
+        // Shared read-only PG-référence connection (`osm` / `tourism`): the
+        // reference-data reads and the `postgres_reference` connectivity check
+        // (ADR-060). Bound by parameter name in services.php.
+        private Connection $referenceConnection,
         #[Autowire(service: 'routing.client')]
         private HttpClientInterface $valhallaClient,
         #[Autowire(service: 'mercure.health.client')]
@@ -63,6 +68,7 @@ final readonly class HealthController
 
         $deps = [];
         $deps['postgres'] = $this->checkPostgres();
+        $deps['postgres_reference'] = $this->checkReferencePostgres();
         $deps['redis'] = $this->checkRedis();
 
         // Launch HTTP-based checks in parallel by issuing their requests up front.
@@ -82,8 +88,11 @@ final readonly class HealthController
             $deps[$name] = $this->finishHttpCheck($pair);
         }
 
-        // reference_data is non-required: an unprovisioned PostGIS index degrades
-        // features (fewer/no POI), it never takes readiness down (ADR-040).
+        // reference_data and postgres_reference are non-required: the shared
+        // read-only PG-référence backs feature enrichment (POI/accommodations), not
+        // the core trip flow which lives entirely in PG-app. An unreachable or
+        // unprovisioned reference DB degrades features, it never takes readiness
+        // down (ADR-040/060).
         $required = ['postgres', 'redis', 'mercure', 'valhalla'];
         $status = 'ok';
         foreach ($required as $dep) {
@@ -134,6 +143,35 @@ final readonly class HealthController
             // Postgres is unreachable.
             $this->connection->executeStatement('SET statement_timeout = 1000');
             $this->connection->executeQuery('SELECT 1');
+
+            return [
+                'status' => 'ok',
+                'latency_ms' => $this->elapsedMs($start),
+            ];
+        } catch (\Throwable $throwable) {
+            return [
+                'status' => 'down',
+                'latency_ms' => $this->elapsedMs($start),
+                'error' => $this->sanitizeError($throwable),
+            ];
+        }
+    }
+
+    /**
+     * Connectivity of the shared read-only PG-référence (ADR-060): a plain
+     * `SELECT 1` over the reference connection. Non-required — reported so an
+     * operator sees the reference DB is unreachable, but it never flips readiness
+     * (the reference index is a feature-enrichment source, ADR-040).
+     *
+     * @return array{status: string, latency_ms: int, error?: string}
+     */
+    private function checkReferencePostgres(): array
+    {
+        $start = hrtime(true);
+
+        try {
+            $this->referenceConnection->executeStatement('SET statement_timeout = 1000');
+            $this->referenceConnection->executeQuery('SELECT 1');
 
             return [
                 'status' => 'ok',
@@ -205,7 +243,7 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
-            $this->connection->executeStatement('SET statement_timeout = 1000');
+            $this->referenceConnection->executeStatement('SET statement_timeout = 1000');
 
             $osm = $this->fetchProvisioningMetadata('osm');
             $tourism = $this->fetchProvisioningMetadata('tourism');
@@ -229,7 +267,7 @@ final readonly class HealthController
             // Reset the per-check ceiling so a persistent connection (FrankenPHP
             // worker mode) does not inherit the 1s limit on later queries.
             try {
-                $this->connection->executeStatement('RESET statement_timeout');
+                $this->referenceConnection->executeStatement('RESET statement_timeout');
             } catch (\Throwable) {
             }
         }
@@ -251,7 +289,7 @@ final readonly class HealthController
             // columns existed must still report its counts rather than read as
             // unprovisioned, which naming the columns here would cause.
             // Age is computed in SQL (now() - refreshed_at) to stay timezone-safe.
-            $row = $this->connection->fetchAssociative(
+            $row = $this->referenceConnection->fetchAssociative(
                 \sprintf('SELECT *, EXTRACT(EPOCH FROM (now() - refreshed_at))::bigint AS age_seconds FROM %s.metadata LIMIT 1', $schema),
             );
         } catch (\Throwable) {
@@ -294,8 +332,8 @@ final readonly class HealthController
         $unknown = ['open' => [], 'routing_perimeter' => [], 'routing_containment' => ['status' => 'unknown', 'uncovered' => []]];
 
         try {
-            $perimeter = $this->connection->fetchFirstColumn('SELECT slug FROM osm.routing_perimeter ORDER BY slug');
-            $zones = $this->connection->fetchAllAssociative(
+            $perimeter = $this->referenceConnection->fetchFirstColumn('SELECT slug FROM osm.routing_perimeter ORDER BY slug');
+            $zones = $this->referenceConnection->fetchAllAssociative(
                 <<<'SQL'
                     SELECT z.slug, z.name, z.country, z.opened_at, z.refreshed_at, z.pipeline_version,
                            (p.slug IS NOT NULL) AS routable

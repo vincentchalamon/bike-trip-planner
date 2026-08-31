@@ -14,7 +14,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class CulturalPoiRepository implements CulturalPoiRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -35,7 +35,7 @@ final readonly class CulturalPoiRepository implements CulturalPoiRepositoryInter
         // result stays bounded after the registry combines both sources. The
         // image/wikipedia columns are filled at provision time (ADR-041).
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT name, category, opening_hours, description, wikidata, image_url, wikipedia_url,
                        ST_Y(geom) AS lat, ST_X(geom) AS lon

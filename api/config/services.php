@@ -20,13 +20,23 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         // REFRESH_TOKEN_ENC_KEY; the dev/CI default below only keeps the container
         // bootable (throwaway dev tokens, never used to protect real credentials).
         ->set('app.refresh_token_enc_key', '%env(default:default_refresh_token_enc_key:REFRESH_TOKEN_ENC_KEY)%')
-        ->set('default_refresh_token_enc_key', 'dev-only-refresh-token-encryption-key-change-in-prod');
+        ->set('default_refresh_token_enc_key', 'dev-only-refresh-token-encryption-key-change-in-prod')
+        // PG split (ADR-060): the reference connection URL defaults to the app
+        // database URL, so dev/CI keep running on a single Postgres with no extra
+        // configuration. Production points REFERENCE_DATABASE_URL at the shared
+        // read-only PG-référence (wired through compose.yaml on php/worker).
+        ->set('env(REFERENCE_DATABASE_URL)', '%env(DATABASE_URL)%');
 
     $services = $containerConfigurator->services();
 
     $services->defaults()
         ->autowire()
-        ->autoconfigure();
+        ->autoconfigure()
+        // Bind the reference (read-only PG-référence) connection by parameter name
+        // (ADR-060). Every raw-SQL reference repository / command takes a
+        // `Connection $referenceConnection`; a plain `Connection` still autowires to
+        // the default PG-app connection.
+        ->bind('Doctrine\DBAL\Connection $referenceConnection', service('doctrine.dbal.reference_connection'));
 
     $services->load('App\\', __DIR__.'/../src/');
 

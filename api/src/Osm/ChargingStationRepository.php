@@ -13,7 +13,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class ChargingStationRepository implements ChargingStationRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -35,7 +35,7 @@ final readonly class ChargingStationRepository implements ChargingStationReposit
         $wkt = WktGeometry::lineStringOrPoint($route);
 
         /** @var array<string, scalar|null>|false $row */
-        $row = $this->connection->fetchAssociative(
+        $row = $this->referenceConnection->fetchAssociative(
             <<<'SQL'
                 SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.charging_stations

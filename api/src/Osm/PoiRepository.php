@@ -13,7 +13,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class PoiRepository implements PoiRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -31,7 +31,7 @@ final readonly class PoiRepository implements PoiRepositoryInterface
         }
 
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT osm_type, osm_id, name, category, opening_hours, website, ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.pois

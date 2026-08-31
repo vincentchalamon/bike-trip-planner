@@ -38,7 +38,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class WaysRepository implements WaysRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -54,7 +54,7 @@ final readonly class WaysRepository implements WaysRepositoryInterface
         }
 
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 WITH corridor AS (
                     SELECT ST_SetSRID(ST_GeomFromText(:wkt), 4326) AS geom

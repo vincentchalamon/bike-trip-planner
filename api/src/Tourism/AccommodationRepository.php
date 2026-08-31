@@ -25,7 +25,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
      */
     private const int MAX_ROWS_PER_POINT = 30;
 
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -71,7 +71,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
         // `ranked.*` carries the ranking helper columns (point_index, distance,
         // point_rank, id); the mapping below reads named keys and ignores them.
         /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $rows = $this->referenceConnection->fetchAllAssociative(
             <<<'SQL'
                 SELECT ranked.*
                 FROM (

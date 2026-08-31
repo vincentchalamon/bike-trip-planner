@@ -32,7 +32,7 @@ final class NotifyZoneOpenedCommand extends Command
 {
     public function __construct(
         private readonly ZoneOpeningNotifier $notifier,
-        private readonly Connection $connection,
+        private readonly Connection $referenceConnection,
     ) {
         parent::__construct();
     }
@@ -71,7 +71,7 @@ final class NotifyZoneOpenedCommand extends Command
 
     private function lookupZoneName(string $slug): ?string
     {
-        $name = $this->connection->fetchOne('SELECT name FROM osm.zones WHERE slug = :slug', ['slug' => $slug]);
+        $name = $this->referenceConnection->fetchOne('SELECT name FROM osm.zones WHERE slug = :slug', ['slug' => $slug]);
 
         return \is_string($name) ? $name : null;
     }

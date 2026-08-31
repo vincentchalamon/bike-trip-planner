@@ -25,7 +25,7 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class CoverageRepository implements CoverageRepositoryInterface
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
@@ -35,7 +35,7 @@ final readonly class CoverageRepository implements CoverageRepositoryInterface
             return false;
         }
 
-        $result = $this->connection->fetchOne(
+        $result = $this->referenceConnection->fetchOne(
             <<<'SQL'
                 SELECT (geom IS NOT NULL AND NOT ST_Covers(geom, ST_SetSRID(ST_GeomFromText(:wkt), 4326)))::int
                 FROM osm.coverage

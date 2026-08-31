@@ -27,13 +27,13 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
      */
     private const int LOCALITY_MIN_LEVEL = 7;
 
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $referenceConnection)
     {
     }
 
     public function findCountryAt(float $lat, float $lon, string $locale): ?string
     {
-        $country = $this->connection->fetchOne(
+        $country = $this->referenceConnection->fetchOne(
             <<<'SQL'
                 SELECT COALESCE(tags->>('name:' || :locale), tags->>'name:en', name)
                 FROM osm.admin_boundaries
@@ -75,7 +75,7 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
         // (communes) are filtered out rather than winning the LIMIT 1. Testing the
         // tags with the jsonb `?` operator is not an option: DBAL's SQL parser
         // reads it as a positional placeholder.
-        $code = $this->connection->fetchOne(
+        $code = $this->referenceConnection->fetchOne(
             <<<'SQL'
                 SELECT code FROM (
                     SELECT COALESCE(tags->>'ISO3166-1', tags->>'ISO3166-1:alpha2', left(tags->>'ISO3166-2', 2)) AS code,
@@ -103,7 +103,7 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
 
     public function findLocalityAt(float $lat, float $lon, string $locale): ?string
     {
-        $locality = $this->connection->fetchOne(
+        $locality = $this->referenceConnection->fetchOne(
             <<<'SQL'
                 SELECT COALESCE(tags->>('name:' || :locale), tags->>'name:en', name)
                 FROM osm.admin_boundaries

@@ -75,6 +75,11 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Shared read-only PG-référence (osm/tourism reads, ADR-060). Defaults to the
+      # SAME `database` service so a single Postgres still works in dev/CI; prod/Ansible
+      # points it at the separate PG-référence host. Wired here (the iso-prod base) so it
+      # is not silently empty in prod — same discipline as MAILER_DSN below.
+      REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -174,6 +179,8 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Shared read-only PG-référence (osm/tourism reads, ADR-060). Same default as php.
+      REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -459,7 +466,11 @@ services:
         condition: service_healthy
     environment:
       # Tier-1 PostGIS import target (ADR-040). Standard libpq env, consumed by
-      # osm2pgsql and psql during the PostGIS import (always run).
+      # osm2pgsql and psql during the PostGIS import (always run). Since the PG split
+      # (ADR-060) this IS the reference-database pointer: it defaults to the shared
+      # `database` service (single Postgres in dev/CI) and prod/Ansible retargets it
+      # at the separate PG-référence host. The entrypoint applies the reference schema
+      # (reference_schema.sql) here before the first import.
       PGHOST: "${DATABASE_HOST:-database}"
       PGPORT: "5432"
       PGUSER: "${DATABASE_USERNAME:-app}"
