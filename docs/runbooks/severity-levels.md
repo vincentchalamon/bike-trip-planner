@@ -59,5 +59,5 @@ GitHub label: `incident`, `severity-p3`.
 
 ## References
 
-- ADR-019 — Deployment infrastructure on Oracle Always Free + Coolify
+- ADR-019 / ADR-061 — Deployment infrastructure (Oracle Always Free; Ansible + GitHub Actions SSH + Traefik + Cloudflare Tunnel)
 - `incident-template.md` — post-mortem template

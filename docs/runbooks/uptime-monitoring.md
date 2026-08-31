@@ -11,7 +11,7 @@
 
 Target (post-beta) two-layer uptime monitoring for Bike Trip Planner production:
 
-1. **Self-hosted (Uptime Kuma)** on the Coolify VM — sub-minute detection,
+1. **Self-hosted (Uptime Kuma)** on the prod VM — sub-minute detection,
    rich monitor types, public status page. Configuration documented in
    [`.docker/uptime-kuma/README.md`](../../.docker/uptime-kuma/README.md).
    **Not deployed in beta** (see banner above).
@@ -87,7 +87,7 @@ and trigger the incident workflow.
   > **Free tier workaround**: UptimeRobot free does not allow custom headers.
   > Route the webhook through a tiny relay (Cloudflare Worker or a
   > GitHub-hosted `workflow_dispatch` proxy) that adds the `Authorization`
-  > header server-side. Document the relay URL in the Coolify secret store.
+  > header server-side. Document the relay URL in Ansible Vault (prod `.env`).
   > Until the relay exists, the UptimeRobot alert still fires by email; the
   > `repository_dispatch` automation is best-effort on free tier.
 
@@ -131,7 +131,7 @@ the VM (or Uptime Kuma) is the problem.
 **Contents: Read & write** on `vincentchalamon/bike-trip-planner` only.
 
 - Lifetime: 90 days (GitHub maximum for fine-grained PATs without SSO).
-- Storage: Coolify secret store (for Uptime Kuma) + UptimeRobot alert contact
+- Storage: Ansible Vault → prod `.env` (for Uptime Kuma) + UptimeRobot alert contact
   (or relay env var).
 - Rotation runbook: generate a new PAT, update both stores, send a test
   dispatch, then revoke the old PAT.

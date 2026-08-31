@@ -84,10 +84,10 @@ docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
 5. **Raise `maxmemory`** as a stopgap if the VM has free RAM:
 
     ```bash
-    docker compose exec redis redis-cli CONFIG SET maxmemory 512mb
+    docker compose -p prod exec redis redis-cli CONFIG SET maxmemory 512mb
     ```
 
-    Then update `compose.yaml` and redeploy via Coolify so the change is persisted.
+    Then update `compose.yaml` and redeploy (`docker compose -p prod … up -d`) so the change is persisted.
 
 ## Post-action
 

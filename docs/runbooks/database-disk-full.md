@@ -7,7 +7,7 @@ PostgreSQL 18 persists trip configurations and stages (JSONB) per ADR-022. The b
 - PHP container logs: `SQLSTATE[53100]` (`disk full`) or `could not extend file`
 - `/api/health` reports `database: 503`
 - Writes fail (POST `/trips` returns 5xx) but reads still succeed for a few minutes
-- Coolify dashboard shows boot volume > 90 % usage
+- Uptime/host monitoring (or `df -h /` over SSH) shows boot volume > 90 % usage
 
 ## Diagnostic
 
@@ -83,7 +83,7 @@ LIMIT 10;
 3. **Resize the boot volume** on Oracle Cloud (last resort, requires VM reboot):
     - OCI console → Compute → Instances → select VM → Boot volume → "Edit" → raise size (free tier ceiling: 200 GB total block storage across all volumes)
     - SSH into VM and run `sudo /usr/libexec/oci-growfs -y` to extend the filesystem
-    - Coolify auto-restarts the stack after reboot
+    - After reboot, the stack comes back up via the Docker `restart: unless-stopped` policy (Ansible-provisioned); if not, `docker compose -p prod … up -d` on the VM
 
 ## Post-action
 

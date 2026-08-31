@@ -21,10 +21,10 @@ L'inventaire complet des secrets est dans [secrets-inventory.md](secrets-invento
 | `B2_APPLICATION_KEY` | **Annuelle** + on-compromise | Standard cloud. Coût rotation faible. |
 | `OCI_*` (Object Storage) | **Annuelle** + on-compromise | Idem. |
 | `DATABASE_PASSWORD` | **Bi-annuelle** + on-compromise | Compromise rare en pratique (réseau Docker isolé), mais hygiène utile. |
-| `MAILER_DSN` (Resend) | On-compromise | Pas de risque structurel à scheduler. |
+| `MAILER_DSN` (Brevo) | On-compromise | Pas de risque structurel à scheduler. |
 | `DATATOURISME_API_KEY` | On-compromise | Idem. |
 | `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | On-compromise | Projet GlitchTip recréable. |
-| `COOLIFY_WEBHOOK_URL`, `COOLIFY_DEPLOY_SECRET` | On-compromise | Webhook unique, exposition uniquement au job GHA `deploy.yml`. |
+| `SSH_HOST` / `SSH_USER` / `SSH_KEY` / `SSH_KNOWN_HOSTS` / `PROD_HEALTH_URL` | On-compromise (clé) / on-changement d'hôte | Clé SSH de déploiement + hôte VM ; exposition uniquement au job GHA `deploy.yml`. Paire régénérée et `authorized_keys` re-provisionnée par Ansible. |
 | `INCIDENT_DISPATCH_TOKEN` | **90 jours** | Déjà appliqué (fine-grained PAT, contraintes GitHub). |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Géré par Anthropic | Hors scope. |
 
@@ -32,12 +32,12 @@ L'inventaire complet des secrets est dans [secrets-inventory.md](secrets-invento
 
 Pour tout secret sauf cas spécifiques (cf. section suivante) :
 
-1. **Révoquer immédiatement** côté provider (Backblaze, Resend, Anthropic, GitHub PAT…). Couper l'accès en premier, regénérer ensuite.
+1. **Révoquer immédiatement** côté provider (Backblaze, Brevo, Anthropic, GitHub PAT…). Couper l'accès en premier, regénérer ensuite.
 2. **Générer une nouvelle valeur** côté provider, scope minimal (ex. B2 : limiter au bucket `btp-backups`).
 3. **Mettre à jour** la localisation source listée dans [secrets-inventory.md](secrets-inventory.md) :
-    - Coolify env → UI ou `coolify env set`
+    - Runtime secret → **Ansible Vault** (`ansible-vault edit …`), puis re-render du `.env` prod sur la VM par un run du playbook
     - GitHub secret → `gh secret set <NAME>` ou UI repo settings
-4. **Redéployer** si runtime secret : tag `vX.Y.Z+1-rotation` ou re-trigger `deploy.yml` manuellement.
+4. **Redéployer** si runtime secret : tag `vX.Y.Z+1-rotation` (le job `deploy-prod` SSH roule la stack avec le nouveau `.env`).
 5. **Vérifier** : `curl https://<host>/api/healthz` + `curl https://<host>/api/health` verts ; pour CI secret, déclencher le workflow concerné.
 6. **Tracer** dans un commentaire de l'issue d'incident liée (`incident-template.md`) : qui, quand, quel secret, raison.
 
@@ -54,8 +54,8 @@ La rotation **ne re-chiffre pas** l'historique des backups : trop coûteux, et l
     ```
 
 2. Dans **Bitwarden vault** : **renommer l'item courant** `bike-trip-planner / age private key` en `bike-trip-planner / age private key legacy YYYYMMDD` (date de la dernière utilisation comme clé courante). **Créer un nouvel item** `bike-trip-planner / age private key` (nom canonique conservé) contenant la nouvelle clé privée. Le bootstrap DR cherche toujours le nom canonique ; les items `legacy *` ne servent qu'à restaurer les dumps antérieurs et doivent être conservés indéfiniment.
-3. Mettre à jour `AGE_RECIPIENT` dans Coolify (env du service `backup`) avec la nouvelle clé publique.
-4. Mettre à jour le repo si la clé publique y est référencée (`compose.yaml` par défaut env, ADR-038 — #527).
+3. Mettre à jour `AGE_RECIPIENT` dans **Ansible Vault** (`.env` du service `backup`) avec la nouvelle clé publique, puis re-render sur la VM.
+4. Mettre à jour le repo si la clé publique y est référencée (`compose.yaml` par défaut env, ADR-062).
 5. Forcer un backup : `make backup-now`. Confirmer via `rclone ls b2:btp-backups | tail -1` que le dernier dump est bien plus récent que la rotation.
 6. **Ne pas supprimer** les anciens dumps avant leur expiration GFS naturelle.
 
@@ -66,7 +66,7 @@ Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérific
 1. Sur la VM, dans le container `php` éphémère :
 
     ```bash
-    docker compose exec php bin/console lexik:jwt:generate-keypair --overwrite
+    docker compose -p prod exec php bin/console lexik:jwt:generate-keypair --overwrite
     ```
 
     Cela écrit les PEM dans `/app/config/jwt/` (espace de travail du container). Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** ; extraire les fichiers générés :
@@ -77,8 +77,8 @@ Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérific
     chmod 600 /etc/bike-trip-planner/jwt/private.pem
     ```
 
-2. Mettre à jour `JWT_PASSPHRASE` dans Coolify (utiliser la passphrase saisie lors de la regen).
-3. Redéployer la stack pour que `php` et `worker` rechargent les secrets Docker.
+2. Mettre à jour `JWT_PASSPHRASE` dans **Ansible Vault** (utiliser la passphrase saisie lors de la regen), puis re-render du `.env` prod.
+3. Redéployer la stack (`docker compose -p prod … up -d`) pour que `php` et `worker` rechargent les secrets.
 4. Communiquer aux testeurs : "reconnexion magic link nécessaire".
 5. Vérifier : `curl -X POST /api/auth/magic-link` → 202, login flow complet OK.
 
@@ -86,8 +86,8 @@ Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérific
 
 1. Backblaze B2 console → Application Keys → **Add a New Application Key**, scope `btp-backups` only, capabilities `listFiles`, `readFiles`, `writeFiles`, `deleteFiles`.
 2. Récupérer `keyID` + `applicationKey` (affiché une seule fois).
-3. Mettre à jour `B2_ACCOUNT_ID` (= keyID) et `B2_APPLICATION_KEY` dans Coolify env du service `backup`.
-4. Restart `backup` service : `docker compose restart backup`.
+3. Mettre à jour `B2_ACCOUNT_ID` (= keyID) et `B2_APPLICATION_KEY` dans **Ansible Vault** (`.env` du service `backup`), puis re-render sur la VM.
+4. Restart `backup` service : `docker compose -p prod restart backup`.
 5. Valider : `make backup-now` → succès, `rclone ls b2:btp-backups` liste le nouveau dump.
 6. **Supprimer l'ancienne clé** dans la console Backblaze (rétention pendant 7 j non requise, vu que la nouvelle a fonctionné).
 
@@ -98,12 +98,12 @@ Downtime ~30 s acceptable. Faire en heure creuse.
 1. Sur la VM :
 
     ```bash
-    docker compose exec database psql -U "$DATABASE_USERNAME" -d "$DATABASE_NAME" -c \
+    docker compose -p prod exec database psql -U "$DATABASE_USERNAME" -d "$DATABASE_NAME" -c \
       "ALTER USER \"$DATABASE_USERNAME\" WITH PASSWORD '<NEW_PASSWORD>';"
     ```
 
-2. Mettre à jour `DATABASE_PASSWORD` dans Coolify env.
-3. Redéployer (Coolify) — `php`, `worker`, `backup` reprennent la nouvelle valeur via le DSN.
+2. Mettre à jour `DATABASE_PASSWORD` dans **Ansible Vault**, puis re-render du `.env` prod.
+3. Redéployer (`docker compose -p prod … up -d`) — `php`, `worker`, `backup` reprennent la nouvelle valeur via le DSN.
 4. Vérifier : `curl /api/health` → `deps.postgres.status: "healthy"`.
 
 ## Post-action

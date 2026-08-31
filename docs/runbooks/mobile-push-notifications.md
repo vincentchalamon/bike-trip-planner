@@ -35,7 +35,7 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
 
     In dev/recette this is expected to be empty (ADR-058 leaves it unset on
     purpose so unrelated endpoints keep working); in **production** an empty
-    value is the bug — check the Coolify secret and that `compose.yaml` (not
+    value is the bug — check the prod `.env` (Ansible Vault) and that `compose.yaml` (not
     only `compose.dev.yaml`) passes it through to **both** `php` and `worker`
     (project convention, see `CLAUDE.md` "New runtime secret?").
 
@@ -110,7 +110,7 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
 
 1. **Configure the credential** (once per environment): in the Firebase
    console, generate a service-account private key (JSON) for the project, and
-   set it as `FCM_SERVICE_ACCOUNT_JSON` in the Coolify app's secrets (production)
+   set it as `FCM_SERVICE_ACCOUNT_JSON` in Ansible Vault → prod `.env` (production)
    or a local `.env` (recette/dev testing). It must reach **both** `php` and
    `worker` — already wired as a passthrough in `compose.yaml` (lines defining
    `FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"`); do not
@@ -147,9 +147,9 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
   right after a fresh install, suspect it reinstalled with a new token while
   the old row lingered (expected — the old row prunes itself on the next send
   attempt, not instantly).
-- If the root cause was a credential rotation, update the team's secret store,
-  not just the running container's env (a Coolify redeploy without the secret
-  reverts it to empty).
+- If the root cause was a credential rotation, update the secret store (Ansible
+  Vault → prod `.env`), not just the running container's env (a redeploy without
+  the secret reverts it to empty).
 
 ## References
 

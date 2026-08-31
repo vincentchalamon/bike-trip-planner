@@ -1,6 +1,6 @@
 # Release Checklist
 
-Run through this before merging to `main` (which triggers the production deploy via Coolify webhook). The list is intentionally short — anything longer ends up skipped.
+Run through this before cutting a `v*` tag (which triggers the production deploy — `deploy-prod` SSHes to the VM and rolls the stack, ADR-061). The list is intentionally short — anything longer ends up skipped.
 
 ## Symptômes (when to use)
 
@@ -32,7 +32,7 @@ A green release is one where every line below is checked. If any line is unknown
 - [ ] `curl https://staging.../api/healthz` returns 200 (the commit SHA is no longer exposed publicly — SEC-011; check the deployed SHA via the image label / deployment logs instead)
 - [ ] `curl https://staging.../api/health | jq` reports every dependency `ok`
 - [ ] End-to-end trip creation through the PWA succeeded on staging (`make test-e2e` against staging if applicable)
-- [ ] Fail-closed secrets are set in the Coolify environment for **both** `php` and `worker`: `ACCESS_REQUEST_HMAC_SECRET`, `REFRESH_TOKEN_ENC_KEY`, `MERCURE_JWT_KEY` (see [secrets-inventory.md](secrets-inventory.md)). `MERCURE_JWT_KEY`/`REFRESH_TOKEN_ENC_KEY` missing or default makes the container refuse to boot (SEC-004/SEC-003, `entrypoint.sh`); `ACCESS_REQUEST_HMAC_SECRET` empty 500s every access-request call once the app is up — `compose.yaml` forwards them, but the Coolify env must actually carry a value
+- [ ] Fail-closed secrets are set in the prod `.env` (rendered by Ansible from Vault) for **both** `php` and `worker`: `ACCESS_REQUEST_HMAC_SECRET`, `REFRESH_TOKEN_ENC_KEY`, `MERCURE_JWT_KEY` (see [secrets-inventory.md](secrets-inventory.md)). `MERCURE_JWT_KEY`/`REFRESH_TOKEN_ENC_KEY` missing or default makes the container refuse to boot (SEC-004/SEC-003, `entrypoint.sh`); `ACCESS_REQUEST_HMAC_SECRET` empty 500s every access-request call once the app is up — `compose.yaml` forwards them, but the `.env` must actually carry a value
 
 ### 4. Observability
 
@@ -51,12 +51,12 @@ During the beta, error tracking is **Sentry SaaS** (ADR-039); GlitchTip is the p
 
 ### 6. Rollback readiness
 
-- [ ] Previous green deployment image still available in Coolify (default — but verify if many releases shipped today)
+- [ ] Previous green tag's images still on GHCR (retained by SHA + tag, 10 most recent — the rollback target for a redeploy)
 - [ ] On-call available for the next 60 min (post-deploy smoke window)
 
 ## Post-action
 
-- Merge → `deploy.yml` runs → Coolify pulls the new image → smoke test fires.
+- Tag `v*` → `deploy.yml` runs → `deploy-prod` SSHes and `docker compose -p prod … up -d --pull always` → smoke test fires.
 - If smoke fails, `incident-create.yml` opens a P1 issue automatically; follow `release-rollback.md`.
 - Confirm the Sentry release page lists the new SHA with `environment: production` (GlitchTip post-beta).
 - Note the deploy in the channel or issue tracker for visibility.
@@ -64,5 +64,5 @@ During the beta, error tracking is **Sentry SaaS** (ADR-039); GlitchTip is the p
 ## References
 
 - `release-rollback.md` — what to do when this checklist was not enough
-- ADR-019 — Coolify deployment workflow
+- ADR-019 / ADR-061 — deployment workflow (Ansible + GitHub Actions SSH `deploy-prod`)
 - `CLAUDE.md` — repo conventions (commit format, TRACKING.md policy)
