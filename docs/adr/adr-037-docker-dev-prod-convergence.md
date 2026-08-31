@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-01
 - **Depends on:** ADR-019 (Deployment Infrastructure)
-- **Related:** ADR-036 (manual OSM refresh)
+- **Related:** ADR-036 (manual OSM refresh); [ADR-061](adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md) (in prod the FrankenPHP edge serves plain HTTP behind Traefik + Cloudflare Tunnel — auto-HTTPS disabled; dev/recette unchanged)
 
 ## Context
 

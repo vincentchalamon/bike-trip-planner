@@ -1,6 +1,6 @@
 # Release Rollback
 
-Coolify keeps the N most recent built images per service. A 1-click rollback reverts containers to a previous image; Doctrine migrations are not rolled back automatically.
+GHCR keeps images by SHA and by tag (the `build-images` job prunes to the 10 most recent versions per service). Rollback reverts the running stack to a previous tag's images by redeploying that tag; Doctrine migrations are not rolled back automatically.
 
 ## Symptômes
 
@@ -16,24 +16,31 @@ Identify the offending release:
 git log --oneline -10
 ```
 
-In Coolify:
+Identify the live and previous tags:
 
-1. Application → Deployments tab → confirm the latest deployment finished and its commit SHA
-2. Locate the previous green deployment (same view) and its SHA
+1. GitHub → Actions → `Deploy` runs, or `git tag --sort=-creatordate | head` — confirm the tag currently live (also in the `commit` field of `/api/healthz`) and the previous green tag.
+2. Note both `v*` tags: the offending one and the rollback target.
 
 Inspect the last few migrations:
 
 ```bash
-docker compose exec php bin/console doctrine:migrations:list | tail -20
+docker compose -p prod exec php bin/console doctrine:migrations:list | tail -20
 ```
 
 Check GlitchTip releases page — confirm the new release SHA is associated with the spike.
 
 ## Procédure
 
-1. **Rollback containers via Coolify** (fast path, ~30 s):
-    - Application → Deployments → previous green deployment → "Redeploy"
-    - Coolify recreates containers from the cached image of that commit. No image rebuild needed.
+1. **Redeploy the previous tag** (fast path — images already on GHCR, no rebuild):
+    - **From CI:** GitHub → Actions → the `Deploy` run for the previous green tag → "Re-run jobs". `deploy-prod` SSHes to the VM and rolls the stack to that tag.
+    - **From the VM** (if CI is unavailable):
+
+      ```bash
+      cd /opt/bike-trip-planner   # ${PROD_REPO_DIR}
+      git fetch --tags --force
+      git checkout --force <previous-tag>
+      docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+      ```
 
 2. **Verify the smoke test**:
 
@@ -48,7 +55,7 @@ Check GlitchTip releases page — confirm the new release SHA is associated with
     - **Destructive migration shipped** (dropped column, renamed table) — the old image will crash. Revert the schema manually:
 
       ```bash
-      docker compose exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
+      docker compose -p prod exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
       ```
 
       Only attempt this if a `down()` exists; otherwise restore from the most recent PostgreSQL backup.
@@ -68,6 +75,6 @@ Check GlitchTip releases page — confirm the new release SHA is associated with
 
 ## References
 
-- ADR-019 — Deployment infrastructure (Coolify rolling restart)
+- ADR-019 / ADR-061 — Deployment infrastructure (GitHub Actions SSH deploy + `docker compose -p prod`)
 - `release-checklist.md` — pre-release checks that should have caught it
 - `incident-template.md` — post-mortem template

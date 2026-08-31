@@ -6,8 +6,8 @@ an event that ended last week is dead weight. So events get a temporal lifecycle
 band by the `events-refresh` command — distinct from `provision <zone>`, which opens a
 *place* dataset and never expires a row.
 
-This runbook covers running the refresh by hand, and the one-time production setup of the
-weekly scheduled task. Opening a zone is a separate procedure ([zone-opening.md](zone-opening.md)).
+This runbook covers running the refresh by hand, and the production systemd timer that
+runs it weekly. Opening a zone is a separate procedure ([zone-opening.md](zone-opening.md)).
 
 ## What it does
 
@@ -52,21 +52,22 @@ continue-on-error). The exit code is non-zero if any zone or source failed.
 The command takes the same provisioning lock as `provision`, so a refresh and a zone
 opening never run concurrently.
 
-## Production: the weekly Coolify scheduled task (one-time setup)
+## Production: the weekly systemd timer (Ansible-provisioned)
 
-The refresh is **not** automated by this repository. Configure it once in Coolify as a
-**scheduled task** on the production application:
+The refresh runs on the prod VM as a **systemd timer** provisioned by Ansible (ADR-061) —
+there is no in-repo scheduler. The service unit runs the provisioner image with the
+`events-refresh` entrypoint against the prod stack:
 
 | Field | Value |
 |---|---|
-| Command | `php -d memory_limit=512M bin/events-refresh` |
-| Container / image | the `provisioner` image (same one `make provision` runs) |
-| Schedule (cron) | `0 3 * * 0` — **weekly, Sunday 03:00 UTC** (default; tune the cadence here) |
+| Command | `docker compose -p prod --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/events-refresh` |
+| Schedule (`OnCalendar`) | `Sun *-*-* 03:00:00 UTC` — **weekly, Sunday 03:00 UTC** (default; tune the cadence in the Ansible timer var) |
 
-The task inherits the same environment as the `provisioner` service in `compose.yaml`
-(the `PG*` connection and the `DATATOURISME_*` / `OPENAGENDA_*` feed credentials), so there
-is nothing else to wire. The frequency is a single cron field: raise it if events churn
-faster than weekly, lower it to reduce feed bandwidth.
+The provisioner container inherits the same environment as the `provisioner` service in
+`compose.yaml` (the `PG*` connection and the `DATATOURISME_*` / `OPENAGENDA_*` feed
+credentials, rendered by Ansible from Vault), so there is nothing else to wire. The
+frequency is a single `OnCalendar` field: raise it if events churn faster than weekly,
+lower it to reduce feed bandwidth. Inspect a run with `journalctl -u btp-events-refresh`.
 
 Verify a run:
 
