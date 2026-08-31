@@ -5,6 +5,12 @@ declare(strict_types=1);
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
+    // Default for the scoped routing client's base_uri when VALHALLA_BASE_URI is
+    // unset (e.g. the test env / a bare non-container run). compose.yaml passes a
+    // value at runtime; this keeps the app bootable everywhere without an .env entry.
+    $containerConfigurator->parameters()
+        ->set('app.valhalla_base_uri', 'http://valhalla:8002');
+
     $containerConfigurator->extension('framework', [
         'secret' => '%env(APP_SECRET)%',
         'http_method_override' => false,
@@ -83,7 +89,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     // Host-locked to the Valhalla service. Configurable so the
                     // shared Valhalla resource (ADR-061) can live outside the app
                     // stack; the default keeps the in-stack service name for dev.
-                    'base_uri' => '%env(VALHALLA_BASE_URI)%',
+                    'base_uri' => '%env(default:app.valhalla_base_uri:VALHALLA_BASE_URI)%',
                     'timeout' => 5,
                     // Direct internal Valhalla API — never redirects; refuse to follow
                     // any 3xx so a compromised response can't pivot to another internal
