@@ -46,10 +46,10 @@ new EventSource('/.well-known/mercure?topic=' + encodeURIComponent('https://exam
 2. **If the JWT secret rotated**, regenerate it across services. The publisher key lives in the PHP container, the subscriber key in the PWA build. Both must share `MERCURE_JWT_SECRET`:
 
     ```bash
-    docker compose exec php php -r 'echo bin2hex(random_bytes(32))."\n";'
+    docker compose -p prod exec php php -r 'echo bin2hex(random_bytes(32))."\n";'
     ```
 
-    Update the Coolify environment for `php` and `pwa`, then redeploy. Mismatched keys produce silent 401s with no obvious symptom beyond reconnect loops.
+    Update the prod `.env` (Ansible Vault) for `php` and `pwa`, then redeploy. Mismatched keys produce silent 401s with no obvious symptom beyond reconnect loops.
 
 3. **Reset reconnect state on the PWA** — the Mercure client (`pwa/src/lib/mercure/client.ts`) backs off exponentially. After a hub restart, ask users to refresh; the `use-mercure` hook will re-subscribe automatically.
 

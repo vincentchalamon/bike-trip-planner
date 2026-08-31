@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-03-04
 - **Depends on:** ADR-016 (performance optimization), ADR-017 (Valhalla + Overpass), ADR-018 (Garmin export)
-- **Amended by:** [ADR-039](adr-039-beta-right-sizing-free-tier.md) (beta right-sizing + corrected budget)
+- **Amended by:** [ADR-039](adr-039-beta-right-sizing-free-tier.md) (beta right-sizing + corrected budget); [ADR-061](adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md) (Coolify removed — control plane = Ansible + GitHub Actions SSH + Traefik + Cloudflare Tunnel)
 
 > **Budget correction (2026-06-01).** The RAM budget below was wrong: it counts a local Overpass server that was since removed (ADR-025, public API instead), and it omits the host OS + Docker daemon, the self-hosted observability/analytics stacks (GlitchTip ADR-031, Plausible/ClickHouse ADR-034) and Uptime Kuma, while under-counting Coolify. The "~9.5 GB margin" was illusory: a full self-hosted stack with both LLaMA models resident lands around **17-18 GB**, not 14.5 GB. More importantly, the binding constraint is **CPU** (CPU-only LLaMA inference on 4 cores), not RAM. The corrected RAM/CPU/disk budget and the deployed beta profile (single 3B on demand, split `async`/`llm` workers, SaaS observability, deferred analytics, France-only OSM) are formalised in [ADR-039](adr-039-beta-right-sizing-free-tier.md).
 

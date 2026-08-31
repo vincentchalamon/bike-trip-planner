@@ -31,7 +31,7 @@ Every runbook follows the same four sections:
 | [mobile-release-build.md](mobile-release-build.md) | Produce a release-signed, sideloadable Android APK |
 | [mobile-push-notifications.md](mobile-push-notifications.md) | FCM configuration and push delivery troubleshooting |
 | [incident-template.md](incident-template.md) | Post-mortem template |
-| [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
+| [release-rollback.md](release-rollback.md) | Roll back a bad deploy by redeploying the previous tag |
 | [release-checklist.md](release-checklist.md) | Pre-release checklist |
 | [uptime-monitoring.md](uptime-monitoring.md) | Uptime Kuma + UptimeRobot configuration |
 | [secrets-inventory.md](secrets-inventory.md) | Source of truth for every production secret |
@@ -42,5 +42,5 @@ Every runbook follows the same four sections:
 
 - All commands assume the working directory is the repository root.
 - `make php-shell` / `make pwa-shell` open a bash session inside the relevant container; `bin/console` is always called from there or via `docker compose exec php`.
-- Production commands run on the Coolify host via SSH; the compose project is named after the Coolify application.
+- Production commands run on the prod VM via SSH; the compose project is `prod` (`docker compose -p prod …`, ADR-061).
 - Times are UTC unless stated otherwise.

@@ -78,8 +78,9 @@ codes rather than relying on a hand-maintained map. See
 
 ## Deployment & operations
 
-Production runs as Docker Compose on an Oracle Cloud VM, orchestrated by Coolify and shipped by
-the `deploy.yml` workflow. Errors flow through the Sentry SDKs and uptime is probed externally; in
+Production runs as Docker Compose on an Oracle Cloud VM provisioned by Ansible (Traefik +
+Cloudflare Tunnel, no public port), shipped by the `deploy.yml` workflow: on a `v*` tag the
+`deploy-prod` job SSHes to the VM and rolls the stack with `docker compose -p prod` (ADR-061). Errors flow through the Sentry SDKs and uptime is probed externally; in
 beta (Sprint 34.5) these point at Sentry SaaS and UptimeRobot, with the self-hosted GlitchTip and
 Uptime Kuma stacks kept in-repo but not deployed (reversible — see ADR-031). See
 [Deployment](deployment.md) and the [runbooks](runbooks/).
