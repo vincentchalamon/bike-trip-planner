@@ -327,6 +327,9 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      # Root for the per-PR checkouts, kept OUTSIDE the prod canonical dir so a
+      # preview deploy never shares a working tree / .git index with prod.
+      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
       PR_NUMBER: ${{ github.event.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -340,7 +343,10 @@ jobs:
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview deploy."
             exit 0
           fi
-          repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          canonical_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          # Dedicated checkout per PR, distinct from prod and from every other
+          # preview: concurrent preview/prod deploys never race on one working tree.
+          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
           # Pull the pr-<n> images this run's build-images just pushed to GHCR.
           php_image="${REGISTRY}/${IMAGE_OWNER}-php:pr-${PR_NUMBER}"
           pwa_image="${REGISTRY}/${IMAGE_OWNER}-pwa:pr-${PR_NUMBER}"
@@ -348,16 +354,24 @@ jobs:
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          # Check out the PR head on the VM and roll the isolated pr-<n> stack.
-          # PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
-          # runtime secrets come from the VM `.env` (Ansible-managed). Public
+          # First deploy clones the PR's own checkout (independent .git, seeded from
+          # the canonical clone's origin remote); later deploys just fetch+checkout in
+          # it. PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
+          # runtime secrets come from that dir's VM `.env` (Ansible-managed). Public
           # migrations run at container boot (MIGRATIONS_ON_BOOT, base php).
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
-          cd "${repo_dir}"
+          if [ ! -d "${preview_dir}/.git" ]; then
+            mkdir -p "\$(dirname "${preview_dir}")"
+            git clone "\$(git -C "${canonical_dir}" remote get-url origin)" "${preview_dir}"
+          fi
+          cd "${preview_dir}"
           git fetch origin --force
           git checkout --force "${HEAD_SHA}"
+          # The fresh clone has no VM .env; read DOMAIN + shared secrets from the
+          # canonical clone's Ansible-provisioned .env (injected vars still override).
           PR_NUMBER="${PR_NUMBER}" PHP_IMAGE="${php_image}" PWA_IMAGE="${pwa_image}" \
-            docker compose -p "pr-${PR_NUMBER}" -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
+            docker compose --env-file "${canonical_dir}/.env" -p "pr-${PR_NUMBER}" \
+              -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
           EOF
 
   teardown-preview:
@@ -374,6 +388,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
       PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Tear down preview over SSH
@@ -383,15 +398,22 @@ jobs:
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview teardown."
             exit 0
           fi
-          repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          canonical_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          # -v drops the preview's isolated PG-app + redis volumes (no data to keep).
-          # --remove-orphans in case a service was renamed between deploys.
+          # Tear the pr-<n> stack down from its own checkout, then remove that
+          # checkout dir. `down -v` drops the isolated PG-app + redis volumes (no data
+          # to keep); --remove-orphans in case a service was renamed between deploys.
+          # `|| true` so a stack already gone (deploy never ran) still reclaims the dir.
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
-          cd "${repo_dir}"
-          PR_NUMBER="${PR_NUMBER}" \
-            docker compose -p "pr-${PR_NUMBER}" -f compose.yaml -f deploy/preview/compose.yaml down -v --remove-orphans
+          if [ -d "${preview_dir}/.git" ]; then
+            cd "${preview_dir}"
+            PR_NUMBER="${PR_NUMBER}" \
+              docker compose --env-file "${canonical_dir}/.env" -p "pr-${PR_NUMBER}" \
+                -f compose.yaml -f deploy/preview/compose.yaml down -v --remove-orphans || true
+          fi
+          rm -rf "${preview_dir}"
           EOF
