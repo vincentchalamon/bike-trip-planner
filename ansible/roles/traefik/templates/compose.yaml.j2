@@ -11,6 +11,12 @@ services:
     networks:
       - edge
     volumes:
+      # Traefik's Docker provider needs the socket to read container labels.
+      # `:ro` does NOT restrict the Docker API — a read-only socket mount still
+      # grants full Engine access (equivalent to host root). Accepted single-
+      # tenant tradeoff for the beta VM. TODO (post-beta hardening): put a
+      # least-privilege docker-socket-proxy (tecnativa/docker-socket-proxy) in
+      # front, exposing only the containers/events endpoints Traefik reads.
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - {{ traefik_dir }}/traefik.yml:/etc/traefik/traefik.yml:ro
 
