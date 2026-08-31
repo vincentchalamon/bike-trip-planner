@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Run the bike-trip-planner PG-app backup nightly
+
+[Timer]
+OnCalendar={{ backup_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

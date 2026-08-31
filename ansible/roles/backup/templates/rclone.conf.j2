@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# rclone remotes for the off-site backup (ADR-062). Only the remotes listed in
+# backup_remotes are used; an unused section is harmless.
+
+[b2]
+type = b2
+account = {{ vault_b2_account_id }}
+key = {{ vault_b2_application_key }}
+
+[oci]
+type = s3
+provider = Other
+access_key_id = {{ vault_oci_access_key_id }}
+secret_access_key = {{ vault_oci_secret_access_key }}
+endpoint = {{ vault_oci_s3_endpoint }}
+region = {{ vault_oci_region }}

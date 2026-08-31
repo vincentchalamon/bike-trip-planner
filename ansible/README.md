@@ -36,11 +36,7 @@ and cloudflared publish no host ports.
 | `cloudflared` | Cloudflare Tunnel with a **locally-managed `config.yml`** (wildcard `*.${DOMAIN}` + `www.${DOMAIN}` -> `http://traefik:80`), credentials from Vault |
 | `app_deploy` | Repo checkout (for compose bind mounts), prod `.env` + JWT PEM from Vault, `deploy-prod.sh` hook, optional events-refresh timer |
 | `shared_infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared`, seed `valhalla-tiles` volume from a shipped tar |
-
-> **Backup role = PR-G / W10.** The `playbook.yml` carries a
-> `TODO(PR-G / W10)` where `- role: backup` will be added (pg_dump PG-app ->
-> `age` -> `rclone` to B2/OCI). It is intentionally omitted here so PR-I and
-> PR-G do not collide on `playbook.yml`.
+| `backup` | Nightly PG-app backup: `pg_dump` -> `age` (recipient-only) -> `rclone` to B2 and/or OCI, GFS retention, via a systemd timer (`btp-backup.timer`). On-demand with `make backup-now`. PG-reference is NOT backed up (reproducible). See [ADR-062](../docs/adr/adr-062-backup-and-disaster-recovery.md). |
 
 ## Prerequisites (on your workstation)
 
@@ -85,8 +81,9 @@ ansible-vault encrypt vault.yml         # encrypt in place (edit later: ansible-
 (see `../docs/runbooks/secrets-inventory.md`, updated by plan W9): JWT keypair +
 passphrase, `MERCURE_JWT_KEY`, `REFRESH_TOKEN_ENC_KEY`,
 `ACCESS_REQUEST_HMAC_SECRET`, `FCM_SERVICE_ACCOUNT_JSON`, `MAILER_DSN` (Brevo),
-DB creds, `REFERENCE_DATABASE_URL`, `SENTRY_DSN`, and the Cloudflare Tunnel
-credentials. `VALHALLA_BASE_URI` is a non-secret in `group_vars/all.yml`.
+DB creds, `REFERENCE_DATABASE_URL`, `SENTRY_DSN`, the Cloudflare Tunnel
+credentials, and the backup secrets (`AGE_RECIPIENT` public key, `B2_*`, `OCI_*`
+— ADR-062). `VALHALLA_BASE_URI` is a non-secret in `group_vars/all.yml`.
 
 > **`.env` gotcha:** docker compose interpolates `$` in `.env`. If a secret
 > value contains a literal `$`, double it as `$$` in `vault.yml`.

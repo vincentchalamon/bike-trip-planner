@@ -1,0 +1,72 @@
+---
+# --- Backup & DR (ADR-062 / plan W10) ----------------------------------------
+# Nightly pg_dump of PG-app -> age -> rclone to B2/OCI, GFS retention. Runtime is
+# a systemd timer on the Ansible-managed VM (no Coolify). PG-reference is NOT
+# backed up (reproducible via `make provision`, ADR-060). The age PRIVATE key is
+# never on the VM (Bitwarden); only the public recipient is deployed here.
+- name: Install the backup tooling (age, rclone)
+  ansible.builtin.apt:
+    name: "{{ backup_packages }}"
+    state: present
+
+- name: Create the backup config directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Render the rclone config (B2 / OCI creds from Vault)
+  ansible.builtin.template:
+    src: rclone.conf.j2
+    dest: "{{ backup_dir }}/rclone.conf"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Render the backup environment file
+  ansible.builtin.template:
+    src: backup-env.j2
+    dest: "{{ backup_dir }}/backup.env"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Install the backup script
+  ansible.builtin.template:
+    src: btp-backup.sh.j2
+    dest: "{{ backup_bin }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+# Unit files are rendered unconditionally so that flipping enable_backup back to
+# false can still disable/stop an already-installed timer (a `when` guard here
+# would leave a stale, running timer in place).
+- name: Install the backup service
+  ansible.builtin.template:
+    src: btp-backup.service.j2
+    dest: /etc/systemd/system/btp-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the backup timer
+  ansible.builtin.template:
+    src: btp-backup.timer.j2
+    dest: /etc/systemd/system/btp-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable or disable the backup timer per enable_backup
+  ansible.builtin.systemd_service:
+    name: btp-backup.timer
+    enabled: "{{ enable_backup | bool }}"
+    state: "{{ 'started' if enable_backup | bool else 'stopped' }}"
+    daemon_reload: true

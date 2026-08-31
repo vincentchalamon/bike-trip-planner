@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Backup & DR (ADR-062). Dump PG-app -> age-encrypt -> rclone off-site, GFS prune.
+# Config comes from the EnvironmentFile backup.env (systemd) or is sourced by
+# `make backup-now`. PG-reference is NOT backed up (reproducible, ADR-060).
+set -euo pipefail
+
+: "${AGE_RECIPIENT:?AGE_RECIPIENT is required}"
+: "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
+: "${BACKUP_REMOTES:?BACKUP_REMOTES is required}"
+: "${PROD_PROJECT:?PROD_PROJECT is required}"
+: "${DB_SERVICE:?DB_SERVICE is required}"
+: "${APP_DIR:?APP_DIR is required}"
+: "${RCLONE_CONFIG:?RCLONE_CONFIG is required}"
+: "${KEEP_DAILY:?}" "${KEEP_WEEKLY:?}" "${KEEP_MONTHLY:?}"
+export RCLONE_CONFIG
+
+# Keep the newest $keep objects under $path, delete the rest. Object names are
+# UTC timestamps, so a plain sort is chronological.
+prune() {
+  local path="$1" keep="$2" f
+  rclone lsf --files-only "$path" 2>/dev/null | sort | head -n "-${keep}" | while read -r f; do
+    [ -n "$f" ] && rclone deletefile "${path}/${f}"
+  done
+}
+
+ts="$(date -u +%Y%m%dT%H%M%SZ)"
+name="pg-app-${ts}.dump.age"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+out="${tmp}/${name}"
+
+# 1. Dump PG-app from the running prod container (reads POSTGRES_USER/DB the
+#    container already holds) and encrypt to the age recipient. No plaintext dump
+#    ever hits disk; the private key is off-VM, so the VM cannot decrypt this.
+cd "$APP_DIR"
+docker compose -p "$PROD_PROJECT" -f compose.yaml -f deploy/prod/compose.yaml \
+  exec -T "$DB_SERVICE" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+  | age -r "$AGE_RECIPIENT" -o "$out"
+
+# 2. Fan out to every configured remote, tier by GFS, prune each tier.
+dow="$(date -u +%u)"   # 1 = Monday
+dom="$(date -u +%d)"   # 01 = first of month
+for remote in $BACKUP_REMOTES; do
+  base="${remote}:${BACKUP_BUCKET}"
+  rclone copyto "$out" "${base}/daily/${name}"
+  [ "$dow" = "1" ] && rclone copyto "$out" "${base}/weekly/${name}"
+  [ "$dom" = "01" ] && rclone copyto "$out" "${base}/monthly/${name}"
+  prune "${base}/daily" "$KEEP_DAILY"
+  prune "${base}/weekly" "$KEEP_WEEKLY"
+  prune "${base}/monthly" "$KEEP_MONTHLY"
+  echo "backup: shipped ${name} to ${base}"
+done

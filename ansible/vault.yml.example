@@ -76,3 +76,25 @@ vault_cloudflared_tunnel_credentials: |
 # --- GHCR pull auth (optional; only if the images are private) ---------------
 vault_ghcr_username: ""
 vault_ghcr_token: ""                              # PAT with read:packages
+
+# --- Backup & DR (ADR-062, plan W10) -----------------------------------------
+# Nightly pg_dump of PG-app -> age -> rclone to B2 and/or OCI. Consumed by the
+# `backup` role (rclone.conf + backup.env). PG-app creds are NOT duplicated here:
+# the dump runs `pg_dump` inside the running PG-app container, which already has
+# POSTGRES_USER / POSTGRES_DB — see vault_database_* above.
+#
+# age recipient = PUBLIC key. The matching PRIVATE key is NEVER on the VM; it
+# lives off-VM in Bitwarden and is used only at restore time (ADR-062).
+vault_age_recipient: "age1REPLACE_ME"             # AGE_RECIPIENT (public key)
+
+# Backblaze B2 application key scoped to the backup bucket (btp-backups).
+vault_b2_account_id: "REPLACE_ME"                 # B2_ACCOUNT_ID (= keyID)
+vault_b2_application_key: "REPLACE_ME"            # B2_APPLICATION_KEY
+
+# OCI Object Storage, S3-compatible endpoint (optional second destination; only
+# needed if "oci" is in backup_remotes). Create a Customer Secret Key in the OCI
+# console; the endpoint is https://<namespace>.compat.objectstorage.<region>.oraclecloud.com.
+vault_oci_access_key_id: "REPLACE_ME"             # OCI_* — access key id
+vault_oci_secret_access_key: "REPLACE_ME"         # OCI_* — secret access key
+vault_oci_s3_endpoint: "https://REPLACE_ME.compat.objectstorage.REPLACE_ME.oraclecloud.com"
+vault_oci_region: "REPLACE_ME"                    # e.g. eu-paris-1
