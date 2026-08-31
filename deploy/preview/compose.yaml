@@ -35,7 +35,7 @@ x-preview-env: &preview-env
   MERCURE_PUBLIC_URL: "https://pr-${PR_NUMBER}.${DOMAIN}/.well-known/mercure"
   # Host forwarded by Cloudflare -> Traefik is pr-<n>.${DOMAIN}; php also answers to
   # the internal `php` name (worker -> Mercure). Anything else Symfony rejects.
-  TRUSTED_HOSTS: "^pr-${PR_NUMBER}\\.${DOMAIN}|php$$"
+  TRUSTED_HOSTS: "^(pr-${PR_NUMBER}\\.${DOMAIN}|php)$$"
   # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
   VALHALLA_BASE_URI: http://valhalla:8002
   # Shared read-only PG-référence (osm/tourism reads, ADR-060), reached on btp-shared.

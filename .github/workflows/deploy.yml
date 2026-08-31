@@ -330,6 +330,9 @@ jobs:
       # Root for the per-PR checkouts, kept OUTSIDE the prod canonical dir so a
       # preview deploy never shares a working tree / .git index with prod.
       PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
+      # Dedicated NON-PROD env file for previews (see the deploy step). Never the
+      # prod .env — previews must not inherit prod secrets.
+      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
       PR_NUMBER: ${{ github.event.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -347,6 +350,19 @@ jobs:
           # Dedicated checkout per PR, distinct from prod and from every other
           # preview: concurrent preview/prod deploys never race on one working tree.
           preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
+          # NON-PROD env file for previews. MUST NOT be the prod .env: compose.yaml
+          # interpolates MAILER_DSN / REFRESH_TOKEN_ENC_KEY / ACCESS_REQUEST_HMAC_SECRET
+          # / FCM_SERVICE_ACCOUNT_JSON / JWT_* / DB creds from it, and an ephemeral PR
+          # preview must never inherit prod secrets.
+          # TODO(PR-I / Ansible): provision this preview.env on the VM with
+          #   preview-scoped, NON-PROD values — a dedicated Mercure key, dedicated
+          #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET, a null/sink MAILER_DSN,
+          #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds — plus
+          #   the shared read-only values (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI,
+          #   DOMAIN). Defaults to a single shared file at the previews root (outside
+          #   any pr-<n> dir, so teardown's rm -rf never deletes it); until it exists
+          #   the deploy fails closed on the missing file rather than leak prod secrets.
+          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
           # Pull the pr-<n> images this run's build-images just pushed to GHCR.
           php_image="${REGISTRY}/${IMAGE_OWNER}-php:pr-${PR_NUMBER}"
           pwa_image="${REGISTRY}/${IMAGE_OWNER}-pwa:pr-${PR_NUMBER}"
@@ -357,8 +373,8 @@ jobs:
           # First deploy clones the PR's own checkout (independent .git, seeded from
           # the canonical clone's origin remote); later deploys just fetch+checkout in
           # it. PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
-          # runtime secrets come from that dir's VM `.env` (Ansible-managed). Public
-          # migrations run at container boot (MIGRATIONS_ON_BOOT, base php).
+          # preview-scoped secrets come from the NON-PROD preview env file (never the
+          # prod .env). Public migrations run at container boot (MIGRATIONS_ON_BOOT).
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
           if [ ! -d "${preview_dir}/.git" ]; then
             mkdir -p "\$(dirname "${preview_dir}")"
@@ -367,10 +383,8 @@ jobs:
           cd "${preview_dir}"
           git fetch origin --force
           git checkout --force "${HEAD_SHA}"
-          # The fresh clone has no VM .env; read DOMAIN + shared secrets from the
-          # canonical clone's Ansible-provisioned .env (injected vars still override).
           PR_NUMBER="${PR_NUMBER}" PHP_IMAGE="${php_image}" PWA_IMAGE="${pwa_image}" \
-            docker compose --env-file "${canonical_dir}/.env" -p "pr-${PR_NUMBER}" \
+            docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
               -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
           EOF
 
@@ -389,6 +403,7 @@ jobs:
       SSH_KEY: ${{ secrets.SSH_KEY }}
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
       PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
+      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
       PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Tear down preview over SSH
@@ -398,8 +413,9 @@ jobs:
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview teardown."
             exit 0
           fi
-          canonical_dir="${REPO_DIR:-/opt/bike-trip-planner}"
           preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
+          # Same NON-PROD preview env file as the deploy — never the prod .env.
+          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
@@ -412,7 +428,7 @@ jobs:
           if [ -d "${preview_dir}/.git" ]; then
             cd "${preview_dir}"
             PR_NUMBER="${PR_NUMBER}" \
-              docker compose --env-file "${canonical_dir}/.env" -p "pr-${PR_NUMBER}" \
+              docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
                 -f compose.yaml -f deploy/preview/compose.yaml down -v --remove-orphans || true
           fi
           rm -rf "${preview_dir}"
