@@ -1,0 +1,81 @@
+# Prod overlay on top of compose.yaml (iso-prod base) — W4 of the deploy plan.
+#
+# Layered EXPLICITLY on the VM by the deploy-prod job (never auto-loaded):
+#   docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+#
+# What prod changes vs the base:
+#  - php no longer publishes 80/443 (ports: !reset []): prod is fronted by Traefik
+#    over the `edge` network; the base keeps the published ports for dev/recette.
+#  - php + worker join `btp-shared` to reach the shared Valhalla and the shared
+#    PG-référence (both Ansible-managed, external to every app stack).
+#  - The in-stack `valhalla`/`valhalla-builder` (base, `routing` profile) stay
+#    DORMANT in prod: the profile is never enabled here, so routing is served only
+#    by the shared resource on btp-shared.
+#  - Public host + Mercure/CORS/trusted-hosts point at www.${DOMAIN}; TLS is
+#    terminated at the Cloudflare edge, so FrankenPHP serves plain HTTP (Traefik
+#    talks HTTP to it).
+#
+# Only ${DOMAIN} (and the reference DB / Mercure secrets) need to be in the VM
+# `.env`; nothing host-specific is hardcoded here.
+
+# Shared prod env for php + worker (YAML anchor to avoid duplicating the block).
+x-prod-env: &prod-env
+  FRONTEND_URL: "https://www.${DOMAIN}"
+  MERCURE_PUBLIC_URL: "https://www.${DOMAIN}/.well-known/mercure"
+  # The Host header forwarded by Cloudflare -> Traefik is www.${DOMAIN}; php also
+  # answers to the internal `php` service name (worker -> Mercure). Anything else
+  # is rejected by Symfony's trusted-host guard.
+  TRUSTED_HOSTS: "^(www\\.${DOMAIN}|php)$$"
+  # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
+  VALHALLA_BASE_URI: http://valhalla:8002
+  # Shared read-only PG-référence (osm/tourism, ADR-060), reached on btp-shared.
+  # Defaults to the Ansible-managed `pg-reference` host; the DSN (incl. the RO
+  # password) may be overridden wholesale from the VM `.env`.
+  REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://reference_ro:${REFERENCE_DB_PASSWORD:-}@pg-reference:5432/reference?serverVersion=18&charset=utf8}"
+
+services:
+  php:
+    # TLS is terminated at the Cloudflare edge; Traefik reverse-proxies plain HTTP
+    # to php, so the base's published 80/443 are dropped entirely in prod.
+    ports: !reset []
+    networks:
+      - edge
+      - btp-shared
+    environment:
+      <<: *prod-env
+      # Serve plain HTTP (no FrankenPHP auto-TLS) on the public host and the
+      # internal `php` name — Traefik/Cloudflare own TLS.
+      SERVER_NAME: "http://www.${DOMAIN}, http://php"
+      MERCURE_EXTRA_DIRECTIVES: "cors_origins https://www.${DOMAIN}"
+    labels:
+      - "traefik.enable=true"
+      # Bind the router to the edge network (php is multi-homed).
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.prod.rule=Host(`www.${DOMAIN}`)"
+      # HTTP entrypoint only: no ACME on Traefik (edge TLS via Cloudflare Tunnel).
+      - "traefik.http.routers.prod.entrypoints=web"
+      - "traefik.http.services.prod.loadbalancer.server.port=80"
+
+  worker:
+    # Reach the shared Valhalla + PG-référence on btp-shared (routing + osm reads).
+    networks:
+      - btp-shared
+    environment:
+      <<: *prod-env
+
+volumes:
+  # The routing graph lives in the shared Valhalla stack's volume
+  # (project valhalla-shared, deploy/valhalla). External here so prod never
+  # creates an empty one; the provisioner mounts it :ro (base).
+  valhalla-tiles:
+    external: true
+    name: valhalla-shared_valhalla-tiles
+
+networks:
+  # Both created by Ansible ahead of any deploy (W5).
+  # Traefik <-> php.
+  edge:
+    external: true
+  # Shared infra (Valhalla + PG-référence), spanning prod and every preview.
+  btp-shared:
+    external: true
