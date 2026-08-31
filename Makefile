@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up routing-publish coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -9,7 +9,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build provision provision-recette provision-override events-refresh
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build routing-publish provision provision-recette provision-override events-refresh
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   $(eval $(ARGS):;@:)
@@ -245,6 +245,27 @@ routing-build: ## Build the Valhalla routing graph for the given country slugs (
 
 routing-up: ## Start the Valhalla routing service (requires a graph built by `make routing-build`)
 	@COMPOSE_PROFILES=routing docker compose up --wait valhalla
+
+# Off-VM shipping recipe for docs/runbooks/valhalla-routing-graph.md §3-6: package
+# the valhalla_tiles.tar built locally by `make routing-build`, ship it to a
+# server over SSH/rsync, and repopulate its valhalla-tiles volume. ARGS =
+# <user@host> <slug> [slug...] — the host is the SSH/rsync target, the slugs only
+# name the artifact (must match what `make routing-build` already produced) and
+# do not touch what gets rebuilt. Only valhalla_tiles.tar is packaged (not the
+# unpacked valhalla_tiles/ dir, nor the *.osm.pbf extracts), matching runbook §3.
+ROUTING_HOST := $(word 1,$(ARGS))
+ROUTING_PUBLISH_SLUGS := $(wordlist 2,$(words $(ARGS)),$(ARGS))
+
+routing-publish: ## Ship the built routing graph to a server (e.g. make routing-publish deploy@prod-host france belgium)
+	@test -n "$(ARGS)" || { echo "Usage: make routing-publish <user@host> <slug> [slug...] (e.g. make routing-publish deploy@prod-host france belgium)"; exit 1; }
+	@ARTIFACT="valhalla-$$(echo $(ROUTING_PUBLISH_SLUGS) | tr ' ' '-')-$$(date +%Y%m).tar.gz"; \
+	VOL=$$(docker volume ls -q | grep valhalla-tiles); \
+	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar; \
+	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz"; \
+	rm -f "$$ARTIFACT"; \
+	ssh "$(ROUTING_HOST)" 'docker compose stop valhalla'; \
+	ssh "$(ROUTING_HOST)" 'VOL=$$(docker volume ls -q | grep valhalla-tiles); docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles"; docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst'; \
+	ssh "$(ROUTING_HOST)" 'docker compose restart valhalla'
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration
