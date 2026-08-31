@@ -208,6 +208,9 @@ jobs:
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          # TOFU host-key trust for the beta. Harden once W5 (Ansible/SSH infra)
+          # is in place by pinning an SSH_KNOWN_HOSTS secret straight into
+          # ~/.ssh/known_hosts instead of scanning the host live.
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
           # Check out the tag on the VM and roll the stack, pulling the images
           # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
@@ -227,7 +230,7 @@ jobs:
     # Prod host to probe. Defaults to the current value so nothing breaks before
     # cutover; set PROD_HEALTH_URL to https://www.${DOMAIN} at cutover.
     env:
-      HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || env.HEALTH_URL }}
+      HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || 'https://biketrip.mooo.com' }}
     steps:
       - name: Wait for the new image to roll
         run: sleep 60

@@ -25,7 +25,7 @@ x-prod-env: &prod-env
   # The Host header forwarded by Cloudflare -> Traefik is www.${DOMAIN}; php also
   # answers to the internal `php` service name (worker -> Mercure). Anything else
   # is rejected by Symfony's trusted-host guard.
-  TRUSTED_HOSTS: "^www\\.${DOMAIN}|php$$"
+  TRUSTED_HOSTS: "^(www\\.${DOMAIN}|php)$$"
   # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
   VALHALLA_BASE_URI: http://valhalla:8002
   # Shared read-only PG-référence (osm/tourism, ADR-060), reached on btp-shared.
