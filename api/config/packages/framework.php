@@ -80,7 +80,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                 ],
                 'routing.client' => [
-                    'base_uri' => 'http://valhalla:8002',
+                    // Host-locked to the Valhalla service. Configurable so the
+                    // shared Valhalla resource (ADR-061) can live outside the app
+                    // stack; the default keeps the in-stack service name for dev.
+                    'base_uri' => '%env(VALHALLA_BASE_URI)%',
                     'timeout' => 5,
                     // Direct internal Valhalla API — never redirects; refuse to follow
                     // any 3xx so a compromised response can't pivot to another internal

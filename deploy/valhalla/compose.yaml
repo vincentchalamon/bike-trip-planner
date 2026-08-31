@@ -1,0 +1,56 @@
+# Shared Valhalla routing engine (serve-only) — ADR-061.
+#
+# Deployed once on the VM by Ansible, OUTSIDE the app stacks, on the shared
+# `btp-shared` external network. Prod and every PR preview reach it as
+# http://valhalla:8002 (VALHALLA_BASE_URI) instead of each bundling its own
+# ~2 GB copy. The graph is built off-VM and shipped into the `valhalla-tiles`
+# volume by `make routing-publish` (docs/runbooks/valhalla-routing-graph.md);
+# this service only ever mmaps and serves the extract — it never builds (#881).
+#
+# Deploy: docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml up -d
+# The volume is then named `valhalla-shared_valhalla-tiles`; the prod/preview
+# overlays reference it (or just the shared service) — see deploy/prod, deploy/preview.
+
+services:
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:3.5.1@sha256:d154396aa2499f463f3d5419ef3f107063247a4ffbed80dbcdf952aa53172d97
+    restart: unless-stopped
+    # France+Belgium extract kept in the page cache: size at
+    # `valhalla_tiles.tar` + 512 MB (see docs/runbooks/valhalla-routing-graph.md).
+    # Too low degrades latency (page-cache eviction), it does not OOM.
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    networks:
+      btp-shared:
+        # App stacks reach it as http://valhalla:8002 via this alias.
+        aliases:
+          - valhalla
+    volumes:
+      - valhalla-tiles:/custom_files
+    environment:
+      serve_tiles: "True"
+      # Load the tiles as they are; never derive anything from a PBF. All three
+      # build_* switches stay False so a missing artifact can never trigger a
+      # full graph build on the serving host (#881).
+      use_tiles_ignore_pbf: "True"
+      build_elevation: "False"
+      build_admins: "False"
+      build_time_zones: "False"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  # Created by Ansible; shared by prod-app, previews and this service.
+  btp-shared:
+    external: true
+
+volumes:
+  # Seeded by `make routing-publish` (off-VM build shipped in). Ansible-managed,
+  # deterministic name `valhalla-shared_valhalla-tiles` under project valhalla-shared.
+  valhalla-tiles: ~
