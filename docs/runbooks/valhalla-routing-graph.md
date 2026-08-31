@@ -51,10 +51,11 @@ data, re-run `make provision`.
 Confirm what is currently served:
 
 ```bash
-# On the production host (Coolify SSH), in the application directory:
-docker compose exec valhalla curl -sS http://localhost:8002/status | jq
-docker compose exec valhalla du -sh /custom_files
-docker compose exec valhalla ls -lh /custom_files
+# On the production host (SSH with the Ansible-provisioned deploy key), in the
+# shared Valhalla project (deploy/valhalla, ADR-061):
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla curl -sS http://localhost:8002/status | jq
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla du -sh /custom_files
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla ls -lh /custom_files
 ```
 
 A healthy France graph shows `valhalla_tiles.tar` plus `valhalla_tiles/` and
@@ -65,7 +66,8 @@ alongside them; production only needs the tar.
 ## Procédure
 
 Build steps run on a local workstation (>= 8 GB free RAM, ~30 GB disk).
-Production steps are marked **(prod)** and run on the Coolify host via SSH.
+Production steps are marked **(prod)** and run on the prod host over SSH (the
+Ansible-provisioned deploy key, ADR-061).
 
 ### 1. Build the graph locally
 
@@ -175,10 +177,10 @@ Production only ever serves: it needs the tar, not the extracts. Do not run
 
 ### 6. Restart Valhalla **(prod)**
 
-Coolify: redeploy the `valhalla` service from the dashboard, or on the host:
+Restart the shared Valhalla service on the host:
 
 ```bash
-docker compose restart valhalla
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml restart valhalla
 ```
 
 ### 7. Wait for the healthcheck **(prod)**
