@@ -53,7 +53,7 @@ services:
       PWA_UPSTREAM: pwa:3000
       # Valhalla routing base URI. Defaults to the in-stack service (dev/recette/CI
       # start it under the `routing` profile); prod points it at the shared Valhalla
-      # resource over the external network (ADR-061, deploy/valhalla).
+      # resource over the external network (see deploy/valhalla/).
       VALHALLA_BASE_URI: ${VALHALLA_BASE_URI:-http://valhalla:8002}
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"

@@ -1,4 +1,4 @@
-# Shared Valhalla routing engine (serve-only) — ADR-061.
+# Shared Valhalla routing engine (serve-only) — no-Coolify shared-infra deploy.
 #
 # Deployed once on the VM by Ansible, OUTSIDE the app stacks, on the shared
 # `btp-shared` external network. Prod and every PR preview reach it as
