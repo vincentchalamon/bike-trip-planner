@@ -67,7 +67,8 @@ alongside them; production only needs the tar.
 
 Build steps run on a local workstation (>= 8 GB free RAM, ~30 GB disk).
 Production steps are marked **(prod)** and run on the prod host over SSH (the
-Ansible-provisioned deploy key, ADR-061).
+Ansible-provisioned deploy key, ADR-061). Steps 3-6 are mechanized end to end
+by `make routing-publish <user@host> <slug> [slug...]` (`Makefile`).
 
 ### 1. Build the graph locally
 
@@ -160,10 +161,10 @@ mv /tmp/valhalla-france-YYYYMM.tar.gz /tmp/valhalla-france.tar.gz
 ### 5. Repopulate the `valhalla-tiles` volume **(prod)**
 
 ```bash
-# Stop the service so nothing reads the volume mid-write:
-docker compose stop valhalla
+# Stop the shared service so nothing reads the volume mid-write:
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml stop valhalla
 
-VOL=$(docker volume ls -q | grep valhalla-tiles)
+VOL=$(docker volume ls -q | grep valhalla-tiles)   # valhalla-shared_valhalla-tiles
 # Wipe the old tiles, then unpack the new tar into the volume root:
 docker run --rm -v "$VOL":/dst alpine \
   sh -c 'rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles'
@@ -189,9 +190,9 @@ Serving pre-built tiles is an mmap, so the `start_period` is 20s — if `valhall
 is not healthy within a minute, read the logs rather than waiting it out:
 
 ```bash
-docker compose ps valhalla            # STATUS should reach "healthy"
-docker compose logs --tail=50 valhalla
-docker compose exec valhalla curl -sS http://localhost:8002/status | jq
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml ps valhalla            # STATUS should reach "healthy"
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml logs --tail=50 valhalla
+docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla curl -sS http://localhost:8002/status | jq
 ```
 
 ### 8. Smoke-test `/route` **(prod)**
@@ -221,7 +222,7 @@ Requalified in #881, when build and serve stopped sharing a container:
   the extract stays cached. Anonymous memory is the config plus per-request A*
   search state (tens to a few hundred MB for a long bicycle route). Sizing rule
   when the perimeter grows: `valhalla_tiles.tar` + 512 MB, measured with
-  `docker compose exec valhalla ls -lh /custom_files/valhalla_tiles.tar`. Setting
+  `docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla ls -lh /custom_files/valhalla_tiles.tar`. Setting
   it too low degrades latency through constant page-cache eviction; it does not
   OOM.
 - **`valhalla-builder`: uncapped, deliberately.** Its peak scales with the
@@ -230,8 +231,8 @@ Requalified in #881, when build and serve stopped sharing a container:
 
 ## Post-action
 
-- `docker compose ps valhalla` reports `healthy`; `/api/health` shows
-  `valhalla: ok`.
+- `docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml ps valhalla`
+  reports `healthy`; `/api/health` shows `valhalla: ok`.
 - The Lille -> Cassel `/route` smoke test returns a valid trip.
 - Trigger one real trip computation through the app to confirm route + stage
   generation succeed end to end.
@@ -244,10 +245,16 @@ Requalified in #881, when build and serve stopped sharing a container:
   by #881, which splits the routing and reference calendars
 - ADR-017 — Valhalla routing engine (its build/serve coupling is removed by #881)
 - ADR-040 — Tier-1 PostGIS reference index (the *other* dataset)
+- ADR-061 — Deployment: Ansible + GHA-SSH + Traefik + Tunnel; the shared
+  `valhalla-shared` compose project is deployed standalone by Ansible
 - [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) — corrupted-tile /
   hot rebuild
-- `Makefile` targets `routing-build`, `routing-up` (routing) and `provision`
-  (reference)
-- `compose.yaml` — `valhalla` (serve-only), `valhalla-builder` (one-shot),
-  `valhalla-tiles` volume
+- `Makefile` targets `routing-build`, `routing-up` (local build/serve) and
+  `routing-publish` (ships the built tar to `valhalla-shared` on the shared-infra
+  host, steps 3-6 of this runbook); `provision` is the unrelated reference target
+- `compose.yaml` — local `valhalla` (serve-only) and `valhalla-builder`
+  (one-shot) services, `valhalla-tiles` volume, used for `routing-build`/
+  `routing-up`
+- `deploy/valhalla/compose.yaml` — the standalone `valhalla-shared` project
+  actually served in production (Ansible-deployed, ADR-061)
 - `.docker/valhalla/build-routing-graph.sh` — what the builder actually runs
