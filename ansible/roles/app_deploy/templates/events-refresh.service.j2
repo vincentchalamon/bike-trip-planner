@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# events-refresh (plan W5.1 / ADR-051). Runs the provisioner `events-refresh`
+# entrypoint against the prod stack. OPTIONAL in beta.
+[Unit]
+Description=bike-trip-planner events-refresh
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User={{ deploy_user }}
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/bin/docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml --profile provisioning run --rm provisioner events-refresh {{ events_refresh_zone }}

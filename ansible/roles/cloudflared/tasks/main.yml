@@ -1,0 +1,45 @@
+---
+- name: Create the cloudflared directory
+  ansible.builtin.file:
+    path: "{{ cloudflared_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the tunnel credentials (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_cloudflared_tunnel_credentials }}"
+    dest: "{{ cloudflared_dir }}/credentials.json"
+    # The cloudflared image runs as the distroless nonroot user (UID/GID 65532,
+    # numeric — no matching name on the host). Own the file by that UID so the
+    # container reads it while keeping mode 0600: the tunnel token stays private
+    # to the cloudflared process, not world-readable on the host.
+    owner: "65532"
+    group: "65532"
+    mode: "0600"
+  no_log: true
+  notify: Restart cloudflared
+
+- name: Render the locally-managed tunnel config
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ cloudflared_dir }}/config.yml"
+    # Not secret, but owned by the container UID (65532) for consistency.
+    owner: "65532"
+    group: "65532"
+    mode: "0644"
+  notify: Restart cloudflared
+
+- name: Render the cloudflared compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ cloudflared_dir }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy cloudflared
+  community.docker.docker_compose_v2:
+    project_src: "{{ cloudflared_dir }}"
+    state: present

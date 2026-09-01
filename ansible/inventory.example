@@ -1,0 +1,20 @@
+# Copy to `inventory.ini` and fill in.
+#
+# The VM has NO public IP (Cloudflare Tunnel egress only, plan W5.3), so SSH is
+# not reachable over the open internet once the tunnel is up. Options for the
+# `ansible_host` / connection:
+#
+#   * FIRST bootstrap run: attach a temporary public IP during OCI instance
+#     creation, or use the OCI serial console. Remove the public IP once the
+#     tunnel + Access SSH are working.
+#   * Ongoing runs (and the GHA deploy-prod/deploy-preview SSH jobs): expose SSH
+#     through a Cloudflare Access "ssh" application over the same tunnel and
+#     connect with a ProxyCommand, e.g.
+#       ansible_ssh_common_args='-o ProxyCommand="cloudflared access ssh --hostname %h"'
+#       ansible_host=ssh.example.com
+#
+[btp]
+btp-prod ansible_host=CHANGE_ME ansible_user=ubuntu
+
+[btp:vars]
+# ansible_ssh_common_args='-o ProxyCommand="cloudflared access ssh --hostname %h"'

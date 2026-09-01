@@ -1,0 +1,32 @@
+---
+- name: Create the Traefik directory
+  ansible.builtin.file:
+    path: "{{ traefik_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render the Traefik static config
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_dir }}/traefik.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  # docker_compose_v2: state: present only reacts to compose.yaml changes, not
+  # to the bind-mounted static config; restart on change to stay idempotent.
+  notify: Restart Traefik
+
+- name: Render the Traefik compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ traefik_dir }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy Traefik
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_dir }}"
+    state: present

@@ -1,0 +1,5 @@
+---
+- name: Restart cloudflared
+  community.docker.docker_compose_v2:
+    project_src: "{{ cloudflared_dir }}"
+    state: restarted

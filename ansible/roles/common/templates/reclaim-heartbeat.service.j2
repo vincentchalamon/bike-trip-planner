@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# Anti-reclaim heartbeat (plan W5.1). Generates a little CPU + egress by hitting
+# the public health endpoint through the tunnel, keeping the instance above the
+# OCI Always-Free reclaim threshold (ADR-019). OPTIONAL — the steady-state
+# memory footprint already clears the 20% threshold.
+[Unit]
+Description=bike-trip-planner anti-reclaim heartbeat
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -fsS -o /dev/null https://www.{{ domain }}/api/healthz

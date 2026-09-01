@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Cloudflare Tunnel — LOCALLY-managed config (plan W5.1). A locally-managed
+# config.yml is required (rather than a remotely-managed run-token) so the
+# wildcard `*.${DOMAIN}` public hostname can be declared here. This is what
+# makes the VM have no open public port: all ingress arrives over the outbound
+# tunnel, so Cloudflare Access is non-bypassable (plan W7.2).
+tunnel: {{ cloudflared_tunnel_id }}
+credentials-file: {{ cloudflared_dir }}/credentials.json
+no-autoupdate: true
+
+ingress:
+  # www -> Traefik (reached over the shared `edge` docker network).
+  - hostname: "www.{{ domain }}"
+    service: http://traefik:80
+  # Wildcard for PR previews (pr-N.${DOMAIN}) -> same Traefik.
+  - hostname: "*.{{ domain }}"
+    service: http://traefik:80
+  # Everything else is refused.
+  - service: http_status:404

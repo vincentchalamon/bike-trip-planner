@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Run the bike-trip-planner anti-reclaim heartbeat periodically
+
+[Timer]
+OnCalendar={{ reclaim_heartbeat_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
