@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# EnvironmentFile for btp-backup.service (and sourced by `make backup-now`).
+# AGE_RECIPIENT is a PUBLIC key; the private half is off-VM (Bitwarden).
+AGE_RECIPIENT={{ vault_age_recipient }}
+BACKUP_BUCKET={{ backup_bucket }}
+BACKUP_REMOTES={{ backup_remotes | join(' ') }}
+PROD_PROJECT={{ backup_prod_project }}
+DB_SERVICE={{ backup_db_service }}
+APP_DIR={{ app_dir }}
+RCLONE_CONFIG={{ backup_dir }}/rclone.conf
+KEEP_DAILY={{ backup_keep_daily }}
+KEEP_WEEKLY={{ backup_keep_weekly }}
+KEEP_MONTHLY={{ backup_keep_monthly }}

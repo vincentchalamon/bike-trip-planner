@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up routing-publish coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -275,6 +275,17 @@ routing-publish: ## Ship the built routing graph to a server (e.g. make routing-
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) stop valhalla' && \
 	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f /tmp/valhalla-tiles.tar.gz' && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) restart valhalla'
+
+## --- 💾 Backup & DR ---
+# On-demand off-VM backup of PG-app (users/trips — the only irreplaceable data;
+# PG-reference is reproducible via `make provision`). Fires the same path the
+# nightly systemd timer runs: pg_dump -> age -> rclone to B2/OCI, GFS-pruned
+# (ADR-062). Runtime lives on the Ansible-managed VM (no Coolify), so this SSHes
+# in as the deploy user and runs the backup script with its EnvironmentFile.
+# Set the SSH target: make backup-now BACKUP_SSH=deploy@vm
+backup-now: ## Trigger an on-demand PG-app backup on the VM (needs BACKUP_SSH=user@host)
+	@test -n "$(BACKUP_SSH)" || { echo "Usage: make backup-now BACKUP_SSH=user@host"; exit 1; }
+	@ssh $(BACKUP_SSH) 'set -a && . /etc/bike-trip-planner/backup/backup.env && /usr/local/bin/btp-backup.sh'
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration

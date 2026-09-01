@@ -21,7 +21,8 @@
     # deploy/valhalla/compose.yaml from the checkout.
     - role: app_deploy
     - role: shared_infra
-    # TODO(PR-G / W10): add `- role: backup` here once the backup role lands in
-    # PR-G (pg_dump PG-app -> age -> rclone to B2/OCI, GFS retention, systemd
-    # timer + `make backup-now`). Left out on purpose so PR-I and PR-G do not
-    # collide on this file. See plan W10 / ADR-062 (Backup & DR), created by PR-G.
+    # Nightly pg_dump of PG-app -> age -> rclone to B2/OCI, GFS retention, via a
+    # systemd timer (no Coolify); on-demand with `make backup-now`. PG-reference
+    # is not backed up (reproducible, ADR-060). See plan W10 and
+    # docs/adr/adr-062-backup-and-disaster-recovery.md.
+    - role: backup

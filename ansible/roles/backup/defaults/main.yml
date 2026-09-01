@@ -1,0 +1,40 @@
+---
+# --- Backup & DR (ADR-062 / plan W10) ----------------------------------------
+# Nightly pg_dump of PG-app (users/trips) -> age-encrypted -> rclone off-site.
+# PG-reference is NOT backed up (reproducible via `make provision`, ADR-060).
+enable_backup: true
+
+# Config + rendered rclone.conf / backup.env live here (root:deploy, 0750).
+backup_dir: "{{ etc_dir }}/backup"
+backup_bin: "/usr/local/bin/btp-backup.sh"
+
+# Nightly at 02:30, server timezone (Europe/Paris). Persistent catches up a run
+# missed while the VM was down.
+backup_calendar: "*-*-* 02:30:00"
+
+# Max runtime for the one-shot before systemd aborts it (seconds). The default
+# ~90s would truncate a longer pg_dump/age/rclone run; 30 min is generous.
+backup_timeout_start_sec: 1800
+
+# The prod stack holding PG-app (docker compose -p <project>) and its DB service.
+backup_prod_project: "prod"
+backup_db_service: "database"
+
+# rclone remotes to fan the encrypted dump out to. One suffices in beta; list
+# both to mirror. Each name must match a [section] in rclone.conf (rendered from
+# Vault): "b2" (Backblaze) and/or "oci" (OCI Object Storage, S3-compatible).
+backup_remotes:
+  - "b2"
+
+# Bucket / path prefix within every remote.
+backup_bucket: "btp-backups"
+
+# GFS retention (object counts), pruned per remote after each successful upload.
+backup_keep_daily: 7
+backup_keep_weekly: 4
+backup_keep_monthly: 6
+
+# apt packages the backup path needs on the VM.
+backup_packages:
+  - age
+  - rclone

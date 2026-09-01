@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+# Backup & DR one-shot (ADR-062). Dumps PG-app, encrypts with age, ships off-site
+# with rclone (GFS retention). Fired nightly by btp-backup.timer, or on demand
+# by `make backup-now`.
+[Unit]
+Description=bike-trip-planner PG-app backup (pg_dump -> age -> rclone)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# pg_dump + age + rclone to B2/OCI can run for minutes on a larger DB or a slow
+# uplink; the systemd default (~90s) would SIGTERM a mid-flight run and silently
+# truncate the backup. Give it 30 min (override with backup_timeout_start_sec).
+TimeoutStartSec={{ backup_timeout_start_sec }}
+User={{ deploy_user }}
+EnvironmentFile={{ backup_dir }}/backup.env
+ExecStart={{ backup_bin }}
