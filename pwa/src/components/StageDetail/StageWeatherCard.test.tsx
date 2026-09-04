@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import type { WeatherData } from "@btp/core";
 import { isSunUp, StageWeatherCard } from "./StageWeatherCard";
 
 // Stub next-intl to avoid wiring a NextIntlClientProvider in unit tests.
@@ -39,6 +40,68 @@ describe("isSunUp", () => {
     const today = new Date(Date.UTC(2030, 5, 21));
     const now = new Date(Date.UTC(2030, 5, 21, 22, 0, 0));
     expect(isSunUp(today, 5.5, 20.5, now)).toBe(false);
+  });
+});
+
+describe("StageWeatherCard forecast-horizon message", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const weather: WeatherData = {
+    icon: "01d",
+    description: "Clear",
+    tempMin: 10,
+    tempMax: 20,
+    windSpeed: 5,
+    windDirection: "N",
+    precipitationProbability: 0,
+    humidity: 50,
+    comfortIndex: 90,
+    relativeWindDirection: "unknown",
+    apparentTempMin: 9,
+    apparentTempMax: 19,
+    windGusts: 8,
+    precipitationMm: 0,
+    uvIndex: 1,
+    hourly: [],
+  };
+
+  it("shows the horizon notice for a stage beyond the 16-day window with no weather", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2030, 0, 1, 12, 0, 0)));
+
+    const { getByTestId } = render(
+      <StageWeatherCard weather={null} startDate="2030-06-01" stageIndex={0} />,
+    );
+
+    expect(getByTestId("stage-weather-horizon")).toBeInTheDocument();
+  });
+
+  it("hides the horizon notice for a stage within the 16-day window", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2030, 0, 1, 12, 0, 0)));
+
+    const { queryByTestId } = render(
+      <StageWeatherCard weather={null} startDate="2030-01-03" stageIndex={0} />,
+    );
+
+    expect(queryByTestId("stage-weather-horizon")).toBeNull();
+  });
+
+  it("hides the horizon notice when weather is present, even far in the future", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2030, 0, 1, 12, 0, 0)));
+
+    const { queryByTestId } = render(
+      <StageWeatherCard
+        weather={weather}
+        startDate="2030-06-01"
+        stageIndex={0}
+      />,
+    );
+
+    expect(queryByTestId("stage-weather-horizon")).toBeNull();
   });
 });
 

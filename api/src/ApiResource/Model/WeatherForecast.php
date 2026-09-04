@@ -18,6 +18,9 @@ final readonly class WeatherForecast
     /** No stage bearing available to compute relative wind direction. */
     public const string RELATIVE_WIND_UNKNOWN = 'unknown';
 
+    /**
+     * @param list<HourlyWeatherSlot> $hourly the riding-window hours (empty when no hourly data is available)
+     */
     public function __construct(
         public string $icon,
         public string $description,
@@ -29,6 +32,12 @@ final readonly class WeatherForecast
         public int $humidity,
         public int $comfortIndex,
         public string $relativeWindDirection,
+        public float $apparentTempMin = 0.0,
+        public float $apparentTempMax = 0.0,
+        public float $windGusts = 0.0,
+        public float $precipitationMm = 0.0,
+        public int $uvIndex = 0,
+        public array $hourly = [],
     ) {
     }
 }

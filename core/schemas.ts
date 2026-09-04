@@ -58,6 +58,21 @@ export const AlertSchema = z.object({
   action: AlertActionSchema.nullable().optional(),
 });
 
+export const HourlyWeatherSlotSchema = z.object({
+  hour: z.number().int(),
+  temp: z.number(),
+  apparentTemp: z.number(),
+  precipitationMm: z.number(),
+  precipitationProbability: z.number(),
+  windSpeed: z.number(),
+  windGusts: z.number(),
+  windDirectionDeg: z.number().int(),
+  relativeWindDirection: z
+    .enum(["headwind", "tailwind", "crosswind", "unknown"])
+    .default("unknown"),
+  weatherCode: z.number().int(),
+});
+
 export const WeatherForecastSchema = z.object({
   icon: z.string(),
   description: z.string(),
@@ -71,6 +86,14 @@ export const WeatherForecastSchema = z.object({
   relativeWindDirection: z
     .enum(["headwind", "tailwind", "crosswind", "unknown"])
     .default("unknown"),
+  // Advanced weather (feels-like, gusts, rain mm, UV) + per-hour riding-window
+  // series. Defaulted for back-compat with forecasts persisted before this shape.
+  apparentTempMin: z.number().default(0),
+  apparentTempMax: z.number().default(0),
+  windGusts: z.number().default(0),
+  precipitationMm: z.number().default(0),
+  uvIndex: z.number().default(0),
+  hourly: z.array(HourlyWeatherSlotSchema).default([]),
 });
 
 export const PointOfInterestSchema = z.object({
@@ -261,6 +284,7 @@ export type CoordinateData = z.infer<typeof CoordinateSchema>;
 export type AlertActionData = z.infer<typeof AlertActionSchema>;
 export type AlertData = z.infer<typeof AlertSchema>;
 export type WeatherData = z.infer<typeof WeatherForecastSchema>;
+export type HourlyWeatherData = z.infer<typeof HourlyWeatherSlotSchema>;
 export type PoiData = z.infer<typeof PointOfInterestSchema>;
 export type ResupplyData = z.infer<typeof ResupplySchema>;
 

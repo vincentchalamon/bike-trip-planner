@@ -979,7 +979,7 @@ export interface components {
              * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
              * @enum {string|null}
              */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
+            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
             /** @enum {string} */
             type?: "critical" | "warning" | "nudge";
             message?: string;
@@ -992,7 +992,7 @@ export interface components {
              * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
              * @enum {string|null}
              */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
+            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
             /** @enum {string} */
             type?: "critical" | "warning" | "nudge";
             message?: string;
@@ -1005,7 +1005,7 @@ export interface components {
              * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
              * @enum {string|null}
              */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
+            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
             /** @enum {string} */
             type?: "critical" | "warning" | "nudge";
             message?: string;
@@ -1275,6 +1275,42 @@ export interface components {
             lat: number;
             /** @description Longitude in decimal degrees (WGS84). */
             lon: number;
+        };
+        "HourlyWeatherSlot.fit": {
+            hour?: number;
+            temp?: number;
+            apparentTemp?: number;
+            precipitationMm?: number;
+            precipitationProbability?: number;
+            windSpeed?: number;
+            windGusts?: number;
+            windDirectionDeg?: number;
+            relativeWindDirection?: string;
+            weatherCode?: number;
+        };
+        "HourlyWeatherSlot.gpx": {
+            hour?: number;
+            temp?: number;
+            apparentTemp?: number;
+            precipitationMm?: number;
+            precipitationProbability?: number;
+            windSpeed?: number;
+            windGusts?: number;
+            windDirectionDeg?: number;
+            relativeWindDirection?: string;
+            weatherCode?: number;
+        };
+        "HourlyWeatherSlot.jsonld": {
+            hour?: number;
+            temp?: number;
+            apparentTemp?: number;
+            precipitationMm?: number;
+            precipitationProbability?: number;
+            windSpeed?: number;
+            windGusts?: number;
+            windDirectionDeg?: number;
+            relativeWindDirection?: string;
+            weatherCode?: number;
         };
         HydraCollectionBaseSchema: components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
             /**
@@ -1857,7 +1893,7 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
-                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
+                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;
@@ -2123,7 +2159,7 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
-                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "comfort_poor_conditions" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
+                    code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;
@@ -2233,6 +2269,12 @@ export interface components {
             humidity?: number;
             comfortIndex?: number;
             relativeWindDirection?: string;
+            apparentTempMin?: number;
+            apparentTempMax?: number;
+            windGusts?: number;
+            precipitationMm?: number;
+            uvIndex?: number;
+            hourly?: components["schemas"]["HourlyWeatherSlot.fit"][];
         };
         "WeatherForecast.gpx": {
             icon?: string;
@@ -2245,6 +2287,12 @@ export interface components {
             humidity?: number;
             comfortIndex?: number;
             relativeWindDirection?: string;
+            apparentTempMin?: number;
+            apparentTempMax?: number;
+            windGusts?: number;
+            precipitationMm?: number;
+            uvIndex?: number;
+            hourly?: components["schemas"]["HourlyWeatherSlot.gpx"][];
         };
         "WeatherForecast.jsonld": {
             icon?: string;
@@ -2257,6 +2305,12 @@ export interface components {
             humidity?: number;
             comfortIndex?: number;
             relativeWindDirection?: string;
+            apparentTempMin?: number;
+            apparentTempMax?: number;
+            windGusts?: number;
+            precipitationMm?: number;
+            uvIndex?: number;
+            hourly?: components["schemas"]["HourlyWeatherSlot.jsonld"][];
         };
     };
     responses: never;

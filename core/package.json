@@ -11,6 +11,8 @@
     "./mercure": "./mercure.ts",
     "./reconciliation": "./reconciliation.ts",
     "./elevation": "./elevation.ts",
+    "./weather-series": "./weather-series.ts",
+    "./weather-codes": "./weather-codes.ts",
     "./budget": "./budget.ts",
     "./difficulty": "./difficulty.ts",
     "./trip-text": "./trip-text.ts",

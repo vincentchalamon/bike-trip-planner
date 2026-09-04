@@ -117,6 +117,29 @@ export function stagesComputedEventWithGeometry(): MercureEvent {
   };
 }
 
+/** Advanced-weather fields (feels-like, gusts, rain mm, UV, hourly series). */
+function advancedWeather(baseTemp: number) {
+  return {
+    apparentTempMin: baseTemp - 3,
+    apparentTempMax: baseTemp + 5,
+    windGusts: 30,
+    precipitationMm: 1.2,
+    uvIndex: 3,
+    hourly: [8, 9, 10].map((hour, i) => ({
+      hour,
+      temp: baseTemp + i,
+      apparentTemp: baseTemp + i - 2,
+      precipitationMm: i * 0.5,
+      precipitationProbability: 10 + i * 10,
+      windSpeed: 12 + i,
+      windGusts: 25 + i * 5,
+      windDirectionDeg: 200,
+      relativeWindDirection: "crosswind" as const,
+      weatherCode: 2,
+    })),
+  };
+}
+
 export function weatherFetchedEvent(): MercureEvent {
   return {
     type: "weather_fetched",
@@ -135,6 +158,7 @@ export function weatherFetchedEvent(): MercureEvent {
             humidity: 65,
             comfortIndex: 78,
             relativeWindDirection: "crosswind",
+            ...advancedWeather(18),
           },
         },
         {
@@ -150,6 +174,7 @@ export function weatherFetchedEvent(): MercureEvent {
             humidity: 55,
             comfortIndex: 85,
             relativeWindDirection: "tailwind",
+            ...advancedWeather(20),
           },
         },
         {
@@ -165,6 +190,7 @@ export function weatherFetchedEvent(): MercureEvent {
             humidity: 75,
             comfortIndex: 60,
             relativeWindDirection: "headwind",
+            ...advancedWeather(16),
           },
         },
       ],
@@ -703,6 +729,7 @@ export function tripReadyEvent(): MercureEvent {
             humidity: 65,
             comfortIndex: 78,
             relativeWindDirection: "crosswind",
+            ...advancedWeather(18),
           },
           alerts: [],
           resupply: {

@@ -19,6 +19,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Enum\TripStatus;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Weather\WeatherForecastSerializer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -36,6 +37,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         private DoctrineTripRequestRepository $tripStateManager,
         private TripLocker $tripLocker,
         private ComputationTrackerInterface $computationTracker,
+        private WeatherForecastSerializer $weatherSerializer,
     ) {
     }
 
@@ -174,7 +176,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'endLabel' => $stage->endLabel,
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
-            'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
+            'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
             'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
             'resupply' => $this->serializeResupply($stage->resupply),
             'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
@@ -190,25 +192,6 @@ final readonly class TripDetailProvider implements ProviderInterface
     private function serializeCoord(Coordinate $coord): array
     {
         return ['lat' => $coord->lat, 'lon' => $coord->lon, 'ele' => $coord->ele];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serializeWeather(WeatherForecast $w): array
-    {
-        return [
-            'icon' => $w->icon,
-            'description' => $w->description,
-            'tempMin' => $w->tempMin,
-            'tempMax' => $w->tempMax,
-            'windSpeed' => $w->windSpeed,
-            'windDirection' => $w->windDirection,
-            'precipitationProbability' => $w->precipitationProbability,
-            'humidity' => $w->humidity,
-            'comfortIndex' => $w->comfortIndex,
-            'relativeWindDirection' => $w->relativeWindDirection,
-        ];
     }
 
     /**

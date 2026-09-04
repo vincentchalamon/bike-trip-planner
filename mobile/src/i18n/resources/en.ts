@@ -69,8 +69,7 @@ export const en: typeof fr = {
   },
   create: {
     title: 'New trip',
-    subtitle:
-      'Paste a route link or import a GPX file to get started.',
+    subtitle: 'Paste a route link or import a GPX file to get started.',
     linkSection: 'From a link',
     linkPlaceholder: 'Komoot, Strava or RideWithGPS link',
     submit: 'Import',
@@ -156,7 +155,7 @@ export const en: typeof fr = {
       q4: 'How do I change my account information?',
       a4: 'Go to Account to change your email address, language, theme, or export/delete your data.',
       q5: 'What happens if my trip has already started?',
-      a5: "A started trip becomes read-only: date or stage changes are no longer possible, to keep the already-computed data consistent.",
+      a5: 'A started trip becomes read-only: date or stage changes are no longer possible, to keep the already-computed data consistent.',
     },
     legalContent: {
       lastUpdated: 'Last updated: 29 May 2026',
@@ -204,13 +203,15 @@ export const en: typeof fr = {
         'For any question about this privacy policy, write to us at: __CONTACT_EMAIL__.\n\nThis policy may be updated; the last-updated date is shown at the top of this page.',
     },
     export: {
-      description: 'Download a JSON archive of your profile and trips (GDPR portability).',
+      description:
+        'Download a JSON archive of your profile and trips (GDPR portability).',
       action: 'Export my data',
       success: 'Data exported via the share sheet.',
       failed: 'Export failed. Try again.',
     },
     delete: {
-      warningBefore: 'Irreversible action: your trips and data will be anonymised. Type ',
+      warningBefore:
+        'Irreversible action: your trips and data will be anonymised. Type ',
       keyword: 'DELETE',
       warningAfter: ' to confirm.',
       action: 'Permanently delete my account',
@@ -235,14 +236,16 @@ export const en: typeof fr = {
     footer:
       'These notifications are service-related — weather, analysis, reminders — never marketing. "Zone opening" is an announcement, off by default. You can turn everything off here or in Android settings.',
     weatherSafetyTitle: 'Stage weather & safety',
-    weatherSafetyDesc: 'The day before and in the morning: stage weather + new alerts.',
+    weatherSafetyDesc:
+      'The day before and in the morning: stage weather + new alerts.',
     analysisDoneTitle: 'Analysis done or failed',
     analysisDoneDesc:
       "When the trip is ready — or on failure — and you're not already looking at it.",
     offlineNotReadyTitle: 'Offline sync not ready',
     offlineNotReadyDesc: 'Before a departure, if the data is not cached yet.',
     offlineNotReadyNotifTitle: 'Departure soon: data not downloaded',
-    offlineNotReadyNotifBody: 'Cache your trip to have it offline during the ride.',
+    offlineNotReadyNotifBody:
+      'Cache your trip to have it offline during the ride.',
     tripNoDateTitle: 'Trip without dates',
     tripNoDateDesc: 'Reminder to set the dates, 1-2 days after creation.',
     tripNoDateNotifTitle: 'Set your trip dates',
@@ -310,13 +313,16 @@ export const en: typeof fr = {
     editFailedTitle: 'Change failed',
     editFailedMessage: 'The change failed. Try again.',
     outOfZoneTitle: 'Out of area',
-    outOfZoneMessage: 'This change needs a recompute that is unavailable outside the covered area.',
+    outOfZoneMessage:
+      'This change needs a recompute that is unavailable outside the covered area.',
     offlineTitle: 'Offline',
     offlineMessage: 'Reconnect to edit this trip.',
     apiUnavailableTitle: 'Service unavailable',
-    apiUnavailableMessage: 'The service is temporarily unavailable. Try again later.',
+    apiUnavailableMessage:
+      'The service is temporarily unavailable. Try again later.',
     accommodationStaleTitle: 'List refreshed',
-    accommodationStaleMessage: 'The accommodations were refreshed. Try your selection again.',
+    accommodationStaleMessage:
+      'The accommodations were refreshed. Try your selection again.',
     accommodationGeocodeFailedTitle: 'Address not found',
     accommodationGeocodeFailedMessage:
       'Refine the address (add a city or postcode) and try again.',
@@ -407,6 +413,14 @@ export const en: typeof fr = {
       weatherTemp: '{{min}}° / {{max}}°',
       weatherWind: 'Wind {{speed}} km/h {{direction}}',
       weatherPrecip: 'Precipitation {{prob}} %',
+      weatherFeelsLike: 'Feels like {{min}}° / {{max}}°',
+      weatherGusts: 'Gusts {{speed}} km/h',
+      weatherRainMm: 'Rain {{mm}} mm',
+      weatherHourlyDetail: 'Hourly weather',
+      weatherHourlyTitle: 'Hourly weather',
+      weatherHourlyRow:
+        '{{hour}}h: {{temp}}°, feels {{feels}}°, rain {{mm}} mm, wind {{wind}} km/h',
+      weatherClose: 'Close',
       accommodation: 'Accommodations',
       accommodationEmpty: 'No accommodation found.',
       accommodationSelected: 'Selected',

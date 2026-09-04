@@ -35,6 +35,19 @@ export interface EnrichedStagePayload extends StagePayload {
   events: EventPayload[];
 }
 
+export interface HourlyWeatherSlotPayload {
+  hour: number;
+  temp: number;
+  apparentTemp: number;
+  precipitationMm: number;
+  precipitationProbability: number;
+  windSpeed: number;
+  windGusts: number;
+  windDirectionDeg: number;
+  relativeWindDirection: "headwind" | "tailwind" | "crosswind" | "unknown";
+  weatherCode: number;
+}
+
 export interface WeatherPayload {
   dayNumber: number;
   weather: {
@@ -48,6 +61,12 @@ export interface WeatherPayload {
     humidity: number;
     comfortIndex: number;
     relativeWindDirection: "headwind" | "tailwind" | "crosswind" | "unknown";
+    apparentTempMin: number;
+    apparentTempMax: number;
+    windGusts: number;
+    precipitationMm: number;
+    uvIndex: number;
+    hourly: HourlyWeatherSlotPayload[];
   } | null;
 }
 

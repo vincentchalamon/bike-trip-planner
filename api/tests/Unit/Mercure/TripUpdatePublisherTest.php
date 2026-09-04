@@ -13,6 +13,7 @@ use App\Mercure\CurrentCorrelationIdProvider;
 use App\Mercure\MercureEventType;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisher;
+use App\Weather\WeatherForecastSerializer;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -48,7 +49,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 5, 9, 2);
     }
 
@@ -70,7 +71,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
         $publisher->publishTripReady(self::TRIP_ID, [
             $this->createStage(1),
             $this->createStage(2),
@@ -96,7 +97,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
         $publisher->publishStageUpdated(self::TRIP_ID, $this->createStage(3));
     }
 
@@ -106,7 +107,7 @@ final class TripUpdatePublisherTest extends TestCase
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::exactly(3))->method('publish');
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
         $publisher->publishValidationError(self::TRIP_ID, 'MIN_STAGES', 'Too few stages.');
         $publisher->publishComputationError(self::TRIP_ID, 'weather', 'API down', retryable: true);
         $publisher->publishTripComplete(self::TRIP_ID, ['terrain' => 'done']);
@@ -145,7 +146,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider($expected));
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider($expected));
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 1, 2, 0);
     }
 
@@ -163,7 +164,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(), $this->createCorrelationIdProvider());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 1, 2, 0);
     }
 

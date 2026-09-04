@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\HourlyWeatherSlot;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -130,6 +131,74 @@ final class AnalyzeWindHandlerTest extends TestCase
             new DecimalFormatter(),
             $this->createStub(MessageBusInterface::class),
         );
+    }
+
+    #[Test]
+    public function emitsHeatColdRainAndGustAlertsFromHourlyDerivedFields(): void
+    {
+        $extreme = new WeatherForecast(
+            icon: 'sunny',
+            description: 'Clear',
+            tempMin: 20.0,
+            tempMax: 35.0,
+            windSpeed: 15.0,
+            windDirection: 'N',
+            precipitationProbability: 80,
+            humidity: 60,
+            comfortIndex: 80,
+            relativeWindDirection: WeatherForecast::RELATIVE_WIND_CROSSWIND,
+            apparentTempMin: -1.0,
+            apparentTempMax: 34.0,
+            windGusts: 55.0,
+            precipitationMm: 12.0,
+            hourly: [new HourlyWeatherSlot(9, 20.0, 19.0, 12.0, 80, 15.0, 55.0, 0, WeatherForecast::RELATIVE_WIND_CROSSWIND, 61)],
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1, $extreme)]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WIND_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $codes = array_column($data['alerts'], 'code');
+                    self::assertContains('heat_extreme', $codes);
+                    self::assertContains('cold_extreme', $codes);
+                    self::assertContains('rain_heavy', $codes);
+                    self::assertContains('wind_gusts_strong', $codes);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler(new AnalyzeWind('trip-1'));
+    }
+
+    #[Test]
+    public function noExtremeAlertsWhenForecastHasNoHourlyData(): void
+    {
+        // A legacy forecast without hourly data must not trip the extreme thresholds
+        // on its default field values (apparentTempMin defaults to 0.0).
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1, $this->createWeather())]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WIND_ALERTS,
+                $this->callback(static fn (array $data): bool => [] === $data['alerts']),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler(new AnalyzeWind('trip-1'));
     }
 
     #[Test]

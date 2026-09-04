@@ -13,6 +13,7 @@ use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
+use App\Weather\WeatherForecastSerializer;
 
 /**
  * Centralizes the wire-format serialization of {@see Stage} instances for Mercure events.
@@ -23,6 +24,10 @@ use App\ApiResource\Stage;
  */
 final readonly class StagePayloadMapper
 {
+    public function __construct(private WeatherForecastSerializer $weatherSerializer)
+    {
+    }
+
     /**
      * Serialises a single stage to the wire format expected by the frontend Mercure types.
      *
@@ -43,7 +48,7 @@ final readonly class StagePayloadMapper
                 $this->coordinateToPayload(...),
                 $stage->geometry,
             ),
-            'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherToPayload($stage->weather) : null,
+            'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
             'alerts' => array_map(
                 $this->alertToPayload(...),
                 $stage->alerts,
@@ -170,23 +175,6 @@ final readonly class StagePayloadMapper
             'imageUrl' => $event->imageUrl,
             'wikipediaUrl' => $event->wikipediaUrl,
             'openingHours' => $event->openingHours,
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    private function weatherToPayload(WeatherForecast $weather): array
-    {
-        return [
-            'icon' => $weather->icon,
-            'description' => $weather->description,
-            'tempMin' => $weather->tempMin,
-            'tempMax' => $weather->tempMax,
-            'windSpeed' => round($weather->windSpeed, 1),
-            'windDirection' => $weather->windDirection,
-            'precipitationProbability' => $weather->precipitationProbability,
-            'humidity' => $weather->humidity,
-            'comfortIndex' => $weather->comfortIndex,
-            'relativeWindDirection' => $weather->relativeWindDirection,
         ];
     }
 }

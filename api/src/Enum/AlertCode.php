@@ -35,7 +35,11 @@ enum AlertCode: string
     case CALENDAR_PUBLIC_HOLIDAY = 'calendar_public_holiday';
     case CALENDAR_SUNDAY = 'calendar_sunday';
     case WIND_HEADWIND = 'wind_headwind';
+    case WIND_GUSTS_STRONG = 'wind_gusts_strong';
     case COMFORT_POOR_CONDITIONS = 'comfort_poor_conditions';
+    case HEAT_EXTREME = 'heat_extreme';
+    case COLD_EXTREME = 'cold_extreme';
+    case RAIN_HEAVY = 'rain_heavy';
     case BIKE_SHOP_NONE_NEARBY = 'bike_shop_none_nearby';
     case RESUPPLY_NONE_ON_STAGE = 'resupply_none_on_stage';
     case RESUPPLY_CLOSED_AT_PASSAGE = 'resupply_closed_at_passage';
@@ -73,7 +77,11 @@ enum AlertCode: string
         self::CALENDAR_PUBLIC_HOLIDAY->value,
         self::CALENDAR_SUNDAY->value,
         self::WIND_HEADWIND->value,
+        self::WIND_GUSTS_STRONG->value,
         self::COMFORT_POOR_CONDITIONS->value,
+        self::HEAT_EXTREME->value,
+        self::COLD_EXTREME->value,
+        self::RAIN_HEAVY->value,
         self::BIKE_SHOP_NONE_NEARBY->value,
         self::RESUPPLY_NONE_ON_STAGE->value,
         self::RESUPPLY_CLOSED_AT_PASSAGE->value,

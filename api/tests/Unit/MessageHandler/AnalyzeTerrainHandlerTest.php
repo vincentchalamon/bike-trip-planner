@@ -19,6 +19,7 @@ use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Weather\WeatherForecastSerializer;
 use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
 use App\Osm\WaysRepositoryInterface;
@@ -85,7 +86,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $analyzerRegistry,
             $waysRepository,
             $distributor,
-            new StagePayloadMapper(),
+            new StagePayloadMapper(new WeatherForecastSerializer()),
             $this->createStub(MessageBusInterface::class),
         );
     }
