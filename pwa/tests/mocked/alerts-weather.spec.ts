@@ -108,6 +108,37 @@ test.describe("Alerts and weather", () => {
     await expect(card.getByRole("table")).toBeVisible();
   });
 
+  test("expands two stage cards independently with isolated panels", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      weatherFetchedEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    const card1 = mockedPage.getByTestId("stage-card-1");
+    const card2 = mockedPage.getByTestId("stage-card-2");
+    const toggle1 = card1.getByTestId("stage-weather-detail-toggle");
+    const toggle2 = card2.getByTestId("stage-weather-detail-toggle");
+
+    // Each toggle controls its own panel (unique per-card id, useId) — no collision.
+    const controls1 = await toggle1.getAttribute("aria-controls");
+    const controls2 = await toggle2.getAttribute("aria-controls");
+    expect(controls1).toBeTruthy();
+    expect(controls1).not.toBe(controls2);
+
+    // Expanding both leaves each card with its own visible table.
+    await toggle1.click();
+    await toggle2.click();
+    await expect(card1.getByRole("table")).toBeVisible();
+    await expect(card2.getByRole("table")).toBeVisible();
+  });
+
   test("shows weather in summary bar", async ({
     submitUrl,
     injectSequence,
