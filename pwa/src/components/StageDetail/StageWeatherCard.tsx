@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sunrise,
@@ -123,6 +123,7 @@ export function StageWeatherCard({
     : null;
 
   const [detailOpen, setDetailOpen] = useState(false);
+  const detailId = useId();
   const hasHourly = (weather?.hourly?.length ?? 0) > 0;
 
   // Beyond the provider horizon the backend returns no weather; tell the rider
@@ -254,7 +255,7 @@ export function StageWeatherCard({
           <button
             type="button"
             aria-expanded={detailOpen}
-            aria-controls="stage-weather-detail"
+            aria-controls={detailId}
             onClick={() => setDetailOpen((v) => !v)}
             data-testid="stage-weather-detail-toggle"
             className="mt-2 inline-flex min-h-11 items-center gap-1 text-xs font-medium text-foreground/80 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -268,7 +269,7 @@ export function StageWeatherCard({
           </button>
 
           {detailOpen && (
-            <div id="stage-weather-detail" className="mt-2">
+            <div id={detailId} className="mt-2">
               <StageWeatherProfile hourly={weather.hourly} />
             </div>
           )}

@@ -137,7 +137,7 @@ export function StageWeatherModal({
             <View
               key={h.hour}
               accessibilityLabel={t('trip.blocks.weatherHourlyRow', {
-                hour: h.hour,
+                hour: h.hour % 24,
                 temp: Math.round(h.temp),
                 feels: Math.round(h.apparentTemp),
                 mm: h.precipitationMm,
@@ -158,7 +158,7 @@ export function StageWeatherModal({
                   fontSize: 13,
                 }}
               >
-                {h.hour}h
+                {h.hour % 24}h
               </Text>
               <Text
                 style={{

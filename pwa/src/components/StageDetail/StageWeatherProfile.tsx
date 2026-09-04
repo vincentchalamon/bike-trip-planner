@@ -115,7 +115,7 @@ export function StageWeatherProfile({ hourly }: StageWeatherProfileProps) {
                   textAnchor="middle"
                   className="fill-muted-foreground text-[10px]"
                 >
-                  {p.hour}h
+                  {p.hour % 24}h
                 </text>
               </g>
             );
@@ -144,7 +144,7 @@ export function StageWeatherProfile({ hourly }: StageWeatherProfileProps) {
 
         {hovered && (
           <div className="pointer-events-none absolute right-0 top-0 rounded-md bg-card/95 px-2 py-1 text-[11px] shadow">
-            <span className="font-medium">{hovered.hour}h</span> ·{" "}
+            <span className="font-medium">{hovered.hour % 24}h</span> ·{" "}
             {Math.round(hovered.temp)}° ({t("feelsLike")}{" "}
             {Math.round(hovered.apparentTemp)}°) · {hovered.precipitationMm}mm ·{" "}
             {Math.round(hovered.windSpeed)}km/h
@@ -193,7 +193,7 @@ export function StageWeatherProfile({ hourly }: StageWeatherProfileProps) {
             {series.points.map((p) => (
               <tr key={`row-${p.hour}`} className="border-t border-border/50">
                 <th scope="row" className="py-1 pr-2 font-normal">
-                  {p.hour}h
+                  {p.hour % 24}h
                 </th>
                 <td className="py-1 pr-2">
                   {t(`condition.${weatherCodeToConditionKey(p.weatherCode)}`)}

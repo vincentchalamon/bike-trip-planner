@@ -95,7 +95,7 @@ export function WeatherBlock({ weather }: { weather: WeatherData | null }) {
                     <View
                       key={h.hour}
                       accessibilityLabel={t('trip.blocks.weatherHourlyRow', {
-                        hour: h.hour,
+                        hour: h.hour % 24,
                         temp: Math.round(h.temp),
                         feels: Math.round(h.apparentTemp),
                         mm: h.precipitationMm,
@@ -103,7 +103,7 @@ export function WeatherBlock({ weather }: { weather: WeatherData | null }) {
                       })}
                       style={{ alignItems: 'center', minWidth: 44 }}
                     >
-                      <Text style={muted}>{h.hour}h</Text>
+                      <Text style={muted}>{h.hour % 24}h</Text>
                       <Text
                         style={{
                           color: theme.colors.foreground,

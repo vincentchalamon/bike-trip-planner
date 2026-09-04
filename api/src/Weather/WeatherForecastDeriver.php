@@ -35,16 +35,19 @@ final readonly class WeatherForecastDeriver
         ?float $stageBearing,
         string $locale,
     ): ?WeatherForecast {
-        $startBucket = (int) floor($startHour);
-        $endBucket = (int) ceil($endHour);
+        // Absolute [start, end] window anchored at the stage's local midnight, so a
+        // riding window that crosses midnight (late departure / very long stage)
+        // still picks up the post-midnight hours from the next day's slots. Hours
+        // are then expressed relative to that midnight (0..23, then 24, 25… past
+        // midnight) so they stay monotonic for the graph; the UI shows `hour % 24`.
+        $midnight = new \DateTimeImmutable($localDate.' 00:00:00', $raw->timezone);
+        $startTs = $midnight->getTimestamp() + (int) floor($startHour) * 3600;
+        $endTs = $midnight->getTimestamp() + (int) ceil($endHour) * 3600;
+        $hourOf = static fn (RawHourlySlot $s): int => (int) round(($s->time->getTimestamp() - $midnight->getTimestamp()) / 3600);
 
         $window = array_values(array_filter(
-            $raw->slotsForDate($localDate),
-            static function (RawHourlySlot $s) use ($startBucket, $endBucket): bool {
-                $h = (int) $s->time->format('G');
-
-                return $h >= $startBucket && $h <= $endBucket;
-            },
+            $raw->slots,
+            static fn (RawHourlySlot $s): bool => $s->time->getTimestamp() >= $startTs && $s->time->getTimestamp() <= $endTs,
         ));
 
         // No hour of the riding window is covered by the forecast: no fake data.
@@ -75,7 +78,7 @@ final readonly class WeatherForecastDeriver
 
         $hourly = array_map(
             fn (RawHourlySlot $s): HourlyWeatherSlot => new HourlyWeatherSlot(
-                hour: (int) $s->time->format('G'),
+                hour: $hourOf($s),
                 temp: round($s->temp, 1),
                 apparentTemp: round($s->apparentTemp, 1),
                 precipitationMm: round($s->precipitationMm, 1),

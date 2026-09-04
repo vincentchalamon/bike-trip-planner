@@ -31,7 +31,7 @@ export function StageWeatherStrip({
       slot.relativeWindDirection !== "unknown"
         ? `, ${t(`relativeWind_${slot.relativeWindDirection}` as "relativeWind_headwind" | "relativeWind_tailwind" | "relativeWind_crosswind")}`
         : "";
-    return `${slot.hour}h, ${condition}, ${Math.round(slot.temp)}°C, ${t("wind")} ${Math.round(slot.windSpeed)} km/h${wind}`;
+    return `${slot.hour % 24}h, ${condition}, ${Math.round(slot.temp)}°C, ${t("wind")} ${Math.round(slot.windSpeed)} km/h${wind}`;
   };
 
   return (
@@ -46,7 +46,7 @@ export function StageWeatherStrip({
         const cell = (
           <>
             <span className="tabular-nums text-muted-foreground">
-              {slot.hour}h
+              {slot.hour % 24}h
             </span>
             <Icon className="h-4 w-4 text-foreground/80" aria-hidden="true" />
             <span className="tabular-nums font-medium">

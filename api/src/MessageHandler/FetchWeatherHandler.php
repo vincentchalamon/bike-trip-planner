@@ -124,7 +124,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                 $indices = array_keys($uncached);
                 $dates = array_map(static fn (int $i): string => $contexts[$i]['localDate'], $indices);
                 $rangeStart = new \DateTimeImmutable(min($dates), new \DateTimeZone('UTC'));
-                $rangeEnd = new \DateTimeImmutable(max($dates), new \DateTimeZone('UTC'));
+                // +1 day so a riding window that crosses midnight can read the next
+                // day's early hours (the deriver anchors the window on local midnight).
+                $rangeEnd = new \DateTimeImmutable(max($dates), new \DateTimeZone('UTC'))->modify('+1 day');
 
                 try {
                     $forecasts = $this->weatherProvider->fetchForecasts(array_values($uncached), $rangeStart, $rangeEnd);
@@ -135,7 +137,13 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                             continue;
                         }
 
-                        $dayRaw = new RawForecast($raw->timezone, $raw->slotsForDate($contexts[$stageIndex]['localDate']));
+                        // Cache the stage day plus the following day, so a window
+                        // crossing midnight has its post-midnight hours available and
+                        // the cache stays independent of pace/departure.
+                        $localDate = $contexts[$stageIndex]['localDate'];
+                        $nextDate = new \DateTimeImmutable($localDate)->modify('+1 day')->format('Y-m-d');
+                        $daySlots = array_merge($raw->slotsForDate($localDate), $raw->slotsForDate($nextDate));
+                        $dayRaw = new RawForecast($raw->timezone, $daySlots);
                         if ([] === $dayRaw->slots) {
                             continue;
                         }

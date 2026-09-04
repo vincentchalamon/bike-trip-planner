@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Weather;
 
+use App\ApiResource\Model\HourlyWeatherSlot;
 use App\ApiResource\Model\WeatherForecast;
 use App\Weather\RawForecast;
 use App\Weather\RawHourlySlot;
@@ -83,6 +84,29 @@ final class WeatherForecastDeriverTest extends TestCase
     public function returnsNullWhenTheDateIsNotCovered(): void
     {
         self::assertNull($this->deriver()->derive($this->raw(), '2026-09-05', 8.0, 10.0, 0.0, 'en'));
+    }
+
+    #[Test]
+    public function windowCrossingMidnightPicksUpNextDayHours(): void
+    {
+        // Late departure: window [22, 26] spans into the next calendar day. The
+        // deriver must include the 00:00/01:00 slots and express their hour as
+        // 24/25 (monotonic, relative to the stage-day midnight).
+        $raw = new RawForecast(new \DateTimeZone('Europe/Paris'), [
+            $this->slot('2026-09-04T22:00', 18.0, 16.0, 0.0, 10.0, 20.0),
+            $this->slot('2026-09-04T23:00', 16.0, 14.0, 1.0, 12.0, 22.0),
+            $this->slot('2026-09-05T00:00', 14.0, 12.0, 2.0, 14.0, 26.0),
+            $this->slot('2026-09-05T01:00', 12.0, 9.0, 3.0, 16.0, 30.0),
+            $this->slot('2026-09-05T02:00', 11.0, 8.0, 0.0, 8.0, 15.0),
+        ]);
+
+        $forecast = $this->deriver()->derive($raw, '2026-09-04', 22.0, 26.0, 0.0, 'en');
+
+        self::assertNotNull($forecast);
+        self::assertCount(5, $forecast->hourly, 'includes 22h, 23h and the next-day 00h, 01h, 02h');
+        self::assertSame([22, 23, 24, 25, 26], array_map(static fn (HourlyWeatherSlot $h): int => $h->hour, $forecast->hourly));
+        self::assertSame(11.0, $forecast->tempMin, 'min over the full window incl. post-midnight');
+        self::assertSame(6.0, $forecast->precipitationMm, 'summed across midnight');
     }
 
     #[Test]
