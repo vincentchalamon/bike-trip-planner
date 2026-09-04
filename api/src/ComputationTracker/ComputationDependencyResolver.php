@@ -18,8 +18,8 @@ final class ComputationDependencyResolver
         'maxDistancePerDay' => [ComputationName::STAGES],    // cascade subtree
         'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
         'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
-        'departureHour' => [ComputationName::TERRAIN],       // affects sunset arrival estimate
-        'averageSpeed' => [ComputationName::TERRAIN],        // affects sunset arrival estimate
+        'departureHour' => [ComputationName::TERRAIN, ComputationName::WEATHER], // sunset estimate + weather riding window
+        'averageSpeed' => [ComputationName::TERRAIN, ComputationName::WEATHER],  // sunset estimate + weather riding window
         'enabledAccommodationTypes' => [ComputationName::ACCOMMODATIONS], // re-scan with new types
     ];
 

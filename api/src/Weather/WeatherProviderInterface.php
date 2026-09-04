@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Weather;
 
-use App\ApiResource\Model\WeatherForecast;
-
 interface WeatherProviderInterface
 {
     /**
@@ -13,16 +11,17 @@ interface WeatherProviderInterface
      * failed call after retries, or a response missing the core fields) — never a
      * fabricated default, so the caller leaves the stage weather genuinely absent.
      */
-    public function fetchForecast(float $lat, float $lon, string $locale = 'en'): ?WeatherForecast;
+    public function fetchForecast(float $lat, float $lon, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): ?RawForecast;
 
     /**
-     * Fetch forecasts for multiple locations in a single API call. The result is
-     * aligned to $locations by index; an entry is null when that location has no
-     * usable forecast.
+     * Fetch raw hourly series for multiple locations in a single API call, over
+     * the [startDate, endDate] range (inclusive, provider forecast horizon). The
+     * result is aligned to $locations by index; an entry is null when that
+     * location has no usable forecast.
      *
      * @param list<array{lat: float, lon: float}> $locations
      *
-     * @return list<?WeatherForecast>
+     * @return list<?RawForecast>
      */
-    public function fetchForecasts(array $locations, string $locale = 'en'): array;
+    public function fetchForecasts(array $locations, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): array;
 }

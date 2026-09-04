@@ -80,6 +80,34 @@ test.describe("Alerts and weather", () => {
     );
   });
 
+  test("shows the hourly strip and expands the detailed table", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      weatherFetchedEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    const card = mockedPage.getByTestId("stage-card-1");
+
+    // Always-visible hourly strip.
+    await expect(card.getByTestId("stage-weather-strip")).toBeVisible();
+
+    // The detailed graph + table are behind the disclosure toggle.
+    const toggle = card.getByTestId("stage-weather-detail-toggle");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    // The accessible hourly table is the source of truth for the graph.
+    await expect(card.getByRole("table")).toBeVisible();
+  });
+
   test("shows weather in summary bar", async ({
     submitUrl,
     injectSequence,

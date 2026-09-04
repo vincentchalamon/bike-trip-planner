@@ -22,11 +22,21 @@ import { fetchTripDetail } from '../api/trips';
 import { fetchMercureToken, subscribeToTrip } from '../api/mercure';
 import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
-const mockDetail = fetchTripDetail as jest.MockedFunction<typeof fetchTripDetail>;
-const mockToken = fetchMercureToken as jest.MockedFunction<typeof fetchMercureToken>;
-const mockSubscribe = subscribeToTrip as jest.MockedFunction<typeof subscribeToTrip>;
-const mockCache = cacheTripDetail as jest.MockedFunction<typeof cacheTripDetail>;
-const mockReadCache = readTripCache as jest.MockedFunction<typeof readTripCache>;
+const mockDetail = fetchTripDetail as jest.MockedFunction<
+  typeof fetchTripDetail
+>;
+const mockToken = fetchMercureToken as jest.MockedFunction<
+  typeof fetchMercureToken
+>;
+const mockSubscribe = subscribeToTrip as jest.MockedFunction<
+  typeof subscribeToTrip
+>;
+const mockCache = cacheTripDetail as jest.MockedFunction<
+  typeof cacheTripDetail
+>;
+const mockReadCache = readTripCache as jest.MockedFunction<
+  typeof readTripCache
+>;
 
 const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
@@ -72,7 +82,12 @@ function enrichedPayload(): EnrichedStagePayload {
     label: null,
     weather: null,
     alerts: [],
-    resupply: { foodAtLunch: [], waterMorning: null, waterAfternoon: null, foodAtArrival: [] },
+    resupply: {
+      foodAtLunch: [],
+      waterMorning: null,
+      waterAfternoon: null,
+      foodAtArrival: [],
+    },
     accommodations: [],
     selectedAccommodation: null,
     events: [],
@@ -101,7 +116,11 @@ describe('runTripLive orchestration (#1014)', () => {
 
     expect(store().stages).toHaveLength(1);
     expect(store().loading).toBe(false);
-    expect(mockSubscribe).toHaveBeenCalledWith('t1', 'jwt', expect.any(Function));
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      't1',
+      'jwt',
+      expect.any(Function),
+    );
     expect(sub).toEqual({ close });
   });
 
@@ -181,7 +200,10 @@ describe('runTripLive orchestration (#1014)', () => {
 
     await runTripLive('t1', store(), notCancelled);
 
-    expect(mockCache).toHaveBeenCalledWith('t1', expect.objectContaining({ title: 'Trip' }));
+    expect(mockCache).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({ title: 'Trip' }),
+    );
   });
 
   it('hydrates from cache and skips SSE while offline (#1147)', async () => {
@@ -345,6 +367,12 @@ describe('computing state machine driven by SSE', () => {
               humidity: 60,
               comfortIndex: 4,
               relativeWindDirection: 'tailwind',
+              apparentTempMin: 6,
+              apparentTempMax: 15,
+              windGusts: 20,
+              precipitationMm: 0.8,
+              uvIndex: 2,
+              hourly: [],
             },
           },
         ],

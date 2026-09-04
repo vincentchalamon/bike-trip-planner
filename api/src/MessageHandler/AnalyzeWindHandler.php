@@ -33,6 +33,18 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
     private const int COMFORT_INDEX_POOR_THRESHOLD = 39;
 
+    /** Apparent temperature at or above this (°C) flags a heat-risk stage. */
+    private const float HEAT_APPARENT_MAX_C = 32.0;
+
+    /** Apparent temperature at or below this (°C) flags a cold-risk stage. */
+    private const float COLD_APPARENT_MIN_C = 2.0;
+
+    /** Total precipitation over the riding window at or above this (mm) flags heavy rain. */
+    private const float RAIN_HEAVY_MM = 10.0;
+
+    /** Wind gusts at or above this (km/h) flag a strong-gust stage. */
+    private const float WIND_GUSTS_STRONG_KMH = 50.0;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
@@ -62,6 +74,10 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             $alerts = [];
             $headwindCount = 0;
             $poorComfortCount = 0;
+            $heatCount = 0;
+            $coldCount = 0;
+            $rainCount = 0;
+            $gustCount = 0;
 
             foreach ($stages as $stage) {
                 if (null === $stage->weather) {
@@ -81,6 +97,29 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 // Count stages with poor comfort index
                 if ($weather->comfortIndex <= self::COMFORT_INDEX_POOR_THRESHOLD) {
                     ++$poorComfortCount;
+                }
+
+                // The apparent-temperature / rain-mm / gust thresholds are only
+                // meaningful once the hourly derivation has populated those fields;
+                // skip legacy/partial forecasts that carry defaults.
+                if ([] === $weather->hourly) {
+                    continue;
+                }
+
+                if ($weather->apparentTempMax >= self::HEAT_APPARENT_MAX_C) {
+                    ++$heatCount;
+                }
+
+                if ($weather->apparentTempMin <= self::COLD_APPARENT_MIN_C) {
+                    ++$coldCount;
+                }
+
+                if ($weather->precipitationMm >= self::RAIN_HEAVY_MM) {
+                    ++$rainCount;
+                }
+
+                if ($weather->windGusts >= self::WIND_GUSTS_STRONG_KMH) {
+                    ++$gustCount;
                 }
             }
 
@@ -138,9 +177,78 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 ];
             }
 
+            if ($heatCount > 0) {
+                $alerts[] = $this->alertPayload(
+                    AlertCode::HEAT_EXTREME,
+                    $this->translator->trans(
+                        'alert.heat.warning',
+                        ['%count%' => $heatCount, '%threshold%' => $this->decimalFormatter->format(self::HEAT_APPARENT_MAX_C, $locale)],
+                        'alerts',
+                        $locale,
+                    ),
+                    $dismissAction,
+                );
+            }
+
+            if ($coldCount > 0) {
+                $alerts[] = $this->alertPayload(
+                    AlertCode::COLD_EXTREME,
+                    $this->translator->trans(
+                        'alert.cold.warning',
+                        ['%count%' => $coldCount, '%threshold%' => $this->decimalFormatter->format(self::COLD_APPARENT_MIN_C, $locale)],
+                        'alerts',
+                        $locale,
+                    ),
+                    $dismissAction,
+                );
+            }
+
+            if ($rainCount > 0) {
+                $alerts[] = $this->alertPayload(
+                    AlertCode::RAIN_HEAVY,
+                    $this->translator->trans(
+                        'alert.rain.warning',
+                        ['%count%' => $rainCount, '%threshold%' => $this->decimalFormatter->format(self::RAIN_HEAVY_MM, $locale)],
+                        'alerts',
+                        $locale,
+                    ),
+                    $dismissAction,
+                );
+            }
+
+            if ($gustCount > 0) {
+                $alerts[] = $this->alertPayload(
+                    AlertCode::WIND_GUSTS_STRONG,
+                    $this->translator->trans(
+                        'alert.gusts.warning',
+                        ['%count%' => $gustCount, '%threshold%' => $this->decimalFormatter->format(self::WIND_GUSTS_STRONG_KMH, $locale)],
+                        'alerts',
+                        $locale,
+                    ),
+                    $dismissAction,
+                );
+            }
+
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [
                 'alerts' => $alerts,
             ]);
         }, $generation);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function alertPayload(AlertCode $code, string $message, AlertAction $action): array
+    {
+        return [
+            'code' => $code->value,
+            'type' => AlertType::WARNING->value,
+            'message' => $message,
+            'action' => [
+                'kind' => $action->kind->value,
+                'label' => $action->label,
+                'payload' => $action->payload,
+            ],
+        ];
     }
 }

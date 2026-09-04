@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sunrise,
@@ -9,6 +10,9 @@ import {
   Gauge,
   Moon,
   Sun,
+  Thermometer,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
 import {
@@ -17,6 +21,14 @@ import {
   formatSunTime,
 } from "@/lib/sun-times";
 import type { WeatherData } from "@btp/core";
+import { StageWeatherStrip } from "./StageWeatherStrip";
+import { StageWeatherProfile } from "./StageWeatherProfile";
+
+/** Open-Meteo forecast horizon; beyond it the backend returns no weather. */
+const FORECAST_HORIZON_DAYS = 16;
+
+/** Gusts are only worth surfacing on the card when notably above the mean wind. */
+const GUST_HIGHLIGHT_DELTA_KMH = 15;
 
 function getComfortColor(index: number): string {
   if (index >= 70) return "text-emerald-500";
@@ -110,7 +122,24 @@ export function StageWeatherCard({
     ? isSunUp(stageDate, sunTimes.sunrise, sunTimes.sunset)
     : null;
 
-  if (!weather && !showSunTimes) {
+  const [detailOpen, setDetailOpen] = useState(false);
+  const hasHourly = (weather?.hourly?.length ?? 0) > 0;
+
+  // Beyond the provider horizon the backend returns no weather; tell the rider
+  // why rather than showing an empty card. Computed in an effect since it reads
+  // the wall clock (impure during render).
+  const calendarTime =
+    computeStageDate(startDate ?? null, stageIndex)?.getTime() ?? null;
+  const [beyondHorizon, setBeyondHorizon] = useState(false);
+  useEffect(() => {
+    setBeyondHorizon(
+      !weather &&
+        calendarTime !== null &&
+        (calendarTime - Date.now()) / 86_400_000 > FORECAST_HORIZON_DAYS,
+    );
+  }, [weather, calendarTime]);
+
+  if (!weather && !showSunTimes && !beyondHorizon) {
     return null;
   }
 
@@ -169,6 +198,16 @@ export function StageWeatherCard({
 
       {weather && (
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          {hasHourly && (
+            <div className="flex items-center gap-1" title={t("feelsLike")}>
+              <Thermometer className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>
+                {t("feelsLike")} {Math.round(weather.apparentTempMin)}-
+                {Math.round(weather.apparentTempMax)}°
+              </span>
+            </div>
+          )}
+
           <div
             className="flex items-center gap-1"
             title={`${t("wind")}: ${weather.windDirection}`}
@@ -176,6 +215,10 @@ export function StageWeatherCard({
             <Wind className="h-3.5 w-3.5" aria-hidden="true" />
             <span>
               {Math.round(weather.windSpeed)} km/h {relativeWindLabel}
+              {hasHourly &&
+              weather.windGusts >= weather.windSpeed + GUST_HIGHLIGHT_DELTA_KMH
+                ? ` · ${t("gusts")} ${Math.round(weather.windGusts)}`
+                : ""}
             </span>
           </div>
 
@@ -184,15 +227,61 @@ export function StageWeatherCard({
             <span>{weather.humidity}%</span>
           </div>
 
-          {weather.precipitationProbability > 0 && (
+          {(hasHourly
+            ? weather.precipitationMm > 0
+            : weather.precipitationProbability > 0) && (
             <div className="flex items-center gap-1" title={t("rain")}>
               <span className="text-blue-400" aria-hidden="true">
                 🌧
               </span>
-              <span>{weather.precipitationProbability}%</span>
+              <span>
+                {hasHourly
+                  ? `${weather.precipitationMm} ${t("mmUnit")}`
+                  : `${weather.precipitationProbability}%`}
+              </span>
             </div>
           )}
         </div>
+      )}
+
+      {hasHourly && weather && (
+        <>
+          <StageWeatherStrip
+            hourly={weather.hourly}
+            onSelectHour={() => setDetailOpen(true)}
+          />
+
+          <button
+            type="button"
+            aria-expanded={detailOpen}
+            aria-controls="stage-weather-detail"
+            onClick={() => setDetailOpen((v) => !v)}
+            data-testid="stage-weather-detail-toggle"
+            className="mt-2 inline-flex min-h-11 items-center gap-1 text-xs font-medium text-foreground/80 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {detailOpen ? (
+              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            )}
+            {t("hourlyDetailToggle")}
+          </button>
+
+          {detailOpen && (
+            <div id="stage-weather-detail" className="mt-2">
+              <StageWeatherProfile hourly={weather.hourly} />
+            </div>
+          )}
+        </>
+      )}
+
+      {beyondHorizon && (
+        <p
+          data-testid="stage-weather-horizon"
+          className="text-xs text-muted-foreground"
+        >
+          {t("forecastHorizon", { days: FORECAST_HORIZON_DAYS })}
+        </p>
       )}
 
       {showSunTimes && (

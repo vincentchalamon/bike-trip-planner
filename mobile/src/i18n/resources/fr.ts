@@ -31,7 +31,8 @@ export const fr = {
   auth: {
     verifying: 'Connexion en cours…',
     expiredTitle: 'Lien expiré ou invalide',
-    expiredBody: "Ce lien de connexion n'est plus valide. Demande-en un nouveau.",
+    expiredBody:
+      "Ce lien de connexion n'est plus valide. Demande-en un nouveau.",
     requestNew: 'Demander un nouveau lien',
   },
   trips: {
@@ -146,15 +147,15 @@ export const fr = {
     },
     faqContent: {
       q1: "Qu'est-ce que le bikepacking ?",
-      a1: "Le bikepacking consiste à voyager à vélo sur plusieurs jours en autonomie, avec son matériel de bivouac ou en hébergement. Bike Trip Planner découpe automatiquement ton parcours en étapes journalières adaptées à ton profil.",
+      a1: 'Le bikepacking consiste à voyager à vélo sur plusieurs jours en autonomie, avec son matériel de bivouac ou en hébergement. Bike Trip Planner découpe automatiquement ton parcours en étapes journalières adaptées à ton profil.',
       q2: "Qu'est-ce que le roadbook ?",
-      a2: "Le roadbook est la vue jour par jour de ton voyage : distance, dénivelé, hébergements suggérés, météo et alertes pour chaque étape. Il se met à jour automatiquement après un recalcul.",
+      a2: 'Le roadbook est la vue jour par jour de ton voyage : distance, dénivelé, hébergements suggérés, météo et alertes pour chaque étape. Il se met à jour automatiquement après un recalcul.',
       q3: 'Comment fonctionnent les notifications ?',
       a3: 'Les notifications te préviennent des événements importants sur tes voyages (recalcul terminé, alerte météo, etc.). Tu peux gérer les catégories activées depuis Compte > Notifications.',
       q4: 'Comment modifier les informations de mon compte ?',
       a4: 'Rends-toi dans Compte pour changer ton adresse email, ta langue, ton thème, ou exporter/supprimer tes données.',
       q5: 'Que se passe-t-il si mon voyage a déjà démarré ?',
-      a5: 'Un voyage démarré passe en lecture seule : les modifications de dates ou d\'étapes ne sont plus possibles pour préserver la cohérence des données déjà calculées.',
+      a5: "Un voyage démarré passe en lecture seule : les modifications de dates ou d'étapes ne sont plus possibles pour préserver la cohérence des données déjà calculées.",
     },
     legalContent: {
       lastUpdated: 'Dernière mise à jour : 29 mai 2026',
@@ -187,7 +188,7 @@ export const fr = {
         "Compte : ton adresse email, nécessaire à la connexion par lien magique.\n\nVoyages : la configuration de tes voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour te permettre d'y accéder depuis n'importe quel appareil.\n\nDonnées de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.\n\nAucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers.",
       retentionTitle: 'Durée de conservation',
       retentionBody:
-        'Ton compte et tes voyages sont conservés tant que ton compte est actif. Tu peux demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de ton compte.\n\nLes données de tracé brutes en cache sont conservées au maximum 24 heures.\n\nLes données de mesure d\'audience anonyme sont agrégées et ne permettent pas de te réidentifier.',
+        "Ton compte et tes voyages sont conservés tant que ton compte est actif. Tu peux demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de ton compte.\n\nLes données de tracé brutes en cache sont conservées au maximum 24 heures.\n\nLes données de mesure d'audience anonyme sont agrégées et ne permettent pas de te réidentifier.",
       rightsTitle: 'Tes droits',
       rightsBody:
         "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de tes données.\n\nPour exercer ces droits, contacte-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.\n\nTu as également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr).",
@@ -199,7 +200,7 @@ export const fr = {
         "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur la même infrastructure que l'application.\n\nPlausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.\n\nLes adresses IP et les agents utilisateurs (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de t'identifier ou de te suivre entre les sites.\n\nFinalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.\n\nAucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; tu conserves néanmoins tes droits d'opposition décrits ci-dessus.",
       contactTitle: 'Contact',
       contactBody:
-        "Pour toute question relative à cette politique de confidentialité, écris-nous à : __CONTACT_EMAIL__.\n\nCette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page.",
+        'Pour toute question relative à cette politique de confidentialité, écris-nous à : __CONTACT_EMAIL__.\n\nCette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page.',
     },
     export: {
       description:
@@ -209,7 +210,8 @@ export const fr = {
       failed: "L'export a échoué. Réessaie.",
     },
     delete: {
-      warningBefore: 'Action irréversible : tes voyages et données seront anonymisés. Tape ',
+      warningBefore:
+        'Action irréversible : tes voyages et données seront anonymisés. Tape ',
       keyword: 'SUPPRIMER',
       warningAfter: ' pour confirmer.',
       action: 'Supprimer définitivement mon compte',
@@ -226,7 +228,8 @@ export const fr = {
     permissionDenied: 'Bloquées par le système',
     permissionDeniedHint: 'Réactive-les dans les réglages Android.',
     permissionPrompt: 'Active les notifications système',
-    permissionPromptHint: 'Sans autorisation, aucune notification ne peut être envoyée.',
+    permissionPromptHint:
+      'Sans autorisation, aucune notification ne peut être envoyée.',
     permissionAllow: 'Autoriser',
     groupTrips: 'Voyages à venir & en cours',
     groupCoverage: 'Couverture',
@@ -234,19 +237,22 @@ export const fr = {
     footer:
       'Ces notifications sont liées au service — météo, analyse, rappels — jamais du marketing. « Ouverture de zone » est une annonce, désactivée par défaut. Tu peux tout couper ici ou dans les réglages Android.',
     weatherSafetyTitle: "Météo & sécurité d'étape",
-    weatherSafetyDesc: "La veille et le matin : météo de l'étape + nouvelles alertes.",
+    weatherSafetyDesc:
+      "La veille et le matin : météo de l'étape + nouvelles alertes.",
     analysisDoneTitle: 'Analyse terminée ou échouée',
     analysisDoneDesc:
       "Quand le voyage est prêt — ou en cas d'échec — et que tu n'es pas déjà en train de le regarder.",
     offlineNotReadyTitle: 'Synchro hors-ligne non prête',
-    offlineNotReadyDesc: "Avant un départ, si les données ne sont pas encore en cache.",
+    offlineNotReadyDesc:
+      'Avant un départ, si les données ne sont pas encore en cache.',
     offlineNotReadyNotifTitle: 'Départ proche : données non téléchargées',
     offlineNotReadyNotifBody:
       "Mets ton voyage en cache pour l'avoir hors-ligne pendant le trajet.",
     tripNoDateTitle: 'Voyage sans date',
     tripNoDateDesc: 'Rappel de définir les dates, 1-2 jours après la création.',
     tripNoDateNotifTitle: 'Définis les dates de ton voyage',
-    tripNoDateNotifBody: 'Ajoute une date de départ pour planifier étapes et météo.',
+    tripNoDateNotifBody:
+      'Ajoute une date de départ pour planifier étapes et météo.',
     zoneOpeningTitle: "Ouverture d'une nouvelle zone",
     zoneOpeningDesc: 'Quand une région qui te concerne devient couverte.',
   },
@@ -310,13 +316,16 @@ export const fr = {
     editFailedTitle: 'Modification impossible',
     editFailedMessage: 'La modification a échoué. Réessayez.',
     outOfZoneTitle: 'Hors zone',
-    outOfZoneMessage: 'Cette modification nécessite un recalcul indisponible hors de la zone couverte.',
+    outOfZoneMessage:
+      'Cette modification nécessite un recalcul indisponible hors de la zone couverte.',
     offlineTitle: 'Hors connexion',
     offlineMessage: 'Reconnectez-vous pour modifier ce voyage.',
     apiUnavailableTitle: 'Service indisponible',
-    apiUnavailableMessage: 'Le service est momentanément indisponible. Réessayez plus tard.',
+    apiUnavailableMessage:
+      'Le service est momentanément indisponible. Réessayez plus tard.',
     accommodationStaleTitle: 'Liste actualisée',
-    accommodationStaleMessage: 'Les hébergements ont été réactualisés. Réessayez votre sélection.',
+    accommodationStaleMessage:
+      'Les hébergements ont été réactualisés. Réessayez votre sélection.',
     accommodationGeocodeFailedTitle: 'Adresse introuvable',
     accommodationGeocodeFailedMessage:
       "Précisez l'adresse (ajoutez une ville ou un code postal) et réessayez.",
@@ -333,7 +342,8 @@ export const fr = {
       failedTitle: 'Modification impossible',
       reason: {
         locked: 'Ce voyage a démarré : il est en lecture seule.',
-        out_of_zone: 'Cette action nécessite un itinéraire dans la zone couverte.',
+        out_of_zone:
+          'Cette action nécessite un itinéraire dans la zone couverte.',
         offline: 'Vous êtes hors ligne. Reconnectez-vous pour modifier.',
         api_unavailable: 'Service indisponible. Réessayez plus tard.',
         validation: 'Valeur invalide. Vérifiez la distance saisie.',
@@ -407,6 +417,14 @@ export const fr = {
       weatherTemp: '{{min}}° / {{max}}°',
       weatherWind: 'Vent {{speed}} km/h {{direction}}',
       weatherPrecip: 'Précipitations {{prob}} %',
+      weatherFeelsLike: 'Ressenti {{min}}° / {{max}}°',
+      weatherGusts: 'Rafales {{speed}} km/h',
+      weatherRainMm: 'Pluie {{mm}} mm',
+      weatherHourlyDetail: 'Météo heure par heure',
+      weatherHourlyTitle: 'Météo heure par heure',
+      weatherHourlyRow:
+        '{{hour}} h : {{temp}}°, ressenti {{feels}}°, pluie {{mm}} mm, vent {{wind}} km/h',
+      weatherClose: 'Fermer',
       accommodation: 'Hébergements',
       accommodationEmpty: 'Aucun hébergement trouvé.',
       accommodationSelected: 'Sélectionné',
@@ -431,7 +449,8 @@ export const fr = {
       resupplyWaterMorning: 'Eau matin',
       resupplyWaterAfternoon: 'Eau après-midi',
       resupplyArrival: 'Ravitaillement arrivée',
-      resupplyHelp: 'Suggestions indicatives — vérifiez horaires et disponibilité.',
+      resupplyHelp:
+        'Suggestions indicatives — vérifiez horaires et disponibilité.',
       supply: 'Ravitaillement',
       supplyEmpty: 'Aucun point de ravitaillement.',
       supplyMarkerAt: 'km {{distance}} · {{water}} eau · {{food}} ravito',
@@ -482,8 +501,7 @@ export const fr = {
       offlineBadge: 'Hors ligne',
       offlineHint: "La recherche de points d'intérêt nécessite une connexion.",
       disclaimerStrong: "Ton itinéraire n'est pas modifié.",
-      disclaimer:
-        'Données OSM — à vérifier sur place (horaires, ouverture).',
+      disclaimer: 'Données OSM — à vérifier sur place (horaires, ouverture).',
       locationWaiting: 'Recherche du signal GPS…',
       locationDeniedTitle: 'Localisation désactivée',
       locationDenied:
@@ -517,7 +535,8 @@ export const fr = {
         found: '{{count}} adresses à proximité.',
         foundTruncated: 'Les {{count}} plus proches sur {{total}} à proximité.',
         none: "Rien d'exploitable à proximité.",
-        capReached: 'Aucun résultat exploitable parmi les {{count}} plus proches.',
+        capReached:
+          'Aucun résultat exploitable parmi les {{count}} plus proches.',
         outOfCoverage: 'Tu es en dehors de la zone couverte.',
       },
       warning: {
@@ -650,7 +669,7 @@ export const fr = {
       ride: {
         title: 'Passe en selle',
         description:
-          "Sur le terrain, « En selle » affiche ta position et les points utiles autour de toi (eau, abri, ravito), même hors-ligne.",
+          'Sur le terrain, « En selle » affiche ta position et les points utiles autour de toi (eau, abri, ravito), même hors-ligne.',
       },
     },
   },

@@ -106,6 +106,12 @@ const weather = {
   humidity: 50,
   comfortIndex: 100,
   relativeWindDirection: "unknown" as const,
+  apparentTempMin: 9,
+  apparentTempMax: 19,
+  windGusts: 8,
+  precipitationMm: 0,
+  uvIndex: 1,
+  hourly: [],
 };
 
 describe("reduceMercureEvent — trip-level events", () => {

@@ -32,3 +32,17 @@ export const weatherIconMap: Record<string, React.ElementType> = {
 
 /** Default weather icon when code is not found */
 export const DefaultWeatherIcon = Cloud;
+
+/** Lucide icon for a WMO weather code (per-hour strip / graph, mirrors backend buckets). */
+export function weatherIconForCode(code: number): React.ElementType {
+  if (code === 0 || code === 1) return Sun;
+  if (code === 2) return CloudSun;
+  if (code === 3) return Cloud;
+  if (code === 45 || code === 48) return CloudFog;
+  if (code >= 51 && code <= 67) return CloudRain;
+  if (code >= 71 && code <= 77) return Snowflake;
+  if (code >= 80 && code <= 82) return CloudRain;
+  if (code === 85 || code === 86) return Snowflake;
+  if (code >= 95 && code <= 99) return CloudLightning;
+  return Cloud;
+}

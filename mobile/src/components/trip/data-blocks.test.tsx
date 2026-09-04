@@ -38,7 +38,9 @@ jest.mock('../../hooks/use-trip-mutations', () => ({
 
 function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap((t: any) => {
-    const kids = Array.isArray(t.props.children) ? t.props.children : [t.props.children];
+    const kids = Array.isArray(t.props.children)
+      ? t.props.children
+      : [t.props.children];
     return kids.filter((c: unknown): c is string => typeof c === 'string');
   });
 }
@@ -111,7 +113,9 @@ describe('AlertsBlock', () => {
   it('hides an alert dismissed on its stage (keyed on code, not wording)', () => {
     useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
     const t = texts(
-      render(<AlertsBlock alerts={[alert({ message: 'Caché' })]} stageKey={1} />),
+      render(
+        <AlertsBlock alerts={[alert({ message: 'Caché' })]} stageKey={1} />,
+      ),
     );
     expect(t).not.toContain('Caché');
     expect(t).toContain(fr.trip.blocks.alertsEmpty);
@@ -121,7 +125,9 @@ describe('AlertsBlock', () => {
     // Same code 'c1' dismissed on stage 1 must remain visible on stage 2.
     useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
     const t = texts(
-      render(<AlertsBlock alerts={[alert({ message: 'Visible' })]} stageKey={2} />),
+      render(
+        <AlertsBlock alerts={[alert({ message: 'Visible' })]} stageKey={2} />,
+      ),
     );
     expect(t).toContain('Visible');
   });
@@ -183,6 +189,12 @@ describe('WeatherBlock', () => {
       humidity: 60,
       comfortIndex: 80,
       relativeWindDirection: 'headwind',
+      apparentTempMin: 6,
+      apparentTempMax: 15,
+      windGusts: 35,
+      precipitationMm: 2.4,
+      uvIndex: 3,
+      hourly: [],
     };
     const t = texts(render(<WeatherBlock weather={weather} />)).join(' ');
     expect(t).toContain('Averses');
@@ -229,7 +241,11 @@ describe('AccommodationBlock', () => {
       render(
         <AccommodationBlock
           accommodations={[
-            acc({ estimatedPriceMin: 30, estimatedPriceMax: 45, isExactPrice: true }),
+            acc({
+              estimatedPriceMin: 30,
+              estimatedPriceMax: 45,
+              isExactPrice: true,
+            }),
           ]}
         />,
       ),
@@ -243,7 +259,11 @@ describe('AccommodationBlock', () => {
       render(
         <AccommodationBlock
           accommodations={[
-            acc({ estimatedPriceMin: 12, estimatedPriceMax: 20, isExactPrice: false }),
+            acc({
+              estimatedPriceMin: 12,
+              estimatedPriceMax: 20,
+              isExactPrice: false,
+            }),
           ]}
         />,
       ),
@@ -317,9 +337,15 @@ describe('AccommodationBlock', () => {
 
   it('renders a zero distance rather than dropping it (accommodation at the endpoint)', () => {
     const meta = texts(
-      render(<AccommodationBlock accommodations={[acc({ distanceToEndPoint: 0 })]} />),
+      render(
+        <AccommodationBlock
+          accommodations={[acc({ distanceToEndPoint: 0 })]}
+        />,
+      ),
     ).join(' ');
-    expect(meta).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '0'));
+    expect(meta).toContain(
+      fr.trip.blocks.distanceKm.replace('{{distance}}', '0'),
+    );
   });
 
   it('stays read-only (no select/expand buttons) without editing callbacks', () => {
@@ -673,8 +699,22 @@ describe('ResupplyBlock', () => {
 describe('SupplyBlock', () => {
   it('renders markers ordered by distance with the km mark', () => {
     const markers: SupplyMarkerData[] = [
-      { type: 'water', distanceFromStart: 30, lat: 0, lon: 0, water: [], food: [] },
-      { type: 'food', distanceFromStart: 10, lat: 0, lon: 0, water: [], food: [] },
+      {
+        type: 'water',
+        distanceFromStart: 30,
+        lat: 0,
+        lon: 0,
+        water: [],
+        food: [],
+      },
+      {
+        type: 'food',
+        distanceFromStart: 10,
+        lat: 0,
+        lon: 0,
+        water: [],
+        food: [],
+      },
     ];
     const t = texts(render(<SupplyBlock supplyTimeline={markers} />));
     const first = t.find((s) => s.startsWith('km'));
@@ -706,7 +746,9 @@ describe('EventsBlock', () => {
     const tree = render(<EventsBlock events={events} />);
     expect(texts(tree)).not.toContain('D');
     // The only button in the block is the "see more" toggle.
-    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    act(() =>
+      tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress(),
+    );
     expect(texts(tree)).toContain('D');
   });
 
@@ -715,7 +757,9 @@ describe('EventsBlock', () => {
       event(`E${i}`, `2026-06-0${i + 1}`),
     );
     const tree = render(<EventsBlock events={events} />);
-    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    act(() =>
+      tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress(),
+    );
     const t = texts(tree);
     expect(t).toContain('E4'); // 5th soonest is shown
     expect(t).not.toContain('E5'); // 6th and 7th are capped out

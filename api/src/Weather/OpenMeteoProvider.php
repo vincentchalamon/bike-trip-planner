@@ -4,55 +4,47 @@ declare(strict_types=1);
 
 namespace App\Weather;
 
-use App\ApiResource\Model\WeatherForecast;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class OpenMeteoProvider implements WeatherProviderInterface
 {
+    private const string HOURLY_VARS = 'temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,uv_index';
+
     public function __construct(
         #[Autowire(service: 'open_meteo.client')]
         private HttpClientInterface $httpClient,
-        private TranslatorInterface $translator,
-        private ComfortIndexCalculator $comfortIndexCalculator = new ComfortIndexCalculator(),
     ) {
     }
 
-    public function fetchForecast(float $lat, float $lon, string $locale = 'en'): ?WeatherForecast
+    public function fetchForecast(float $lat, float $lon, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): ?RawForecast
     {
         $response = $this->httpClient->request('GET', '/v1/forecast', [
             'query' => [
                 'latitude' => $lat,
                 'longitude' => $lon,
-                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,relative_humidity_2m_mean',
+                'hourly' => self::HOURLY_VARS,
                 'timezone' => 'auto',
-                'forecast_days' => 1,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
             ],
         ]);
 
-        /** @var array{daily?: array<string, list<float|int>>} $data */
+        /** @var array<string, mixed> $data */
         $data = $response->toArray();
 
-        return $this->parseForecast($data['daily'] ?? [], $locale);
+        return $this->parseForecast($data);
     }
 
-    /**
-     * Fetch forecasts for multiple locations in a single API call.
-     *
-     * @param list<array{lat: float, lon: float}> $locations
-     *
-     * @return list<?WeatherForecast>
-     */
-    public function fetchForecasts(array $locations, string $locale = 'en'): array
+    public function fetchForecasts(array $locations, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): array
     {
         if ([] === $locations) {
             return [];
         }
 
-        // Single location: delegate to existing method (API response format differs)
+        // Single location: delegate — the API response format differs (object vs array).
         if (1 === \count($locations)) {
-            return [$this->fetchForecast($locations[0]['lat'], $locations[0]['lon'], $locale)];
+            return [$this->fetchForecast($locations[0]['lat'], $locations[0]['lon'], $startDate, $endDate)];
         }
 
         $latitudes = implode(',', array_map(static fn (array $loc): string => (string) $loc['lat'], $locations));
@@ -62,97 +54,116 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             'query' => [
                 'latitude' => $latitudes,
                 'longitude' => $longitudes,
-                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,relative_humidity_2m_mean',
+                'hourly' => self::HOURLY_VARS,
                 'timezone' => 'auto',
-                'forecast_days' => 1,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
             ],
         ]);
 
-        /** @var list<array{daily?: array<string, list<float|int>>}> $dataList */
+        /** @var list<array<string, mixed>> $dataList */
         $dataList = $response->toArray();
 
-        return array_map(fn (array $data): ?WeatherForecast => $this->parseForecast($data['daily'] ?? [], $locale), $dataList);
+        return array_map($this->parseForecast(...), $dataList);
     }
 
     /**
-     * Builds a forecast from one open-meteo `daily` block, or null when the core
-     * fields (weather code + both temperatures) are absent — so a 200 response
-     * with an empty/partial body yields no weather rather than a fabricated 0 °C
-     * clear-sky forecast (ADR — Tier 3 "no fake data").
+     * Builds a RawForecast from one open-meteo response block, or null when the
+     * hourly block is absent — so a 200 response with an empty body yields no
+     * weather rather than fabricated readings (Tier 3 "no fake data").
      *
-     * @param array<string, list<float|int>> $daily
+     * @param array<string, mixed> $data
      */
-    private function parseForecast(array $daily, string $locale): ?WeatherForecast
+    private function parseForecast(array $data): ?RawForecast
     {
-        if (!isset($daily['weather_code'][0], $daily['temperature_2m_max'][0], $daily['temperature_2m_min'][0])) {
+        $hourly = $data['hourly'] ?? null;
+        if (!\is_array($hourly) || !isset($hourly['time']) || !\is_array($hourly['time'])) {
             return null;
         }
 
-        $weatherCode = (int) $daily['weather_code'][0];
-        $tempMax = (float) $daily['temperature_2m_max'][0];
-        $tempMin = (float) $daily['temperature_2m_min'][0];
-        // Secondary fields keep conservative defaults when absent (dry, calm).
-        $precipProb = (int) ($daily['precipitation_probability_max'][0] ?? 0);
-        $windSpeed = (float) ($daily['wind_speed_10m_max'][0] ?? 0.0);
-        $windDeg = (int) ($daily['wind_direction_10m_dominant'][0] ?? 0);
-        $humidity = (int) ($daily['relative_humidity_2m_mean'][0] ?? 50);
+        $tzName = \is_string($data['timezone'] ?? null) ? $data['timezone'] : 'UTC';
+        try {
+            $timezone = new \DateTimeZone($tzName);
+        } catch (\Exception) {
+            $timezone = new \DateTimeZone('UTC');
+        }
 
-        return new WeatherForecast(
-            icon: $this->wmoToIcon($weatherCode),
-            description: $this->wmoToDescription($weatherCode, $locale),
-            tempMin: $tempMin,
-            tempMax: $tempMax,
-            windSpeed: $windSpeed,
-            windDirection: $this->degToDirection($windDeg),
-            precipitationProbability: $precipProb,
-            humidity: $humidity,
-            comfortIndex: $this->comfortIndexCalculator->compute($tempMax, $windSpeed, $humidity, $precipProb),
-            relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
-        );
+        $times = array_values($hourly['time']);
+        $temps = $this->column($hourly, 'temperature_2m');
+        $apparent = $this->column($hourly, 'apparent_temperature');
+        $precip = $this->column($hourly, 'precipitation');
+        $precipProb = $this->column($hourly, 'precipitation_probability');
+        $code = $this->column($hourly, 'weather_code');
+        $windSpeed = $this->column($hourly, 'wind_speed_10m');
+        $windGusts = $this->column($hourly, 'wind_gusts_10m');
+        $windDir = $this->column($hourly, 'wind_direction_10m');
+        $humidity = $this->column($hourly, 'relative_humidity_2m');
+        $uv = $this->column($hourly, 'uv_index');
+
+        $slots = [];
+        foreach ($times as $i => $time) {
+            if (!\is_string($time) || !isset($temps[$i])) {
+                continue;
+            }
+
+            try {
+                $dt = new \DateTimeImmutable($time, $timezone);
+            } catch (\Exception) {
+                continue;
+            }
+
+            $temp = $this->floatAt($temps, $i, 0.0);
+            $slots[] = new RawHourlySlot(
+                time: $dt,
+                temp: $temp,
+                apparentTemp: $this->floatAt($apparent, $i, $temp),
+                precipitationMm: $this->floatAt($precip, $i, 0.0),
+                precipitationProbability: $this->intAt($precipProb, $i, 0),
+                windSpeed: $this->floatAt($windSpeed, $i, 0.0),
+                windGusts: $this->floatAt($windGusts, $i, 0.0),
+                windDirectionDeg: $this->intAt($windDir, $i, 0),
+                humidity: $this->intAt($humidity, $i, 50),
+                uvIndex: $this->floatAt($uv, $i, 0.0),
+                weatherCode: $this->intAt($code, $i, 0),
+            );
+        }
+
+        if ([] === $slots) {
+            return null;
+        }
+
+        return new RawForecast($timezone, $slots);
     }
 
-    private function wmoToIcon(int $code): string
+    /**
+     * @param array<mixed, mixed> $hourly
+     *
+     * @return array<int, mixed>
+     */
+    private function column(array $hourly, string $key): array
     {
-        return match (true) {
-            0 === $code => '01d',
-            1 === $code => '02d',
-            2 === $code => '03d',
-            3 === $code => '04d',
-            \in_array($code, [45, 48], true) => '50d',
-            $code >= 51 && $code <= 57 => '09d',
-            $code >= 61 && $code <= 67 => '10d',
-            $code >= 71 && $code <= 77 => '13d',
-            $code >= 80 && $code <= 82 => '09d',
-            \in_array($code, [85, 86], true) => '13d',
-            $code >= 95 && $code <= 99 => '11d',
-            default => '01d',
-        };
+        $col = $hourly[$key] ?? null;
+
+        return \is_array($col) ? array_values($col) : [];
     }
 
-    private function wmoToDescription(int $code, string $locale): string
+    /**
+     * @param array<int, mixed> $col
+     */
+    private function floatAt(array $col, int $i, float $default): float
     {
-        $key = match (true) {
-            0 === $code => 'weather.clear_sky',
-            1 === $code => 'weather.mainly_clear',
-            2 === $code => 'weather.partly_cloudy',
-            3 === $code => 'weather.overcast',
-            \in_array($code, [45, 48], true) => 'weather.fog',
-            $code >= 51 && $code <= 57 => 'weather.drizzle',
-            $code >= 61 && $code <= 67 => 'weather.rain',
-            $code >= 71 && $code <= 77 => 'weather.snow',
-            $code >= 80 && $code <= 82 => 'weather.rain_showers',
-            \in_array($code, [85, 86], true) => 'weather.snow_showers',
-            $code >= 95 && $code <= 99 => 'weather.thunderstorm',
-            default => 'weather.unknown',
-        };
+        $v = $col[$i] ?? null;
 
-        return $this->translator->trans($key, [], 'alerts', $locale);
+        return is_numeric($v) ? (float) $v : $default;
     }
 
-    private function degToDirection(int $deg): string
+    /**
+     * @param array<int, mixed> $col
+     */
+    private function intAt(array $col, int $i, int $default): int
     {
-        $directions = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+        $v = $col[$i] ?? null;
 
-        return $directions[(int) round($deg / 45) % 8];
+        return is_numeric($v) ? (int) $v : $default;
     }
 }
