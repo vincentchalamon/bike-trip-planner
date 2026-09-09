@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
 import { createPortal } from "react-dom";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString } from "geojson";
 import { useTheme } from "next-themes";
@@ -351,7 +351,7 @@ export const MapView = memo(function MapView({
       // Accommodation link dashed line (empty by default, updated on hover)
       addAccommodationLinkLayer(map);
 
-      map.on("click", "route-hover-target", (e) => {
+      map.on("click", "route-hover-target", (e: maplibregl.MapLayerMouseEvent) => {
         const features = e.features;
         if (!features?.length) return;
         const dayNumber = features[0]?.properties?.dayNumber as
