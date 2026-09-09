@@ -39,9 +39,7 @@ final class TripRequest
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     public ?\DateTimeImmutable $startDate = null {
         set(?\DateTimeImmutable $value) {
-            $this->startDate = $value instanceof \DateTimeImmutable
-                ? new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'))
-                : null;
+            $this->startDate = self::normalizeDate($value);
         }
     }
 
@@ -51,9 +49,7 @@ final class TripRequest
     #[Assert\GreaterThan(propertyPath: 'startDate', message: 'End date must be after start date.')]
     public ?\DateTimeImmutable $endDate = null {
         set(?\DateTimeImmutable $value) {
-            $this->endDate = $value instanceof \DateTimeImmutable
-                ? new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'))
-                : null;
+            $this->endDate = self::normalizeDate($value);
         }
     }
 
@@ -177,6 +173,23 @@ final class TripRequest
         $this->stages = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    private function normalizeDate(?\DateTimeImmutable $value): ?\DateTimeImmutable
+    {
+        if (!$value instanceof \DateTimeImmutable) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'));
+        } catch (\Error) {
+            // Symfony's var-exporter DeepCloner (test array cache) reconstructs the
+            // value in place and runs this set hook before the clone is initialized,
+            // so format() throws. The reference is already a normalized value from
+            // an earlier set; return it as-is and let reconstruction finish it.
+            return $value;
+        }
     }
 
     public function addStage(Stage $stage): void
