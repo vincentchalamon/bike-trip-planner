@@ -183,11 +183,16 @@ final class TripRequest
 
         try {
             return new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'));
-        } catch (\Error) {
+        } catch (\Error $error) {
             // Symfony's var-exporter DeepCloner (test array cache) reconstructs the
             // value in place and runs this set hook before the clone is initialized,
             // so format() throws. The reference is already a normalized value from
             // an earlier set; return it as-is and let reconstruction finish it.
+            // Narrowed to that specific error so any other Error still fails loudly.
+            if (!str_contains($error->getMessage(), 'has not been correctly initialized')) {
+                throw $error;
+            }
+
             return $value;
         }
     }
