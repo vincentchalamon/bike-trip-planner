@@ -54,3 +54,6 @@ certificates
 
 # Capacitor
 /android/
+
+# MapLibre worker assets copied from node_modules at pre(build|dev) (see scripts/copy-maplibre-worker.mjs)
+/public/vendor/maplibre/

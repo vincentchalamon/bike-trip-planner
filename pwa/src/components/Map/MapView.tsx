@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
 import { createPortal } from "react-dom";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString } from "geojson";
 import { useTheme } from "next-themes";
@@ -28,6 +28,12 @@ const LIGHT_TILES =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_TILES =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+// MapLibre v6 is ESM-only and resolves its Web Worker at runtime via
+// `import.meta.url`, which the Turbopack production build cannot statically
+// emit — leaving the map blank (no tiles, no markers). Point it at the static
+// copy served from public/ (populated by scripts/copy-maplibre-worker.mjs).
+maplibregl.setWorkerUrl("/vendor/maplibre/maplibre-gl-worker.mjs");
 
 /**
  * Esri WorldImagery is freely usable for non-commercial maps as long as the
@@ -351,7 +357,7 @@ export const MapView = memo(function MapView({
       // Accommodation link dashed line (empty by default, updated on hover)
       addAccommodationLinkLayer(map);
 
-      map.on("click", "route-hover-target", (e) => {
+      map.on("click", "route-hover-target", (e: maplibregl.MapLayerMouseEvent) => {
         const features = e.features;
         if (!features?.length) return;
         const dayNumber = features[0]?.properties?.dayNumber as

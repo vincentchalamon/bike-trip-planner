@@ -300,13 +300,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return false;
         }
 
-        foreach ($persisted->getValues() as $index => $entity) {
-            if ($this->stageGeometrySignature($stages[$index]) !== $this->entityGeometrySignature($entity)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($persisted->getValues(), fn (StageEntity $entity, $index): bool => $this->stageGeometrySignature($stages[$index]) === $this->entityGeometrySignature($entity));
     }
 
     /** @return list<float> The persisted on-cycle-network fractions, index-aligned with the stages. */

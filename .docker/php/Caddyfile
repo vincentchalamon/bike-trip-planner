@@ -123,7 +123,7 @@
                     '*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
                 )
             )
-            || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*', '/.well-known/assetlinks.json')
+            || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*', '/vendor/*', '/.well-known/assetlinks.json')
             || query({'_rsc': '*'})
             || path('/api/auth/*')`
 
