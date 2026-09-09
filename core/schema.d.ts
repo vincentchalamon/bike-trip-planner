@@ -985,6 +985,7 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            /** @description Optional contextual action for this alert. */
             action?: components["schemas"]["AlertAction.fit"] | null;
         };
         "Alert.gpx": {
@@ -998,6 +999,7 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            /** @description Optional contextual action for this alert. */
             action?: components["schemas"]["AlertAction.gpx"] | null;
         };
         "Alert.jsonld": {
@@ -1011,6 +1013,7 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            /** @description Optional contextual action for this alert. */
             action?: components["schemas"]["AlertAction.jsonld"] | null;
         };
         "AlertAction.fit": {
@@ -1487,23 +1490,29 @@ export interface components {
             website?: string | null;
         };
         "Resupply.fit": {
+            /** @description up to 2 food shops near the estimated lunch stop */
             foodAtLunch?: components["schemas"]["PointOfInterest.fit"][];
             waterMorning?: components["schemas"]["PointOfInterest.fit"] | null;
             waterAfternoon?: components["schemas"]["PointOfInterest.fit"] | null;
+            /** @description up to 2 food shops at the arrival */
             foodAtArrival?: components["schemas"]["PointOfInterest.fit"][];
             readonly empty?: boolean;
         };
         "Resupply.gpx": {
+            /** @description up to 2 food shops near the estimated lunch stop */
             foodAtLunch?: components["schemas"]["PointOfInterest.gpx"][];
             waterMorning?: components["schemas"]["PointOfInterest.gpx"] | null;
             waterAfternoon?: components["schemas"]["PointOfInterest.gpx"] | null;
+            /** @description up to 2 food shops at the arrival */
             foodAtArrival?: components["schemas"]["PointOfInterest.gpx"][];
             readonly empty?: boolean;
         };
         "Resupply.jsonld": {
+            /** @description up to 2 food shops near the estimated lunch stop */
             foodAtLunch?: components["schemas"]["PointOfInterest.jsonld"][];
             waterMorning?: components["schemas"]["PointOfInterest.jsonld"] | null;
             waterAfternoon?: components["schemas"]["PointOfInterest.jsonld"] | null;
+            /** @description up to 2 food shops at the arrival */
             foodAtArrival?: components["schemas"]["PointOfInterest.jsonld"][];
             readonly empty?: boolean;
         };
@@ -2274,6 +2283,7 @@ export interface components {
             windGusts?: number;
             precipitationMm?: number;
             uvIndex?: number;
+            /** @description the riding-window hours (empty when no hourly data is available) */
             hourly?: components["schemas"]["HourlyWeatherSlot.fit"][];
         };
         "WeatherForecast.gpx": {
@@ -2292,6 +2302,7 @@ export interface components {
             windGusts?: number;
             precipitationMm?: number;
             uvIndex?: number;
+            /** @description the riding-window hours (empty when no hourly data is available) */
             hourly?: components["schemas"]["HourlyWeatherSlot.gpx"][];
         };
         "WeatherForecast.jsonld": {
@@ -2310,6 +2321,7 @@ export interface components {
             windGusts?: number;
             precipitationMm?: number;
             uvIndex?: number;
+            /** @description the riding-window hours (empty when no hourly data is available) */
             hourly?: components["schemas"]["HourlyWeatherSlot.jsonld"][];
         };
     };
