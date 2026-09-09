@@ -29,6 +29,12 @@ const LIGHT_TILES =
 const DARK_TILES =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+// MapLibre v6 is ESM-only and resolves its Web Worker at runtime via
+// `import.meta.url`, which the Turbopack production build cannot statically
+// emit — leaving the map blank (no tiles, no markers). Point it at the static
+// copy served from public/ (populated by scripts/copy-maplibre-worker.mjs).
+maplibregl.setWorkerUrl("/vendor/maplibre/maplibre-gl-worker.mjs");
+
 /**
  * Esri WorldImagery is freely usable for non-commercial maps as long as the
  * attribution is shown — see https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9
