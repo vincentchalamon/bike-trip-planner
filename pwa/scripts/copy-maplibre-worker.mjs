@@ -31,4 +31,3 @@ mkdirSync(dest, { recursive: true });
 for (const file of ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]) {
   cpSync(join(src, file), join(dest, file));
 }
-console.log(`Copied MapLibre worker assets to ${dest}`);
