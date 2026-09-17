@@ -49,6 +49,8 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
         ComputationName::RAILWAY_STATIONS,
         ComputationName::HEALTH_SERVICES,
         ComputationName::BORDER_CROSSING,
+        ComputationName::FERRIES,
+        ComputationName::FORDS,
         ComputationName::EVENTS,
     ];
 
