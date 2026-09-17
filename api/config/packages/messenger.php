@@ -9,6 +9,8 @@ use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
+use App\Message\CheckFerries;
+use App\Message\CheckFords;
 use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
@@ -61,6 +63,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 CheckBikeShops::class => 'async',
                 CheckBorderCrossing::class => 'async',
                 CheckCulturalPois::class => 'async',
+                CheckFerries::class => 'async',
+                CheckFords::class => 'async',
                 CheckHealthServices::class => 'async',
                 CheckRailwayStations::class => 'async',
                 CheckWaterPoints::class => 'async',
