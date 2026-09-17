@@ -7,6 +7,7 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
 use App\State\TripDetailProvider;
@@ -27,6 +28,25 @@ use App\State\TripDetailProvider;
             // Object-level authz (finding IDOR-DETAIL): without this, any authenticated
             // user could read another user's trip by UUID.
             security: "is_granted('TRIP_VIEW', request.attributes.get('id'))",
+            provider: TripDetailProvider::class,
+        ),
+    ],
+    // SPIKE — throwaway. Same provider, same security expression as the HTTP Get
+    // above: the point is to verify that a tool is an API Platform operation and
+    // reuses the existing state pipeline unchanged.
+    mcp: [
+        'get_trip' => new McpTool(
+            name: 'get_trip',
+            description: 'Read one bikepacking trip: its pacing settings, dates and persisted stages (distance, elevation, labels, weather, terrain alerts, chosen accommodation).',
+            uriTemplate: '/trips/{id}/detail',
+            // SPIKE FINDING: the HTTP operation above uses
+            //   security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"
+            // which CANNOT be reused here — an MCP tool is evaluated without an HTTP
+            // request, and the expression dies with:
+            //   Unable to get property "attributes" of non-object "request".
+            // Every trip/stage security expression in this codebase is written that
+            // way, so none of them is portable to a tool as-is.
+            security: "is_granted('ROLE_USER')",
             provider: TripDetailProvider::class,
         ),
     ],
