@@ -34,7 +34,7 @@ use App\State\MercureTokenProvider;
             ),
             // Same object-level authz as GET /trips/{id}/detail: a non-owner is
             // masked as 404, not 403 (ADR-038, HideForbiddenAsNotFoundListener).
-            security: "is_granted('TRIP_VIEW', request.attributes.get('id'))",
+            security: "is_granted('TRIP_VIEW', id)",
             provider: MercureTokenProvider::class,
         ),
     ],

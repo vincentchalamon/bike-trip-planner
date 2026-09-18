@@ -21,7 +21,7 @@ use App\State\TripRouteProvider;
         new Get(
             uriTemplate: '/trips/{id}/route',
             openapi: new Operation(summary: 'All-stages decimated geometry for the map (loaded on demand).'),
-            security: "is_granted('TRIP_VIEW', request.attributes.get('id'))",
+            security: "is_granted('TRIP_VIEW', id)",
             provider: TripRouteProvider::class,
         ),
     ],

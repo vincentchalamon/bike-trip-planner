@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
+import { applyAccountLocale } from '../i18n';
 import { registerDeviceToken, subscribeTokenRotation, unregisterDeviceToken } from '../notifications/push';
 import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
@@ -74,6 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await api.GET('/users/me', { headers: { Accept: LD_JSON } });
         if (!cancelled) {
           setEmail(data?.email ?? null);
+          // The server renders a trip's alerts in the account's locale (ADR-063),
+          // so the interface has to follow it or the two disagree. This also gives
+          // the app the language persistence it never had: i18n starts from the
+          // device locale, and the account's choice takes over once the session
+          // resolves -- on a fresh login and on a restored one alike.
+          applyAccountLocale(data?.locale);
         }
       } catch {
         // Offline / API down: leave the email unresolved rather than letting the

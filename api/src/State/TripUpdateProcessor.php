@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
@@ -20,7 +21,7 @@ use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -36,7 +37,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private ComputationDependencyResolver $dependencyResolver,
         private IdempotencyCheckerInterface $idempotencyChecker,
         private TripGenerationTrackerInterface $generationTracker,
-        private RequestStack $requestStack,
+        private Security $security,
         private TripLocker $tripLocker,
     ) {
     }
@@ -60,9 +61,11 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         \assert($existingRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($existingRequest);
 
-        // Refresh locale on each PATCH
-        $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
-        $this->tripStateManager->storeLocale($id, $locale);
+        // Refresh locale on each PATCH: the account preference may have changed since
+        // the trip was created.
+        $user = $this->security->getUser();
+        \assert($user instanceof User);
+        $this->tripStateManager->storeLocale($id, $user->getLocale());
 
         // Provider (TripRequestProvider) already threw 404 if the trip doesn't exist;
         // the processor only runs when $data is a valid, non-null TripRequest.

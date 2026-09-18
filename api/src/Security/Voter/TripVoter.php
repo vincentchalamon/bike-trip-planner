@@ -20,7 +20,15 @@ use Symfony\Component\Uid\Uuid;
  * Checks the PostgreSQL trip table first (user column), with a Redis fallback
  * for trips that are still being computed (not yet persisted).
  *
- * @extends Voter<string, TripRequest|string>
+ * The subject is a trip identity in any of the three shapes the framework hands
+ * over: the entity itself, the raw route string, or a `Uuid` — API Platform's
+ * `UuidUriVariableTransformer` converts a URI variable whose target identifier is
+ * typed `Uuid` (e.g. the `tripId` of TripShare, whose Link points at
+ * `TripRequest::$id`). Rejecting that shape would make the voter **abstain**, which
+ * denies silently and, through ADR-038, surfaces as a plausible 404 — a
+ * misconfiguration indistinguishable from a legitimate refusal.
+ *
+ * @extends Voter<string, TripRequest|Uuid|string>
  */
 final class TripVoter extends Voter
 {
@@ -48,11 +56,11 @@ final class TripVoter extends Voter
     protected function supports(string $attribute, mixed $subject): bool
     {
         return \in_array($attribute, self::SUPPORTED_ATTRIBUTES, true)
-            && ($subject instanceof TripRequest || \is_string($subject));
+            && ($subject instanceof TripRequest || $subject instanceof Uuid || \is_string($subject));
     }
 
     /**
-     * @param TripRequest|string $subject A TripRequest entity or a trip ID string
+     * @param TripRequest|Uuid|string $subject A TripRequest entity, or a trip ID
      */
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
     {
@@ -61,9 +69,11 @@ final class TripVoter extends Voter
             return false;
         }
 
-        $tripId = $subject instanceof TripRequest
-            ? $subject->id?->toRfc4122() ?? ''
-            : $subject;
+        $tripId = match (true) {
+            $subject instanceof TripRequest => $subject->id?->toRfc4122() ?? '',
+            $subject instanceof Uuid => $subject->toRfc4122(),
+            default => $subject,
+        };
 
         if ('' === $tripId) {
             return false;

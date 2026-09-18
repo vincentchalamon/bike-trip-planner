@@ -7,6 +7,8 @@ namespace App\Tests\Functional;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
+use App\Repository\TripRequestRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use PHPUnit\Framework\Attributes\Test;
@@ -273,5 +275,46 @@ final class TripCreateTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertNotEmpty($data['id']);
         $this->assertSame('Trip', $data['@type']);
+    }
+
+    #[Test]
+    public function theTripLocaleComesFromTheAccountNotFromAcceptLanguage(): void
+    {
+        // ADR-063: the locale is a stored account preference, not a property of
+        // whichever transport happens to carry the request. A non-browser client
+        // (an agent, a cron, the mobile app) sends no Accept-Language at all, and
+        // must not silently fall back to a different language than the owner's.
+        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt('locale-owner@test.com');
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get('doctrine.orm.entity_manager');
+        $user->setLocale('en');
+        $em->flush();
+
+        $response = self::createClient()->request('POST', '/trips', [
+            'headers' => array_merge(
+                [
+                    'Content-Type' => 'application/ld+json',
+                    // Deliberately contradicts the account preference.
+                    'Accept-Language' => 'fr',
+                ],
+                $this->authHeader($token),
+            ),
+            'json' => ['sourceUrl' => 'https://www.komoot.com/tour/123456789'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        $tripId = $response->toArray(false)['id'];
+        $this->assertIsString($tripId);
+
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+        $this->assertSame(
+            'en',
+            $repo->getLocale($tripId),
+            'The trip took the Accept-Language header instead of the account preference.',
+        );
     }
 }

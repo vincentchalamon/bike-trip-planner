@@ -19,7 +19,6 @@ use App\Security\Voter\TripVoter;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -35,7 +34,6 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
-        private RequestStack $requestStack,
         private TripLocker $tripLocker,
         private Security $security,
         #[Autowire(service: 'cache.trip_state')]
@@ -66,8 +64,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         $this->tripStateManager->initializeTrip($tripId, $data);
 
-        $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
-        $this->tripStateManager->storeLocale($tripId, $locale);
+        $this->tripStateManager->storeLocale($tripId, $user->getLocale());
 
         // Store userId in Redis for fast ownership checks during computation
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));

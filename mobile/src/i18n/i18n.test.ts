@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import i18n from './index';
+import i18n, { applyAccountLocale } from './index';
 import { en } from './resources/en';
 import { fr } from './resources/fr';
 
@@ -28,4 +28,32 @@ describe('i18n', () => {
   it('interpolates the day number', () => {
     expect(i18n.t('trip.day', { day: 3 })).toContain('3');
   });
+});
+
+// The server renders a trip's alerts in the account's locale (ADR-063), so the
+// interface adopts it once the session resolves -- otherwise an account set to
+// English would show a French UI next to English alerts.
+describe('applyAccountLocale', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('fr');
+  });
+
+  it('switches the interface to the account locale', async () => {
+    await i18n.changeLanguage('fr');
+
+    applyAccountLocale('en');
+
+    expect(i18n.language).toBe('en');
+  });
+
+  it.each([[undefined], [null], ['kl'], [42]])(
+    'leaves the interface alone for an unusable value (%p)',
+    async (value) => {
+      await i18n.changeLanguage('en');
+
+      applyAccountLocale(value);
+
+      expect(i18n.language).toBe('en');
+    },
+  );
 });

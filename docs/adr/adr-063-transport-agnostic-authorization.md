@@ -27,14 +27,27 @@ starting one. That the `object` form is already in production here, working, is 
 evidence that it is the right target.
 
 It is not harmless any more. The MCP spike proved that an API Platform operation can be
-invoked **without an HTTP request** — at `tools/list` time, and from the CLI. In that
-context `ApiPlatform\Mcp\Security\ExpressionAccessChecker` passes
+invoked **without an HTTP request**. There are two failure modes, and the quieter one is
+the dangerous one.
+
+**Listing from the CLI — a loud failure.**
+`ApiPlatform\Mcp\Security\ExpressionAccessChecker` passes
 `['request' => $requestStack?->getCurrentRequest()]`, i.e. **`request` is defined but
-null**, and every one of the 18 remaining expressions dies:
+null**, so the expression dies:
 
 ```text
 Unable to get property "attributes" of non-object "request".
 ```
+
+**Calling a tool over HTTP — a silent universal denial.** `ApiPlatform\Mcp\Server\Handler`
+passes that same `getCurrentRequest()`, but over the MCP transport there *is* a current
+request: `POST /mcp`. It simply is not the trip route. So
+`request.attributes.get('tripId')` does not throw — it returns **null**,
+`TripVoter::supports()` rejects null, the voter abstains, and **every caller is denied,
+the owner included**. ADR-038 then masks that as a perfectly plausible 404.
+
+An exception is survivable; a rule that silently denies everyone and looks like a normal
+"not found" is not. This second mode is the real argument for the change.
 
 The same coupling shows up outside authorization: `TripCreateProcessor` and
 `TripUpdateProcessor` inject `RequestStack` solely to call
@@ -46,73 +59,124 @@ concerns that have been expressed in terms of a transport artefact.
 
 ## Decision
 
-**Authorization expressions must not reference `request`.** Three forms replace it, and
-the one to use is decided by **what the operation's provider returns** — not by what the
-operation is keyed on, which is the intuitive but wrong criterion.
-
-| The provider returns… | Form | Count |
-|---|---|---|
-| a `TripRequest` entity, which `TripVoter::supports()` accepts | `object` | **already done** (6) |
-| a DTO exposing the trip id | `object.id` | **3** |
-| anything else, or the operation is keyed on a parent `tripId` | per-URI-variable security | **15** |
-
-### 1. The provider returns a `TripRequest` — bare `object`
-
-Already the case for the six `Trip.php` operations whose provider is
-`TripRequestProvider` or `TripDoctrineProvider`. Nothing to do.
-
-### 2. The provider returns a DTO carrying the id — `object.id` (3 expressions)
+**Authorization expressions must not reference `request`.** A single form replaces it:
+**name the URI variable**.
 
 ```php
-security: "is_granted('TRIP_VIEW', object.id)"
+- security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))"
++ security: "is_granted('TRIP_EDIT', tripId)"
 ```
 
-`object` is undefined at listing time, which raises a `SyntaxError` that
-`ExpressionAccessChecker` **catches on purpose**: the element stays visible and the
-expression is enforced on the call. This is a documented, intentional deferral, not a
-workaround.
-
-`object.id` rather than bare `object` because `TripVoter::supports()` accepts a
-`TripRequest` entity or a string id, not a response DTO.
-
-Applies to `Trip.php:155` (`TripGpxProvider` → `Trip`), `TripRoute.php`
-(→ `TripRoute`) and `TripDetail.php` (→ `TripDetail`) — the three DTOs that expose an
-`id`.
-
-### 3. Parent identifier, or a DTO with no id — per-URI-variable security (15 expressions)
-
-Fourteen expressions key on `tripId`, a **parent** identifier that `object` does not
-carry, and `AccessCheckerProvider` exposes no `uriVariables` variable.
-
-**A fifteenth joins them for a different reason:** `MercureToken.php` is keyed on its own
-`id`, but `MercureTokenProvider` returns a `MercureToken` DTO whose only property is
-`$token`. There is no `id` to read, so `object.id` is impossible there.
-
-That case also carries the sharpest version of the ordering caveat below: `object.*`
-is evaluated **after** the provider has run, so using it here would mean **minting a
-Mercure JWT before refusing the caller**. The URI-variable form avoids that entirely.
-
-All fifteen move onto the URI variable itself, where `SecurityParameterProvider` binds
-the value under its own name:
+`ApiPlatform\Symfony\Security\State\AccessCheckerProvider` already binds every URI
+variable under its own name in the expression context:
 
 ```php
-uriVariables: [
-    'tripId' => new Link(fromClass: Stage::class, security: "is_granted('TRIP_EDIT', tripId)"),
-    'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
-],
+// URI variables are exposed to the expression (e.g. is_granted('VIEW', user_id));
+// reserved keys below must win on collision.
+$resourceAccessCheckerContext = [
+    'object' => $body,
+    'previous_object' => ...,
+    'request' => $request,
+] + $uriVariables;
 ```
 
-`SecurityParameterProvider` is present in both the HTTP and the MCP provider chains, so a
-single declaration covers both transports.
+So all 18 expressions are a one-token rewrite, with **no change to any `uriVariables`,
+`Link` or provider**. The six `Trip.php` operations already using bare `object` stay as
+they are: their provider returns a `TripRequest`, which `TripVoter::supports()` accepts.
 
-### 3. Locale comes from the user, not from the request
+### Why not `object.id`, and why not `Link(security:)`
 
-`TripCreateProcessor` and `TripUpdateProcessor` read `$user->getLocale()`. The `locale`
-column already exists on `User` and is already used by `AuthRequestLinkProcessor` and
-`RequestEmailChangeProcessor`. This removes `RequestStack` from both processors, and is
-more correct regardless of transport: a stored preference beats a browser header.
+Both were considered and both are worse.
 
-### 4. `RequestStack` stays only where the transport genuinely is the subject
+`object.id` is unnecessary: every one of these operations is keyed on `{id}` or
+`{tripId}`, so the URI variable is available — and available *earlier*, see below.
+
+`Link(security:)` is actively wrong for the goal. It is enforced by
+`SecurityParameterProvider`, whose `provide()` calls `$this->decorated->provide(...)` on
+its **first** line and only then checks. The provider has already run. For
+`MercureTokenProvider` that would mean **minting a Mercure JWT before refusing the
+caller** — precisely what the URI-variable form was supposed to avoid.
+
+### The check does not move: it stays before the provider
+
+`AccessCheckerProvider` is wired **four times** into the chain, one of them at the
+`pre_read` stage (decoration priority 10, the outermost). There it sets `$body = null`
+and, when the expression references neither `object` nor `previous_object`
+(`ResourceAccessChecker::usesObjectVariable()`, an AST walk), it **evaluates before
+calling the decorated provider**.
+
+`is_granted('TRIP_EDIT', tripId)` does not mention `object`, so the check happens exactly
+where `request.attributes.get('tripId')` happened. **The HTTP behaviour is unchanged**,
+`MercureTokenProvider` still mints nothing for a caller who will be refused, and its
+docblock ("Ownership is enforced by the operation's `security` expression before this
+runs") stays true.
+
+`ReadListener` resolves `$uriVariables` *before* entering the chain, so they are in scope
+from the outermost decorator. `read: false` does not change this: the listener always
+calls the chain; it is `ReadProvider`, at the bottom, that consults `canRead()`.
+
+### Both transports, one declaration
+
+`config/state/security.php` (HTTP) and `config/mcp/security.php` (MCP) declare **the same
+four decorators, at the same priorities, over the same
+`api_platform.security.resource_access_checker`**.
+
+On the MCP side, `Mcp\Server\Handler` fills `$uriVariables` from the JSON-RPC `arguments`
+using the operation's declared URI variables, then calls that same chain. At `tools/list`
+the variable is not yet bound, which raises a `SyntaxError` that `ExpressionAccessChecker`
+**catches on purpose** — its comment names "uri variables" among the deferred cases, so
+the element stays visible and the rule is enforced on the call. This form is the one the
+framework anticipates.
+
+> **⚠ Limit — `McpResource` has no URI variables.** That `Handler` loop is guarded by
+> `if (!$isResource)`: an `McpResource` receives an empty `$uriVariables`, so this form
+> does **not** apply to it. An MCP resource needing object-level authorization must be
+> modelled as a tool, or express its rule another way. ADR-064's excluded-surface list
+> proposes `export_trip` as an `McpResource`; that choice has to be revisited when the
+> tools are built.
+
+### Locale comes from the user, not from the request
+
+`TripCreateProcessor`, `TripUpdateProcessor` and `GpxUploadController` read
+`$user->getLocale()`. This removes `RequestStack` from both processors, and is more
+correct regardless of transport: a stored preference beats a browser header the server
+may never see.
+
+**That preference had to become writable first.** `User::$locale` existed and defaulted to
+`fr`, but only `CreateUserCommand --locale` ever wrote it — no route could change it.
+Switching the trip locale onto it without opening a write would have made every trip
+French for any account created with the default. So this ADR also introduces
+**`PATCH /users/me`** (`AccountUpdate` input, `AccountMe` output), alongside the existing
+`GET`/`DELETE`, with `User::SUPPORTED_LOCALES` replacing the four hard-coded `['fr','en']`
+lists.
+
+`/users/me`, not `/users/{id}`: the whole Account resource resolves the current user from
+the security token and never from a URL identifier, which is what gives it no IDOR
+surface. It is also the more transport-agnostic shape — an agent holding a token does not
+know its user's UUID.
+
+**The clients keep both directions in sync, and both are required.** Making the account
+the source of truth for rendered content means the interface and the content can now
+disagree, in either direction:
+
+| Missing direction | What the user sees |
+|---|---|
+| The switcher does not push | Interface switches to English, alerts stay French, and only the CLI can fix it |
+| Login does not read | Account is `en`, a fresh browser opens the interface in French next to English alerts |
+
+So the language switchers `PATCH /users/me` (fire-and-forget: switching language is local
+and immediate, and must not be held hostage to the network), and the session adopts the
+account's locale when it starts — the web BFF writes the `locale` cookie from
+`GET /users/me` while it still holds the fresh JWT, and the mobile session effect, which
+already fetched that endpoint for the email, applies it to i18next.
+
+Both clients were previously wired to carry the interface language *to* the server —
+the PWA through `Accept-Language`, mobile through an explicit header its middleware sets
+because React Native's `fetch` does not (#1169). This replaces that link rather than
+removing it. On mobile it also supplies the language persistence the app never had: i18next
+starts from the device locale, and the account's choice takes over on a restored session.
+
+### `RequestStack` stays only where the transport genuinely is the subject
 
 `/auth/*` and the early-access flow (`AuthSessionProvider`, `AuthRequestLinkProcessor`,
 `AccessRequestCreateProcessor`, `RequestEmailChangeProcessor`) may keep it: they are
@@ -140,27 +204,25 @@ Any transport added to this application must therefore either reproduce the mask
 explicitly accept that it does not apply. That decision belongs to the ADR introducing the
 transport, and is taken for MCP in ADR-064.
 
-### Authorization moves from before the provider to after it
+### Never convert a URI variable into an object
 
-`request.attributes.get('id')` is evaluated before the provider runs; `object.id` is
-evaluated after. The denial still happens, so no authorization outcome changes — but
-**the provider's side effects happen first**, for a caller who will be refused.
+The value reaches the voter as the raw `string` from the route, which
+`TripVoter::supports()` accepts. `UriVariablesConverter` leaves it alone here because the
+identifier properties are declared `string` (or absent from the DTO), and the only
+transformers registered are `integer`, `date_time` and `api_resource`.
 
-For the three `object.id` cases that is a database read, which is benign. It is the
-reason `MercureToken` must **not** take that form: its provider mints a JWT, and work of
-that nature should not be done for an unauthorized caller even when the result is
-discarded. Reading the ordering as "one extra SELECT" would have missed it.
+"Tidying" a `Link` into `fromClass: TripRequest::class, identifiers: ['id']` would break
+that: `TripRequest::$id` is a `Uuid`, `supports()` would return false, **the voter would
+abstain and access would be denied silently** — and ADR-038 would dress the failure up as
+a credible 404. A denial that comes from a misconfiguration is indistinguishable from a
+denial that comes from the rule.
 
-This is also why the expression stays on `security` (post-provider) rather than being
-forced into `pre_read`: `AccessCheckerProvider` sets `object` to null at that stage by
-construction, so object-level rules cannot be expressed there at all.
-
-### A misconfigured `Link` skips its check silently
-
-`SecurityParameterProvider` does `continue` when it cannot resolve a target resource
-(`getFromClass() ?? getToClass()`). A URI variable whose `Link` lacks a class therefore
-carries **no** authorization at all, without any error. Every per-URI-variable expression
-needs a functional test proving denial, not just review.
+That is the general shape of the risk here, and it is why **every migrated expression
+needs a functional test proving denial**, not a careful reading. The same reasoning
+applies to `SecurityParameterProvider`, which does `continue` when it cannot resolve a
+target resource (`getFromClass() ?? getToClass()`): a `Link` lacking a class carries **no**
+authorization at all, without any error. That trap does not affect the form chosen here —
+we do not use `Link(security:)` — but it is the reason not to reach for it later either.
 
 ### Positive
 
