@@ -204,6 +204,11 @@ final class TripRequest
         }
     }
 
+    public function removeStage(Stage $stage): void
+    {
+        $this->stages->removeElement($stage);
+    }
+
     public function clearStages(): void
     {
         $this->stages->clear();
