@@ -106,8 +106,6 @@ final readonly class GpxUploadController
         $tripRequest = new TripRequest();
         $this->applyOptionalParameters($tripRequest, $request);
 
-        $locale = $request->getPreferredLanguage(['en', 'fr']) ?? 'en';
-
         /** @var User $user */
         $user = $this->security->getUser();
 
@@ -119,7 +117,7 @@ final readonly class GpxUploadController
             throw new TooManyRequestsHttpException();
         }
 
-        $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale, $user);
+        $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $user->getLocale(), $user);
 
         $response = [
             '@context' => '/contexts/Trip',

@@ -18,7 +18,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpFoundation\RequestStack;
+use App\Entity\User;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -44,8 +45,8 @@ final class TripUpdateProcessorTest extends TestCase
         $this->computationTracker = $this->createMock(ComputationTrackerInterface::class);
         $this->idempotencyChecker = $this->createMock(IdempotencyCheckerInterface::class);
 
-        $requestStack = $this->createStub(RequestStack::class);
-        $requestStack->method('getCurrentRequest')->willReturn(null);
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn(new User('owner@example.com'));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -58,7 +59,7 @@ final class TripUpdateProcessorTest extends TestCase
             new ComputationDependencyResolver(),
             $this->idempotencyChecker,
             $generationTracker,
-            $requestStack,
+            $security,
             new TripLocker(),
         );
     }
@@ -72,8 +73,8 @@ final class TripUpdateProcessorTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
 
-        $requestStack = $this->createStub(RequestStack::class);
-        $requestStack->method('getCurrentRequest')->willReturn(null);
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn(new User('owner@example.com'));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(1);
@@ -86,7 +87,7 @@ final class TripUpdateProcessorTest extends TestCase
             new ComputationDependencyResolver(),
             $this->createStub(IdempotencyCheckerInterface::class),
             $generationTracker,
-            $requestStack,
+            $security,
             new TripLocker(),
         );
 

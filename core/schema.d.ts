@@ -65,7 +65,11 @@ export interface paths {
         delete: operations["api_usersme_delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Updates the Account resource.
+         * @description Updates the Account resource.
+         */
+        patch: operations["api_usersme_patch"];
         trace?: never;
     };
     "/users/me/export": {
@@ -948,6 +952,10 @@ export interface components {
          * @description GDPR self-service operations for the authenticated user (#549).
          *
          *     - GET    /users/me        the current user's profile ({ userId, email, locale })
+         *     - PATCH  /users/me        change the account preferences; only `locale` today.
+         *       It is the language the server renders for the user (emails) and passes to
+         *       third parties when enriching a trip, so it must be a stored preference rather
+         *       than an `Accept-Language` header (ADR-063).
          *     - DELETE /users/me        right to erasure: anonymise the account, purge
          *       trips and preferences, revoke refresh tokens
          *     - GET    /users/me/export right to portability: download a JSON archive of
@@ -965,6 +973,30 @@ export interface components {
          * @description GDPR self-service operations for the authenticated user (#549).
          *
          *     - GET    /users/me        the current user's profile ({ userId, email, locale })
+         *     - PATCH  /users/me        change the account preferences; only `locale` today.
+         *       It is the language the server renders for the user (emails) and passes to
+         *       third parties when enriching a trip, so it must be a stored preference rather
+         *       than an `Accept-Language` header (ADR-063).
+         *     - DELETE /users/me        right to erasure: anonymise the account, purge
+         *       trips and preferences, revoke refresh tokens
+         *     - GET    /users/me/export right to portability: download a JSON archive of
+         *       the profile, trips and their preferences
+         *
+         *     The current user is always resolved from the security token, never from a
+         *     URL identifier, so there is no IDOR surface.
+         */
+        "Account.AccountUpdate.jsonMergePatch": {
+            /** @enum {string|null} */
+            locale?: "fr" | "en" | null;
+        };
+        /**
+         * @description GDPR self-service operations for the authenticated user (#549).
+         *
+         *     - GET    /users/me        the current user's profile ({ userId, email, locale })
+         *     - PATCH  /users/me        change the account preferences; only `locale` today.
+         *       It is the language the server renders for the user (emails) and passes to
+         *       third parties when enriching a trip, so it must be a stored preference rather
+         *       than an `Accept-Language` header (ADR-063).
          *     - DELETE /users/me        right to erasure: anonymise the account, purge
          *       trips and preferences, revoke refresh tokens
          *     - GET    /users/me/export right to portability: download a JSON archive of
@@ -2517,6 +2549,75 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Error.jsonld"];
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_usersme_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The updated Account resource */
+        requestBody: {
+            content: {
+                "application/merge-patch+json": components["schemas"]["Account.AccountUpdate.jsonMergePatch"];
+            };
+        };
+        responses: {
+            /** @description Account resource updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Account.AccountMe.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
         };

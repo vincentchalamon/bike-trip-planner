@@ -80,10 +80,8 @@ final class CreateUserCommand extends Command
         $locale = $input->getOption('locale');
         \assert(\is_string($locale));
 
-        $supportedLocales = ['fr', 'en'];
-
-        if (!\in_array($locale, $supportedLocales, true)) {
-            $io->error(\sprintf('Unsupported locale: %s. Supported locales: %s', $locale, implode(', ', $supportedLocales)));
+        if (!\in_array($locale, User::SUPPORTED_LOCALES, true)) {
+            $io->error(\sprintf('Unsupported locale: %s. Supported locales: %s', $locale, implode(', ', User::SUPPORTED_LOCALES)));
 
             return Command::FAILURE;
         }

@@ -16,6 +16,13 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
 class User implements UserInterface
 {
+    /**
+     * Locales the application can render and translate into.
+     *
+     * @var list<string>
+     */
+    public const array SUPPORTED_LOCALES = ['fr', 'en'];
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
