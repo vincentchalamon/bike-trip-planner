@@ -10,7 +10,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageManualAccommodationRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeocoderInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateStages;
@@ -67,7 +66,6 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
             $repo,
             $bus,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
             $geocoder,
         );

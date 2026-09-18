@@ -162,7 +162,36 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         });
 
         self::assertNotNull($written);
+        self::assertSame('edited', $written->stages[0]->label);
         self::assertSame('edited', ($this->repository->getStages($tripId) ?? [])[0]->label);
+    }
+
+    /**
+     * The version handed back names *this* write, not whatever the trip is at when the
+     * caller gets round to asking.
+     *
+     * Read afterwards, it could belong to a concurrent edit or a worker that bumped it in
+     * the meantime. The caller would then stamp its messages with a later, unrelated
+     * generation — and `isStale()` only rejects `messageGeneration < current`, so those
+     * messages would never be rejected despite being built from older data. The staleness
+     * guard would quietly stop guarding, which is the failure ADR-066 exists to close.
+     */
+    #[Test]
+    public function theVersionHandedBackIsTheOneThisWriteProduced(): void
+    {
+        $tripId = $this->seedTrip();
+        $before = $this->repository->getVersion($tripId);
+        self::assertNotNull($before);
+
+        $written = $this->repository->mutateStages($tripId, static fn (array $stages): array => $stages);
+        self::assertNotNull($written);
+        self::assertSame($before + 1, $written->version);
+
+        // Somebody else writes right after. The value already handed out must not move.
+        $this->repository->bumpVersion($tripId);
+
+        self::assertSame($before + 1, $written->version);
+        self::assertSame($before + 2, $this->repository->getVersion($tripId));
     }
 
     #[Test]

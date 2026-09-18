@@ -144,10 +144,8 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
 
     /**
      * @param callable(list<Stage>): list<Stage> $mutator
-     *
-     * @return list<Stage>|null
      */
-    public function mutateStages(string $tripId, callable $mutator): ?array
+    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
     {
         $stages = $this->getStages($tripId);
         if (null === $stages) {
@@ -157,7 +155,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         $mutated = $mutator($stages);
         $this->storeStages($tripId, $mutated);
 
-        return $mutated;
+        return new StageWriteResult($mutated, $this->getVersion($tripId) ?? 1);
     }
 
     public function getVersion(string $tripId): ?int

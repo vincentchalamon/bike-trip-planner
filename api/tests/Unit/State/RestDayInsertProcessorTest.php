@@ -13,7 +13,6 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
@@ -49,14 +48,11 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $this->processor = new RestDayInsertProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
     }

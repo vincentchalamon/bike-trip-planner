@@ -11,12 +11,12 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -31,7 +31,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private StageResponseMapper $stageResponseMapper,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -61,7 +60,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         // Read, edit and write as one unit: an enrichment worker writing a column in
         // between would otherwise be reverted by the snapshot read here.
-        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $distance, &$position, &$newStage): array {
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $distance, &$position, &$newStage): array {
             $position = $data->position ?? \count($stages);
 
             if ($position < 0 || $position > \count($stages)) {
@@ -82,11 +81,17 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             array_splice($stages, $position, 0, [$newStage]);
 
             return $this->reindexDayNumbers($stages);
-        }) ?? [];
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
 
         \assert(null !== $position && $newStage instanceof Stage);
-
-        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$newStage->id], generation: $generation));
 

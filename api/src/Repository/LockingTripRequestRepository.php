@@ -64,12 +64,10 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
 
     /**
      * @param callable(list<Stage>): list<Stage> $mutator
-     *
-     * @return list<Stage>|null
      */
-    public function mutateStages(string $tripId, callable $mutator): ?array
+    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
     {
-        return $this->withStagesLock($tripId, fn (): ?array => $this->decorated->mutateStages($tripId, $mutator));
+        return $this->withStagesLock($tripId, fn (): ?StageWriteResult => $this->decorated->mutateStages($tripId, $mutator));
     }
 
     /** @param list<Stage> $stages */

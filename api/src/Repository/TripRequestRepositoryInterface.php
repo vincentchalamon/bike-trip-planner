@@ -61,11 +61,15 @@ interface TripRequestRepositoryInterface
      * The mutator returns the new list rather than mutating by reference, because the
      * callers splice, reorder and renumber.
      *
+     * Hands back the resulting version along with the stages, read while the write is still
+     * serialised — see {@see StageWriteResult} for why reading it afterwards is not the same
+     * thing.
+     *
      * @param callable(list<Stage>): list<Stage> $mutator
      *
-     * @return list<Stage>|null the stages as written, or null when the trip is unknown
+     * @return StageWriteResult|null null when the trip is unknown
      */
-    public function mutateStages(string $tripId, callable $mutator): ?array;
+    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult;
 
     /**
      * Returns a single stage's route geometry, in travel order, projected to 2D.

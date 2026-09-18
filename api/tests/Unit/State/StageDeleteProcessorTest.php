@@ -7,7 +7,6 @@ namespace App\Tests\Unit\State;
 use ApiPlatform\Metadata\Delete;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
@@ -50,8 +49,6 @@ final class StageDeleteProcessorTest extends TestCase
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         // Return a non-locked request by default (startDate in the future)
         $unlockedRequest = new TripRequest();
@@ -62,7 +59,6 @@ final class StageDeleteProcessorTest extends TestCase
             $this->tripStateManager,
             $this->messageBus,
             $this->distanceCalculator,
-            $generationTracker,
             new TripLocker(),
         );
     }
@@ -201,14 +197,11 @@ final class StageDeleteProcessorTest extends TestCase
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
         $tripStateManager->method('getStages')->willReturn([]);
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(1);
 
         $processor = new StageDeleteProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             $this->createStub(DistanceCalculatorInterface::class),
-            $generationTracker,
             new TripLocker(),
         );
 

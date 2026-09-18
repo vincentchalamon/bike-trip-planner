@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\State;
 
 use App\ApiResource\Stage;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\MockObject\Stub;
 
@@ -26,10 +27,8 @@ trait MutateStagesStubTrait
         $repository->method('mutateStages')->willReturnCallback(
             /**
              * @param callable(list<Stage>): list<Stage> $mutator
-             *
-             * @return list<Stage>|null
              */
-            static function (string $tripId, callable $mutator) use ($repository): ?array {
+            static function (string $tripId, callable $mutator) use ($repository): ?StageWriteResult {
                 $stages = $repository->getStages($tripId);
                 if (null === $stages) {
                     return null;
@@ -38,7 +37,7 @@ trait MutateStagesStubTrait
                 $mutated = $mutator($stages);
                 $repository->storeStages($tripId, $mutated);
 
-                return $mutated;
+                return new StageWriteResult($mutated, $repository->getVersion($tripId) ?? 1);
             },
         );
     }

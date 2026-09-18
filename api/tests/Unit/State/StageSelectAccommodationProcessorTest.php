@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Patch;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageSelectAccommodationProcessor;
@@ -36,7 +35,6 @@ final class StageSelectAccommodationProcessorTest extends TestCase
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
         );
 

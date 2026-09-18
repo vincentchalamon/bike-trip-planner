@@ -300,10 +300,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
     /**
      * @param callable(list<StageDto>): list<StageDto> $mutator
-     *
-     * @return list<StageDto>|null
      */
-    public function mutateStages(string $tripId, callable $mutator): ?array
+    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
     {
         $stages = $this->getStages($tripId);
         if (null === $stages) {
@@ -313,7 +311,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $mutated = $mutator($stages);
         $this->storeStages($tripId, $mutated);
 
-        return $mutated;
+        return new StageWriteResult($mutated, $this->getVersion($tripId) ?? 1);
     }
 
     /**

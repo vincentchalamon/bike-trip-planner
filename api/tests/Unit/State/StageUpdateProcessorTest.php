@@ -10,7 +10,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -121,8 +120,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -131,7 +128,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -212,8 +208,6 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -222,7 +216,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -291,8 +284,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -301,7 +292,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -361,8 +351,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -371,7 +359,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -411,7 +398,6 @@ final class StageUpdateProcessorTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
         );
 
@@ -468,8 +454,6 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -478,7 +462,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $generationTracker,
             new TripLocker(),
         );
 

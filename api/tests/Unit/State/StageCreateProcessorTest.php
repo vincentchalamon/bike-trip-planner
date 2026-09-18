@@ -9,7 +9,6 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
@@ -37,8 +36,6 @@ final class StageCreateProcessorTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn(0.0);
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(1);
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
@@ -47,7 +44,6 @@ final class StageCreateProcessorTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             $distanceCalculator,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 

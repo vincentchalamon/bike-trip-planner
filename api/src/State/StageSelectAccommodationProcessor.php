@@ -12,12 +12,12 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -49,7 +49,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -73,7 +72,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         // Read, edit and write as one unit: an accommodation scan running concurrently
         // writes the very column this edits, and the snapshot read here would revert it.
-        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $index, $isDeselect, &$stage): array {
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $index, $isDeselect, &$stage): array {
             if (!isset($stages[$index])) {
                 throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
             }
@@ -136,12 +135,19 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             }
 
             return $stages;
-        }) ?? [];
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
 
         \assert($stage instanceof Stage);
 
         if ($isDeselect) {
-            $generation = $this->generationTracker->current($tripId) ?? 1;
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageId: $stage->id, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$stage->id, $stages[$index + 1]->id] : [$stage->id];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
@@ -154,8 +160,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         if (isset($stages[$index + 1])) {
             $affected[] = $stages[$index + 1]->id;
         }
-
-        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipAccommodationScan: true, generation: $generation));
 

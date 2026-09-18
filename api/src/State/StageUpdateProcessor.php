@@ -12,7 +12,6 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -20,6 +19,7 @@ use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -36,7 +36,6 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private StageResponseMapper $stageResponseMapper,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -61,7 +60,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         // between would otherwise be reverted by the snapshot read here. Both editing
         // modes (explicit points and distance-driven split) share the one critical
         // section; only the set of stages to recalculate differs afterwards.
-        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $index, &$stage): array {
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $index, &$stage): array {
             if (!isset($stages[$index])) {
                 throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
             }
@@ -101,14 +100,20 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $stages[$index] = $stage;
 
             return $stages;
-        }) ?? [];
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
 
         \assert($stage instanceof Stage);
 
         // Bump generation: stage edits invalidate in-flight computations. After the
         // write, so the generation names the state that was actually persisted.
-        $generation = $this->generationTracker->current($tripId) ?? 1;
-
         // A distance edit cascades into every following stage; a point or label edit
         // touches only this one.
         $affected = null !== $data->distance
