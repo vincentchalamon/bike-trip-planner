@@ -459,7 +459,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $signature;
     }
 
-    /** @return list<StageDto>|null */
+    /**
+     * @return list<StageDto>|null
+     */
     public function getStages(string $tripId): ?array
     {
         $trip = $this->findTripRequest($tripId);
@@ -467,8 +469,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return null;
         }
 
+        // Read through the refreshing query rather than the owning collection. The
+        // targeted per-stage writes are DQL UPDATEs that bypass the unit of work, so a
+        // caller that read the trip before one of them would otherwise be served its own
+        // stale entities and never see the enrichment that just landed.
         $result = [];
-        foreach ($trip->stages as $stageEntity) {
+        foreach ($this->freshStagesById($trip) as $stageEntity) {
             $result[] = $this->stageEntityToDto($stageEntity);
         }
 

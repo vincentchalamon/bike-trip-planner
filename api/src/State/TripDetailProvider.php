@@ -163,6 +163,8 @@ final readonly class TripDetailProvider implements ProviderInterface
     private function serializeStage(Stage $stage): array
     {
         return [
+            // Emitted but not yet contractual: see StagePayloadMapper::toPayload().
+            'stageId' => $stage->id,
             'dayNumber' => $stage->dayNumber,
             'distance' => $stage->distance,
             'elevation' => $stage->elevation,

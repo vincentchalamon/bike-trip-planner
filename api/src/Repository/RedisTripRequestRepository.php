@@ -93,6 +93,20 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         $this->bumpVersion($tripId);
     }
 
+    /**
+     * Writes the blob without touching the version.
+     *
+     * A targeted enrichment write has to go through the whole blob here — it is the
+     * storage unit — but it is not a structural change, and bumping the version would
+     * make a client's ETag go stale on its own while enrichments land.
+     *
+     * @param list<Stage> $stages
+     */
+    private function storeStagesWithoutVersionBump(string $tripId, array $stages): void
+    {
+        $this->set($this->stagesKey($tripId), $stages);
+    }
+
     /** @return list<Stage>|null */
     public function getStages(string $tripId): ?array
     {
@@ -237,7 +251,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         }
 
         if ($changed) {
-            $this->storeStages($tripId, $stages);
+            $this->storeStagesWithoutVersionBump($tripId, $stages);
         }
     }
 

@@ -36,6 +36,10 @@ final readonly class StagePayloadMapper
     public function toPayload(Stage $stage): array
     {
         return [
+            // Emitted but not yet consumed: the clients still address stages by position.
+            // Landing it first means the identities can be seen to be stable across edits
+            // before anything is hung off them (ADR-066).
+            'stageId' => $stage->id,
             'dayNumber' => $stage->dayNumber,
             'distance' => round($stage->distance, 1),
             'elevation' => (int) $stage->elevation,
