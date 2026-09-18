@@ -26,7 +26,7 @@ use App\State\TripDetailProvider;
             openapi: new Operation(summary: 'Load trip configuration and persisted stages for frontend hydration.'),
             // Object-level authz (finding IDOR-DETAIL): without this, any authenticated
             // user could read another user's trip by UUID.
-            security: "is_granted('TRIP_VIEW', request.attributes.get('id'))",
+            security: "is_granted('TRIP_VIEW', id)",
             provider: TripDetailProvider::class,
         ),
     ],
