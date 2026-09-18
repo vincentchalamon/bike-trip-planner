@@ -22,6 +22,7 @@ use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Uid\Uuid;
 
 final class NearbyPoiFinderTest extends TestCase
 {
@@ -412,6 +413,9 @@ final class NearbyPoiFinderTest extends TestCase
 
         $trip = $this->createStub(TripRequestRepositoryInterface::class);
         $trip->method('getLocale')->willReturn($locale);
+        // `stageDay` stays a day number in the public request body, so the finder
+        // resolves it to the stage identity the storage layer addresses by.
+        $trip->method('getStageIdByDayNumber')->willReturn(null === $geometry ? null : Uuid::v7()->toRfc4122());
         $trip->method('getStageGeometry')->willReturn($geometry);
 
         return new NearbyPoiFinder(

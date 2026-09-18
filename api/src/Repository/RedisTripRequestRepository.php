@@ -103,7 +103,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     }
 
     /** @return list<array{lat: float, lon: float}>|null */
-    public function getStageGeometry(string $tripId, int $dayNumber): ?array
+    public function getStageGeometry(string $tripId, string $stageId): ?array
     {
         $stages = $this->getStages($tripId);
         if (null === $stages) {
@@ -111,7 +111,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         }
 
         foreach ($stages as $stage) {
-            if ($stage->dayNumber !== $dayNumber) {
+            if ($stage->id !== $stageId) {
                 continue;
             }
 
@@ -128,52 +128,63 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return null;
     }
 
-    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($weather): void {
+        foreach ($this->getStages($tripId) ?? [] as $stage) {
+            if ($stage->dayNumber === $dayNumber) {
+                return $stage->id;
+            }
+        }
+
+        return null;
+    }
+
+    public function updateStageWeather(string $tripId, string $stageId, ?WeatherForecast $weather): void
+    {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($weather): void {
             $stage->weather = $weather;
         });
     }
 
     /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($alerts): void {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($alerts): void {
             $stage->alerts = $alerts;
         });
     }
 
-    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void
+    public function updateStageResupply(string $tripId, string $stageId, Resupply $resupply): void
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($resupply): void {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($resupply): void {
             $stage->resupply = $resupply;
         });
     }
 
     /** @param list<Accommodation> $accommodations */
-    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
+    public function updateStageAccommodations(string $tripId, string $stageId, array $accommodations): void
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($accommodations): void {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($accommodations): void {
             $stage->accommodations = $accommodations;
         });
     }
 
-    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void
+    public function updateStageLabels(string $tripId, string $stageId, ?string $startLabel, ?string $endLabel): void
     {
-        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($startLabel, $endLabel): void {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($startLabel, $endLabel): void {
             $stage->startLabel = $startLabel;
             $stage->endLabel = $endLabel;
         });
     }
 
     /**
-     * Lock-guarded read-modify-write of a single stage (matched by dayNumber) in the
+     * Lock-guarded read-modify-write of a single stage (matched by identifier) in the
      * monolithic blob, so concurrent enrichment handlers can't lose each other's
      * column updates (recette #649).
      *
      * @param callable(Stage): void $mutator
      */
-    private function updateStageField(string $tripId, int $dayNumber, callable $mutator): void
+    private function updateStageField(string $tripId, string $stageId, callable $mutator): void
     {
         $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), ttl: 5);
         $lock->acquire(blocking: true);
@@ -186,7 +197,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
 
             $changed = false;
             foreach ($stages as $stage) {
-                if ($stage->dayNumber === $dayNumber) {
+                if ($stage->id === $stageId) {
                     $mutator($stage);
                     $changed = true;
                     break;

@@ -101,7 +101,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $this->cache->method('getItem')->willReturnOnConsecutiveCalls($readItem, $writeItem);
         $this->cache->expects(self::atLeastOnce())->method('save');
 
-        $this->repository->updateStageAlerts($tripId, 1, [$alert]);
+        $this->repository->updateStageAlerts($tripId, $stage->id, [$alert]);
     }
 
     #[Test]
@@ -138,12 +138,12 @@ final class RedisTripRequestRepositoryTest extends TestCase
                 ['lat' => 48.1, 'lon' => 2.1],
                 ['lat' => 48.2, 'lon' => 2.2],
             ],
-            $this->repository->getStageGeometry($tripId, 2),
+            $this->repository->getStageGeometry($tripId, $stage->id),
         );
     }
 
     #[Test]
-    public function getStageGeometryReturnsNullForUnknownDay(): void
+    public function getStageGeometryReturnsNullForUnknownStage(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $stage = new Stage(
@@ -162,7 +162,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $readItem->method('expiresAfter')->willReturnSelf();
         $this->cache->method('getItem')->willReturn($readItem);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 9));
+        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -174,7 +174,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $missing->method('isHit')->willReturn(false);
         $this->cache->method('getItem')->willReturn($missing);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -196,6 +196,6 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $readItem->method('expiresAfter')->willReturnSelf();
         $this->cache->method('getItem')->willReturn($readItem);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+        self::assertNull($this->repository->getStageGeometry($tripId, $stage->id));
     }
 }

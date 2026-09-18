@@ -399,7 +399,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     /**
      * @param array<string, StageEntity> $existing
      *
-     * @return array<string, float> The persisted on-cycle-network fractions, keyed by stage identifier.
+     * @return array<string, float> the persisted on-cycle-network fractions, keyed by stage identifier
      */
     private function persistedCycleNetwork(array $existing): array
     {
@@ -460,18 +460,18 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
      *
      * @return list<array{lat: float, lon: float}>|null
      */
-    public function getStageGeometry(string $tripId, int $dayNumber): ?array
+    public function getStageGeometry(string $tripId, string $stageId): ?array
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return null;
         }
 
         /** @var array{geometry: list<array{lat: float, lon: float, ele: float}>}|null $row */
         $row = $this->getEntityManager()->createQuery(
-            'SELECT s.geometry FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'SELECT s.geometry FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
 
         if (null === $row || [] === $row['geometry']) {
@@ -484,7 +484,29 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
-    // Atomic per-stage UPDATE of one JSONB column, keyed by dayNumber: lets parallel
+    public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
+    {
+        if (!Uuid::isValid($tripId)) {
+            return null;
+        }
+
+        /** @var array{id: Uuid|string}|null $row */
+        $row = $this->getEntityManager()->createQuery(
+            'SELECT s.id FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.dayNumber = :dayNumber ORDER BY s.position ASC',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setMaxResults(1)
+            ->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
+
+        if (null === $row) {
+            return null;
+        }
+
+        return $row['id'] instanceof Uuid ? $row['id']->toRfc4122() : $row['id'];
+    }
+
+    // Atomic per-stage UPDATE of one JSONB column, keyed by the stage identifier: lets parallel
     // enrichment handlers persist only their own column instead of the whole-collection
     // read-modify-write of storeStages() (which let a slow handler overwrite a sibling's
     // freshly-written column — recette #649). One literal DQL per column (a dynamic,
@@ -493,81 +515,81 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     // without the explicit type Doctrine infers ArrayParameterType and expands the list
     // into $1, $2, … .
 
-    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    public function updateStageWeather(string $tripId, string $stageId, ?WeatherForecast $weather): void
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.weather = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'UPDATE App\Entity\Stage s SET s.weather = :value WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->setParameter('value', $weather instanceof WeatherForecast ? $this->weatherToArray($weather) : null, 'jsonb')
             ->execute();
     }
 
     /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.alerts = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'UPDATE App\Entity\Stage s SET s.alerts = :value WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->setParameter('value', array_map($this->alertToArray(...), $alerts), 'jsonb')
             ->execute();
     }
 
-    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void
+    public function updateStageResupply(string $tripId, string $stageId, Resupply $resupply): void
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         // Stored in the (JSONB) `pois` column — repurposed to hold the curated
         // resupply object since the raw corridor set is no longer persisted (#1099).
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.pois = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'UPDATE App\Entity\Stage s SET s.pois = :value WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->setParameter('value', $this->resupplyToArray($resupply), 'jsonb')
             ->execute();
     }
 
     /** @param list<Accommodation> $accommodations */
-    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
+    public function updateStageAccommodations(string $tripId, string $stageId, array $accommodations): void
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.accommodations = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'UPDATE App\Entity\Stage s SET s.accommodations = :value WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->setParameter('value', array_map($this->accommodationToArray(...), $accommodations), 'jsonb')
             ->execute();
     }
 
-    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void
+    public function updateStageLabels(string $tripId, string $stageId, ?string $startLabel, ?string $endLabel): void
     {
-        if (!Uuid::isValid($tripId)) {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.startLabel = :startLabel, s.endLabel = :endLabel WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+            'UPDATE App\Entity\Stage s SET s.startLabel = :startLabel, s.endLabel = :endLabel WHERE s.trip = :tripId AND s.id = :stageId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('stageId', Uuid::fromString($stageId))
             ->setParameter('startLabel', $startLabel)
             ->setParameter('endLabel', $endLabel)
             ->execute();

@@ -206,10 +206,13 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
 
     private function countRows(string $tripId): int
     {
-        return (int) $this->entityManager->getConnection()->fetchOne(
+        $count = $this->entityManager->getConnection()->fetchOne(
             'SELECT COUNT(*) FROM stage WHERE trip_id = :trip',
             ['trip' => $tripId],
         );
+        \assert(is_numeric($count));
+
+        return (int) $count;
     }
 
     private function setOnCycleNetwork(string $stageId, float $fraction): void
@@ -222,10 +225,13 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
 
     private function onCycleNetworkOf(string $stageId): float
     {
-        return (float) $this->entityManager->getConnection()->fetchOne(
+        $fraction = $this->entityManager->getConnection()->fetchOne(
             'SELECT on_cycle_network FROM stage WHERE id = :id',
             ['id' => $stageId],
         );
+        \assert(is_numeric($fraction));
+
+        return (float) $fraction;
     }
 
     private function seedTrip(): string

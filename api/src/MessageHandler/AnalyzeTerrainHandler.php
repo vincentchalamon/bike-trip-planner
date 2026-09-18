@@ -96,7 +96,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             // lunch/seasonal alerts from pois/accommodations are delivered live via
             // Mercure only.
             foreach ($stages as $stage) {
-                $this->tripStateManager->updateStageAlerts($tripId, $stage->dayNumber, array_values($stage->alerts));
+                $this->tripStateManager->updateStageAlerts($tripId, $stage->id, array_values($stage->alerts));
             }
 
             // Coordinates and contextual actions are part of the live payload: the

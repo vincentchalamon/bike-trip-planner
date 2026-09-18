@@ -48,7 +48,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
     public function returnsStagePointsInTravelOrderWithoutElevation(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->seedTrip($tripId);
+        $stageId = $this->seedTrip($tripId);
 
         $this->entityManager->clear();
 
@@ -58,7 +58,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
                 ['lat' => 48.1, 'lon' => 2.1],
                 ['lat' => 48.2, 'lon' => 2.2],
             ],
-            $this->repository->getStageGeometry($tripId, 2),
+            $this->repository->getStageGeometry($tripId, $stageId),
         );
     }
 
@@ -66,13 +66,13 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
     public function doesNotHydrateTheStageAggregate(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->seedTrip($tripId);
+        $stageId = $this->seedTrip($tripId);
 
         // Start from a cold identity map: the scalar geometry read must not pull any
         // Stage entity into the unit of work (unlike getStages(), which hydrates them).
         $this->entityManager->clear();
 
-        $this->repository->getStageGeometry($tripId, 2);
+        $this->repository->getStageGeometry($tripId, $stageId);
 
         $identityMap = $this->entityManager->getUnitOfWork()->getIdentityMap();
         self::assertArrayNotHasKey(StageEntity::class, $identityMap);
@@ -81,24 +81,24 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
     #[Test]
     public function returnsNullForUnknownTrip(): void
     {
-        self::assertNull($this->repository->getStageGeometry(Uuid::v7()->toRfc4122(), 1));
+        self::assertNull($this->repository->getStageGeometry(Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
     public function returnsNullForInvalidTripId(): void
     {
-        self::assertNull($this->repository->getStageGeometry('not-a-uuid', 1));
+        self::assertNull($this->repository->getStageGeometry('not-a-uuid', Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
-    public function returnsNullForUnknownDay(): void
+    public function returnsNullForUnknownStage(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->seedTrip($tripId);
+        $stageId = $this->seedTrip($tripId);
 
         $this->entityManager->clear();
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 99));
+        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -107,39 +107,39 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
         $tripId = Uuid::v7()->toRfc4122();
         $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
         // Day 1 has no geometry (StageDto default is []).
-        $this->repository->storeStages($tripId, [
-            new StageDto(
-                tripId: $tripId,
-                dayNumber: 1,
-                distance: 10.0,
-                elevation: 50.0,
-                startPoint: new Coordinate(48.0, 2.0),
-                endPoint: new Coordinate(48.1, 2.1),
-            ),
-        ]);
+        $stage = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 10.0,
+            elevation: 50.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.1, 2.1),
+        );
+        $this->repository->storeStages($tripId, [$stage]);
 
         $this->entityManager->clear();
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+        self::assertNull($this->repository->getStageGeometry($tripId, $stage->id));
     }
 
-    private function seedTrip(string $tripId): void
+    private function seedTrip(string $tripId): string
     {
         $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
-        $this->repository->storeStages($tripId, [
-            new StageDto(
-                tripId: $tripId,
-                dayNumber: 2,
-                distance: 40.0,
-                elevation: 200.0,
-                startPoint: new Coordinate(48.0, 2.0),
-                endPoint: new Coordinate(48.2, 2.2),
-                geometry: [
-                    new Coordinate(48.0, 2.0, 100.0),
-                    new Coordinate(48.1, 2.1, 110.0),
-                    new Coordinate(48.2, 2.2, 120.0),
-                ],
-            ),
-        ]);
+        $stage = new StageDto(
+            tripId: $tripId,
+            dayNumber: 2,
+            distance: 40.0,
+            elevation: 200.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.2, 2.2),
+            geometry: [
+                new Coordinate(48.0, 2.0, 100.0),
+                new Coordinate(48.1, 2.1, 110.0),
+                new Coordinate(48.2, 2.2, 120.0),
+            ],
+        );
+        $this->repository->storeStages($tripId, [$stage]);
+
+        return $stage->id;
     }
 }
