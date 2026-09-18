@@ -145,6 +145,6 @@ only ever exercises Redis (`config/services.php`, the #56 TODO).
 
 ## Sources
 
-- [ADR-032: Migration Strategy](adr-032-migration-strategy.md) — pre-launch baseline reset addendum
+- [ADR-032: Migrations and Rollback Strategy](adr-032-migrations-and-rollback-strategy.md) — pre-launch baseline reset addendum
 - [ADR-043: Synchronous Structural Computation with Per-Block Asynchronous Enrichments](adr-043-synchronous-structural-computation-async-enrichments.md)
 - [ADR-057: Progressive Trip Loading](adr-057-progressive-trip-loading.md)
