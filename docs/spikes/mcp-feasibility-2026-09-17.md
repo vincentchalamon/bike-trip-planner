@@ -229,15 +229,19 @@ l'injecter à `null` et laisser exploser toute expression qui la déréférence.
 `is_granted('TRIP_VIEW', object.id)` fonctionne **pour l'opération HTTP comme pour
 l'outil**. Le refactor proposé est donc cohérent et sans régression de contrat.
 
-**Portée mesurée : 19 expressions `security:` référençant `request.`**, réparties sur
+**Portée mesurée : 18 expressions `security:` référençant `request.`**, réparties sur
 7 fichiers — `Trip.php`, `Stage.php`, `TripDetail.php`, `TripRoute.php`,
 `MercureToken.php`, `AccommodationScan.php` et `Entity/TripShare.php`.
 
+**Et la migration est déjà entamée** : sur 24 expressions d'autorisation objet,
+**6 utilisent déjà `object` nu**, toutes dans `Trip.php` (l. 84, 100, 117, 133, 142, 161).
+Leurs providers rendent un `TripRequest`, que `TripVoter::supports()` accepte.
+
 **Nuance de sécurité à ne pas perdre.** `request.attributes.get('id')` est évalué **avant**
-le chargement, `object.id` **après**. Avec `object`, l'objet d'autrui est donc lu en base
-avant d'être refusé. Sans conséquence d'autorisation (le refus a bien lieu, et ADR-038
-masque en 404), mais c'est un changement d'ordre à acter — et une raison de conserver
-`security` (post-read) plutôt que de chercher à tout basculer en `pre_read`.
+le provider, `object.id` **après**. Le refus a bien lieu, mais **les effets de bord du
+provider, eux, ont déjà eu lieu**. Pour trois cas c'est une lecture en base, anodin. Pour
+`MercureTokenProvider` ce serait **minter un JWT avant de refuser** — raison pour laquelle
+ce cas-là bascule sur la variable d'URI et non sur `object`.
 
 ### Sémantique de sécurité à deux étages, précisée
 
@@ -280,7 +284,7 @@ l'appel.
 |---|---|
 | « Vérifier si `api-platform/mcp` fournit le resource server » | **Fourni par `mcp/sdk`**, et **atteignable** en décorant `mcp.server.<name>.middleware_factory`. Phase 3A rétrécit pour de bon. |
 | « Ne pas écrire l'AS à la main, socle `league/oauth2-server` » | **Confirmé par l'ADR du SDK lui-même**, qui le recommande nommément. |
-| « Un outil réutilise le `security:` existant inchangé » | **Faux.** Recette en deux temps : **5 expressions → `object.id`**, **14 → sur la variable d'URI** (`Link(security: ...)`). |
+| « Un outil réutilise le `security:` existant inchangé » | **Faux.** Recette à **trois** branches, décidée par ce que rend le provider : **6 déjà sur `object`**, **3 → `object.id`**, **15 → variable d'URI**. |
 | « `security:` est appliqué à l'appel » | **PROUVÉ** par test fonctionnel : propriétaire OK, autre utilisateur `Access Denied.`, anonyme 401. |
 | « Le refus d'ownership ressort en *not found* (ADR-038) » | **FAUX — faille.** `Access Denied.` vs `... not found.` sont distinguables : énumération d'UUID rouverte sur le chemin MCP. |
 | « Comment tester un outil MCP » | **RÉSOLU** : `ApiTestCase` + JSON-RPC sur la route, sans client MCP. En-têtes miroir obligatoires. |
@@ -339,18 +343,30 @@ le chemin MCP, ou ADR-038 doit acter qu'il ne couvre pas ce transport.
 
 ### ⚠️ CORRIGÉ : `object.id` n'est PAS la recette universelle
 
-Répartition réelle des 19 expressions :
+Répartition réelle des 18 expressions :
 
 | Forme | Nombre |
 |---|---|
 | `is_granted('TRIP_EDIT', request.attributes.get('tripId'))` | **12** |
-| `is_granted('TRIP_VIEW', request.attributes.get('id'))` | 5 |
+| `is_granted('TRIP_VIEW', request.attributes.get('id'))` | 4 |
 | `is_granted('TRIP_VIEW', request.attributes.get('tripId'))` | 2 |
 
-**14 sur 19 (74 %) portent sur `tripId`, un identifiant *parent***, pas sur l'id de
-l'objet. `object.id` ne couvre que les 5 autres. Et `AccessCheckerProvider` ne fournit que
-`object`, `previous_object` et `request` — **pas de `uriVariables`** — donc on ne peut pas
-écrire `uriVariables['tripId']`.
+**14 sur 18 portent sur `tripId`, un identifiant *parent***, pas sur l'id de l'objet. Et
+`AccessCheckerProvider` ne fournit que `object`, `previous_object` et `request` — **pas de
+`uriVariables`** — donc on ne peut pas écrire `uriVariables['tripId']`.
+
+**Et `object.id` ne couvre même pas les 4 autres.** Le critère réel n'est pas ce sur quoi
+l'opération est clée, mais **ce que rend son provider** :
+
+| Le provider rend… | Forme | Nombre |
+|---|---|---|
+| un `TripRequest` (accepté par `TripVoter::supports()`) | `object` nu | déjà fait (6) |
+| un DTO exposant l'id — `Trip`, `TripRoute`, `TripDetail` | `object.id` | **3** |
+| autre chose, ou clé parente | variable d'URI | **15** |
+
+Le quinzième est `MercureToken.php` : clé sur son propre `id`, mais son provider rend un
+DTO dont la seule propriété est `$token`. Il n'y a **pas d'`id` à lire**, `object.id` y
+est donc impossible.
 
 **La bonne réponse est la sécurité par variable d'URI**, portée par
 `SecurityParameterProvider` (présent dans la chaîne MCP sous
@@ -365,7 +381,8 @@ uriVariables: [
 ],
 ```
 
-Recette finale : **5 expressions → `object.id`** ; **14 → sur la variable d'URI**.
+Recette finale : **3 expressions → `object.id`** ; **15 → sur la variable d'URI** ;
+**6 déjà migrées** vers `object` nu, rien à y faire.
 
 > **Piège à signaler à la revue de sécurité** : `SecurityParameterProvider` fait
 > `continue` si `$targetResource` est introuvable (`getFromClass() ?? getToClass()`). Un
@@ -412,7 +429,7 @@ donc **une décoration Symfony standard de ce service**, sans fork ni patch.
 
 Puisque `request` n'existe pas au listing MCP, qu'est-ce d'autre qui en dépend ?
 
-- **19 expressions `security:` référençant `request.`**, sur 7 fichiers — c'est le
+- **18 expressions `security:` référençant `request.`**, sur 7 fichiers — c'est le
   périmètre du refactor vers `object.id`.
 - **6 services injectent `RequestStack`.** Quatre sont hors périmètre MCP par conception
   (`AuthSessionProvider`, `AuthRequestLinkProcessor`, `AccessRequestCreateProcessor`,

@@ -10,22 +10,27 @@
 
 ## Context and Problem Statement
 
-Every object-level authorization expression in this codebase reads the HTTP request:
+Most object-level authorization expressions in this codebase read the HTTP request:
 
 ```php
 security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"
 security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))"
 ```
 
-There are **19 such expressions across 7 files** — `Trip.php`, `Stage.php`,
-`TripDetail.php`, `TripRoute.php`, `MercureToken.php`, `AccommodationScan.php` and
-`Entity/TripShare.php`. That was harmless while HTTP was the only way in.
+Counted on `api/src`, there are **24 object-level expressions**, of which **6 already use
+the `object` form** — all in `Trip.php` (lines 84, 100, 117, 133, 142, 161). **18 remain
+coupled to the request**, across 7 files: `Trip.php`, `Stage.php`, `TripDetail.php`,
+`TripRoute.php`, `MercureToken.php`, `AccommodationScan.php` and `Entity/TripShare.php`.
+
+This ADR therefore **finishes a migration that is already a quarter done**, rather than
+starting one. That the `object` form is already in production here, working, is the best
+evidence that it is the right target.
 
 It is not harmless any more. The MCP spike proved that an API Platform operation can be
 invoked **without an HTTP request** — at `tools/list` time, and from the CLI. In that
 context `ApiPlatform\Mcp\Security\ExpressionAccessChecker` passes
 `['request' => $requestStack?->getCurrentRequest()]`, i.e. **`request` is defined but
-null**, and every one of the 19 expressions dies:
+null**, and every one of the 18 remaining expressions dies:
 
 ```text
 Unable to get property "attributes" of non-object "request".
@@ -41,10 +46,22 @@ concerns that have been expressed in terms of a transport artefact.
 
 ## Decision
 
-**Authorization expressions must not reference `request`.** Two forms replace it,
-according to what the operation is keyed on.
+**Authorization expressions must not reference `request`.** Three forms replace it, and
+the one to use is decided by **what the operation's provider returns** — not by what the
+operation is keyed on, which is the intuitive but wrong criterion.
 
-### 1. Operations keyed on their own identifier (5 expressions) — `object`
+| The provider returns… | Form | Count |
+|---|---|---|
+| a `TripRequest` entity, which `TripVoter::supports()` accepts | `object` | **already done** (6) |
+| a DTO exposing the trip id | `object.id` | **3** |
+| anything else, or the operation is keyed on a parent `tripId` | per-URI-variable security | **15** |
+
+### 1. The provider returns a `TripRequest` — bare `object`
+
+Already the case for the six `Trip.php` operations whose provider is
+`TripRequestProvider` or `TripDoctrineProvider`. Nothing to do.
+
+### 2. The provider returns a DTO carrying the id — `object.id` (3 expressions)
 
 ```php
 security: "is_granted('TRIP_VIEW', object.id)"
@@ -55,15 +72,28 @@ security: "is_granted('TRIP_VIEW', object.id)"
 expression is enforced on the call. This is a documented, intentional deferral, not a
 workaround.
 
-`object.id` rather than `object` because `TripVoter::supports()` accepts a `TripRequest`
-entity or a string id, not the response DTO.
+`object.id` rather than bare `object` because `TripVoter::supports()` accepts a
+`TripRequest` entity or a string id, not a response DTO.
 
-### 2. Operations keyed on a parent identifier (14 expressions) — per-URI-variable security
+Applies to `Trip.php:155` (`TripGpxProvider` → `Trip`), `TripRoute.php`
+(→ `TripRoute`) and `TripDetail.php` (→ `TripDetail`) — the three DTOs that expose an
+`id`.
 
-Three quarters of the expressions key on `tripId`, a **parent** identifier that `object`
-does not carry, and `AccessCheckerProvider` exposes no `uriVariables` variable. Those move
-onto the URI variable itself, where `SecurityParameterProvider` binds the value under its
-own name:
+### 3. Parent identifier, or a DTO with no id — per-URI-variable security (15 expressions)
+
+Fourteen expressions key on `tripId`, a **parent** identifier that `object` does not
+carry, and `AccessCheckerProvider` exposes no `uriVariables` variable.
+
+**A fifteenth joins them for a different reason:** `MercureToken.php` is keyed on its own
+`id`, but `MercureTokenProvider` returns a `MercureToken` DTO whose only property is
+`$token`. There is no `id` to read, so `object.id` is impossible there.
+
+That case also carries the sharpest version of the ordering caveat below: `object.*`
+is evaluated **after** the provider has run, so using it here would mean **minting a
+Mercure JWT before refusing the caller**. The URI-variable form avoids that entirely.
+
+All fifteen move onto the URI variable itself, where `SecurityParameterProvider` binds
+the value under its own name:
 
 ```php
 uriVariables: [
@@ -110,13 +140,20 @@ Any transport added to this application must therefore either reproduce the mask
 explicitly accept that it does not apply. That decision belongs to the ADR introducing the
 transport, and is taken for MCP in ADR-064.
 
-### Authorization moves from before the read to after it
+### Authorization moves from before the provider to after it
 
-`request.attributes.get('id')` is evaluated before the object is loaded; `object.id` is
-evaluated after. Another user's trip is therefore read from the database before being
-refused. This changes no authorization outcome — the denial still happens — but it is an
-ordering change worth stating, and a reason to keep the expression on `security`
-(post-read) rather than trying to force everything into `pre_read`.
+`request.attributes.get('id')` is evaluated before the provider runs; `object.id` is
+evaluated after. The denial still happens, so no authorization outcome changes — but
+**the provider's side effects happen first**, for a caller who will be refused.
+
+For the three `object.id` cases that is a database read, which is benign. It is the
+reason `MercureToken` must **not** take that form: its provider mints a JWT, and work of
+that nature should not be done for an unauthorized caller even when the result is
+discarded. Reading the ordering as "one extra SELECT" would have missed it.
+
+This is also why the expression stays on `security` (post-provider) rather than being
+forced into `pre_read`: `AccessCheckerProvider` sets `object` to null at that stage by
+construction, so object-level rules cannot be expressed there at all.
 
 ### A misconfigured `Link` skips its check silently
 
@@ -138,8 +175,9 @@ authorization surface — the part of the codebase where duplication is least ac
 and guarantees the two copies drift.
 
 **Extend `TripVoter` to accept the response DTOs, and use bare `object`.** Rejected: it
-widens the voter's contract to solve a problem that `object.id` already solves, and does
-nothing for the 14 parent-keyed expressions.
+widens the voter's contract to solve a problem that `object.id` already solves, does
+nothing for the 15 expressions that need the URI-variable form, and would not help
+`MercureToken` at all — its DTO carries no trip identity for the voter to read.
 
 **Move all checks to `pre_read`.** Rejected: `AccessCheckerProvider` sets `object` to null
 at that stage by construction, so it cannot express object-level rules at all.
