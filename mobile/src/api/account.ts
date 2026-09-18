@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n';
 import { api } from './client';
 import { LD_JSON } from './config';
 
@@ -21,6 +22,29 @@ export async function fetchAccountExport(): Promise<ArrayBuffer> {
     throw new Error('Failed to export account');
   }
   return data;
+}
+
+/**
+ * Persist the interface language as the account's locale (`PATCH /users/me`).
+ *
+ * The server renders alerts and queries third parties in the account's locale
+ * rather than in the `Accept-Language` this client sends (ADR-063), so the
+ * language picked in the app has to be pushed or the trips keep answering in the
+ * previous one.
+ *
+ * Never throws: switching language is a local, immediate action and must not be
+ * held hostage to the network.
+ */
+export async function updateAccountLocale(locale: Locale): Promise<boolean> {
+  try {
+    const { response } = await api.PATCH('/users/me', {
+      headers: { Accept: LD_JSON, 'Content-Type': 'application/merge-patch+json' },
+      body: { locale },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 // Anonymise the account (204). Never throws: resolves to false on any failure,

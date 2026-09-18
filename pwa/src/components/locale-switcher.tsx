@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/locale";
 import { setLocale } from "@/i18n/set-locale";
+import { updateAccountLocale } from "@/lib/api/client";
+import { useAuthStore } from "@/store/auth-store";
 
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
   fr: "Français",
@@ -30,12 +32,24 @@ export function LocaleSwitcher() {
   const currentLocale = useLocale() as SupportedLocale;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  function handleLocaleChange(locale: string) {
+  function handleLocaleChange(value: string) {
+    const locale = value as SupportedLocale;
     if (locale === currentLocale) return;
 
+    // The server no longer reads Accept-Language for a trip's language; it uses
+    // the account's stored locale (ADR-063). Without this the interface would
+    // switch while alerts kept answering in the previous language.
+    //
+    // Fire-and-forget, and only when signed in: this switcher is also mounted on
+    // the public top bar, where there is no account to update.
+    if (isAuthenticated) {
+      void updateAccountLocale(locale);
+    }
+
     startTransition(() => {
-      setLocale(locale as SupportedLocale);
+      setLocale(locale);
       router.refresh();
     });
   }

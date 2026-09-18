@@ -1,6 +1,7 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import { z } from "zod";
 import type { components, operations, paths } from "@btp/core/schema";
+import type { SupportedLocale } from "@/i18n/locale";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -759,6 +760,31 @@ export async function downloadAccountExport(): Promise<void> {
 export async function deleteAccount(): Promise<boolean> {
   const { response } = await apiClient.DELETE("/users/me");
   return response.ok;
+}
+
+/**
+ * Persist the interface language as the account's locale (`PATCH /users/me`).
+ *
+ * The server renders alerts and queries third parties in the account's locale,
+ * not in `Accept-Language` (ADR-063), so a language chosen here has to be sent
+ * or the trips keep answering in the previous one.
+ *
+ * Never throws: the language switch is a local, immediate action and must not be
+ * held hostage to the network. A failed sync leaves the account preference on its
+ * previous value, which the next successful switch corrects.
+ */
+export async function updateAccountLocale(
+  locale: SupportedLocale,
+): Promise<boolean> {
+  try {
+    const { response } = await apiClient.PATCH("/users/me", {
+      headers: { "Content-Type": "application/merge-patch+json" },
+      body: { locale },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
