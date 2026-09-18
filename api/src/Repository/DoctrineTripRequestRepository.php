@@ -295,6 +295,24 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     }
 
     /**
+     * @param callable(list<StageDto>): list<StageDto> $mutator
+     *
+     * @return list<StageDto>|null
+     */
+    public function mutateStages(string $tripId, callable $mutator): ?array
+    {
+        $stages = $this->getStages($tripId);
+        if (null === $stages) {
+            return null;
+        }
+
+        $mutated = $mutator($stages);
+        $this->storeStages($tripId, $mutated);
+
+        return $mutated;
+    }
+
+    /**
      * Re-reads the persisted stages from the database, keyed by identifier.
      *
      * Never built from $trip->stages: the owning collection is initialised by the

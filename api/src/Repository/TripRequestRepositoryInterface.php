@@ -49,6 +49,25 @@ interface TripRequestRepositoryInterface
     public function getStages(string $tripId): ?array;
 
     /**
+     * Reads the stages, applies the mutation, writes them back — as one atomic unit.
+     *
+     * Every caller that edits the stage collection (create, update, move, delete, rest
+     * day, accommodation selection) does exactly this sequence. Done by hand it is a
+     * read-modify-write with no protection: a worker writing one enrichment column in
+     * between has its write silently reverted by the caller's stale snapshot. Routed
+     * through here, the whole sequence is serialised against the targeted writes by
+     * {@see LockingTripRequestRepository}.
+     *
+     * The mutator returns the new list rather than mutating by reference, because the
+     * callers splice, reorder and renumber.
+     *
+     * @param callable(list<Stage>): list<Stage> $mutator
+     *
+     * @return list<Stage>|null the stages as written, or null when the trip is unknown
+     */
+    public function mutateStages(string $tripId, callable $mutator): ?array;
+
+    /**
      * Returns a single stage's route geometry, in travel order, projected to 2D.
      *
      * Feeds the in-ride detour calculation ({@see \App\InRide\DetourCalculator}),

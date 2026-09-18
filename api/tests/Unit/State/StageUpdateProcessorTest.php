@@ -26,6 +26,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class StageUpdateProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     /** @var list<array{lat: float, lon: float, ele: float}> */
     private array $decimatedPointsRaw;
 
@@ -104,6 +106,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -195,6 +198,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         // Expired: the fallback must rebuild from the stage geometry.
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
@@ -272,6 +276,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -341,6 +346,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -392,6 +398,8 @@ final class StageUpdateProcessorTest extends TestCase
         $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
@@ -447,6 +455,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());

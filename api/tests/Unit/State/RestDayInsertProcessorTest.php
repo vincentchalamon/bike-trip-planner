@@ -31,6 +31,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class RestDayInsertProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
     private MockObject&MessageBusInterface $messageBus;
@@ -43,6 +45,7 @@ final class RestDayInsertProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($this->tripStateManager);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 

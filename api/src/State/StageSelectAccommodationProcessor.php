@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -67,21 +68,79 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         \assert($request instanceof TripRequest);
         $this->tripLocker->assertNotLocked($request);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $stage = null;
+        $isDeselect = null === $data->selectedAccommodationLat || null === $data->selectedAccommodationLon;
 
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
+        // Read, edit and write as one unit: an accommodation scan running concurrently
+        // writes the very column this edits, and the snapshot read here would revert it.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $index, $isDeselect, &$stage): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        $stage = $stages[$index];
+            $stage = $stages[$index];
 
-        // Deselect: clear selected accommodation and trigger a new accommodation scan
-        if (null === $data->selectedAccommodationLat || null === $data->selectedAccommodationLon) {
-            $stage->selectedAccommodation = null;
-            $stages[$index] = $stage;
-            $this->tripStateManager->storeStages($tripId, $stages);
+            // Deselect: clear selected accommodation; a new scan is dispatched below.
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
+            if ($isDeselect) {
+                $stage->selectedAccommodation = null;
+                $stages[$index] = $stage;
+
+                return $stages;
+            }
+
+            $lat = $data->selectedAccommodationLat;
+            $lon = $data->selectedAccommodationLon;
+            \assert(null !== $lat && null !== $lon);
+
+            $selected = null;
+            foreach ($stage->accommodations as $accommodation) {
+                if (abs($accommodation->lat - $lat) < 1e-6 && abs($accommodation->lon - $lon) < 1e-6) {
+                    $selected = $accommodation;
+                    break;
+                }
+            }
+
+            // Fallback: the accommodation list may have been refreshed by a concurrent
+            // scan while the user was looking at the old list. Check selectedAccommodation
+            // (set by a previous selection that survived the re-scan) as a last resort.
+            if (null === $selected && null !== $stage->selectedAccommodation) {
+                $acc = $stage->selectedAccommodation;
+                if (abs($acc->lat - $lat) < 1e-6 && abs($acc->lon - $lon) < 1e-6) {
+                    $selected = $acc;
+                }
+            }
+
+            if (null === $selected) {
+                // The frontend is showing stale accommodation data — a concurrent scan
+                // replaced the list. Return 409 so the frontend can refresh and retry.
+                throw new ConflictHttpException(\sprintf('Accommodation at (%F, %F) is no longer in the current list for stage %d. Accommodation data may have been refreshed; please retry.', $lat, $lon, $index));
+            }
+
+            // Keep only the selected accommodation (remove others)
+            $stage->accommodations = [$selected];
+            $stage->selectedAccommodation = $selected;
+
+            // Update stage endPoint to the accommodation coordinates (marker only)
+            // Distance and geometry are intentionally preserved from the original GPX route
+            $stage->endPoint = new Coordinate($selected->lat, $selected->lon);
+
+            $stages[$index] = $stage;
+
+            // Update the next stage startPoint to the same accommodation coordinates
+            if (isset($stages[$index + 1])) {
+                $nextStage = $stages[$index + 1];
+                $nextStage->startPoint = $stage->endPoint;
+                $stages[$index + 1] = $nextStage;
+            }
+
+            return $stages;
+        }) ?? [];
+
+        \assert($stage instanceof Stage);
+
+        if ($isDeselect) {
             $generation = $this->generationTracker->increment($tripId);
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
@@ -89,52 +148,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
             return $this->stageResponseMapper->map($stage);
         }
-
-        $lat = $data->selectedAccommodationLat;
-        $lon = $data->selectedAccommodationLon;
-
-        $selected = null;
-        foreach ($stage->accommodations as $accommodation) {
-            if (abs($accommodation->lat - $lat) < 1e-6 && abs($accommodation->lon - $lon) < 1e-6) {
-                $selected = $accommodation;
-                break;
-            }
-        }
-
-        // Fallback: the accommodation list may have been refreshed by a concurrent
-        // scan while the user was looking at the old list. Check selectedAccommodation
-        // (set by a previous selection that survived the re-scan) as a last resort.
-        if (null === $selected && null !== $stage->selectedAccommodation) {
-            $acc = $stage->selectedAccommodation;
-            if (abs($acc->lat - $lat) < 1e-6 && abs($acc->lon - $lon) < 1e-6) {
-                $selected = $acc;
-            }
-        }
-
-        if (null === $selected) {
-            // The frontend is showing stale accommodation data — a concurrent scan
-            // replaced the list. Return 409 so the frontend can refresh and retry.
-            throw new ConflictHttpException(\sprintf('Accommodation at (%F, %F) is no longer in the current list for stage %d. Accommodation data may have been refreshed; please retry.', $lat, $lon, $index));
-        }
-
-        // Keep only the selected accommodation (remove others)
-        $stage->accommodations = [$selected];
-        $stage->selectedAccommodation = $selected;
-
-        // Update stage endPoint to the accommodation coordinates (marker only)
-        // Distance and geometry are intentionally preserved from the original GPX route
-        $stage->endPoint = new Coordinate($selected->lat, $selected->lon);
-
-        $stages[$index] = $stage;
-
-        // Update the next stage startPoint to the same accommodation coordinates
-        if (isset($stages[$index + 1])) {
-            $nextStage = $stages[$index + 1];
-            $nextStage->startPoint = $stage->endPoint;
-            $stages[$index + 1] = $nextStage;
-        }
-
-        $this->tripStateManager->storeStages($tripId, $stages);
 
         // Trigger recalculation for affected stages
         $affectedIndices = [$index];

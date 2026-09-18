@@ -55,62 +55,64 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $stage = null;
 
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
-        $stage = $stages[$index];
-        $pointsChanged = false;
-
-        if (null !== $data->startPoint) {
-            $stage->startPoint = $data->startPoint;
-            $pointsChanged = true;
-        }
-
-        if (null !== $data->endPoint) {
-            $stage->endPoint = $data->endPoint;
-            $pointsChanged = true;
-        }
-
-        if (null !== $data->label) {
-            $stage->label = $data->label;
-        }
-
-        // Bump generation: stage edits invalidate in-flight computations
-        $generation = $this->generationTracker->increment($tripId);
-
-        // Distance-based editing: walk along decimated route to find new endPoint
-        if (null !== $data->distance) {
-            $this->applyDistanceChange($tripId, $stages, $index, $data->distance);
-            $this->tripStateManager->storeStages($tripId, $stages);
-
-            // Recalculate all affected stages (current and subsequent)
-            $affected = range($index, \count($stages) - 1);
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
-
-            $tripRequest = $this->tripStateManager->getRequest($tripId);
-            if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-                $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-                $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here. Both editing
+        // modes (explicit points and distance-driven split) share the one critical
+        // section; only the set of stages to recalculate differs afterwards.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $index, &$stage): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
             }
 
-            return $this->stageResponseMapper->map($stages[$index]);
-        }
+            $stage = $stages[$index];
+            $pointsChanged = false;
 
-        if ($pointsChanged) {
-            $stage->distance = $this->distanceCalculator->distanceBetween(
-                $stage->startPoint,
-                $stage->endPoint,
-            ) / 1000.0;
-            $stage->geometry = [$stage->startPoint, $stage->endPoint];
-        }
+            if (null !== $data->startPoint) {
+                $stage->startPoint = $data->startPoint;
+                $pointsChanged = true;
+            }
 
-        $stages[$index] = $stage;
-        $this->tripStateManager->storeStages($tripId, $stages);
+            if (null !== $data->endPoint) {
+                $stage->endPoint = $data->endPoint;
+                $pointsChanged = true;
+            }
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$index], generation: $generation));
+            if (null !== $data->label) {
+                $stage->label = $data->label;
+            }
+
+            // Distance-based editing: walk along decimated route to find new endPoint
+            if (null !== $data->distance) {
+                $this->applyDistanceChange($tripId, $stages, $index, $data->distance);
+
+                return $stages;
+            }
+
+            if ($pointsChanged) {
+                $stage->distance = $this->distanceCalculator->distanceBetween(
+                    $stage->startPoint,
+                    $stage->endPoint,
+                ) / 1000.0;
+                $stage->geometry = [$stage->startPoint, $stage->endPoint];
+            }
+
+            $stages[$index] = $stage;
+
+            return $stages;
+        }) ?? [];
+
+        \assert($stage instanceof Stage);
+
+        // Bump generation: stage edits invalidate in-flight computations. After the
+        // write, so the generation names the state that was actually persisted.
+        $generation = $this->generationTracker->increment($tripId);
+
+        // A distance edit cascades into every following stage; a point or label edit
+        // touches only this one.
+        $affected = null !== $data->distance ? range($index, \count($stages) - 1) : [$index];
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
@@ -118,7 +120,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
-        return $this->stageResponseMapper->map($stage);
+        return $this->stageResponseMapper->map($stages[$index] ?? $stage);
     }
 
     /**

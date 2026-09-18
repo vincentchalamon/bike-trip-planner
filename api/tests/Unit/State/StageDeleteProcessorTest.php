@@ -29,6 +29,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
     private MockObject&MessageBusInterface $messageBus;
@@ -44,6 +46,7 @@ final class StageDeleteProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($this->tripStateManager);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
 
@@ -193,6 +196,8 @@ final class StageDeleteProcessorTest extends TestCase
         $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
         $tripStateManager->method('getStages')->willReturn([]);
 

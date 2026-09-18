@@ -48,42 +48,48 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $restDay = null;
 
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $index, &$restDay): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        $afterStage = $stages[$index];
+            $afterStage = $stages[$index];
 
-        // Prevent adjacent rest days — the frontend enforces this too, but the
-        // API contract must be self-consistent.
-        if ($afterStage->isRestDay || (isset($stages[$index + 1]) && $stages[$index + 1]->isRestDay)) {
-            throw new UnprocessableEntityHttpException('Cannot insert a rest day adjacent to an existing rest day.');
-        }
+            // Prevent adjacent rest days — the frontend enforces this too, but the
+            // API contract must be self-consistent.
+            if ($afterStage->isRestDay || (isset($stages[$index + 1]) && $stages[$index + 1]->isRestDay)) {
+                throw new UnprocessableEntityHttpException('Cannot insert a rest day adjacent to an existing rest day.');
+            }
 
-        // The rest day sits between $index and $index+1.
-        // startPoint = endPoint of the previous stage (same location).
-        $restDay = new Stage(
-            tripId: $tripId,
-            dayNumber: $index + 2,
-            distance: 0.0,
-            elevation: 0.0,
-            startPoint: $afterStage->endPoint,
-            endPoint: $afterStage->endPoint,
-            geometry: [$afterStage->endPoint],
-            elevationLoss: 0.0,
-            isRestDay: true,
-        );
+            // The rest day sits between $index and $index+1.
+            // startPoint = endPoint of the previous stage (same location).
+            $restDay = new Stage(
+                tripId: $tripId,
+                dayNumber: $index + 2,
+                distance: 0.0,
+                elevation: 0.0,
+                startPoint: $afterStage->endPoint,
+                endPoint: $afterStage->endPoint,
+                geometry: [$afterStage->endPoint],
+                elevationLoss: 0.0,
+                isRestDay: true,
+            );
 
-        array_splice($stages, $index + 1, 0, [$restDay]);
+            array_splice($stages, $index + 1, 0, [$restDay]);
 
-        // Reindex day numbers
-        foreach ($stages as $i => $stage) {
-            $stage->dayNumber = $i + 1;
-        }
+            // Reindex day numbers
+            foreach ($stages as $i => $stage) {
+                $stage->dayNumber = $i + 1;
+            }
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            return $stages;
+        }) ?? [];
+
+        \assert($restDay instanceof Stage);
 
         $generation = $this->generationTracker->increment($tripId);
 

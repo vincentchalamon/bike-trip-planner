@@ -53,32 +53,38 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('startPoint and endPoint are required to create a stage.');
         }
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        $position = $data->position ?? \count($stages);
-
-        if ($position < 0 || $position > \count($stages)) {
-            throw new UnprocessableEntityHttpException(\sprintf('Position %d is out of bounds (0-%d).', $position, \count($stages)));
-        }
-
         $distance = $this->distanceCalculator
                 ->distanceBetween($data->startPoint, $data->endPoint) / 1000.0;
 
-        $newStage = new Stage(
-            tripId: $tripId,
-            dayNumber: $position + 1,
-            distance: $distance,
-            elevation: 0.0,
-            startPoint: $data->startPoint,
-            endPoint: $data->endPoint,
-            geometry: [$data->startPoint, $data->endPoint],
-            label: $data->label,
-        );
+        $position = null;
+        $newStage = null;
 
-        array_splice($stages, $position, 0, [$newStage]);
-        $stages = $this->reindexDayNumbers($stages);
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $distance, &$position, &$newStage): array {
+            $position = $data->position ?? \count($stages);
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            if ($position < 0 || $position > \count($stages)) {
+                throw new UnprocessableEntityHttpException(\sprintf('Position %d is out of bounds (0-%d).', $position, \count($stages)));
+            }
+
+            $newStage = new Stage(
+                tripId: $tripId,
+                dayNumber: $position + 1,
+                distance: $distance,
+                elevation: 0.0,
+                startPoint: $data->startPoint,
+                endPoint: $data->endPoint,
+                geometry: [$data->startPoint, $data->endPoint],
+                label: $data->label,
+            );
+
+            array_splice($stages, $position, 0, [$newStage]);
+
+            return $this->reindexDayNumbers($stages);
+        }) ?? [];
+
+        \assert(null !== $position && $newStage instanceof Stage);
 
         $generation = $this->generationTracker->increment($tripId);
 

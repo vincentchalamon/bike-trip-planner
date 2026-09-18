@@ -10,6 +10,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageManualAccommodationRequest;
+use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -62,14 +63,9 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
         \assert($request instanceof TripRequest);
         $this->tripLocker->assertNotLocked($request);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
         // Geocode before mutating anything: a non-resolvable/ambiguous address is a
-        // 422 with nothing persisted (acceptance: rien persisté).
+        // 422 with nothing persisted (acceptance: rien persisté). Kept out of the
+        // critical section below — it is a network call, and the lock is not for waiting on.
         $coordinate = $this->geocoder->geocode($data->address);
         if (!$coordinate instanceof Coordinate) {
             throw new UnprocessableEntityHttpException(\sprintf('Address "%s" could not be geocoded. Refine it (add a city or postcode) and try again.', $data->address));
@@ -92,23 +88,35 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
             address: $data->address,
         );
 
-        $stage = $stages[$index];
+        $stage = null;
 
-        // Same downstream as selecting a scanned accommodation: keep only this one,
-        // mark it selected, move the stage boundary to its coordinates.
-        $stage->accommodations = [$accommodation];
-        $stage->selectedAccommodation = $accommodation;
-        $stage->endPoint = new Coordinate($accommodation->lat, $accommodation->lon);
+        // Read, edit and write as one unit: an accommodation scan running concurrently
+        // writes the very column this edits, and the snapshot read here would revert it.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $accommodation, &$stage): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        $stages[$index] = $stage;
+            $stage = $stages[$index];
 
-        if (isset($stages[$index + 1])) {
-            $nextStage = $stages[$index + 1];
-            $nextStage->startPoint = $stage->endPoint;
-            $stages[$index + 1] = $nextStage;
-        }
+            // Same downstream as selecting a scanned accommodation: keep only this one,
+            // mark it selected, move the stage boundary to its coordinates.
+            $stage->accommodations = [$accommodation];
+            $stage->selectedAccommodation = $accommodation;
+            $stage->endPoint = new Coordinate($accommodation->lat, $accommodation->lon);
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            $stages[$index] = $stage;
+
+            if (isset($stages[$index + 1])) {
+                $nextStage = $stages[$index + 1];
+                $nextStage->startPoint = $stage->endPoint;
+                $stages[$index + 1] = $nextStage;
+            }
+
+            return $stages;
+        }) ?? [];
+
+        \assert($stage instanceof Stage);
 
         $affectedIndices = [$index];
         if (isset($stages[$index + 1])) {

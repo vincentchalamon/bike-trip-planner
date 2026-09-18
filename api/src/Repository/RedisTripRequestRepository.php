@@ -128,6 +128,24 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return null;
     }
 
+    /**
+     * @param callable(list<Stage>): list<Stage> $mutator
+     *
+     * @return list<Stage>|null
+     */
+    public function mutateStages(string $tripId, callable $mutator): ?array
+    {
+        $stages = $this->getStages($tripId);
+        if (null === $stages) {
+            return null;
+        }
+
+        $mutated = $mutator($stages);
+        $this->storeStages($tripId, $mutated);
+
+        return $mutated;
+    }
+
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
     {
         foreach ($this->getStages($tripId) ?? [] as $stage) {

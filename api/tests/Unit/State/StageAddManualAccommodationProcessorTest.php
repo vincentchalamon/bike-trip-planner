@@ -28,6 +28,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageAddManualAccommodationProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     /** @return list<Stage> */
     private function twoStages(): array
     {
@@ -78,6 +80,8 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $stored = null;
 
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($stages);
         $repo->expects(self::once())->method('storeStages')
@@ -120,6 +124,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     public function omittedPriceProducesNoExactPrice(): void
     {
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($this->twoStages());
         $stored = null;
@@ -145,6 +150,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     public function dispatchesRecalculationForAffectedStages(): void
     {
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($this->twoStages());
 
@@ -172,6 +178,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     public function unresolvableAddressThrows422AndPersistsNothing(): void
     {
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($this->twoStages());
         $repo->expects(self::never())->method('storeStages');
@@ -190,6 +197,8 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $locked->startDate = new \DateTimeImmutable('yesterday');
 
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn($locked);
         $repo->method('getStages')->willReturn($this->twoStages());
 

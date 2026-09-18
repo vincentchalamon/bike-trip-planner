@@ -48,39 +48,41 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
-        if (\count($stages) <= 2) {
-            throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');
-        }
-
         $sourceType = $this->tripStateManager->getSourceType($tripId);
+        $isRestDayDeletion = false;
+        $mergedIndex = null;
 
-        $isRestDayDeletion = $stages[$index]->isRestDay;
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $stages = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        if ($isRestDayDeletion) {
-            // Rest days are just removed without merging
-            array_splice($stages, $index, 1);
-            $mergedIndex = null;
-        } elseif ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
-            // Single stage or collection: just remove
-            array_splice($stages, $index, 1);
-            $mergedIndex = null;
-        } else {
-            // Continuous route with 2+ stages: merge with adjacent stage
-            [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
-        }
+            if (\count($stages) <= 2) {
+                throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');
+            }
 
-        // Reindex day numbers
-        foreach ($stages as $i => $stage) {
-            $stage->dayNumber = $i + 1;
-        }
+            $isRestDayDeletion = $stages[$index]->isRestDay;
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            if ($isRestDayDeletion) {
+                // Rest days are just removed without merging
+                array_splice($stages, $index, 1);
+            } elseif ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
+                // Single stage or collection: just remove
+                array_splice($stages, $index, 1);
+            } else {
+                // Continuous route with 2+ stages: merge with adjacent stage
+                [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
+            }
+
+            // Reindex day numbers
+            foreach ($stages as $i => $stage) {
+                $stage->dayNumber = $i + 1;
+            }
+
+            return $stages;
+        }) ?? [];
 
         $generation = $this->generationTracker->increment($tripId);
 
