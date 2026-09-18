@@ -7,6 +7,7 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
@@ -39,6 +40,10 @@ use App\State\TripDetailProvider;
             name: 'get_trip',
             description: 'Read one bikepacking trip: its pacing settings, dates and persisted stages (distance, elevation, labels, weather, terrain alerts, chosen accommodation).',
             uriTemplate: '/trips/{id}/detail',
+            // SPIKE FINDING: without an explicit uriVariables declaration the tool's
+            // `id` argument never reaches the provider — the call executes and dies with
+            // `Trip "" not found.`
+            uriVariables: ['id' => new Link(fromClass: TripDetail::class)],
             // SPIKE FINDING: the HTTP operation above uses
             //   security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"
             // which CANNOT be reused here. At LISTING time (tools/list, and the CLI)

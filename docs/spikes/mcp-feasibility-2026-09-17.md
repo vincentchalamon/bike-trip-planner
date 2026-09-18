@@ -322,11 +322,122 @@ l'appel.
 |---|---|
 | « Vérifier si `api-platform/mcp` fournit le resource server » | **Fourni par `mcp/sdk`**, avec en prime un proxy de délégation. Phase 3A rétrécit. |
 | « Ne pas écrire l'AS à la main, socle `league/oauth2-server` » | **Confirmé par l'ADR du SDK lui-même**, qui le recommande nommément. |
-| « Un outil réutilise le `security:` existant inchangé » | **Faux sous la forme `request.`, vrai sous la forme `object.id`** — portable HTTP *et* MCP. Refactor cohérent de **19 expressions sur 7 fichiers**. |
+| « Un outil réutilise le `security:` existant inchangé » | **Faux.** Recette en deux temps : **5 expressions → `object.id`**, **14 → sur la variable d'URI** (`Link(security: ...)`). |
+| « `security:` est appliqué à l'appel » | **PROUVÉ** par test fonctionnel : propriétaire OK, autre utilisateur `Access Denied.`, anonyme 401. |
+| « Le refus d'ownership ressort en *not found* (ADR-038) » | **FAUX — faille.** `Access Denied.` vs `... not found.` sont distinguables : énumération d'UUID rouverte sur le chemin MCP. |
+| « Comment tester un outil MCP » | **RÉSOLU** : `ApiTestCase` + JSON-RPC sur la route, sans client MCP. En-têtes miroir obligatoires. |
+| « Aucun conflit de dépendances » | Exact, mais **8 paquets transitifs** ajoutés. |
 | « `format: json` pour éviter le bruit JSON-LD » | **Possible par opération**, global laissé à `null`. **Zéro impact HTTP, prouvé par un diff OpenAPI identique.** |
 | « `debug:mcp` comme première boucle de retour » | **Utilisable** — l'apparente absence d'outils était le filtre de sécurité en contexte anonyme. |
 | « Le mode worker FrankenPHP est traité par `McpRegistryPass` » | **Confirmé par conception**, non vérifié sous charge. |
 | Dépendances expérimentales | **Aucun conflit** sur PHP 8.5 / Symfony 8.1 / API Platform 4.3. |
+
+## Deuxième passe — ce que la relecture critique a prouvé, et corrigé
+
+La première rédaction inférait beaucoup depuis la lecture de code. Un test fonctionnel
+réel (`api/tests/Functional/McpToolCallTest.php`, 4 tests verts) a tranché.
+
+### ✅ PROUVÉ : `security:` est appliqué à l'appel, pas seulement au listing
+
+C'est l'affirmation centrale du plan, et elle n'était jusque-là qu'une déduction. Deux
+utilisateurs authentifiés, un voyage appartenant au premier :
+
+| Appelant | Réponse |
+|---|---|
+| Propriétaire | Le voyage complet, titre inclus |
+| Autre utilisateur | `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"Access Denied."}}` |
+| Anonyme | **401** — le firewall `api` (`pattern: ^/`) couvre `/mcp` sans une ligne de config |
+
+Le test positif assert le titre, donc le test de refus **ne peut pas passer à vide**.
+
+### ✅ RÉSOLU : comment tester fonctionnellement un outil MCP
+
+**Aucun client MCP n'est nécessaire.** Le transport est une route Symfony ordinaire :
+`ApiTestCase` y poste du JSON-RPC comme sur n'importe quel endpoint, avec Foundry pour la
+base. C'est la réponse à la question (d), laissée ouverte en première passe.
+
+**L'enveloppe exige des en-têtes miroir**, découverts un à un via des erreurs `-32020`
+(HeaderMismatch) : `MCP-Protocol-Version`, puis `Mcp-Method`, puis `Mcp-Name`. Le corps
+JSON-RPC ne suffit pas — la révision 2026-07-28 duplique version, méthode et nom d'élément
+en en-têtes, ce qui permet de router ou cacher un appel en périphérie sans parser le corps.
+
+### 🔴 FAILLE : ADR-038 ne tient pas sur le chemin MCP
+
+Le plan affirmait qu'un refus d'ownership ressortirait en « not found », préservant
+ADR-038. **C'est faux, vérifié :**
+
+```
+trip d'autrui   : Access Denied.
+trip inexistant : Trip "01936f6e-0000-7000-8000-0000000009ff" not found.
+```
+
+Deux réponses **distinguables** : le chemin MCP fuite l'existence d'un voyage, soit
+exactement l'énumération d'UUID qu'ADR-038 ferme côté HTTP.
+`HideForbiddenAsNotFoundListener` est un listener d'exception du kernel HTTP ; le SDK
+attrape l'exception et la convertit en erreur JSON-RPC sans qu'il n'intervienne.
+
+**À traiter en Phase 3**, et ce n'est pas optionnel : le masquage doit être reproduit sur
+le chemin MCP, ou ADR-038 doit acter qu'il ne couvre pas ce transport.
+
+### ⚠️ CORRIGÉ : `object.id` n'est PAS la recette universelle
+
+Répartition réelle des 19 expressions :
+
+| Forme | Nombre |
+|---|---|
+| `is_granted('TRIP_EDIT', request.attributes.get('tripId'))` | **12** |
+| `is_granted('TRIP_VIEW', request.attributes.get('id'))` | 5 |
+| `is_granted('TRIP_VIEW', request.attributes.get('tripId'))` | 2 |
+
+**14 sur 19 (74 %) portent sur `tripId`, un identifiant *parent***, pas sur l'id de
+l'objet. `object.id` ne couvre que les 5 autres. Et `AccessCheckerProvider` ne fournit que
+`object`, `previous_object` et `request` — **pas de `uriVariables`** — donc on ne peut pas
+écrire `uriVariables['tripId']`.
+
+**La bonne réponse est la sécurité par variable d'URI**, portée par
+`SecurityParameterProvider` (présent dans la chaîne MCP sous
+`api_platform.mcp.state_provider.security_parameter`) : chaque uri variable peut porter sa
+propre expression, évaluée avec sa valeur liée **sous son propre nom**. `Link` accepte
+`security` et `securityObjectName`, et `Stage.php` déclare déjà ses `uriVariables`.
+
+```php
+uriVariables: [
+    'tripId' => new Link(fromClass: Stage::class, security: "is_granted('TRIP_EDIT', tripId)"),
+    'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+],
+```
+
+Recette finale : **5 expressions → `object.id`** ; **14 → sur la variable d'URI**.
+
+> **Piège à signaler à la revue de sécurité** : `SecurityParameterProvider` fait
+> `continue` si `$targetResource` est introuvable (`getFromClass() ?? getToClass()`). Un
+> `Link` mal configuré **saute donc le contrôle silencieusement**.
+
+### ⚠️ CORRIGÉ : `uriVariables` doit être déclaré explicitement sur l'outil
+
+Sans lui, l'argument de l'outil n'atteint jamais le provider : l'appel s'exécute et meurt
+sur `Trip "" not found.` — un échec silencieux côté mapping, pas une erreur de
+configuration visible.
+
+### ⚠️ CORRIGÉ : « aucun conflit » minimisait le coût
+
+Aucun conflit de *versions*, mais **8 paquets transitifs** ajoutés : `opis/json-schema`,
+`opis/string`, `opis/uri`, `php-http/discovery`, `psr/http-client`,
+`psr/http-server-handler`, `psr/http-server-middleware`, `psr/simple-cache`. C'est une
+expansion réelle de surface de dépendances, à passer au `security-check` du projet.
+
+### Ce qui reste non prouvé
+
+- **FrankenPHP en mode worker sous charge concurrente.** Traité par conception
+  (`McpRegistryPass`), jamais exercé.
+- **Le resource server OAuth du SDK est-il atteignable via le bundle ?** Les classes
+  existent, mais `MiddlewareFactory` ne gère que la protection DNS-rebinding : aucune
+  couture n'a été trouvée pour injecter `AuthorizationMiddleware`. Tant que ce point n'est
+  pas levé, « la Phase 3A rétrécit » reste une hypothèse, pas un acquis.
+- **La sérialisation réelle du format par opération** (prouvée au niveau métadonnées et
+  OpenAPI seulement).
+
+---
 
 ## Balayage des dépendances à `Request` (demandé après la première rédaction)
 
