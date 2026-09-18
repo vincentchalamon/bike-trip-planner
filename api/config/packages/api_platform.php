@@ -15,6 +15,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'jsonld' => [
                 'application/ld+json',
             ],
+            // REPRODUCER: required before api_platform.mcp.format may name "json".
+            'json' => [
+                'application/json',
+            ],
         ],
         'docs_formats' => [
             'jsonld' => [

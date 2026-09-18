@@ -39,6 +39,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
     ]);
 
+    $containerConfigurator->extension('api_platform', ['mcp' => ['format' => 'json']]);
+
     // SPIKE FINDING — `api_platform.mcp.format` is INERT in v4.3.19.
     //
     // Setting it to 'json' is first refused unless 'json' is also registered in
