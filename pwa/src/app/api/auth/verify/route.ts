@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/auth/backend";
 import { enforceSameOrigin } from "@/lib/auth/same-origin";
 import { setRefreshCookie } from "@/lib/auth/refresh-cookie";
+import { syncLocaleFromAccount } from "@/i18n/account-locale";
 
 /** Reads the request/env at runtime, so it must never be prerendered. */
 export const dynamic = "force-dynamic";
@@ -27,5 +28,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const data = (await res.json()) as { token: string; refresh_token: string };
   await setRefreshCookie(data.refresh_token);
+  await syncLocaleFromAccount(data.token);
   return NextResponse.json({ token: data.token });
 }

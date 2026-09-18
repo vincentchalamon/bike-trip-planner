@@ -75,6 +75,73 @@ describe("POST /api/auth/verify", () => {
     expect(jar.set).not.toHaveBeenCalled();
   });
 
+  /**
+   * The server renders a trip's alerts in the account's locale (ADR-063), so the
+   * session has to start in that language. Without this the interface would open
+   * in the browser's default while the alerts answered in the account's.
+   */
+  function stubBackend(me: { status: number; body?: unknown }) {
+    const fetchMock = vi.fn().mockImplementation((url: string | URL) => {
+      if (String(url).endsWith("/users/me")) {
+        return Promise.resolve(
+          new Response(me.body === undefined ? null : JSON.stringify(me.body), {
+            status: me.status,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ token: "jwt-123", refresh_token: "refresh-abc" }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("adopts the account locale as the interface language", async () => {
+    const jar = stubCookieJar();
+    const fetchMock = stubBackend({ status: 200, body: { locale: "en" } });
+
+    const res = await POST(sameOriginPost({ token: "magic" }));
+
+    expect(res.status).toBe(200);
+    expect(jar.set).toHaveBeenCalledWith(
+      "locale",
+      "en",
+      // Readable from the browser, so the switcher can rewrite it.
+      expect.objectContaining({ httpOnly: false }),
+    );
+    // Sent with the freshly minted JWT, not the refresh token.
+    const meCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith("/users/me"),
+    );
+    expect(meCall?.[1]?.headers).toMatchObject({
+      Authorization: "Bearer jwt-123",
+    });
+  });
+
+  it("still signs the user in when the profile cannot be read", async () => {
+    const jar = stubCookieJar();
+    stubBackend({ status: 503 });
+
+    const res = await POST(sameOriginPost({ token: "magic" }));
+
+    expect(res.status).toBe(200);
+    expect(jar.set).toHaveBeenCalledWith(
+      "refresh_token",
+      "refresh-abc",
+      expect.anything(),
+    );
+    expect(jar.set).not.toHaveBeenCalledWith(
+      "locale",
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("rejects a cross-site request with 403 and never calls the backend", async () => {
     stubCookieJar();
     const fetchMock = vi.fn();
