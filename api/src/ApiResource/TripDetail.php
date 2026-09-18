@@ -41,12 +41,22 @@ use App\State\TripDetailProvider;
             uriTemplate: '/trips/{id}/detail',
             // SPIKE FINDING: the HTTP operation above uses
             //   security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"
-            // which CANNOT be reused here — an MCP tool is evaluated without an HTTP
-            // request, and the expression dies with:
+            // which CANNOT be reused here. At LISTING time (tools/list, and the CLI)
+            // ExpressionAccessChecker passes request => $requestStack->getCurrentRequest(),
+            // which is null outside HTTP, so `request.attributes` dies with
             //   Unable to get property "attributes" of non-object "request".
-            // Every trip/stage security expression in this codebase is written that
-            // way, so none of them is portable to a tool as-is.
-            security: "is_granted('ROLE_USER')",
+            //
+            // `object` is the portable form: it is undefined at listing time, which
+            // raises a SyntaxError that ExpressionAccessChecker catches on purpose —
+            // the element stays visible and the expression is enforced on tools/call.
+            // `object.id` rather than `object` because TripVoter::supports() accepts a
+            // TripRequest entity or a string id, not this DTO.
+            //
+            // This form works for BOTH the HTTP operation and the tool, so the 19
+            // request-based expressions in this codebase can be refactored coherently.
+            security: "is_granted('TRIP_VIEW', object.id)",
+            // SPIKE: per-operation format, global api_platform.mcp.format left unset.
+            outputFormats: ['json' => ['application/json']],
             provider: TripDetailProvider::class,
         ),
     ],

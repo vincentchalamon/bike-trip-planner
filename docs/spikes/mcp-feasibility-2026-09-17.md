@@ -83,43 +83,106 @@ contre un FrankenPHP en mode worker. À garder comme test de charge en Phase 3.
 
 ### (c) La taille des réponses est-elle tenable ?
 
-**Question rouverte par une contrainte non anticipée.** Le plan prévoyait de passer
-`api_platform.mcp.format` à `json`, le `@context`/`@id` de JSON-LD étant du bruit pur
-dans la fenêtre de contexte d'un agent. **C'est refusé** :
+**Contrainte trouvée, puis contournée — le format PEUT être déclaré par opération.**
+
+Le plan prévoyait de passer `api_platform.mcp.format` à `json`, le `@context`/`@id` de
+JSON-LD étant du bruit pur dans la fenêtre de contexte d'un agent. En **global**, c'est
+refusé :
 
 ```
 The MCP format "json" is not configured in api_platform.formats.
 ```
 
-Le format MCP doit être l'un des formats globalement enregistrés, et
-`api/config/packages/api_platform.php` ne déclare que `jsonld`. Servir le MCP en JSON
-simple impose donc d'ajouter `'json' => ['application/json']` à `api_platform.formats` —
-ce qui **donne aussi ce format à toutes les opérations REST**, et fait donc dériver
-l'OpenAPI et `core/schema.d.ts`.
+`api/config/packages/api_platform.php` ne déclare que `jsonld`, et l'y ajouter donnerait
+`application/json` à **toutes** les opérations REST, faisant dériver l'OpenAPI et
+`core/schema.d.ts`.
 
-Trois issues, à trancher en Phase 3 :
-1. accepter l'enveloppe JSON-LD dans le contexte de l'agent ;
-2. enregistrer `json` globalement et assumer la dérive de contrat (peu coûteuse tant que
-   rien n'est déployé) ;
-3. chercher un format scopé à l'opération — `McpTool` étend `HttpOperation` et porte donc
-   `outputFormats`, piste non explorée par le spike.
+**Mais `FormatsResourceMetadataCollectionFactory` (l. 71-82) montre que ce n'est pas la
+seule voie** :
+
+```php
+if (null !== $this->mcpFormat && null !== ($mcp = $resourceMetadata->getMcp())) {
+    if (!isset($this->formats[$this->mcpFormat])) { throw ... }   // l. 72-73
+    foreach ($mcp as $key => $operation) {
+        if (($operation instanceof McpTool || $operation instanceof McpResource)
+            && null === $operation->getFormats()
+            && null === $operation->getInputFormats()
+            && null === $operation->getOutputFormats()) {          // l. 78
+            $operation = $operation->withInputFormats($mcpFormats)->withOutputFormats($mcpFormats);
+```
+
+Deux conséquences :
+
+1. le format global n'est appliqué **que si l'opération n'en déclare aucun** — le
+   **par-opération gagne** ;
+2. le contrôle strict de la l. 72 ne s'exécute **que si le global est défini**. Global
+   laissé à `null` ⇒ aucun contrôle, et l'opération déclare ce qu'elle veut.
+
+**Vérifié** : `new McpTool(..., outputFormats: ['json' => ['application/json']])` avec
+`api_platform.mcp.format` non défini construit le conteneur et `debug:mcp` liste l'outil,
+sans que `json` soit dans `api_platform.formats`.
+
+**Et cela n'impacte PAS les opérations HTTP — prouvé, pas supposé.** Les deux exports
+OpenAPI, avec et sans le bloc `mcp:` portant `outputFormats: ['json' => ['application/json']]`,
+sont **octet pour octet identiques** (431 992 octets, `cmp` silencieux) :
+
+```
+$ cmp -s /tmp/oas-main.json /tmp/oas-spike.json && echo identiques
+identiques
+```
+
+`GET /trips/{id}/detail` continue d'annoncer `application/ld+json` seul en 200 (les
+`application/json` visibles en 403/404 sont le jeu d'erreurs RFC 7807 standard,
+antérieur). Le format déclaré sur un `McpTool` est donc **strictement confiné au bucket
+MCP** : ni l'OpenAPI, ni `core/schema.d.ts`, ni le drift guard CI ne bougent. Cohérent
+avec les deux boucles distinctes de la factory (l. 68 pour `getOperations()`, l. 71+ pour
+`getMcp()`).
+
+**Réserve honnête** : c'est prouvé au niveau *métadonnées / OpenAPI / construction du
+conteneur*, pas à la sérialisation d'un appel réel — l'enregistrement dans
+`api_platform.formats` est aussi ce qui câble le normalizer. À confirmer par un appel
+JSON-RPC réel.
+
+**Remarque DX pour la core-team, si tu la sollicites** : il n'existe pas de moyen de
+déclarer un format *pour le MCP seulement*. Soit on le répète sur chaque outil, soit on
+le rend global et il contamine le REST. Un `api_platform.mcp.formats` autonome — validé
+contre les formats connus mais non versé dans `api_platform.formats` — supprimerait
+l'arbitrage.
 
 ### (d) Comment teste-t-on fonctionnellement un outil MCP ?
 
-**Non résolu, et un angle mort d'outillage a été trouvé.**
+**`debug:mcp` fonctionne parfaitement.** Une première rédaction de ce verdict concluait à
+un angle mort d'outillage : c'était faux, et la vraie explication est bien meilleure.
 
-`bin/console debug:mcp` existe et tourne, mais **il ne voit pas les outils déclarés via
-API Platform** : il rapporte « No MCP capabilities are registered » alors que le câblage
-est complet. Vérifié dans le conteneur — `api_platform.mcp.secure_registry.btp`,
-`api_platform.mcp.loader`, `api_platform.mcp.security.expression_access_checker`,
-`api_platform.mcp.state.tool_provider`, `api_platform.mcp.state_processor` existent tous.
-La cause est le chargement paresseux « au premier read » décrit en (b) : `debug:mcp` lit
-la vue native du bundle, qui ne connaît que les services portant un attribut `#[McpTool]`.
+`debug:mcp` rapportait « No MCP capabilities are registered ». Ce n'est ni un cache
+périmé (`cache:clear` ne change rien) ni un défaut de câblage — la décoration est
+correcte, `mcp.server.btp.registry` résout bien vers
+`ApiPlatform\Mcp\Capability\Registry\SecureRegistry`, et `DebugCommand::listElements()`
+appelle bien `$registry->getTools()` dessus.
 
-**Donc `debug:mcp` n'est pas une boucle de retour utilisable** pour des outils déclarés en
-`mcp:` sur une `ApiResource`, contrairement à ce que le plan supposait. Le retour passera
-par l'endpoint HTTP lui-même (MCP Inspector, ou un test fonctionnel émettant du JSON-RPC
-sur `POST /mcp`).
+**C'était le filtre de sécurité qui faisait son travail.** En CLI aucun utilisateur n'est
+authentifié, donc l'expression `is_granted('ROLE_USER')` de l'outil était fausse et
+`SecureRegistry` le masquait du listing — exactement
+`testToolDeniedBySecurityIsOmittedFromGetTools`. Retirer l'expression fait apparaître
+l'outil immédiatement :
+
+```
+Tools (1)
+  Name       Handler                      Description
+  get_trip   api_platform.mcp.handler()   Read one bikepacking trip: ...
+```
+
+**C'est donc une preuve positive**, et pas une déconvenue : le filtrage de sécurité au
+listing fonctionne de bout en bout pour un outil déclaré via `mcp:` sur une `ApiResource`,
+ce qui n'était jusque-là inféré que de tests unitaires.
+
+Conséquence pratique à connaître : **`debug:mcp` ne montre que les outils visibles par
+l'utilisateur courant**, et en CLI c'est l'anonyme. Un outil absent de la sortie n'est pas
+forcément mal enregistré — il peut simplement être refusé. Le retour reste utilisable, à
+condition de lire la liste comme une vue filtrée.
+
+La question de fond — un test fonctionnel PHPUnit d'un appel d'outil — **reste ouverte** :
+il faudra émettre du JSON-RPC sur `POST /mcp`, ou tester les opérations sous-jacentes.
 
 ### (e) `league/oauth2-server` est-il compatible Symfony 8 ?
 
@@ -160,9 +223,57 @@ Double enseignement :
    `request.attributes.get('id')` ou `request.attributes.get('tripId')`.
 
 Le plan affirmait qu'« un outil réutilise le `security:` existant inchangé ». **C'est
-faux.** Chaque outil devra exprimer son autorisation autrement — sur `object` après
-chargement, ou sur l'entrée dénormalisée via `securityPostDenormalize` — et ce
-ré-encodage est du travail réel, à chiffrer dans la Phase 3.
+faux** — mais il existe une forme portable, et elle est conçue pour ça.
+
+### La forme portable : `object`, et le report à l'appel est délibéré
+
+`ApiPlatform\Mcp\Security\ExpressionAccessChecker::isGranted()` passe
+`['request' => $this->requestStack?->getCurrentRequest()]` — d'où le `null` en CLI. Mais
+son `catch (SyntaxError)` porte ce commentaire, qui répond directement à la question :
+
+> The expression reads variables that only exist once the element is called (object,
+> previous_object, uri variables). Listing cannot decide, so the element stays visible and
+> the expression is enforced on tools/call and resources/read, as AccessCheckerProvider
+> already defers the pre_read stage in that case.
+
+Autrement dit **API Platform a conçu exprès le report à l'appel** : une expression
+référençant `object` est indécidable au listing, lève un `SyntaxError`, celui-ci est
+attrapé, l'élément **reste visible**, et l'expression est appliquée sur `tools/call`.
+
+**Vérifié** : `is_granted('TRIP_VIEW', object)` puis `is_granted('TRIP_VIEW', object.id)`
+laissent tous deux l'outil listé, là où la forme `request.attributes.get('id')` faisait
+planter la commande.
+
+**`object.id` et non `object`** : `TripVoter::supports()` (l. 48-52) n'accepte qu'un
+`TripRequest` ou une **chaîne**, pas ce DTO. Passer `object.id` évite donc de toucher au
+voter.
+
+### Pourquoi le crash n'est pas attrapé — un vrai défaut amont
+
+Le `catch` ne couvre que `SyntaxError`, c'est-à-dire une variable **indéfinie**. Or
+`request` est **défini mais null** : `request.attributes` est donc une erreur d'accès de
+propriété à l'exécution (`GetAttrNode`), pas une erreur de syntaxe — elle échappe au
+`catch` et fait tomber la commande.
+
+C'est défendable comme **rapport à la core-team** : quand `getCurrentRequest()` rend
+`null`, il vaudrait mieux ne pas injecter la variable `request` du tout (ce qui
+produirait un `SyntaxError`, donc la dégradation gracieuse déjà prévue) plutôt que de
+l'injecter à `null` et laisser exploser toute expression qui la déréférence.
+
+### Le refactor, et sa portée exacte
+
+`is_granted('TRIP_VIEW', object.id)` fonctionne **pour l'opération HTTP comme pour
+l'outil**. Le refactor proposé est donc cohérent et sans régression de contrat.
+
+**Portée mesurée : 19 expressions `security:` référençant `request.`**, réparties sur
+7 fichiers — `Trip.php`, `Stage.php`, `TripDetail.php`, `TripRoute.php`,
+`MercureToken.php`, `AccommodationScan.php` et `Entity/TripShare.php`.
+
+**Nuance de sécurité à ne pas perdre.** `request.attributes.get('id')` est évalué **avant**
+le chargement, `object.id` **après**. Avec `object`, l'objet d'autrui est donc lu en base
+avant d'être refusé. Sans conséquence d'autorisation (le refus a bien lieu, et ADR-038
+masque en 404), mais c'est un changement d'ordre à acter — et une raison de conserver
+`security` (post-read) plutôt que de chercher à tout basculer en `pre_read`.
 
 ### Sémantique de sécurité à deux étages, précisée
 
@@ -205,11 +316,31 @@ l'appel.
 |---|---|
 | « Vérifier si `api-platform/mcp` fournit le resource server » | **Fourni par `mcp/sdk`**, avec en prime un proxy de délégation. Phase 3A rétrécit. |
 | « Ne pas écrire l'AS à la main, socle `league/oauth2-server` » | **Confirmé par l'ADR du SDK lui-même**, qui le recommande nommément. |
-| « Un outil réutilise le `security:` existant inchangé » | **Faux.** Aucune expression du projet n'est portable. Travail à chiffrer. |
-| « `format: json` pour éviter le bruit JSON-LD » | **Impossible sans enregistrer `json` globalement**, ce qui fait dériver le contrat REST. |
-| « `debug:mcp` comme première boucle de retour » | **Inutilisable** pour les outils déclarés en `mcp:`. |
+| « Un outil réutilise le `security:` existant inchangé » | **Faux sous la forme `request.`, vrai sous la forme `object.id`** — portable HTTP *et* MCP. Refactor cohérent de **19 expressions sur 7 fichiers**. |
+| « `format: json` pour éviter le bruit JSON-LD » | **Possible par opération**, global laissé à `null`. **Zéro impact HTTP, prouvé par un diff OpenAPI identique.** |
+| « `debug:mcp` comme première boucle de retour » | **Utilisable** — l'apparente absence d'outils était le filtre de sécurité en contexte anonyme. |
 | « Le mode worker FrankenPHP est traité par `McpRegistryPass` » | **Confirmé par conception**, non vérifié sous charge. |
 | Dépendances expérimentales | **Aucun conflit** sur PHP 8.5 / Symfony 8.1 / API Platform 4.3. |
+
+## Balayage des dépendances à `Request` (demandé après la première rédaction)
+
+Puisque `request` n'existe pas au listing MCP, qu'est-ce d'autre qui en dépend ?
+
+- **19 expressions `security:` référençant `request.`**, sur 7 fichiers — c'est le
+  périmètre du refactor vers `object.id`.
+- **6 services injectent `RequestStack`.** Quatre sont hors périmètre MCP par conception
+  (`AuthSessionProvider`, `AuthRequestLinkProcessor`, `AccessRequestCreateProcessor`,
+  `RequestEmailChangeProcessor` — tout `/auth/*` et l'accès anticipé sont exclus des
+  outils).
+- Les deux qui comptent pour la Phase 3 écriture, **`TripCreateProcessor:69` et
+  `TripUpdateProcessor:64`**, ne s'en servent que pour
+  `getCurrentRequest()?->getPreferredLanguage(['en','fr']) ?? 'en'`, afin de stocker la
+  locale du voyage. **Ce n'est pas un crash mais une dégradation silencieuse** : un appel
+  d'outil arrive bien par `POST /mcp`, donc `getCurrentRequest()` n'est pas null, mais un
+  agent n'envoie en général pas d'`Accept-Language` — tout voyage créé via MCP serait donc
+  en `en`. À traiter par un paramètre de locale explicite sur l'outil.
+
+Aucune autre dépendance à `Request` n'a été trouvée dans les providers et mappers.
 
 **Recommandation** : poursuivre. Le transport, la découverte, la sécurité à deux étages et
 le resource server sont acquis ou fournis. Le coût réel de la Phase 3 se concentre sur
