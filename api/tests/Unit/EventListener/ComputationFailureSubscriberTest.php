@@ -173,7 +173,7 @@ final class ComputationFailureSubscriberTest extends TestCase
         $bus->expects($this->never())->method('dispatch');
 
         // RecalculateStages is an Act 3 inline-edit message, not a gated pipeline computation.
-        ($this->subscriber($publisher, $bus))($this->exhaustedFailure(new RecalculateStages(self::TRIP_ID, [0])));
+        ($this->subscriber($publisher, $bus))($this->exhaustedFailure(new RecalculateStages(self::TRIP_ID, ['01936f6e-0000-7000-8000-0000000000a0'])));
 
         self::assertSame('running', $this->statusOf(ComputationName::STAGES));
     }

@@ -18,8 +18,6 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\Lock\LockFactory;
-use Symfony\Component\Lock\SharedLockInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[CoversClass(RedisTripRequestRepository::class)]
@@ -28,22 +26,22 @@ final class RedisTripRequestRepositoryTest extends TestCase
 {
     private CacheItemPoolInterface&MockObject $cache;
 
-    private LockFactory&MockObject $lockFactory;
-
     private RedisTripRequestRepository $repository;
 
     #[\Override]
     protected function setUp(): void
     {
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
-        $this->lockFactory = $this->createMock(LockFactory::class);
-        $this->repository = new RedisTripRequestRepository($this->cache, $this->lockFactory);
+        $this->repository = new RedisTripRequestRepository($this->cache);
     }
 
     /**
      * Regression for the persistence race (recette #649): a per-column update must
      * read the stage fresh and write back only its own column, so it cannot wipe a
      * sibling column (here: weather) a concurrent enrichment handler already persisted.
+     *
+     * Serialisation against a concurrent whole-collection write is not this class's job
+     * any more — LockingTripRequestRepository decorates it and holds the per-trip lock.
      */
     #[Test]
     public function updateStageAlertsPreservesSiblingColumns(): void
@@ -74,14 +72,6 @@ final class RedisTripRequestRepositoryTest extends TestCase
 
         $alert = new Alert(code: AlertCode::STEEP_GRADIENT, type: AlertType::WARNING, message: 'steep gradient');
 
-        $lock = $this->createMock(SharedLockInterface::class);
-        $lock->expects(self::once())->method('acquire')->with(true)->willReturn(true);
-        $lock->expects(self::once())->method('release');
-        $this->lockFactory->expects(self::once())
-            ->method('createLock')
-            ->with(self::stringContains($tripId), 5)
-            ->willReturn($lock);
-
         $readItem = $this->createMock(CacheItemInterface::class);
         $readItem->method('isHit')->willReturn(true);
         $readItem->method('get')->willReturn([$stage]);
@@ -98,10 +88,25 @@ final class RedisTripRequestRepositoryTest extends TestCase
                 && '10d' === $stages[0]->weather->icon));
         $writeItem->method('expiresAfter')->willReturnSelf();
 
-        $this->cache->method('getItem')->willReturnOnConsecutiveCalls($readItem, $writeItem);
+        // storeStages() also bumps the trip version, so the pool is asked for more than
+        // the two stage items: route by key rather than by call order.
+        $versionItem = $this->createMock(CacheItemInterface::class);
+        $versionItem->method('isHit')->willReturn(false);
+        $versionItem->method('expiresAfter')->willReturnSelf();
+
+        $stageReads = 0;
+        $this->cache->method('getItem')->willReturnCallback(
+            static function (string $key) use ($readItem, $writeItem, $versionItem, &$stageReads): CacheItemInterface {
+                if (str_ends_with($key, '.version')) {
+                    return $versionItem;
+                }
+
+                return 0 === $stageReads++ ? $readItem : $writeItem;
+            },
+        );
         $this->cache->expects(self::atLeastOnce())->method('save');
 
-        $this->repository->updateStageAlerts($tripId, 1, [$alert]);
+        $this->repository->updateStageAlerts($tripId, $stage->id, [$alert]);
     }
 
     #[Test]
@@ -138,12 +143,12 @@ final class RedisTripRequestRepositoryTest extends TestCase
                 ['lat' => 48.1, 'lon' => 2.1],
                 ['lat' => 48.2, 'lon' => 2.2],
             ],
-            $this->repository->getStageGeometry($tripId, 2),
+            $this->repository->getStageGeometry($tripId, $stage->id),
         );
     }
 
     #[Test]
-    public function getStageGeometryReturnsNullForUnknownDay(): void
+    public function getStageGeometryReturnsNullForUnknownStage(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $stage = new Stage(
@@ -162,7 +167,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $readItem->method('expiresAfter')->willReturnSelf();
         $this->cache->method('getItem')->willReturn($readItem);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 9));
+        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -174,7 +179,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $missing->method('isHit')->willReturn(false);
         $this->cache->method('getItem')->willReturn($missing);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -196,6 +201,6 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $readItem->method('expiresAfter')->willReturnSelf();
         $this->cache->method('getItem')->willReturn($readItem);
 
-        self::assertNull($this->repository->getStageGeometry($tripId, 1));
+        self::assertNull($this->repository->getStageGeometry($tripId, $stage->id));
     }
 }

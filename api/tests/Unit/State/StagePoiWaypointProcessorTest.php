@@ -93,7 +93,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateRouteSegment));
         self::assertCount(1, $recalculate);
         self::assertSame('trip-1', $recalculate[0]->tripId);
-        self::assertSame(0, $recalculate[0]->stageIndex);
+        self::assertSame($stage->id, $recalculate[0]->stageId);
         self::assertSame(48.2, $recalculate[0]->waypointLat);
         self::assertSame(2.3, $recalculate[0]->waypointLon);
         self::assertSame('poi_detour', $recalculate[0]->reason);

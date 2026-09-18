@@ -10,7 +10,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -26,6 +25,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class StageUpdateProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     /** @var list<array{lat: float, lon: float, ele: float}> */
     private array $decimatedPointsRaw;
 
@@ -104,6 +105,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -118,8 +120,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -128,7 +128,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -195,6 +194,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         // Expired: the fallback must rebuild from the stage geometry.
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
@@ -208,8 +208,6 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -218,7 +216,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -272,6 +269,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -286,8 +284,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -296,7 +292,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -341,6 +336,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -355,8 +351,6 @@ final class StageUpdateProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -365,7 +359,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 
@@ -392,6 +385,8 @@ final class StageUpdateProcessorTest extends TestCase
         $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
@@ -403,7 +398,6 @@ final class StageUpdateProcessorTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
         );
 
@@ -447,6 +441,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
@@ -459,8 +454,6 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
@@ -469,7 +462,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $generationTracker,
             new TripLocker(),
         );
 

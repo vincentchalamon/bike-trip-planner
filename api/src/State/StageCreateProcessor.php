@@ -11,12 +11,12 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -31,7 +31,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private StageResponseMapper $stageResponseMapper,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -53,36 +52,48 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('startPoint and endPoint are required to create a stage.');
         }
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        $position = $data->position ?? \count($stages);
-
-        if ($position < 0 || $position > \count($stages)) {
-            throw new UnprocessableEntityHttpException(\sprintf('Position %d is out of bounds (0-%d).', $position, \count($stages)));
-        }
-
         $distance = $this->distanceCalculator
                 ->distanceBetween($data->startPoint, $data->endPoint) / 1000.0;
 
-        $newStage = new Stage(
-            tripId: $tripId,
-            dayNumber: $position + 1,
-            distance: $distance,
-            elevation: 0.0,
-            startPoint: $data->startPoint,
-            endPoint: $data->endPoint,
-            geometry: [$data->startPoint, $data->endPoint],
-            label: $data->label,
-        );
+        $position = null;
+        $newStage = null;
 
-        array_splice($stages, $position, 0, [$newStage]);
-        $stages = $this->reindexDayNumbers($stages);
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $distance, &$position, &$newStage): array {
+            $position = $data->position ?? \count($stages);
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            if ($position < 0 || $position > \count($stages)) {
+                throw new UnprocessableEntityHttpException(\sprintf('Position %d is out of bounds (0-%d).', $position, \count($stages)));
+            }
 
-        $generation = $this->generationTracker->increment($tripId);
+            $newStage = new Stage(
+                tripId: $tripId,
+                dayNumber: $position + 1,
+                distance: $distance,
+                elevation: 0.0,
+                startPoint: $data->startPoint,
+                endPoint: $data->endPoint,
+                geometry: [$data->startPoint, $data->endPoint],
+                label: $data->label,
+            );
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
+            array_splice($stages, $position, 0, [$newStage]);
+
+            return $this->reindexDayNumbers($stages);
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
+
+        \assert(null !== $position && $newStage instanceof Stage);
+
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$newStage->id], generation: $generation));
 
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so adding a

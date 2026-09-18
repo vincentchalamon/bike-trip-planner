@@ -10,7 +10,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageMoveProcessor;
@@ -40,14 +39,11 @@ final class StageMoveProcessorTest extends TestCase
 
         $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(1);
 
         $processor = new StageMoveProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             $stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
 

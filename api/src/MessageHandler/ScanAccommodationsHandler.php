@@ -65,11 +65,26 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $tripId = $message->tripId;
         $generation = $message->generation;
         $radiusMeters = $message->radiusMeters;
-        $stageIndex = $message->stageIndex;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
             return;
+        }
+
+        // Resolve the targeted stage by identity, keeping its current position as the key
+        // the distributor and the published payload are built on.
+        $stageIndex = null;
+        if (null !== $message->stageId) {
+            foreach ($stages as $index => $stage) {
+                if ($stage->id === $message->stageId) {
+                    $stageIndex = $index;
+                    break;
+                }
+            }
+
+            if (null === $stageIndex) {
+                return;
+            }
         }
 
         $request = $this->tripStateManager->getRequest($tripId);
@@ -241,7 +256,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // processed stage(s) (single-stage expand or all) — recette #649. The
             // seasonal alert is delivered live via Mercure (above), not persisted here.
             foreach ($stagesToProcess as $stage) {
-                $this->tripStateManager->updateStageAccommodations($tripId, $stage->dayNumber, array_values($stage->accommodations));
+                $this->tripStateManager->updateStageAccommodations($tripId, $stage->id, array_values($stage->accommodations));
             }
         }, $generation);
     }

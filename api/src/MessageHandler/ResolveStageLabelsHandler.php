@@ -59,7 +59,7 @@ final readonly class ResolveStageLabelsHandler
                 ? $startLabel
                 : $this->adminBoundaryRepository->findLocalityAt($stage->endPoint->lat, $stage->endPoint->lon, $locale);
 
-            $this->tripStateManager->updateStageLabels($tripId, $stage->dayNumber, $startLabel, $endLabel);
+            $this->tripStateManager->updateStageLabels($tripId, $stage->id, $startLabel, $endLabel);
         }
     }
 }

@@ -43,12 +43,18 @@ Every command below runs **from the worktree root** — the `docker run` resolve
 
 docker run --rm --network bike-trip-planner_default -e APP_ENV=test -e XDEBUG_MODE=off -e JWT_PASSPHRASE=test \
   -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8" \
-  -e REDIS_URL="redis://redis:6379" -e FRONTEND_URL="https://localhost" \
+  -e REDIS_URL="redis://redis:6379" -e LOCK_DSN="redis://redis:6379" -e FRONTEND_URL="https://localhost" \
   -v "$PWD/api:/app" -v "$PWD/docs:/docs:ro" \
   -w /app --entrypoint vendor/bin/phpunit bike-trip-planner-php:dev --no-coverage tests/Unit tests/Integration
 ```
 
-Two traps in that command:
+Three traps in that command:
+
+- **`-e LOCK_DSN` is required**, and its absence does not fail — it **hangs**. `compose.yaml`
+  sets it on both `php` and `worker`; a throwaway container that omits it falls back to a
+  store that never returns, and the run sits there producing no output at all (not even the
+  PHPUnit banner), which reads as a frozen machine rather than a missing variable. Stage
+  writes go through the Symfony lock (ADR-066), so this now affects the repository suites.
 
 - **`-v "$PWD/docs:/docs:ro"` is required.** `AlertDocumentationTest` reads the alert-engine table at `docs/alert-engine.md` relative to the project root, i.e. `/app/../docs/alert-engine.md`. Mounting only `api/` makes it fail with `docs/alert-engine.md not found at project root` — a false alarm that looks like a real regression.
 - The test database is auto-suffixed `_test` (`doctrine.php dbname_suffix`), so this never touches the dev data.

@@ -7,6 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\Stage;
 use App\ApiResource\Trip;
 use App\ApiResource\TripBatchRecomputeRequest;
 use App\ApiResource\TripRequest;
@@ -101,13 +102,13 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
             return new Trip(id: $tripId);
         }
 
-        $allStageIndices = array_keys($stages);
+        $stageIds = array_map(static fn (Stage $stage): string => $stage->id, $stages);
         $hasDates = $request->startDate instanceof \DateTimeImmutable;
 
         $messages = $this->dependencyResolver->resolve(
             $tripId,
             $data->modifications,
-            $allStageIndices,
+            $stageIds,
             $hasDates,
             $request->enabledAccommodationTypes,
             $generation,

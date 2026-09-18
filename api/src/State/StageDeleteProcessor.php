@@ -9,13 +9,13 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -30,7 +30,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -48,44 +47,54 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
-        if (\count($stages) <= 2) {
-            throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');
-        }
-
         $sourceType = $this->tripStateManager->getSourceType($tripId);
+        $isRestDayDeletion = false;
+        $mergedIndex = null;
 
-        $isRestDayDeletion = $stages[$index]->isRestDay;
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        if ($isRestDayDeletion) {
-            // Rest days are just removed without merging
-            array_splice($stages, $index, 1);
-            $mergedIndex = null;
-        } elseif ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
-            // Single stage or collection: just remove
-            array_splice($stages, $index, 1);
-            $mergedIndex = null;
-        } else {
-            // Continuous route with 2+ stages: merge with adjacent stage
-            [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
-        }
+            if (\count($stages) <= 2) {
+                throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');
+            }
 
-        // Reindex day numbers
-        foreach ($stages as $i => $stage) {
-            $stage->dayNumber = $i + 1;
-        }
+            $isRestDayDeletion = $stages[$index]->isRestDay;
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+            if ($isRestDayDeletion) {
+                // Rest days are just removed without merging
+                array_splice($stages, $index, 1);
+            } elseif ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
+                // Single stage or collection: just remove
+                array_splice($stages, $index, 1);
+            } else {
+                // Continuous route with 2+ stages: merge with adjacent stage
+                [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
+            }
 
-        $generation = $this->generationTracker->increment($tripId);
+            // Reindex day numbers
+            foreach ($stages as $i => $stage) {
+                $stage->dayNumber = $i + 1;
+            }
 
-        $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));
+            return $stages;
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
+
+        // Only the stage that absorbed the deleted one needs recomputing; a plain
+        // removal affects none, which an empty list would read as "all".
+        $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: $isRestDayDeletion, generation: $generation));
         // Deleting a rest day skips geographic scans (no geometry change) but the
         // rest-day nudge is context-dependent: removing the rest day must restore
         // the "consider a rest day" nudge on the day that preceded it. Re-run the

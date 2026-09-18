@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 final class RecalculateRouteSegmentHandlerTest extends TestCase
 {
@@ -80,7 +81,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',
-            stageIndex: 0,
+            stageId: $stage->id,
             waypointLat: 50.05,
             waypointLon: 2.05,
             reason: 'poi_detour',
@@ -113,7 +114,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',
-            stageIndex: 0,
+            stageId: Uuid::v7()->toRfc4122(),
             waypointLat: 50.0,
             waypointLon: 2.0,
             reason: 'poi_detour',
@@ -121,7 +122,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
     }
 
     #[Test]
-    public function invokeWithInvalidStageIndexReturnsEarly(): void
+    public function invokeWithUnknownStageIdReturnsEarly(): void
     {
         $stage = new Stage(
             tripId: 'trip-1',
@@ -155,7 +156,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',
-            stageIndex: 5,
+            stageId: Uuid::v7()->toRfc4122(),
             waypointLat: 50.0,
             waypointLon: 2.0,
             reason: 'accommodation_reroute',

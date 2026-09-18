@@ -10,7 +10,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageManualAccommodationRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeocoderInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateStages;
@@ -28,6 +27,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageAddManualAccommodationProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     /** @return list<Stage> */
     private function twoStages(): array
     {
@@ -65,7 +66,6 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
             $repo,
             $bus,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
-            $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
             $geocoder,
         );
@@ -78,6 +78,8 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $stored = null;
 
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($stages);
         $repo->expects(self::once())->method('storeStages')
@@ -120,6 +122,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     public function omittedPriceProducesNoExactPrice(): void
     {
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($this->twoStages());
         $stored = null;
@@ -144,9 +147,13 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     #[Test]
     public function dispatchesRecalculationForAffectedStages(): void
     {
+        $stages = $this->twoStages();
+        [$stage0, $stage1] = $stages;
+
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
-        $repo->method('getStages')->willReturn($this->twoStages());
+        $repo->method('getStages')->willReturn($stages);
 
         $geocoder = $this->createStub(GeocoderInterface::class);
         $geocoder->method('geocode')->willReturn(new Coordinate(48.0, 2.0));
@@ -164,7 +171,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $this->processor($repo, $geocoder, $bus)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 
         self::assertInstanceOf(RecalculateStages::class, $recalc);
-        self::assertSame([0, 1], $recalc->affectedIndices);
+        self::assertSame([$stage0->id, $stage1->id], $recalc->affectedStageIds);
         self::assertTrue($recalc->skipAccommodationScan);
     }
 
@@ -172,6 +179,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     public function unresolvableAddressThrows422AndPersistsNothing(): void
     {
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $repo->method('getStages')->willReturn($this->twoStages());
         $repo->expects(self::never())->method('storeStages');
@@ -190,6 +198,8 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $locked->startDate = new \DateTimeImmutable('yesterday');
 
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn($locked);
         $repo->method('getStages')->willReturn($this->twoStages());
 

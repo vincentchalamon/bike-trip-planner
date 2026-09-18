@@ -159,6 +159,10 @@ jobs:
           # (services.php); set explicitly to mirror the prod wiring.
           REFERENCE_DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
           REDIS_URL: "redis://redis:6379"
+          # Mirrors compose.yaml, which sets LOCK_DSN on both php and worker. Stage
+          # writes are serialised through the Symfony lock (ADR-066); with no DSN the
+          # component falls back to a store that hangs the suite rather than failing it.
+          LOCK_DSN: "redis://redis:6379"
           FRONTEND_URL: "https://localhost"
         run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
       - name: Upload coverage report

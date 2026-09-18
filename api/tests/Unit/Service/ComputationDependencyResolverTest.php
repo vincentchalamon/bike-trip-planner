@@ -22,6 +22,13 @@ final class ComputationDependencyResolverTest extends TestCase
 {
     private ComputationDependencyResolver $resolver;
 
+    /** Stage identifiers in display order, as the batch processor passes them. */
+    private const array STAGE_IDS = [
+        '01936f6e-0000-7000-8000-0000000000a0',
+        '01936f6e-0000-7000-8000-0000000000a1',
+        '01936f6e-0000-7000-8000-0000000000a2',
+    ];
+
     protected function setUp(): void
     {
         $this->resolver = new ComputationDependencyResolver();
@@ -34,7 +41,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
-            [0, 1, 2],
+            self::STAGE_IDS,
             false,
             ['hotel', 'camp_site'],
             generation: 5,
@@ -55,13 +62,13 @@ final class ComputationDependencyResolverTest extends TestCase
     public function accommodationModificationIncludesNextStageInRecalculate(): void
     {
         $modification = new TripModification(stageIndex: 0, type: 'accommodation', label: 'test');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], false, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
         $this->assertInstanceOf(RecalculateStages::class, $recalc);
         // Stage 0 + next stage 1
-        $this->assertContains(0, $recalc->affectedIndices);
-        $this->assertContains(1, $recalc->affectedIndices);
+        $this->assertContains(self::STAGE_IDS[0], $recalc->affectedStageIds);
+        $this->assertContains(self::STAGE_IDS[1], $recalc->affectedStageIds);
     }
 
     #[Test]
@@ -71,7 +78,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
-            [0, 1, 2],
+            self::STAGE_IDS,
             false,
             ['hotel'],
             generation: 3,
@@ -90,7 +97,7 @@ final class ComputationDependencyResolverTest extends TestCase
     public function distanceModificationWithDatesTriggersWeatherAndCalendar(): void
     {
         $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1], true, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
         $classes = $this->classesOf($messages);
         $this->assertContains(FetchWeather::class, $classes);
@@ -101,7 +108,7 @@ final class ComputationDependencyResolverTest extends TestCase
     public function distanceModificationWithoutDatesDoesNotTriggerWeather(): void
     {
         $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1], false, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, [], generation: null);
 
         $classes = $this->classesOf($messages);
         $this->assertNotContains(FetchWeather::class, $classes);
@@ -112,7 +119,7 @@ final class ComputationDependencyResolverTest extends TestCase
     public function datesModificationTriggersWeatherCalendarAndEvents(): void
     {
         $modification = new TripModification(type: 'dates', label: 'Dates');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], true, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
         $classes = $this->classesOf($messages);
         $this->assertContains(FetchWeather::class, $classes);
@@ -128,18 +135,18 @@ final class ComputationDependencyResolverTest extends TestCase
     public function pacingModificationTriggersRecalculateForAllStages(): void
     {
         $modification = new TripModification(type: 'pacing', label: 'Pacing');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], false, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
         $this->assertInstanceOf(RecalculateStages::class, $recalc);
-        $this->assertCount(3, $recalc->affectedIndices);
+        $this->assertCount(3, $recalc->affectedStageIds);
     }
 
     #[Test]
     public function pacingModificationWithDatesTriggersWeatherAndCalendar(): void
     {
         $modification = new TripModification(type: 'pacing', label: 'Pacing');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], true, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
         $classes = $this->classesOf($messages);
         $this->assertContains(RecalculateStages::class, $classes);
@@ -156,7 +163,7 @@ final class ComputationDependencyResolverTest extends TestCase
             new TripModification(type: 'dates', label: 'dates'),
         ];
 
-        $messages = $this->resolver->resolve('trip-1', $modifications, [0, 1, 2], true, ['hotel'], generation: 1);
+        $messages = $this->resolver->resolve('trip-1', $modifications, self::STAGE_IDS, true, ['hotel'], generation: 1);
 
         $classes = $this->classesOf($messages);
 
@@ -177,7 +184,7 @@ final class ComputationDependencyResolverTest extends TestCase
     public function generationIsPropagatedToAllMessages(): void
     {
         $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
-        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1], false, ['hotel'], generation: 7);
+        $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, ['hotel'], generation: 7);
 
         foreach ($messages as $message) {
             if (property_exists($message, 'generation')) {
@@ -190,7 +197,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function emptyModificationsListReturnsNoMessages(): void
     {
-        $messages = $this->resolver->resolve('trip-1', [], [0, 1, 2], false, [], generation: null);
+        $messages = $this->resolver->resolve('trip-1', [], self::STAGE_IDS, false, [], generation: null);
         $this->assertSame([], $messages);
     }
 

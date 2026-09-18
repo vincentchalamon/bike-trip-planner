@@ -49,6 +49,29 @@ interface TripRequestRepositoryInterface
     public function getStages(string $tripId): ?array;
 
     /**
+     * Reads the stages, applies the mutation, writes them back — as one atomic unit.
+     *
+     * Every caller that edits the stage collection (create, update, move, delete, rest
+     * day, accommodation selection) does exactly this sequence. Done by hand it is a
+     * read-modify-write with no protection: a worker writing one enrichment column in
+     * between has its write silently reverted by the caller's stale snapshot. Routed
+     * through here, the whole sequence is serialised against the targeted writes by
+     * {@see LockingTripRequestRepository}.
+     *
+     * The mutator returns the new list rather than mutating by reference, because the
+     * callers splice, reorder and renumber.
+     *
+     * Hands back the resulting version along with the stages, read while the write is still
+     * serialised — see {@see StageWriteResult} for why reading it afterwards is not the same
+     * thing.
+     *
+     * @param callable(list<Stage>): list<Stage> $mutator
+     *
+     * @return StageWriteResult|null null when the trip is unknown
+     */
+    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult;
+
+    /**
      * Returns a single stage's route geometry, in travel order, projected to 2D.
      *
      * Feeds the in-ride detour calculation ({@see \App\InRide\DetourCalculator}),
@@ -56,44 +79,75 @@ interface TripRequestRepositoryInterface
      * not the whole aggregate ({@see self::getStages()} hydrates weather, POIs,
      * accommodations…).
      *
-     * @return list<array{lat: float, lon: float}>|null null when the trip, the day,
+     * @return list<array{lat: float, lon: float}>|null null when the trip, the stage,
      *                                                  or the geometry does not exist
      */
-    public function getStageGeometry(string $tripId, int $dayNumber): ?array;
+    public function getStageGeometry(string $tripId, string $stageId): ?array;
 
     /**
-     * Persists a single stage's weather atomically, keyed by dayNumber.
+     * Resolves a day number to the stage identifier, for the one caller that still
+     * addresses a stage by day: the `stageDay` field of the in-ride nearby-POI search
+     * request, which is part of the public request body.
+     *
+     * A scalar lookup, so the detour path keeps reading no more than it needs.
+     */
+    public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string;
+
+    /**
+     * The trip's structural version — see {@see TripRequest::$version}.
+     *
+     * Bumped by {@see self::storeStages()} itself, so any write of the collection moves it,
+     * including the ones a worker performs when the pacing is regenerated.
+     */
+    public function getVersion(string $tripId): ?int;
+
+    /**
+     * Bumps the structural version without writing stages, for a change that invalidates
+     * in-flight computations without rewriting the collection (trip settings, batch
+     * recompute).
+     *
+     * @return int the new version, or 0 when the trip is unknown
+     */
+    public function bumpVersion(string $tripId): int;
+
+    /**
+     * Persists a single stage's weather atomically, keyed by the stage identifier.
      *
      * Parallel enrichment handlers each own one JSONB column; routing them through
      * {@see self::storeStages()} re-writes the whole stages collection, so a slow
      * handler reading a stale snapshot overwrites a sibling's freshly-written column
      * (the weather/accommodations "disappear" bug — recette #649).
+     *
+     * Keyed by identifier rather than by dayNumber: every structural edit renumbers the
+     * day numbers (`$i + 1`), so a handler that computed its result before a move would
+     * otherwise write it onto a geographically different stage — a silent corruption,
+     * not a lost write (ADR-066).
      */
-    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void;
+    public function updateStageWeather(string $tripId, string $stageId, ?WeatherForecast $weather): void;
 
     /**
      * Persists a single stage's alerts atomically (see {@see self::updateStageWeather()}).
      *
      * @param list<Alert> $alerts
      */
-    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void;
+    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void;
 
     /**
      * Persists a single stage's curated resupply atomically (see {@see self::updateStageWeather()}).
      */
-    public function updateStageResupply(string $tripId, int $dayNumber, Resupply $resupply): void;
+    public function updateStageResupply(string $tripId, string $stageId, Resupply $resupply): void;
 
     /**
      * Persists a single stage's accommodations atomically (see {@see self::updateStageWeather()}).
      *
      * @param list<Accommodation> $accommodations
      */
-    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void;
+    public function updateStageAccommodations(string $tripId, string $stageId, array $accommodations): void;
 
     /**
      * Persists a single stage's reverse-geocoded endpoint labels atomically (see {@see self::updateStageWeather()}).
      */
-    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void;
+    public function updateStageLabels(string $tripId, string $stageId, ?string $startLabel, ?string $endLabel): void;
 
     /**
      * Stores multi-track data for Komoot Collection source type.

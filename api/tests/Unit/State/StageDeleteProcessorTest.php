@@ -7,7 +7,6 @@ namespace App\Tests\Unit\State;
 use ApiPlatform\Metadata\Delete;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
@@ -29,6 +28,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
     private MockObject&MessageBusInterface $messageBus;
@@ -44,11 +45,10 @@ final class StageDeleteProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($this->tripStateManager);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         // Return a non-locked request by default (startDate in the future)
         $unlockedRequest = new TripRequest();
@@ -59,7 +59,6 @@ final class StageDeleteProcessorTest extends TestCase
             $this->tripStateManager,
             $this->messageBus,
             $this->distanceCalculator,
-            $generationTracker,
             new TripLocker(),
         );
     }
@@ -119,7 +118,7 @@ final class StageDeleteProcessorTest extends TestCase
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
         $this->assertSame('trip-1', $recalculate[0]->tripId);
-        $this->assertSame([], $recalculate[0]->affectedIndices);
+        $this->assertSame([], $recalculate[0]->affectedStageIds);
         // Geographic scans must be skipped: deleting a rest day does not change geography
         $this->assertTrue($recalculate[0]->skipGeographicScans);
     }
@@ -193,17 +192,16 @@ final class StageDeleteProcessorTest extends TestCase
         $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
         $tripStateManager->method('getStages')->willReturn([]);
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(1);
 
         $processor = new StageDeleteProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             $this->createStub(DistanceCalculatorInterface::class),
-            $generationTracker,
             new TripLocker(),
         );
 

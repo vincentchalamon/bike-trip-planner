@@ -209,7 +209,14 @@ final readonly class NearbyPoiFinder
             return $candidates;
         }
 
-        $geometry = $this->tripRepository->getStageGeometry($tripId, $stageDay);
+        // `stageDay` is part of the public request body, so it stays a day number here
+        // and is resolved to the stage identity the storage layer now addresses by.
+        $stageId = $this->tripRepository->getStageIdByDayNumber($tripId, $stageDay);
+        if (null === $stageId) {
+            return $candidates;
+        }
+
+        $geometry = $this->tripRepository->getStageGeometry($tripId, $stageId);
         if (null === $geometry || [] === $geometry) {
             return $candidates;
         }

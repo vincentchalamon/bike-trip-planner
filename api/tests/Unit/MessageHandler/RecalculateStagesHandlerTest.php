@@ -81,7 +81,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
 
-        $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: [], skipGeographicScans: true));
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [], skipGeographicScans: true));
     }
 
     #[Test]
@@ -99,7 +99,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             $this->createStub(MessageBusInterface::class),
         );
 
-        $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: []));
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: []));
     }
 
     #[Test]
@@ -122,7 +122,7 @@ final class RecalculateStagesHandlerTest extends TestCase
     }
 
     #[Test]
-    public function stagesComputedDispatchesScanAccommodationsPerAffectedIndex(): void
+    public function stagesComputedDispatchesScanAccommodationsPerAffectedStage(): void
     {
         $makeStage = static fn (int $day): Stage => new Stage(
             tripId: 'trip-1',
@@ -133,8 +133,10 @@ final class RecalculateStagesHandlerTest extends TestCase
             endPoint: new Coordinate(48.5, 2.5),
         );
 
+        $stages = [$makeStage(1), $makeStage(2), $makeStage(3)];
+
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$makeStage(1), $makeStage(2), $makeStage(3)]);
+        $tripStateManager->method('getStages')->willReturn($stages);
 
         $request = new TripRequest();
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -154,7 +156,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
 
-        $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: [0, 2]));
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [$stages[0]->id, $stages[2]->id]));
 
         $scanMessages = array_values(array_filter(
             $dispatched,
@@ -165,12 +167,12 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         /** @var ScanAccommodations $first */
         $first = $scanMessages[0];
-        $this->assertSame(0, $first->stageIndex);
+        $this->assertSame($stages[0]->id, $first->stageId);
         $this->assertFalse($first->isExpandScan);
 
         /** @var ScanAccommodations $second */
         $second = $scanMessages[1];
-        $this->assertSame(2, $second->stageIndex);
+        $this->assertSame($stages[2]->id, $second->stageId);
         $this->assertFalse($second->isExpandScan);
     }
 }

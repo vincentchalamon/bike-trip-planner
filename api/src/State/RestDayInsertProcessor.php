@@ -10,12 +10,12 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -30,7 +30,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
     }
@@ -48,48 +47,63 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $restDay = null;
 
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
+        // Read, edit and write as one unit: an enrichment worker writing a column in
+        // between would otherwise be reverted by the snapshot read here.
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $index, &$restDay): array {
+            if (!isset($stages[$index])) {
+                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
+            }
 
-        $afterStage = $stages[$index];
+            $afterStage = $stages[$index];
 
-        // Prevent adjacent rest days — the frontend enforces this too, but the
-        // API contract must be self-consistent.
-        if ($afterStage->isRestDay || (isset($stages[$index + 1]) && $stages[$index + 1]->isRestDay)) {
-            throw new UnprocessableEntityHttpException('Cannot insert a rest day adjacent to an existing rest day.');
-        }
+            // Prevent adjacent rest days — the frontend enforces this too, but the
+            // API contract must be self-consistent.
+            if ($afterStage->isRestDay || (isset($stages[$index + 1]) && $stages[$index + 1]->isRestDay)) {
+                throw new UnprocessableEntityHttpException('Cannot insert a rest day adjacent to an existing rest day.');
+            }
 
-        // The rest day sits between $index and $index+1.
-        // startPoint = endPoint of the previous stage (same location).
-        $restDay = new Stage(
-            tripId: $tripId,
-            dayNumber: $index + 2,
-            distance: 0.0,
-            elevation: 0.0,
-            startPoint: $afterStage->endPoint,
-            endPoint: $afterStage->endPoint,
-            geometry: [$afterStage->endPoint],
-            elevationLoss: 0.0,
-            isRestDay: true,
+            // The rest day sits between $index and $index+1.
+            // startPoint = endPoint of the previous stage (same location).
+            $restDay = new Stage(
+                tripId: $tripId,
+                dayNumber: $index + 2,
+                distance: 0.0,
+                elevation: 0.0,
+                startPoint: $afterStage->endPoint,
+                endPoint: $afterStage->endPoint,
+                geometry: [$afterStage->endPoint],
+                elevationLoss: 0.0,
+                isRestDay: true,
+            );
+
+            array_splice($stages, $index + 1, 0, [$restDay]);
+
+            // Reindex day numbers
+            foreach ($stages as $i => $stage) {
+                $stage->dayNumber = $i + 1;
+            }
+
+            return $stages;
+        });
+
+        // The trip was asserted to exist above, so the write happened.
+        \assert($write instanceof StageWriteResult);
+
+        $stages = $write->stages;
+        // The generation comes back from inside the locked write. Re-reading it here would
+        // hand us whichever version won the race after the lock was released.
+        $generation = $write->version;
+
+        \assert($restDay instanceof Stage);
+
+        // The inserted rest day and everything after it shift by a day.
+        $affected = array_map(
+            static fn (Stage $stage): string => $stage->id,
+            \array_slice($stages, $index + 1),
         );
-
-        array_splice($stages, $index + 1, 0, [$restDay]);
-
-        // Reindex day numbers
-        foreach ($stages as $i => $stage) {
-            $stage->dayNumber = $i + 1;
-        }
-
-        $this->tripStateManager->storeStages($tripId, $stages);
-
-        $generation = $this->generationTracker->increment($tripId);
-
-        $insertedIndex = $index + 1;
-        $affectedIndices = range($insertedIndex, count($stages) - 1);
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true, generation: $generation));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: true, generation: $generation));
         // Re-run the terrain/pacing analysis across all stages: geographic scans
         // are skipped (a rest day adds no geometry), but the rest-day nudge is
         // context-dependent on the rest-day layout — inserting one must suppress

@@ -1616,6 +1616,12 @@ export interface components {
             selectedAccommodationLon?: number | null;
         };
         "Stage.fit": {
+            /**
+             * @description Stable identity of the stage, carried by the DTO so it survives every write:
+             *     the repository reconciles the persisted rows against these identifiers instead
+             *     of deleting and re-inserting the collection (ADR-066).
+             */
+            id?: string | null;
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
             alerts?: components["schemas"]["Alert.fit"][];
             resupply?: components["schemas"]["Resupply.fit"] | null;
@@ -1648,6 +1654,12 @@ export interface components {
             isRestDay?: boolean;
         };
         "Stage.gpx": {
+            /**
+             * @description Stable identity of the stage, carried by the DTO so it survives every write:
+             *     the repository reconciles the persisted rows against these identifiers instead
+             *     of deleting and re-inserting the collection (ADR-066).
+             */
+            id?: string | null;
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
             alerts?: components["schemas"]["Alert.gpx"][];
             resupply?: components["schemas"]["Resupply.gpx"] | null;
@@ -1680,6 +1692,12 @@ export interface components {
             isRestDay?: boolean;
         };
         "Stage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /**
+             * @description Stable identity of the stage, carried by the DTO so it survives every write:
+             *     the repository reconciles the persisted rows against these identifiers instead
+             *     of deleting and re-inserting the collection (ADR-066).
+             */
+            id?: string | null;
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             alerts?: components["schemas"]["Alert.jsonld"][];
             resupply?: components["schemas"]["Resupply.jsonld"] | null;
@@ -2050,6 +2068,12 @@ export interface components {
             readonly active?: boolean;
         };
         "TripShare.Stage.fit": {
+            /**
+             * @description Stable identity of the stage, carried by the DTO so it survives every write:
+             *     the repository reconciles the persisted rows against these identifiers instead
+             *     of deleting and re-inserting the collection (ADR-066).
+             */
+            id?: string | null;
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
             alerts?: components["schemas"]["Alert.fit"][];
             resupply?: components["schemas"]["Resupply.fit"] | null;
@@ -2082,6 +2106,12 @@ export interface components {
             isRestDay?: boolean;
         };
         "TripShare.Stage.gpx": {
+            /**
+             * @description Stable identity of the stage, carried by the DTO so it survives every write:
+             *     the repository reconciles the persisted rows against these identifiers instead
+             *     of deleting and re-inserting the collection (ADR-066).
+             */
+            id?: string | null;
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
             alerts?: components["schemas"]["Alert.gpx"][];
             resupply?: components["schemas"]["Resupply.gpx"] | null;

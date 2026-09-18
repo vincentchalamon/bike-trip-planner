@@ -13,7 +13,6 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
@@ -31,6 +30,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class RestDayInsertProcessorTest extends TestCase
 {
+    use MutateStagesStubTrait;
+
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
     private MockObject&MessageBusInterface $messageBus;
@@ -43,17 +44,15 @@ final class RestDayInsertProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stubMutateStages($this->tripStateManager);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(2);
 
         $this->processor = new RestDayInsertProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->stageResponseMapper,
-            $generationTracker,
             new TripLocker(),
         );
     }
@@ -197,8 +196,10 @@ final class RestDayInsertProcessorTest extends TestCase
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
         $this->assertSame('trip-1', $recalculate[0]->tripId);
-        // After inserting at index 0, stages are [0..3], inserted at 1, so affected = [1,2,3]
-        $this->assertSame([1, 2, 3], $recalculate[0]->affectedIndices);
+        // Inserting after index 0 shifts the rest day and everything after it: the
+        // identifiers are the inserted stage's plus the two that followed.
+        $this->assertCount(3, $recalculate[0]->affectedStageIds);
+        $this->assertSame([$stage1->id, $stage2->id], \array_slice($recalculate[0]->affectedStageIds, 1));
         // Geographic scans must be skipped: inserting a rest day does not change geography
         $this->assertTrue($recalculate[0]->skipGeographicScans);
     }

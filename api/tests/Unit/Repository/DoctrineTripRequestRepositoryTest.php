@@ -136,8 +136,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
-        $this->entityManager->method('createQuery')
-            ->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -314,7 +315,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new TripRequest(Uuid::fromString($tripId));
         $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -348,7 +350,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         $enriched = new Accommodation(
             name: 'Gîte du Morvan',
@@ -411,7 +415,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         $osmEntry = new Accommodation(
             name: 'Camping du Pont',
@@ -490,6 +496,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')->willReturn($trip);
 
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $stages = $this->repository->getStages($tripId);
 
         self::assertNotNull($stages);
@@ -540,8 +548,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
-        $this->entityManager->method('createQuery')
-            ->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -675,6 +684,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -727,6 +738,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
 
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $result = $this->repository->getStages($tripId);
 
         self::assertSame([], $result);
@@ -740,6 +753,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -755,6 +770,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -772,6 +789,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -837,7 +856,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -895,6 +916,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')->willReturn($trip);
 
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $stages = $this->repository->getStages($tripId);
 
         self::assertNotNull($stages);
@@ -910,7 +933,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -961,6 +986,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')->willReturn($trip);
 
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $stages = $this->repository->getStages($tripId);
 
         self::assertNotNull($stages);
@@ -995,6 +1022,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
 
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessageIsOrContains('Unhandled Alert subclass "UnknownAlertType"');
 
@@ -1008,6 +1037,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')->willReturn($trip);
+
+        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+
 
         // Concrete readonly subclass not registered in alertToArray
         $unknownAlert = new UnknownAlertStub(code: null, type: AlertType::WARNING, message: 'x');
@@ -1044,9 +1076,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $repository = $this->repositoryWithOsm($trip, $cycleRoute, $coverage);
 
-        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
-        // Re-storing the same geometry must not trigger another PostGIS scan.
-        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
+        $stage = $this->stageWithGeometry($tripId);
+        $repository->storeStages($tripId, [$stage]);
+        // Re-storing the same stage with the same geometry must not trigger another scan.
+        $repository->storeStages($tripId, [$stage]);
 
         // The persisted fraction is preserved across the guarded second store.
         $stages = $repository->getStages($tripId);
@@ -1067,12 +1100,30 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $repository = $this->repositoryWithOsm($trip, $cycleRoute, $coverage);
 
-        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
-        // A moved endpoint changes the geometry signature → recompute.
-        $moved = $this->stageWithGeometry($tripId);
-        $moved->endPoint = new Coordinate(49.0, 3.0, 0.0);
+        $stage = $this->stageWithGeometry($tripId);
+        $repository->storeStages($tripId, [$stage]);
+        // Same stage, moved endpoint: the geometry signature changes → recompute.
+        $stage->endPoint = new Coordinate(49.0, 3.0, 0.0);
 
-        $repository->storeStages($tripId, [$moved]);
+        $repository->storeStages($tripId, [$stage]);
+    }
+
+    /**
+     * Stands in for every DQL the repository runs against `stage`, chiefly the refreshing
+     * re-read {@see DoctrineTripRequestRepository::storeStages()} reconciles against. It
+     * answers from the trip's in-memory collection, which is what this harness persists
+     * into — so a second store sees what the first one wrote, as it would against a real
+     * database.
+     */
+    private function stageQueryFor(TripRequest $trip): Query&MockObject
+    {
+        $query = $this->createMock(Query::class);
+        $query->method('setParameter')->willReturnSelf();
+        $query->method('setHint')->willReturnSelf();
+        $query->method('setMaxResults')->willReturnSelf();
+        $query->method('getResult')->willReturnCallback(static fn (): array => $trip->stages->getValues());
+
+        return $query;
     }
 
     private function stageWithGeometry(string $tripId): StageDto
@@ -1101,7 +1152,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $em->method('wrapInTransaction')->willReturnCallback(static fn (callable $cb): mixed => $cb());
         $em->method('getClassMetadata')->willReturn(new ClassMetadata(TripRequest::class));
         $em->method('find')->willReturn($trip);
-        $em->method('createQuery')->willReturn($this->createStub(Query::class));
+        $em->method('createQuery')->willReturn($this->stageQueryFor($trip));
 
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($em);

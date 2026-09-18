@@ -144,6 +144,7 @@ nav:
       - adr/adr-062-backup-and-disaster-recovery.md
       - adr/adr-063-transport-agnostic-authorization.md
       - adr/adr-064-mcp-server-as-third-api-client.md
+      - adr/adr-066-stable-stage-identity.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:

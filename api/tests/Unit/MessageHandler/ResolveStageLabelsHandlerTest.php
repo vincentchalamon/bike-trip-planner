@@ -35,7 +35,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $repo->method('getLocale')->willReturn('fr');
         $repo->expects(self::once())
             ->method('updateStageLabels')
-            ->with(self::TRIP_ID, 1, 'Lyon', 'Villefranche-sur-Saône');
+            ->with(self::TRIP_ID, $stage->id, 'Lyon', 'Villefranche-sur-Saône');
 
         $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
         // The trip locale is passed through to the index lookup.
@@ -70,7 +70,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $repo->method('getLocale')->willReturn(null);
         $repo->expects(self::once())
             ->method('updateStageLabels')
-            ->with(self::TRIP_ID, 1, 'Lyon', null);
+            ->with(self::TRIP_ID, $stage->id, 'Lyon', null);
 
         $boundaries = $this->createStub(AdminBoundaryRepositoryInterface::class);
         // No trip locale: the lookup falls back to en.
@@ -121,7 +121,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $repo->method('getLocale')->willReturn('fr');
         $repo->expects(self::once())
             ->method('updateStageLabels')
-            ->with(self::TRIP_ID, 2, 'Lyon', 'Lyon');
+            ->with(self::TRIP_ID, $restDay->id, 'Lyon', 'Lyon');
 
         $tracker = $this->createStub(TripGenerationTrackerInterface::class);
         $tracker->method('current')->willReturn(null);

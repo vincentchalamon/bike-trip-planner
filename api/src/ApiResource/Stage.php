@@ -29,6 +29,7 @@ use App\State\StagePoiWaypointProcessor;
 use App\State\StageProvider;
 use App\State\StageSelectAccommodationProcessor;
 use App\State\StageUpdateProcessor;
+use Symfony\Component\Uid\Uuid;
 
 #[ApiResource(
     shortName: 'Stage',
@@ -183,6 +184,22 @@ use App\State\StageUpdateProcessor;
 )]
 final class Stage
 {
+    /**
+     * Stable identity of the stage, carried by the DTO so it survives every write:
+     * the repository reconciles the persisted rows against these identifiers instead
+     * of deleting and re-inserting the collection (ADR-066).
+     *
+     * Server-owned, never writable: an identifier coming from a request body would let
+     * a client dictate which row an edit lands on. Reconciliation only ever matches
+     * within the stages of the trip being written.
+     *
+     * Stable *within a pacing generation*: it survives an insertion, a move, a deletion,
+     * a rest day and a distance edit, but a regeneration produces new stages, hence new
+     * identifiers.
+     */
+    #[ApiProperty(writable: false)]
+    public string $id;
+
     public ?WeatherForecast $weather = null;
 
     /** @var Alert[] */
@@ -235,7 +252,9 @@ final class Stage
         public ?string $label = null,
         public float $elevationLoss = 0.0,
         public bool $isRestDay = false,
+        ?string $id = null,
     ) {
+        $this->id = $id ?? Uuid::v7()->toRfc4122();
     }
 
     public function addAlert(Alert $alert): void
