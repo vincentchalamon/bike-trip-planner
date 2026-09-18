@@ -103,6 +103,7 @@ final class McpToolCallTest extends ApiTestCase
         self::assertStringContainsString(self::TRIP_ID, $body);
         // Pins the positive side, so the denial test below cannot pass vacuously.
         self::assertStringContainsString('Detail test trip', $body, 'The owner must actually receive the trip payload.');
+        fwrite(\STDERR, "\n[SPIKE] enveloppe: ".substr($body, 0, 3000)."\n");
     }
 
     /**

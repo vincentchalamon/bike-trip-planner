@@ -60,8 +60,6 @@ use App\State\TripDetailProvider;
             // This form works for BOTH the HTTP operation and the tool, so the 19
             // request-based expressions in this codebase can be refactored coherently.
             security: "is_granted('TRIP_VIEW', object.id)",
-            // SPIKE: per-operation format, global api_platform.mcp.format left unset.
-            outputFormats: ['json' => ['application/json']],
             provider: TripDetailProvider::class,
         ),
     ],

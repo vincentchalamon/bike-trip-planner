@@ -83,77 +83,35 @@ contre un FrankenPHP en mode worker. À garder comme test de charge en Phase 3.
 
 ### (c) La taille des réponses est-elle tenable ?
 
-**Contrainte trouvée, puis contournée — le format PEUT être déclaré par opération.**
+**L'option de format est INERTE.** La première rédaction concluait « possible par
+opération » sur la foi de la construction du conteneur. Un appel réel a démenti.
 
-Le plan prévoyait de passer `api_platform.mcp.format` à `json`, le `@context`/`@id` de
-JSON-LD étant du bruit pur dans la fenêtre de contexte d'un agent. En **global**, c'est
-refusé :
+Le plan voulait passer l'enveloppe en JSON simple, le `@context`/`@id` de JSON-LD étant
+du bruit dans la fenêtre de contexte d'un agent. **Les deux voies ont été essayées, et
+aucune ne fonctionne :**
 
-```
-The MCP format "json" is not configured in api_platform.formats.
-```
+| Tentative | Résultat |
+|---|---|
+| `api_platform.mcp.format = 'json'` seul | **Refusé** : « The MCP format "json" is not configured in api_platform.formats. » |
+| `json` enregistré dans `api_platform.formats` + global `mcp.format = 'json'` | Accepté, paramètre vérifié à `json` dans le conteneur, cache vidé — **sortie toujours JSON-LD** |
+| `new McpTool(..., outputFormats: ['json' => ['application/json']])` | Accepté à la construction — **sortie toujours JSON-LD** |
 
-`api/config/packages/api_platform.php` ne déclare que `jsonld`, et l'y ajouter donnerait
-`application/json` à **toutes** les opérations REST, faisant dériver l'OpenAPI et
-`core/schema.d.ts`.
+Réponse réelle d'un appel d'outil, `content[0].text` **et** `structuredContent` :
 
-**Mais `FormatsResourceMetadataCollectionFactory` (l. 71-82) montre que ce n'est pas la
-seule voie** :
-
-```php
-if (null !== $this->mcpFormat && null !== ($mcp = $resourceMetadata->getMcp())) {
-    if (!isset($this->formats[$this->mcpFormat])) { throw ... }   // l. 72-73
-    foreach ($mcp as $key => $operation) {
-        if (($operation instanceof McpTool || $operation instanceof McpResource)
-            && null === $operation->getFormats()
-            && null === $operation->getInputFormats()
-            && null === $operation->getOutputFormats()) {          // l. 78
-            $operation = $operation->withInputFormats($mcpFormats)->withOutputFormats($mcpFormats);
+```json
+{"result":{"content":[{"type":"text","text":"{\"@context\":\"/contexts/TripDetail\",\"@type\":\"TripDetail\",…"}],
+ "isError":false,
+ "structuredContent":{"@context":"/contexts/TripDetail","@type":"TripDetail",…}}}
 ```
 
-Deux conséquences :
+**Conclusion : l'enveloppe `@context`/`@type` est aujourd'hui inévitable** sur une sortie
+d'outil MCP en API Platform 4.3.19. Le bruit reste modeste par réponse, mais il n'est pas
+évitable, et l'option de configuration qui prétend le régler ne fait rien.
 
-1. le format global n'est appliqué **que si l'opération n'en déclare aucun** — le
-   **par-opération gagne** ;
-2. le contrôle strict de la l. 72 ne s'exécute **que si le global est défini**. Global
-   laissé à `null` ⇒ aucun contrôle, et l'opération déclare ce qu'elle veut.
-
-**Vérifié** : `new McpTool(..., outputFormats: ['json' => ['application/json']])` avec
-`api_platform.mcp.format` non défini construit le conteneur et `debug:mcp` liste l'outil,
-sans que `json` soit dans `api_platform.formats`.
-
-**Et cela n'impacte PAS les opérations HTTP — prouvé, pas supposé.** Les deux exports
-OpenAPI, avec et sans le bloc `mcp:` portant `outputFormats: ['json' => ['application/json']]`,
-sont **octet pour octet identiques** (431 992 octets, `cmp` silencieux) :
-
-```
-$ cmp -s /tmp/oas-main.json /tmp/oas-spike.json && echo identiques
-identiques
-```
-
-`GET /trips/{id}/detail` continue d'annoncer `application/ld+json` seul en 200 (les
-`application/json` visibles en 403/404 sont le jeu d'erreurs RFC 7807 standard,
-antérieur). Le format déclaré sur un `McpTool` est donc **strictement confiné au bucket
-MCP** : ni l'OpenAPI, ni `core/schema.d.ts`, ni le drift guard CI ne bougent. Cohérent
-avec les deux boucles distinctes de la factory (l. 68 pour `getOperations()`, l. 71+ pour
-`getMcp()`).
-
-**Réserve honnête** : c'est prouvé au niveau *métadonnées / OpenAPI / construction du
-conteneur*, pas à la sérialisation d'un appel réel — l'enregistrement dans
-`api_platform.formats` est aussi ce qui câble le normalizer. À confirmer par un appel
-JSON-RPC réel.
-
-**À ne pas confondre** : `api_platform.mcp.format` (singulier) **ne déclare rien et ne
-fusionne rien** — c'est une *clé de recherche* dans `api_platform.formats`, qui exige que
-le format y soit déjà. L'impact HTTP ne vient donc pas du nœud MCP mais de l'ajout, fait
-séparément, de `json` à `api_platform.formats`.
-
-**Remarque DX pour la core-team, si tu la sollicites** — confort, pas blocage : il
-n'existe pas de moyen de déclarer un format *pour le MCP seulement*. Soit on le répète sur
-chaque outil (ce qui marche, cf. ci-dessus), soit on le rend global et il contamine le
-REST. Un `api_platform.mcp.formats` **autonome** — au pluriel, validé contre les formats
-connus mais **jamais versé dans `api_platform.formats`** — supprimerait la répétition sans
-toucher au REST.
+**Ce qui reste vrai de la première rédaction** : déclarer un format sur un `McpTool`
+**n'impacte pas** les opérations HTTP — les exports OpenAPI avec et sans le bloc `mcp:`
+sont octet pour octet identiques (431 992 octets, `cmp` silencieux). Le bucket MCP est
+bien étanche ; c'est simplement que rien n'y consomme le format.
 
 ### (d) Comment teste-t-on fonctionnellement un outil MCP ?
 
@@ -320,14 +278,14 @@ l'appel.
 
 | Point du plan | Après spike |
 |---|---|
-| « Vérifier si `api-platform/mcp` fournit le resource server » | **Fourni par `mcp/sdk`**, avec en prime un proxy de délégation. Phase 3A rétrécit. |
+| « Vérifier si `api-platform/mcp` fournit le resource server » | **Fourni par `mcp/sdk`**, et **atteignable** en décorant `mcp.server.<name>.middleware_factory`. Phase 3A rétrécit pour de bon. |
 | « Ne pas écrire l'AS à la main, socle `league/oauth2-server` » | **Confirmé par l'ADR du SDK lui-même**, qui le recommande nommément. |
 | « Un outil réutilise le `security:` existant inchangé » | **Faux.** Recette en deux temps : **5 expressions → `object.id`**, **14 → sur la variable d'URI** (`Link(security: ...)`). |
 | « `security:` est appliqué à l'appel » | **PROUVÉ** par test fonctionnel : propriétaire OK, autre utilisateur `Access Denied.`, anonyme 401. |
 | « Le refus d'ownership ressort en *not found* (ADR-038) » | **FAUX — faille.** `Access Denied.` vs `... not found.` sont distinguables : énumération d'UUID rouverte sur le chemin MCP. |
 | « Comment tester un outil MCP » | **RÉSOLU** : `ApiTestCase` + JSON-RPC sur la route, sans client MCP. En-têtes miroir obligatoires. |
 | « Aucun conflit de dépendances » | Exact, mais **8 paquets transitifs** ajoutés. |
-| « `format: json` pour éviter le bruit JSON-LD » | **Possible par opération**, global laissé à `null`. **Zéro impact HTTP, prouvé par un diff OpenAPI identique.** |
+| « `format: json` pour éviter le bruit JSON-LD » | **Impossible — l'option est inerte.** Global et par-opération testés, sortie toujours JSON-LD. Le bucket MCP reste étanche côté HTTP (diff OpenAPI identique). |
 | « `debug:mcp` comme première boucle de retour » | **Utilisable** — l'apparente absence d'outils était le filtre de sécurité en contexte anonyme. |
 | « Le mode worker FrankenPHP est traité par `McpRegistryPass` » | **Confirmé par conception**, non vérifié sous charge. |
 | Dépendances expérimentales | **Aucun conflit** sur PHP 8.5 / Symfony 8.1 / API Platform 4.3. |
@@ -426,16 +384,27 @@ Aucun conflit de *versions*, mais **8 paquets transitifs** ajoutés : `opis/json
 `psr/http-server-handler`, `psr/http-server-middleware`, `psr/simple-cache`. C'est une
 expansion réelle de surface de dépendances, à passer au `security-check` du projet.
 
+### ✅ RÉSOLU : le resource server OAuth du SDK est atteignable via le bundle
+
+La première rédaction laissait ce point en suspens, et il conditionnait tout
+l'allègement de la Phase 3A. Il est levé : `McpBundle.php:399` enregistre
+**`mcp.server.<name>.middleware_factory`** comme service de conteneur (vérifié :
+`mcp.server.btp.middleware_factory` existe), `McpController` l'injecte, et son `create()`
+alimente `new StreamableHttpTransport(...)` — dont le constructeur **accepte une pile de
+middlewares custom** (`?iterable $middleware`, `null` installant les défauts).
+
+Brancher `AuthorizationMiddleware` et `ProtectedResourceMetadataMiddleware` du SDK est
+donc **une décoration Symfony standard de ce service**, sans fork ni patch.
+
 ### Ce qui reste non prouvé
 
 - **FrankenPHP en mode worker sous charge concurrente.** Traité par conception
   (`McpRegistryPass`), jamais exercé.
-- **Le resource server OAuth du SDK est-il atteignable via le bundle ?** Les classes
-  existent, mais `MiddlewareFactory` ne gère que la protection DNS-rebinding : aucune
-  couture n'a été trouvée pour injecter `AuthorizationMiddleware`. Tant que ce point n'est
-  pas levé, « la Phase 3A rétrécit » reste une hypothèse, pas un acquis.
-- **La sérialisation réelle du format par opération** (prouvée au niveau métadonnées et
-  OpenAPI seulement).
+- **FrankenPHP en mode worker sous charge concurrente** — seul point réellement non
+  couvert. Le risque est documenté et traité par `McpRegistryPass`, et le chargement
+  paresseux du registre a été vérifié en processus frais ; ce qui reste à exercer est
+  le cas multi-requêtes d'un runtime persistant. Cela relève du test de charge déjà
+  prévu en Phase 3, pas d'un spike.
 
 ---
 

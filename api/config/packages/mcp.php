@@ -39,12 +39,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
     ]);
 
-    // SPIKE FINDING: `'mcp' => ['format' => 'json']` is REFUSED —
-    //   "The MCP format "json" is not configured in api_platform.formats."
-    // Only `jsonld` is declared in api_platform.php, and the MCP format must be one
-    // of the globally registered formats. Serving MCP as plain JSON therefore means
-    // adding `'json' => ['application/json']` to api_platform.formats, which also
-    // hands every REST operation a format it does not advertise today — an OpenAPI
-    // and core/schema.d.ts contract change. Left on the jsonld default here; the
-    // trade-off is recorded in the verdict.
+    // SPIKE FINDING — `api_platform.mcp.format` is INERT in v4.3.19.
+    //
+    // Setting it to 'json' is first refused unless 'json' is also registered in
+    // api_platform.formats. Register it, set the global, clear the cache, verify the
+    // parameter really holds "json" in the container — and the tool output is STILL
+    // JSON-LD, in `content[0].text` AND in `structuredContent`:
+    //   {"@context":"/contexts/TripDetail","@type":"TripDetail","id":...}
+    // Declaring outputFormats on the McpTool itself is accepted too, and equally
+    // ineffective. There is currently no way to avoid the @context/@type envelope.
+    // Left unset: neither form buys anything.
 };
