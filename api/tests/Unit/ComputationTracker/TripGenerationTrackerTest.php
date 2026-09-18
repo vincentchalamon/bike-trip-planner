@@ -5,60 +5,53 @@ declare(strict_types=1);
 namespace App\Tests\Unit\ComputationTracker;
 
 use App\ComputationTracker\TripGenerationTracker;
+use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
+/**
+ * The generation is the trip's persisted structural version, so this only pins the
+ * delegation. What the generation must actually guarantee — that it is bumped by every
+ * write of the stage collection, never expires and never decreases — is a property of the
+ * stored column, covered by
+ * {@see \App\Tests\Integration\Repository\DoctrineStageReconciliationTest}.
+ */
 final class TripGenerationTrackerTest extends TestCase
 {
-    private TripGenerationTracker $tracker;
-
-    #[\Override]
-    protected function setUp(): void
+    #[Test]
+    public function theCurrentGenerationIsTheTripVersion(): void
     {
-        $this->tracker = new TripGenerationTracker(new ArrayAdapter());
+        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository->expects(self::once())->method('getVersion')->with('trip-1')->willReturn(7);
+
+        self::assertSame(7, new TripGenerationTracker($repository)->current('trip-1'));
     }
 
     #[Test]
-    public function initializeSetsGenerationToOne(): void
+    public function incrementingBumpsTheTripVersion(): void
     {
-        $this->tracker->initialize('trip-1');
+        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository->expects(self::once())->method('bumpVersion')->with('trip-1')->willReturn(8);
 
-        $this->assertSame(1, $this->tracker->current('trip-1'));
+        self::assertSame(8, new TripGenerationTracker($repository)->increment('trip-1'));
     }
 
     #[Test]
-    public function incrementReturnsNextGeneration(): void
+    public function anUnknownTripHasNoGeneration(): void
     {
-        $this->tracker->initialize('trip-1');
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
+        $repository->method('getVersion')->willReturn(null);
 
-        $this->assertSame(2, $this->tracker->increment('trip-1'));
-        $this->assertSame(3, $this->tracker->increment('trip-1'));
+        self::assertNull(new TripGenerationTracker($repository)->current('unknown'));
     }
 
+    /** A trip row exists at version 1, so there is nothing to seed. */
     #[Test]
-    public function currentReturnsNullForUnknownTrip(): void
+    public function initializingWritesNothing(): void
     {
-        $this->assertNull($this->tracker->current('unknown'));
-    }
+        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository->expects(self::never())->method('bumpVersion');
 
-    #[Test]
-    public function incrementFromZeroWhenNotInitialized(): void
-    {
-        $this->assertSame(1, $this->tracker->increment('trip-new'));
-        $this->assertSame(1, $this->tracker->current('trip-new'));
-    }
-
-    #[Test]
-    public function independentTripsDoNotInterfere(): void
-    {
-        $this->tracker->initialize('trip-1');
-        $this->tracker->initialize('trip-2');
-
-        $this->tracker->increment('trip-1');
-        $this->tracker->increment('trip-1');
-
-        $this->assertSame(3, $this->tracker->current('trip-1'));
-        $this->assertSame(1, $this->tracker->current('trip-2'));
+        new TripGenerationTracker($repository)->initialize('trip-1');
     }
 }

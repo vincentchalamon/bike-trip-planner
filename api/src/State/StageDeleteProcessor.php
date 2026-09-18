@@ -84,7 +84,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
             return $stages;
         }) ?? [];
 
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));

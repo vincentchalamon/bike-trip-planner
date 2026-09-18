@@ -107,7 +107,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
         // Bump generation: stage edits invalidate in-flight computations. After the
         // write, so the generation names the state that was actually persisted.
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         // A distance edit cascades into every following stage; a point or label edit
         // touches only this one.

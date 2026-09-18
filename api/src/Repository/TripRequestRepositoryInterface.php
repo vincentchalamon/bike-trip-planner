@@ -90,6 +90,23 @@ interface TripRequestRepositoryInterface
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string;
 
     /**
+     * The trip's structural version — see {@see TripRequest::$version}.
+     *
+     * Bumped by {@see self::storeStages()} itself, so any write of the collection moves it,
+     * including the ones a worker performs when the pacing is regenerated.
+     */
+    public function getVersion(string $tripId): ?int;
+
+    /**
+     * Bumps the structural version without writing stages, for a change that invalidates
+     * in-flight computations without rewriting the collection (trip settings, batch
+     * recompute).
+     *
+     * @return int the new version, or 0 when the trip is unknown
+     */
+    public function bumpVersion(string $tripId): int;
+
+    /**
      * Persists a single stage's weather atomically, keyed by the stage identifier.
      *
      * Parallel enrichment handlers each own one JSONB column; routing them through

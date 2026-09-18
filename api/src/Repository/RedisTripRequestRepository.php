@@ -13,7 +13,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Lock\LockFactory;
 
 final readonly class RedisTripRequestRepository implements TripRequestRepositoryInterface
 {
@@ -22,7 +21,6 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
-        private LockFactory $lockFactory,
     ) {
     }
 
@@ -91,6 +89,8 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     public function storeStages(string $tripId, array $stages): void
     {
         $this->set($this->stagesKey($tripId), $stages);
+        // Any write of the collection is a structural change (see TripRequest::$version).
+        $this->bumpVersion($tripId);
     }
 
     /** @return list<Stage>|null */
@@ -146,6 +146,21 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return $mutated;
     }
 
+    public function getVersion(string $tripId): ?int
+    {
+        $value = $this->get($this->versionKey($tripId));
+
+        return \is_int($value) ? $value : null;
+    }
+
+    public function bumpVersion(string $tripId): int
+    {
+        $next = ($this->getVersion($tripId) ?? 1) + 1;
+        $this->set($this->versionKey($tripId), $next);
+
+        return $next;
+    }
+
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
     {
         foreach ($this->getStages($tripId) ?? [] as $stage) {
@@ -196,37 +211,33 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     }
 
     /**
-     * Lock-guarded read-modify-write of a single stage (matched by identifier) in the
-     * monolithic blob, so concurrent enrichment handlers can't lose each other's
-     * column updates (recette #649).
+     * Read-modify-write of a single stage (matched by identifier) in the monolithic blob.
+     *
+     * No lock of its own: {@see LockingTripRequestRepository} already holds the per-trip
+     * one around every entry point here. Taking it again would be worse than redundant —
+     * createLock() mints a fresh token per call, so the nested blocking acquire would wait
+     * on the lock this very process holds and never return.
      *
      * @param callable(Stage): void $mutator
      */
     private function updateStageField(string $tripId, string $stageId, callable $mutator): void
     {
-        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), ttl: 5);
-        $lock->acquire(blocking: true);
+        $stages = $this->getStages($tripId);
+        if (null === $stages) {
+            return;
+        }
 
-        try {
-            $stages = $this->getStages($tripId);
-            if (null === $stages) {
-                return;
+        $changed = false;
+        foreach ($stages as $stage) {
+            if ($stage->id === $stageId) {
+                $mutator($stage);
+                $changed = true;
+                break;
             }
+        }
 
-            $changed = false;
-            foreach ($stages as $stage) {
-                if ($stage->id === $stageId) {
-                    $mutator($stage);
-                    $changed = true;
-                    break;
-                }
-            }
-
-            if ($changed) {
-                $this->storeStages($tripId, $stages);
-            }
-        } finally {
-            $lock->release();
+        if ($changed) {
+            $this->storeStages($tripId, $stages);
         }
     }
 
@@ -312,6 +323,11 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     private function decimatedPointsKey(string $tripId): string
     {
         return \sprintf('trip.%s.decimated_points', $tripId);
+    }
+
+    private function versionKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.version', $tripId);
     }
 
     private function stagesKey(string $tripId): string

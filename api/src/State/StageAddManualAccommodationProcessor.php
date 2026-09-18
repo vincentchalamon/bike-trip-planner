@@ -123,7 +123,7 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
             $affectedIndices[] = $index + 1;
         }
 
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 

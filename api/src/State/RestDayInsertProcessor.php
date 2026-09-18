@@ -91,7 +91,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         \assert($restDay instanceof Stage);
 
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $insertedIndex = $index + 1;
         $affectedIndices = range($insertedIndex, count($stages) - 1);

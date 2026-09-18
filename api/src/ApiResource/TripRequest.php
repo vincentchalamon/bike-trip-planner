@@ -136,6 +136,23 @@ final class TripRequest
     public string $locale = 'en';
 
     /**
+     * Monotonic counter of structural writes to this trip, bumped on every write of the
+     * stage collection and on every settings change that invalidates in-flight work.
+     *
+     * Replaces the Redis-held generation counter, which was a non-atomic get/+1/set with
+     * a 30-minute TTL: past that TTL the value vanished, the staleness guard stopped
+     * rejecting anything (a null current generation is treated as "not stale"), and the
+     * counter restarted from 1 — it could go backwards. A column bumped inside the write
+     * transaction is atomic and monotonic by construction (#252, RC1 and RC5).
+     *
+     * Deliberately not `#[ORM\Version]`: Doctrine does not bump a parent's version when a
+     * child changes, and what changes here is the Stage rows.
+     */
+    #[ORM\Column(options: ['default' => 1])]
+    #[ApiProperty(readable: false, writable: false)]
+    public int $version = 1;
+
+    /**
      * True when the route falls (even partly) outside the provisioned coverage
      * area: the trip is display-only (no Valhalla rerouting).
      *

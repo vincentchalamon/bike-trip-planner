@@ -172,6 +172,37 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
         $this->repository->storeStages($tripId, [$stages[0], $stages[0]]);
     }
 
+    /**
+     * The structural version is what a message's generation is compared against, and what
+     * PR3 will hand out as an ETag. It has to move on every write of the collection —
+     * including the ones a worker performs when the pacing is regenerated, which no
+     * HTTP-side counter would have seen.
+     */
+    #[Test]
+    public function everyWriteOfTheCollectionBumpsTheVersion(): void
+    {
+        $tripId = $this->seedTrip();
+        $before = $this->repository->getVersion($tripId);
+        self::assertNotNull($before);
+
+        $this->repository->storeStages($tripId, $this->repository->getStages($tripId) ?? []);
+
+        self::assertSame($before + 1, $this->repository->getVersion($tripId));
+    }
+
+    /** A targeted enrichment write is not a structural change and must leave it alone. */
+    #[Test]
+    public function aTargetedEnrichmentWriteDoesNotBumpTheVersion(): void
+    {
+        $tripId = $this->seedTrip();
+        $stages = $this->repository->getStages($tripId) ?? [];
+        $before = $this->repository->getVersion($tripId);
+
+        $this->repository->updateStageLabels($tripId, $stages[0]->id, 'Lyon', 'Vienne');
+
+        self::assertSame($before, $this->repository->getVersion($tripId));
+    }
+
     /** @return list<string> */
     private function persistedIds(string $tripId): array
     {

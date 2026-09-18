@@ -86,7 +86,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         \assert(null !== $position && $newStage instanceof Stage);
 
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
 

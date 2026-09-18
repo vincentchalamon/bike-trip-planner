@@ -236,6 +236,20 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
         return $this->decorated->getStageIdByDayNumber($tripId, $dayNumber);
     }
 
+    public function getVersion(string $tripId): ?int
+    {
+        return $this->decorated->getVersion($tripId);
+    }
+
+    /**
+     * Under the same lock as the stage writes: the version is bumped by those writes too,
+     * so a bare read-modify-write here could interleave with one and lose a bump.
+     */
+    public function bumpVersion(string $tripId): int
+    {
+        return $this->withStagesLock($tripId, fn (): int => $this->decorated->bumpVersion($tripId));
+    }
+
     /** @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData */
     public function storeTracksData(string $tripId, array $tracksData): void
     {

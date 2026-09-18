@@ -141,7 +141,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         \assert($stage instanceof Stage);
 
         if ($isDeselect) {
-            $generation = $this->generationTracker->increment($tripId);
+            $generation = $this->generationTracker->current($tripId) ?? 1;
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
@@ -155,7 +155,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $affectedIndices[] = $index + 1;
         }
 
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 

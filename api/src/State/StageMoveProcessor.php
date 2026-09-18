@@ -88,7 +88,7 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         \assert($stage instanceof Stage);
 
         // Bump generation: stage moves invalidate in-flight computations
-        $generation = $this->generationTracker->increment($tripId);
+        $generation = $this->generationTracker->current($tripId) ?? 1;
 
         // Dispatch continuity check for all stages; weather/calendar for all stages
         $this->messageBus->dispatch(new RecalculateStages($tripId, [], generation: $generation));

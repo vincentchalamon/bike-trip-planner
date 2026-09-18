@@ -269,6 +269,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             // (correctness review on #787).
             $trip->outOfZone = $outOfZone;
 
+            // Any write of the collection is a structural change, whether it comes from a
+            // client edit or from a worker regenerating the pacing.
+            ++$trip->version;
+
             foreach ($stages as $position => $stageDto) {
                 $stageEntity = $existing[$stageDto->id] ?? null;
                 if (!$stageEntity instanceof StageEntity) {
@@ -500,6 +504,24 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             static fn (array $point): array => ['lat' => $point['lat'], 'lon' => $point['lon']],
             $row['geometry'],
         );
+    }
+
+    public function getVersion(string $tripId): ?int
+    {
+        return $this->findTripRequest($tripId)?->version;
+    }
+
+    public function bumpVersion(string $tripId): int
+    {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
+            return 0;
+        }
+
+        ++$trip->version;
+        $this->getEntityManager()->flush();
+
+        return $trip->version;
     }
 
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
