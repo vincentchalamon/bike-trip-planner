@@ -77,7 +77,7 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
         $gpx = 'application/gpx+xml';
 
         // is_granted('TRIP_VIEW', id) — keyed on the trip's own identifier
-        yield 'Trip.php:155 GET /trips/{id} (export)' => ['GET', '/trips/' . $trip, $gpx];
+        yield 'Trip.php:155 GET /trips/{id} (export)' => ['GET', '/trips/'.$trip, $gpx];
         yield 'TripRoute.php:24 GET /trips/{id}/route' => ['GET', sprintf('/trips/%s/route', $trip), $jsonLd];
         yield 'TripDetail.php:29 GET /trips/{id}/detail' => ['GET', sprintf('/trips/%s/detail', $trip), $jsonLd];
         yield 'MercureToken.php:37 GET /trips/{id}/mercure-token' => ['GET', sprintf('/trips/%s/mercure-token', $trip), $jsonLd];
