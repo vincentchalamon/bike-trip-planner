@@ -111,7 +111,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
         // A distance edit cascades into every following stage; a point or label edit
         // touches only this one.
-        $affected = null !== $data->distance ? range($index, \count($stages) - 1) : [$index];
+        $affected = null !== $data->distance
+            ? array_map(static fn (Stage $s): string => $s->id, \array_slice($stages, $index))
+            : [$stage->id];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);

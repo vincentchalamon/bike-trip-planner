@@ -122,7 +122,7 @@ final class StageDeleteProcessorTest extends TestCase
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
         $this->assertSame('trip-1', $recalculate[0]->tripId);
-        $this->assertSame([], $recalculate[0]->affectedIndices);
+        $this->assertSame([], $recalculate[0]->affectedStageIds);
         // Geographic scans must be skipped: deleting a rest day does not change geography
         $this->assertTrue($recalculate[0]->skipGeographicScans);
     }

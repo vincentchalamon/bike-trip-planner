@@ -73,7 +73,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
 
         $this->messageBus->dispatch(new RecalculateRouteSegment(
             tripId: $tripId,
-            stageIndex: $index,
+            stageId: $stage->id,
             waypointLat: $waypointLat,
             waypointLon: $waypointLon,
             reason: 'poi_detour',

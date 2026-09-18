@@ -86,8 +86,10 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         $generation = $this->generationTracker->current($tripId) ?? 1;
 
-        $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));
+        // Only the stage that absorbed the deleted one needs recomputing; a plain
+        // removal affects none, which an empty list would read as "all".
+        $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: $isRestDayDeletion, generation: $generation));
         // Deleting a rest day skips geographic scans (no geometry change) but the
         // rest-day nudge is context-dependent: removing the rest day must restore
         // the "consider a rest day" nudge on the day that preceded it. Re-run the

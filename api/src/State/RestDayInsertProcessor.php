@@ -93,9 +93,12 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         $generation = $this->generationTracker->current($tripId) ?? 1;
 
-        $insertedIndex = $index + 1;
-        $affectedIndices = range($insertedIndex, count($stages) - 1);
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true, generation: $generation));
+        // The inserted rest day and everything after it shift by a day.
+        $affected = array_map(
+            static fn (Stage $stage): string => $stage->id,
+            \array_slice($stages, $index + 1),
+        );
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: true, generation: $generation));
         // Re-run the terrain/pacing analysis across all stages: geographic scans
         // are skipped (a rest day adds no geometry), but the rest-day nudge is
         // context-dependent on the rest-day layout — inserting one must suppress

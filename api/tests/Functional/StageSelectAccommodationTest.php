@@ -250,7 +250,13 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $this->assertCount(1, $scanMessages);
         /** @var ScanAccommodations $scanMessage */
         $scanMessage = $scanMessages[0]->getMessage();
-        $this->assertSame(0, $scanMessage->stageIndex);
+        // The identifiers the API just wrote, read back so the assertion names the same
+        // stages the processor addressed.
+        $stageIds = array_map(
+            static fn (Stage $stage): string => $stage->id,
+            self::getContainer()->get(TripRequestRepositoryInterface::class)->getStages(self::TRIP_ID) ?? [],
+        );
+        $this->assertSame($stageIds[0], $scanMessage->stageId);
         $this->assertFalse($scanMessage->isExpandScan);
 
         $recalculateMessages = array_filter(
@@ -260,7 +266,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $this->assertCount(1, $recalculateMessages);
         /** @var RecalculateStages $recalculateMessage */
         $recalculateMessage = array_first($recalculateMessages)->getMessage();
-        $this->assertSame([0, 1], $recalculateMessage->affectedIndices);
+        $this->assertSame([$stageIds[0], $stageIds[1]], $recalculateMessage->affectedStageIds);
     }
 
     private function seedTripWithSelectedAccommodationOnly(string $tripId): void

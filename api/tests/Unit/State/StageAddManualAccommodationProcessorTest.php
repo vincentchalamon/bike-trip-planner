@@ -149,10 +149,13 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     #[Test]
     public function dispatchesRecalculationForAffectedStages(): void
     {
+        $stages = $this->twoStages();
+        [$stage0, $stage1] = $stages;
+
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
         $this->stubMutateStages($repo);
         $repo->method('getRequest')->willReturn(new TripRequest());
-        $repo->method('getStages')->willReturn($this->twoStages());
+        $repo->method('getStages')->willReturn($stages);
 
         $geocoder = $this->createStub(GeocoderInterface::class);
         $geocoder->method('geocode')->willReturn(new Coordinate(48.0, 2.0));
@@ -170,7 +173,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $this->processor($repo, $geocoder, $bus)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 
         self::assertInstanceOf(RecalculateStages::class, $recalc);
-        self::assertSame([0, 1], $recalc->affectedIndices);
+        self::assertSame([$stage0->id, $stage1->id], $recalc->affectedStageIds);
         self::assertTrue($recalc->skipAccommodationScan);
     }
 

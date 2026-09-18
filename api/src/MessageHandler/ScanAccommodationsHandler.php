@@ -65,11 +65,26 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $tripId = $message->tripId;
         $generation = $message->generation;
         $radiusMeters = $message->radiusMeters;
-        $stageIndex = $message->stageIndex;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
             return;
+        }
+
+        // Resolve the targeted stage by identity, keeping its current position as the key
+        // the distributor and the published payload are built on.
+        $stageIndex = null;
+        if (null !== $message->stageId) {
+            foreach ($stages as $index => $stage) {
+                if ($stage->id === $message->stageId) {
+                    $stageIndex = $index;
+                    break;
+                }
+            }
+
+            if (null === $stageIndex) {
+                return;
+            }
         }
 
         $request = $this->tripStateManager->getRequest($tripId);

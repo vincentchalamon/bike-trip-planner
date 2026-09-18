@@ -88,7 +88,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         $generation = $this->generationTracker->current($tripId) ?? 1;
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$newStage->id], generation: $generation));
 
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so adding a

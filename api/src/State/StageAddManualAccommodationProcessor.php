@@ -118,14 +118,14 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
 
         \assert($stage instanceof Stage);
 
-        $affectedIndices = [$index];
+        $affected = [$stage->id];
         if (isset($stages[$index + 1])) {
-            $affectedIndices[] = $index + 1;
+            $affected[] = $stages[$index + 1]->id;
         }
 
         $generation = $this->generationTracker->current($tripId) ?? 1;
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipAccommodationScan: true, generation: $generation));
 
         if ($request->startDate instanceof \DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));

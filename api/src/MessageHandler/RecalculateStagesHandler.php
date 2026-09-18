@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -54,11 +55,21 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $affectedIndices = $message->affectedIndices;
-        // If empty, recalculate all stages (e.g. after a move)
-        if ([] === $affectedIndices) {
-            $affectedIndices = array_keys($stages);
+        // Resolve identifiers to the stages as they stand now, so an edit that happened
+        // since this message was sent moves the target rather than mis-targeting it. A
+        // stage that no longer exists is simply skipped.
+        $byId = [];
+        foreach ($stages as $stage) {
+            $byId[$stage->id] = $stage;
         }
+
+        // If empty, recalculate all stages (e.g. after a move)
+        $affected = [] === $message->affectedStageIds
+            ? $stages
+            : array_values(array_filter(array_map(
+                static fn (string $stageId): ?Stage => $byId[$stageId] ?? null,
+                $message->affectedStageIds,
+            )));
 
         // Mode 2 — inline modification (Act 3): emit one `stage_updated` event per
         // affected stage so the frontend mutates the corresponding slice of its
@@ -70,22 +81,20 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // racing the `stage_updated` slice and reverting a user-set distance
         // (e.g. 80km -> 60km snapping back). The initial generation path still emits
         // `STAGES_COMPUTED` (GenerateStagesHandler / GpxUploadService) (issue #774).
-        foreach ($affectedIndices as $idx) {
-            if (isset($stages[$idx])) {
-                $this->publisher->publishStageUpdated($tripId, $stages[$idx]);
-            }
+        foreach ($affected as $stage) {
+            $this->publisher->publishStageUpdated($tripId, $stage);
         }
 
         // Dispatch POI/Accommodation/BikeShop scans for affected stages
-        if ([] !== $affectedIndices && !$message->skipGeographicScans) {
+        if ([] !== $affected && !$message->skipGeographicScans) {
             $this->messageBus->dispatch(new ScanPois($tripId, $generation));
             if (!$message->skipAccommodationScan) {
                 $request = $this->tripStateManager->getRequest($tripId);
                 \assert($request instanceof TripRequest);
-                foreach ($affectedIndices as $idx) {
+                foreach ($affected as $stage) {
                     $this->messageBus->dispatch(new ScanAccommodations(
                         $tripId,
-                        stageIndex: $idx,
+                        stageId: $stage->id,
                         enabledAccommodationTypes: $request->enabledAccommodationTypes,
                         generation: $generation,
                     ));

@@ -42,18 +42,28 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
             return;
         }
 
-        if (!isset($stages[$message->stageIndex])) {
-            return;
+        // Resolve by identity: an edit since this message was sent may have moved the
+        // stage, and a stale position would rewrite another stage's geometry.
+        $stage = null;
+        $stageIndex = null;
+        foreach ($stages as $index => $candidate) {
+            if ($candidate->id === $message->stageId) {
+                $stage = $candidate;
+                $stageIndex = $index;
+                break;
+            }
         }
 
-        $stage = $stages[$message->stageIndex];
+        if (null === $stage) {
+            return;
+        }
         $waypoint = new Coordinate($message->waypointLat, $message->waypointLon);
 
-        $this->executeWithTracking($tripId, ComputationName::ROUTE_SEGMENT, function () use ($tripId, $message, $stage, $waypoint): void {
+        $this->executeWithTracking($tripId, ComputationName::ROUTE_SEGMENT, function () use ($tripId, $message, $stage, $stageIndex, $waypoint): void {
             $result = $this->routingProvider->calculateRoute($stage->startPoint, $stage->endPoint, [$waypoint]);
 
             $this->publisher->publish($tripId, MercureEventType::ROUTE_SEGMENT_RECALCULATED, [
-                'stageIndex' => $message->stageIndex,
+                'stageIndex' => $stageIndex,
                 'reason' => $message->reason,
                 'distance' => $result->distance,
                 'elevationGain' => $result->elevationGain,

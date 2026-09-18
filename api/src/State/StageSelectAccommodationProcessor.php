@@ -142,22 +142,22 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         if ($isDeselect) {
             $generation = $this->generationTracker->current($tripId) ?? 1;
-            $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
-            $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
+            $this->messageBus->dispatch(new ScanAccommodations($tripId, stageId: $stage->id, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
+            $affectedDeselect = isset($stages[$index + 1]) ? [$stage->id, $stages[$index + 1]->id] : [$stage->id];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
 
             return $this->stageResponseMapper->map($stage);
         }
 
         // Trigger recalculation for affected stages
-        $affectedIndices = [$index];
+        $affected = [$stage->id];
         if (isset($stages[$index + 1])) {
-            $affectedIndices[] = $index + 1;
+            $affected[] = $stages[$index + 1]->id;
         }
 
         $generation = $this->generationTracker->current($tripId) ?? 1;
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipAccommodationScan: true, generation: $generation));
 
         if ($request->startDate instanceof \DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));

@@ -37,7 +37,9 @@ final readonly class ComputationDependencyResolver
 {
     /**
      * @param list<TripModification> $modifications
-     * @param list<int>              $allStageIndices
+     * @param list<string>           $stageIds                  stage identifiers, in display order: the
+     *                                                          modifications name stages by position (it is
+     *                                                          their public contract), the messages carry identity
      * @param list<string>           $enabledAccommodationTypes
      *
      * @return list<object> Messenger messages to dispatch
@@ -45,7 +47,7 @@ final readonly class ComputationDependencyResolver
     public function resolve(
         string $tripId,
         array $modifications,
-        array $allStageIndices,
+        array $stageIds,
         bool $hasDates,
         array $enabledAccommodationTypes,
         ?int $generation,
@@ -70,7 +72,7 @@ final readonly class ComputationDependencyResolver
                     if (null !== $modification->stageIndex) {
                         $recalcIndices[] = $modification->stageIndex;
                         // Also recalculate the next stage (its startPoint may shift)
-                        if (isset($allStageIndices[$modification->stageIndex + 1])) {
+                        if (isset($stageIds[$modification->stageIndex + 1])) {
                             $recalcIndices[] = $modification->stageIndex + 1;
                         }
 
@@ -83,7 +85,7 @@ final readonly class ComputationDependencyResolver
                     if (null !== $modification->stageIndex) {
                         // Distance change affects the modified stage and all subsequent
                         $affected = array_filter(
-                            $allStageIndices,
+                            array_keys($stageIds),
                             static fn (int $i): bool => $i >= $modification->stageIndex,
                         );
                         array_push($recalcIndices, ...array_values($affected));
@@ -114,7 +116,7 @@ final readonly class ComputationDependencyResolver
 
                 case 'pacing':
                     // Pacing changes affect all stages (fatigue factor, elevation penalty, etc.)
-                    array_push($recalcIndices, ...$allStageIndices);
+                    array_push($recalcIndices, ...array_keys($stageIds));
                     if ($hasDates) {
                         $needsWeather = true;
                         $needsCalendar = true;
@@ -125,15 +127,24 @@ final readonly class ComputationDependencyResolver
         }
 
         // Deduplicate and sort affected indices
+        /** @var list<int> $recalcIndices */
         $recalcIndices = array_values(array_unique($recalcIndices));
         sort($recalcIndices);
+        /** @var list<int> $accommodationScanIndices */
         $accommodationScanIndices = array_values(array_unique($accommodationScanIndices));
 
+        // Resolve positions to identities here, once: the messages are consumed after
+        // further edits may have reordered the collection.
+        $recalcStageIds = array_values(array_filter(array_map(
+            static fn (int $index): ?string => $stageIds[$index] ?? null,
+            $recalcIndices,
+        )));
+
         // Build RecalculateStages message (skip accommodation scan since we handle it separately)
-        if ([] !== $recalcIndices) {
+        if ([] !== $recalcStageIds) {
             $messages[] = new RecalculateStages(
                 $tripId,
-                $recalcIndices,
+                $recalcStageIds,
                 skipAccommodationScan: true,
                 generation: $generation,
             );
@@ -141,9 +152,13 @@ final readonly class ComputationDependencyResolver
 
         // Build per-stage ScanAccommodations messages
         foreach ($accommodationScanIndices as $idx) {
+            if (!isset($stageIds[$idx])) {
+                continue;
+            }
+
             $messages[] = new ScanAccommodations(
                 $tripId,
-                stageIndex: $idx,
+                stageId: $stageIds[$idx],
                 enabledAccommodationTypes: $enabledAccommodationTypes,
                 generation: $generation,
             );
