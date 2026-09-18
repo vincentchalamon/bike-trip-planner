@@ -138,7 +138,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -316,7 +316,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new TripRequest(Uuid::fromString($tripId));
         $this->entityManager->method('find')->willReturn($trip);
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -352,7 +352,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         $enriched = new Accommodation(
             name: 'Gîte du Morvan',
@@ -417,7 +417,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         $osmEntry = new Accommodation(
             name: 'Camping du Pont',
@@ -550,7 +550,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -858,7 +858,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -935,7 +935,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -1039,7 +1039,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')->willReturn($trip);
 
         $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-        
+
 
         // Concrete readonly subclass not registered in alertToArray
         $unknownAlert = new UnknownAlertStub(code: null, type: AlertType::WARNING, message: 'x');

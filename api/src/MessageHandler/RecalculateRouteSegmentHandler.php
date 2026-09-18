@@ -57,6 +57,7 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
         if (null === $stage) {
             return;
         }
+
         $waypoint = new Coordinate($message->waypointLat, $message->waypointLon);
 
         $this->executeWithTracking($tripId, ComputationName::ROUTE_SEGMENT, function () use ($tripId, $message, $stage, $stageIndex, $waypoint): void {

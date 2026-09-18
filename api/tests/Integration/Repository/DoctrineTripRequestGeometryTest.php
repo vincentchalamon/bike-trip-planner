@@ -94,7 +94,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
     public function returnsNullForUnknownStage(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $stageId = $this->seedTrip($tripId);
+        $this->seedTrip($tripId);
 
         $this->entityManager->clear();
 

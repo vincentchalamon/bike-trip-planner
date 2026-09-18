@@ -767,7 +767,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         \assert($tripId instanceof Uuid);
 
         $dto = new StageDto(
-            id: $entity->getId()->toRfc4122(),
             tripId: $tripId->toRfc4122(),
             dayNumber: $entity->getDayNumber(),
             distance: $entity->getDistance(),
@@ -781,6 +780,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             label: $entity->getLabel(),
             elevationLoss: $entity->getElevationLoss(),
             isRestDay: $entity->isRestDay(),
+            id: $entity->getId()->toRfc4122(),
         );
 
         $dto->onCycleNetwork = $entity->getOnCycleNetwork();
