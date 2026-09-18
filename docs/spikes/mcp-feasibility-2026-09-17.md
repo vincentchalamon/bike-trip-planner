@@ -143,11 +143,17 @@ conteneur*, pas à la sérialisation d'un appel réel — l'enregistrement dans
 `api_platform.formats` est aussi ce qui câble le normalizer. À confirmer par un appel
 JSON-RPC réel.
 
-**Remarque DX pour la core-team, si tu la sollicites** : il n'existe pas de moyen de
-déclarer un format *pour le MCP seulement*. Soit on le répète sur chaque outil, soit on
-le rend global et il contamine le REST. Un `api_platform.mcp.formats` autonome — validé
-contre les formats connus mais non versé dans `api_platform.formats` — supprimerait
-l'arbitrage.
+**À ne pas confondre** : `api_platform.mcp.format` (singulier) **ne déclare rien et ne
+fusionne rien** — c'est une *clé de recherche* dans `api_platform.formats`, qui exige que
+le format y soit déjà. L'impact HTTP ne vient donc pas du nœud MCP mais de l'ajout, fait
+séparément, de `json` à `api_platform.formats`.
+
+**Remarque DX pour la core-team, si tu la sollicites** — confort, pas blocage : il
+n'existe pas de moyen de déclarer un format *pour le MCP seulement*. Soit on le répète sur
+chaque outil (ce qui marche, cf. ci-dessus), soit on le rend global et il contamine le
+REST. Un `api_platform.mcp.formats` **autonome** — au pluriel, validé contre les formats
+connus mais **jamais versé dans `api_platform.formats`** — supprimerait la répétition sans
+toucher au REST.
 
 ### (d) Comment teste-t-on fonctionnellement un outil MCP ?
 
@@ -338,9 +344,45 @@ Puisque `request` n'existe pas au listing MCP, qu'est-ce d'autre qui en dépend 
   locale du voyage. **Ce n'est pas un crash mais une dégradation silencieuse** : un appel
   d'outil arrive bien par `POST /mcp`, donc `getCurrentRequest()` n'est pas null, mais un
   agent n'envoie en général pas d'`Accept-Language` — tout voyage créé via MCP serait donc
-  en `en`. À traiter par un paramètre de locale explicite sur l'outil.
+  en `en`.
 
 Aucune autre dépendance à `Request` n'a été trouvée dans les providers et mappers.
+
+### La locale : deux usages à séparer
+
+Le pipeline tourne en worker, sans requête : la locale doit donc être capturée à la
+création. **Au moins 8 handlers** la relisent (`AnalyzeTerrain`, `ScanAccommodations`,
+`CheckCulturalPois`, `FetchWeather`, `ResolveStageLabels`, `CheckHealthServices`,
+`CheckRailwayStations`, `CheckBorderCrossing`) via
+`$this->tripStateManager->getLocale($tripId) ?? 'en'`. Mais ils n'en font pas la même chose.
+
+| Usage | Où | Sort-il du périmètre `Request` ? |
+|---|---|---|
+| **Rendu** — messages d'alerte et libellés d'action, traduits puis **persistés comme chaînes** (`RestDayNudgeAnalyzer:97`, `EbikeRangeAnalyzer:66` : `$translator->trans('alert.…', [], 'alerts', $locale)`) | Analyzers | **Oui — à supprimer**, voir ci-dessous |
+| **Acquisition** — langue passée à un tiers : géocodage inverse (`ResolveStageLabels`), descriptions DataTourisme (`CheckCulturalPois`, `ScanAccommodations`) | Handlers | **Non** — c'est un paramètre de requête sortante, il doit rester au write time |
+
+**Correctif immédiat, gratuit, à faire dans tous les cas** : `User` porte **déjà** une
+locale (`User.php:118`, exposée par `AccountMeProvider`, déjà utilisée par
+`AuthRequestLinkProcessor` et `RequestEmailChangeProcessor`). `TripCreateProcessor` et
+`TripUpdateProcessor` doivent lire `$user->getLocale()` au lieu de l'en-tête HTTP. Cela
+**retire `RequestStack` des deux processors**, fonctionne identiquement en HTTP et en MCP,
+et est plus correct de toute façon : une préférence enregistrée vaut mieux qu'un en-tête
+navigateur.
+
+**Correctif de fond, aligné sur le principe directeur du plan** — *persister les faits,
+dériver les verdicts à la lecture*. Un message traduit **est un rendu, pas un fait** :
+persister `code` + paramètres structurés, rendre au read. Le projet a déjà l'identité qu'il
+faut — chaque alerte porte un `AlertCode` stable, et le frontend s'y accroche déjà pour la
+dédup et le dismiss.
+
+Pour un agent, c'est **strictement meilleur qu'une traduction** : servir `SUNSET_RISK` +
+`{arrivalTime, sunsetTime}` lui permet de formuler dans la langue réelle de sa
+conversation, que le serveur ne peut pas connaître. Une chaîne pré-traduite en `fr`
+rendue à un agent qui répond en anglais est un défaut, pas une commodité.
+
+**Conséquence pour le lot B du plan** : « persister le payload publié verbatim » doit se
+lire *verbatim moins le rendu* — on garde `code`, `type`, coordonnées et paramètres, on
+cesse de figer `message` et `action.label`.
 
 **Recommandation** : poursuivre. Le transport, la découverte, la sécurité à deux étages et
 le resource server sont acquis ou fournis. Le coût réel de la Phase 3 se concentre sur
