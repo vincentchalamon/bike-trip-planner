@@ -1,8 +1,10 @@
 # Spike — Faisabilité d'un serveur MCP dans l'API (17/09/2026)
 
 > **Verdict écrit d'une investigation timeboxée, sur branche `spike/mcp-feasibility` jamais mergée.**
-> Destiné à devenir la section « Contexte » d'ADR-068. Les constats ci-dessous sont
-> tous vérifiés par exécution, pas déduits de la documentation.
+> Il a donné naissance à [ADR-063](../adr/adr-063-transport-agnostic-authorization.md) et
+> [ADR-064](../adr/adr-064-mcp-server-as-third-api-client.md), qui portent les décisions ;
+> ce document garde les mesures et les chemins parcourus pour y arriver.
+> Les constats ci-dessous sont tous vérifiés par exécution, pas déduits de la documentation.
 
 ## Verdict global
 
