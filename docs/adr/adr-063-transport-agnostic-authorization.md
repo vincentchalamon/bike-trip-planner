@@ -155,6 +155,27 @@ the security token and never from a URL identifier, which is what gives it no ID
 surface. It is also the more transport-agnostic shape — an agent holding a token does not
 know its user's UUID.
 
+**The clients keep both directions in sync, and both are required.** Making the account
+the source of truth for rendered content means the interface and the content can now
+disagree, in either direction:
+
+| Missing direction | What the user sees |
+|---|---|
+| The switcher does not push | Interface switches to English, alerts stay French, and only the CLI can fix it |
+| Login does not read | Account is `en`, a fresh browser opens the interface in French next to English alerts |
+
+So the language switchers `PATCH /users/me` (fire-and-forget: switching language is local
+and immediate, and must not be held hostage to the network), and the session adopts the
+account's locale when it starts — the web BFF writes the `locale` cookie from
+`GET /users/me` while it still holds the fresh JWT, and the mobile session effect, which
+already fetched that endpoint for the email, applies it to i18next.
+
+Both clients were previously wired to carry the interface language *to* the server —
+the PWA through `Accept-Language`, mobile through an explicit header its middleware sets
+because React Native's `fetch` does not (#1169). This replaces that link rather than
+removing it. On mobile it also supplies the language persistence the app never had: i18next
+starts from the device locale, and the account's choice takes over on a restored session.
+
 ### `RequestStack` stays only where the transport genuinely is the subject
 
 `/auth/*` and the early-access flow (`AuthSessionProvider`, `AuthRequestLinkProcessor`,
