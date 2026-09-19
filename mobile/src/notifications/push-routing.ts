@@ -7,7 +7,7 @@ import type { Href } from 'expo-router';
 export type PushData = {
   category?: string;
   tripId?: string;
-  stageIndex?: string | number;
+  stageId?: string;
 };
 
 // Map a notification payload to the in-app route to open on tap. Pure, so it is
@@ -16,9 +16,9 @@ export type PushData = {
 // announcement the trip-creation tab (where a newly-opened region is usable).
 export function resolvePushRoute(data: PushData | null | undefined): Href | null {
   if (!data) return null;
-  const stage = data.stageIndex;
-  if (data.tripId && stage != null && `${stage}` !== '') {
-    return `/trip/${data.tripId}/stage/${stage}` as Href;
+  const stageId = data.stageId;
+  if (data.tripId && stageId != null && stageId !== '') {
+    return `/trip/${data.tripId}/stage/${stageId}` as Href;
   }
   if (data.tripId) {
     return `/trip/${data.tripId}` as Href;

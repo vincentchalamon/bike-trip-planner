@@ -113,10 +113,10 @@ export type StageDetail = components['schemas']['Stage.StageResponse.jsonld'];
 
 export async function fetchStageDetail(
   tripId: string,
-  index: number,
+  stageId: string,
 ): Promise<StageDetail | null> {
-  const { data, error } = await api.GET('/trips/{tripId}/stages/{index}/detail', {
-    params: { path: { tripId, index: String(index) } },
+  const { data, error } = await api.GET('/trips/{tripId}/stages/{stageId}/detail', {
+    params: { path: { tripId, stageId } },
     headers: ld,
   });
   if (error) {
@@ -131,10 +131,10 @@ export async function fetchStageDetail(
 // lock (423) from any other failure and roll back its optimistic update.
 export async function deleteStage(
   tripId: string,
-  index: number,
+  stageId: string,
 ): Promise<{ ok: boolean; status: number }> {
-  const { response } = await api.DELETE('/trips/{tripId}/stages/{index}', {
-    params: { path: { tripId, index: String(index) } },
+  const { response } = await api.DELETE('/trips/{tripId}/stages/{stageId}', {
+    params: { path: { tripId, stageId } },
     headers: ld,
   });
   return { ok: response.ok, status: response.status };
@@ -174,11 +174,11 @@ export async function createStage(
 /** Update a stage's distance (re-splits from this stage onward). */
 export async function updateStageDistance(
   tripId: string,
-  index: number,
+  stageId: string,
   distance: number,
 ): Promise<MutationResult> {
-  const { response } = await api.PATCH('/trips/{tripId}/stages/{index}', {
-    params: { path: { tripId, index: String(index) } },
+  const { response } = await api.PATCH('/trips/{tripId}/stages/{stageId}', {
+    params: { path: { tripId, stageId } },
     headers: mergePatch,
     body: { distance },
   });
@@ -188,11 +188,11 @@ export async function updateStageDistance(
 /** Move a stage to a new position. */
 export async function moveStage(
   tripId: string,
-  index: number,
+  stageId: string,
   toIndex: number,
 ): Promise<MutationResult> {
-  const { response } = await api.PATCH('/trips/{tripId}/stages/{index}/move', {
-    params: { path: { tripId, index: String(index) } },
+  const { response } = await api.PATCH('/trips/{tripId}/stages/{stageId}/move', {
+    params: { path: { tripId, stageId } },
     headers: mergePatch,
     body: { toIndex },
   });
@@ -202,10 +202,10 @@ export async function moveStage(
 /** Insert a rest day after `index` (dates shift by one day server-side). */
 export async function insertRestDay(
   tripId: string,
-  index: number,
+  stageId: string,
 ): Promise<MutationResult> {
-  const { response } = await api.POST('/trips/{tripId}/stages/{index}/rest-day', {
-    params: { path: { tripId, index: String(index) } },
+  const { response } = await api.POST('/trips/{tripId}/stages/{stageId}/rest-day', {
+    params: { path: { tripId, stageId } },
     headers: ld,
   });
   return { ok: response.ok, status: response.status };
@@ -217,14 +217,14 @@ export async function insertRestDay(
  */
 export async function setStageAccommodation(
   tripId: string,
-  index: number,
+  stageId: string,
   lat: number | null,
   lon: number | null,
 ): Promise<MutationResult> {
   const { response } = await api.PATCH(
-    '/trips/{tripId}/stages/{index}/accommodation',
+    '/trips/{tripId}/stages/{stageId}/accommodation',
     {
-      params: { path: { tripId, index: String(index) } },
+      params: { path: { tripId, stageId } },
       headers: mergePatch,
       body: { selectedAccommodationLat: lat, selectedAccommodationLon: lon },
     },
@@ -240,7 +240,7 @@ export async function setStageAccommodation(
  */
 export async function addManualAccommodation(
   tripId: string,
-  index: number,
+  stageId: string,
   body: {
     name: string;
     address: string;
@@ -249,9 +249,9 @@ export async function addManualAccommodation(
   },
 ): Promise<MutationResult> {
   const { response } = await api.POST(
-    '/trips/{tripId}/stages/{index}/accommodations/manual',
+    '/trips/{tripId}/stages/{stageId}/accommodations/manual',
     {
-      params: { path: { tripId, index: String(index) } },
+      params: { path: { tripId, stageId } },
       headers: ldBody,
       body,
     },
@@ -262,14 +262,14 @@ export async function addManualAccommodation(
 /** Insert a cultural POI as a waypoint, re-routing the stage via Valhalla. */
 export async function addPoiWaypoint(
   tripId: string,
-  index: number,
+  stageId: string,
   waypointLat: number,
   waypointLon: number,
 ): Promise<MutationResult> {
   const { response } = await api.POST(
-    '/trips/{tripId}/stages/{index}/poi-waypoint',
+    '/trips/{tripId}/stages/{stageId}/poi-waypoint',
     {
-      params: { path: { tripId, index: String(index) } },
+      params: { path: { tripId, stageId } },
       headers: ldBody,
       body: { waypointLat, waypointLon },
     },
@@ -281,12 +281,12 @@ export async function addPoiWaypoint(
 export async function scanAccommodations(
   tripId: string,
   radiusKm: number,
-  stageIndex?: number,
+  stageId?: string,
 ): Promise<MutationResult> {
   const { response } = await api.POST('/trips/{tripId}/accommodations/scan', {
     params: { path: { tripId } },
     headers: ldBody,
-    body: { radiusKm, ...(stageIndex !== undefined && { stageIndex }) },
+    body: { radiusKm, ...(stageId !== undefined && { stageId }) },
   });
   return { ok: response.ok, status: response.status };
 }
@@ -451,17 +451,20 @@ export async function fetchTripExport(
 }
 
 /**
- * Download a single stage as GPX/FIT. The `{index}` path segment actually
- * resolves on the 1-based `dayNumber` server-side (Stage.php's Link targets
- * `dayNumber`, not the 0-based array position) — pass `dayNumber`.
+ * Download a single stage as GPX/FIT.
+ *
+ * Previously this sent the 1-based `dayNumber` while the server indexed the
+ * 0-based array position, so it downloaded the following day and 404'd on the
+ * last one. The URL names a stage by identity now, and there is only one thing
+ * an identifier can mean (ADR-066).
  */
 export async function fetchStageExport(
   tripId: string,
-  dayNumber: number,
+  stageId: string,
   format: ExportFormat,
 ): Promise<ArrayBuffer> {
-  const { data, error, response } = await api.GET('/trips/{tripId}/stages/{index}/export', {
-    params: { path: { tripId, index: String(dayNumber) } },
+  const { data, error, response } = await api.GET('/trips/{tripId}/stages/{stageId}/export', {
+    params: { path: { tripId, stageId } },
     headers: { Accept: EXPORT_ACCEPT[format] },
     parseAs: 'arrayBuffer',
   });

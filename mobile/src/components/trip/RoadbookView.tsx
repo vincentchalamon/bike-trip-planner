@@ -133,7 +133,10 @@ export function RoadbookView({
   // for `StageCard`'s `onPress` (tap-through to the stage detail).
   const openStage = useCallback(
     (index: number): void => {
-      router.push(`/trip/${id}/stage/${index}`);
+      // The card knows its position; the route is addressed by identity.
+      const stageId = useTripStore.getState().stages[index]?.id;
+      if (!stageId) return;
+      router.push(`/trip/${id}/stage/${stageId}`);
     },
     [router, id],
   );

@@ -20,6 +20,7 @@ type ApiStage = NonNullable<TripDetail['stages']>[number];
 // defaults. Mirrors the web hydrate in pwa's trip-page.
 export function stageDataFromDetail(s: ApiStage): StageData {
   return {
+    id: s.stageId ?? '',
     dayNumber: s.dayNumber ?? 0,
     distance: s.distance ?? 0,
     elevation: s.elevation ?? 0,
@@ -157,7 +158,7 @@ interface TripState extends TripConfig {
   // Mode 1 terminal event: reconcile the whole trip via the shared core reducer.
   applyTripReady: (stages: StageData[]) => void;
   // Mode 2 per-stage event: reconcile a single slice via the shared core reducer.
-  applyStageUpdate: (index: number, stage: StageData) => void;
+  applyStageUpdate: (stageId: string, position: number, stage: StageData) => void;
   // Reconcile one SSE enrichment/segment event through the shared core reducer
   // (weather, POIs, accommodations, alerts, route_segment_recalculated, …) that
   // trip_ready/stage_updated do not cover, so mobile reflects them live (ADR-055).
@@ -289,11 +290,12 @@ export const useTripStore = create<TripState>((set, get) => ({
       }
       return { stages: reconciled, stageDiffs, diffConsumedToken: consumed };
     }),
-  applyStageUpdate: (index, stage) =>
+  applyStageUpdate: (stageId, position, stage) =>
     set((state) => {
       const { stages, appendedTrailingStage } = reconcileStageUpdate(
         state.stages,
-        index,
+        stageId,
+        position,
         stage,
       );
       // A trailing-day split (#840) grows the stage count by one, so the trip's
@@ -364,6 +366,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       const after = state.stages[afterIndex];
       if (!after) return {};
       const restDay: StageData = {
+        // Provisional identity until the server's lands.
+        id: `pending-${Date.now()}-${afterIndex}`,
         dayNumber: afterIndex + 2,
         distance: 0,
         elevation: 0,

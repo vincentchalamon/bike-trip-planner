@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorState, Screen } from '../../../../src/components/ui';
 import { StageDetailView, TripTitleHeader } from '../../../../src/components/trip';
-import { ownsTripLive, parseStageIndex } from '../../../../src/components/trip/stage-detail';
+import { ownsTripLive } from '../../../../src/components/trip/stage-detail';
 import { useTripLive } from '../../../../src/hooks/use-trip-live';
 import { useTripStore } from '../../../../src/store/trip-store';
 
@@ -16,7 +16,7 @@ import { useTripStore } from '../../../../src/store/trip-store';
 // decided once, at mount.
 export default function StageDetailScreen() {
   const { t } = useTranslation();
-  const { id, index } = useLocalSearchParams<{ id: string; index: string }>();
+  const { id, stageId } = useLocalSearchParams<{ id: string; stageId: string }>();
   const error = useTripStore((s) => s.error);
 
   // Own the live store only when it isn't already live for this trip (deep-link
@@ -38,7 +38,7 @@ export default function StageDetailScreen() {
       <Stack.Screen
         options={{ headerTitle: () => <TripTitleHeader tripId={id} /> }}
       />
-      <StageDetailView initialIndex={parseStageIndex(index)} />
+      <StageDetailView initialStageId={stageId} />
     </Screen>
   );
 }

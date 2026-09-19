@@ -7,6 +7,8 @@ import type { StageData } from '@btp/core';
 // Parse the `[index]` route param into a non-negative integer (defaults to 0 on
 // a malformed value). Bounds against the stage count are applied separately by
 // clampIndex once the store is hydrated.
+//
+// Kept for the paging cursor; the screen itself is addressed by stage identity.
 export function parseStageIndex(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '', 10);
   return Number.isFinite(n) && n >= 0 ? n : 0;
