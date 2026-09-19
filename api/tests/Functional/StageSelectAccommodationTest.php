@@ -29,6 +29,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageSelectAccommodationTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -103,7 +104,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
@@ -145,7 +146,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
@@ -229,7 +230,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $transport = self::getContainer()->get('messenger.transport.async');
         $transport->reset();
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => ['selectedAccommodationLat' => null, 'selectedAccommodationLon' => null],
         ]);
@@ -328,7 +329,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.0,
@@ -344,7 +345,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithSelectedAccommodationOnly(self::TRIP_ID);
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
@@ -360,7 +361,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/accommodation', [
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.Uuid::v7()->toRfc4122().'/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,

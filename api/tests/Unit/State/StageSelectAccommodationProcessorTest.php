@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageSelectAccommodationProcessorTest extends TestCase
@@ -41,7 +42,7 @@ final class StageSelectAccommodationProcessorTest extends TestCase
         );
 
         try {
-            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
+            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

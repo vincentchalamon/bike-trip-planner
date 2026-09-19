@@ -22,6 +22,7 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class RestDayInsertTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -83,7 +84,7 @@ final class RestDayInsertTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/rest-day', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/rest-day', [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -103,7 +104,7 @@ final class RestDayInsertTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/rest-day', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/rest-day', [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 

@@ -24,10 +24,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
+use Symfony\Component\Uid\Uuid;
 
 #[ResetDatabase]
 final class TripDetailTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -548,7 +550,8 @@ final class TripDetailTest extends ApiTestCase
             ),
         ]);
 
-        $response = $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $response = $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, $stageId), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
 
@@ -593,7 +596,8 @@ final class TripDetailTest extends ApiTestCase
 
         ['token' => $otherToken] = $this->createTestUserWithJwt('intruder2@example.com');
 
-        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, $stageId), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
         ]);
 
@@ -601,12 +605,12 @@ final class TripDetailTest extends ApiTestCase
     }
 
     #[Test]
-    public function stageDetailOutOfRangeIndexReturns404(): void
+    public function stageDetailOfAnUnknownStageReturns404(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID);
         $repo->storeStages(self::TRIP_ID, []);
 
-        $this->client->request('GET', \sprintf('/trips/%s/stages/0/detail', self::TRIP_ID), [
+        $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, Uuid::v7()->toRfc4122()), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
 

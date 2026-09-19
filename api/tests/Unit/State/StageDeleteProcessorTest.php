@@ -25,6 +25,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
@@ -209,7 +210,7 @@ final class StageDeleteProcessorTest extends TestCase
         );
 
         try {
-            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
+            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

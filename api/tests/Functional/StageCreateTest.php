@@ -25,6 +25,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageCreateTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
