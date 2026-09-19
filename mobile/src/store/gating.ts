@@ -15,6 +15,7 @@ export type MutationFailure =
   | 'validation'
   | 'not_found'
   | 'conflict'
+  | 'stale'
   | 'network'
   | 'error';
 
@@ -67,8 +68,10 @@ export function evaluateGate(
  * Classify an HTTP status into a {@link MutationFailure}. Per the API error
  * contract (CLAUDE.md): object-level authorization denials are masked as 404
  * (never 403), and an unknown backed-enum value fails denormalization as 422
- * (not 400). 423 = trip locked, 409 = stale accommodation list. `status === 0`
- * marks a request that never reached the backend.
+ * (not 400). 423 = trip locked, 409 = stale accommodation list. 412/428 = the edit was
+ * computed against a version the trip has moved past, or pinned none at all (ADR-067) —
+ * answered by reloading, never by replaying. `status === 0` marks a request that never
+ * reached the backend.
  */
 export function normalizeStatus(status: number): MutationFailure {
   switch (status) {
@@ -80,6 +83,9 @@ export function normalizeStatus(status: number): MutationFailure {
       return 'locked';
     case 409:
       return 'conflict';
+    case 412:
+    case 428:
+      return 'stale';
     case 0:
       return 'network';
     default:

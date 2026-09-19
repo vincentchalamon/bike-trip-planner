@@ -102,8 +102,17 @@ interface UiState {
    * Persisted by {@link toggleBubble} the first time the panel opens.
    */
   hasSeenBubble: boolean;
+  /**
+   * Bumped whenever the server refuses an edit as computed against a version the trip has
+   * moved past (412). The trip view keys its hydration on it, so the refusal is answered by
+   * re-reading the trip rather than by replaying the edit — replaying is the one recovery
+   * that could apply it to a state it was never meant for (ADR-067).
+   */
+  resyncToken: number;
 
   setProcessing: (value: boolean) => void;
+  /** @see resyncToken */
+  requestTripResync: () => void;
   setAccommodationScanning: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
   setConfigPanelOpen: (value: boolean) => void;
@@ -191,6 +200,12 @@ export const useUiStore = create<UiState>()(
     isBubbleOpen: false,
     chatHistory: [],
     hasSeenBubble: readBubbleSeenFromStorage(),
+    resyncToken: 0,
+
+    requestTripResync: () =>
+      set((state) => {
+        state.resyncToken += 1;
+      }),
 
     setProcessing: (value) =>
       set((state) => {

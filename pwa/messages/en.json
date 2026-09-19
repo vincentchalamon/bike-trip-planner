@@ -671,6 +671,7 @@
     "validationError": "Invalid data.",
     "badRequest": "Bad request.",
     "notFound": "Resource not found.",
+    "tripMovedOn": "This trip changed while you were editing it. It has been reloaded — reapply your change.",
     "failedUpdateDates": "Failed to update dates.",
     "failedDeleteStage": "Failed to delete stage.",
     "failedMoveStage": "Failed to move stage.",

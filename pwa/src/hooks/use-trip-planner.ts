@@ -15,6 +15,7 @@ import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
   parseApiError,
+  preconditionHeader,
   localizedApiErrorMessage,
   isNetworkError,
   uploadGpxFile,
@@ -155,6 +156,21 @@ export function useTripPlanner() {
   const setAccommodationScanning = useUiStore(
     (s) => s.setAccommodationScanning,
   );
+  const requestTripResync = useUiStore((s) => s.requestTripResync);
+
+  /**
+   * Surfaces a failed mutation, and re-reads the trip when the server refused it as computed
+   * against a version the trip has moved past.
+   *
+   * The edit is never replayed: the client had a view the server no longer holds, so
+   * re-sending it is the one recovery that could apply it to a state it was not meant for.
+   * Re-reading puts the user back in front of the current trip, with their change to redo.
+   */
+  function reportApiError(status: number, error: unknown): void {
+    const apiError = parseApiError(status, error);
+    toast.error(localizedApiErrorMessage(apiError, t));
+    if (apiError.type === "stale") requestTripResync();
+  }
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
   const preDragPacingSnapshot = useRef<ReturnType<
@@ -199,8 +215,7 @@ export function useTripPlanner() {
       });
 
       if (error || !data) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
         setProcessing(false);
         setAccommodationScanning(false);
         return;
@@ -281,7 +296,7 @@ export function useTripPlanner() {
     try {
       const pacing = getPacingState();
       const { data, error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
+        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           startDate: newStart,
@@ -291,8 +306,7 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
       } else {
         if (data) actions.setIsLocked(data.isLocked === true);
         setProcessing(true);
@@ -310,7 +324,7 @@ export function useTripPlanner() {
     try {
       const pacing = getPacingState();
       await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
+        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           title: newTitle,
@@ -337,12 +351,14 @@ export function useTripPlanner() {
       const { error, response } = await apiClient.DELETE(
         "/trips/{tripId}/stages/{stageId}",
         {
-          params: { path: { tripId, stageId } },
+          params: {
+            path: { tripId, stageId },
+            header: preconditionHeader(tripId),
+          },
         },
       );
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
@@ -370,6 +386,7 @@ export function useTripPlanner() {
         {
           params: {
             path: { tripId, stageId },
+            header: preconditionHeader(tripId),
           },
           parseAs: "json",
         },
@@ -440,13 +457,12 @@ export function useTripPlanner() {
       const { error, response } = await apiClient.POST(
         "/trips/{tripId}/stages",
         {
-          params: { path: { tripId } },
+          params: { path: { tripId }, header: preconditionHeader(tripId) },
           body: { position: afterIndex + 1, startPoint, endPoint },
         },
       );
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(currentStages);
       } else {
@@ -521,7 +537,10 @@ export function useTripPlanner() {
       const { error, response } = await apiClient.PATCH(
         "/trips/{tripId}/stages/{stageId}",
         {
-          params: { path: { tripId, stageId } },
+          params: {
+            path: { tripId, stageId },
+            header: preconditionHeader(tripId),
+          },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: { distance },
         },
@@ -532,8 +551,7 @@ export function useTripPlanner() {
         useTripStore.getState().clearRecomputingStages();
         setProcessing(false);
         setAccommodationScanning(false);
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
       } else {
         // Push snapshot only after a successful PATCH to avoid phantom undo entries
         useTripTemporalStore.getState()._push(snapshot);
@@ -565,7 +583,7 @@ export function useTripPlanner() {
       const { departureHour: dh, enabledAccommodationTypes: eat } =
         getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
+        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           fatigueFactor: newFatigue,
@@ -579,8 +597,7 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -655,7 +672,7 @@ export function useTripPlanner() {
     try {
       const pacing = getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
+        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           ...pacing,
@@ -664,8 +681,7 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -705,7 +721,7 @@ export function useTripPlanner() {
     try {
       const pacing = getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
+        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           ...pacing,
@@ -715,8 +731,7 @@ export function useTripPlanner() {
 
       if (error) {
         actions.setEnabledAccommodationTypes(previous);
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -957,7 +972,10 @@ export function useTripPlanner() {
       const { error, response } = await apiClient.PATCH(
         "/trips/{tripId}/stages/{stageId}/accommodation",
         {
-          params: { path: { tripId, stageId } },
+          params: {
+            path: { tripId, stageId },
+            header: preconditionHeader(tripId),
+          },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: {
             selectedAccommodationLat: acc.lat,
@@ -982,8 +1000,7 @@ export function useTripPlanner() {
             toast.error(t("errors.unexpectedError"));
           }
         } else {
-          const apiError = parseApiError(response.status, error);
-          toast.error(apiError.message);
+          reportApiError(response.status, error);
           // Rollback on error: restore accommodations from store snapshot
           useTripStore.getState().setStages([...currentStages]);
         }
@@ -1021,7 +1038,10 @@ export function useTripPlanner() {
       const { error, response } = await apiClient.PATCH(
         "/trips/{tripId}/stages/{stageId}/accommodation",
         {
-          params: { path: { tripId, stageId } },
+          params: {
+            path: { tripId, stageId },
+            header: preconditionHeader(tripId),
+          },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: {
             selectedAccommodationLat: null,
@@ -1030,8 +1050,7 @@ export function useTripPlanner() {
         },
       );
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(localizedApiErrorMessage(apiError, t));
+        reportApiError(response.status, error);
         useTripStore.getState().setStages([...currentStages]);
       } else {
         setProcessing(true);

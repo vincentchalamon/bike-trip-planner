@@ -5,6 +5,7 @@ import { getJwt } from '../auth/tokens';
 import { refreshTokens } from '../auth/authApi';
 import { useOfflineStore } from '../store/offline-store';
 import i18n from '../i18n';
+import { setTripVersion } from './trips';
 
 const RETRY_HEADER = 'X-Native-Retry';
 
@@ -94,5 +95,26 @@ export const authMiddleware: Middleware = {
   },
 };
 
+/**
+ * Records the structural version every trip response advertises, so the next edit can pin it
+ * with `If-Match` (ADR-067).
+ *
+ * Only the response half: the request half is named at each call site through
+ * `preconditionHeader`, because the generated types mark `If-Match` required on exactly the
+ * operations the server guards — the compiler catches a missing one, a middleware could not.
+ */
+export const preconditionMiddleware: Middleware = {
+  onResponse({ request, response }) {
+    const tripId = /\/trips\/([^/?#]+)/.exec(request.url)?.[1];
+    const etag = response.headers.get('ETag');
+    if (tripId === undefined || etag === null) return response;
+
+    const version = Number.parseInt(etag.replace(/^W\/|"/g, ''), 10);
+    if (Number.isFinite(version)) setTripVersion(decodeURIComponent(tripId), version);
+    return response;
+  },
+};
+
 export const api = createClient<paths>({ baseUrl: API_BASE_URL });
 api.use(authMiddleware);
+api.use(preconditionMiddleware);

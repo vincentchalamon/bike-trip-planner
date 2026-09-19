@@ -7,6 +7,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
+import { setTripVersion } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import {
   enrichedPayloadToStageData,
@@ -347,8 +348,13 @@ export function useMercure(tripId: string | null): void {
     );
     clientRef.current = client;
 
-    client.onEvent((event) => {
-      dispatchEvent(event, controller.signal, timers);
+    client.onEvent((envelope) => {
+      // Record the version the envelope carries before reducing: a regeneration performed by
+      // a worker moves it with no HTTP response to carry a fresh ETag, and the next edit
+      // pins whatever is recorded here.
+      if (envelope.version !== undefined)
+        setTripVersion(tripId, envelope.version);
+      dispatchEvent(envelope, controller.signal, timers);
     });
 
     return () => {
