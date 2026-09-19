@@ -196,6 +196,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
 
   function stageWithGeometry(): StageData {
     return {
+      id: 'stage-1',
       dayNumber: 1,
       distance: 50,
       elevation: 800,
@@ -255,7 +256,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
 
   it('opens the popover on a POI tap and reroutes via runAddPoiWaypoint', async () => {
     mock(addPoiWaypoint).mockResolvedValue({ ok: true, status: 202 });
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
 
     // Tap a POI marker on the stage map.
     act(() =>
@@ -270,12 +271,12 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
     await act(async () => {});
 
     // index is String()-ified in the API layer; the runner passed stage 0 + coords.
-    expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 0, 45.2, 3.1);
+    expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 'stage-1', 45.2, 3.1);
   });
 
   it('offers no POI affordance in degraded (offline) mode', () => {
     act(() => useOfflineStore.setState({ isOnline: false }));
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     // Read-only: the markers source carries no onPress, so a tap is inert and no
     // reroute can be dispatched.
     expect(markersSource(tree).props.onPress).toBeUndefined();
@@ -288,7 +289,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
     act(() =>
       useTripStore.setState({ stages: [{ ...stageWithGeometry(), isRestDay: true }] }),
     );
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     expect(markersSource(tree).props.onPress).toBeUndefined();
     expect(addPoiWaypoint).not.toHaveBeenCalled();
   });

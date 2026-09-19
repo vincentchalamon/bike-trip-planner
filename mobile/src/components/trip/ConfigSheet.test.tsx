@@ -100,6 +100,7 @@ beforeEach(() => {
     title: 'Trip',
     stages: [
       {
+        id: 'stage-1',
         dayNumber: 1,
         distance: 50,
         elevation: 100,

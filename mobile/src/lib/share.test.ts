@@ -28,8 +28,10 @@ function acc(over: Partial<AccommodationData> = {}): AccommodationData {
 }
 
 function stage(over: Partial<StageData> = {}): StageData {
+  const dayNumber = over.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 300,
     elevationLoss: 200,

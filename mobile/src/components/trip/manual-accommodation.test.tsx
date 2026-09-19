@@ -251,8 +251,10 @@ describe('AccommodationBlock — manual (hors-app) entry #1097', () => {
 
 function stageFixture(overrides: Partial<StageData> = {}): StageData {
   const p = { lat: 0, lon: 0, ele: 0 };
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -282,7 +284,14 @@ function stageFixture(overrides: Partial<StageData> = {}): StageData {
 // "the form stayed open".
 describe('StageDataBlocks — manual accommodation 422 surfacing (#1097)', () => {
   beforeEach(() => {
-    useTripStore.setState({ tripId: 't1', isLocked: false, outOfZone: false });
+    // The runner resolves the rendered position against the store to address the
+    // stage, so the store must hold the very stage the component renders.
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stageFixture()],
+      isLocked: false,
+      outOfZone: false,
+    });
     useOfflineStore.setState({ isOnline: true, apiReachable: true });
   });
 
@@ -309,7 +318,7 @@ describe('StageDataBlocks — manual accommodation 422 surfacing (#1097)', () =>
       await btn(tree, P.accommodationManualSave).props.onPress();
     });
 
-    expect(mockAddManualAccommodation).toHaveBeenCalledWith('t1', 0, {
+    expect(mockAddManualAccommodation).toHaveBeenCalledWith('t1', 'stage-1', {
       name: 'Gîte Test',
       address: 'Adresse introuvable',
       priceTotal: null,

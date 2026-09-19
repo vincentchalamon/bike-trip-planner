@@ -34,8 +34,10 @@ function bigStage(
   }));
   const first = geometry[0]!;
   const last = geometry[geometry.length - 1]!;
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 80,
     elevation: 900,
     elevationLoss: 850,

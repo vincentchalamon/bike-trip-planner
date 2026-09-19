@@ -42,8 +42,10 @@ const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
 
 function apiStage(overrides: Record<string, unknown> = {}) {
+  const dayNumber = (overrides.dayNumber as number | undefined) ?? 1;
   return {
-    dayNumber: 1,
+    stageId: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -72,6 +74,7 @@ const detailCache = (stages: unknown[]) =>
 
 function enrichedPayload(): EnrichedStagePayload {
   return {
+    stageId: 'stage-1',
     dayNumber: 1,
     distance: 50,
     elevation: 0,
@@ -155,7 +158,7 @@ describe('runTripLive orchestration (#1014)', () => {
     // reducer must preserve the previous "Lyon" — proving the full SSE pipeline.
     dispatch!({
       type: 'stage_updated',
-      data: { stageIndex: 0, stage: enrichedPayload() },
+      data: { stageId: 'stage-1', position: 0, stage: enrichedPayload() },
     });
     expect(store().stages[0]!.endLabel).toBe('Lyon');
   });
@@ -333,7 +336,7 @@ describe('computing state machine driven by SSE', () => {
     dispatch({
       type: 'route_segment_recalculated',
       data: {
-        stageIndex: 0,
+        stageId: 'stage-1',
         reason: 'waypoint_added',
         distance: 42000,
         elevationGain: 99,

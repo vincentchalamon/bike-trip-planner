@@ -66,8 +66,10 @@ const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
 const P = { lat: 0, lon: 0, ele: 0 };
 
 function stage(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -178,7 +180,7 @@ describe('runAddManualAccommodation (routing)', () => {
     const ok = await runAddManualAccommodation('t1', 0, input, ctx(), jest.fn());
 
     expect(ok).toBe(true);
-    expect(addManualAccommodation).toHaveBeenCalledWith('t1', 0, input);
+    expect(addManualAccommodation).toHaveBeenCalledWith('t1', 'stage-1', input);
   });
 
   it('is refused out of zone without an API call (reroute gate)', async () => {
@@ -230,7 +232,7 @@ describe('runUpdateStageDistance (routing) — gating branches', () => {
     mock(updateStageDistance).mockResolvedValue({ ok: true, status: 202 });
     const ok = await runUpdateStageDistance('t1', 0, 42, ctx(), jest.fn());
     expect(ok).toBe(true);
-    expect(updateStageDistance).toHaveBeenCalledWith('t1', 0, 42);
+    expect(updateStageDistance).toHaveBeenCalledWith('t1', 'stage-1', 42);
   });
 });
 
@@ -250,7 +252,7 @@ describe('runSelectAccommodation', () => {
     const ok = await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
 
     expect(ok).toBe(true);
-    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 0, 9, 9);
+    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 'stage-1', 9, 9);
     expect(
       useTripStore.getState().stages[0]!.selectedAccommodation,
     ).not.toBeNull();
@@ -274,8 +276,8 @@ describe('runSelectAccommodation', () => {
 
     await runSelectAccommodation('t1', 0, 0, ctx(), jest.fn());
 
-    // DEFAULT_ACCOMMODATION_RADIUS_KM = 5, stageIndex = 0.
-    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 0);
+    // DEFAULT_ACCOMMODATION_RADIUS_KM = 5, first stage.
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 'stage-1');
   });
 
   it('does NOT re-scan when the select succeeds', async () => {
@@ -358,7 +360,7 @@ describe('config runners (non-routing) — allowed out of zone + rollback', () =
     mock(insertRestDay).mockResolvedValueOnce({ ok: true, status: 202 });
     expect(await runInsertRestDay('t1', 0, ctx(), jest.fn())).toBe(true);
     expect(useTripStore.getState().stages).toHaveLength(3);
-    expect(insertRestDay).toHaveBeenCalledWith('t1', 0);
+    expect(insertRestDay).toHaveBeenCalledWith('t1', 'stage-1');
 
     mock(insertRestDay).mockResolvedValueOnce({ ok: false, status: 409 });
     expect(await runInsertRestDay('t1', 0, ctx(), jest.fn())).toBe(false);
@@ -408,7 +410,7 @@ describe('runMoveStage (routing) — optimistic + rollback', () => {
     expect(useTripStore.getState().stages.map((s) => s.distance)).toEqual([
       20, 10,
     ]);
-    expect(moveStage).toHaveBeenCalledWith('t1', 1, 0);
+    expect(moveStage).toHaveBeenCalledWith('t1', 'stage-2', 0);
   });
 
   it('rolls back the stage order on 409', async () => {
@@ -434,7 +436,7 @@ describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: true, status: 202 });
     expect(await runDeselectAccommodation('t1', 0, ctx(), jest.fn())).toBe(true);
     expect(useTripStore.getState().stages[0]!.selectedAccommodation).toBeNull();
-    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 0, null, null);
+    expect(setStageAccommodation).toHaveBeenCalledWith('t1', 'stage-1', null, null);
   });
 
   it('rolls back the selection on 409', async () => {
@@ -450,7 +452,7 @@ describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
     mock(setStageAccommodation).mockResolvedValue({ ok: false, status: 409 });
     mock(scanAccommodations).mockResolvedValue({ ok: true, status: 202 });
     await runDeselectAccommodation('t1', 0, ctx(), jest.fn());
-    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 0);
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 5, 'stage-1');
   });
 });
 
@@ -460,7 +462,7 @@ describe('runAddPoiWaypoint (routing) — calls the API in zone', () => {
     expect(await runAddPoiWaypoint('t1', 0, 1.5, 2.5, ctx(), jest.fn())).toBe(
       true,
     );
-    expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 0, 1.5, 2.5);
+    expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 'stage-1', 1.5, 2.5);
   });
 });
 
@@ -472,7 +474,7 @@ describe('runScanAccommodations (non-routing) — allowed out of zone', () => {
     const ok = await runScanAccommodations('t1', 7, 0, ctx(), jest.fn());
 
     expect(ok).toBe(true);
-    expect(scanAccommodations).toHaveBeenCalledWith('t1', 7, 0);
+    expect(scanAccommodations).toHaveBeenCalledWith('t1', 7, 'stage-1');
   });
 });
 

@@ -14,8 +14,10 @@ const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
 
 function stageData(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,
@@ -77,7 +79,7 @@ describe('useStageDetail (ADR-057)', () => {
 
     await render(1);
 
-    expect(mockDetail).toHaveBeenCalledWith('t1', 1);
+    expect(mockDetail).toHaveBeenCalledWith('t1', 'stage-2');
     expect(store().stages[0]!.geometry).toEqual([]);
     expect(store().stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
   });

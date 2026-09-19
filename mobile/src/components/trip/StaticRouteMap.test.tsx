@@ -11,8 +11,10 @@ import { StaticRouteMap } from './StaticRouteMap';
 
 function stage(over: Partial<StageData> = {}): StageData {
   const p = (lat: number, lon: number) => ({ lat, lon, ele: 0 });
+  const dayNumber = over.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,

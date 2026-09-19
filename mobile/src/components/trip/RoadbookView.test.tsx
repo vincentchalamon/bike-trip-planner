@@ -33,8 +33,10 @@ const deleteA11y = fr.trip.deleteA11y.replace('{{day}}', '1');
 
 function stage(overrides: Partial<StageData> = {}): StageData {
   const point = { lat: 0, lon: 0, ele: 0 };
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,
@@ -91,7 +93,7 @@ describe('RoadbookView navigation', () => {
 
     act(() => summary.props.onPress());
 
-    expect(mockPush).toHaveBeenCalledWith('/trip/trip-42/stage/1');
+    expect(mockPush).toHaveBeenCalledWith('/trip/trip-42/stage/stage-2');
   });
 
   it('pushes the in-ride route when the "En selle" FAB is tapped', () => {

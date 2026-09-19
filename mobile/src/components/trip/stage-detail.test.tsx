@@ -72,8 +72,10 @@ function render(element: ReactElement): any {
 
 function stage(overrides: Partial<StageData> = {}): StageData {
   const point = { lat: 0, lon: 0, ele: 0 };
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 800,
     elevationLoss: 600,
@@ -191,7 +193,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView initialIndex={0} />)).join(' ');
+    const t = texts(render(<StageDetailView initialStageId="stage-1" />)).join(' ');
     expect(t).toContain('Paris');
     expect(t).toContain('Lyon');
     expect(t).toContain('50 km');
@@ -209,7 +211,7 @@ describe('StageDetailView', () => {
       const replaced = jest.replaceProperty(Platform, 'OS', os);
       let t!: ReturnType<typeof TestRenderer.create>;
       act(() => {
-        t = TestRenderer.create(<StageDetailView initialIndex={0} />);
+        t = TestRenderer.create(<StageDetailView initialStageId="stage-1" />);
       });
       const behavior = t.root.findByType(KeyboardAvoidingView).props.behavior;
       const tapThrough = t.root
@@ -237,7 +239,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     const prev = () => navButton(tree, fr.trip.stageDetail.prev);
     const next = () => navButton(tree, fr.trip.stageDetail.next);
 
@@ -263,7 +265,7 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView initialIndex={1} />));
+    const t = texts(render(<StageDetailView initialStageId="stage-2" />));
     expect(t).toContain(fr.trip.stageDetail.restNoProfile);
   });
 
@@ -274,24 +276,24 @@ describe('StageDetailView', () => {
       startDate: null,
       loading: false,
     });
-    const t = texts(render(<StageDetailView initialIndex={0} />));
+    const t = texts(render(<StageDetailView initialStageId="stage-1" />));
     expect(t).not.toContain(fr.trip.stageDetail.restNoProfile);
   });
 
   it('shows the not-found placeholder for an out-of-range stage', () => {
     useTripStore.setState({ tripId: 't1', stages: [], loading: false });
-    const t = texts(render(<StageDetailView initialIndex={0} />));
+    const t = texts(render(<StageDetailView initialStageId="stage-1" />));
     expect(t).toContain(fr.trip.stageDetail.notFound);
   });
 
   it('disables the accommodation block when the API is unreachable, re-enables when reachable (#1166)', () => {
     useTripStore.setState({ tripId: 't1', stages: [stage()], startDate: null, loading: false });
     useOfflineStore.setState({ isOnline: true, apiReachable: false });
-    const down = render(<StageDetailView initialIndex={0} />);
+    const down = render(<StageDetailView initialStageId="stage-1" />);
     expect(down.root.findByType(AccommodationBlock).props.disabled).toBe(true);
 
     useOfflineStore.setState({ apiReachable: true });
-    const up = render(<StageDetailView initialIndex={0} />);
+    const up = render(<StageDetailView initialStageId="stage-1" />);
     expect(up.root.findByType(AccommodationBlock).props.disabled).toBe(false);
   });
 });
@@ -335,7 +337,7 @@ describe('StageDetailView inline distance edit', () => {
 
   it('hides the distance-edit affordance when the API is unreachable while online (#1166)', () => {
     useOfflineStore.setState({ isOnline: true, apiReachable: false });
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     // No edit pencil to tap: the affordance is gated on apiReachable, like the
     // accommodation block, so a down API can't present a misleading control.
     expect(navButton(tree, editLabel())).toBeUndefined();
@@ -343,7 +345,7 @@ describe('StageDetailView inline distance edit', () => {
   });
 
   it('commits a valid distance to the API', () => {
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     openEditor(tree);
     type(tree, '42.5');
     save(tree);
@@ -351,7 +353,7 @@ describe('StageDetailView inline distance edit', () => {
   });
 
   it('is a no-op for a non-finite or non-positive draft', () => {
-    const tree = render(<StageDetailView initialIndex={0} />);
+    const tree = render(<StageDetailView initialStageId="stage-1" />);
     for (const bad of ['abc', '0', '-5']) {
       openEditor(tree);
       type(tree, bad);
