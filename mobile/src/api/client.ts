@@ -104,14 +104,15 @@ export const authMiddleware: Middleware = {
  * operations the server guards — the compiler catches a missing one, a middleware could not.
  */
 export const preconditionMiddleware: Middleware = {
+  // Returns nothing: openapi-fetch treats any returned value as a *replacement* response and
+  // rejects one that is not a `Response`, so an observer that changes nothing must stay silent.
   onResponse({ request, response }) {
     const tripId = /\/trips\/([^/?#]+)/.exec(request.url)?.[1];
     const etag = response.headers.get('ETag');
-    if (tripId === undefined || etag === null) return response;
+    if (tripId === undefined || etag === null) return;
 
     const version = Number.parseInt(etag.replace(/^W\/|"/g, ''), 10);
     if (Number.isFinite(version)) setTripVersion(decodeURIComponent(tripId), version);
-    return response;
   },
 };
 

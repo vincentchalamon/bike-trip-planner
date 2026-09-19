@@ -231,9 +231,10 @@ const requestIdMiddleware: Middleware = {
  * quiet the day a URL stopped matching its pattern; the compiler does not.
  */
 const preconditionMiddleware: Middleware = {
+  // Returns nothing: openapi-fetch treats any returned value as a *replacement* response and
+  // rejects one that is not a `Response`, so an observer that changes nothing must stay silent.
   onResponse({ request, response }) {
     rememberTripVersion(request.url, response);
-    return response;
   },
 };
 

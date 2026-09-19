@@ -138,6 +138,34 @@ final class TripPreconditionTest extends ApiTestCase
     }
 
     /**
+     * A refused settings edit must leave the settings alone.
+     *
+     * `PATCH /trips/{id}` had no precondition coverage at all, which is how it shipped
+     * persisting the merged request *before* the authoritative comparison (#1292 review).
+     *
+     * What this pins is the contract, not the ordering: the version is already stale when the
+     * request arrives, so the refusal comes from the fail-fast check and the processor body
+     * never runs. The ordering itself is pinned where it can be — in
+     * {@see \App\Tests\Unit\State\TripUpdateProcessorTest::resolvesTheChangeBeforeTheWriteAliasesTheOldRequest}.
+     */
+    #[Test]
+    public function aStaleSettingsEditIsRefusedWithoutPersistingAnything(): void
+    {
+        $this->seedTrip();
+        $stale = $this->currentVersion();
+        $before = $this->repository()->getRequest(self::TRIP_ID)?->fatigueFactor;
+        $this->repository()->bumpVersion(self::TRIP_ID);
+
+        $this->client->request('PATCH', \sprintf('/trips/%s', self::TRIP_ID), $this->asOwner([
+            'If-Match' => \sprintf('"%d"', $stale),
+            'Content-Type' => 'application/merge-patch+json',
+        ]) + ['json' => ['fatigueFactor' => 0.55]]);
+
+        self::assertResponseStatusCodeSame(412);
+        self::assertSame($before, $this->repository()->getRequest(self::TRIP_ID)?->fatigueFactor);
+    }
+
+    /**
      * The precondition runs past the provider chain, so it cannot answer before authorization
      * has. If it ran earlier — in a `kernel.request` listener, say — the 412/428 pair would
      * tell a stranger whether a given version of someone else's trip exists.

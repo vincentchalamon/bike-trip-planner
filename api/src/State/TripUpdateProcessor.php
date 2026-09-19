@@ -74,11 +74,36 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // Reuse the request already fetched above for the lock check.
         $oldRequest = $existingRequest;
 
+        // Everything that compares the old settings with the new must happen BEFORE the
+        // write, for two independent reasons.
+        //
+        // Doctrine hands out the managed entity, and storeRequest() copies the incoming
+        // fields onto that very instance — so $oldRequest is not "old" once the write has
+        // run, and resolving afterwards compares the new values with themselves. The
+        // functional suite never showed it: it is aliased to the Redis implementation, which
+        // deserialises a fresh copy per read.
+        //
+        // And the precondition has to guard the write rather than follow it. Checked after,
+        // a stale If-Match would persist the settings and only then answer 412 — a refusal
+        // the caller is entitled to read as "nothing happened".
+        $hasChanged = $this->idempotencyChecker->hasChanged($id, $data);
+        $computationsToTrigger = $hasChanged ? $this->dependencyResolver->resolve($oldRequest, $data) : [];
+
+        $generation = null;
+        if ([] !== $computationsToTrigger) {
+            // Criteria changed: bump generation so in-flight messages become stale. The
+            // client's If-Match rides along and is compared under the write lock — a
+            // settings edit that triggers a regeneration replaces every stage, so applying
+            // it to a trip that moved on since is exactly what the precondition forbids.
+            $generation = $this->generationTracker->increment($id, IfMatch::expectedVersion($context));
+            TripVersionEtag::stamp($context, $generation);
+        }
+
         // Always persist — non-computation fields (e.g. title) may have changed
         $this->tripStateManager->storeRequest($id, $data);
 
         // Check idempotency for computation-triggering fields only
-        if (!$this->idempotencyChecker->hasChanged($id, $data)) {
+        if (!$hasChanged) {
             $statuses = $this->computationTracker->getStatuses($id) ?? [];
 
             return new Trip(
@@ -90,17 +115,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
 
         $this->idempotencyChecker->saveHash($id, $data);
 
-        // Determine which computations to re-trigger
-        $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
-
-        if ([] !== $computationsToTrigger) {
-            // Criteria changed: bump generation so in-flight messages become stale. The
-            // client's If-Match rides along and is compared under the write lock — a
-            // settings edit that triggers a regeneration replaces every stage, so applying
-            // it to a trip that moved on since is exactly what the precondition forbids.
-            $generation = $this->generationTracker->increment($id, IfMatch::expectedVersion($context));
-            TripVersionEtag::stamp($context, $generation);
-
+        if (null !== $generation) {
             foreach ($computationsToTrigger as $computation) {
                 $this->computationTracker->resetComputation($id, $computation);
                 $this->dispatchComputation($id, $computation, $generation);

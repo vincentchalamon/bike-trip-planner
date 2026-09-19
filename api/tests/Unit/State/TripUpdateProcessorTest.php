@@ -141,6 +141,50 @@ final class TripUpdateProcessorTest extends TestCase
         $this->assertSame($enabledTypes, $scanMessages[0]->enabledAccommodationTypes);
     }
 
+    /**
+     * Regression (#1292 review): the settings comparison has to run before the write.
+     *
+     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity and
+     * `storeRequest()` copies the incoming fields onto that very instance, so a comparison
+     * performed afterwards compares the new values with themselves and dispatches nothing.
+     * The functional suite cannot see it — it is aliased to the Redis implementation, which
+     * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
+     */
+    #[Test]
+    public function resolvesTheChangeBeforeTheWriteAliasesTheOldRequest(): void
+    {
+        $tripId = 'trip-alias';
+
+        $managed = new TripRequest();
+        $managed->sourceUrl = 'https://www.komoot.com/tour/123';
+        $managed->maxDistancePerDay = 80.0;
+
+        $incoming = new TripRequest();
+        $incoming->sourceUrl = 'https://www.komoot.com/tour/123';
+        $incoming->maxDistancePerDay = 120.0;
+
+        $this->tripStateManager->method('getRequest')->willReturn($managed);
+        // What Doctrine does: the write lands on the object the reads handed out.
+        $this->tripStateManager->method('storeRequest')
+            ->willReturnCallback(static function (string $id, TripRequest $source) use ($managed): void {
+                $managed->maxDistancePerDay = $source->maxDistancePerDay;
+            });
+        $this->computationTracker->method('getStatuses')->willReturn([]);
+        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
+
+        $dispatched = [];
+        $this->messageBus->method('dispatch')
+            ->willReturnCallback(static function (object $msg) use (&$dispatched): Envelope {
+                $dispatched[] = $msg;
+
+                return new Envelope($msg);
+            });
+
+        $this->processor->process($incoming, new Patch(), ['id' => $tripId]);
+
+        $this->assertNotSame([], $dispatched, 'A pacing change must re-dispatch its computations; resolving after the write compares the new settings with themselves and dispatches nothing.');
+    }
+
     #[Test]
     public function doesNotDispatchWhenNothingChanged(): void
     {
