@@ -281,7 +281,7 @@ export function terrainAlertsEvent(): MercureEvent {
     type: "terrain_alerts",
     data: {
       alertsByStage: {
-        "0": [
+        "stage-1": [
           {
             type: "warning",
             message: "Route non goudronnee sur 3km",
@@ -294,7 +294,7 @@ export function terrainAlertsEvent(): MercureEvent {
             },
           },
         ],
-        "1": [
+        "stage-2": [
           {
             type: "nudge",
             message: "Passage en altitude (820m)",
@@ -324,7 +324,7 @@ export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
     type: "terrain_alerts",
     data: {
       alertsByStage: {
-        "0": [
+        "stage-1": [
           {
             type: "critical",
             message: "Discontinuity between stage 1 and 2",
@@ -337,7 +337,7 @@ export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
             },
           },
         ],
-        "1": [
+        "stage-2": [
           {
             type: "warning",
             message: "Significant elevation gain (1200m)",
@@ -391,7 +391,7 @@ export function terrainAlertWithSegmentsEvent(): MercureEvent {
     type: "terrain_alerts",
     data: {
       alertsByStage: {
-        "0": [
+        "stage-1": [
           {
             type: "critical",
             code: "traffic_main_road",
@@ -425,7 +425,7 @@ export function alertsWithActionsEvent(): MercureEvent {
     type: "terrain_alerts",
     data: {
       alertsByStage: {
-        "0": [
+        "stage-1": [
           {
             type: "warning",
             message: "Steep gradient detected (12%)",
@@ -449,7 +449,7 @@ export function alertsWithActionsEvent(): MercureEvent {
             },
           },
         ],
-        "1": [
+        "stage-2": [
           {
             type: "critical",
             message: "E-bike range exceeded",
@@ -462,7 +462,7 @@ export function alertsWithActionsEvent(): MercureEvent {
             },
           },
         ],
-        "2": [
+        "stage-3": [
           {
             type: "warning",
             message: "Difficult terrain ahead",

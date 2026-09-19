@@ -89,13 +89,13 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
     injectSequence,
     mockedPage,
   }) => {
-    // Inject a terrain_alerts event with source "railway_station" on stage 0
+    // Inject a terrain_alerts event with source "railway_station" on the first stage
     await injectSequence([
       {
         type: "terrain_alerts",
         data: {
           alertsByStage: {
-            "0": [
+            "stage-1": [
               {
                 type: "warning",
                 message: "Gare SNCF à proximité",

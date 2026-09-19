@@ -741,14 +741,14 @@ When("I set a departure date about two years out", async ({ mockedPage }) => {
 When(
   "une mise à jour temps réel de l'étape {int} est reçue",
   async ({ mockedPage }, stage: number) => {
-    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage));
   },
 );
 
 When(
   "a real-time update for stage {int} is received",
   async ({ mockedPage }, stage: number) => {
-    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage));
   },
 );
 

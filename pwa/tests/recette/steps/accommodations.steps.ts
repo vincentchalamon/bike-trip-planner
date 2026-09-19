@@ -24,14 +24,14 @@ function getAccommodationTextAlias(text: string): string {
 Given(
   "aucun hébergement n'est trouvé dans un rayon de {int} km pour l'étape {int}",
   async ({ injectSequence }, radius: number, _stage: number) => {
-    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
+    await injectSequence([emptyAccommodationsFoundEvent("stage-1", radius)]);
   },
 );
 
 Given(
   "no accommodation is found within {int} km for stage {int}",
   async ({ injectSequence }, radius: number, _stage: number) => {
-    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
+    await injectSequence([emptyAccommodationsFoundEvent("stage-1", radius)]);
   },
 );
 
@@ -282,7 +282,7 @@ Then(
 When(
   "aucun hébergement n'est trouvé dans un rayon de {int} km",
   async ({ injectSequence }, radius: number) => {
-    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
+    await injectSequence([emptyAccommodationsFoundEvent("stage-1", radius)]);
   },
 );
 
@@ -290,7 +290,7 @@ When(
   "no accommodation is found within {int} km",
   async ({}, radius: number) => {
     await injectSseSequence(getCurrentRecettePage(), [
-      emptyAccommodationsFoundEvent(0, radius),
+      emptyAccommodationsFoundEvent("stage-1", radius),
     ]);
   },
 );

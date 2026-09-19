@@ -16,7 +16,6 @@ import {
   hasNextStage,
   hasPrevStage,
   ownsTripLive,
-  parseStageIndex,
   stageGeometryCoords,
   stageStats,
   surfaceShares,
@@ -111,13 +110,6 @@ afterEach(() => {
 });
 
 describe('stage-detail helpers', () => {
-  it('parses the route index param, defaulting to 0 on garbage', () => {
-    expect(parseStageIndex('3')).toBe(3);
-    expect(parseStageIndex(undefined)).toBe(0);
-    expect(parseStageIndex('-2')).toBe(0);
-    expect(parseStageIndex('x')).toBe(0);
-  });
-
   it('clamps an index into the stage range', () => {
     expect(clampIndex(5, 3)).toBe(2);
     expect(clampIndex(-1, 3)).toBe(0);

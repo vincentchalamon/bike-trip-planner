@@ -152,7 +152,7 @@ export function StageCard({
         >
           <StageDownloads
             tripId={tripId}
-            stageIndex={stageIndex}
+            stageId={stage.id}
             dayNumber={stage.dayNumber}
           />
         </div>

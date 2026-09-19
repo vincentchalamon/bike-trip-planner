@@ -29,7 +29,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *
  * Context keys consumed:
  *  - 'startDate'     (\DateTimeImmutable|null) — trip start date; falls back to today
- *  - 'stageIndex'    (int)                     — 0-based stage index; used to offset startDate
  *  - 'departureHour' (int)                     — rider departure hour (default 8)
  *  - 'averageSpeed'  (float)                   — rider average speed km/h (default 15.0)
  *  - 'locale'        (string)                  — translation locale (default 'en')
@@ -51,8 +50,6 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
 
         /** @var \DateTimeImmutable|null $startDate */
         $startDate = $context['startDate'] ?? null;
-        /** @var int $stageIndex */
-        $stageIndex = $context['stageIndex'] ?? 0;
         /** @var int $departureHour */
         $departureHour = $context['departureHour'] ?? 8;
         /** @var float $averageSpeed */
@@ -60,9 +57,12 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         /** @var string $locale */
         $locale = $context['locale'] ?? 'en';
 
-        // Compute the stage date from the start date + stage index offset
+        // The stage's own day number carries the offset, so nothing has to be threaded
+        // through the analysis context. It used to come from a 'stageIndex' context key,
+        // which a rename elsewhere silently reduced to its `?? 0` default — every stage
+        // then dated from the trip start (#1290 review).
         $baseDate = $startDate ?? new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
-        $stageDate = $baseDate->modify(\sprintf('+%d days', $stageIndex));
+        $stageDate = $baseDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
 
         if (false === $stageDate) {
             return [];

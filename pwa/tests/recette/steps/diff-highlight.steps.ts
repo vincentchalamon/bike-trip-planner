@@ -106,7 +106,7 @@ When(
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
       timeout: 3000,
     });
-    await injectEvent(stageUpdatedWithDistanceChange(n - 1));
+    await injectEvent(stageUpdatedWithDistanceChange(n));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
   },
 );
@@ -124,7 +124,7 @@ When(
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
       timeout: 3000,
     });
-    await injectEvent(stageUpdatedWithDistanceChange(n - 1));
+    await injectEvent(stageUpdatedWithDistanceChange(n));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
   },
 );
@@ -142,7 +142,7 @@ When(
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
       timeout: 3000,
     });
-    await injectEvent(stageUpdatedWithNewAlerts(n - 1));
+    await injectEvent(stageUpdatedWithNewAlerts(n));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
   },
 );
@@ -160,7 +160,7 @@ When(
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
       timeout: 3000,
     });
-    await injectEvent(stageUpdatedWithNewAlerts(n - 1));
+    await injectEvent(stageUpdatedWithNewAlerts(n));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
   },
 );

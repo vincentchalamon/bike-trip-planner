@@ -737,7 +737,8 @@ export function useTripPlanner() {
     if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return false;
 
     try {
-      const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
+      const stageId = useTripStore.getState().stages[stageIndex]?.id;
+      const ok = await scanAccommodations(tripId, nextRadius, stageId);
       if (ok) {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -973,7 +974,7 @@ export function useTripPlanner() {
           const ok = await scanAccommodations(
             tripId,
             DEFAULT_ACCOMMODATION_RADIUS_KM,
-            stageIndex,
+            stageId,
           );
           if (ok) {
             setAccommodationScanning(true);

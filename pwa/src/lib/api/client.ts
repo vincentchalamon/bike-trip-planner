@@ -379,23 +379,27 @@ export async function addManualAccommodation(
 
 /**
  * Trigger an accommodation re-scan with a custom radius.
- * When `stageIndex` is provided, only that stage's endpoint is scanned.
+ * When `stageId` is provided, only that stage's endpoint is scanned.
  * Returns `true` on success, `false` when the trip is not found or the request fails.
  */
 export async function scanAccommodations(
   tripId: string,
   radiusKm: number,
-  stageIndex?: number,
+  stageId?: string,
 ): Promise<boolean> {
+  // Typed against the generated schema on purpose: this body is hand-assembled, so
+  // without the annotation a renamed field drifts silently past the type contract.
+  const body: components["schemas"]["AccommodationScan.AccommodationScanRequest"] =
+    {
+      radiusKm,
+      ...(stageId !== undefined && { stageId }),
+    };
   const res = await apiFetch(
     `${API_URL}/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
     {
       method: "POST",
       headers: { "Content-Type": "application/ld+json" },
-      body: JSON.stringify({
-        radiusKm,
-        ...(stageIndex !== undefined && { stageIndex }),
-      }),
+      body: JSON.stringify(body),
     },
   );
   return res.ok;
@@ -720,13 +724,13 @@ export async function downloadTripFile(
 
 export async function downloadStageFile(
   tripId: string,
-  stageIndex: number,
+  stageId: string,
   format: "gpx" | "fit",
   dayNumber: number,
   tripTitle: string,
 ): Promise<void> {
   const res = await apiFetch(
-    `${API_URL}/trips/${tripId}/stages/${stageIndex}/export.${format}`,
+    `${API_URL}/trips/${tripId}/stages/${encodeURIComponent(stageId)}/export.${format}`,
   );
   if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();
@@ -957,13 +961,13 @@ export async function downloadSharedTripFile(
  */
 export async function downloadSharedStageFile(
   shortCode: string,
-  stageIndex: number,
+  stageId: string,
   format: "gpx" | "fit",
   dayNumber: number,
   tripTitle: string,
 ): Promise<void> {
   const res = await fetch(
-    `${API_URL}/s/${encodeURIComponent(shortCode)}/stages/${stageIndex}.${format}`,
+    `${API_URL}/s/${encodeURIComponent(shortCode)}/stages/${encodeURIComponent(stageId)}.${format}`,
   );
   if (!res.ok) throw new Error("Download failed");
   const blob = await res.blob();

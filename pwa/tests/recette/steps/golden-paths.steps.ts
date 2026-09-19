@@ -31,10 +31,7 @@ async function selectAccommodation(
   await item.getByRole("button", { name: SELECT_ACCOMMODATION_NAME }).click();
   // The endpoint recomputation arrives via SSE; inject the matching event for
   // the 0-based stage index so the selected badge renders deterministically.
-  await injectSseEvent(
-    page,
-    stageUpdatedEventWithSelectedAccommodation(stage - 1),
-  );
+  await injectSseEvent(page, stageUpdatedEventWithSelectedAccommodation(stage));
 }
 
 /**
