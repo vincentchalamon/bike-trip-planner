@@ -194,8 +194,13 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::TERRAIN_ALERTS,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alertsByStage'][0] ?? [];
+                // Keyed by identity, never by position: this assertion used to read
+                // `['alertsByStage'][0]`, so it kept passing after ADR-066 moved the client
+                // to resolve by identity — and the live terrain alerts were silently
+                // dropped for want of a matching key.
+                $this->callback(static function (array $data) use ($stage): bool {
+                    self::assertArrayNotHasKey(0, $data['alertsByStage']);
+                    $alerts = $data['alertsByStage'][$stage->id] ?? [];
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
@@ -282,7 +287,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $handler(new AnalyzeTerrain('trip-1'));
 
         $this->assertIsArray($published);
-        $alerts = $published['alertsByStage'][0];
+        $this->assertArrayNotHasKey(0, $published['alertsByStage']);
+        $alerts = $published['alertsByStage'][$stage->id];
         $this->assertCount(2, $alerts);
 
         $this->assertSame(48.1, $alerts[0]['lat']);
