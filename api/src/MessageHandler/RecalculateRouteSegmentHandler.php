@@ -41,6 +41,7 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
         if (null === $stages) {
             return;
         }
+
         // Resolve by identity: an edit since this message was sent may have moved the
         // stage, and a stale position would rewrite another stage's geometry.
         $stage = array_find($stages, fn ($candidate): bool => $candidate->id === $message->stageId);
