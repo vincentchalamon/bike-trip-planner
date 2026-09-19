@@ -36,10 +36,27 @@ use App\Message\ScanPois;
 final readonly class ComputationDependencyResolver
 {
     /**
+     * The modification names a stage by identity; the dependency rules are expressed in
+     * terms of "and the ones after it", so the identity is resolved against the current
+     * order. A stage that no longer exists contributes nothing.
+     *
+     * @param list<string> $stageIds
+     */
+    private function positionOf(array $stageIds, ?string $stageId): ?int
+    {
+        if (null === $stageId) {
+            return null;
+        }
+
+        $position = array_search($stageId, $stageIds, true);
+
+        return false === $position ? null : $position;
+    }
+
+    /**
      * @param list<TripModification> $modifications
-     * @param list<string>           $stageIds                  stage identifiers, in display order: the
-     *                                                          modifications name stages by position (it is
-     *                                                          their public contract), the messages carry identity
+     * @param list<string>           $stageIds                  stage identifiers, in display order, so "this stage
+     *                                                          and the ones after it" can still be expressed
      * @param list<string>           $enabledAccommodationTypes
      *
      * @return list<object> Messenger messages to dispatch
@@ -69,24 +86,26 @@ final readonly class ComputationDependencyResolver
         foreach ($modifications as $modification) {
             switch ($modification->type) {
                 case 'accommodation':
-                    if (null !== $modification->stageIndex) {
-                        $recalcIndices[] = $modification->stageIndex;
+                    $position = $this->positionOf($stageIds, $modification->stageId);
+                    if (null !== $position) {
+                        $recalcIndices[] = $position;
                         // Also recalculate the next stage (its startPoint may shift)
-                        if (isset($stageIds[$modification->stageIndex + 1])) {
-                            $recalcIndices[] = $modification->stageIndex + 1;
+                        if (isset($stageIds[$position + 1])) {
+                            $recalcIndices[] = $position + 1;
                         }
 
-                        $accommodationScanIndices[] = $modification->stageIndex;
+                        $accommodationScanIndices[] = $position;
                     }
 
                     break;
 
                 case 'distance':
-                    if (null !== $modification->stageIndex) {
+                    $position = $this->positionOf($stageIds, $modification->stageId);
+                    if (null !== $position) {
                         // Distance change affects the modified stage and all subsequent
                         $affected = array_filter(
                             array_keys($stageIds),
-                            static fn (int $i): bool => $i >= $modification->stageIndex,
+                            static fn (int $i): bool => $i >= $position,
                         );
                         array_push($recalcIndices, ...array_values($affected));
                         foreach ($affected as $idx) {

@@ -268,7 +268,7 @@ export function StageDetailPanel({
                 canDelete={!readOnly && stages.length > 2}
                 onDelete={() => onDeleteStage(i)}
               />
-            ) : recomputingStages.has(i) ? (
+            ) : recomputingStages.has(stage.id) ? (
               <StageSkeleton />
             ) : (
               <StageCard
@@ -330,7 +330,7 @@ export function StageDetailPanel({
                 an intermediate stage mid-recompute would race the in-flight
                 re-split (recette). */}
             {!readOnly &&
-              !recomputingStages.has(i) &&
+              !recomputingStages.has(stage.id) &&
               i < stages.length - 1 &&
               (onAddStage || onInsertRestDay) && (
                 <div className="flex w-full flex-wrap gap-2">

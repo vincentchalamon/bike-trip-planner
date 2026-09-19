@@ -4,14 +4,6 @@ import type { StageData } from '@btp/core';
 // so the navigation bounds, per-stage stats and geometry are unit-tested without
 // a React renderer.
 
-// Parse the `[index]` route param into a non-negative integer (defaults to 0 on
-// a malformed value). Bounds against the stage count are applied separately by
-// clampIndex once the store is hydrated.
-export function parseStageIndex(raw: string | undefined): number {
-  const n = Number.parseInt(raw ?? '', 10);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
-}
-
 // Whether this screen should own the live store: true only on a deep-link entry,
 // where the store isn't already live for this trip. When reached by tapping a
 // StageCard the roadbook already owns it (same tripId), so we return false to

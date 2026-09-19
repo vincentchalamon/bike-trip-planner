@@ -9,6 +9,7 @@ function buildStage(
   isRestDay = false,
 ): StageData {
   return {
+    id: `stage-${dayNumber}`,
     dayNumber,
     distance,
     elevation,

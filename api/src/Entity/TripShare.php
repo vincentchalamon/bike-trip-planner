@@ -105,14 +105,14 @@ use Symfony\Component\Uid\Uuid;
             provider: TripShareRouteProvider::class,
         ),
         new Get(
-            uriTemplate: '/s/{shortCode}/stages/{index}{._format}',
+            uriTemplate: '/s/{shortCode}/stages/{stageId}{._format}',
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],
             ],
             uriVariables: [
                 'shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode']),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             openapi: new Operation(summary: 'Download shared stage as GPX or FIT via short code.'),
             security: 'is_granted("PUBLIC_ACCESS")',

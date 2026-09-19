@@ -37,7 +37,7 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
+      supplyTimelineEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -59,7 +59,7 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
+      supplyTimelineEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -92,7 +92,7 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
+      supplyTimelineEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -128,7 +128,7 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
+      supplyTimelineEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -161,7 +161,7 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
+      supplyTimelineEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -198,6 +198,7 @@ test.describe.skip("Supply timeline", () => {
         data: {
           stages: [
             {
+              stageId: "stage-1",
               dayNumber: 1,
               distance: 72.5,
               elevation: 1180,
@@ -209,6 +210,7 @@ test.describe.skip("Supply timeline", () => {
               isRestDay: false,
             },
             {
+              stageId: "stage-2",
               dayNumber: 2,
               distance: 0,
               elevation: 0,
@@ -220,6 +222,7 @@ test.describe.skip("Supply timeline", () => {
               isRestDay: true,
             },
             {
+              stageId: "stage-3",
               dayNumber: 3,
               distance: 51.6,
               elevation: 800,
@@ -234,7 +237,7 @@ test.describe.skip("Supply timeline", () => {
         },
       },
       // supply_timeline event for index 1 (rest day) — should be ignored by UI
-      supplyTimelineEvent(1),
+      supplyTimelineEvent("stage-2"),
       tripCompleteEvent(),
     ]);
 
@@ -256,8 +259,8 @@ test.describe.skip("Supply timeline", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineEvent(0),
-      supplyTimelineEvent(1),
+      supplyTimelineEvent("stage-1"),
+      supplyTimelineEvent("stage-2"),
       tripCompleteEvent(),
     ]);
 
@@ -291,7 +294,7 @@ test.describe.skip("supply timeline — marker clustering", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineClusterEvent(0),
+      supplyTimelineClusterEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -314,7 +317,7 @@ test.describe.skip("supply timeline — marker clustering", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineClusterEvent(0),
+      supplyTimelineClusterEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -344,7 +347,7 @@ test.describe.skip("supply timeline — marker clustering", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      supplyTimelineClusterEvent(0),
+      supplyTimelineClusterEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 

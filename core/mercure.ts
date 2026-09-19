@@ -10,6 +10,7 @@ export interface CoordinatePayload {
 }
 
 export interface StagePayload {
+  stageId: string;
   dayNumber: number;
   distance: number;
   elevation: number;
@@ -182,13 +183,13 @@ export type MercureEvent =
     }
   | {
       type: "stages_computed";
-      data: { stages: StagePayload[]; affectedIndices?: number[] };
+      data: { stages: StagePayload[]; affectedStageIds?: string[] };
     }
   | { type: "weather_fetched"; data: { stages: WeatherPayload[] } }
   | {
       type: "pois_scanned";
       data: {
-        stageIndex: number;
+        stageId: string;
         resupply: ResupplyPayload;
         alerts?: AlertPayload[];
       };
@@ -196,7 +197,7 @@ export type MercureEvent =
   | {
       type: "accommodations_found";
       data: {
-        stageIndex: number;
+        stageId: string;
         accommodations: AccommodationPayload[];
         alerts?: AlertPayload[];
         searchRadiusKm?: number;
@@ -210,7 +211,7 @@ export type MercureEvent =
       type: "calendar_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: string;
@@ -221,13 +222,13 @@ export type MercureEvent =
     }
   | {
       type: "wind_alerts";
-      data: { alerts: AlertPayload[] };
+      data: { alerts: (AlertPayload & { stageId: string; dayNumber: number })[] };
     }
   | {
       type: "bike_shop_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           code: string;
           type: string;
           message: string;
@@ -239,14 +240,14 @@ export type MercureEvent =
       type: "water_point_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           code: string;
           type: string;
           message: string;
           dayNumber: number;
         }[];
         waterPointsByStage: {
-          stageIndex: number;
+          stageId: string;
           waterPoints: {
             lat: number;
             lon: number;
@@ -258,7 +259,7 @@ export type MercureEvent =
   | {
       type: "supply_timeline";
       data: {
-        stageIndex: number;
+        stageId: string;
         markers: SupplyMarker[];
       };
     }
@@ -266,7 +267,7 @@ export type MercureEvent =
       type: "health_service_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: string;
@@ -278,7 +279,7 @@ export type MercureEvent =
       type: "cultural_poi_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: string;
@@ -306,7 +307,7 @@ export type MercureEvent =
       type: "railway_station_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: string;
@@ -326,7 +327,7 @@ export type MercureEvent =
       type: "border_crossing_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: "nudge";
@@ -345,7 +346,7 @@ export type MercureEvent =
       type: "ferry_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: "warning";
@@ -364,7 +365,7 @@ export type MercureEvent =
       type: "ford_alerts";
       data: {
         alerts: {
-          stageIndex: number;
+          stageId: string;
           dayNumber: number;
           code: string;
           type: "nudge" | "warning";
@@ -382,7 +383,7 @@ export type MercureEvent =
   | {
       type: "route_segment_recalculated";
       data: {
-        stageIndex: number;
+        stageId: string;
         reason: string;
         distance: number;
         elevationGain: number;
@@ -393,7 +394,7 @@ export type MercureEvent =
   | {
       type: "events_found";
       data: {
-        stageIndex: number;
+        stageId: string;
         events: EventPayload[];
       };
     }
@@ -436,9 +437,14 @@ export type MercureEvent =
   | {
       // Mode 2 — Per-stage update emitted after an inline modification
       // (Act 3). The frontend mutates the single slice identified by
-      // `stageIndex` without rebuilding the whole trip.
+      // `stageId` without rebuilding the whole trip.
+      //
+      // `position` comes along because identity alone is not enough for a stage
+      // the client has never seen: it cannot tell the trailing stage a distance
+      // edit just split off (append) from an event of a superseded generation
+      // (drop). The position disambiguates the two.
       type: "stage_updated";
-      data: { stageIndex: number; stage: EnrichedStagePayload };
+      data: { stageId: string; position: number; stage: EnrichedStagePayload };
     };
 
 /**

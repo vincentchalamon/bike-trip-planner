@@ -247,12 +247,12 @@ final class CheckHealthServicesHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::HEALTH_SERVICE_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
                     \assert(\is_array($alerts));
 
                     return 2 === \count($alerts)
-                        && \in_array(1, array_column($alerts, 'stageIndex'), true);
+                        && \in_array($stages[1]->id, array_column($alerts, 'stageId'), true);
                 }),
             );
 

@@ -18,7 +18,7 @@ test.describe("Accommodation selection", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -41,7 +41,7 @@ test.describe("Accommodation selection", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -56,8 +56,8 @@ test.describe("Accommodation selection", () => {
     // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
     await expect(stageCard).toBeHidden({ timeout: 3000 });
     // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
-    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
-    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // The accommodation should now be marked as selected
     await expect(stageCard).toContainText("Sélectionné");
@@ -84,7 +84,7 @@ test.describe("Accommodation selection", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -100,8 +100,8 @@ test.describe("Accommodation selection", () => {
     // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
     await expect(stageCard).toBeHidden({ timeout: 3000 });
     // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
-    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
-    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // Only the selected accommodation should remain (Hotel du Pont; Camping removed)
     await expect(stageCard).toContainText("Hotel du Pont");
@@ -118,7 +118,7 @@ test.describe("Accommodation selection", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -131,8 +131,8 @@ test.describe("Accommodation selection", () => {
     // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
     await expect(stageCard).toBeHidden({ timeout: 3000 });
     // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
-    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
-    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(1));
+    await injectEvent(stageUpdatedEvent(2));
     await expect(stageCard).toContainText("Sélectionné");
 
     // Deselect
@@ -142,8 +142,8 @@ test.describe("Accommodation selection", () => {
     // Wait for skeleton to appear before injecting the resolve event
     await expect(stageCard).toBeHidden({ timeout: 3000 });
     // Skeleton shows again during deselect recomputation — resolve both stages
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");
@@ -178,7 +178,7 @@ test.describe("Accommodation selection", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 

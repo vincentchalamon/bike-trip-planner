@@ -25,6 +25,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageDeleteTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -87,7 +88,7 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 1), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -119,7 +120,7 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $lastStageEndPoint = $stagesBefore[3]->endPoint;
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/3', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 3), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -148,7 +149,7 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $firstStageStartPoint = $stagesBefore[0]->startPoint;
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -177,7 +178,7 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $secondStageLabel = $stagesBefore[1]->label;
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -198,7 +199,7 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -214,7 +215,9 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/99', [
+        $unknownStageId = Uuid::v7()->toRfc4122();
+
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$unknownStageId, [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -222,7 +225,7 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
         $this->assertJsonContains([
             'status' => 404,
-            'detail' => 'Stage at index 99 not found.',
+            'detail' => 'Stage "'.$unknownStageId.'" not found.',
         ]);
     }
 
@@ -231,7 +234,7 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 1), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -254,7 +257,7 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 5);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/2', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 2), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
@@ -278,7 +281,7 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
-        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 1), [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 

@@ -246,7 +246,7 @@ export function Timeline({
                         canDelete={!readOnly && stages.length > 2}
                         onDelete={() => onDeleteStage(originalIndex)}
                       />
-                    ) : recomputingStages.has(originalIndex) ? (
+                    ) : recomputingStages.has(stage.id) ? (
                       <StageSkeleton />
                     ) : (
                       <StageCard

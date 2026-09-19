@@ -37,7 +37,7 @@ function RootNavigator() {
       <Stack.Screen name="login" options={{ title: t('header.login') }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="trip/[id]/index" />
-      <Stack.Screen name="trip/[id]/stage/[index]" />
+      <Stack.Screen name="trip/[id]/stage/[stageId]" />
       {/* Anonymous shared-trip consultation, opened via the /s/<code> App Link. */}
       <Stack.Screen name="s/[code]" />
       <Stack.Screen name="auth/verify/[token]" options={{ headerShown: false }} />

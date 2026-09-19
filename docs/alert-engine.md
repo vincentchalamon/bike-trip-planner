@@ -31,12 +31,12 @@ Rules are executed in priority order (lower = higher priority):
 | **Sunset** | `sunset_arrival_after_twilight` | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point (times shown in the stage's local timezone) |
 | **Calendar** | `calendar_public_holiday` | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a public holiday of a country the route crosses, for any year the trip spans (France as fallback when no boundary resolves). Named and unnamed holidays share this code |
 | **Calendar** | `calendar_sunday` | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a Sunday (businesses may be closed) |
-| **Wind** | `wind_headwind` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data |
-| **Wind** | `wind_gusts_strong` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Wind gusts >= 50 km/h during the riding window on at least one stage |
-| **Comfort** | `comfort_poor_conditions` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100) on at least one stage |
-| **Heat** | `heat_extreme` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Feels-like temperature >= 32 °C during the riding window on at least one stage |
-| **Cold** | `cold_extreme` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Feels-like temperature <= 2 °C during the riding window on at least one stage |
-| **Rain** | `rain_heavy` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Total precipitation >= 10 mm over the riding window on at least one stage |
+| **Wind** | `wind_headwind` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data. The threshold stays trip-wide (it describes a trip spent riding into the wind, not one windy day), but the alert is raised on each headwind stage |
+| **Wind** | `wind_gusts_strong` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Wind gusts >= 50 km/h during the riding window, raised on each affected stage |
+| **Comfort** | `comfort_poor_conditions` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100), raised on each affected stage |
+| **Heat** | `heat_extreme` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Feels-like temperature >= 32 °C during the riding window, raised on each affected stage |
+| **Cold** | `cold_extreme` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Feels-like temperature <= 2 °C during the riding window, raised on each affected stage |
+| **Rain** | `rain_heavy` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Total precipitation >= 10 mm over the riding window, raised on each affected stage |
 | **Bike shops** | `bike_shop_none_nearby` | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No repair resource within 2 km of stage midpoint (trips > 5 stages) |
 | **Resupply** | `resupply_none_on_stage` | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage >= 40 km with no food/resupply POI along the route |
 | **Resupply** | `resupply_closed_at_passage` | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All resupply POIs on the stage are known to be closed at estimated passage time (a POI whose OpenStreetMap `opening_hours` is missing or unparsable is treated as unknown and suppresses the warning) |

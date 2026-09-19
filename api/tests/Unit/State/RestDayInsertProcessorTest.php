@@ -16,6 +16,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,6 +27,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class RestDayInsertProcessorTest extends TestCase
@@ -54,6 +56,7 @@ final class RestDayInsertProcessorTest extends TestCase
             $this->messageBus,
             $this->stageResponseMapper,
             new TripLocker(),
+            new StageLocator(),
         );
     }
 
@@ -67,7 +70,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getStages')->willReturn([]);
 
         try {
-            $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+            $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());
@@ -82,7 +85,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 5]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
     }
 
     #[Test]
@@ -97,7 +100,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $this->expectException(UnprocessableEntityHttpException::class);
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $restDay->id]);
     }
 
     #[Test]
@@ -113,7 +116,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $this->expectException(UnprocessableEntityHttpException::class);
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
     }
 
     #[Test]
@@ -137,7 +140,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
         $this->assertNotNull($capturedStages);
         $this->assertCount(3, $capturedStages);
@@ -163,7 +166,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
-        $result = $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $result = $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
         // The response is built from the inserted rest day.
         $this->assertTrue($result->isRestDay);
@@ -191,7 +194,7 @@ final class RestDayInsertProcessorTest extends TestCase
             });
 
         // Insert after index 0 → rest day at position 1, affected indices = [1, 2, 3]
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
@@ -225,7 +228,7 @@ final class RestDayInsertProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
         $weatherMessages = array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather);
         $calendarMessages = array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar);
@@ -258,7 +261,7 @@ final class RestDayInsertProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
         $weatherMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather));
         $calendarMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar));

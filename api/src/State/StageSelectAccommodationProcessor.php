@@ -20,7 +20,6 @@ use App\Message\ScanAccommodations;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -50,18 +49,20 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param StageSelectAccommodationRequest     $data
-     * @param Patch                               $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param StageSelectAccommodationRequest          $data
+     * @param Patch                                    $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
+        $index = 0;
 
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
@@ -72,10 +73,8 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         // Read, edit and write as one unit: an accommodation scan running concurrently
         // writes the very column this edits, and the snapshot read here would revert it.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $index, $isDeselect, &$stage): array {
-            if (!isset($stages[$index])) {
-                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-            }
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $stageId, $isDeselect, &$index, &$stage): array {
+            $index = $this->stageLocator->indexOf($stages, $stageId);
 
             $stage = $stages[$index];
 
@@ -86,7 +85,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
                 $stage->selectedAccommodation = null;
                 $stages[$index] = $stage;
 
-                return $stages;
+                return array_values($stages);
             }
 
             $lat = $data->selectedAccommodationLat;
@@ -134,7 +133,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
                 $stages[$index + 1] = $nextStage;
             }
 
-            return $stages;
+            return array_values($stages);
         });
 
         // The trip was asserted to exist above, so the write happened.

@@ -35,6 +35,7 @@ const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
 function stage(dayNumber: number): StageData {
   const point = { lat: 0, lon: 0, ele: 0 };
   return {
+    id: `stage-${dayNumber}`,
     dayNumber,
     distance: 50,
     elevation: 100,
@@ -127,7 +128,7 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     expect(useTripStore.getState().stages).toHaveLength(3);
 
     await act(async () => {});
-    expect(insertRestDay).toHaveBeenCalledWith('t1', 0);
+    expect(insertRestDay).toHaveBeenCalledWith('t1', 'stage-1');
     expect(useTripStore.getState().stages).toHaveLength(3);
     expect(alertSpy).not.toHaveBeenCalled();
   });

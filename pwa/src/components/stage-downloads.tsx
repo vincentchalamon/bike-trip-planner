@@ -11,13 +11,13 @@ import { useTripStore } from "@/store/trip-store";
 
 interface StageDownloadsProps {
   tripId: string | undefined;
-  stageIndex: number;
+  stageId: string;
   dayNumber: number;
 }
 
 export function StageDownloads({
   tripId,
-  stageIndex,
+  stageId,
   dayNumber,
 }: StageDownloadsProps) {
   const t = useTranslations("stage");
@@ -36,19 +36,13 @@ export function StageDownloads({
       if (share) {
         await downloadSharedStageFile(
           share.shortCode,
-          stageIndex,
+          stageId,
           format,
           dayNumber,
           tripTitle,
         );
       } else {
-        await downloadStageFile(
-          tripId!,
-          stageIndex,
-          format,
-          dayNumber,
-          tripTitle,
-        );
+        await downloadStageFile(tripId!, stageId, format, dayNumber, tripTitle);
       }
     } catch {
       toast.error(t("downloadFailed"));

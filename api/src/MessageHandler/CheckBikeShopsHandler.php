@@ -91,7 +91,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 
             // Check each stage for nearby bike shops
             $stagesWithoutBikeShop = [];
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 // A rest day is not ridden: no mid-ride mechanical failure to cover.
                 if ($stage->isRestDay) {
                     continue;
@@ -108,7 +108,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
                 $nearestShop = $this->findNearestShop($midpoint, $allShops);
                 $stagesWithoutBikeShop[] = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::BIKE_SHOP_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,

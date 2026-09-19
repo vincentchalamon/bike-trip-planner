@@ -25,8 +25,10 @@ const B = { lat: 2, lon: 2, ele: 0 };
 const C = { lat: 3, lon: 3, ele: 0 };
 
 function stage(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -63,7 +65,7 @@ function baseState(overrides: Partial<ReconciledState> = {}): ReconciledState {
     title: null,
     stages: [],
     computationStatus: {},
-    recomputingStages: new Set<number>(),
+    recomputingStages: new Set<string>(),
     ...overrides,
   };
 }
@@ -72,6 +74,7 @@ function enriched(
   overrides: Partial<EnrichedStagePayload> = {},
 ): EnrichedStagePayload {
   return {
+    stageId: "stage-1",
     dayNumber: 1,
     distance: 50,
     elevation: 0,
@@ -149,7 +152,7 @@ describe("reduceMercureEvent — trip-level events", () => {
 
   it("trip_complete stores the status and clears recomputing markers", () => {
     const next = reduceMercureEvent(
-      baseState({ recomputingStages: new Set([0, 1]) }),
+      baseState({ recomputingStages: new Set(["stage-1", "stage-2"]) }),
       {
         type: "trip_complete",
         data: { computationStatus: { weather: "done" } },
@@ -161,7 +164,7 @@ describe("reduceMercureEvent — trip-level events", () => {
 
   it("validation_error clears recomputing markers", () => {
     const next = reduceMercureEvent(
-      baseState({ recomputingStages: new Set([2]) }),
+      baseState({ recomputingStages: new Set(["stage-3"]) }),
       { type: "validation_error", data: { code: "x", message: "bad" } },
     );
     expect(next.recomputingStages.size).toBe(0);
@@ -169,7 +172,7 @@ describe("reduceMercureEvent — trip-level events", () => {
 
   it("computation_error clears recomputing only when not retryable", () => {
     const retry = reduceMercureEvent(
-      baseState({ recomputingStages: new Set([0]) }),
+      baseState({ recomputingStages: new Set(["stage-1"]) }),
       {
         type: "computation_error",
         data: { computation: "weather", message: "e", retryable: true },
@@ -178,7 +181,7 @@ describe("reduceMercureEvent — trip-level events", () => {
     expect(retry.recomputingStages.size).toBe(1);
 
     const fatal = reduceMercureEvent(
-      baseState({ recomputingStages: new Set([0]) }),
+      baseState({ recomputingStages: new Set(["stage-1"]) }),
       {
         type: "computation_error",
         data: { computation: "weather", message: "e", retryable: false },
@@ -215,7 +218,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     const next = reduceMercureEvent(state, {
       type: "pois_scanned",
       data: {
-        stageIndex: 0,
+        stageId: "stage-1",
         resupply: {
           foodAtLunch: [
             {
@@ -248,7 +251,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     };
     const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
       type: "supply_timeline",
-      data: { stageIndex: 0, markers: [marker] },
+      data: { stageId: "stage-1", markers: [marker] },
     });
     expect(next.stages[0]!.supplyTimeline).toEqual([marker]);
   });
@@ -257,7 +260,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     const next = reduceMercureEvent(baseState({ stages: [stage()] }), {
       type: "events_found",
       data: {
-        stageIndex: 0,
+        stageId: "stage-1",
         events: [
           {
             name: "Fete",
@@ -290,7 +293,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     const next = reduceMercureEvent(state, {
       type: "accommodations_found",
       data: {
-        stageIndex: 0,
+        stageId: "stage-1",
         accommodations: [
           { name: "New" } as StageData["accommodations"][number],
         ],
@@ -303,7 +306,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     const kept = reduceMercureEvent(state, {
       type: "accommodations_found",
       data: {
-        stageIndex: 1,
+        stageId: "stage-2",
         accommodations: [
           { name: "Ignored" } as StageData["accommodations"][number],
         ],
@@ -315,12 +318,16 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
 
 describe("reduceMercureEvent — alert groups", () => {
   it("terrain_alerts fans alertsByStage onto the matching stages under the terrain group", () => {
-    const state = baseState({ stages: [stage(), stage()] });
+    const state = baseState({
+      stages: [stage({ dayNumber: 1 }), stage({ dayNumber: 2 })],
+    });
     const next = reduceMercureEvent(state, {
       type: "terrain_alerts",
       data: {
         alertsByStage: {
-          "1": [{ type: "warning", message: "gravel", lat: null, lon: null }],
+          "stage-2": [
+            { type: "warning", message: "gravel", lat: null, lon: null },
+          ],
         },
       },
     });
@@ -335,13 +342,24 @@ describe("reduceMercureEvent — alert groups", () => {
       type: "terrain_alerts",
       data: {
         alertsByStage: {
-          "0": [{ type: "warning", message: "t", lat: null, lon: null }],
+          "stage-1": [{ type: "warning", message: "t", lat: null, lon: null }],
         },
       },
     });
     state = reduceMercureEvent(state, {
       type: "wind_alerts",
-      data: { alerts: [{ type: "nudge", message: "w", lat: null, lon: null }] },
+      data: {
+        alerts: [
+          {
+            stageId: "stage-1",
+            dayNumber: 1,
+            type: "nudge",
+            message: "w",
+            lat: null,
+            lon: null,
+          },
+        ],
+      },
     });
     const sources = state.stages[0]!.alerts.map(
       (a) => (a as StageAlert)._group,
@@ -365,7 +383,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "SUNDAY",
             type: "nudge",
@@ -390,7 +408,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "FERRY",
             type: "warning",
@@ -418,7 +436,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "BS",
             type: "nudge",
@@ -438,7 +456,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "WP",
             type: "nudge",
@@ -459,7 +477,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "HS",
             type: "nudge",
@@ -479,7 +497,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "CP",
             type: "nudge",
@@ -507,7 +525,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "RS",
             type: "nudge",
@@ -533,7 +551,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "BC",
             type: "nudge",
@@ -560,7 +578,7 @@ describe("reduceMercureEvent — alert groups", () => {
       data: {
         alerts: [
           {
-            stageIndex: 0,
+            stageId: "stage-1",
             dayNumber: 1,
             code: "FD",
             type: "warning",
@@ -600,12 +618,12 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     };
     const state = baseState({
       stages: [stage({ alerts: [{ ...cultural }, { ...terrain }] })],
-      recomputingStages: new Set([0]),
+      recomputingStages: new Set(["stage-1"]),
     });
     const next = reduceMercureEvent(state, {
       type: "route_segment_recalculated",
       data: {
-        stageIndex: 0,
+        stageId: "stage-1",
         reason: "detour",
         distance: 42000,
         elevationGain: 300,
@@ -624,13 +642,14 @@ describe("reduceMercureEvent — structural / terminal events", () => {
   it("stages_computed (full replace) preserves labels on a stable endpoint and prunes stale recomputing", () => {
     const state = baseState({
       stages: [stage({ endLabel: "Lyon", startLabel: "Paris" })],
-      recomputingStages: new Set([0, 3]),
+      recomputingStages: new Set(["stage-1", "stage-4"]),
     });
     const next = reduceMercureEvent(state, {
       type: "stages_computed",
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 60,
             elevation: 100,
@@ -645,7 +664,7 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     });
     expect(next.stages[0]!.startLabel).toBe("Paris");
     expect(next.stages[0]!.endLabel).toBe("Lyon");
-    expect([...next.recomputingStages]).toEqual([0]);
+    expect([...next.recomputingStages]).toEqual(["stage-1"]);
   });
 
   it("stages_computed (partial update) keeps the derived label on an unaffected stage when the payload omits it", () => {
@@ -657,14 +676,15 @@ describe("reduceMercureEvent — structural / terminal events", () => {
         stage({ dayNumber: 1, label: "Col du Galibier" }),
         stage({ dayNumber: 2, label: "Briançon" }),
       ],
-      recomputingStages: new Set([1]),
+      recomputingStages: new Set(["stage-2"]),
     });
     const next = reduceMercureEvent(state, {
       type: "stages_computed",
       data: {
-        affectedIndices: [1],
+        affectedStageIds: ["stage-2"],
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 61,
             elevation: 100,
@@ -675,6 +695,7 @@ describe("reduceMercureEvent — structural / terminal events", () => {
             label: null,
           },
           {
+            stageId: "stage-2",
             dayNumber: 2,
             distance: 40,
             elevation: 10,
@@ -693,14 +714,14 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     // Affected stage: fully replaced by the payload.
     expect(next.stages[1]!.label).toBe("Névache");
     // In-range recomputing marker is kept (pruning only drops out-of-range).
-    expect([...next.recomputingStages]).toEqual([1]);
+    expect([...next.recomputingStages]).toEqual(["stage-2"]);
   });
 
   it("trip_ready delegates to reconcileTripReady, stores status and clears recomputing", () => {
     const acc = { name: "Gite" } as StageData["accommodations"][number];
     const state = baseState({
       stages: [stage({ endLabel: "Lyon", accommodations: [acc] })],
-      recomputingStages: new Set([0]),
+      recomputingStages: new Set(["stage-1"]),
     });
     const next = reduceMercureEvent(state, {
       type: "trip_ready",
@@ -719,26 +740,30 @@ describe("reduceMercureEvent — structural / terminal events", () => {
   it("stage_updated delegates to reconcileStageUpdate and removes the index from recomputing", () => {
     const state = baseState({
       stages: [stage({ dayNumber: 1, endLabel: "Lyon" })],
-      recomputingStages: new Set([0, 1]),
+      recomputingStages: new Set(["stage-1", "stage-2"]),
     });
     const next = reduceMercureEvent(state, {
       type: "stage_updated",
-      data: { stageIndex: 0, stage: enriched({ dayNumber: 1, label: null }) },
+      data: {
+        stageId: "stage-1",
+        position: 0,
+        stage: enriched({ dayNumber: 1, label: null }),
+      },
     });
     expect(next.stages[0]!.endLabel).toBe("Lyon"); // preserved on stable endpoint
-    expect([...next.recomputingStages]).toEqual([1]);
+    expect([...next.recomputingStages]).toEqual(["stage-2"]);
   });
 });
 
 describe("reduceMercureEvent — purity", () => {
   it("does not mutate the input state's stages or recomputing set", () => {
     const stages = [stage()];
-    const recomputingStages = new Set([0]);
+    const recomputingStages = new Set(["stage-1"]);
     const state = baseState({ stages, recomputingStages });
     reduceMercureEvent(state, {
       type: "pois_scanned",
       data: {
-        stageIndex: 0,
+        stageId: "stage-1",
         resupply: {
           foodAtLunch: [
             { name: "x", category: "c", lat: 1, lon: 1, distanceFromStart: 0 },
@@ -754,7 +779,7 @@ describe("reduceMercureEvent — purity", () => {
       data: { computationStatus: {} },
     });
     expect(state.stages[0]!.resupply.foodAtLunch).toHaveLength(0);
-    expect(recomputingStages.has(0)).toBe(true);
+    expect(recomputingStages.has("stage-1")).toBe(true);
   });
 });
 
@@ -808,7 +833,7 @@ describe("Mercure contract drift guard (#1030)", () => {
       stages_computed: { stages: [] },
       weather_fetched: { stages: [] },
       pois_scanned: {
-        stageIndex: 0,
+        stageId: "stage-1",
         resupply: {
           foodAtLunch: [],
           waterMorning: null,
@@ -816,9 +841,9 @@ describe("Mercure contract drift guard (#1030)", () => {
           foodAtArrival: [],
         },
       },
-      accommodations_found: { stageIndex: 0, accommodations: [] },
-      events_found: { stageIndex: 0, events: [] },
-      supply_timeline: { stageIndex: 0, markers: [] },
+      accommodations_found: { stageId: "stage-1", accommodations: [] },
+      events_found: { stageId: "stage-1", events: [] },
+      supply_timeline: { stageId: "stage-1", markers: [] },
       terrain_alerts: { alertsByStage: {} },
       calendar_alerts: { alerts: [] },
       wind_alerts: { alerts: [] },
@@ -831,7 +856,7 @@ describe("Mercure contract drift guard (#1030)", () => {
       ferry_alerts: { alerts: [] },
       ford_alerts: { alerts: [] },
       route_segment_recalculated: {
-        stageIndex: 0,
+        stageId: "stage-1",
         reason: "",
         distance: 0,
         elevationGain: 0,
@@ -846,7 +871,7 @@ describe("Mercure contract drift guard (#1030)", () => {
         total: 0,
       },
       trip_ready: { stages: [], computationStatus: {} },
-      stage_updated: { stageIndex: 0, stage: enriched() },
+      stage_updated: { stageId: "stage-1", stage: enriched() },
       validation_error: { code: "", message: "" },
       computation_error: { computation: "", message: "", retryable: false },
     };

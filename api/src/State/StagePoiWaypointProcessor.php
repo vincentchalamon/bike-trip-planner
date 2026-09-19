@@ -15,7 +15,6 @@ use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -35,35 +34,26 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param StagePoiWaypointRequest                    $data
-     * @param Post                                       $operation
-     * @param array{tripId?: string, index?: int|string} $uriVariables
+     * @param StagePoiWaypointRequest                  $data
+     * @param Post                                     $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $rawIndex = $uriVariables['index'] ?? null;
-
-        if (!\is_numeric($rawIndex)) {
-            throw new BadRequestHttpException('Stage index must be a valid integer.');
-        }
-
-        $index = (int) $rawIndex;
+        $stageId = $uriVariables['stageId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
-
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
+        $index = $this->stageLocator->indexOf($stages, $stageId);
         $stage = $stages[$index];
 
         $waypointLat = $data->waypointLat ?? throw new BadRequestHttpException('waypointLat is required.');

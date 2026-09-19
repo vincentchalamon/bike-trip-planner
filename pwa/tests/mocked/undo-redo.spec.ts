@@ -95,7 +95,7 @@ test.describe("Undo/Redo", () => {
     });
     // The distance change puts stage 0 in recomputing state (skeleton visible).
     // Resolve it so the real card is accessible again.
-    await injectEvent(stageUpdatedEvent(0));
+    await injectEvent(stageUpdatedEvent(1));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
     // Open the distance editor again — input is auto-focused
     const pencilBtn3b = stageCard.getByRole("button", {

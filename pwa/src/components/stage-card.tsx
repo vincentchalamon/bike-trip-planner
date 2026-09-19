@@ -152,7 +152,7 @@ export function StageCard({
         >
           <StageDownloads
             tripId={tripId}
-            stageIndex={stageIndex}
+            stageId={stage.id}
             dayNumber={stage.dayNumber}
           />
         </div>
@@ -171,6 +171,7 @@ export function StageCard({
         <StageStatsRow
           stage={stage}
           stageIndex={stageIndex}
+          stageId={stage.id}
           isFirst={isFirst}
           isLast={isLast}
           isProcessing={isProcessing}
@@ -224,7 +225,7 @@ export function StageCard({
         {hasAlerts && (
           <div className="pb-2">
             <DiffHighlight
-              stageIndex={stageIndex}
+              stageId={stage.id}
               field="alerts_added"
               changeLabel={t("diffAlertsAdded")}
             >

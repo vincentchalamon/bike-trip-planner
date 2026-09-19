@@ -198,8 +198,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::ACCOMMODATIONS_FOUND,
-                $this->callback(static function (array $data): bool {
-                    if (0 === $data['stageIndex'] && 1 === \count($data['accommodations'])) {
+                $this->callback(static function (array $data) use ($stage): bool {
+                    if ($stage->id === $data['stageId'] && 1 === \count($data['accommodations'])) {
                         $acc = $data['accommodations'][0];
 
                         return array_key_exists('distanceToEndPoint', $acc) && 5.7 === $acc['distanceToEndPoint'];
@@ -736,9 +736,9 @@ final class ScanAccommodationsHandlerTest extends TestCase
             static function (string $id, MercureEventType $type, array $payload) use (&$published): void {
                 /** @var list<array{name: string}> $accommodations */
                 $accommodations = $payload['accommodations'];
-                /** @var int $stageIndex */
-                $stageIndex = $payload['stageIndex'];
-                $published[$stageIndex] = array_column($accommodations, 'name');
+                /** @var string $stageId */
+                $stageId = $payload['stageId'];
+                $published[$stageId] = array_column($accommodations, 'name');
             },
         );
 
@@ -752,11 +752,11 @@ final class ScanAccommodationsHandlerTest extends TestCase
         );
         $handler(new ScanAccommodations('trip-rest'));
 
-        self::assertArrayHasKey(1, $published);
-        self::assertSame($published[0], $published[1], 'both nights are spent at the same place');
-        self::assertCount(5, $published[1]);
-        self::assertContains('Camping Municipal', $published[1]);
-        self::assertCount(4, array_filter($published[1], static fn (string $name): bool => str_starts_with($name, 'Hotel ')));
+        self::assertArrayHasKey($restDay->id, $published);
+        self::assertSame($published[$stage->id], $published[$restDay->id], 'both nights are spent at the same place');
+        self::assertCount(5, $published[$restDay->id]);
+        self::assertContains('Camping Municipal', $published[$restDay->id]);
+        self::assertCount(4, array_filter($published[$restDay->id], static fn (string $name): bool => str_starts_with($name, 'Hotel ')));
     }
 
     /**

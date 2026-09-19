@@ -268,7 +268,7 @@ export function runInsertRestDay(
       undoable: true,
       optimistic: () => ctx.insertRestDayOptimistic(afterIndex),
       rollback: () => ctx.setStages(snapshot),
-      call: () => insertRestDay(tripId, afterIndex),
+      call: () => insertRestDay(tripId, ctx.stages[afterIndex]?.id ?? ''),
     },
     onFailure,
   );
@@ -289,6 +289,8 @@ export function runAddStage(
     return Promise.resolve(false);
   }
   const placeholder: StageData = {
+    // Provisional identity until the server's lands on the next stages_computed.
+    id: `pending-${Date.now()}-${afterIndex}`,
     dayNumber: afterIndex + 2,
     distance: 0,
     elevation: 0,
@@ -344,7 +346,7 @@ export function runUpdateStageDistance(
     ctx,
     {
       requiresRouting: true,
-      call: () => updateStageDistance(tripId, index, distance),
+      call: () => updateStageDistance(tripId, ctx.stages[index]?.id ?? '', distance),
     },
     onFailure,
   );
@@ -365,7 +367,7 @@ export function runMoveStage(
       undoable: true,
       optimistic: () => ctx.moveStageOptimistic(fromIndex, toIndex),
       rollback: () => ctx.setStages(snapshot),
-      call: () => moveStage(tripId, fromIndex, toIndex),
+      call: () => moveStage(tripId, snapshot[fromIndex]?.id ?? '', toIndex),
     },
     onFailure,
   );
@@ -381,7 +383,8 @@ export function runSelectAccommodation(
   onFailure: OnFailure,
 ): Promise<boolean> {
   const acc = ctx.stages[stageIndex]?.accommodations[accIndex];
-  if (!acc) {
+  const stageId = ctx.stages[stageIndex]?.id;
+  if (!acc || !stageId) {
     onFailure('error');
     return Promise.resolve(false);
   }
@@ -396,7 +399,7 @@ export function runSelectAccommodation(
       optimistic: () =>
         ctx.selectAccommodationOptimistic(stageIndex, accIndex, nextStageIndex),
       rollback: () => ctx.setStages(snapshot),
-      call: () => setStageAccommodation(tripId, stageIndex, acc.lat, acc.lon),
+      call: () => setStageAccommodation(tripId, stageId, acc.lat, acc.lon),
       // 409 = a concurrent scan invalidated the candidate list. Re-scan this
       // stage at the default radius so the user gets a fresh list to retry from
       // (mirrors the web handleSelectAccommodation flow). A failed re-scan is
@@ -405,7 +408,7 @@ export function runSelectAccommodation(
         void scanAccommodations(
           tripId,
           DEFAULT_ACCOMMODATION_RADIUS_KM,
-          stageIndex,
+          stageId,
         ).catch(() => onFailure('network')),
     },
     onFailure,
@@ -419,18 +422,19 @@ export function runDeselectAccommodation(
   onFailure: OnFailure,
 ): Promise<boolean> {
   const snapshot = ctx.stages;
+  const stageId = snapshot[stageIndex]?.id ?? '';
   return run(
     ctx,
     {
       requiresRouting: true,
       optimistic: () => ctx.deselectAccommodationOptimistic(stageIndex),
       rollback: () => ctx.setStages(snapshot),
-      call: () => setStageAccommodation(tripId, stageIndex, null, null),
+      call: () => setStageAccommodation(tripId, stageId, null, null),
       onConflict: () =>
         void scanAccommodations(
           tripId,
           DEFAULT_ACCOMMODATION_RADIUS_KM,
-          stageIndex,
+          stageId,
         ).catch(() => onFailure('network')),
     },
     onFailure,
@@ -459,7 +463,7 @@ export function runAddManualAccommodation(
     ctx,
     {
       requiresRouting: true,
-      call: () => addManualAccommodation(tripId, stageIndex, input),
+      call: () => addManualAccommodation(tripId, ctx.stages[stageIndex]?.id ?? '', input),
     },
     onFailure,
   );
@@ -477,7 +481,12 @@ export function runScanAccommodations(
     ctx,
     {
       requiresRouting: false,
-      call: () => scanAccommodations(tripId, radiusKm, stageIndex),
+      call: () =>
+        scanAccommodations(
+          tripId,
+          radiusKm,
+          stageIndex === undefined ? undefined : ctx.stages[stageIndex]?.id,
+        ),
     },
     onFailure,
   );
@@ -497,7 +506,7 @@ export function runAddPoiWaypoint(
     ctx,
     {
       requiresRouting: true,
-      call: () => addPoiWaypoint(tripId, stageIndex, lat, lon),
+      call: () => addPoiWaypoint(tripId, ctx.stages[stageIndex]?.id ?? '', lat, lon),
     },
     onFailure,
   );

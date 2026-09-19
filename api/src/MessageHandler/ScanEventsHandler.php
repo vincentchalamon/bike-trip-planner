@@ -82,7 +82,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'events' => array_map($this->eventToArray(...), $events),
                 ]);
 

@@ -64,7 +64,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-07-15', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -83,7 +82,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -110,7 +108,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -131,7 +128,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2026-06-21', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -152,7 +148,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => null,
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -183,7 +178,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'locale' => 'fr',
         ]);
 
@@ -198,23 +192,38 @@ final class SunsetAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function stageIndexOffsetsDays(): void
+    public function dayNumberOffsetsTheStageDate(): void
     {
-        // Stage index 5 = 5 days after startDate
-        // Regardless of exact dates, it should not throw and should use the correct date
-        $stage = $this->createStage(lat: 48.85, lon: 2.35);
+        // The offset used to arrive through a 'stageIndex' context key. When a rename
+        // elsewhere dropped that key the `?? 0` default took over and every stage silently
+        // dated from the trip start, which the old assertion (an empty alert list) could
+        // not see. Reading it off the stage removes the wiring, and asserting the sunset
+        // time the alert reports makes the offset observable (#1290 review).
+        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(23.5);
+        $startDate = new \DateTimeImmutable('2024-06-01', new \DateTimeZone('UTC'));
+        $context = ['startDate' => $startDate, 'departureHour' => 8, 'averageSpeed' => 15.0];
 
-        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(8.0);
+        // Paris, day 1 (1 June) against day 100 (8 September): the sun sets over an hour
+        // earlier in September, so the two alerts cannot carry the same time.
+        $june = $this->analyzer->analyze($this->createStage(lat: 48.85, lon: 2.35), $context);
+        $september = $this->analyzer->analyze(
+            $this->createStage(lat: 48.85, lon: 2.35, dayNumber: 100),
+            $context,
+        );
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-06-01', new \DateTimeZone('UTC')),
-            'stageIndex' => 5,
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $this->assertCount(1, $june);
+        $this->assertCount(1, $september);
+        $this->assertGreaterThan(
+            $this->reportedSunset($september[0]->message),
+            $this->reportedSunset($june[0]->message),
+        );
+    }
 
-        // 08:00 arrival in June is well before any twilight — should be empty
-        $this->assertSame([], $alerts);
+    private function reportedSunset(string $message): string
+    {
+        self::assertSame(1, preg_match('/"%sunset%":"(\d{2}:\d{2})"/', $message, $matches), $message);
+
+        return $matches[1];
     }
 
     #[Test]
@@ -230,7 +239,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $alerts = $analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
         ]);
@@ -252,10 +260,11 @@ final class SunsetAlertAnalyzerTest extends TestCase
         float $distance = 80.0,
         float $elevation = 500.0,
         bool $isRestDay = false,
+        int $dayNumber = 1,
     ): Stage {
         return new Stage(
             tripId: 'trip-1',
-            dayNumber: 1,
+            dayNumber: $dayNumber,
             distance: $distance,
             elevation: $elevation,
             startPoint: new Coordinate(44.0, 4.0),

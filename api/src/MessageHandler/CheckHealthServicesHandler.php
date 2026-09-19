@@ -87,7 +87,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
 
             // Check each stage for nearby health services
             $alerts = [];
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $midpoint = $geometry[(int) (\count($geometry) / 2)];
 
@@ -105,7 +105,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                 }
 
                 $alerts[] = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::HEALTH_SERVICE_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,

@@ -771,6 +771,7 @@ describe('StageDataBlocks disabled gating (#1166)', () => {
   function stageData(): StageData {
     const p = { lat: 0, lon: 0, ele: 0 };
     return {
+      id: 'stage-1',
       dayNumber: 1,
       distance: 50,
       elevation: 100,

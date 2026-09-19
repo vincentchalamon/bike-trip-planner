@@ -81,8 +81,11 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // racing the `stage_updated` slice and reverting a user-set distance
         // (e.g. 80km -> 60km snapping back). The initial generation path still emits
         // `STAGES_COMPUTED` (GenerateStagesHandler / GpxUploadService) (issue #774).
+        // The position comes from the list as it stands now, so the client can tell an
+        // appended stage from an event of a superseded generation.
+        $positions = array_flip(array_map(static fn (Stage $s): string => $s->id, $stages));
         foreach ($affected as $stage) {
-            $this->publisher->publishStageUpdated($tripId, $stage);
+            $this->publisher->publishStageUpdated($tripId, $stage, $positions[$stage->id]);
         }
 
         // Dispatch POI/Accommodation/BikeShop scans for affected stages

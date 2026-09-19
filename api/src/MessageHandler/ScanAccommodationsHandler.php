@@ -241,7 +241,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 }
 
                 $payload = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
                 ];

@@ -35,19 +35,19 @@ use Symfony\Component\Uid\Uuid;
     shortName: 'Stage',
     operations: [
         new Get(
-            // Dedicated export sub-route: the canonical '/trips/{tripId}/stages/{index}'
+            // Dedicated export sub-route: the canonical '/trips/{tripId}/stages/{stageId}'
             // path is the StageResponse NotExposed IRI (json-ld). Sharing it made the
             // NotExposedAction controller shadow this gpx/fit download, so the
             // authenticated download 404'd with "This route does not aim to be called"
             // (recette #649). A distinct path avoids the collision.
-            uriTemplate: '/trips/{tripId}/stages/{index}/export{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/export{._format}',
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],
             ],
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             openapi: new Operation(summary: 'Download a stage as GPX or FIT file.'),
             security: "is_granted('TRIP_VIEW', tripId)",
@@ -55,12 +55,12 @@ use Symfony\Component\Uid\Uuid;
         ),
         new Get(
             // On-demand full stage detail (ADR-057), on a distinct sub-route for the
-            // same reason as the export above: the plain '/stages/{index}' path is the
+            // same reason as the export above: the plain '/stages/{stageId}' path is the
             // StageResponse NotExposed IRI and would be shadowed by NotExposedAction.
-            uriTemplate: '/trips/{tripId}/stages/{index}/detail{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/detail{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             openapi: new Operation(summary: 'Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).'),
             security: "is_granted('TRIP_VIEW', tripId)",
@@ -80,10 +80,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageCreateProcessor::class,
         ),
         new Patch(
-            uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Update stage data (start/end points, etc.).'),
@@ -94,10 +94,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageUpdateProcessor::class,
         ),
         new Patch(
-            uriTemplate: '/trips/{tripId}/stages/{index}/move{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/move{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Move a stage to a new position.'),
@@ -108,10 +108,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageMoveProcessor::class,
         ),
         new Delete(
-            uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Delete a stage (merge with adjacent).'),
@@ -120,10 +120,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageDeleteProcessor::class,
         ),
         new Post(
-            uriTemplate: '/trips/{tripId}/stages/{index}/rest-day{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/rest-day{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.'),
@@ -133,10 +133,10 @@ use Symfony\Component\Uid\Uuid;
             processor: RestDayInsertProcessor::class,
         ),
         new Patch(
-            uriTemplate: '/trips/{tripId}/stages/{index}/accommodation{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodation{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.'),
@@ -147,10 +147,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageSelectAccommodationProcessor::class,
         ),
         new Post(
-            uriTemplate: '/trips/{tripId}/stages/{index}/accommodations/manual{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodations/manual{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(
@@ -167,10 +167,10 @@ use Symfony\Component\Uid\Uuid;
             processor: StageAddManualAccommodationProcessor::class,
         ),
         new Post(
-            uriTemplate: '/trips/{tripId}/stages/{index}/poi-waypoint{._format}',
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/poi-waypoint{._format}',
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
-                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
             openapi: new Operation(summary: 'Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.'),

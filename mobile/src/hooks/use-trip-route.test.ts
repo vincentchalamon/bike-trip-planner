@@ -22,8 +22,10 @@ const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
 
 function stageData(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,

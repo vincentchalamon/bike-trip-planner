@@ -171,10 +171,10 @@ describe('fetchStageExport (#1047)', () => {
       response: { ok: true },
     } as never);
 
-    const res = await fetchStageExport('trip-1', 2, 'fit');
+    const res = await fetchStageExport('trip-1', 'stage-2', 'fit');
 
-    expect(mockGet).toHaveBeenCalledWith('/trips/{tripId}/stages/{index}/export', {
-      params: { path: { tripId: 'trip-1', index: '2' } },
+    expect(mockGet).toHaveBeenCalledWith('/trips/{tripId}/stages/{stageId}/export', {
+      params: { path: { tripId: 'trip-1', stageId: 'stage-2' } },
       headers: { Accept: 'application/vnd.ant.fit' },
       parseAs: 'arrayBuffer',
     });
@@ -187,7 +187,7 @@ describe('fetchStageExport (#1047)', () => {
       error: { detail: 'boom' },
       response: { ok: false },
     } as never);
-    await expect(fetchStageExport('trip-1', 2, 'gpx')).rejects.toThrow('Failed to export stage');
+    await expect(fetchStageExport('trip-1', 'stage-2', 'gpx')).rejects.toThrow('Failed to export stage');
   });
 });
 

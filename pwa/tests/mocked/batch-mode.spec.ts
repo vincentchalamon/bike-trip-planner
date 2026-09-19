@@ -29,7 +29,7 @@ import {
 async function queueModification(
   page: import("@playwright/test").Page,
   modification: {
-    stageIndex: number | null;
+    stageId: string | null;
     type: "accommodation" | "distance" | "dates" | "pacing";
     label: string;
   },
@@ -57,7 +57,7 @@ test.describe("ModificationQueue — display", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1 : Camping Les Oliviers",
     });
@@ -74,17 +74,17 @@ test.describe("ModificationQueue — display", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1 : Camping Les Oliviers",
     });
     await queueModification(mockedPage, {
-      stageIndex: 1,
+      stageId: "stage-2",
       type: "distance",
       label: "Distance étape 2 : 55 km → 65 km",
     });
     await queueModification(mockedPage, {
-      stageIndex: null,
+      stageId: null,
       type: "dates",
       label: "Dates : 15 juin → 18 juin",
     });
@@ -101,12 +101,12 @@ test.describe("ModificationQueue — display", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1 : Camping Les Oliviers",
     });
     await queueModification(mockedPage, {
-      stageIndex: 1,
+      stageId: "stage-2",
       type: "distance",
       label: "Distance étape 2 : 55 km → 65 km",
     });
@@ -124,7 +124,7 @@ test.describe("ModificationQueue — display", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1",
     });
@@ -135,20 +135,20 @@ test.describe("ModificationQueue — display", () => {
     await expect(estimate).toContainText("~");
   });
 
-  test("duplicate modification type+stageIndex replaces existing entry", async ({
+  test("duplicate modification type+stageId replaces existing entry", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1 : Gîte du Moulin",
     });
-    // Queue the same type + stageIndex again — should replace, not append
+    // Queue the same type + stageId again — should replace, not append
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1 : Camping Les Oliviers",
     });
@@ -199,7 +199,7 @@ test.describe("ModificationQueue — apply all", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1",
     });
@@ -245,17 +245,17 @@ test.describe("ModificationQueue — apply all", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1",
     });
     await queueModification(mockedPage, {
-      stageIndex: 1,
+      stageId: "stage-2",
       type: "distance",
       label: "Distance étape 2",
     });
     await queueModification(mockedPage, {
-      stageIndex: null,
+      stageId: null,
       type: "dates",
       label: "Dates du voyage",
     });
@@ -291,7 +291,7 @@ test.describe("ModificationQueue — apply all", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1",
     });
@@ -307,8 +307,8 @@ test.describe("ModificationQueue — apply all", () => {
     await expect(mockedPage.getByTestId("stage-card-1")).toBeHidden();
 
     // Inject stage_updated to resolve the recomputation
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // Stage card should be restored
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -334,7 +334,7 @@ test.describe("ModificationQueue — apply all", () => {
 
     // Queue a distance modification on stage 0 — backend will recompute all subsequent stages
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "distance",
       label: "Distance étape 1",
     });
@@ -349,9 +349,9 @@ test.describe("ModificationQueue — apply all", () => {
     await expect(mockedPage.getByTestId("stage-card-3")).toBeHidden();
 
     // Resolve all three stages via SSE
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
     await injectEvent(stageUpdatedEvent(2));
+    await injectEvent(stageUpdatedEvent(3));
 
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
       timeout: 3000,
@@ -367,7 +367,7 @@ test.describe("ModificationQueue — cancel", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "accommodation",
       label: "Hébergement étape 1",
     });
@@ -391,7 +391,7 @@ test.describe("ModificationQueue — cancel", () => {
     await createFullTrip();
 
     await queueModification(mockedPage, {
-      stageIndex: 0,
+      stageId: "stage-1",
       type: "distance",
       label: "Distance étape 1",
     });

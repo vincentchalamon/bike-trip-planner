@@ -14,6 +14,7 @@ export function runDeleteStage(
   onFailure: OnFailure,
 ): Promise<boolean> {
   const snapshot = store.stages;
+  const stageId = snapshot[index]?.id ?? '';
   return run(
     store,
     {
@@ -23,7 +24,7 @@ export function runDeleteStage(
       undoable: true,
       optimistic: () => store.deleteStageOptimistic(index),
       rollback: () => store.setStages(snapshot),
-      call: () => apiDeleteStage(tripId, index),
+      call: () => apiDeleteStage(tripId, stageId),
     },
     onFailure,
   );

@@ -33,8 +33,8 @@ final class AnalyzeWindHandlerTest extends TestCase
      */
     public static function renderedMessageProvider(): iterable
     {
-        yield 'french' => ['fr', 'Vents de face attendus pour 2/2 étapes (≥25 km/h). Prévois du temps supplémentaire.'];
-        yield 'english' => ['en', 'Headwinds expected for 2/2 stages (≥25 km/h). Allow extra time.'];
+        yield 'french' => ['fr', 'Vents de face attendus sur cette étape (≥25 km/h). Prévois du temps supplémentaire.'];
+        yield 'english' => ['en', 'Headwinds expected on this stage (≥25 km/h). Allow extra time.'];
     }
 
     /**
@@ -227,12 +227,12 @@ final class AnalyzeWindHandlerTest extends TestCase
     #[Test]
     public function comfortAlertWhenPoorComfortStagesExist(): void
     {
+        $poor = $this->createStage('trip-1', 1, $this->createWeather(comfortIndex: 30));
+        $fine = $this->createStage('trip-1', 2, $this->createWeather(comfortIndex: 80));
+        $alsoPoor = $this->createStage('trip-1', 3, $this->createWeather(comfortIndex: 20));
+
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
-            $this->createStage('trip-1', 1, $this->createWeather(comfortIndex: 30)),
-            $this->createStage('trip-1', 2, $this->createWeather(comfortIndex: 80)),
-            $this->createStage('trip-1', 3, $this->createWeather(comfortIndex: 20)),
-        ]);
+        $tripStateManager->method('getStages')->willReturn([$poor, $fine, $alsoPoor]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -241,12 +241,16 @@ final class AnalyzeWindHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WIND_ALERTS,
-                $this->callback(static function (array $data): bool {
+                // One alert per affected stage, each naming the stage it describes —
+                // the comfortable one gets none.
+                $this->callback(static function (array $data) use ($poor, $fine, $alsoPoor): bool {
                     $alerts = $data['alerts'];
 
-                    return 1 === \count($alerts)
+                    return 2 === \count($alerts)
+                        && [$poor->id, $alsoPoor->id] === array_column($alerts, 'stageId')
+                        && !\in_array($fine->id, array_column($alerts, 'stageId'), true)
                         && 'warning' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'Poor comfort on 2/3')
+                        && 'comfort_poor_conditions' === $alerts[0]['code']
                         && \is_array($alerts[0]['action'])
                         && 'dismiss' === $alerts[0]['action']['kind'];
                 }),
@@ -259,12 +263,12 @@ final class AnalyzeWindHandlerTest extends TestCase
     #[Test]
     public function windAlertWhenHeadwindRatioExceeded(): void
     {
+        $windy = $this->createStage('trip-1', 1, $this->createWeather(windSpeed: 30.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND));
+        $alsoWindy = $this->createStage('trip-1', 2, $this->createWeather(windSpeed: 28.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND));
+        $calm = $this->createStage('trip-1', 3, $this->createWeather(windSpeed: 5.0, relativeWind: WeatherForecast::RELATIVE_WIND_TAILWIND));
+
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
-            $this->createStage('trip-1', 1, $this->createWeather(windSpeed: 30.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
-            $this->createStage('trip-1', 2, $this->createWeather(windSpeed: 28.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
-            $this->createStage('trip-1', 3, $this->createWeather(windSpeed: 5.0, relativeWind: WeatherForecast::RELATIVE_WIND_TAILWIND)),
-        ]);
+        $tripStateManager->method('getStages')->willReturn([$windy, $alsoWindy, $calm]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -273,12 +277,16 @@ final class AnalyzeWindHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WIND_ALERTS,
-                $this->callback(static function (array $data): bool {
+                // The ratio still decides whether anything is raised at all; what changed
+                // is that the alerts land on the stages carrying the headwind.
+                $this->callback(static function (array $data) use ($windy, $alsoWindy, $calm): bool {
                     $alerts = $data['alerts'];
 
-                    return 1 === \count($alerts)
+                    return 2 === \count($alerts)
+                        && [$windy->id, $alsoWindy->id] === array_column($alerts, 'stageId')
+                        && !\in_array($calm->id, array_column($alerts, 'stageId'), true)
                         && 'warning' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'Headwind on 2/3')
+                        && 'wind_headwind' === $alerts[0]['code']
                         && \is_array($alerts[0]['action'])
                         && 'dismiss' === $alerts[0]['action']['kind'];
                 }),
@@ -304,7 +312,10 @@ final class AnalyzeWindHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WIND_ALERTS,
-                $this->callback(static fn (array $data): bool => 2 === \count($data['alerts'])),
+                // Two stages, each carrying both a headwind and poor comfort: four alerts,
+                // two per stage, where the aggregated form produced one of each.
+                $this->callback(static fn (array $data): bool => 4 === \count($data['alerts'])
+                    && ['wind_headwind', 'wind_headwind', 'comfort_poor_conditions', 'comfort_poor_conditions'] === array_column($data['alerts'], 'code')),
             );
 
         $handler = $this->createHandler($tripStateManager, $publisher);
@@ -369,7 +380,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                     $alerts = $data['alerts'];
 
                     return 1 === \count($alerts)
-                        && str_contains((string) $alerts[0]['message'], 'Poor comfort on 1/2');
+                        && 'comfort_poor_conditions' === $alerts[0]['code'];
                 }),
             );
 

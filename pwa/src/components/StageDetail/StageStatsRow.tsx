@@ -80,6 +80,7 @@ function StatCell({
 interface StageStatsRowProps {
   stage: StageData;
   stageIndex: number;
+  stageId: string;
   isFirst: boolean;
   isLast: boolean;
   isProcessing?: boolean;
@@ -111,6 +112,7 @@ interface StageStatsRowProps {
 export function StageStatsRow({
   stage,
   stageIndex,
+  stageId,
   isFirst,
   isLast,
   isProcessing,
@@ -179,7 +181,7 @@ export function StageStatsRow({
           label) and its tooltip explains the ripple effect on other stages
           (recette #649). */}
       <DiffHighlight
-        stageIndex={stageIndex}
+        stageId={stageId}
         field="distance"
         changeLabel={tStage("diffDistanceChanged")}
       >

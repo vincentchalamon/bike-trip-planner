@@ -71,6 +71,7 @@ function SharedTripLoader({ code }: { code: string }) {
         setEndDate(data.endDate?.split("T")[0] ?? null);
 
         const parsedStages: StageData[] = (data.stages ?? []).map((s) => ({
+          id: (s.stageId as string) ?? "",
           dayNumber: (s.dayNumber as number) ?? 0,
           distance: (s.distance as number) ?? 0,
           elevation: (s.elevation as number) ?? 0,

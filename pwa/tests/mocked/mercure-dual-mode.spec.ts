@@ -84,7 +84,7 @@ test.describe("Mercure dual mode — Mode 2 (inline modification)", () => {
     await expect(mockedPage.getByTestId("stage-card-2")).toBeVisible();
     await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible();
 
-    await injectEvent(stageUpdatedEvent(0));
+    await injectEvent(stageUpdatedEvent(1));
 
     // The other stages must still be there — no wholesale rebuild.
     await expect(mockedPage.getByTestId("stage-card-2")).toBeVisible();

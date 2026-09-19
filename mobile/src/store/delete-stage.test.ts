@@ -13,6 +13,7 @@ const P = { lat: 0, lon: 0, ele: 0 };
 
 function stage(dayNumber: number): StageData {
   return {
+    id: `stage-${dayNumber}`,
     dayNumber,
     distance: 50,
     elevation: 0,
@@ -57,7 +58,7 @@ describe('runDeleteStage optimistic delete (#1015)', () => {
     const stages = useTripStore.getState().stages;
     expect(stages).toHaveLength(2);
     expect(stages.map((s) => s.dayNumber)).toEqual([1, 2]);
-    expect(mockDelete).toHaveBeenCalledWith('t1', 1);
+    expect(mockDelete).toHaveBeenCalledWith('t1', 'stage-2');
     expect(noop).not.toHaveBeenCalled();
   });
 

@@ -17,7 +17,6 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -31,17 +30,18 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param Delete                              $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param Delete                                   $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): void
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
@@ -53,10 +53,8 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         // Read, edit and write as one unit: an enrichment worker writing a column in
         // between would otherwise be reverted by the snapshot read here.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
-            if (!isset($stages[$index])) {
-                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-            }
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($stageId, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
+            $index = $this->stageLocator->indexOf($stages, $stageId);
 
             if (\count($stages) <= 2) {
                 throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');

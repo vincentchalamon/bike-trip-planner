@@ -51,14 +51,8 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
 
         $generation = $this->generationTracker->current($tripId);
 
-        // `stageIndex` is part of the public request body, so it stays a position here and
-        // is resolved to the stage identity the scan will address by.
-        $stageId = null !== $data->stageIndex
-            ? ($this->tripStateManager->getStages($tripId)[$data->stageIndex] ?? null)?->id
-            : null;
-
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
-        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $stageId, $enabledAccommodationTypes, isExpandScan: true, generation: $generation));
+        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageId, $enabledAccommodationTypes, isExpandScan: true, generation: $generation));
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
 

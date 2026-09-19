@@ -60,7 +60,7 @@ import type { MutationFailure } from '../../store/gating';
 // (weather / alerts / events / accommodation / supply / POI). Reads straight from
 // the live store; the stage index is local state so prev/next stays on one
 // mounted screen (no navigation stacking, no SSE re-subscribe).
-export function StageDetailView({ initialIndex }: { initialIndex: number }) {
+export function StageDetailView({ initialStageId }: { initialStageId: string }) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const stages = useTripStore((s) => s.stages);
@@ -72,7 +72,14 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
   const outOfZone = useTripStore((s) => s.outOfZone);
   const isOnline = useOfflineStore((s) => s.isOnline);
   const apiReachable = useOfflineStore((s) => s.apiReachable);
-  const [index, setIndex] = useState(initialIndex);
+  // The screen is addressed by identity (a deep link, a notification), but paging
+  // through the roadbook is positional, so the identity is resolved once on mount
+  // and the cursor stays an index from there. Resolving against the store means a
+  // cached trip answers offline too.
+  const initialIndex = useTripStore((s) =>
+    s.stages.findIndex((stage) => stage.id === initialStageId),
+  );
+  const [index, setIndex] = useState(Math.max(0, initialIndex));
   // Stretch highlighted by an alert `navigate` action ([lon, lat] for the map).
   const [highlightedSegment, setHighlightedSegment] = useState<
     [number, number][] | undefined
@@ -262,7 +269,7 @@ export function StageDetailView({ initialIndex }: { initialIndex: number }) {
           <ExportButton
             tripId={tripId}
             tripTitle={title ?? t('trip.title')}
-            stage={{ dayNumber: day }}
+            stage={{ id: stage.id, dayNumber: day }}
           />
         ) : null}
       </View>

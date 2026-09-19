@@ -30,8 +30,13 @@ import {
  * in one recompute pass via `POST /trips/{id}/recompute`.
  */
 export interface Modification {
-  /** Zero-based stage index. Null for trip-level changes (dates, pacing). */
-  stageIndex: number | null;
+  /**
+   * Identifier of the affected stage. Null for trip-level changes (dates, pacing).
+   *
+   * An identifier rather than a position: the batch is replayed after the edits
+   * it queues, by which point a position would name a different stage (ADR-066).
+   */
+  stageId: string | null;
   /**
    * Modification type — maps directly to the backend TripModification.type:
    * 'accommodation' | 'distance' | 'dates' | 'pacing'
@@ -79,7 +84,7 @@ interface TripState {
    * by a shimmer skeleton. The set is populated when a recomputation is
    * triggered and each index is removed when its `stage_updated` event lands.
    */
-  recomputingStages: Set<number>;
+  recomputingStages: Set<string>;
   /**
    * Monotonic counter bumped every time a recomputation is started
    * ({@link startStageRecomputation}). Acts as a concurrency token: the hook
@@ -95,7 +100,7 @@ interface TripState {
    * client-side timer. Used by `DiffHighlight` to transiently highlight the
    * fields that changed during an inline recomputation.
    */
-  stageDiffs: Map<number, Set<string>>;
+  stageDiffs: Map<string, Set<string>>;
 
   /**
    * Accumulated modifications that have not yet been sent to the backend.
@@ -215,7 +220,11 @@ interface TripState {
    * Same preservation semantics as {@link applyTripReady} but for a single
    * slice. No-op if the index is out of bounds (stale message).
    */
-  applyStageUpdate: (stageIndex: number, stage: StageData) => void;
+  applyStageUpdate: (
+    stageId: string,
+    position: number,
+    stage: StageData,
+  ) => void;
   /**
    * Apply a full {@link ReconciledState} from the shared SSE reducer in one
    * mutation. Used by the Mercure hook for every event except `stage_updated`
@@ -228,28 +237,28 @@ interface TripState {
    * skeleton until the corresponding `stage_updated` events arrive. Also bumps
    * {@link recomputeVersion} so overlapping edits can be disambiguated (#840).
    */
-  startStageRecomputation: (indices: number[]) => void;
+  startStageRecomputation: (stageIds: string[]) => void;
   /**
    * Remove a stage index from the recomputing set (called when `stage_updated`
    * lands for that index). When the set becomes empty the progress bar hides.
    */
-  finishStageRecomputation: (index: number) => void;
+  finishStageRecomputation: (stageId: string) => void;
   /** Clear all recomputing stages — safety net for lost `stage_updated` events. */
   clearRecomputingStages: () => void;
   /**
    * Record which fields changed for a stage after a `stage_updated` event.
    * Replaces any previously recorded diff for the same index.
    */
-  setStageDiff: (stageIndex: number, changedFields: Set<string>) => void;
+  setStageDiff: (stageId: string, changedFields: Set<string>) => void;
   /**
    * Clear the diff highlight for a stage (called by the auto-expiry timer
    * in `use-mercure.ts` after ~3 seconds).
    */
-  clearStageDiff: (stageIndex: number) => void;
+  clearStageDiff: (stageId: string) => void;
 
   /**
    * Enqueue a modification in the pending batch. Duplicate entries (same type
-   * + stageIndex) are replaced rather than appended.
+   * + stageId) are replaced rather than appended.
    */
   queueModification: (modification: Modification) => void;
 
@@ -299,9 +308,9 @@ const initialState = {
   ] as AccommodationType[],
   stages: [],
   computationStatus: {},
-  recomputingStages: new Set<number>(),
+  recomputingStages: new Set<string>(),
   recomputeVersion: 0,
-  stageDiffs: new Map<number, Set<string>>(),
+  stageDiffs: new Map<string, Set<string>>(),
   pendingModifications: [] as Modification[],
   selectedStageIndex: 0,
   focusedAlertSegment: null as [number, number][][] | null,
@@ -387,10 +396,10 @@ export function getUndoableSlice(state: {
 /** Reassign the pruned recomputing set on the draft (see core, #840). */
 function pruneStaleRecomputing(state: {
   stages: StageData[];
-  recomputingStages: Set<number>;
+  recomputingStages: Set<string>;
 }): void {
   state.recomputingStages = corePruneStaleRecomputing(
-    state.stages.length,
+    state.stages,
     state.recomputingStages,
   );
 }
@@ -659,6 +668,9 @@ export const useTripStore = create<TripState>()(
         if (!afterStage) return;
 
         const restDay: StageData = {
+          // Provisional identity: replaced by the server's on the next
+          // stages_computed / trip_ready.
+          id: `pending-${crypto.randomUUID()}`,
           dayNumber: afterIndex + 2,
           distance: 0,
           elevation: 0,
@@ -736,15 +748,17 @@ export const useTripStore = create<TripState>()(
         state.stages = reconcileTripReady(state.stages, stages);
       }),
 
-    applyStageUpdate: (stageIndex, stage) =>
+    applyStageUpdate: (stageId, position, stage) =>
       set((state) => {
         // Mode 2 per-stage reconciliation: preserve client-only fields and
-        // merge cultural-POI alerts on a stable endpoint; a stage_updated at
-        // stages.length appends the split-off trailing day (see
-        // reconcileStageUpdate in core, #840/#649).
+        // merge cultural-POI alerts on a stable endpoint. An identifier we do
+        // not know is either the split-off trailing day (append) or an event
+        // from a superseded generation (ignore); `position` decides (core,
+        // #840/#649).
         const { stages, appendedTrailingStage } = reconcileStageUpdate(
           state.stages,
-          stageIndex,
+          stageId,
+          position,
           stage,
         );
         state.stages = stages;
@@ -777,19 +791,19 @@ export const useTripStore = create<TripState>()(
         state.recomputingStages = next.recomputingStages;
       }),
 
-    startStageRecomputation: (indices) =>
+    startStageRecomputation: (stageIds) =>
       set((state) => {
         // Bump the concurrency token so a rapid follow-up edit supersedes any
         // in-flight safety-net timer keyed to the previous value (#840).
         state.recomputeVersion += 1;
-        for (const index of indices) {
-          state.recomputingStages.add(index);
+        for (const stageId of stageIds) {
+          state.recomputingStages.add(stageId);
         }
       }),
 
-    finishStageRecomputation: (index) =>
+    finishStageRecomputation: (stageId) =>
       set((state) => {
-        state.recomputingStages.delete(index);
+        state.recomputingStages.delete(stageId);
       }),
 
     clearRecomputingStages: () =>
@@ -797,23 +811,22 @@ export const useTripStore = create<TripState>()(
         state.recomputingStages.clear();
       }),
 
-    setStageDiff: (stageIndex, changedFields) =>
+    setStageDiff: (stageId, changedFields) =>
       set((state) => {
-        state.stageDiffs.set(stageIndex, changedFields);
+        state.stageDiffs.set(stageId, changedFields);
       }),
 
-    clearStageDiff: (stageIndex) =>
+    clearStageDiff: (stageId) =>
       set((state) => {
-        state.stageDiffs.delete(stageIndex);
+        state.stageDiffs.delete(stageId);
       }),
 
     queueModification: (modification) =>
       set((state) => {
-        // Replace duplicate: same type + stageIndex (null considered equal to null)
+        // Replace duplicate: same type + stageId (null considered equal to null)
         const existingIndex = state.pendingModifications.findIndex(
           (m) =>
-            m.type === modification.type &&
-            m.stageIndex === modification.stageIndex,
+            m.type === modification.type && m.stageId === modification.stageId,
         );
         if (existingIndex !== -1) {
           state.pendingModifications[existingIndex] = modification;

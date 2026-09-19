@@ -72,7 +72,7 @@ When(
 When(
   "aucun hébergement n'est trouvé dans un rayon de {int} km pour une étape",
   async ({ injectEvent }, radius: number) => {
-    await injectEvent(emptyAccommodationsFoundEvent(0, radius));
+    await injectEvent(emptyAccommodationsFoundEvent("stage-1", radius));
   },
 );
 
@@ -207,7 +207,7 @@ When(
 When(
   "no accommodation is found within {int} km for a stage",
   async ({ injectEvent }, radius: number) => {
-    await injectEvent(emptyAccommodationsFoundEvent(0, radius));
+    await injectEvent(emptyAccommodationsFoundEvent("stage-1", radius));
   },
 );
 

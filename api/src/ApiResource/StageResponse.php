@@ -14,15 +14,23 @@ use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 
 #[NotExposed(
-    uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
+    uriTemplate: '/trips/{tripId}/stages/{stageId}{._format}',
     uriVariables: [
         'tripId' => new Link(toProperty: 'trip', fromClass: Trip::class, identifiers: ['id']),
-        'index' => new Link(fromClass: StageResponse::class, identifiers: ['dayNumber']),
+        'stageId' => new Link(fromClass: StageResponse::class, identifiers: ['id']),
     ],
     shortName: 'Stage',
 )]
 final class StageResponse
 {
+    /**
+     * The stage's stable identity, and what its IRI is built from (ADR-066).
+     *
+     * Previously the IRI was keyed on `dayNumber`, which every structural edit renumbers —
+     * so the same IRI named a different stage after an insertion or a move.
+     */
+    public string $id;
+
     public ?WeatherForecast $weather = null;
 
     /** @var Alert[] */

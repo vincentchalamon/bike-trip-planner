@@ -42,6 +42,7 @@ test.describe("Stage management", () => {
         data: {
           stages: [
             {
+              stageId: "stage-1",
               dayNumber: 1,
               distance: 90,
               elevation: 1200,
@@ -52,6 +53,7 @@ test.describe("Stage management", () => {
               label: null,
             },
             {
+              stageId: "stage-2",
               dayNumber: 2,
               distance: 97.3,
               elevation: 1650,

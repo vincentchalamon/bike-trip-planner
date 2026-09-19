@@ -35,6 +35,7 @@ const mock = <T extends (...args: never[]) => unknown>(fn: T) =>
 
 function stage(dayNumber: number): StageData {
   return {
+    id: `stage-${dayNumber}`,
     dayNumber,
     distance: 50,
     elevation: 100,

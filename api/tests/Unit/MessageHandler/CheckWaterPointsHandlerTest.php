@@ -156,7 +156,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
     public function stageWithWaterPointsEmitsNoAlert(): void
     {
         // Stage of 50km with 3 water points evenly spread → no 30km gap
-        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
+        $stages = [$this->createStage('trip-1', 1, 50.0)];
+        $tripStateManager = $this->tripStateManager($stages);
 
         $waterPointRepository = $this->waterPointRepository([
             ['lat' => 48.1, 'lon' => 2.1],
@@ -196,7 +197,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
     #[Test]
     public function longStageWithoutWaterPointEmitsNudge(): void
     {
-        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
+        $stages = [$this->createStage('trip-1', 1, 50.0)];
+        $tripStateManager = $this->tripStateManager($stages);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -209,12 +211,12 @@ final class CheckWaterPointsHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WATER_POINT_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
 
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 0 === $alerts[0]['stageIndex']
+                        && $stages[0]->id === $alerts[0]['stageId']
                         && 1 === $alerts[0]['dayNumber']
                         && null === $alerts[0]['action'];
                 }),
@@ -227,7 +229,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
     #[Test]
     public function shortStageWithoutWaterPointEmitsNoAlert(): void
     {
-        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 25.0)]);
+        $stages = [$this->createStage('trip-1', 1, 25.0)];
+        $tripStateManager = $this->tripStateManager($stages);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -263,7 +266,9 @@ final class CheckWaterPointsHandlerTest extends TestCase
             isRestDay: true,
         );
 
-        $tripStateManager = $this->tripStateManager([$restDay]);
+        $stages = [$restDay];
+
+        $tripStateManager = $this->tripStateManager($stages);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -311,7 +316,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
     #[Test]
     public function longStageWithoutNearbyWaterPointEmitsNudgeWithNavigateAction(): void
     {
-        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
+        $stages = [$this->createStage('trip-1', 1, 50.0)];
+        $tripStateManager = $this->tripStateManager($stages);
 
         // One water point globally, but the distributor assigns none to the stage → water gap.
         $waterPointRepository = $this->waterPointRepository([['lat' => 48.25, 'lon' => 2.25]]);
@@ -328,12 +334,12 @@ final class CheckWaterPointsHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WATER_POINT_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
 
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 0 === $alerts[0]['stageIndex']
+                        && $stages[0]->id === $alerts[0]['stageId']
                         && 1 === $alerts[0]['dayNumber']
                         && null !== $alerts[0]['action']
                         && AlertActionKind::NAVIGATE->value === $alerts[0]['action']['kind']
@@ -349,7 +355,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
     #[Test]
     public function waterPointsIncludeDistanceFromStart(): void
     {
-        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1)]);
+        $stages = [$this->createStage('trip-1', 1)];
+        $tripStateManager = $this->tripStateManager($stages);
 
         $waterPointRepository = $this->waterPointRepository([['lat' => 48.3, 'lon' => 2.3]]);
 

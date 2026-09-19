@@ -98,6 +98,7 @@ function TripLoader({ tripId }: { tripId: string }) {
       // Convert stages to Zustand StageData shape
       const stages: StageData[] = (data.stages ?? []).map((s) => {
         return {
+          id: s.stageId ?? "",
           dayNumber: s.dayNumber ?? 0,
           distance: s.distance ?? 0,
           elevation: s.elevation ?? 0,

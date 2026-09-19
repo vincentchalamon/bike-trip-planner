@@ -9,8 +9,10 @@ const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
 
 function apiStage(overrides: Record<string, unknown> = {}) {
+  const dayNumber = (overrides.dayNumber as number | undefined) ?? 1;
   return {
-    dayNumber: 1,
+    stageId: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,
@@ -31,8 +33,10 @@ function apiStage(overrides: Record<string, unknown> = {}) {
 }
 
 function stageData(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,
@@ -88,7 +92,7 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
 
   it('applyStageUpdate reconciles via core (preserves prev label on a stable endpoint)', () => {
     useTripStore.setState({ stages: [stageData({ endLabel: 'Lyon' })], loading: false });
-    useTripStore.getState().applyStageUpdate(0, stageData({ endLabel: null }));
+    useTripStore.getState().applyStageUpdate('stage-1', 0, stageData({ endLabel: null }));
     expect(useTripStore.getState().stages[0]!.endLabel).toBe('Lyon');
   });
 

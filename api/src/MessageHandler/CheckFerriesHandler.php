@@ -63,7 +63,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
         $this->executeWithTracking($tripId, ComputationName::FERRIES, function () use ($tripId, $stages, $locale): void {
             $alerts = [];
 
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
@@ -84,7 +84,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
                     $seenNames[] = $key;
 
                     $alerts[] = [
-                        'stageIndex' => $i,
+                        'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::FERRY_CROSSING->value,
                         'type' => AlertType::WARNING->value,

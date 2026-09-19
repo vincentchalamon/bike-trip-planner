@@ -25,6 +25,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageUpdateTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -87,7 +88,7 @@ final class StageUpdateTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Grenoble → Briançon',
@@ -114,7 +115,7 @@ final class StageUpdateTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
@@ -142,7 +143,7 @@ final class StageUpdateTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 1), [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'endPoint' => ['lat' => 44.0, 'lon' => 6.0, 'ele' => 1200.0],
@@ -175,7 +176,7 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $distanceBefore = $stagesBefore[0]->distance;
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'endPoint' => ['lat' => 48.0, 'lon' => 8.0],
@@ -199,7 +200,7 @@ final class StageUpdateTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0), [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Updated label',
@@ -228,7 +229,9 @@ final class StageUpdateTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99', [
+        $unknownStageId = Uuid::v7()->toRfc4122();
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/'.$unknownStageId, [
             'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Ghost stage',
@@ -239,7 +242,7 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
         $this->assertJsonContains([
             'status' => 404,
-            'detail' => 'Stage at index 99 not found.',
+            'detail' => 'Stage "'.$unknownStageId.'" not found.',
         ]);
     }
 }

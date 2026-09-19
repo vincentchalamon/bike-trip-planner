@@ -17,7 +17,6 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -31,18 +30,19 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param StageRequest                        $data
-     * @param Patch                               $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param StageRequest                             $data
+     * @param Patch                                    $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
@@ -58,10 +58,8 @@ final readonly class StageMoveProcessor implements ProcessorInterface
 
         // Read, edit and write as one unit: an enrichment worker writing a column in
         // between would otherwise be reverted by the snapshot read here.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $toIndex, &$stage): array {
-            if (!isset($stages[$index])) {
-                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-            }
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($stageId, $toIndex, &$stage): array {
+            $index = $this->stageLocator->indexOf($stages, $stageId);
 
             if ($toIndex < 0 || $toIndex >= \count($stages)) {
                 throw new UnprocessableEntityHttpException(\sprintf('toIndex %d is out of bounds (0-%d).', $toIndex, \count($stages) - 1));

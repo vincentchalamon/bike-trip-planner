@@ -468,14 +468,14 @@ Then(
 Given(
   "des données de ravitaillement sont disponibles pour l'étape {int}",
   async ({ injectEvent }, stage: number) => {
-    await injectEvent(supplyTimelineEvent(stage - 1));
+    await injectEvent(supplyTimelineEvent(`stage-${stage}`));
   },
 );
 
 Given(
   "supply data is available for stage {int}",
   async ({ injectEvent }, stage: number) => {
-    await injectEvent(supplyTimelineEvent(stage - 1));
+    await injectEvent(supplyTimelineEvent(`stage-${stage}`));
   },
 );
 
@@ -483,7 +483,7 @@ Given(
   "des données de ravitaillement sont disponibles pour l'étape {int} sur mobile",
   async ({ mockedPage, injectEvent }, stage: number) => {
     await mockedPage.setViewportSize({ width: 390, height: 844 });
-    await injectEvent(supplyTimelineEvent(stage - 1));
+    await injectEvent(supplyTimelineEvent(`stage-${stage}`));
   },
 );
 
@@ -491,7 +491,7 @@ Given(
   "supply data is available for stage {int} on mobile",
   async ({ mockedPage, injectEvent }, stage: number) => {
     await mockedPage.setViewportSize({ width: 390, height: 844 });
-    await injectEvent(supplyTimelineEvent(stage - 1));
+    await injectEvent(supplyTimelineEvent(`stage-${stage}`));
   },
 );
 

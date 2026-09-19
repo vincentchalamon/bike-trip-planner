@@ -11,12 +11,14 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageSelectAccommodationProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageSelectAccommodationProcessorTest extends TestCase
@@ -36,10 +38,11 @@ final class StageSelectAccommodationProcessorTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             new TripLocker(),
+            new StageLocator(),
         );
 
         try {
-            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'index' => 0]);
+            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

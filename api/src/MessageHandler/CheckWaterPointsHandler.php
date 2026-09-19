@@ -88,7 +88,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 $stageWaterPoints = $waterByStage[$i] ?? [];
                 $waterPointsWithDistance = $this->computeDistancesFromStart($stage, $stageWaterPoints);
                 $waterPointsByStage[] = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'waterPoints' => $waterPointsWithDistance,
                 ];
 
@@ -97,7 +97,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 if (!$stage->isRestDay && $this->hasWaterGap($stage, $waterPointsWithDistance)) {
                     $nearestWp = $this->findNearestWaterPoint($stage, $allWaterPoints);
                     $alerts[] = [
-                        'stageIndex' => $i,
+                        'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::WATER_POINT_GAP->value,
                         'type' => AlertType::NUDGE->value,

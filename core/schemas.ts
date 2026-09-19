@@ -213,6 +213,12 @@ export const SurfaceSegmentSchema = z.object({
 });
 
 export const StageDataSchema = z.object({
+  /**
+   * Stable identity of the stage (ADR-066): what every API call and every SSE
+   * event addresses it by. Stable across insertions, moves and deletions, but not
+   * across a pacing regeneration, which produces different stages.
+   */
+  id: z.string(),
   dayNumber: z.number(),
   distance: z.number(),
   elevation: z.number(),

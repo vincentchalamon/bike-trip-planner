@@ -115,7 +115,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::BORDER_CROSSING_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
 
                     return 1 === \count($alerts)
@@ -123,7 +123,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                         && str_contains((string) $alerts[0]['message'], 'Belgium')
                         && 'navigate' === $alerts[0]['action']['kind']
                         && 'alert.border_crossing.action' === $alerts[0]['action']['label']
-                        && 0 === $alerts[0]['stageIndex'];
+                        && $stages[0]->id === $alerts[0]['stageId'];
                 }),
             );
 

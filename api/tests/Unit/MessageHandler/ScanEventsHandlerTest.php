@@ -165,12 +165,12 @@ final class ScanEventsHandlerTest extends TestCase
 
         // Only the two stages with active events publish; the empty third does not.
         self::assertCount(2, $events);
-        self::assertSame(0, $events[0]['payload']['stageIndex']);
+        self::assertSame($stages[0]->id, $events[0]['payload']['stageId']);
         self::assertSame('Festival de Jazz', $events[0]['payload']['events'][0]['name']);
         self::assertSame('festival', $events[0]['payload']['events'][0]['type']);
         self::assertSame('https://festival.example.com', $events[0]['payload']['events'][0]['url']);
         self::assertSame('datatourisme', $events[0]['payload']['events'][0]['source']);
-        self::assertSame(1, $events[1]['payload']['stageIndex']);
+        self::assertSame($stages[1]->id, $events[1]['payload']['stageId']);
         self::assertSame('Expo Renoir', $events[1]['payload']['events'][0]['name']);
     }
 }

@@ -31,6 +31,7 @@ test.describe("Rest day management", () => {
         data: {
           stages: [
             {
+              stageId: "stage-1",
               dayNumber: 1,
               distance: 72.5,
               elevation: 1180,
@@ -42,6 +43,7 @@ test.describe("Rest day management", () => {
               isRestDay: false,
             },
             {
+              stageId: "stage-2",
               dayNumber: 2,
               distance: 0,
               elevation: 0,
@@ -53,6 +55,7 @@ test.describe("Rest day management", () => {
               isRestDay: true,
             },
             {
+              stageId: "stage-3",
               dayNumber: 3,
               distance: 63.2,
               elevation: 870,
@@ -64,6 +67,7 @@ test.describe("Rest day management", () => {
               isRestDay: false,
             },
             {
+              stageId: "stage-4",
               dayNumber: 4,
               distance: 51.6,
               elevation: 800,
@@ -101,6 +105,7 @@ test.describe("Rest day management", () => {
         data: {
           stages: [
             {
+              stageId: "stage-1",
               dayNumber: 1,
               distance: 72.5,
               elevation: 1180,
@@ -112,6 +117,7 @@ test.describe("Rest day management", () => {
               isRestDay: false,
             },
             {
+              stageId: "stage-2",
               dayNumber: 2,
               distance: 0,
               elevation: 0,
@@ -123,6 +129,7 @@ test.describe("Rest day management", () => {
               isRestDay: true,
             },
             {
+              stageId: "stage-3",
               dayNumber: 3,
               distance: 51.6,
               elevation: 800,
@@ -164,6 +171,7 @@ test.describe("Rest day management", () => {
         data: {
           stages: [
             {
+              stageId: "stage-1",
               dayNumber: 1,
               distance: 72.5,
               elevation: 1180,
@@ -175,6 +183,7 @@ test.describe("Rest day management", () => {
               isRestDay: false,
             },
             {
+              stageId: "stage-2",
               dayNumber: 2,
               distance: 0,
               elevation: 0,
@@ -186,6 +195,7 @@ test.describe("Rest day management", () => {
               isRestDay: true,
             },
             {
+              stageId: "stage-3",
               dayNumber: 3,
               distance: 51.6,
               elevation: 800,

@@ -6,6 +6,7 @@ const TRIP_ID = "01936f6e-0000-7000-8000-000000000101";
 
 const MOCK_STAGES = [
   {
+    stageId: "stage-1",
     dayNumber: 1,
     distance: 72.5,
     elevation: 1180,
@@ -41,6 +42,7 @@ const MOCK_STAGES = [
     selectedAccommodation: null,
   },
   {
+    stageId: "stage-2",
     dayNumber: 2,
     distance: 63.2,
     elevation: 870,
@@ -65,6 +67,7 @@ const MOCK_STAGES = [
     selectedAccommodation: null,
   },
   {
+    stageId: "stage-3",
     dayNumber: 3,
     distance: 51.6,
     elevation: 800,

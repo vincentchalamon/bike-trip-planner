@@ -85,7 +85,7 @@ export function ModificationQueue({
         <ul className="space-y-1" data-testid="modification-queue-list">
           {pendingModifications.map((mod, i) => (
             <li
-              key={`${mod.type}-${mod.stageIndex ?? "trip"}-${i}`}
+              key={`${mod.type}-${mod.stageId ?? "trip"}-${i}`}
               className="text-sm text-muted-foreground flex items-start gap-1.5"
             >
               <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-brand flex-shrink-0" />

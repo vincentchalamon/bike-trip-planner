@@ -26,8 +26,10 @@ function render(element: ReactElement): any {
 
 function stage(overrides: Partial<StageData> = {}): StageData {
   const point = { lat: 0, lon: 0, ele: 0 };
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 300,
     elevationLoss: 200,

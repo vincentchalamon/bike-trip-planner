@@ -57,7 +57,7 @@ test.describe("GPX download", () => {
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
+    expect(gpxRequests[0]).toContain("/stages/stage-1/export.gpx");
   });
 
   test("global GPX download button is visible after stages computed", async ({

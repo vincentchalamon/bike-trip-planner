@@ -60,5 +60,5 @@ interface TripUpdatePublisherInterface
      * Only the updated stage is carried over the wire so the frontend can
      * perform a targeted mutation on its store without rebuilding the whole trip.
      */
-    public function publishStageUpdated(string $tripId, Stage $stage): void;
+    public function publishStageUpdated(string $tripId, Stage $stage, int $position): void;
 }

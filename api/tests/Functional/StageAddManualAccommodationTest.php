@@ -27,6 +27,7 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class StageAddManualAccommodationTest extends ApiTestCase
 {
+    use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
 
@@ -102,7 +103,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
         $this->seedTripWithStages(self::TRIP_ID);
         $this->mockNominatimClient([['lat' => '45.4801', 'lon' => '5.4802']]);
 
-        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/accommodations/manual', [
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'name' => 'HomeExchange Grenoble',
@@ -153,7 +154,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
         $this->seedTripWithStages(self::TRIP_ID);
         $this->mockNominatimClient([['lat' => '45.10', 'lon' => '5.10']]);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/accommodations/manual', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'name' => 'Chez lhabitant',
@@ -181,7 +182,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
         // Nominatim returns no match → geocoding fails.
         $this->mockNominatimClient([]);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/accommodations/manual', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'name' => 'Nowhere',
@@ -206,7 +207,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/0/accommodations/manual', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => ['name' => '', 'address' => ''],
         ]);
@@ -219,7 +220,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/99/accommodations/manual', [
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.Uuid::v7()->toRfc4122().'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => ['name' => 'Nowhere', 'address' => 'somewhere'],
         ]);

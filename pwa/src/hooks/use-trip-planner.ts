@@ -326,15 +326,18 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     const currentStages = useTripStore.getState().stages;
-    const isRestDay = currentStages[index]?.isRestDay ?? false;
+    const target = currentStages[index];
+    if (!target) return;
+    const stageId = target.id;
+    const isRestDay = target.isRestDay ?? false;
     const snapshot = [...currentStages];
     actions.deleteStage(index);
 
     try {
       const { error, response } = await apiClient.DELETE(
-        "/trips/{tripId}/stages/{index}",
+        "/trips/{tripId}/stages/{stageId}",
         {
-          params: { path: { tripId, index: String(index) } },
+          params: { path: { tripId, stageId } },
         },
       );
       if (error) {
@@ -357,14 +360,16 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     const snapshot = [...useTripStore.getState().stages];
+    const stageId = useTripStore.getState().stages[afterIndex]?.id;
+    if (!stageId) return;
     actions.insertRestDay(afterIndex);
 
     try {
       const { response } = await apiClient.POST(
-        "/trips/{tripId}/stages/{index}/rest-day",
+        "/trips/{tripId}/stages/{stageId}/rest-day",
         {
           params: {
-            path: { tripId, index: String(afterIndex) },
+            path: { tripId, stageId },
           },
           parseAs: "json",
         },
@@ -398,6 +403,9 @@ export function useTripPlanner() {
     }
 
     const placeholder: StageData = {
+      // Provisional identity: replaced by the server's when stages_computed or
+      // trip_ready lands. Distinct so the reconciler treats it as its own stage.
+      id: `pending-${crypto.randomUUID()}`,
       dayNumber: afterIndex + 2,
       distance: 0,
       elevation: 0,
@@ -499,22 +507,21 @@ export function useTripPlanner() {
     // identique un moment"). The backend re-splits from `index` onward
     // (StageUpdateProcessor → RecalculateStages over range(index, count-1)), so
     // the shimmer covers the same range (#840).
-    const stageCount = useTripStore.getState().stages.length;
+    const currentStages = useTripStore.getState().stages;
+    const stageId = currentStages[index]?.id;
+    if (!stageId) return;
     setProcessing(true);
     setAccommodationScanning(true);
     actions.startStageRecomputation(
-      Array.from(
-        { length: Math.max(1, stageCount - index) },
-        (_, k) => index + k,
-      ),
+      currentStages.slice(index).map((stage) => stage.id),
     );
     armRecomputeSafetyNet();
 
     try {
       const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{index}",
+        "/trips/{tripId}/stages/{stageId}",
         {
-          params: { path: { tripId, index: String(index) } },
+          params: { path: { tripId, stageId } },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: { distance },
         },
@@ -583,11 +590,9 @@ export function useTripPlanner() {
         // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
         // the whole trip view (toolbar, config, undo/redo) and defeats the
         // in-place merge that preserves accommodations/labels (use-mercure).
-        const stageCount = useTripStore.getState().stages.length;
-        if (stageCount > 0) {
-          actions.startStageRecomputation(
-            Array.from({ length: stageCount }, (_, i) => i),
-          );
+        const allStages = useTripStore.getState().stages;
+        if (allStages.length > 0) {
+          actions.startStageRecomputation(allStages.map((stage) => stage.id));
         }
       }
     } catch {
@@ -732,7 +737,8 @@ export function useTripPlanner() {
     if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return false;
 
     try {
-      const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
+      const stageId = useTripStore.getState().stages[stageIndex]?.id;
+      const ok = await scanAccommodations(tripId, nextRadius, stageId);
       if (ok) {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -763,12 +769,10 @@ export function useTripPlanner() {
     }
 
     try {
-      const ok = await addPoiWaypointToRoute(
-        tripId,
-        stageIndex,
-        poiLat,
-        poiLon,
-      );
+      const stageId = useTripStore.getState().stages[stageIndex]?.id;
+      if (!stageId) return;
+
+      const ok = await addPoiWaypointToRoute(tripId, stageId, poiLat, poiLon);
       if (ok) {
         setProcessing(true);
       } else {
@@ -900,9 +904,12 @@ export function useTripPlanner() {
     }
 
     try {
+      const stageId = useTripStore.getState().stages[stageIndex]?.id;
+      if (!stageId) return false;
+
       const { ok, status } = await addManualAccommodation(
         tripId,
-        stageIndex,
+        stageId,
         data,
       );
       if (!ok) {
@@ -914,11 +921,11 @@ export function useTripPlanner() {
         return false;
       }
       setProcessing(true);
-      const affectedIndices = [stageIndex];
-      if (stageIndex + 1 < useTripStore.getState().stages.length) {
-        affectedIndices.push(stageIndex + 1);
-      }
-      actions.startStageRecomputation(affectedIndices);
+      const current = useTripStore.getState().stages;
+      const affected = [current[stageIndex], current[stageIndex + 1]]
+        .filter((stage) => stage !== undefined)
+        .map((stage) => stage.id);
+      actions.startStageRecomputation(affected);
       trackEvent("accommodation_selected", { type: "other" });
       return true;
     } catch {
@@ -940,14 +947,17 @@ export function useTripPlanner() {
     const nextStageIndex =
       stageIndex + 1 < currentStages.length ? stageIndex + 1 : null;
 
+    const stageId = useTripStore.getState().stages[stageIndex]?.id;
+    if (!stageId) return false;
+
     // Optimistic update
     actions.selectAccommodation(stageIndex, accIndex, nextStageIndex);
 
     try {
       const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{index}/accommodation",
+        "/trips/{tripId}/stages/{stageId}/accommodation",
         {
-          params: { path: { tripId, index: String(stageIndex) } },
+          params: { path: { tripId, stageId } },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: {
             selectedAccommodationLat: acc.lat,
@@ -964,7 +974,7 @@ export function useTripPlanner() {
           const ok = await scanAccommodations(
             tripId,
             DEFAULT_ACCOMMODATION_RADIUS_KM,
-            stageIndex,
+            stageId,
           );
           if (ok) {
             setAccommodationScanning(true);
@@ -981,9 +991,14 @@ export function useTripPlanner() {
         setProcessing(true);
         // Mark affected stages as recomputing: the selected stage and the
         // next one (its startPoint may have shifted to the accommodation).
-        const affectedIndices = [stageIndex];
-        if (nextStageIndex !== null) affectedIndices.push(nextStageIndex);
-        actions.startStageRecomputation(affectedIndices);
+        const current = useTripStore.getState().stages;
+        const affected = [
+          current[stageIndex],
+          nextStageIndex !== null ? current[nextStageIndex] : undefined,
+        ]
+          .filter((stage) => stage !== undefined)
+          .map((stage) => stage.id);
+        actions.startStageRecomputation(affected);
         trackEvent("accommodation_selected", { type: acc.type });
       }
     } catch {
@@ -996,14 +1011,17 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     const currentStages = useTripStore.getState().stages;
+    const stageId = currentStages[stageIndex]?.id;
+    if (!stageId) return;
+
     // Optimistic update
     actions.deselectAccommodation(stageIndex);
 
     try {
       const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{index}/accommodation",
+        "/trips/{tripId}/stages/{stageId}/accommodation",
         {
-          params: { path: { tripId, index: String(stageIndex) } },
+          params: { path: { tripId, stageId } },
           headers: { "Content-Type": "application/merge-patch+json" },
           body: {
             selectedAccommodationLat: null,
@@ -1020,12 +1038,11 @@ export function useTripPlanner() {
         setAccommodationScanning(true);
         // Mark affected stages as recomputing: the deselected stage and the
         // next one (its startPoint reverts to original after deselection).
-        const affectedIndices: number[] = [stageIndex];
-        const nextIdx = stageIndex + 1;
-        if (nextIdx < useTripStore.getState().stages.length) {
-          affectedIndices.push(nextIdx);
-        }
-        actions.startStageRecomputation(affectedIndices);
+        const current = useTripStore.getState().stages;
+        const affected = [current[stageIndex], current[stageIndex + 1]]
+          .filter((stage) => stage !== undefined)
+          .map((stage) => stage.id);
+        actions.startStageRecomputation(affected);
       }
     } catch {
       toast.error(t("errors.failedDeselectAccommodation"));
@@ -1043,32 +1060,35 @@ export function useTripPlanner() {
         actions.clearPendingModifications();
         setProcessing(true);
         setAccommodationScanning(true);
-        // Mark all stages affected by pending modifications as recomputing
-        const affectedIndices = new Set<number>();
+        // Mark all stages affected by pending modifications as recomputing.
+        // The dependency rules are positional ("and every subsequent one"), so the
+        // identifier is resolved against the current order and the markers are
+        // stored back as identifiers.
+        const affected = new Set<string>();
         for (const mod of pendingModifications) {
-          if (mod.stageIndex !== null) {
+          if (mod.stageId !== null) {
+            const at = stages.findIndex((s) => s.id === mod.stageId);
+            if (at === -1) continue;
             if (mod.type === "distance") {
               // Distance recomputes the modified stage and every subsequent one
               // (mirrors ComputationDependencyResolver.resolve on the backend).
-              for (let i = mod.stageIndex; i < stages.length; i++) {
-                affectedIndices.add(i);
+              for (let i = at; i < stages.length; i++) {
+                affected.add(stages[i]!.id);
               }
             } else {
-              affectedIndices.add(mod.stageIndex);
-              const nextIdx = mod.stageIndex + 1;
-              if (nextIdx < stages.length) {
-                affectedIndices.add(nextIdx);
-              }
+              affected.add(stages[at]!.id);
+              const next = stages[at + 1];
+              if (next) affected.add(next.id);
             }
           } else {
             // Trip-level modifications (dates, pacing) affect all stages
-            for (let i = 0; i < stages.length; i++) {
-              affectedIndices.add(i);
+            for (const stage of stages) {
+              affected.add(stage.id);
             }
           }
         }
-        if (affectedIndices.size > 0) {
-          actions.startStageRecomputation(Array.from(affectedIndices));
+        if (affected.size > 0) {
+          actions.startStageRecomputation(Array.from(affected));
         }
       } else {
         toast.error(t("modificationQueue.failedApply"));

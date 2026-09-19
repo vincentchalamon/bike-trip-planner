@@ -6,11 +6,11 @@ import {
 } from "../fixtures/mock-data";
 import type { MercureEvent } from "@btp/core/mercure";
 
-function eventsFoundEvent(stageIndex: number): MercureEvent {
+function eventsFoundEvent(stageId: string): MercureEvent {
   return {
     type: "events_found",
     data: {
-      stageIndex,
+      stageId,
       events: [
         {
           name: "Festival de Jazz de Vals",
@@ -45,11 +45,11 @@ function eventsFoundEvent(stageIndex: number): MercureEvent {
   };
 }
 
-function manyEventsFoundEvent(stageIndex: number, count: number): MercureEvent {
+function manyEventsFoundEvent(stageId: string, count: number): MercureEvent {
   return {
     type: "events_found",
     data: {
-      stageIndex,
+      stageId,
       events: Array.from({ length: count }, (_, i) => ({
         name: `Événement ${i + 1}`,
         type: "schema:Festival",
@@ -78,7 +78,7 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      eventsFoundEvent(0),
+      eventsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -99,7 +99,7 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      eventsFoundEvent(0),
+      eventsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -123,7 +123,7 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      eventsFoundEvent(0),
+      eventsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -145,7 +145,7 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      eventsFoundEvent(0),
+      eventsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -173,7 +173,7 @@ test.describe("Events panel", () => {
       stagesComputedEvent(),
       {
         type: "events_found",
-        data: { stageIndex: 0, events: [] },
+        data: { stageId: "stage-1", events: [] },
       },
       tripCompleteEvent(),
     ]);
@@ -191,7 +191,7 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      manyEventsFoundEvent(0, 7),
+      manyEventsFoundEvent("stage-1", 7),
       tripCompleteEvent(),
     ]);
 
@@ -222,8 +222,8 @@ test.describe("Events panel", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      eventsFoundEvent(0),
-      eventsFoundEvent(1),
+      eventsFoundEvent("stage-1"),
+      eventsFoundEvent("stage-2"),
       tripCompleteEvent(),
     ]);
 

@@ -51,7 +51,7 @@ final class TripShareStageProviderTest extends TestCase
         $stage = new Stage('trip-id', 1, 50.0, 100.0, $coord, $coord);
         $this->stageProvider->expects($this->once())->method('provide')->willReturn($stage);
 
-        $result = $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP', 'index' => 0]);
+        $result = $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP', 'stageId' => $stage->id]);
 
         self::assertSame($stage, $result);
     }
@@ -62,7 +62,7 @@ final class TripShareStageProviderTest extends TestCase
         $this->repository->expects($this->once())->method('findByShortCode')->willReturn(null);
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['shortCode' => 'invalid1', 'index' => 0]);
+        $this->provider->provide(new Get(), ['shortCode' => 'invalid1', 'stageId' => Uuid::v7()->toRfc4122()]);
     }
 
     #[Test]
@@ -71,7 +71,7 @@ final class TripShareStageProviderTest extends TestCase
         $this->repository->expects($this->never())->method('findByShortCode');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['index' => 0]);
+        $this->provider->provide(new Get(), ['stageId' => Uuid::v7()->toRfc4122()]);
     }
 
     #[Test]
@@ -82,6 +82,6 @@ final class TripShareStageProviderTest extends TestCase
         $this->stageProvider->expects($this->never())->method('provide');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP', 'index' => 0]);
+        $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP', 'stageId' => Uuid::v7()->toRfc4122()]);
     }
 }

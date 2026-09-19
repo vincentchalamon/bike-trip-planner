@@ -112,6 +112,7 @@ test.describe("Travel time estimation", () => {
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 72.5,
             elevation: 1180,
@@ -122,6 +123,7 @@ test.describe("Travel time estimation", () => {
             label: null,
           },
           {
+            stageId: "stage-2",
             dayNumber: 2,
             distance: 0,
             elevation: 0,
@@ -133,6 +135,7 @@ test.describe("Travel time estimation", () => {
             isRestDay: true,
           },
           {
+            stageId: "stage-3",
             dayNumber: 3,
             distance: 63.2,
             elevation: 870,

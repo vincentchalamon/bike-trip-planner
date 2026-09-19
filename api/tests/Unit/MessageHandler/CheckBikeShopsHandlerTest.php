@@ -228,13 +228,13 @@ final class CheckBikeShopsHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::BIKE_SHOP_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
                     \assert(\is_array($alerts));
 
                     // 6 stages, one of which is a rest day: only the 5 ridden days alert.
                     return 5 === \count($alerts)
-                        && !\in_array(2, array_column($alerts, 'stageIndex'), true);
+                        && !\in_array($stages[2]->id, array_column($alerts, 'stageId'), true);
                 }),
             );
 

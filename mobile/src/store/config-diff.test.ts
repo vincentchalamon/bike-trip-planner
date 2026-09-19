@@ -6,8 +6,10 @@ import { diffStageIndices } from './config-diff';
 const P = { lat: 0, lon: 0, ele: 0 };
 
 function stage(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 100,
     elevationLoss: 0,

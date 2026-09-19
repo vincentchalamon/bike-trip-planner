@@ -17,7 +17,6 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -31,17 +30,19 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param Post                                $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param Post                                     $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
+        $index = 0;
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
@@ -51,10 +52,8 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         // Read, edit and write as one unit: an enrichment worker writing a column in
         // between would otherwise be reverted by the snapshot read here.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $index, &$restDay): array {
-            if (!isset($stages[$index])) {
-                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-            }
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $stageId, &$index, &$restDay): array {
+            $index = $this->stageLocator->indexOf($stages, $stageId);
 
             $afterStage = $stages[$index];
 

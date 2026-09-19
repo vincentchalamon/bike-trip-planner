@@ -15,16 +15,17 @@ use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StagePoiWaypointProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StagePoiWaypointProcessorTest extends TestCase
@@ -57,6 +58,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
             $this->stageResponseMapper,
             $generationTracker,
             new TripLocker(),
+            new StageLocator(),
         );
     }
 
@@ -88,7 +90,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         });
 
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
-        $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+        $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage->id]);
 
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateRouteSegment));
         self::assertCount(1, $recalculate);
@@ -100,22 +102,13 @@ final class StagePoiWaypointProcessorTest extends TestCase
     }
 
     #[Test]
-    public function nonNumericIndexThrowsBadRequestHttpException(): void
-    {
-        $this->expectException(BadRequestHttpException::class);
-
-        $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
-        $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'index' => 'abc']);
-    }
-
-    #[Test]
-    public function unknownStageIndexThrowsNotFoundHttpException(): void
+    public function unknownStageIdThrowsNotFoundHttpException(): void
     {
         $this->tripStateManager->method('getStages')->willReturn([]);
         $this->expectException(NotFoundHttpException::class);
 
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
-        $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'index' => 99]);
+        $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
     }
 
     #[Test]
@@ -140,10 +133,11 @@ final class StagePoiWaypointProcessorTest extends TestCase
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             $generationTracker,
             new TripLocker(),
+            new StageLocator(),
         );
 
         try {
-            $processor->process(new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3), new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+            $processor->process(new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3), new Post(), ['tripId' => 'trip-1', 'stageId' => $stage->id]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

@@ -20,7 +20,6 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -44,19 +43,21 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripLocker $tripLocker,
+        private StageLocator $stageLocator,
         private GeocoderInterface $geocoder,
     ) {
     }
 
     /**
-     * @param StageManualAccommodationRequest     $data
-     * @param Post                                $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param StageManualAccommodationRequest          $data
+     * @param Post                                     $operation
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
+        $index = 0;
 
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
@@ -91,10 +92,8 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
 
         // Read, edit and write as one unit: an accommodation scan running concurrently
         // writes the very column this edits, and the snapshot read here would revert it.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($index, $accommodation, &$stage): array {
-            if (!isset($stages[$index])) {
-                throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-            }
+        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($stageId, $accommodation, &$index, &$stage): array {
+            $index = $this->stageLocator->indexOf($stages, $stageId);
 
             $stage = $stages[$index];
 
@@ -112,7 +111,7 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
                 $stages[$index + 1] = $nextStage;
             }
 
-            return $stages;
+            return array_values($stages);
         });
 
         // The trip was asserted to exist above, so the write happened.

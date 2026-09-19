@@ -86,7 +86,8 @@ export async function runTripLive(
         store.setComputing(false);
       } else if (event.type === 'stage_updated') {
         store.applyStageUpdate(
-          event.data.stageIndex,
+          event.data.stageId,
+          event.data.position,
           enrichedPayloadToStageData(event.data.stage),
         );
       } else if (event.type === 'computation_step_completed') {

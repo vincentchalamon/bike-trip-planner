@@ -85,7 +85,7 @@ test.describe("Cultural POI suggestions", () => {
     await addButton.click();
 
     // Inject the route_segment_recalculated event (simulating async backend response)
-    await injectEvent(routeSegmentRecalculatedEvent(0));
+    await injectEvent(routeSegmentRecalculatedEvent("stage-1"));
 
     // Stage 1 distance should be updated (75.2 km from mock event)
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText("75.2");

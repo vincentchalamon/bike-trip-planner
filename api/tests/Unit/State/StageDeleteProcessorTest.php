@@ -15,6 +15,7 @@ use App\Message\RecalculateStages;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageDeleteProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,6 +25,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
@@ -60,6 +62,7 @@ final class StageDeleteProcessorTest extends TestCase
             $this->messageBus,
             $this->distanceCalculator,
             new TripLocker(),
+            new StageLocator(),
         );
     }
 
@@ -84,7 +87,7 @@ final class StageDeleteProcessorTest extends TestCase
             }));
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
-        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 1]);
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $restDay->id]);
 
         $this->assertNotNull($capturedStages);
         $this->assertCount(2, $capturedStages);
@@ -113,7 +116,7 @@ final class StageDeleteProcessorTest extends TestCase
             return new Envelope($msg);
         });
 
-        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 1]);
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $restDay->id]);
 
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
@@ -142,7 +145,7 @@ final class StageDeleteProcessorTest extends TestCase
             return new Envelope($msg);
         });
 
-        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 1]);
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $stage1->id]);
 
         $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
         $this->assertCount(1, $recalculate);
@@ -173,7 +176,7 @@ final class StageDeleteProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 1]);
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $restDay->id]);
 
         $weatherMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather));
         $calendarMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar));
@@ -203,10 +206,11 @@ final class StageDeleteProcessorTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             $this->createStub(DistanceCalculatorInterface::class),
             new TripLocker(),
+            new StageLocator(),
         );
 
         try {
-            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 0]);
+            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

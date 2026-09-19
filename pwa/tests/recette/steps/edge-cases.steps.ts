@@ -38,6 +38,7 @@ function singleStageEvent() {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -740,14 +741,14 @@ When("I set a departure date about two years out", async ({ mockedPage }) => {
 When(
   "une mise à jour temps réel de l'étape {int} est reçue",
   async ({ mockedPage }, stage: number) => {
-    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage));
   },
 );
 
 When(
   "a real-time update for stage {int} is received",
   async ({ mockedPage }, stage: number) => {
-    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage));
   },
 );
 
@@ -757,9 +758,9 @@ When(
   "aucun hébergement n'est trouvé pour l'ensemble du voyage",
   async ({ mockedPage }) => {
     await injectSseSequence(mockedPage, [
-      emptyAccommodationsFoundEvent(0),
-      emptyAccommodationsFoundEvent(1),
-      emptyAccommodationsFoundEvent(2),
+      emptyAccommodationsFoundEvent("stage-1"),
+      emptyAccommodationsFoundEvent("stage-2"),
+      emptyAccommodationsFoundEvent("stage-3"),
     ]);
   },
 );
@@ -768,9 +769,9 @@ When(
   "no accommodation is found for the entire trip",
   async ({ mockedPage }) => {
     await injectSseSequence(mockedPage, [
-      emptyAccommodationsFoundEvent(0),
-      emptyAccommodationsFoundEvent(1),
-      emptyAccommodationsFoundEvent(2),
+      emptyAccommodationsFoundEvent("stage-1"),
+      emptyAccommodationsFoundEvent("stage-2"),
+      emptyAccommodationsFoundEvent("stage-3"),
     ]);
   },
 );

@@ -84,7 +84,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
 
             // Check each stage for nearby stations and build alerts
             $alerts = [];
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
@@ -97,7 +97,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                 $nearestStation = $this->findNearestStation($stage->endPoint, $stationLocations);
 
                 $alert = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::RAILWAY_STATION_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,

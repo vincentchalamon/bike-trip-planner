@@ -57,7 +57,7 @@ describe('reduceAnalysisEvent', () => {
   it('ignores unrelated events', () => {
     const next = reduceAnalysisEvent(INITIAL_FOLLOW_STATE, {
       type: 'stage_updated',
-      data: { stageIndex: 0, stage: {} as never },
+      data: { stageId: 'stage-1', position: 0, stage: {} as never },
     });
     expect(next).toBe(INITIAL_FOLLOW_STATE);
   });
