@@ -81,16 +81,21 @@ final class TripUpdatePublisherTest extends TestCase
     }
 
     #[Test]
-    public function publishesStageUpdatedWithSingleStageAndStageIndex(): void
+    public function publishesStageUpdatedWithBothIdentityAndPosition(): void
     {
+        $stage = $this->createStage(3);
+
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::once())
             ->method('publish')
-            ->willReturnCallback(function (Update $update): string {
-                /** @var array{type: string, data: array{stageIndex: int, stage: array<string, mixed>}} $decoded */
+            ->willReturnCallback(function (Update $update) use ($stage): string {
+                /** @var array{type: string, data: array{stageId: string, position: int, stage: array<string, mixed>}} $decoded */
                 $decoded = json_decode($update->getData(), true, flags: \JSON_THROW_ON_ERROR);
                 self::assertSame(MercureEventType::STAGE_UPDATED->value, $decoded['type']);
-                self::assertSame(2, $decoded['data']['stageIndex']);
+                // Identity is what the client matches on; the position is what tells it, for
+                // an identity it does not know, whether to append or to drop the event.
+                self::assertSame($stage->id, $decoded['data']['stageId']);
+                self::assertSame(2, $decoded['data']['position']);
                 self::assertSame(3, $decoded['data']['stage']['dayNumber']);
                 self::assertIsArray($decoded['data']['stage']['geometry']);
 
@@ -98,7 +103,7 @@ final class TripUpdatePublisherTest extends TestCase
             });
 
         $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer()), $this->createCorrelationIdProvider());
-        $publisher->publishStageUpdated(self::TRIP_ID, $this->createStage(3));
+        $publisher->publishStageUpdated(self::TRIP_ID, $stage, 2);
     }
 
     #[Test]

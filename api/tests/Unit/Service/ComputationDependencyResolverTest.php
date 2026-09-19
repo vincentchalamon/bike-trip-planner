@@ -37,7 +37,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function accommodationModificationTriggersRecalculateAndScanForAffectedStages(): void
     {
-        $modification = new TripModification(stageIndex: 1, type: 'accommodation', label: 'Hébergement étape 2');
+        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: 'accommodation', label: 'Hébergement étape 2');
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
@@ -61,7 +61,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function accommodationModificationIncludesNextStageInRecalculate(): void
     {
-        $modification = new TripModification(stageIndex: 0, type: 'accommodation', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'accommodation', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
@@ -74,7 +74,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function distanceModificationTriggersEnrichmentPipeline(): void
     {
-        $modification = new TripModification(stageIndex: 1, type: 'distance', label: 'Distance étape 2');
+        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: 'distance', label: 'Distance étape 2');
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
@@ -96,7 +96,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function distanceModificationWithDatesTriggersWeatherAndCalendar(): void
     {
-        $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -107,7 +107,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function distanceModificationWithoutDatesDoesNotTriggerWeather(): void
     {
-        $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -158,8 +158,8 @@ final class ComputationDependencyResolverTest extends TestCase
     public function batchFusesDependenciesAcrossModifications(): void
     {
         $modifications = [
-            new TripModification(stageIndex: 0, type: 'accommodation', label: 'acc 0'),
-            new TripModification(stageIndex: 2, type: 'distance', label: 'dist 2'),
+            new TripModification(stageId: self::STAGE_IDS[0], type: 'accommodation', label: 'acc 0'),
+            new TripModification(stageId: self::STAGE_IDS[2], type: 'distance', label: 'dist 2'),
             new TripModification(type: 'dates', label: 'dates'),
         ];
 
@@ -183,7 +183,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function generationIsPropagatedToAllMessages(): void
     {
-        $modification = new TripModification(stageIndex: 0, type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, ['hotel'], generation: 7);
 
         foreach ($messages as $message) {

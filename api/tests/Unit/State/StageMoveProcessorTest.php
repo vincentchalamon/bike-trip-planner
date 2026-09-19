@@ -13,6 +13,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageMoveProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -45,13 +46,14 @@ final class StageMoveProcessorTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             $stageResponseMapper,
             new TripLocker(),
+            new StageLocator(),
         );
 
         $data = new StageRequest();
         $data->toIndex = 1;
 
         try {
-            $processor->process($data, new Patch(), ['tripId' => 'trip-1', 'index' => 0]);
+            $processor->process($data, new Patch(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

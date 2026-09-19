@@ -93,7 +93,8 @@ final class CheckFerriesHandlerTest extends TestCase
     #[Test]
     public function emitsWarningForAStageTakingAFerry(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1), $this->stage(2)]);
+        $stages = [$this->stage(1), $this->stage(2)];
+        $tripStateManager = $this->createTripStateManager($stages);
         // Stage 0: a ferry; stage 1: none.
         $ferryRepository = $this->ferryRepository([
             [['name' => 'Le Passage du Gois', 'lat' => 47.05, 'lon' => -2.05]],
@@ -106,12 +107,12 @@ final class CheckFerriesHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::FERRY_ALERTS,
-                $this->callback(static function (array $data): bool {
+                $this->callback(static function (array $data) use ($stages): bool {
                     $alerts = $data['alerts'];
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && 0 === $alerts[0]['stageIndex']
+                        && $stages[0]->id === $alerts[0]['stageId']
                         && str_contains((string) $alerts[0]['message'], 'ferry')
                         && abs($alerts[0]['lat'] - 47.05) < 0.001
                         && abs($alerts[0]['lon'] - (-2.05)) < 0.001
@@ -127,7 +128,8 @@ final class CheckFerriesHandlerTest extends TestCase
     #[Test]
     public function deduplicatesTheSameFerryWithinAStage(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1)]);
+        $stages = [$this->stage(1)];
+        $tripStateManager = $this->createTripStateManager($stages);
         $ferryRepository = $this->ferryRepository([
             [
                 ['name' => 'Bac de X', 'lat' => 47.05, 'lon' => -2.05],
@@ -151,7 +153,8 @@ final class CheckFerriesHandlerTest extends TestCase
     #[Test]
     public function skipsRestDaysAndEmitsNoAlertWhenNoFerry(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1, isRestDay: true)]);
+        $stages = [$this->stage(1, isRestDay: true)];
+        $tripStateManager = $this->createTripStateManager($stages);
 
         $ferryRepository = $this->createMock(FerryRepositoryInterface::class);
         $ferryRepository->expects($this->never())->method('findNearStage');

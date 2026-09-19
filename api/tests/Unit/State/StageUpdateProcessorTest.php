@@ -16,6 +16,7 @@ use App\Engine\RouteSimplifierInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -129,12 +130,13 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $stageResponseMapper,
             new TripLocker(),
+            new StageLocator(),
         );
 
         $request = new StageRequest();
         $request->distance = 15.0;
 
-        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+        $processor->process($request, new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($storedStages);
         self::assertCount(3, $storedStages, 'Stage count should remain 3');
@@ -217,12 +219,13 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             new TripLocker(),
+            new StageLocator(),
         );
 
         $request = new StageRequest();
         $request->distance = 15.0;
 
-        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+        $processor->process($request, new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($storedStages);
         // The edit applied (not a silent no-op): the next stage was recalculated.
@@ -293,12 +296,13 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $stageResponseMapper,
             new TripLocker(),
+            new StageLocator(),
         );
 
         $request = new StageRequest();
         $request->distance = 30.0;
 
-        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 1]);
+        $processor->process($request, new Patch(), ['tripId' => 't', 'stageId' => $stages[1]->id]);
 
         self::assertNotNull($storedStages);
         self::assertCount(3, $storedStages, 'A new stage should have been created');
@@ -360,12 +364,13 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $stageResponseMapper,
             new TripLocker(),
+            new StageLocator(),
         );
 
         $request = new StageRequest();
         $request->distance = 0.0;
 
-        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+        $processor->process($request, new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($storedStages);
         // Fallback: stage 1 startPoint must equal stage 0 endPoint to stay contiguous
@@ -399,10 +404,11 @@ final class StageUpdateProcessorTest extends TestCase
             $this->createStub(RouteSimplifierInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             new TripLocker(),
+            new StageLocator(),
         );
 
         try {
-            $processor->process(new StageRequest(), new Patch(), ['tripId' => 't', 'index' => 0]);
+            $processor->process(new StageRequest(), new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());
@@ -463,12 +469,13 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             new TripLocker(),
+            new StageLocator(),
         );
 
         $request = new StageRequest();
         $request->distance = 60.0;
 
-        $response = $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+        $response = $processor->process($request, new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($storedStages);
         self::assertSame(60.0, $storedStages[0]->distance, 'Edited stage must store the requested split distance');

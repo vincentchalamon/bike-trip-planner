@@ -11,6 +11,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageSelectAccommodationProcessor;
+use App\State\StageLocator;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,10 +37,11 @@ final class StageSelectAccommodationProcessorTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             new TripLocker(),
+            new StageLocator(),
         );
 
         try {
-            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'index' => 0]);
+            $processor->process(new StageSelectAccommodationRequest(), new Patch(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());

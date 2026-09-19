@@ -56,7 +56,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::ROUTE_SEGMENT_RECALCULATED,
-                $this->callback(static fn (array $data): bool => 0 === $data['stageIndex']
+                $this->callback(static fn (array $data): bool => $stage->id === $data['stageId']
                     && 'poi_detour' === $data['reason']
                     && 52000.0 === $data['distance']
                     && 520.0 === $data['elevationGain']

@@ -188,14 +188,15 @@ final class CheckCalendarHandlerTest extends TestCase
     public function sundayNonHolidayEmitsSundayNudge(): void
     {
         // 2026-03-15 is a Sunday, not a French holiday
+        $stage = $this->createStage('trip-1', 1);
         $alerts = $this->publishedAlerts(
-            [$this->createStage('trip-1', 1)],
+            [$stage],
             new \DateTimeImmutable('2026-03-15'),
             ['FR'],
         );
 
         $this->assertCount(1, $alerts);
-        $this->assertSame(0, $alerts[0]['stageIndex']);
+        $this->assertSame($stage->id, $alerts[0]['stageId']);
         $this->assertSame(1, $alerts[0]['dayNumber']);
         $this->assertSame('nudge', $alerts[0]['type']);
         $this->assertSame('2026-03-15', $alerts[0]['date']);
