@@ -53,10 +53,9 @@ final readonly class StagePayloadMapper
                 $stage->geometry,
             ),
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
-            'alerts' => array_map(
-                $this->alertToPayload(...),
-                $stage->alerts,
-            ),
+            // Already in wire shape, each tagged with its group: the producers build it
+            // once and hand the same array to the database and to Mercure (ADR-068).
+            'alerts' => $stage->alerts,
             'resupply' => $this->resupplyToPayload($stage->resupply),
             'accommodations' => array_map(
                 $this->accommodationToPayload(...),

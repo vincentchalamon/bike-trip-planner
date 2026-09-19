@@ -10,6 +10,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -97,6 +98,9 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             }
 
             if ([] === $stageGeometries) {
+                // Nothing found is a result, not an absence of one: the group is cleared so a
+                // previous run's alerts do not survive as stale.
+                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, []);
                 $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
                     'alerts' => [],
                 ]);
@@ -203,6 +207,11 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     $alerts[] = $alert;
                 }
             }
+
+            // Same array to the database and to the wire (ADR-068): grouped by the stage
+            // it addresses, without `stageId`/`dayNumber` — the first is the key, the
+            // second is renumbered by every structural edit and is derived on read.
+            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
                 'alerts' => $alerts,

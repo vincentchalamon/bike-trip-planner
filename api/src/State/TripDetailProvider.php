@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\Coordinate;
@@ -185,7 +184,9 @@ final readonly class TripDetailProvider implements ProviderInterface
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
-            'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
+            // Passed through as the producer wrote it, `group` included: normalising here is
+            // what used to drop the richer fields some producers emit (ADR-068).
+            'alerts' => $stage->alerts,
             'resupply' => $this->serializeResupply($stage->resupply),
             'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
@@ -200,22 +201,6 @@ final readonly class TripDetailProvider implements ProviderInterface
     private function serializeCoord(Coordinate $coord): array
     {
         return ['lat' => $coord->lat, 'lon' => $coord->lon, 'ele' => $coord->ele];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serializeAlert(Alert $alert): array
-    {
-        return [
-            'code' => $alert->code?->value,
-            'type' => $alert->type->value,
-            'message' => $alert->message,
-            'lat' => $alert->lat,
-            'lon' => $alert->lon,
-            // Only the kinds the frontend actually handles are exposed (issue #863).
-            'action' => $alert->action?->toDeliverablePayload(),
-        ];
     }
 
     /**

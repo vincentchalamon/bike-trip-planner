@@ -16,6 +16,7 @@ use App\Engine\FixedSchedule;
 use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
@@ -154,7 +155,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lat: $stage->startPoint->lat,
                         lon: $stage->startPoint->lon,
                     );
-                    $stage->addAlert($alert);
                     $alerts[] = ['code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value, 'type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
@@ -175,7 +175,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lat: $stage->startPoint->lat,
                         lon: $stage->startPoint->lon,
                     );
-                    $stage->addAlert($alert);
                     $alerts[] = ['code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value, 'type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
@@ -214,9 +213,16 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $payload['alerts'] = $alerts;
                 }
 
+                // Same array to both consumers (ADR-068). Already per-stage, so no regrouping.
+                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, $payload);
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);
+
+                // Persisted unconditionally, empty list included: the timeline is recomputed
+                // wholesale, so an empty result has to clear a previous one rather than leave
+                // it standing.
+                $this->tripStateManager->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
 
                 if ([] !== $clusteredMarkers) {
                     $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [

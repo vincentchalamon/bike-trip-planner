@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertGroup;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Lock\LockFactory;
@@ -85,11 +86,45 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
         });
     }
 
-    /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
+    /**
+     * Straight through, with no lock — unlike every other write in this class.
+     *
+     * The group writes are not read-modify-write sequences: each is a single UPDATE whose
+     * merge Postgres performs, so two producers finishing at once cannot lose each other's
+     * work (ADR-068). Taking the per-trip lock would instead serialise a dozen handlers that
+     * run in parallel by design, behind a 3-second bounded acquire that turns a burst into
+     * failed computations.
+     *
+     * @param list<array<string, mixed>> $alerts
+     */
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
-        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $alerts): void {
-            $this->decorated->updateStageAlerts($tripId, $stageId, $alerts);
+        $this->decorated->updateStageAlertsForGroup($tripId, $stageId, $group, $alerts);
+    }
+
+    /**
+     * @param array<string, list<array<string, mixed>>> $alertsByStageId
+     *
+     * @see self::updateStageAlertsForGroup() for why this takes no lock
+     */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
+    {
+        $this->decorated->updateTripAlertsForGroup($tripId, $group, $alertsByStageId);
+    }
+
+    /** @param list<Event> $events */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void
+    {
+        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $events): void {
+            $this->decorated->updateStageEvents($tripId, $stageId, $events);
+        });
+    }
+
+    /** @param list<array<string, mixed>> $markers */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void
+    {
+        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $markers): void {
+            $this->decorated->updateStageSupplyTimeline($tripId, $stageId, $markers);
         });
     }
 

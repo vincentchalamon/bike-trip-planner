@@ -149,7 +149,9 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $clone->setLabel($source->getLabel());
         $clone->setIsRestDay($source->isRestDay());
         $clone->setWeather($source->getWeather());
-        $clone->setAlerts($source->getAlerts());
+        $clone->setAlertsByGroup($source->getAlertsByGroup());
+        $clone->setEvents($source->getEvents());
+        $clone->setSupplyTimeline($source->getSupplyTimeline());
         $clone->setPois($source->getPois());
         $clone->setAccommodations($source->getAccommodations());
         $clone->setSelectedAccommodation($source->getSelectedAccommodation());

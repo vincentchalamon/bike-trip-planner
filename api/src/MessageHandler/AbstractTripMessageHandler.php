@@ -40,6 +40,34 @@ abstract readonly class AbstractTripMessageHandler
      * A null generation means the message was dispatched without versioning
      * (e.g. cascading child messages) — these are never considered stale.
      */
+    /**
+     * Turns the flat alert list a producer publishes into the per-stage map it persists.
+     *
+     * The same arrays, regrouped — never rebuilt — so the database and the wire cannot drift
+     * (ADR-068). Two fields are dropped on the way in: `stageId`, which becomes the key, and
+     * `dayNumber`, which every structural edit renumbers and which is therefore derived from
+     * the owning stage at read time rather than frozen here (ADR-066).
+     *
+     * @param list<array<string, mixed>> $alerts
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    protected function groupByStage(array $alerts): array
+    {
+        $grouped = [];
+        foreach ($alerts as $alert) {
+            $stageId = $alert['stageId'] ?? null;
+            if (!\is_string($stageId)) {
+                continue;
+            }
+
+            unset($alert['stageId'], $alert['dayNumber']);
+            $grouped[$stageId][] = $alert;
+        }
+
+        return $grouped;
+    }
+
     protected function isStale(string $tripId, ?int $messageGeneration): bool
     {
         if (null === $messageGeneration) {

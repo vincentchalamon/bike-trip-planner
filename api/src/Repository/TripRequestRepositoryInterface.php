@@ -6,11 +6,13 @@ namespace App\Repository;
 
 use Symfony\Component\HttpKernel\Exception\PreconditionFailedHttpException;
 use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertGroup;
 
 /**
  * Repository for the trip computation state aggregate.
@@ -138,11 +140,50 @@ interface TripRequestRepositoryInterface
     public function updateStageWeather(string $tripId, string $stageId, ?WeatherForecast $weather): void;
 
     /**
-     * Persists a single stage's alerts atomically (see {@see self::updateStageWeather()}).
+     * Persists one producer's alerts for one stage, replacing that group and only that group.
      *
-     * @param list<Alert> $alerts
+     * The alerts are stored as the producer built them for the wire, minus what belongs to
+     * the row rather than the alert: `stageId` is the address, and `dayNumber` is renumbered
+     * by every structural edit, so persisting it would recreate the drift ADR-066 removed —
+     * it is derived from the owning stage at read time.
+     *
+     * The payloads are *not* normalised into {@see Alert}, which models neither `poiName`
+     * nor `imageUrl`, `openingHours`, `estimatedPrice`, `wikidataId` or `distanceFromRoute`.
+     * Same array in, same array out to both consumers: GET/SSE parity by construction.
+     *
+     * @param list<array<string, mixed>> $alerts
      */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void;
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void;
+
+    /**
+     * Replaces one producer's alerts across the **whole trip**, stage by stage.
+     *
+     * Not a convenience over {@see self::updateStageAlertsForGroup()}: the calendar check
+     * recomputes the set for every stage at once, and a stage that dropped out of the new set
+     * must lose its nudge rather than keep a stale one — the "Sunday bug" the client mirrors
+     * in `reconciliation.ts`. A per-stage loop cannot express "and clear everyone else".
+     *
+     * @param array<string, list<array<string, mixed>>> $alertsByStageId stages absent from the
+     *                                                                   map have the group cleared
+     */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void;
+
+    /**
+     * Persists a stage's nearby events atomically (see {@see self::updateStageWeather()}).
+     *
+     * Typed, unlike the alerts above: {@see Event} already models every field the wire
+     * payload carries, so nothing is lost by going through it.
+     *
+     * @param list<Event> $events
+     */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void;
+
+    /**
+     * Persists a stage's supply timeline atomically (see {@see self::updateStageWeather()}).
+     *
+     * @param list<array<string, mixed>> $markers
+     */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void;
 
     /**
      * Persists a single stage's curated resupply atomically (see {@see self::updateStageWeather()}).

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertGroup;
 use App\Concurrency\VersionPrecondition;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -197,11 +198,37 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         });
     }
 
-    /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
+    /** @param list<array<string, mixed>> $alerts */
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
-        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($alerts): void {
-            $stage->alerts = $alerts;
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($group, $alerts): void {
+            $stage->setAlertsForGroup($group, $alerts);
+        });
+    }
+
+    /** @param array<string, list<array<string, mixed>>> $alertsByStageId */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
+    {
+        // Every stage, not only those carrying alerts: one that dropped out of the new set
+        // has to lose the group rather than keep a stale entry.
+        foreach ($this->getStages($tripId) ?? [] as $stage) {
+            $this->updateStageAlertsForGroup($tripId, $stage->id, $group, $alertsByStageId[$stage->id] ?? []);
+        }
+    }
+
+    /** @param list<Event> $events */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void
+    {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($events): void {
+            $stage->events = $events;
+        });
+    }
+
+    /** @param list<array<string, mixed>> $markers */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void
+    {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($markers): void {
+            $stage->supplyTimeline = $markers;
         });
     }
 

@@ -14,6 +14,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -236,7 +237,6 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                             $locale,
                         ),
                     );
-                    $stage->addAlert($alert);
                     $alertsToPublish[] = ['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
@@ -249,6 +249,8 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $payload['alerts'] = $alertsToPublish;
                 }
 
+                // Same array to both consumers (ADR-068). Already per-stage, so no regrouping.
+                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
             }
 

@@ -10,6 +10,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -125,6 +126,11 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     ] : null,
                 ];
             }
+
+            // Same array to the database and to the wire (ADR-068): grouped by the stage
+            // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
+            // second is renumbered by every structural edit and is derived on read.
+            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, $this->groupByStage($stagesWithoutBikeShop));
 
             $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, [
                 'alerts' => $stagesWithoutBikeShop,

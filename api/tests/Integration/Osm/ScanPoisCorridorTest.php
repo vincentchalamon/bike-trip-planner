@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Osm;
 
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
@@ -12,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Geo\GeometryBasedDistributor;
 use App\Geo\HaversineDistance;
@@ -30,6 +30,7 @@ use App\Poi\SupplyTimelineBuilder;
 use App\Tourism\FoodPoiRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\DBAL\Connection;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -47,6 +48,8 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class ScanPoisCorridorTest extends KernelTestCase
 {
     use ResetDatabase;
+    /** @var list<array<string, mixed>> */
+    private array $writtenAlerts = [];
 
     private Connection $connection;
 
@@ -77,6 +80,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             SQL);
     }
 
+    #[AllowMockObjectsWithoutExpectations]
     #[Test]
     public function resupplyPoiInCorridorSuppressesLunchNudge(): void
     {
@@ -95,11 +99,12 @@ final class ScanPoisCorridorTest extends KernelTestCase
             'The seeded restaurant in the corridor must be curated into the resupply',
         );
         self::assertFalse(
-            array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
+            array_any($this->writtenAlerts, static fn (array $alert): bool => AlertType::NUDGE->value === ($alert['type'] ?? null)),
             'A long stage with a resupply POI in the corridor must not raise the lunch nudge',
         );
     }
 
+    #[AllowMockObjectsWithoutExpectations]
     #[Test]
     public function longStageWithoutResupplyPoiEmitsLunchNudge(): void
     {
@@ -116,11 +121,12 @@ final class ScanPoisCorridorTest extends KernelTestCase
         // resupply for this corridor.
         self::assertTrue($stage->resupply?->isEmpty() ?? true);
         self::assertTrue(
-            array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
+            array_any($this->writtenAlerts, static fn (array $alert): bool => AlertType::NUDGE->value === ($alert['type'] ?? null)),
             'A long stage with no resupply POI in the corridor must raise the lunch nudge',
         );
     }
 
+    #[AllowMockObjectsWithoutExpectations]
     #[Test]
     public function fuelStationInCorridorSuppressesLunchNudge(): void
     {
@@ -140,7 +146,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             'The seeded fuel station in the corridor must be curated into the resupply',
         );
         self::assertFalse(
-            array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
+            array_any($this->writtenAlerts, static fn (array $alert): bool => AlertType::NUDGE->value === ($alert['type'] ?? null)),
             'A long stage with a fuel station in the corridor must not raise the lunch nudge',
         );
     }
@@ -173,7 +179,16 @@ final class ScanPoisCorridorTest extends KernelTestCase
             $route,
         );
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        // The handler persists its alerts instead of mutating the stage it was handed
+        // (ADR-068), so what it wrote is captured here rather than read off the DTO.
+        $this->writtenAlerts = [];
+        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('updateStageAlertsForGroup')->willReturnCallback(
+            /** @param list<array<string, mixed>> $alerts */
+            function (string $tripId, string $stageId, AlertGroup $group, array $alerts): void {
+                $this->writtenAlerts = array_values([...$this->writtenAlerts, ...$alerts]);
+            },
+        );
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());

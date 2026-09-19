@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\AlertAction;
-use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\CulturalPoiAlert;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
@@ -17,8 +14,8 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Concurrency\VersionPrecondition;
 use App\Entity\Stage as StageEntity;
-use App\Enum\AlertCode;
-use App\Enum\AlertType;
+use App\Mapper\EventArrayMapper;
+use App\Enum\AlertGroup;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -47,6 +44,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         private readonly CacheItemPoolInterface $tripStateCache,
         private readonly CycleRouteRepositoryInterface $cycleRouteRepository,
         private readonly CoverageRepositoryInterface $coverageRepository,
+        private readonly EventArrayMapper $eventMapper,
     ) {
         parent::__construct($registry, TripRequest::class);
     }
@@ -580,18 +578,137 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     }
 
     /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
+    /** @param list<array<string, mixed>> $alerts */
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
+    {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
+            return;
+        }
+
+        $this->writeAlertGroup($tripId, [$stageId => $alerts], $group);
+    }
+
+    /** @param array<string, list<array<string, mixed>>> $alertsByStageId */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        // Every stage of the trip, not only the ones carrying alerts: a stage that dropped
+        // out of the new set has to lose the group rather than keep a stale entry.
+        $all = [];
+        foreach ($this->stageIdsOf($tripId) as $stageId) {
+            $all[$stageId] = $alertsByStageId[$stageId] ?? [];
+        }
+
+        $this->writeAlertGroup($tripId, $all, $group);
+    }
+
+    /**
+     * Merges one group into `alerts_by_group`, one UPDATE per stage, no application lock.
+     *
+     * The merge is Postgres's, not ours: `jsonb_set` replaces a single key and leaves the
+     * other twelve untouched, so a dozen enrichment handlers finishing at once all survive.
+     * Under READ COMMITTED a blocked UPDATE re-evaluates against the row version the winner
+     * committed, which is exactly what makes that true.
+     *
+     * Deliberately outside {@see LockingTripRequestRepository}'s per-trip lock: those handlers
+     * run in parallel by design, and serialising them behind a lock with a 3-second bounded
+     * acquire would turn a burst into failed computations. The lock exists for read-modify-write
+     * sequences; this is neither.
+     *
+     * Raw SQL because DQL cannot express a JSONB path write. Same reason and same shape as
+     * {@see MagicLinkRepository::consume()}.
+     *
+     * @param array<string, list<array<string, mixed>>> $alertsByStageId
+     */
+    private function writeAlertGroup(string $tripId, array $alertsByStageId, AlertGroup $group): void
+    {
+        if ([] === $alertsByStageId) {
+            return;
+        }
+
+        $computedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DateTimeInterface::ATOM);
+        $connection = $this->getEntityManager()->getConnection();
+
+        foreach ($alertsByStageId as $stageId => $alerts) {
+            if (!Uuid::isValid($stageId)) {
+                continue;
+            }
+
+            $connection->executeStatement(
+                <<<'SQL'
+                    UPDATE stage
+                    SET alerts_by_group = jsonb_set(
+                        -- An empty PHP array encodes as `[]`, not `{}`, so a stage that has
+                        -- never been enriched holds a JSON *array*; jsonb_set refuses a text
+                        -- path against one. Normalise to an object before merging.
+                        CASE WHEN jsonb_typeof(alerts_by_group) = 'object'
+                             THEN alerts_by_group
+                             ELSE '{}'::jsonb END,
+                        ARRAY[CAST(:group AS text)],
+                        CAST(:entry AS jsonb),
+                        true
+                    )
+                    WHERE trip_id = :tripId AND id = :stageId
+                    SQL,
+                [
+                    'group' => $group->value,
+                    'entry' => json_encode(
+                        ['computedAt' => $computedAt, 'alerts' => array_values($alerts)],
+                        \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION,
+                    ),
+                    'tripId' => $tripId,
+                    'stageId' => $stageId,
+                ],
+            );
+        }
+
+        // Nothing to invalidate by hand: the rows changed behind the ORM's back, but every
+        // read of them goes through the HINT_REFRESH query ADR-066 introduced, which
+        // overwrites the identity map rather than trusting it.
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function stageIdsOf(string $tripId): array
+    {
+        /** @var list<array{id: string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT id FROM stage WHERE trip_id = :tripId',
+            ['tripId' => $tripId],
+        );
+
+        return array_map(static fn (array $row): string => (string) $row['id'], $rows);
+    }
+
+    /** @param list<Event> $events */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void
+    {
+        $this->updateStageJsonColumn($tripId, $stageId, 'events', array_map($this->eventMapper->toArray(...), $events));
+    }
+
+    /** @param list<array<string, mixed>> $markers */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void
+    {
+        $this->updateStageJsonColumn($tripId, $stageId, 'supplyTimeline', $markers);
+    }
+
+    /** @param list<array<string, mixed>> $value */
+    private function updateStageJsonColumn(string $tripId, string $stageId, string $field, array $value): void
     {
         if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
             return;
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\Stage s SET s.alerts = :value WHERE s.trip = :tripId AND s.id = :stageId',
+            \sprintf('UPDATE App\Entity\Stage s SET s.%s = :value WHERE s.trip = :tripId AND s.id = :stageId', $field),
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('stageId', Uuid::fromString($stageId))
-            ->setParameter('value', array_map($this->alertToArray(...), $alerts), 'jsonb')
+            ->setParameter('value', array_values($value), 'jsonb')
             ->execute();
     }
 
@@ -739,13 +856,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         // Weather: WeatherForecast|null → array|null
         $entity->setWeather($dto->weather instanceof WeatherForecast ? $this->weatherToArray($dto->weather) : null);
 
-        // Alerts: Alert[] → list<array>
-        $alerts = [];
-        foreach ($dto->alerts as $alert) {
-            $alerts[] = $this->alertToArray($alert);
-        }
-
-        $entity->setAlerts($alerts);
+        // Enrichment columns are deliberately absent here (ADR-068): alerts, events and the
+        // supply timeline belong to the producers that compute them, written through the
+        // targeted `updateStage*` methods. Carrying them back from the DTO would let a
+        // structural edit replay whatever snapshot the processor happened to read.
 
         // Resupply → the (repurposed) pois JSONB column.
         $entity->setPois($this->resupplyToArray($dto->resupply ?? new Resupply()));
@@ -797,11 +911,16 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $dto->weather = $this->arrayToWeather($weatherData);
         }
 
-        // Alerts
-        /** @var list<array{code?: ?string, type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
-        $alertsData = $entity->getAlerts();
-        foreach ($alertsData as $alertData) {
-            $dto->addAlert($this->arrayToAlert($alertData));
+        // Alerts: handed back exactly as their producer wrote them, group by group. No
+        // reconstruction into Alert — that is what used to drop the richer fields.
+        foreach ($entity->getAlertsByGroup() as $group => $entry) {
+            $dto->alertsByGroup[$group] = array_values($entry['alerts'] ?? []);
+        }
+
+        $dto->supplyTimeline = $entity->getSupplyTimeline();
+
+        foreach ($entity->getEvents() as $eventData) {
+            $dto->addEvent($this->eventMapper->fromArray($eventData));
         }
 
         // Resupply (stored in the repurposed pois JSONB column).
@@ -857,91 +976,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             humidity: $data['humidity'],
             comfortIndex: $data['comfortIndex'],
             relativeWindDirection: $data['relativeWindDirection'],
-        );
-    }
-
-    /** @return array{code: ?string, type: string, message: string, lat: ?float, lon: ?float, action?: array{kind: string, label: string, payload: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
-    private function alertToArray(Alert $alert): array
-    {
-        $data = [
-            'code' => $alert->code?->value,
-            'type' => $alert->type->value,
-            'message' => $alert->message,
-            'lat' => $alert->lat,
-            'lon' => $alert->lon,
-        ];
-
-        // The action is persisted whole; the kind filtering happens at emission
-        // (TripDetailProvider / StagePayloadMapper), see issue #863.
-        if ($alert->action instanceof AlertAction) {
-            $data['action'] = [
-                'kind' => $alert->action->kind->value,
-                'label' => $alert->action->label,
-                'payload' => $alert->action->payload,
-            ];
-        }
-
-        if ($alert instanceof CulturalPoiAlert) {
-            $data['_class'] = 'CulturalPoiAlert';
-            $data['poiName'] = $alert->poiName;
-            $data['poiType'] = $alert->poiType;
-            $data['poiLat'] = $alert->poiLat;
-            $data['poiLon'] = $alert->poiLon;
-            $data['distanceFromRoute'] = $alert->distanceFromRoute;
-        } elseif (Alert::class !== $alert::class) {
-            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $alert::class, __METHOD__));
-        }
-
-        return $data;
-    }
-
-    /** @param array{code?: ?string, type: string, message: string, lat?: ?float, lon?: ?float, action?: ?array{kind: string, label: string, payload?: array<string, mixed>}, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
-    private function arrayToAlert(array $data): Alert
-    {
-        // Alerts persisted before issue #876 carry no code, and a code retired since
-        // then no longer resolves: both degrade to null rather than blowing up the read.
-        $code = AlertCode::tryFrom($data['code'] ?? '');
-        $type = AlertType::from($data['type']);
-        $message = $data['message'];
-        $lat = $data['lat'] ?? null;
-        $lon = $data['lon'] ?? null;
-        // Alerts persisted before issue #863 carry no action at all.
-        $actionData = $data['action'] ?? null;
-        $action = null !== $actionData
-            ? new AlertAction(
-                kind: AlertActionKind::from($actionData['kind']),
-                label: $actionData['label'],
-                payload: $actionData['payload'] ?? [],
-            )
-            : null;
-
-        if (($data['_class'] ?? null) === 'CulturalPoiAlert') {
-            return new CulturalPoiAlert(
-                code: $code,
-                type: $type,
-                message: $message,
-                lat: $lat,
-                lon: $lon,
-                poiName: $data['poiName'] ?? '',
-                poiType: $data['poiType'] ?? '',
-                poiLat: $data['poiLat'] ?? 0.0,
-                poiLon: $data['poiLon'] ?? 0.0,
-                distanceFromRoute: $data['distanceFromRoute'] ?? 0,
-                action: $action,
-            );
-        }
-
-        if (null !== ($data['_class'] ?? null)) {
-            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $data['_class'], __METHOD__));
-        }
-
-        return new Alert(
-            code: $code,
-            type: $type,
-            message: $message,
-            lat: $lat,
-            lon: $lon,
-            action: $action,
         );
     }
 

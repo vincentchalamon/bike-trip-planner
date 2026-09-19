@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Repository;
 
+use App\Enum\AlertGroup;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
@@ -81,8 +82,8 @@ final class RedisTripRequestRepositoryTest extends TestCase
         $writeItem->expects(self::once())
             ->method('set')
             ->with(self::callback(static fn (array $stages): bool => 1 === \count($stages)
-                // the alert is written...
-                && [$alert] === $stages[0]->alerts
+                // the alert is written, tagged with the group that owns it...
+                && [['group' => 'terrain', 'code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message]] === $stages[0]->alerts
                 // ...without wiping the weather a sibling handler already persisted.
                 && $stages[0]->weather instanceof WeatherForecast
                 && '10d' === $stages[0]->weather->icon));
@@ -106,7 +107,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         );
         $this->cache->expects(self::atLeastOnce())->method('save');
 
-        $this->repository->updateStageAlerts($tripId, $stage->id, [$alert]);
+        $this->repository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::TERRAIN, [['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message]]);
     }
 
     #[Test]
