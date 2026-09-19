@@ -24,7 +24,7 @@ final class AccommodationScanRequest
     #[Assert\Range(min: 1, max: self::MAX_ACCOMMODATION_RADIUS_KM)]
     public int $radiusKm = self::DEFAULT_ACCOMMODATION_RADIUS_KM;
 
-    #[ApiProperty(description: 'Optional stage index to restrict the scan to a single stage')]
-    #[Assert\PositiveOrZero]
-    public ?int $stageIndex = null;
+    #[ApiProperty(description: 'Optional stage identifier to restrict the scan to a single stage')]
+    #[Assert\Uuid]
+    public ?string $stageId = null;
 }

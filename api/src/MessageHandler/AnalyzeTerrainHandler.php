@@ -79,7 +79,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     'osmWays' => $waysByStage[$i] ?? [],
                     'allStages' => $stages,
                     'startDate' => $startDate,
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'departureHour' => $departureHour,
                     'averageSpeed' => $averageSpeed,
                 ];

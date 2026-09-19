@@ -148,7 +148,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     );
 
                     $alert = [
-                        'stageIndex' => $originalIndex,
+                        'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::CULTURAL_POI_SUGGESTION->value,
                         'type' => AlertType::NUDGE->value,

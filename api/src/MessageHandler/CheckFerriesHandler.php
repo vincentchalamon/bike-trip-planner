@@ -84,7 +84,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
                     $seenNames[] = $key;
 
                     $alerts[] = [
-                        'stageIndex' => $i,
+                        'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::FERRY_CROSSING->value,
                         'type' => AlertType::WARNING->value,

@@ -92,10 +92,19 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         $this->publish($tripId, MercureEventType::TRIP_READY, $data);
     }
 
-    public function publishStageUpdated(string $tripId, Stage $stage): void
+    /**
+     * Carries both the identity and the position of the stage.
+     *
+     * The identity is what the client matches on. The position is what tells it, when the
+     * identity is unknown, whether this is a stage that was just appended (the trailing
+     * stage a distance edit splits off, #840) or an event from a superseded generation to
+     * be dropped — an unknown identifier alone cannot distinguish the two.
+     */
+    public function publishStageUpdated(string $tripId, Stage $stage, int $position): void
     {
         $this->publish($tripId, MercureEventType::STAGE_UPDATED, [
-            'stageIndex' => $stage->dayNumber - 1,
+            'stageId' => $stage->id,
+            'position' => $position,
             'stage' => $this->stagePayloadMapper->toPayload($stage),
         ]);
     }

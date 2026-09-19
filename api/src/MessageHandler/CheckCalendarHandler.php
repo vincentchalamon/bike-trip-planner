@@ -90,7 +90,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                     $holidayName = $this->resolveHolidayName($holiday);
                     // Named and unnamed phrasings are the same rule, hence the same code.
                     $alerts[] = $this->buildAlert(
-                        $i,
                         $stage,
                         $stageDate,
                         AlertCode::CALENDAR_PUBLIC_HOLIDAY,
@@ -102,7 +101,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                     );
                 } elseif ('7' === $stageDate->format('N')) {
                     $alerts[] = $this->buildAlert(
-                        $i,
                         $stage,
                         $stageDate,
                         AlertCode::CALENDAR_SUNDAY,
@@ -122,12 +120,12 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     /**
      * @param array<string, int|string> $parameters
      *
-     * @return array{stageIndex: int, dayNumber: int, code: string, type: string, date: string, message: string, action: array{kind: string, label: string, payload: array<string, mixed>}}
+     * @return array{stageId: string, dayNumber: int, code: string, type: string, date: string, message: string, action: array{kind: string, label: string, payload: array<string, mixed>}}
      */
-    private function buildAlert(int $stageIndex, Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters, string $locale): array
+    private function buildAlert(Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters, string $locale): array
     {
         return [
-            'stageIndex' => $stageIndex,
+            'stageId' => $stage->id,
             'dayNumber' => $stage->dayNumber,
             'code' => $code->value,
             'type' => AlertType::NUDGE->value,

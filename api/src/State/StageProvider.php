@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Stage;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @implements ProviderInterface<Stage>
@@ -17,23 +16,20 @@ final readonly class StageProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private StageLocator $stageLocator,
     ) {
     }
 
     /**
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param array{tripId?: string, stageId?: string} $uriVariables
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): Stage
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $stageId = $uriVariables['stageId'] ?? '';
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 
-        if (!isset($stages[$index])) {
-            throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
-        }
-
-        return $stages[$index];
+        return $stages[$this->stageLocator->indexOf($stages, $stageId)];
     }
 }

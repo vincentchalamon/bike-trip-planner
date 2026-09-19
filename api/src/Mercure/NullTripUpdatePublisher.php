@@ -47,7 +47,7 @@ final readonly class NullTripUpdatePublisher implements TripUpdatePublisherInter
     {
     }
 
-    public function publishStageUpdated(string $tripId, Stage $stage): void
+    public function publishStageUpdated(string $tripId, Stage $stage, int $position): void
     {
     }
 }

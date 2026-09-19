@@ -29,8 +29,8 @@ final readonly class TripShareStageProvider implements ProviderInterface
     }
 
     /**
-     * @param array{shortCode?: string, index?: int} $uriVariables
-     * @param array<string, mixed>                   $context
+     * @param array{shortCode?: string, stageId?: string} $uriVariables
+     * @param array<string, mixed>                        $context
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): Stage
     {
@@ -49,7 +49,7 @@ final readonly class TripShareStageProvider implements ProviderInterface
 
         $tripId = (string) $trip->id;
 
-        $stage = $this->stageProvider->provide($operation, ['tripId' => $tripId, 'index' => $uriVariables['index'] ?? 0], $context);
+        $stage = $this->stageProvider->provide($operation, ['tripId' => $tripId, 'stageId' => $uriVariables['stageId'] ?? ''], $context);
         \assert($stage instanceof Stage);
 
         return $stage;

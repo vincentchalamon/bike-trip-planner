@@ -206,7 +206,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 );
 
                 $payload = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'resupply' => $this->resupplyToArray($stage->resupply),
                 ];
 
@@ -220,7 +220,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 if ([] !== $clusteredMarkers) {
                     $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
-                        'stageIndex' => $i,
+                        'stageId' => $stage->id,
                         'markers' => $clusteredMarkers,
                     ]);
                 }

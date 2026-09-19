@@ -71,13 +71,18 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages, $locale): void {
-            $alerts = [];
-            $headwindCount = 0;
-            $poorComfortCount = 0;
-            $heatCount = 0;
-            $coldCount = 0;
-            $rainCount = 0;
-            $gustCount = 0;
+            /** @var list<Stage> $headwindStages */
+            $headwindStages = [];
+            /** @var list<Stage> $poorComfortStages */
+            $poorComfortStages = [];
+            /** @var list<Stage> $heatStages */
+            $heatStages = [];
+            /** @var list<Stage> $coldStages */
+            $coldStages = [];
+            /** @var list<Stage> $rainStages */
+            $rainStages = [];
+            /** @var list<Stage> $gustStages */
+            $gustStages = [];
 
             foreach ($stages as $stage) {
                 if (null === $stage->weather) {
@@ -91,12 +96,12 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     $weather->windSpeed >= self::WIND_SPEED_THRESHOLD_KMH
                     && WeatherForecast::RELATIVE_WIND_HEADWIND === $weather->relativeWindDirection
                 ) {
-                    ++$headwindCount;
+                    $headwindStages[] = $stage;
                 }
 
                 // Count stages with poor comfort index
                 if ($weather->comfortIndex <= self::COMFORT_INDEX_POOR_THRESHOLD) {
-                    ++$poorComfortCount;
+                    $poorComfortStages[] = $stage;
                 }
 
                 // The apparent-temperature / rain-mm / gust thresholds are only
@@ -107,19 +112,19 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 }
 
                 if ($weather->apparentTempMax >= self::HEAT_APPARENT_MAX_C) {
-                    ++$heatCount;
+                    $heatStages[] = $stage;
                 }
 
                 if ($weather->apparentTempMin <= self::COLD_APPARENT_MIN_C) {
-                    ++$coldCount;
+                    $coldStages[] = $stage;
                 }
 
                 if ($weather->precipitationMm >= self::RAIN_HEAVY_MM) {
-                    ++$rainCount;
+                    $rainStages[] = $stage;
                 }
 
                 if ($weather->windGusts >= self::WIND_GUSTS_STRONG_KMH) {
-                    ++$gustCount;
+                    $gustStages[] = $stage;
                 }
             }
 
@@ -130,102 +135,74 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 label: $this->translator->trans('alert.wind.action', [], 'alerts', $locale),
             );
 
+            $alerts = [];
+
+            // The headwind rule stays trip-wide in what triggers it — it is about a trip
+            // spent riding into the wind, not about one windy day — so the ratio threshold
+            // is unchanged. Only the placement changes: the alert now sits on the stages
+            // that actually carry the headwind instead of being counted up into one message
+            // pinned to the first day (ADR-066).
             if (
                 $stagesWithWeather > 0
-                && ($headwindCount / $stagesWithWeather) >= self::HEADWIND_RATIO_THRESHOLD
+                && (\count($headwindStages) / $stagesWithWeather) >= self::HEADWIND_RATIO_THRESHOLD
             ) {
-                $message = $this->translator->trans(
-                    'alert.wind.warning',
-                    [
-                        '%count%' => $headwindCount,
-                        '%total%' => $stagesWithWeather,
-                        '%threshold%' => $this->decimalFormatter->format(self::WIND_SPEED_THRESHOLD_KMH, $locale),
-                    ],
-                    'alerts',
-                    $locale,
-                );
-                $alert = new Alert(code: AlertCode::WIND_HEADWIND, type: AlertType::WARNING, message: $message);
-                $alerts[] = [
-                    'code' => $alert->code?->value,
-                    'type' => $alert->type->value,
-                    'message' => $alert->message,
-                    'action' => [
-                        'kind' => $dismissAction->kind->value,
-                        'label' => $dismissAction->label,
-                        'payload' => $dismissAction->payload,
-                    ],
-                ];
+                foreach ($headwindStages as $stage) {
+                    $alerts[] = $this->stageAlert(
+                        $stage,
+                        AlertCode::WIND_HEADWIND,
+                        'alert.wind.stage',
+                        ['%threshold%' => $this->decimalFormatter->format(self::WIND_SPEED_THRESHOLD_KMH, $locale)],
+                        $dismissAction,
+                        $locale,
+                    );
+                }
             }
 
-            if ($stagesWithWeather > 0 && $poorComfortCount > 0) {
-                $message = $this->translator->trans(
-                    'alert.comfort.warning',
-                    ['%count%' => $poorComfortCount, '%total%' => $stagesWithWeather],
-                    'alerts',
-                    $locale,
-                );
-                $alert = new Alert(code: AlertCode::COMFORT_POOR_CONDITIONS, type: AlertType::WARNING, message: $message);
-                $alerts[] = [
-                    'code' => $alert->code?->value,
-                    'type' => $alert->type->value,
-                    'message' => $alert->message,
-                    'action' => [
-                        'kind' => $dismissAction->kind->value,
-                        'label' => $dismissAction->label,
-                        'payload' => $dismissAction->payload,
-                    ],
-                ];
+            foreach ($poorComfortStages as $stage) {
+                $alerts[] = $this->stageAlert($stage, AlertCode::COMFORT_POOR_CONDITIONS, 'alert.comfort.stage', [], $dismissAction, $locale);
             }
 
-            if ($heatCount > 0) {
-                $alerts[] = $this->alertPayload(
+            foreach ($heatStages as $stage) {
+                $alerts[] = $this->stageAlert(
+                    $stage,
                     AlertCode::HEAT_EXTREME,
-                    $this->translator->trans(
-                        'alert.heat.warning',
-                        ['%count%' => $heatCount, '%threshold%' => $this->decimalFormatter->format(self::HEAT_APPARENT_MAX_C, $locale)],
-                        'alerts',
-                        $locale,
-                    ),
+                    'alert.heat.stage',
+                    ['%threshold%' => $this->decimalFormatter->format(self::HEAT_APPARENT_MAX_C, $locale)],
                     $dismissAction,
+                    $locale,
                 );
             }
 
-            if ($coldCount > 0) {
-                $alerts[] = $this->alertPayload(
+            foreach ($coldStages as $stage) {
+                $alerts[] = $this->stageAlert(
+                    $stage,
                     AlertCode::COLD_EXTREME,
-                    $this->translator->trans(
-                        'alert.cold.warning',
-                        ['%count%' => $coldCount, '%threshold%' => $this->decimalFormatter->format(self::COLD_APPARENT_MIN_C, $locale)],
-                        'alerts',
-                        $locale,
-                    ),
+                    'alert.cold.stage',
+                    ['%threshold%' => $this->decimalFormatter->format(self::COLD_APPARENT_MIN_C, $locale)],
                     $dismissAction,
+                    $locale,
                 );
             }
 
-            if ($rainCount > 0) {
-                $alerts[] = $this->alertPayload(
+            foreach ($rainStages as $stage) {
+                $alerts[] = $this->stageAlert(
+                    $stage,
                     AlertCode::RAIN_HEAVY,
-                    $this->translator->trans(
-                        'alert.rain.warning',
-                        ['%count%' => $rainCount, '%threshold%' => $this->decimalFormatter->format(self::RAIN_HEAVY_MM, $locale)],
-                        'alerts',
-                        $locale,
-                    ),
+                    'alert.rain.stage',
+                    ['%threshold%' => $this->decimalFormatter->format(self::RAIN_HEAVY_MM, $locale)],
                     $dismissAction,
+                    $locale,
                 );
             }
 
-            if ($gustCount > 0) {
-                $alerts[] = $this->alertPayload(
+            foreach ($gustStages as $stage) {
+                $alerts[] = $this->stageAlert(
+                    $stage,
                     AlertCode::WIND_GUSTS_STRONG,
-                    $this->translator->trans(
-                        'alert.gusts.warning',
-                        ['%count%' => $gustCount, '%threshold%' => $this->decimalFormatter->format(self::WIND_GUSTS_STRONG_KMH, $locale)],
-                        'alerts',
-                        $locale,
-                    ),
+                    'alert.gusts.stage',
+                    ['%threshold%' => $this->decimalFormatter->format(self::WIND_GUSTS_STRONG_KMH, $locale)],
                     $dismissAction,
+                    $locale,
                 );
             }
 
@@ -236,14 +213,18 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
     }
 
     /**
+     * @param array<string, string> $parameters
+     *
      * @return array<string, mixed>
      */
-    private function alertPayload(AlertCode $code, string $message, AlertAction $action): array
+    private function stageAlert(Stage $stage, AlertCode $code, string $key, array $parameters, AlertAction $action, string $locale): array
     {
         return [
+            'stageId' => $stage->id,
+            'dayNumber' => $stage->dayNumber,
             'code' => $code->value,
             'type' => AlertType::WARNING->value,
-            'message' => $message,
+            'message' => $this->translator->trans($key, $parameters, 'alerts', $locale),
             'action' => [
                 'kind' => $action->kind->value,
                 'label' => $action->label,

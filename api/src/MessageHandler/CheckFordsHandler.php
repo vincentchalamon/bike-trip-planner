@@ -91,7 +91,7 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
                     $seenNames[] = $key;
 
                     $alerts[] = [
-                        'stageIndex' => $i,
+                        'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => ($raining ? AlertCode::FORD_CROSSING_WET : AlertCode::FORD_CROSSING_DRY)->value,
                         'type' => ($raining ? AlertType::WARNING : AlertType::NUDGE)->value,

@@ -17,15 +17,18 @@ final class TripModification
 {
     public function __construct(
         /**
-         * Zero-based index of the affected stage.
+         * Identifier of the affected stage (ADR-066).
          * Null for trip-level modifications (dates, pacing settings, etc.).
+         *
+         * An identifier rather than a position: a batch is replayed after the edits it
+         * queues, by which point a position would name a different stage.
          */
-        #[Assert\PositiveOrZero]
+        #[Assert\Uuid]
         #[Assert\When(
             expression: "this.type in ['accommodation', 'distance']",
-            constraints: [new Assert\NotNull(message: 'stageIndex is required for accommodation and distance modifications.')],
+            constraints: [new Assert\NotNull(message: 'stageId is required for accommodation and distance modifications.')],
         )]
-        public ?int $stageIndex = null,
+        public ?string $stageId = null,
 
         /**
          * Type of modification — determines which handlers are re-dispatched.

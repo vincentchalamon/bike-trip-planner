@@ -36,6 +36,7 @@ final readonly class StageResponseMapper
             id: $stage->tripId,
             computationStatus: $this->computationTracker->getStatuses($stage->tripId) ?? [],
         );
+        $response->id = $stage->id;
         $response->dayNumber = $stage->dayNumber;
         $response->distance = $stage->distance;
         $response->elevation = $stage->elevation;

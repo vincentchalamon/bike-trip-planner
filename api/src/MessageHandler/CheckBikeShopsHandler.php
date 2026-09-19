@@ -108,7 +108,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
                 $nearestShop = $this->findNearestShop($midpoint, $allShops);
                 $stagesWithoutBikeShop[] = [
-                    'stageIndex' => $i,
+                    'stageId' => $stage->id,
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::BIKE_SHOP_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,

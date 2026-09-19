@@ -105,7 +105,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                 $stage = $stages[$stageIndex];
 
                 $alerts[] = [
-                    'stageIndex' => $stageIndex,
+                    'stageId' => $stage->id,
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::BORDER_CROSSING->value,
                     'type' => AlertType::NUDGE->value,
