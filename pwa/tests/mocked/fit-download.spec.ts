@@ -57,7 +57,7 @@ test.describe("FIT download", () => {
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0/export.fit");
+    expect(fitRequests[0]).toContain("/stages/stage-1/export.fit");
   });
 
   test("global FIT download button is visible after stages computed", async ({

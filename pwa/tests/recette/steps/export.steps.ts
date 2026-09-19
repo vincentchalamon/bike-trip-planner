@@ -160,13 +160,13 @@ Then(
 );
 
 Then(
-  /^une requête GET vers \/trips\/\*\/stages\/0\/export\.gpx est envoyée$/,
+  /^une requête GET vers \/trips\/\*\/stages\/\{stageId\}\/export\.gpx est envoyée$/,
   async () => {
     const gpxRequests = getTrackedStageGpxRequests();
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
+    expect(gpxRequests[0]).toContain("/stages/stage-1/export.gpx");
   },
 );
 
@@ -202,13 +202,13 @@ Then("un message d'erreur s'affiche", async ({ mockedPage }) => {
 });
 
 Then(
-  /^une requête GET vers \/trips\/\*\/stages\/0\/export\.fit est envoyée$/,
+  /^une requête GET vers \/trips\/\*\/stages\/\{stageId\}\/export\.fit est envoyée$/,
   async () => {
     const fitRequests = getTrackedStageFitRequests();
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0/export.fit");
+    expect(fitRequests[0]).toContain("/stages/stage-1/export.fit");
   },
 );
 
@@ -251,13 +251,13 @@ Then(
 );
 
 Then(
-  /^a GET request to \/trips\/\*\/stages\/0\/export\.gpx is sent$/,
+  /^a GET request to \/trips\/\*\/stages\/\{stageId\}\/export\.gpx is sent$/,
   async () => {
     const gpxRequests = getTrackedStageGpxRequests();
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
+    expect(gpxRequests[0]).toContain("/stages/stage-1/export.gpx");
   },
 );
 
@@ -295,13 +295,13 @@ Then("an error message is displayed", async ({ mockedPage }) => {
 });
 
 Then(
-  /^a GET request to \/trips\/\*\/stages\/0\/export\.fit is sent$/,
+  /^a GET request to \/trips\/\*\/stages\/\{stageId\}\/export\.fit is sent$/,
   async () => {
     const fitRequests = getTrackedStageFitRequests();
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0/export.fit");
+    expect(fitRequests[0]).toContain("/stages/stage-1/export.fit");
   },
 );
 
