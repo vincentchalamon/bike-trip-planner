@@ -1,5 +1,6 @@
 /// <reference types="jest" />
-import { authMiddleware } from './client';
+import { api, authMiddleware } from './client';
+import { preconditionHeader } from './trips';
 
 jest.mock('../auth/tokens', () => ({ getJwt: jest.fn() }));
 jest.mock('../auth/authApi', () => ({ refreshTokens: jest.fn() }));
@@ -248,5 +249,56 @@ describe('authMiddleware API health wiring (#1166)', () => {
 
   afterAll(() => {
     useOfflineStore.setState({ isOnline: true, apiReachable: true });
+  });
+});
+
+describe('precondition middleware ordering (ADR-067)', () => {
+  const TRIP_ID = '01936f6e-0000-7000-8000-0000000000aa';
+
+  // Regression (#1292 review): openapi-fetch runs `onResponse` in *reverse* registration
+  // order, so a precondition middleware registered after authMiddleware runs on the raw 401
+  // and never on the response the refresh-and-retry rebuilds. The version then stays behind
+  // on exactly the case the precondition exists for — a token expiring mid-edit — and every
+  // later edit is refused. Registration order is the whole fix; this is what pins it.
+  //
+  // Driven through the real client rather than by calling the middlewares by hand, because
+  // calling them by hand would hardcode the very order under test. Mirrors
+  // pwa/src/lib/api/client.test.ts.
+  it('captures the ETag of the response rebuilt after a 401 refresh and retry', async () => {
+    mockGetJwt.mockReturnValue('jwt');
+    mockRefresh.mockResolvedValue(true);
+    let calls = 0;
+    const fetchMock = jest.fn(async () => {
+      calls += 1;
+
+      return calls === 1
+        ? new Response('{}', { status: 401 })
+        : new Response('{}', { status: 202, headers: { ETag: '"12"' } });
+    });
+    globalThis.fetch = fetchMock as never;
+
+    // Re-imported after the mock is in place: createClient captures `globalThis.fetch` when
+    // the module loads, so the client imported at the top of this file holds the real one.
+    jest.resetModules();
+    // `require` rather than a dynamic import: this jest runner has no ESM VM modules.
+    // The auth mocks are re-created by resetModules, so the fresh module graph gets its own
+    // `jest.fn()`s — arming the ones captured at the top of this file would leave the retry
+    // path dead.
+    const freshTokens = require('../auth/tokens') as { getJwt: jest.Mock };
+    const freshAuthApi = require('../auth/authApi') as { refreshTokens: jest.Mock };
+    freshTokens.getJwt.mockReturnValue('jwt');
+    freshAuthApi.refreshTokens.mockResolvedValue(true);
+    const { api: freshApi } = require('./client') as typeof import('./client');
+    const { preconditionHeader: freshHeader } = require('./trips') as typeof import('./trips');
+
+    await freshApi.DELETE('/trips/{tripId}/stages/{stageId}', {
+      params: {
+        path: { tripId: TRIP_ID, stageId: 'stage-1' },
+        header: freshHeader(TRIP_ID),
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(freshHeader(TRIP_ID)).toEqual({ 'If-Match': '"12"' });
   });
 });

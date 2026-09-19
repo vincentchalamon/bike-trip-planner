@@ -16,6 +16,34 @@ export interface MutationResult {
   status: number;
 }
 
+/**
+ * The structural version of each trip this session has seen, as served by the `ETag` of the
+ * response that carried it (ADR-067).
+ *
+ * Module scope rather than the trip store: the store is snapshotted for undo, and a version
+ * restored by an undo would be one the server has already moved past — every later edit would
+ * be refused until the app reloaded the trip.
+ */
+const tripVersions = new Map<string, number>();
+
+/** Records a version pushed over Mercure, or read back from a response ETag. */
+export function setTripVersion(tripId: string, version: number): void {
+  tripVersions.set(tripId, version);
+}
+
+/**
+ * The `If-Match` header pinning the version this edit was computed against.
+ *
+ * Falls back to `*` — "whatever the current state is" (RFC 9110 §13.1.1) — when no version is
+ * known, which only happens before the trip has been read at all. A client in that position
+ * is not mid-edit against a view the server has moved past, so it has no narrower claim.
+ */
+export function preconditionHeader(tripId: string): { 'If-Match': string } {
+  const version = tripVersions.get(tripId);
+
+  return { 'If-Match': version === undefined ? '*' : `"${version}"` };
+}
+
 const ld = { Accept: 'application/ld+json' };
 // Body-bearing POSTs negotiate on JSON-LD; PATCHes use JSON Merge Patch (the
 // backend PATCH operations declare `application/merge-patch+json`).
@@ -134,7 +162,7 @@ export async function deleteStage(
   stageId: string,
 ): Promise<{ ok: boolean; status: number }> {
   const { response } = await api.DELETE('/trips/{tripId}/stages/{stageId}', {
-    params: { path: { tripId, stageId } },
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
     headers: ld,
   });
   return { ok: response.ok, status: response.status };
@@ -151,7 +179,7 @@ export async function updateTripConfig(
   body: TripConfigPatch,
 ): Promise<MutationResult> {
   const { response } = await api.PATCH('/trips/{id}', {
-    params: { path: { id: tripId } },
+    params: { path: { id: tripId }, header: preconditionHeader(tripId) },
     headers: mergePatch,
     body,
   });
@@ -164,7 +192,7 @@ export async function createStage(
   body: { position: number; startPoint: Coordinate; endPoint: Coordinate },
 ): Promise<MutationResult> {
   const { response } = await api.POST('/trips/{tripId}/stages', {
-    params: { path: { tripId } },
+    params: { path: { tripId }, header: preconditionHeader(tripId) },
     headers: ldBody,
     body,
   });
@@ -178,7 +206,7 @@ export async function updateStageDistance(
   distance: number,
 ): Promise<MutationResult> {
   const { response } = await api.PATCH('/trips/{tripId}/stages/{stageId}', {
-    params: { path: { tripId, stageId } },
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
     headers: mergePatch,
     body: { distance },
   });
@@ -192,7 +220,7 @@ export async function moveStage(
   toIndex: number,
 ): Promise<MutationResult> {
   const { response } = await api.PATCH('/trips/{tripId}/stages/{stageId}/move', {
-    params: { path: { tripId, stageId } },
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
     headers: mergePatch,
     body: { toIndex },
   });
@@ -205,7 +233,7 @@ export async function insertRestDay(
   stageId: string,
 ): Promise<MutationResult> {
   const { response } = await api.POST('/trips/{tripId}/stages/{stageId}/rest-day', {
-    params: { path: { tripId, stageId } },
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
     headers: ld,
   });
   return { ok: response.ok, status: response.status };
@@ -224,7 +252,7 @@ export async function setStageAccommodation(
   const { response } = await api.PATCH(
     '/trips/{tripId}/stages/{stageId}/accommodation',
     {
-      params: { path: { tripId, stageId } },
+      params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
       headers: mergePatch,
       body: { selectedAccommodationLat: lat, selectedAccommodationLon: lon },
     },
@@ -251,7 +279,7 @@ export async function addManualAccommodation(
   const { response } = await api.POST(
     '/trips/{tripId}/stages/{stageId}/accommodations/manual',
     {
-      params: { path: { tripId, stageId } },
+      params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
       headers: ldBody,
       body,
     },
@@ -297,7 +325,7 @@ export async function applyBatchRecompute(
   modifications: TripModification[],
 ): Promise<MutationResult> {
   const { response } = await api.POST('/trips/{id}/recompute', {
-    params: { path: { id: tripId } },
+    params: { path: { id: tripId }, header: preconditionHeader(tripId) },
     headers: ldBody,
     body: { modifications },
   });

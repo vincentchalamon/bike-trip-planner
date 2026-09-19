@@ -6,6 +6,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\PointOfInterest;
@@ -58,6 +59,11 @@ final readonly class TripDetailProvider implements ProviderInterface
         \assert($request->id instanceof Uuid);
 
         $stages = $this->tripStateManager->getStages($id) ?? [];
+
+        // The version the body is built from, advertised as the ETag the client pins with
+        // If-Match on its next edit. Read here rather than in the response listener, which
+        // would tag the body with whatever version won a race after it was assembled.
+        TripVersionEtag::stamp($context, $request->version);
 
         $statuses = $this->computationTracker->getStatuses($id);
 

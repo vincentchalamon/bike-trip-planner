@@ -36,9 +36,9 @@ final readonly class TripGenerationTracker implements TripGenerationTrackerInter
     {
     }
 
-    public function increment(string $tripId): int
+    public function increment(string $tripId, ?int $expectedVersion = null): int
     {
-        return $this->tripStateManager->bumpVersion($tripId);
+        return $this->tripStateManager->bumpVersion($tripId, $expectedVersion);
     }
 
     public function current(string $tripId): ?int

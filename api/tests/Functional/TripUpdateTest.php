@@ -26,6 +26,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class TripUpdateTest extends ApiTestCase
 {
+    use EditsTripsTrait;
+
     use Factories;
     use JwtAuthTestTrait;
 
@@ -39,7 +41,7 @@ final class TripUpdateTest extends ApiTestCase
 
     protected function setUp(): void
     {
-        $this->client = self::createClient();
+        $this->client = self::createEditingClient();
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
     }
 

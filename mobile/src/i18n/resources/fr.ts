@@ -349,6 +349,8 @@ export const fr = {
         validation: 'Valeur invalide. Vérifiez la distance saisie.',
         not_found: 'Étape introuvable. Rechargez le voyage.',
         conflict: 'Le voyage a changé entre-temps. Réessayez.',
+        stale:
+          'Ce voyage a changé pendant votre édition. Rechargez-le et refaites votre modification.',
         network: 'Erreur réseau. Réessayez.',
         error: 'La modification a échoué. Réessayez.',
       },

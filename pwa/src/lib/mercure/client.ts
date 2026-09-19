@@ -1,4 +1,4 @@
-import type { MercureEvent } from "@btp/core/mercure";
+import type { MercureEnvelope, MercureEvent } from "@btp/core/mercure";
 import { API_URL } from "@/lib/constants";
 
 const MAX_RECONNECT_DELAY = 30_000;
@@ -9,7 +9,7 @@ export class MercureClient {
   private reconnectDelay = 1_000;
   private closed = false;
   private authRetries = 0;
-  private callback: ((event: MercureEvent) => void) | null = null;
+  private callback: ((event: MercureEnvelope) => void) | null = null;
   private testHandler: ((e: Event) => void) | null = null;
 
   constructor(
@@ -18,7 +18,7 @@ export class MercureClient {
     private readonly authHeaderFactory?: () => Promise<string | null>,
   ) {}
 
-  onEvent(callback: (event: MercureEvent) => void): void {
+  onEvent(callback: (event: MercureEnvelope) => void): void {
     this.callback = callback;
     this.connect();
     // Test-only SSE injection hook (E2E). Gated behind an explicit build flag
@@ -53,7 +53,7 @@ export class MercureClient {
 
     this.eventSource.onmessage = (event) => {
       try {
-        const parsed = JSON.parse(event.data) as MercureEvent;
+        const parsed = JSON.parse(event.data) as MercureEnvelope;
         this.callback?.(parsed);
         this.reconnectDelay = 1_000;
         this.authRetries = 0;
@@ -125,7 +125,7 @@ export class MercureClient {
     if (typeof window === "undefined") return;
 
     this.testHandler = (e: Event) => {
-      const customEvent = e as CustomEvent<MercureEvent>;
+      const customEvent = e as CustomEvent<MercureEnvelope>;
       this.callback?.(customEvent.detail);
     };
 

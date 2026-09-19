@@ -345,6 +345,8 @@ export const en: typeof fr = {
         validation: 'Invalid value. Check the distance entered.',
         not_found: 'Stage not found. Reload the trip.',
         conflict: 'The trip changed in the meantime. Try again.',
+        stale:
+          'This trip changed while you were editing it. Reload it and reapply your change.',
         network: 'Network error. Try again.',
         error: 'The edit failed. Try again.',
       },

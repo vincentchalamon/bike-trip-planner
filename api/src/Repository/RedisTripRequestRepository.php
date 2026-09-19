@@ -11,6 +11,7 @@ use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Concurrency\VersionPrecondition;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -145,12 +146,14 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     /**
      * @param callable(list<Stage>): list<Stage> $mutator
      */
-    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult
     {
         $stages = $this->getStages($tripId);
         if (null === $stages) {
             return null;
         }
+
+        VersionPrecondition::assert($expectedVersion, $this->getVersion($tripId), $tripId);
 
         $mutated = $mutator($stages);
         $this->storeStages($tripId, $mutated);
@@ -165,9 +168,12 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return \is_int($value) ? $value : null;
     }
 
-    public function bumpVersion(string $tripId): int
+    public function bumpVersion(string $tripId, ?int $expectedVersion = null): int
     {
-        $next = ($this->getVersion($tripId) ?? 1) + 1;
+        $current = $this->getVersion($tripId);
+        VersionPrecondition::assert($expectedVersion, $current, $tripId);
+
+        $next = ($current ?? 1) + 1;
         $this->set($this->versionKey($tripId), $next);
 
         return $next;

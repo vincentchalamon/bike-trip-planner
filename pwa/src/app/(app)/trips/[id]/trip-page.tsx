@@ -55,6 +55,7 @@ function TripLoader({ tripId }: { tripId: string }) {
   // first hydrate has no stages, so gating on `isLoaded` alone would never fill
   // labels for that flow (recette #649).
   const stageCount = useTripStore((s) => s.stages.length);
+  const resyncToken = useUiStore((s) => s.resyncToken);
 
   useEffect(() => {
     let cancelled = false;
@@ -277,6 +278,9 @@ function TripLoader({ tripId }: { tripId: string }) {
     };
   }, [
     tripId,
+    // Bumped when the server refuses an edit as stale (412): re-reading the trip is the
+    // recovery, never replaying the edit (ADR-067).
+    resyncToken,
     setTrip,
     setStages,
     updateDatesInternal,

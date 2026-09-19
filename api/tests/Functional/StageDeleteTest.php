@@ -25,6 +25,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageDeleteTest extends ApiTestCase
 {
+    use EditsTripsTrait;
+
     use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
@@ -39,7 +41,7 @@ final class StageDeleteTest extends ApiTestCase
 
     protected function setUp(): void
     {
-        $this->client = self::createClient();
+        $this->client = self::createEditingClient();
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
     }
 

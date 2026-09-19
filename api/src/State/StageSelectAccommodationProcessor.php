@@ -9,6 +9,8 @@ use App\ApiResource\Model\Coordinate;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
+use App\Concurrency\IfMatch;
+use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
@@ -134,7 +136,9 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             }
 
             return array_values($stages);
-        });
+        }, IfMatch::expectedVersion($context));
+
+        TripVersionEtag::stamp($context, $write?->version);
 
         // The trip was asserted to exist above, so the write happened.
         \assert($write instanceof StageWriteResult);

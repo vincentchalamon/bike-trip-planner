@@ -3354,7 +3354,10 @@ export interface operations {
     api_trips_tripIdstages_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3399,6 +3402,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -3410,12 +3420,22 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_tripIdstages_stageId_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3455,12 +3475,29 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_tripIdstages_stageId_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3518,6 +3555,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -3529,12 +3573,22 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_tripIdstages_stageIdaccommodation_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3592,6 +3646,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -3603,12 +3664,22 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_tripIdstages_stageIdaccommodationsmanual_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3662,6 +3733,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description The address could not be geocoded (not found or ambiguous); nothing is persisted. */
             422: {
                 headers: {
@@ -3672,6 +3750,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3773,7 +3858,10 @@ export interface operations {
     api_trips_tripIdstages_stageIdmove_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3831,6 +3919,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -3841,6 +3936,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3910,7 +4012,10 @@ export interface operations {
     "api_trips_tripIdstages_stageIdrest-day_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Stage identifier */
                 tripId: string;
@@ -3952,6 +4057,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -3962,6 +4074,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4248,7 +4367,10 @@ export interface operations {
     api_trips_id_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Trip identifier */
                 id: string;
@@ -4304,6 +4426,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -4314,6 +4443,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4528,7 +4664,10 @@ export interface operations {
     api_trips_idrecompute_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The trip version this edit was computed against, quoted, as served by the ETag of the response it came from — for example `"7"`. `*` accepts whatever the current version is. */
+                "If-Match": string;
+            };
             path: {
                 /** @description Trip identifier */
                 id: string;
@@ -4580,6 +4719,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The trip has changed since the version you sent; reload it and reapply your change. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Trip has no stages to recompute */
             422: {
                 headers: {
@@ -4590,6 +4736,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

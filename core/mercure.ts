@@ -222,7 +222,9 @@ export type MercureEvent =
     }
   | {
       type: "wind_alerts";
-      data: { alerts: (AlertPayload & { stageId: string; dayNumber: number })[] };
+      data: {
+        alerts: (AlertPayload & { stageId: string; dayNumber: number })[];
+      };
     }
   | {
       type: "bike_shop_alerts";
@@ -446,6 +448,24 @@ export type MercureEvent =
       type: "stage_updated";
       data: { stageId: string; position: number; stage: EnrichedStagePayload };
     };
+
+/**
+ * What actually arrives on the wire: an event plus the fields the publisher puts at the
+ * envelope root.
+ *
+ * `version` is the trip's structural version after the change the event describes. A client
+ * pins it with `If-Match` on its next edit, and without it a regeneration performed by a
+ * worker — which moves the version with no HTTP response to say so — would leave the client
+ * holding a version that no longer exists, refused on everything it tried next.
+ *
+ * Optional because the publisher omits it for a trip it can no longer read, and because a
+ * client that does not edit has no use for it.
+ */
+export type MercureEnvelope = MercureEvent & {
+  version?: number;
+  /** End-to-end trace id (Caddy → Symfony → workers → Mercure). Not consumed by clients. */
+  correlationId?: string;
+};
 
 /**
  * Canonical list of every Mercure SSE event `type`. Single source of truth

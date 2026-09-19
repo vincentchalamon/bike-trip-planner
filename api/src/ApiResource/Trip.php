@@ -15,6 +15,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\NearbyPoiSearchProcessor;
+use App\State\PreconditionProcessor;
 use App\State\TripBatchRecomputeProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
@@ -135,6 +136,7 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: TripBatchRecomputeProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Patch(
             uriTemplate: '/trips/{id}{._format}',
@@ -144,6 +146,7 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: TripUpdateProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Get(
             uriTemplate: '/trips/{id}{._format}',

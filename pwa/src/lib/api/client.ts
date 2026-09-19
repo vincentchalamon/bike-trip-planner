@@ -50,6 +50,64 @@ export function rememberRequestId(response: Response): string | null {
 }
 
 /**
+ * The structural version of each trip this session has seen, as served by the `ETag` of the
+ * response that carried it (ADR-067).
+ *
+ * Kept in module scope rather than in the trip store on purpose: the store is snapshotted for
+ * undo/redo, and a version restored by Ctrl+Z would be a version the server has moved past —
+ * every subsequent edit would be refused until the page reloaded.
+ */
+const tripVersions = new Map<string, number>();
+
+const IF_MATCH_HEADER = "If-Match";
+
+/** The trip a request or an event concerns, or null when it concerns none. */
+function tripIdFromUrl(url: string): string | null {
+  return /\/trips\/([^/?#]+)/.exec(url)?.[1] ?? null;
+}
+
+/**
+ * Records the version a trip response advertises. Called from both API paths — the
+ * `openapi-fetch` middleware and the raw {@link apiFetch} the `/detail` hydration uses.
+ */
+export function rememberTripVersion(url: string, response: Response): void {
+  const tripId = tripIdFromUrl(url);
+  const etag = response.headers.get("ETag");
+  if (tripId === null || etag === null) return;
+
+  const version = Number.parseInt(etag.replace(/^W\/|"/g, ""), 10);
+  if (Number.isFinite(version))
+    tripVersions.set(decodeURIComponent(tripId), version);
+}
+
+/**
+ * Records a version pushed over Mercure. A regeneration performed by a worker moves the
+ * version with no HTTP response to carry a fresh ETag, so without this the client would keep
+ * pinning a version the server has left behind and be refused on every edit.
+ */
+export function setTripVersion(tripId: string, version: number): void {
+  tripVersions.set(tripId, version);
+}
+
+export function getTripVersion(tripId: string): number | undefined {
+  return tripVersions.get(tripId);
+}
+
+/**
+ * The `If-Match` header pinning the version this edit was computed against.
+ *
+ * Falls back to `*` — "whatever the current state is" (RFC 9110 §13.1.1) — when no version is
+ * known, which only happens before the trip has been read at all. A client in that position
+ * is not mid-edit against a view the server has moved past, so it has no narrower claim to
+ * make; every edit affordance in the app is behind a hydration that records a version.
+ */
+export function preconditionHeader(tripId: string): { "If-Match": string } {
+  const version = tripVersions.get(tripId);
+
+  return { [IF_MATCH_HEADER]: version === undefined ? "*" : `"${version}"` };
+}
+
+/**
  * Get the current Authorization header value from the auth store.
  * Returns undefined when no access token is available.
  */
@@ -92,6 +150,7 @@ export async function apiFetch(
     },
   });
   rememberRequestId(res);
+  rememberTripVersion(input, res);
 
   // On 401, attempt a silent refresh and retry once
   if (res.status === 401) {
@@ -160,6 +219,22 @@ const requestIdMiddleware: Middleware = {
   onResponse({ response }) {
     rememberRequestId(response);
     return response;
+  },
+};
+
+/**
+ * Records the version every trip response advertises.
+ *
+ * Only the response half: the request half is named at each call site through
+ * {@link preconditionHeader}, because the generated types mark `If-Match` required on exactly
+ * the operations the server guards. A middleware would have set it silently, and gone silently
+ * quiet the day a URL stopped matching its pattern; the compiler does not.
+ */
+const preconditionMiddleware: Middleware = {
+  // Returns nothing: openapi-fetch treats any returned value as a *replacement* response and
+  // rejects one that is not a `Response`, so an observer that changes nothing must stay silent.
+  onResponse({ request, response }) {
+    rememberTripVersion(request.url, response);
   },
 };
 
@@ -232,10 +307,16 @@ export const apiClient = createClient<paths>({
 });
 
 apiClient.use(requestIdMiddleware);
+// Before authMiddleware, never after: openapi-fetch runs `onResponse` in *reverse*
+// registration order, so registered last this would have run on the raw 401 — before
+// authMiddleware refreshed the token and rebuilt the response — and the retried request's
+// ETag would never have been captured. Same reasoning as requestIdMiddleware above, and
+// pinned by "captures the ETag of the response rebuilt after a 401 refresh and retry".
+apiClient.use(preconditionMiddleware);
 apiClient.use(authMiddleware);
 
 export interface ApiError {
-  type: "validation" | "bad_request" | "not_found" | "network";
+  type: "validation" | "bad_request" | "not_found" | "stale" | "network";
   message: string;
   violations?: { propertyPath: string; message: string }[];
 }
@@ -272,6 +353,7 @@ const API_ERROR_FALLBACK_KEY: Record<ApiError["type"], string> = {
   validation: "errors.validationError",
   bad_request: "errors.badRequest",
   not_found: "errors.notFound",
+  stale: "errors.tripMovedOn",
   network: "errors.unexpectedError",
 };
 
@@ -296,6 +378,17 @@ export function parseApiError(status: number, body: unknown): ApiError {
   if (status === 404) {
     return {
       type: "not_found",
+      message: "",
+    };
+  }
+
+  // 412: the edit was computed against a version the trip has moved past. 428: no version
+  // was pinned at all, which means this client never read the trip. Both are answered by
+  // reloading and letting the user decide — never by replaying the edit, which is the one
+  // thing that could apply it to a state it was not meant for.
+  if (status === 412 || status === 428) {
+    return {
+      type: "stale",
       message: "",
     };
   }
@@ -365,7 +458,7 @@ export async function addManualAccommodation(
   const { response } = await apiClient.POST(
     "/trips/{tripId}/stages/{stageId}/accommodations/manual",
     {
-      params: { path: { tripId, stageId } },
+      params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
       body: {
         name: data.name,
         address: data.address,
@@ -489,7 +582,7 @@ export async function applyBatchRecompute(
   modifications: components["schemas"]["TripModification"][],
 ): Promise<boolean> {
   const { response } = await apiClient.POST("/trips/{id}/recompute", {
-    params: { path: { id: tripId } },
+    params: { path: { id: tripId }, header: preconditionHeader(tripId) },
     body: { modifications },
   });
   return response.ok;

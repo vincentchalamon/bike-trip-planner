@@ -19,6 +19,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
+use App\State\PreconditionProcessor;
 use App\State\RestDayInsertProcessor;
 use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageCreateProcessor;
@@ -78,6 +79,7 @@ use Symfony\Component\Uid\Uuid;
             input: StageRequest::class,
             output: StageResponse::class,
             processor: StageCreateProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Patch(
             uriTemplate: '/trips/{tripId}/stages/{stageId}{._format}',
@@ -92,6 +94,7 @@ use Symfony\Component\Uid\Uuid;
             output: StageResponse::class,
             provider: StageProvider::class,
             processor: StageUpdateProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Patch(
             uriTemplate: '/trips/{tripId}/stages/{stageId}/move{._format}',
@@ -106,6 +109,7 @@ use Symfony\Component\Uid\Uuid;
             output: StageResponse::class,
             provider: StageProvider::class,
             processor: StageMoveProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Delete(
             uriTemplate: '/trips/{tripId}/stages/{stageId}{._format}',
@@ -118,6 +122,7 @@ use Symfony\Component\Uid\Uuid;
             security: "is_granted('TRIP_EDIT', tripId)",
             provider: StageProvider::class,
             processor: StageDeleteProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages/{stageId}/rest-day{._format}',
@@ -131,6 +136,7 @@ use Symfony\Component\Uid\Uuid;
             input: false,
             output: StageResponse::class,
             processor: RestDayInsertProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Patch(
             uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodation{._format}',
@@ -145,6 +151,7 @@ use Symfony\Component\Uid\Uuid;
             output: StageResponse::class,
             provider: StageProvider::class,
             processor: StageSelectAccommodationProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodations/manual{._format}',
@@ -165,6 +172,7 @@ use Symfony\Component\Uid\Uuid;
             input: StageManualAccommodationRequest::class,
             output: StageResponse::class,
             processor: StageAddManualAccommodationProcessor::class,
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages/{stageId}/poi-waypoint{._format}',
@@ -173,6 +181,9 @@ use Symfony\Component\Uid\Uuid;
                 'stageId' => new Link(fromClass: Stage::class),
             ],
             status: 202,
+            // No If-Match: this dispatches a reroute that lands through a targeted write, so
+            // it never moves the structural version. It addresses the stage by identity, so a
+            // caller working from a stale list still reroutes the stage it meant to.
             openapi: new Operation(summary: 'Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.'),
             security: "is_granted('TRIP_EDIT', tripId)",
             input: StagePoiWaypointRequest::class,

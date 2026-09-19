@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use Symfony\Component\HttpKernel\Exception\PreconditionFailedHttpException;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Resupply;
@@ -65,11 +66,17 @@ interface TripRequestRepositoryInterface
      * serialised — see {@see StageWriteResult} for why reading it afterwards is not the same
      * thing.
      *
+     * $expectedVersion carries the client's `If-Match` precondition. It is compared here,
+     * inside the critical section, rather than by the caller: checked earlier the comparison
+     * would be a TOCTOU as wide as the processor body (see {@see \App\Concurrency\VersionPrecondition}).
+     *
      * @param callable(list<Stage>): list<Stage> $mutator
      *
      * @return StageWriteResult|null null when the trip is unknown
+     *
+     * @throws PreconditionFailedHttpException when $expectedVersion is stale
      */
-    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult;
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult;
 
     /**
      * Returns a single stage's route geometry, in travel order, projected to 2D.
@@ -106,9 +113,14 @@ interface TripRequestRepositoryInterface
      * in-flight computations without rewriting the collection (trip settings, batch
      * recompute).
      *
+     * @param int|null $expectedVersion the client's `If-Match` precondition, compared inside
+     *                                  the critical section — see {@see self::mutateStages()}
+     *
      * @return int the new version, or 0 when the trip is unknown
+     *
+     * @throws PreconditionFailedHttpException when $expectedVersion is stale
      */
-    public function bumpVersion(string $tripId): int;
+    public function bumpVersion(string $tripId, ?int $expectedVersion = null): int;
 
     /**
      * Persists a single stage's weather atomically, keyed by the stage identifier.
