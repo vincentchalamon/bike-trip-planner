@@ -102,9 +102,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             // Coordinates and contextual actions are part of the live payload: the
             // frontend must be able to zoom to a discontinuity without waiting for a
             // reload through TripDetailProvider (issue #863).
+            // Keyed by stage identity, like every other stage-scoped event since ADR-066.
+            // It was still keyed by array position after that migration, so no key matched
+            // a stage and the client dropped every live terrain alert — invisible because
+            // terrain is the one group that is persisted, so a reload brought them back.
             $alertsData = [];
-            foreach ($stages as $i => $stage) {
-                $alertsData[$i] = array_map(
+            foreach ($stages as $stage) {
+                $alertsData[$stage->id] = array_map(
                     $this->stagePayloadMapper->alertToPayload(...),
                     $stage->alerts,
                 );
