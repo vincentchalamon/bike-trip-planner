@@ -4,7 +4,7 @@ import { useTripStore } from "@/store/trip-store";
 
 interface DiffHighlightProps {
   /** Index of the stage this highlight belongs to. */
-  stageIndex: number;
+  stageId: string;
   /**
    * Logical field name to watch. When this field appears in the stage's
    * `stageDiffs` set, the children receive a transient highlight animation.
@@ -43,13 +43,13 @@ interface DiffHighlightProps {
  * ```
  */
 export function DiffHighlight({
-  stageIndex,
+  stageId,
   field,
   children,
   changeLabel = "",
 }: DiffHighlightProps) {
   const isChanged = useTripStore(
-    (s) => s.stageDiffs.get(stageIndex)?.has(field) ?? false,
+    (s) => s.stageDiffs.get(stageId)?.has(field) ?? false,
   );
 
   return (

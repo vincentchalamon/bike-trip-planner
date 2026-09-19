@@ -352,7 +352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}": {
+    "/trips/{tripId}/stages/{stageId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -366,17 +366,17 @@ export interface paths {
          * Delete a stage (merge with adjacent).
          * @description Delete a stage (merge with adjacent).
          */
-        delete: operations["api_trips_tripIdstages_index_delete"];
+        delete: operations["api_trips_tripIdstages_stageId_delete"];
         options?: never;
         head?: never;
         /**
          * Update stage data (start/end points, etc.).
          * @description Update stage data (start/end points, etc.).
          */
-        patch: operations["api_trips_tripIdstages_index_patch"];
+        patch: operations["api_trips_tripIdstages_stageId_patch"];
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/accommodation": {
+    "/trips/{tripId}/stages/{stageId}/accommodation": {
         parameters: {
             query?: never;
             header?: never;
@@ -393,10 +393,10 @@ export interface paths {
          * Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
          * @description Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
          */
-        patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
+        patch: operations["api_trips_tripIdstages_stageIdaccommodation_patch"];
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/accommodations/manual": {
+    "/trips/{tripId}/stages/{stageId}/accommodations/manual": {
         parameters: {
             query?: never;
             header?: never;
@@ -409,14 +409,14 @@ export interface paths {
          * Add a manually-entered accommodation to a stage. The address is geocoded, the accommodation becomes the selected one, and the stage endPoint plus the next stage startPoint move to it.
          * @description Add a manually-entered accommodation to a stage. The address is geocoded, the accommodation becomes the selected one, and the stage endPoint plus the next stage startPoint move to it.
          */
-        post: operations["api_trips_tripIdstages_indexaccommodationsmanual_post"];
+        post: operations["api_trips_tripIdstages_stageIdaccommodationsmanual_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/detail": {
+    "/trips/{tripId}/stages/{stageId}/detail": {
         parameters: {
             query?: never;
             header?: never;
@@ -427,7 +427,7 @@ export interface paths {
          * Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).
          * @description Load one stage in full (geometry, resupply, accommodations, events, classified alerts, weather).
          */
-        get: operations["api_trips_tripIdstages_indexdetail_get"];
+        get: operations["api_trips_tripIdstages_stageIddetail_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -436,7 +436,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/export": {
+    "/trips/{tripId}/stages/{stageId}/export": {
         parameters: {
             query?: never;
             header?: never;
@@ -447,7 +447,7 @@ export interface paths {
          * Download a stage as GPX or FIT file.
          * @description Download a stage as GPX or FIT file.
          */
-        get: operations["api_trips_tripIdstages_indexexport_get"];
+        get: operations["api_trips_tripIdstages_stageIdexport_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -456,7 +456,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/move": {
+    "/trips/{tripId}/stages/{stageId}/move": {
         parameters: {
             query?: never;
             header?: never;
@@ -473,10 +473,10 @@ export interface paths {
          * Move a stage to a new position.
          * @description Move a stage to a new position.
          */
-        patch: operations["api_trips_tripIdstages_indexmove_patch"];
+        patch: operations["api_trips_tripIdstages_stageIdmove_patch"];
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/poi-waypoint": {
+    "/trips/{tripId}/stages/{stageId}/poi-waypoint": {
         parameters: {
             query?: never;
             header?: never;
@@ -489,14 +489,14 @@ export interface paths {
          * Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.
          * @description Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.
          */
-        post: operations["api_trips_tripIdstages_indexpoi-waypoint_post"];
+        post: operations["api_trips_tripIdstages_stageIdpoi-waypoint_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/stages/{index}/rest-day": {
+    "/trips/{tripId}/stages/{stageId}/rest-day": {
         parameters: {
             query?: never;
             header?: never;
@@ -509,7 +509,7 @@ export interface paths {
          * Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.
          * @description Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.
          */
-        post: operations["api_trips_tripIdstages_indexrest-day_post"];
+        post: operations["api_trips_tripIdstages_stageIdrest-day_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -788,7 +788,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/s/{shortCode}/stages/{index}": {
+    "/s/{shortCode}/stages/{stageId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -799,7 +799,7 @@ export interface paths {
          * Download shared stage as GPX or FIT via short code.
          * @description Download shared stage as GPX or FIT via short code.
          */
-        get: operations["api_s_shortCodestages_index_get"];
+        get: operations["api_s_shortCodestages_stageId_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -937,7 +937,6 @@ export interface components {
              * @default 5
              */
             radiusKm: number;
-            /** @description Optional stage index to restrict the scan to a single stage */
             stageIndex?: number | null;
         };
         "AccommodationScan.Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
@@ -1911,6 +1910,8 @@ export interface components {
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
             /** @description Serialized stage DTOs */
             stages?: {
+                /** Format: uuid */
+                stageId?: string;
                 dayNumber?: number;
                 /** Format: float */
                 distance?: number;
@@ -2189,6 +2190,8 @@ export interface components {
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
             /** @description Serialized stage DTOs */
             stages?: {
+                /** Format: uuid */
+                stageId?: string;
                 dayNumber?: number;
                 /** Format: float */
                 distance?: number;
@@ -3400,7 +3403,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_index_delete: {
+    api_trips_tripIdstages_stageId_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -3408,7 +3411,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3445,7 +3448,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_index_patch: {
+    api_trips_tripIdstages_stageId_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -3453,7 +3456,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3519,7 +3522,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_indexaccommodation_patch: {
+    api_trips_tripIdstages_stageIdaccommodation_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -3527,7 +3530,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3593,7 +3596,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_indexaccommodationsmanual_post: {
+    api_trips_tripIdstages_stageIdaccommodationsmanual_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3601,7 +3604,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3663,7 +3666,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_indexdetail_get: {
+    api_trips_tripIdstages_stageIddetail_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -3671,7 +3674,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3710,7 +3713,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_indexexport_get: {
+    api_trips_tripIdstages_stageIdexport_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -3718,7 +3721,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3758,7 +3761,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_indexmove_patch: {
+    api_trips_tripIdstages_stageIdmove_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -3766,7 +3769,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3832,7 +3835,7 @@ export interface operations {
             };
         };
     };
-    "api_trips_tripIdstages_indexpoi-waypoint_post": {
+    "api_trips_tripIdstages_stageIdpoi-waypoint_post": {
         parameters: {
             query?: never;
             header?: never;
@@ -3840,7 +3843,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -3895,7 +3898,7 @@ export interface operations {
             };
         };
     };
-    "api_trips_tripIdstages_indexrest-day_post": {
+    "api_trips_tripIdstages_stageIdrest-day_post": {
         parameters: {
             query?: never;
             header?: never;
@@ -3903,7 +3906,7 @@ export interface operations {
                 /** @description Stage identifier */
                 tripId: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };
@@ -4851,7 +4854,7 @@ export interface operations {
             };
         };
     };
-    api_s_shortCodestages_index_get: {
+    api_s_shortCodestages_stageId_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -4859,7 +4862,7 @@ export interface operations {
                 /** @description TripShare identifier */
                 shortCode: string;
                 /** @description Stage identifier */
-                index: string;
+                stageId: string;
             };
             cookie?: never;
         };

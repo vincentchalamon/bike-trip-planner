@@ -32,6 +32,7 @@ export function enrichedPayloadToStageData(
   payload: EnrichedStagePayload,
 ): StageData {
   return {
+    id: payload.stageId,
     dayNumber: payload.dayNumber,
     distance: payload.distance,
     elevation: payload.elevation,
@@ -157,18 +158,24 @@ export interface StageUpdateResult {
  * Preserves client-only fields on a stable endpoint (labels, radius, supply
  * timeline, accommodations + selection, events) and merges alerts so a
  * terrain-only reroute payload does not blank the separately-scanned
- * cultural-POI recommendations (#649). A `stage_updated` at exactly
- * `stages.length` appends the split-off trailing day (#840); a larger index is
- * a stale/obsolete event and is ignored.
+ * cultural-POI recommendations (#649).
+ *
+ * The stage is matched by identity. An identifier we do not know is ambiguous on
+ * its own — it is either the trailing day a distance edit just split off (#840)
+ * or an event from a superseded pacing generation — so `position` decides: at
+ * exactly `stages.length` it is the new trailing day and is appended, anywhere
+ * else it is stale and ignored.
  */
 export function reconcileStageUpdate(
   existing: StageData[],
-  stageIndex: number,
+  stageId: string,
+  position: number,
   incoming: StageData,
 ): StageUpdateResult {
-  const prev = existing[stageIndex];
+  const index = existing.findIndex((stage) => stage.id === stageId);
+  const prev = existing[index];
   if (!prev) {
-    if (stageIndex === existing.length) {
+    if (position === existing.length) {
       return {
         stages: [...existing, incoming],
         appendedTrailingStage: true,
@@ -210,25 +217,28 @@ export function reconcileStageUpdate(
   };
 
   const stages = existing.slice();
-  stages[stageIndex] = reconciled;
+  stages[index] = reconciled;
   return { stages, appendedTrailingStage: false };
 }
 
 /**
- * Drop recomputing markers for indices that no longer exist after the stage
- * array changed length, so a phantom index never holds the `processing`
- * overlay open forever (#840). Only ever removes indices, so when nothing is
- * stale it returns the SAME set reference — matching the old in-place
- * `.delete()` semantics, so a store selector keyed on `recomputingStages`
- * (Object.is) does not re-render on every resync/structural edit.
+ * Drop recomputing markers for stages that no longer exist, so a marker never
+ * holds the `processing` overlay open forever (#840). Only ever removes entries,
+ * so when nothing is stale it returns the SAME set reference — matching the old
+ * in-place `.delete()` semantics, so a store selector keyed on
+ * `recomputingStages` (Object.is) does not re-render on every resync.
+ *
+ * Keyed on identity, a marker follows its stage across insertions and moves
+ * instead of being stranded on whatever now sits at that position.
  */
 export function pruneStaleRecomputing(
-  stageCount: number,
-  recomputing: Set<number>,
-): Set<number> {
-  const next = new Set<number>();
-  for (const i of recomputing) {
-    if (i < stageCount) next.add(i);
+  stages: StageData[],
+  recomputing: Set<string>,
+): Set<string> {
+  const alive = new Set(stages.map((stage) => stage.id));
+  const next = new Set<string>();
+  for (const stageId of recomputing) {
+    if (alive.has(stageId)) next.add(stageId);
   }
   return next.size === recomputing.size ? recomputing : next;
 }
@@ -282,19 +292,23 @@ export interface ReconciledState {
   title: string | null;
   stages: StageData[];
   computationStatus: Record<string, string>;
-  recomputingStages: Set<number>;
+  recomputingStages: Set<string>;
 }
 
-/** Replace `stages[index]` via `patch`; returns the same array if out of range. */
+/**
+ * Replace the stage identified by `stageId` via `patch`; returns the same array
+ * when no stage carries that identifier — which is the expected outcome for an
+ * event from a superseded pacing generation.
+ */
 function patchStage(
   stages: StageData[],
-  index: number,
+  stageId: string,
   patch: (stage: StageData) => StageData,
 ): StageData[] {
-  const stage = stages[index];
-  if (!stage) return stages;
+  const index = stages.findIndex((stage) => stage.id === stageId);
+  if (index === -1) return stages;
   const next = stages.slice();
-  next[index] = patch(stage);
+  next[index] = patch(next[index]!);
   return next;
 }
 
@@ -305,11 +319,11 @@ function patchStage(
  */
 function replaceStageAlerts(
   stages: StageData[],
-  index: number,
+  stageId: string,
   alerts: AlertData[],
   group: string,
 ): StageData[] {
-  return patchStage(stages, index, (stage) => {
+  return patchStage(stages, stageId, (stage) => {
     const kept = (stage.alerts as StageAlert[]).filter(
       (a) => a._group !== group,
     );
@@ -318,53 +332,59 @@ function replaceStageAlerts(
   });
 }
 
-/** Fold a per-stage-index alert map onto the stage array under one group tag. */
+/** Fold a per-stage alert map onto the stage array under one group tag. */
 function applyGroupedAlerts(
   stages: StageData[],
-  grouped: Map<number, AlertData[]>,
+  grouped: Map<string, AlertData[]>,
   group: string,
 ): StageData[] {
   let next = stages;
-  for (const [index, alerts] of grouped) {
-    next = replaceStageAlerts(next, index, alerts, group);
+  for (const [stageId, alerts] of grouped) {
+    next = replaceStageAlerts(next, stageId, alerts, group);
   }
   return next;
 }
 
-/** Group + normalize a flat alert list keyed by `stageIndex` into `AlertData`. */
-function groupAlerts<T extends { stageIndex: number }>(
+/**
+ * Group + normalize a flat alert list keyed by `stageId` into `AlertData`.
+ *
+ * The structural constraint is deliberate: it makes every producer of a grouped
+ * alert list fail to compile until it carries the identifier.
+ */
+function groupAlerts<T extends { stageId: string }>(
   alerts: T[],
   toAlert: (alert: T) => AlertData,
-): Map<number, AlertData[]> {
-  const grouped = new Map<number, AlertData[]>();
+): Map<string, AlertData[]> {
+  const grouped = new Map<string, AlertData[]>();
   for (const alert of alerts) {
-    const bucket = grouped.get(alert.stageIndex) ?? [];
+    const bucket = grouped.get(alert.stageId) ?? [];
     bucket.push(toAlert(alert));
-    grouped.set(alert.stageIndex, bucket);
+    grouped.set(alert.stageId, bucket);
   }
   return grouped;
 }
 
 /**
  * `stages_computed` merge (legacy progressive path). A partial update
- * (`affectedIndices`) preserves derived data for untouched stages and resets it
+ * (`affectedStageIds`) preserves derived data for untouched stages and resets it
  * for affected/new ones (keeping alerts + accommodations until their follow-up
  * events land, #649); a full replace preserves labels/accommodations/radius on
  * stages whose endpoints did not move. Verbatim from `use-mercure.ts`.
  */
 function reconcileStagesComputed(
   existing: StageData[],
-  data: { stages: StagePayload[]; affectedIndices?: number[] },
+  data: { stages: StagePayload[]; affectedStageIds?: string[] },
 ): StageData[] {
-  const { affectedIndices } = data;
+  const { affectedStageIds } = data;
 
-  if (affectedIndices && affectedIndices.length > 0 && existing.length > 0) {
-    const affected = new Set(affectedIndices);
+  if (affectedStageIds && affectedStageIds.length > 0 && existing.length > 0) {
+    const affected = new Set(affectedStageIds);
     return data.stages.map((s, i) => {
       const prev = existing[i];
-      if (prev && !affected.has(i)) {
+      if (prev && !affected.has(s.stageId)) {
         return {
           ...prev,
+          id: s.stageId,
           dayNumber: s.dayNumber,
           distance: s.distance,
           elevation: s.elevation,
@@ -377,6 +397,7 @@ function reconcileStagesComputed(
       }
       return {
         ...s,
+        id: s.stageId,
         elevationLoss: s.elevationLoss ?? 0,
         geometry: s.geometry ?? [],
         label: s.label ?? null,
@@ -408,6 +429,7 @@ function reconcileStagesComputed(
       prev.startPoint.lon === s.startPoint.lon;
     return {
       ...s,
+      id: s.stageId,
       elevationLoss: s.elevationLoss ?? 0,
       geometry: s.geometry ?? [],
       label: s.label ?? null,
@@ -428,7 +450,7 @@ function reconcileStagesComputed(
 }
 
 /** Empty recomputing set (terminal events clear the overlay). */
-const NO_RECOMPUTING: ReadonlySet<number> = new Set<number>();
+const NO_RECOMPUTING: ReadonlySet<string> = new Set<string>();
 
 /**
  * Reconcile one Mercure SSE event into the next {@link ReconciledState}. Pure:
@@ -460,7 +482,7 @@ export function reduceMercureEvent(
         ...state,
         stages,
         recomputingStages: pruneStaleRecomputing(
-          stages.length,
+          stages,
           state.recomputingStages,
         ),
       };
@@ -471,23 +493,23 @@ export function reduceMercureEvent(
       for (const w of event.data.stages) {
         const weather = w.weather;
         if (!weather) continue;
-        const index = stages.findIndex((s) => s.dayNumber === w.dayNumber);
-        if (index !== -1) {
-          stages = patchStage(stages, index, (s) => ({ ...s, weather }));
+        const stage = stages.find((s) => s.dayNumber === w.dayNumber);
+        if (stage) {
+          stages = patchStage(stages, stage.id, (s) => ({ ...s, weather }));
         }
       }
       return stages === state.stages ? state : { ...state, stages };
     }
 
     case "pois_scanned": {
-      let stages = patchStage(state.stages, event.data.stageIndex, (s) => ({
+      let stages = patchStage(state.stages, event.data.stageId, (s) => ({
         ...s,
         resupply: event.data.resupply,
       }));
       if (event.data.alerts && event.data.alerts.length > 0) {
         stages = replaceStageAlerts(
           stages,
-          event.data.stageIndex,
+          event.data.stageId,
           event.data.alerts,
           "pois",
         );
@@ -498,15 +520,15 @@ export function reduceMercureEvent(
     case "supply_timeline":
       return {
         ...state,
-        stages: patchStage(state.stages, event.data.stageIndex, (s) => ({
+        stages: patchStage(state.stages, event.data.stageId, (s) => ({
           ...s,
           supplyTimeline: event.data.markers,
         })),
       };
 
     case "accommodations_found": {
-      const { stageIndex, accommodations, searchRadiusKm } = event.data;
-      let stages = patchStage(state.stages, stageIndex, (s) => ({
+      const { stageId, accommodations, searchRadiusKm } = event.data;
+      let stages = patchStage(state.stages, stageId, (s) => ({
         ...s,
         // Do not clobber a rider's picked accommodation (store parity).
         accommodations: s.selectedAccommodation
@@ -520,7 +542,7 @@ export function reduceMercureEvent(
       if (event.data.alerts && event.data.alerts.length > 0) {
         stages = replaceStageAlerts(
           stages,
-          stageIndex,
+          stageId,
           event.data.alerts,
           "accommodations",
         );
@@ -531,7 +553,7 @@ export function reduceMercureEvent(
     case "events_found":
       return {
         ...state,
-        stages: patchStage(state.stages, event.data.stageIndex, (s) => ({
+        stages: patchStage(state.stages, event.data.stageId, (s) => ({
           ...s,
           events: event.data.events,
         })),
@@ -539,13 +561,12 @@ export function reduceMercureEvent(
 
     case "terrain_alerts": {
       let stages = state.stages;
-      for (const [indexStr, alerts] of Object.entries(
+      // The map key is a stage identifier now, so there is nothing to parse and
+      // nothing that can silently resolve to the wrong stage.
+      for (const [stageId, alerts] of Object.entries(
         event.data.alertsByStage,
       )) {
-        const index = Number(indexStr);
-        if (!Number.isNaN(index)) {
-          stages = replaceStageAlerts(stages, index, alerts, "terrain");
-        }
+        stages = replaceStageAlerts(stages, stageId, alerts, "terrain");
       }
       return { ...state, stages };
     }
@@ -573,9 +594,21 @@ export function reduceMercureEvent(
     }
 
     case "wind_alerts":
+      // Previously pinned to the first stage, because the event carried no stage
+      // reference at all — a message about the whole trip read as if it concerned
+      // day one. It names its stages now.
       return {
         ...state,
-        stages: replaceStageAlerts(state.stages, 0, event.data.alerts, "wind"),
+        stages: applyGroupedAlerts(
+          state.stages,
+          groupAlerts(event.data.alerts, (a) => ({
+            code: a.code,
+            type: a.type,
+            message: a.message,
+            action: a.action,
+          })),
+          "wind",
+        ),
       };
 
     case "bike_shop_alerts": {
@@ -718,7 +751,7 @@ export function reduceMercureEvent(
     }
 
     case "route_segment_recalculated": {
-      let stages = patchStage(state.stages, event.data.stageIndex, (s) => ({
+      let stages = patchStage(state.stages, event.data.stageId, (s) => ({
         ...s,
         distance: event.data.distance / 1000, // metres → km
         elevation: event.data.elevationGain,
@@ -726,7 +759,7 @@ export function reduceMercureEvent(
       }));
       stages = replaceStageAlerts(
         stages,
-        event.data.stageIndex,
+        event.data.stageId,
         [],
         "cultural_poi",
       );
@@ -758,11 +791,12 @@ export function reduceMercureEvent(
       const incoming = enrichedPayloadToStageData(event.data.stage);
       const { stages } = reconcileStageUpdate(
         state.stages,
-        event.data.stageIndex,
+        event.data.stageId,
+        event.data.position,
         incoming,
       );
       const recomputingStages = new Set(state.recomputingStages);
-      recomputingStages.delete(event.data.stageIndex);
+      recomputingStages.delete(event.data.stageId);
       return { ...state, stages, recomputingStages };
     }
 

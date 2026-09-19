@@ -331,14 +331,14 @@ export function isNetworkError(error: unknown): error is TypeError {
  */
 export async function addPoiWaypointToRoute(
   tripId: string,
-  stageIndex: number,
+  stageId: string,
   waypointLat: number,
   waypointLon: number,
 ): Promise<boolean> {
   const { response } = await apiClient.POST(
-    "/trips/{tripId}/stages/{index}/poi-waypoint",
+    "/trips/{tripId}/stages/{stageId}/poi-waypoint",
     {
-      params: { path: { tripId, index: String(stageIndex) } },
+      params: { path: { tripId, stageId } },
       body: { waypointLat, waypointLon },
     },
   );
@@ -354,7 +354,7 @@ export async function addPoiWaypointToRoute(
  */
 export async function addManualAccommodation(
   tripId: string,
-  stageIndex: number,
+  stageId: string,
   data: {
     name: string;
     address: string;
@@ -363,9 +363,9 @@ export async function addManualAccommodation(
   },
 ): Promise<{ ok: boolean; status: number }> {
   const { response } = await apiClient.POST(
-    "/trips/{tripId}/stages/{index}/accommodations/manual",
+    "/trips/{tripId}/stages/{stageId}/accommodations/manual",
     {
-      params: { path: { tripId, index: String(stageIndex) } },
+      params: { path: { tripId, stageId } },
       body: {
         name: data.name,
         address: data.address,

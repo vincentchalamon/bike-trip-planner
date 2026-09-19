@@ -62,9 +62,9 @@ function dispatchEvent(
   // reverse-geocode reply cannot overwrite another trip's labels (#787). Scoped
   // per subscription rather than module-global.
   signal: AbortSignal,
-  // Per-subscription stage-diff timers, keyed by stage index. Owned by useMercure
+  // Per-subscription stage-diff timers, keyed by stage identifier. Owned by useMercure
   // and cleared on teardown so a timer from trip A never fires against trip B.
-  timers: Map<number, ReturnType<typeof setTimeout>>,
+  timers: Map<string, ReturnType<typeof setTimeout>>,
 ): void {
   const store = useTripStore.getState();
   const ui = useUiStore.getState();
@@ -77,10 +77,11 @@ function dispatchEvent(
   // core leaves to the store, and its recompute marker is settled right after.
   if (event.type === "stage_updated") {
     store.applyStageUpdate(
-      event.data.stageIndex,
+      event.data.stageId,
+      event.data.position,
       enrichedPayloadToStageData(event.data.stage),
     );
-    store.finishStageRecomputation(event.data.stageIndex);
+    store.finishStageRecomputation(event.data.stageId);
   } else {
     store.applyReconciled(
       reduceMercureEvent(
@@ -108,17 +109,23 @@ function dispatchEvent(
   // (validation_error / computation_error / terminals clear them there).
   switch (event.type) {
     case "stages_computed": {
-      const { affectedIndices } = event.data;
+      const { affectedStageIds } = event.data;
       if (
-        affectedIndices &&
-        affectedIndices.length > 0 &&
+        affectedStageIds &&
+        affectedStageIds.length > 0 &&
         prevStages.length > 0
       ) {
         // Partial update: only the affected stages had their labels reset.
-        const affected = new Set(affectedIndices);
-        const affectedStages = postStages.filter((_, i) => affected.has(i));
-        if (affectedStages.length > 0) {
-          resolveStageLabels(affectedStages, affectedIndices, signal);
+        const affected = new Set(affectedStageIds);
+        const affectedWithIndex = postStages
+          .map((s, i) => ({ s, i }))
+          .filter(({ s }) => affected.has(s.id));
+        if (affectedWithIndex.length > 0) {
+          resolveStageLabels(
+            affectedWithIndex.map(({ s }) => s),
+            affectedWithIndex.map(({ i }) => i),
+            signal,
+          );
         }
       } else {
         // Full replace: geocode every stage still missing a label.
@@ -180,22 +187,22 @@ function dispatchEvent(
     }
 
     case "stage_updated": {
-      const index = event.data.stageIndex;
-      const prevStage = prevStages[index];
-      const nextStage = postStages[index];
+      const stageId = event.data.stageId;
+      const prevStage = prevStages.find((s) => s.id === stageId);
+      const nextStage = postStages.find((s) => s.id === stageId);
 
       // Transient diff-highlight of the changed fields (reads pre vs post state).
       if (prevStage && nextStage) {
         const changed = computeStageDiff(prevStage, nextStage);
         if (changed.size > 0) {
-          const existingTimer = timers.get(index);
+          const existingTimer = timers.get(stageId);
           if (existingTimer !== undefined) clearTimeout(existingTimer);
-          store.setStageDiff(index, changed);
+          store.setStageDiff(stageId, changed);
           const timer = setTimeout(() => {
-            useTripStore.getState().clearStageDiff(index);
-            timers.delete(index);
+            useTripStore.getState().clearStageDiff(stageId);
+            timers.delete(stageId);
           }, 3000);
-          timers.set(index, timer);
+          timers.set(stageId, timer);
         }
       }
 
@@ -208,11 +215,13 @@ function dispatchEvent(
       }
 
       // Labels may have been wiped if endpoints moved — refresh if needed.
+      const nextIndex = postStages.findIndex((s) => s.id === stageId);
       if (
         nextStage &&
+        nextIndex !== -1 &&
         (nextStage.startLabel === null || nextStage.endLabel === null)
       ) {
-        resolveStageLabels([nextStage], [index], signal);
+        resolveStageLabels([nextStage], [nextIndex], signal);
       }
       break;
     }
@@ -322,7 +331,7 @@ export function useMercure(tripId: string | null): void {
     // late geocode reply or a pending diff timer from this trip can never land on
     // the next one after a fast switch.
     const controller = new AbortController();
-    const timers = new Map<number, ReturnType<typeof setTimeout>>();
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
     // Re-authenticate the Mercure cookie when it expires on a long-open tab: the
     // client calls /trips/{id}/detail with this Bearer to have the backend re-pin

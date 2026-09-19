@@ -226,7 +226,7 @@ export function TripPlanner() {
     const handler = (e: Event) => {
       const mod = (
         e as CustomEvent<{
-          stageIndex: number | null;
+          stageId: string | null;
           type: "accommodation" | "distance" | "dates" | "pacing";
           label: string;
         }>

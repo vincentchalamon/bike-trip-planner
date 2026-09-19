@@ -68,6 +68,9 @@ final readonly class TripDetail
             'items' => [
                 'type' => 'object',
                 'properties' => [
+                    // Stable identity of the stage: what every stage operation and
+                    // every SSE event addresses it by (ADR-066).
+                    'stageId' => ['type' => 'string', 'format' => 'uuid'],
                     'dayNumber' => ['type' => 'integer'],
                     'distance' => ['type' => 'number', 'format' => 'float'],
                     'elevation' => ['type' => 'number', 'format' => 'float'],
