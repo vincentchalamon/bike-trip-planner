@@ -144,15 +144,6 @@ final class TripUpdateProcessorTest extends TestCase
     }
 
     /**
-     * Regression (#1292 review): the settings comparison has to run before the write.
-     *
-     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity and
-     * `storeRequest()` copies the incoming fields onto that very instance, so a comparison
-     * performed afterwards compares the new values with themselves and dispatches nothing.
-     * The functional suite cannot see it — it is aliased to the Redis implementation, which
-     * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
-     */
-    /**
      * The settings edit carries the client's `If-Match` into the version bump.
      *
      * The comparison happens in the repository, under the write lock; what is checkable here
@@ -202,6 +193,15 @@ final class TripUpdateProcessorTest extends TestCase
         $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request]);
     }
 
+    /**
+     * Regression (#1292 review): the settings comparison has to run before the write.
+     *
+     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity and
+     * `storeRequest()` copies the incoming fields onto that very instance, so a comparison
+     * performed afterwards compares the new values with themselves and dispatches nothing.
+     * The functional suite cannot see it — it is aliased to the Redis implementation, which
+     * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
+     */
     #[Test]
     public function resolvesTheChangeBeforeTheWriteAliasesTheOldRequest(): void
     {
