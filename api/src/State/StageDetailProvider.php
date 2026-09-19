@@ -15,8 +15,6 @@ use App\Repository\DoctrineTripRequestRepository;
  * alerts, weather) — the on-demand half of the split trip read model (ADR-057).
  * The roadbook loads only the summary; the detail is fetched when a stage opens.
  *
- * `index` is the 0-based stage position, matching {@see StageProvider}.
- *
  * @implements ProviderInterface<StageResponse>
  */
 final readonly class StageDetailProvider implements ProviderInterface
