@@ -66,7 +66,7 @@ test.describe("Manual (hors-app) accommodation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -80,8 +80,8 @@ test.describe("Manual (hors-app) accommodation", () => {
     await expect(stageCard).toBeHidden({ timeout: 3000 });
 
     // …then the resolved stages arrive over SSE (the affected stage + the next).
-    await injectEvent(stageUpdatedEventWithManualAccommodation(0));
-    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEventWithManualAccommodation(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // The manual accommodation is the selected one, rendered by the same block:
     // title, "Manuel" source badge and the postal address.
@@ -111,7 +111,7 @@ test.describe("Manual (hors-app) accommodation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -149,7 +149,7 @@ test.describe("Manual (hors-app) accommodation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -157,8 +157,8 @@ test.describe("Manual (hors-app) accommodation", () => {
     await fillManualForm(stageCard);
     await stageCard.getByRole("button", { name: "Enregistrer" }).click();
     await expect(stageCard).toBeHidden({ timeout: 3000 });
-    await injectEvent(stageUpdatedEventWithManualAccommodation(0));
-    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEventWithManualAccommodation(1));
+    await injectEvent(stageUpdatedEvent(2));
     await expect(stageCard).toContainText("HomeExchange Grenoble");
     await expect(stageCard).toContainText("Sélectionné");
 
@@ -169,8 +169,8 @@ test.describe("Manual (hors-app) accommodation", () => {
     await expect(stageCard).toBeHidden({ timeout: 3000 });
     // Resolve both stages with an empty candidate list (no accommodations_found
     // is injected): the deselect scan finds nothing to re-propose.
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // The manual accommodation is gone and NOT re-proposed as a candidate.
     await expect(stageCard).not.toContainText("HomeExchange Grenoble");

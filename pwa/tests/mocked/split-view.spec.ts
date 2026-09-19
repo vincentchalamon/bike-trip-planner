@@ -10,6 +10,7 @@ function stagesWithGeometryEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -24,6 +25,7 @@ function stagesWithGeometryEvent(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-2",
           dayNumber: 2,
           distance: 63.2,
           elevation: 870,

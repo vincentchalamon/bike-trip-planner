@@ -31,7 +31,7 @@ test.describe("Inline recomputation — skeleton", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -68,7 +68,7 @@ test.describe("Inline recomputation — skeleton", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -101,7 +101,7 @@ test.describe("Inline recomputation — skeleton", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -121,8 +121,8 @@ test.describe("Inline recomputation — skeleton", () => {
 
     // Inject stage_updated for both affected stages: selecting an accommodation
     // on stage 0 also triggers recomputation of stage 1 (its start shifts).
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // The real stage card should be back
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -143,7 +143,7 @@ test.describe("Inline recomputation — skeleton", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -188,7 +188,7 @@ test.describe("Inline recomputation — progress bar", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -222,7 +222,7 @@ test.describe("Inline recomputation — progress bar", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -240,8 +240,8 @@ test.describe("Inline recomputation — progress bar", () => {
     ).toBeVisible({ timeout: 3000 });
 
     // Inject stage_updated for both affected stages (0 and 1)
-    await injectEvent(stageUpdatedEvent(0));
     await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
 
     // Bar should disappear once recomputingStages is empty
     await expect(mockedPage.getByTestId("inline-recomputation-bar")).toBeHidden(

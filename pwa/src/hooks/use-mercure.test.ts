@@ -38,8 +38,10 @@ const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
 
 function stage(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -118,7 +120,7 @@ describe("useMercure — UI side effects (kept out of core)", () => {
     const dispatch = connect();
     dispatch({
       type: "accommodations_found",
-      data: { stageIndex: 0, accommodations: [], searchRadiusKm: 5 },
+      data: { stageId: "stage-1", accommodations: [], searchRadiusKm: 5 },
     });
     expect(useUiStore.getState().isAccommodationScanning).toBe(false);
   });
@@ -171,6 +173,7 @@ describe("useMercure — UI side effects (kept out of core)", () => {
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 50,
             elevation: 0,

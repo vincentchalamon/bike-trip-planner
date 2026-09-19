@@ -13,6 +13,7 @@ Given(
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 72.5,
             elevation: 1180,
@@ -34,6 +35,7 @@ Given("stages have no geometry data", async ({ injectEvent }) => {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,

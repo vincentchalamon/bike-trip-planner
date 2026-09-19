@@ -163,6 +163,7 @@ export function roadbookDetail() {
     },
     stages: [
       {
+        stageId: "stage-1",
         dayNumber: 1,
         distance: 72.5,
         elevation: 1180,
@@ -199,6 +200,7 @@ export function roadbookDetail() {
         events: [],
       },
       {
+        stageId: "stage-2",
         dayNumber: 2,
         distance: 63.2,
         elevation: 870,

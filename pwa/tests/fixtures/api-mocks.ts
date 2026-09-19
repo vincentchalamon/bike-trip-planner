@@ -52,6 +52,7 @@ export function getTripId(): string {
  */
 export const LOADED_TRIP_DETAIL_STAGES = [
   {
+    stageId: "stage-1",
     dayNumber: 1,
     distance: 72.5,
     elevation: 1180,
@@ -76,6 +77,7 @@ export const LOADED_TRIP_DETAIL_STAGES = [
     selectedAccommodation: null,
   },
   {
+    stageId: "stage-2",
     dayNumber: 2,
     distance: 63.2,
     elevation: 870,
@@ -100,6 +102,7 @@ export const LOADED_TRIP_DETAIL_STAGES = [
     selectedAccommodation: null,
   },
   {
+    stageId: "stage-3",
     dayNumber: 3,
     distance: 51.6,
     elevation: 800,

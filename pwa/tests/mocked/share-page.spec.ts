@@ -15,6 +15,7 @@ const MOCK_SHARED_TRIP = {
   averageSpeed: 16,
   stages: [
     {
+      stageId: "stage-1",
       dayNumber: 1,
       distance: 68.5,
       elevation: 920,
@@ -36,6 +37,7 @@ const MOCK_SHARED_TRIP = {
       isRestDay: false,
     },
     {
+      stageId: "stage-2",
       dayNumber: 2,
       distance: 54.2,
       elevation: 640,

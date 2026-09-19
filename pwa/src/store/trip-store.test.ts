@@ -13,6 +13,7 @@ import type {
 
 function makeStage(dayNumber: number, distance = 50): StageData {
   return {
+    id: `stage-${dayNumber}`,
     dayNumber,
     distance,
     elevation: 0,
@@ -76,6 +77,7 @@ describe("getUndoableSlice", () => {
     const state = {
       stages: [
         {
+          id: "stage-1",
           dayNumber: 1,
           distance: 80,
           elevation: 500,
@@ -124,6 +126,7 @@ describe("getUndoableSlice", () => {
 
   it("returns a deep clone (no shared references)", () => {
     const stage = {
+      id: "stage-1",
       dayNumber: 1,
       distance: 50,
       elevation: 200,
@@ -328,7 +331,7 @@ describe("applyStageUpdate preservation (recette #649)", () => {
 
     // stage_updated payload after a re-route carries an empty list.
     const incoming = makeStage(1);
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.accommodations).toEqual([acc]);
@@ -344,7 +347,7 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     const incoming = makeStage(1);
     incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
     incoming.accommodations = [makeAccommodation("New")];
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.accommodations[0]?.name).toBe("New");
@@ -357,7 +360,7 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     store.setStages([current]);
 
     const incoming = makeStage(1);
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.alerts).toHaveLength(1);
@@ -373,7 +376,7 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     const incoming = makeStage(1);
     incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
     incoming.alerts = [makeAlert("new")];
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.alerts[0]?.message).toBe("new");
@@ -394,7 +397,7 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     const incoming = makeStage(1);
     incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
     incoming.alerts = [makeAlert("new terrain")];
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.alerts.some((a) => a.source === "cultural_poi")).toBe(true);
@@ -422,7 +425,7 @@ describe("events preservation (recette)", () => {
     current.events = [makeEvent("Fête du vélo")];
     store.setStages([current]);
 
-    store.applyStageUpdate(0, makeStage(1));
+    store.applyStageUpdate("stage-1", 0, makeStage(1));
 
     expect(useTripStore.getState().stages[0]!.events).toHaveLength(1);
   });
@@ -436,7 +439,7 @@ describe("events preservation (recette)", () => {
     const incoming = makeStage(1);
     incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
     incoming.events = [makeEvent("New")];
-    store.applyStageUpdate(0, incoming);
+    store.applyStageUpdate("stage-1", 0, incoming);
 
     const result = useTripStore.getState().stages[0]!;
     expect(result.events).toHaveLength(1);
@@ -493,8 +496,8 @@ describe("recompute concurrency guard (#840)", () => {
     const store = useTripStore.getState();
     store.clearTrip();
     const before = useTripStore.getState().recomputeVersion;
-    store.startStageRecomputation([0]);
-    store.startStageRecomputation([1]);
+    store.startStageRecomputation(["stage-1"]);
+    store.startStageRecomputation(["stage-2"]);
     expect(useTripStore.getState().recomputeVersion).toBe(before + 2);
   });
 
@@ -506,7 +509,7 @@ describe("recompute concurrency guard (#840)", () => {
     // its stage_updated lands at the next contiguous index.
     const newDay = makeStage(4, 25);
     newDay.endPoint = { lat: 1, lon: 1, ele: 0 };
-    store.applyStageUpdate(3, newDay);
+    store.applyStageUpdate("stage-4", 3, newDay);
 
     const stages = useTripStore.getState().stages;
     expect(stages).toHaveLength(4);
@@ -516,7 +519,7 @@ describe("recompute concurrency guard (#840)", () => {
   it("ignores a far out-of-range stage_updated (stale event)", () => {
     const store = useTripStore.getState();
     store.setStages([makeStage(1), makeStage(2)]);
-    store.applyStageUpdate(5, makeStage(6));
+    store.applyStageUpdate("stage-6", 5, makeStage(6));
     expect(useTripStore.getState().stages).toHaveLength(2);
   });
 
@@ -524,10 +527,10 @@ describe("recompute concurrency guard (#840)", () => {
     const store = useTripStore.getState();
     store.clearTrip();
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
-    store.startStageRecomputation([0, 1, 2]);
-    // Day count shrinks: indices 1 and 2 can never receive a stage_updated.
+    store.startStageRecomputation(["stage-1", "stage-2", "stage-3"]);
+    // Day count shrinks: stages 2 and 3 can never receive a stage_updated.
     store.setStages([makeStage(1)]);
-    expect([...useTripStore.getState().recomputingStages]).toEqual([0]);
+    expect([...useTripStore.getState().recomputingStages]).toEqual(["stage-1"]);
   });
 
   it("lifts the overlay on a last-stage edit that adds a day, losing no data", () => {
@@ -535,15 +538,15 @@ describe("recompute concurrency guard (#840)", () => {
     store.clearTrip();
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
     // Edit last stage: mark the affected range (single last index here).
-    store.startStageRecomputation([2]);
+    store.startStageRecomputation(["stage-3"]);
 
     // Backend re-splits and emits stage_updated for the edited stage and the
     // freshly created trailing day.
-    store.applyStageUpdate(2, makeStage(3, 40));
-    store.finishStageRecomputation(2);
+    store.applyStageUpdate("stage-3", 2, makeStage(3, 40));
+    store.finishStageRecomputation("stage-3");
     const newDay = makeStage(4, 20);
     newDay.endPoint = { lat: 2, lon: 2, ele: 0 };
-    store.applyStageUpdate(3, newDay);
+    store.applyStageUpdate("stage-4", 3, newDay);
 
     const state = useTripStore.getState();
     expect(state.stages).toHaveLength(4);
@@ -556,11 +559,12 @@ describe("recompute concurrency guard (#840)", () => {
     const store = useTripStore.getState();
     store.clearTrip();
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
-    store.startStageRecomputation([0, 1, 2]);
-    // Deleting a stage shrinks the array; index 2 can no longer be settled.
+    store.startStageRecomputation(["stage-1", "stage-2", "stage-3"]);
+    // Deleting a stage removes it; its marker can no longer be settled.
     store.deleteStage(2);
     expect([...useTripStore.getState().recomputingStages].sort()).toEqual([
-      0, 1,
+      "stage-1",
+      "stage-2",
     ]);
   });
 });
@@ -608,7 +612,7 @@ describe("date window stays in sync with stage count (recette #649)", () => {
     // lands at the next contiguous index.
     const newDay = makeStage(3, 20);
     newDay.endPoint = { lat: 3, lon: 3, ele: 0 };
-    store.applyStageUpdate(2, newDay);
+    store.applyStageUpdate("stage-3", 2, newDay);
     // 3 stages → 3 days: 10–12 July.
     expect(useTripStore.getState().endDate).toBe("2026-07-12");
   });

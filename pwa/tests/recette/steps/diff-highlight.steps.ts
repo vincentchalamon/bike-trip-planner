@@ -9,13 +9,15 @@ import type { MercureEvent } from "@btp/core/mercure";
 // ---------------------------------------------------------------------------
 
 /** A stage_updated event changing the distance (72.5 → 55.0 km). */
-function stageUpdatedWithDistanceChange(stageIndex: number): MercureEvent {
+function stageUpdatedWithDistanceChange(dayNumber: number): MercureEvent {
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 55.0,
         elevation: 720,
         elevationLoss: 640,
@@ -44,13 +46,15 @@ function stageUpdatedWithDistanceChange(stageIndex: number): MercureEvent {
 }
 
 /** A stage_updated event adding a new alert (distance unchanged). */
-function stageUpdatedWithNewAlerts(stageIndex: number): MercureEvent {
+function stageUpdatedWithNewAlerts(dayNumber: number): MercureEvent {
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 72.5,
         elevation: 1180,
         elevationLoss: 920,

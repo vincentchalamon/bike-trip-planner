@@ -16,7 +16,7 @@ test.describe("Accommodation hover — map markers", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -49,7 +49,7 @@ test.describe("Accommodation hover — map markers", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 
@@ -81,7 +81,7 @@ test.describe("Accommodation hover — map markers", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
 

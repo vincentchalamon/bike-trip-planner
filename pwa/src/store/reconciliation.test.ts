@@ -21,8 +21,10 @@ const B = { lat: 2, lon: 2, ele: 0 };
 const C = { lat: 3, lon: 3, ele: 0 };
 
 function stage(overrides: Partial<StageData> = {}): StageData {
+  const dayNumber = overrides.dayNumber ?? 1;
   return {
-    dayNumber: 1,
+    id: `stage-${dayNumber}`,
+    dayNumber,
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
@@ -162,16 +164,21 @@ describe("reconcileTripReady (#649)", () => {
 });
 
 describe("reconcileStageUpdate (#840/#649)", () => {
-  it("appends a stage_updated at stages.length and flags the trailing day (#840)", () => {
+  it("appends an unknown stage at stages.length and flags the trailing day (#840)", () => {
     const existing = [stage({ dayNumber: 1 })];
-    const res = reconcileStageUpdate(existing, 1, stage({ dayNumber: 2 }));
+    const res = reconcileStageUpdate(
+      existing,
+      "stage-2",
+      1,
+      stage({ dayNumber: 2 }),
+    );
     expect(res.appendedTrailingStage).toBe(true);
     expect(res.stages).toHaveLength(2);
   });
 
-  it("ignores a stale event at an index beyond the trailing slot", () => {
+  it("ignores an unknown stage whose position is not the trailing slot", () => {
     const existing = [stage()];
-    const res = reconcileStageUpdate(existing, 5, stage());
+    const res = reconcileStageUpdate(existing, "stage-9", 5, stage());
     expect(res.appendedTrailingStage).toBe(false);
     expect(res.stages).toBe(existing);
   });
@@ -180,6 +187,7 @@ describe("reconcileStageUpdate (#840/#649)", () => {
     const existing = [stage({ alerts: [alert({ message: "prev" })] })];
     const res = reconcileStageUpdate(
       existing,
+      "stage-1",
       0,
       stage({ alerts: [alert({ message: "incoming" })] }),
     );
@@ -203,7 +211,7 @@ describe("reconcileStageUpdate (#840/#649)", () => {
         alert({ source: "cultural_poi", message: "should-drop" }),
       ],
     });
-    const s = only(reconcileStageUpdate(existing, 0, incoming).stages);
+    const s = only(reconcileStageUpdate(existing, "stage-1", 0, incoming).stages);
     const messages = s.alerts.map((a) => a.message);
     const sources = s.alerts.map((a) => a.source);
     expect(messages).toContain("museum"); // prev cultural preserved
@@ -223,34 +231,39 @@ describe("reconcileStageUpdate (#840/#649)", () => {
     };
     const existing = [stage({ supplyTimeline: [marker] })];
     const s = only(
-      reconcileStageUpdate(existing, 0, stage({ supplyTimeline: [] })).stages,
+      reconcileStageUpdate(existing, "stage-1", 0, stage({ supplyTimeline: [] })).stages,
     );
     expect(s.supplyTimeline).toEqual([marker]);
   });
 
   it("does not mutate the existing stages", () => {
     const existing = [stage({ endLabel: "Lyon" })];
-    reconcileStageUpdate(existing, 0, stage({ endLabel: null }));
+    reconcileStageUpdate(existing, "stage-1", 0, stage({ endLabel: null }));
     expect(only(existing).endLabel).toBe("Lyon");
   });
 });
 
 describe("pruneStaleRecomputing (#840)", () => {
-  it("drops indices that fell out of bounds and keeps the rest", () => {
-    const pruned = pruneStaleRecomputing(2, new Set([0, 1, 2, 5]));
-    expect([...pruned].sort()).toEqual([0, 1]);
+  const twoStages = [stage({ id: "stage-1" }), stage({ id: "stage-2" })];
+
+  it("drops markers for stages that no longer exist and keeps the rest", () => {
+    const pruned = pruneStaleRecomputing(
+      twoStages,
+      new Set(["stage-1", "stage-2", "stage-3", "stage-6"]),
+    );
+    expect([...pruned].sort()).toEqual(["stage-1", "stage-2"]);
   });
 
   it("returns a new set (does not mutate the input) when something is pruned", () => {
-    const input = new Set([0, 3]);
-    const pruned = pruneStaleRecomputing(1, input);
-    expect(input.has(3)).toBe(true);
+    const input = new Set(["stage-1", "stage-4"]);
+    const pruned = pruneStaleRecomputing([stage({ id: "stage-1" })], input);
+    expect(input.has("stage-4")).toBe(true);
     expect(pruned).not.toBe(input);
   });
 
   it("returns the SAME reference when nothing is stale (preserves Object.is, no phantom re-render)", () => {
-    const input = new Set([0, 1]);
-    expect(pruneStaleRecomputing(2, input)).toBe(input);
+    const input = new Set(["stage-1", "stage-2"]);
+    expect(pruneStaleRecomputing(twoStages, input)).toBe(input);
   });
 });
 

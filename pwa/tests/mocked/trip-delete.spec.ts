@@ -30,6 +30,7 @@ const MOCK_DETAIL = {
   isLocked: false,
   stages: [
     {
+      stageId: "stage-1",
       dayNumber: 1,
       distance: 60,
       elevation: 800,
@@ -54,6 +55,7 @@ const MOCK_DETAIL = {
       selectedAccommodation: null,
     },
     {
+      stageId: "stage-2",
       dayNumber: 2,
       distance: 55,
       elevation: 700,

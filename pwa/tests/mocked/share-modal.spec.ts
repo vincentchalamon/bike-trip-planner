@@ -99,8 +99,8 @@ async function openShareModal(fixtures: {
     routeParsedEvent(),
     stagesComputedEvent(),
     weatherFetchedEvent(),
-    accommodationsFoundEvent(0),
-    accommodationsFoundEvent(1),
+    accommodationsFoundEvent("stage-1"),
+    accommodationsFoundEvent("stage-2"),
     tripCompleteEvent(),
   ]);
 
@@ -249,8 +249,8 @@ test.describe("Share modal", () => {
       routeParsedEvent(),
       stagesComputedEvent(),
       weatherFetchedEvent(),
-      accommodationsFoundEvent(0),
-      accommodationsFoundEvent(1),
+      accommodationsFoundEvent("stage-1"),
+      accommodationsFoundEvent("stage-2"),
       tripCompleteEvent(),
     ]);
 

@@ -27,6 +27,7 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -126,6 +127,7 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -339,6 +341,7 @@ test.describe("StageAlerts — severity grouping", () => {
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 72.5,
             elevation: 1180,

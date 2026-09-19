@@ -13,6 +13,7 @@ function stagesWithGeometryEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -29,6 +30,7 @@ function stagesWithGeometryEvent(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-2",
           dayNumber: 2,
           distance: 63.2,
           elevation: 870,
@@ -44,6 +46,7 @@ function stagesWithGeometryEvent(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-3",
           dayNumber: 3,
           distance: 51.6,
           elevation: 800,
@@ -124,6 +127,7 @@ test.describe("Elevation profile", () => {
       data: {
         stages: [
           {
+            stageId: "stage-1",
             dayNumber: 1,
             distance: 72.5,
             elevation: 1180,
@@ -329,7 +333,7 @@ function enrichedCulturalPoiAlertsEvent(): MercureEvent {
     data: {
       alerts: [
         {
-          stageIndex: 0,
+          stageId: "stage-1",
           dayNumber: 1,
           code: "cultural_poi_suggestion",
           type: "nudge",

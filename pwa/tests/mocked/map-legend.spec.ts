@@ -34,7 +34,7 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({

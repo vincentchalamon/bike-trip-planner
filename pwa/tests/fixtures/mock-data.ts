@@ -19,6 +19,7 @@ export function stagesComputedEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -29,6 +30,7 @@ export function stagesComputedEvent(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-2",
           dayNumber: 2,
           distance: 63.2,
           elevation: 870,
@@ -39,6 +41,7 @@ export function stagesComputedEvent(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-3",
           dayNumber: 3,
           distance: 51.6,
           elevation: 800,
@@ -71,6 +74,7 @@ export function stagesComputedEventWithGeometry(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -85,6 +89,7 @@ export function stagesComputedEventWithGeometry(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-2",
           dayNumber: 2,
           distance: 63.2,
           elevation: 870,
@@ -99,6 +104,7 @@ export function stagesComputedEventWithGeometry(): MercureEvent {
           label: null,
         },
         {
+          stageId: "stage-3",
           dayNumber: 3,
           distance: 51.6,
           elevation: 800,
@@ -199,13 +205,13 @@ export function weatherFetchedEvent(): MercureEvent {
 }
 
 export function accommodationsFoundEvent(
-  stageIndex: number,
+  stageId: string,
   searchRadiusKm = 5,
 ): MercureEvent {
   return {
     type: "accommodations_found",
     data: {
-      stageIndex,
+      stageId,
       searchRadiusKm,
       accommodations: [
         {
@@ -257,13 +263,13 @@ export function accommodationsFoundEvent(
 }
 
 export function emptyAccommodationsFoundEvent(
-  stageIndex: number,
+  stageId: string,
   searchRadiusKm = 5,
 ): MercureEvent {
   return {
     type: "accommodations_found",
     data: {
-      stageIndex,
+      stageId,
       searchRadiusKm,
       accommodations: [],
     },
@@ -355,7 +361,7 @@ export function calendarAlertsEvent(): MercureEvent {
     data: {
       alerts: [
         {
-          stageIndex: 0,
+          stageId: "stage-1",
           dayNumber: 1,
           code: "calendar_public_holiday",
           type: "nudge",
@@ -363,7 +369,7 @@ export function calendarAlertsEvent(): MercureEvent {
           date: "2026-07-14",
         },
         {
-          stageIndex: 1,
+          stageId: "stage-2",
           dayNumber: 2,
           code: "calendar_sunday",
           type: "warning",
@@ -480,7 +486,7 @@ export function culturalPoiAlertsEvent(): MercureEvent {
     data: {
       alerts: [
         {
-          stageIndex: 0,
+          stageId: "stage-1",
           dayNumber: 1,
           code: "cultural_poi_suggestion",
           type: "nudge",
@@ -499,11 +505,11 @@ export function culturalPoiAlertsEvent(): MercureEvent {
   };
 }
 
-export function routeSegmentRecalculatedEvent(stageIndex = 0): MercureEvent {
+export function routeSegmentRecalculatedEvent(stageId = "stage-1"): MercureEvent {
   return {
     type: "route_segment_recalculated",
     data: {
-      stageIndex,
+      stageId,
       reason: "poi_detour",
       distance: 75200,
       elevationGain: 1240,
@@ -532,11 +538,11 @@ export function tripCompleteEvent(): MercureEvent {
   };
 }
 
-export function supplyTimelineEvent(stageIndex: number): MercureEvent {
+export function supplyTimelineEvent(stageId: string): MercureEvent {
   return {
     type: "supply_timeline",
     data: {
-      stageIndex,
+      stageId,
       markers: [
         {
           type: "water",
@@ -604,11 +610,11 @@ export function supplyTimelineEvent(stageIndex: number): MercureEvent {
   };
 }
 
-export function supplyTimelineClusterEvent(stageIndex = 0): MercureEvent {
+export function supplyTimelineClusterEvent(stageId = "stage-1"): MercureEvent {
   return {
     type: "supply_timeline",
     data: {
-      stageIndex,
+      stageId,
       markers: [
         {
           type: "water",
@@ -675,8 +681,8 @@ export function fullTripEventSequence(): MercureEvent[] {
     routeParsedEvent(),
     stagesComputedEvent(),
     weatherFetchedEvent(),
-    accommodationsFoundEvent(0),
-    accommodationsFoundEvent(1),
+    accommodationsFoundEvent("stage-1"),
+    accommodationsFoundEvent("stage-2"),
     terrainAlertsEvent(),
     tripCompleteEvent(),
   ];
@@ -706,6 +712,7 @@ export function tripReadyEvent(): MercureEvent {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -743,6 +750,7 @@ export function tripReadyEvent(): MercureEvent {
           events: [],
         },
         {
+          stageId: "stage-2",
           dayNumber: 2,
           distance: 63.2,
           elevation: 870,
@@ -779,13 +787,15 @@ export function tripReadyEvent(): MercureEvent {
   };
 }
 
-export function stageUpdatedEvent(stageIndex: number): MercureEvent {
+export function stageUpdatedEvent(dayNumber: number): MercureEvent {
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 55.0,
         elevation: 720,
         elevationLoss: 640,
@@ -814,7 +824,7 @@ export function stageUpdatedEvent(stageIndex: number): MercureEvent {
 }
 
 export function stageUpdatedEventWithSelectedAccommodation(
-  stageIndex: number,
+  dayNumber: number,
 ): MercureEvent {
   const hotelDuPont = {
     name: "Hotel du Pont",
@@ -831,9 +841,11 @@ export function stageUpdatedEventWithSelectedAccommodation(
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 55.0,
         elevation: 720,
         elevationLoss: 640,
@@ -869,7 +881,7 @@ export function stageUpdatedEventWithSelectedAccommodation(
  * {@link stageUpdatedEventWithSelectedAccommodation} for a scanned entry.
  */
 export function stageUpdatedEventWithManualAccommodation(
-  stageIndex: number,
+  dayNumber: number,
 ): MercureEvent {
   const manual = {
     name: "HomeExchange Grenoble",
@@ -888,9 +900,11 @@ export function stageUpdatedEventWithManualAccommodation(
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 55.0,
         elevation: 720,
         elevationLoss: 640,

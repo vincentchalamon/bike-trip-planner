@@ -21,7 +21,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -44,7 +44,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -72,7 +72,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -118,7 +118,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -143,7 +143,7 @@ test.describe("Accommodations", () => {
       {
         type: "accommodations_found",
         data: {
-          stageIndex: 0,
+          stageId: "stage-1",
           accommodations: [
             {
               name: "Camping Zero Distance",
@@ -190,7 +190,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      emptyAccommodationsFoundEvent(0, 5),
+      emptyAccommodationsFoundEvent("stage-1", 5),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -210,7 +210,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0, 5),
+      accommodationsFoundEvent("stage-1", 5),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -230,7 +230,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0, 15),
+      accommodationsFoundEvent("stage-1", 15),
       tripCompleteEvent(),
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
@@ -267,7 +267,7 @@ test.describe("Accommodations", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      emptyAccommodationsFoundEvent(0, 5),
+      emptyAccommodationsFoundEvent("stage-1", 5),
       tripCompleteEvent(),
     ]);
 
@@ -291,7 +291,7 @@ test.describe("Accommodations", () => {
     injectSequence,
     mockedPage,
   }) => {
-    const scan = accommodationsFoundEvent(0);
+    const scan = accommodationsFoundEvent("stage-1");
     // Narrowing keeps the reload payload in sync with the SSE fixture.
     const persisted =
       scan.type === "accommodations_found" ? scan.data.accommodations : [];

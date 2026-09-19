@@ -38,6 +38,7 @@ function singleStageEvent() {
     data: {
       stages: [
         {
+          stageId: "stage-1",
           dayNumber: 1,
           distance: 72.5,
           elevation: 1180,
@@ -757,9 +758,9 @@ When(
   "aucun hébergement n'est trouvé pour l'ensemble du voyage",
   async ({ mockedPage }) => {
     await injectSseSequence(mockedPage, [
-      emptyAccommodationsFoundEvent(0),
-      emptyAccommodationsFoundEvent(1),
-      emptyAccommodationsFoundEvent(2),
+      emptyAccommodationsFoundEvent("stage-1"),
+      emptyAccommodationsFoundEvent("stage-2"),
+      emptyAccommodationsFoundEvent("stage-3"),
     ]);
   },
 );
@@ -768,9 +769,9 @@ When(
   "no accommodation is found for the entire trip",
   async ({ mockedPage }) => {
     await injectSseSequence(mockedPage, [
-      emptyAccommodationsFoundEvent(0),
-      emptyAccommodationsFoundEvent(1),
-      emptyAccommodationsFoundEvent(2),
+      emptyAccommodationsFoundEvent("stage-1"),
+      emptyAccommodationsFoundEvent("stage-2"),
+      emptyAccommodationsFoundEvent("stage-3"),
     ]);
   },
 );

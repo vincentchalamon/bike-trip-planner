@@ -17,13 +17,15 @@ import {
  */
 
 /** A stage_updated event that changes the distance (72.5 → 55.0 km). */
-function stageUpdatedWithDistanceChange(stageIndex: number): MercureEvent {
+function stageUpdatedWithDistanceChange(dayNumber: number): MercureEvent {
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 55.0, // was 72.5 km in stagesComputedEvent
         elevation: 720,
         elevationLoss: 640,
@@ -52,13 +54,15 @@ function stageUpdatedWithDistanceChange(stageIndex: number): MercureEvent {
 }
 
 /** A stage_updated event that adds a new alert on the stage. */
-function stageUpdatedWithNewAlerts(stageIndex: number): MercureEvent {
+function stageUpdatedWithNewAlerts(dayNumber: number): MercureEvent {
   return {
     type: "stage_updated",
     data: {
-      stageIndex,
+      stageId: `stage-${dayNumber}`,
+      position: dayNumber - 1,
       stage: {
-        dayNumber: stageIndex + 1,
+        stageId: `stage-${dayNumber}`,
+        dayNumber,
         distance: 72.5, // same distance — no distance diff
         elevation: 1180,
         elevationLoss: 920,
@@ -104,7 +108,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -124,7 +128,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     });
 
     // Inject stage_updated with distance change
-    await injectEvent(stageUpdatedWithDistanceChange(0));
+    await injectEvent(stageUpdatedWithDistanceChange(1));
 
     // Stage card should be back
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -147,7 +151,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -165,7 +169,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     });
 
     // Inject the update
-    await injectEvent(stageUpdatedWithDistanceChange(0));
+    await injectEvent(stageUpdatedWithDistanceChange(1));
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
       timeout: 3000,
     });
@@ -193,7 +197,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      accommodationsFoundEvent(0),
+      accommodationsFoundEvent("stage-1"),
       tripCompleteEvent(),
     ]);
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -212,7 +216,7 @@ test.describe("Diff highlight after inline recomputation", () => {
     });
 
     // Inject stage_updated that adds a new alert
-    await injectEvent(stageUpdatedWithNewAlerts(0));
+    await injectEvent(stageUpdatedWithNewAlerts(1));
 
     // Stage card should be back
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
