@@ -649,7 +649,9 @@ describe("applyRoute (ADR-057 geometry hydration)", () => {
 
   it("coerces optional coordinate fields to numbers", () => {
     useTripStore.setState({ stages: [makeStage(1)] });
-    useTripStore.getState().applyRoute({ stages: [{ dayNumber: 1, geometry: [{ lat: 48 }] }] });
+    useTripStore
+      .getState()
+      .applyRoute({ stages: [{ dayNumber: 1, geometry: [{ lat: 48 }] }] });
     expect(useTripStore.getState().stages[0]!.geometry).toEqual([
       { lat: 48, lon: 0, ele: 0 },
     ]);

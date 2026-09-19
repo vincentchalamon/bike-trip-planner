@@ -91,7 +91,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 
             // Check each stage for nearby bike shops
             $stagesWithoutBikeShop = [];
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 // A rest day is not ridden: no mid-ride mechanical failure to cover.
                 if ($stage->isRestDay) {
                     continue;

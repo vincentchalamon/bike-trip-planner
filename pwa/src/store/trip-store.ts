@@ -220,7 +220,11 @@ interface TripState {
    * Same preservation semantics as {@link applyTripReady} but for a single
    * slice. No-op if the index is out of bounds (stale message).
    */
-  applyStageUpdate: (stageId: string, position: number, stage: StageData) => void;
+  applyStageUpdate: (
+    stageId: string,
+    position: number,
+    stage: StageData,
+  ) => void;
   /**
    * Apply a full {@link ReconciledState} from the shared SSE reducer in one
    * mutation. Used by the Mercure hook for every event except `stage_updated`
@@ -822,8 +826,7 @@ export const useTripStore = create<TripState>()(
         // Replace duplicate: same type + stageId (null considered equal to null)
         const existingIndex = state.pendingModifications.findIndex(
           (m) =>
-            m.type === modification.type &&
-            m.stageId === modification.stageId,
+            m.type === modification.type && m.stageId === modification.stageId,
         );
         if (existingIndex !== -1) {
           state.pendingModifications[existingIndex] = modification;

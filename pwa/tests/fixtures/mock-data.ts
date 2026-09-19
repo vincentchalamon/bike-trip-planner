@@ -505,7 +505,9 @@ export function culturalPoiAlertsEvent(): MercureEvent {
   };
 }
 
-export function routeSegmentRecalculatedEvent(stageId = "stage-1"): MercureEvent {
+export function routeSegmentRecalculatedEvent(
+  stageId = "stage-1",
+): MercureEvent {
   return {
     type: "route_segment_recalculated",
     data: {

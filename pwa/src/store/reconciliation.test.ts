@@ -211,7 +211,9 @@ describe("reconcileStageUpdate (#840/#649)", () => {
         alert({ source: "cultural_poi", message: "should-drop" }),
       ],
     });
-    const s = only(reconcileStageUpdate(existing, "stage-1", 0, incoming).stages);
+    const s = only(
+      reconcileStageUpdate(existing, "stage-1", 0, incoming).stages,
+    );
     const messages = s.alerts.map((a) => a.message);
     const sources = s.alerts.map((a) => a.source);
     expect(messages).toContain("museum"); // prev cultural preserved
@@ -231,7 +233,12 @@ describe("reconcileStageUpdate (#840/#649)", () => {
     };
     const existing = [stage({ supplyTimeline: [marker] })];
     const s = only(
-      reconcileStageUpdate(existing, "stage-1", 0, stage({ supplyTimeline: [] })).stages,
+      reconcileStageUpdate(
+        existing,
+        "stage-1",
+        0,
+        stage({ supplyTimeline: [] }),
+      ).stages,
     );
     expect(s.supplyTimeline).toEqual([marker]);
   });

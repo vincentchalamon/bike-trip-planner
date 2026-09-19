@@ -744,7 +744,11 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     });
     const next = reduceMercureEvent(state, {
       type: "stage_updated",
-      data: { stageId: "stage-1", position: 0, stage: enriched({ dayNumber: 1, label: null }) },
+      data: {
+        stageId: "stage-1",
+        position: 0,
+        stage: enriched({ dayNumber: 1, label: null }),
+      },
     });
     expect(next.stages[0]!.endLabel).toBe("Lyon"); // preserved on stable endpoint
     expect([...next.recomputingStages]).toEqual(["stage-2"]);

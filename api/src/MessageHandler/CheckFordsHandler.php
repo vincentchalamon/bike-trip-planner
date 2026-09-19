@@ -67,7 +67,7 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
         $this->executeWithTracking($tripId, ComputationName::FORDS, function () use ($tripId, $stages, $locale): void {
             $alerts = [];
 
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }

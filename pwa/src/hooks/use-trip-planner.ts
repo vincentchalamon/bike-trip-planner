@@ -906,7 +906,11 @@ export function useTripPlanner() {
       const stageId = useTripStore.getState().stages[stageIndex]?.id;
       if (!stageId) return false;
 
-      const { ok, status } = await addManualAccommodation(tripId, stageId, data);
+      const { ok, status } = await addManualAccommodation(
+        tripId,
+        stageId,
+        data,
+      );
       if (!ok) {
         toast.error(
           status === 422

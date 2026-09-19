@@ -937,7 +937,11 @@ export interface components {
              * @default 5
              */
             radiusKm: number;
-            stageIndex?: number | null;
+            /**
+             * Format: uuid
+             * @description Optional stage identifier to restrict the scan to a single stage
+             */
+            stageId?: string | null;
         };
         "AccommodationScan.Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
@@ -1586,6 +1590,8 @@ export interface components {
             toIndex?: number | null;
         };
         "Stage.StageResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /** @description The stage's stable identity, and what its IRI is built from (ADR-066). */
+            id?: string;
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             alerts?: components["schemas"]["Alert.jsonld"][];
             resupply?: components["schemas"]["Resupply.jsonld"] | null;
@@ -2033,8 +2039,11 @@ export interface components {
             }[];
         };
         TripModification: {
-            /** @description Zero-based index of the affected stage. */
-            stageIndex?: number | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the affected stage (ADR-066).
+             */
+            stageId?: string | null;
             /**
              * @description Type of modification — determines which handlers are re-dispatched.
              * @enum {string}
