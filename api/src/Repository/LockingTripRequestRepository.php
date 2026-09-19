@@ -65,9 +65,9 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
     /**
      * @param callable(list<Stage>): list<Stage> $mutator
      */
-    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult
     {
-        return $this->withStagesLock($tripId, fn (): ?StageWriteResult => $this->decorated->mutateStages($tripId, $mutator));
+        return $this->withStagesLock($tripId, fn (): ?StageWriteResult => $this->decorated->mutateStages($tripId, $mutator, $expectedVersion));
     }
 
     /** @param list<Stage> $stages */
@@ -241,11 +241,13 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
 
     /**
      * Under the same lock as the stage writes: the version is bumped by those writes too,
-     * so a bare read-modify-write here could interleave with one and lose a bump.
+     * so a bare read-modify-write here could interleave with one and lose a bump. That lock
+     * is also what makes the `If-Match` comparison sound — the decorated implementation
+     * compares and increments without anything able to slip between the two.
      */
-    public function bumpVersion(string $tripId): int
+    public function bumpVersion(string $tripId, ?int $expectedVersion = null): int
     {
-        return $this->withStagesLock($tripId, fn (): int => $this->decorated->bumpVersion($tripId));
+        return $this->withStagesLock($tripId, fn (): int => $this->decorated->bumpVersion($tripId, $expectedVersion));
     }
 
     /** @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData */

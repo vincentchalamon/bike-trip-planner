@@ -8,6 +8,8 @@ use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
+use App\Concurrency\IfMatch;
+use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
@@ -81,7 +83,9 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             array_splice($stages, $position, 0, [$newStage]);
 
             return $this->reindexDayNumbers($stages);
-        });
+        }, IfMatch::expectedVersion($context));
+
+        TripVersionEtag::stamp($context, $write?->version);
 
         // The trip was asserted to exist above, so the write happened.
         \assert($write instanceof StageWriteResult);

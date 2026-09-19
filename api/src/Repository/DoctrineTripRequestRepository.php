@@ -15,6 +15,7 @@ use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
+use App\Concurrency\VersionPrecondition;
 use App\Entity\Stage as StageEntity;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
@@ -301,12 +302,14 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     /**
      * @param callable(list<StageDto>): list<StageDto> $mutator
      */
-    public function mutateStages(string $tripId, callable $mutator): ?StageWriteResult
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult
     {
         $stages = $this->getStages($tripId);
         if (null === $stages) {
             return null;
         }
+
+        VersionPrecondition::assert($expectedVersion, $this->getVersion($tripId), $tripId);
 
         $mutated = $mutator($stages);
         $this->storeStages($tripId, $mutated);
@@ -515,12 +518,14 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $this->findTripRequest($tripId)?->version;
     }
 
-    public function bumpVersion(string $tripId): int
+    public function bumpVersion(string $tripId, ?int $expectedVersion = null): int
     {
         $trip = $this->findTripRequest($tripId);
         if (!$trip instanceof TripRequest) {
             return 0;
         }
+
+        VersionPrecondition::assert($expectedVersion, $trip->version, $tripId);
 
         ++$trip->version;
         $this->getEntityManager()->flush();

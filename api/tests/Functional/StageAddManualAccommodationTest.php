@@ -27,6 +27,8 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class StageAddManualAccommodationTest extends ApiTestCase
 {
+    use EditsTripsTrait;
+
     use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
@@ -41,7 +43,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
     protected function setUp(): void
     {
-        $this->client = self::createClient();
+        $this->client = self::createEditingClient();
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('manual-acc@example.com');
     }
 
@@ -222,7 +224,10 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
         $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.Uuid::v7()->toRfc4122().'/accommodations/manual', [
             'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
-            'json' => ['name' => 'Nowhere', 'address' => 'somewhere'],
+            // A real address: the processor geocodes before it looks the stage up, and the
+            // suite calls Nominatim for real, so an unresolvable one answers 422 and never
+            // reaches the lookup this test is about.
+            'json' => ['name' => 'Nowhere', 'address' => 'Grand Place, Lille'],
         ]);
 
         $this->assertResponseStatusCodeSame(404);

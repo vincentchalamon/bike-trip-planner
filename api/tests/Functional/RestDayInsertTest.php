@@ -22,6 +22,8 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class RestDayInsertTest extends ApiTestCase
 {
+    use EditsTripsTrait;
+
     use AddressesStagesByIdTrait;
     use Factories;
     use JwtAuthTestTrait;
@@ -36,7 +38,7 @@ final class RestDayInsertTest extends ApiTestCase
 
     protected function setUp(): void
     {
-        $this->client = self::createClient();
+        $this->client = self::createEditingClient();
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
     }
 

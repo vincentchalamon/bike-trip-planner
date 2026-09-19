@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
+use App\Concurrency\IfMatch;
+use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
 use App\ApiResource\TripBatchRecomputeRequest;
@@ -84,8 +86,11 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
             throw new NotFoundHttpException('Trip not found.');
         }
 
-        // Increment generation to invalidate in-flight workers
-        $generation = $this->generationTracker->increment($tripId);
+        // Increment generation to invalidate in-flight workers. The queue being replayed
+        // was built against a version of the trip; comparing it under the write lock stops
+        // a batch computed on a stale view from landing on stages that have since moved.
+        $generation = $this->generationTracker->increment($tripId, IfMatch::expectedVersion($context));
+        TripVersionEtag::stamp($context, $generation);
 
         // If the initial analysis has not fully settled yet, a minimal,
         // dependency-resolved recompute only re-dispatches a subset while the

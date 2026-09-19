@@ -6,6 +6,7 @@ namespace App\Mercure;
 
 use App\ApiResource\Stage;
 use App\Enum\ComputationName;
+use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -15,6 +16,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         private HubInterface $hub,
         private StagePayloadMapper $stagePayloadMapper,
         private CurrentCorrelationIdProvider $correlationIdProvider,
+        private TripRequestRepositoryInterface $tripStateManager,
     ) {
     }
 
@@ -22,6 +24,17 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     public function publish(string $tripId, MercureEventType $type, array $data = []): void
     {
         $payload = ['type' => $type->value, 'data' => $data];
+
+        // The trip's structural version, at the envelope root next to the correlation id.
+        // Without it a regeneration performed by a worker — which bumps the version without
+        // any HTTP response to carry a fresh ETag — would leave the client pinned to a
+        // version that no longer exists, and every edit it attempted afterwards would be
+        // refused with 412 until it reloaded. Mercure is the invalidation channel, so the
+        // invalidation token belongs on it.
+        $version = $this->tripStateManager->getVersion($tripId);
+        if (null !== $version) {
+            $payload['version'] = $version;
+        }
 
         $correlationId = $this->correlationIdProvider->current();
         if (null !== $correlationId) {

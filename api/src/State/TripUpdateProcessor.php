@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
+use App\Concurrency\IfMatch;
+use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
@@ -92,8 +94,12 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
 
         if ([] !== $computationsToTrigger) {
-            // Criteria changed: bump generation so in-flight messages become stale
-            $generation = $this->generationTracker->increment($id);
+            // Criteria changed: bump generation so in-flight messages become stale. The
+            // client's If-Match rides along and is compared under the write lock — a
+            // settings edit that triggers a regeneration replaces every stage, so applying
+            // it to a trip that moved on since is exactly what the precondition forbids.
+            $generation = $this->generationTracker->increment($id, IfMatch::expectedVersion($context));
+            TripVersionEtag::stamp($context, $generation);
 
             foreach ($computationsToTrigger as $computation) {
                 $this->computationTracker->resetComputation($id, $computation);
