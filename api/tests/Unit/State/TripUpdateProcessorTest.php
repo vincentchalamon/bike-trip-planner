@@ -9,6 +9,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Concurrency\IfMatch;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
@@ -20,6 +21,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -150,6 +152,56 @@ final class TripUpdateProcessorTest extends TestCase
      * The functional suite cannot see it — it is aliased to the Redis implementation, which
      * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
      */
+    /**
+     * The settings edit carries the client's `If-Match` into the version bump.
+     *
+     * The comparison happens in the repository, under the write lock; what is checkable here
+     * is the wiring — and the wiring is what rots silently, since the shared stub above
+     * answers `increment()` the same way whatever it is handed (#1292 review).
+     */
+    #[Test]
+    public function carriesTheClientPreconditionIntoTheVersionBump(): void
+    {
+        $generationTracker = $this->createMock(TripGenerationTrackerInterface::class);
+        $generationTracker->expects(self::once())
+            ->method('increment')
+            ->with('trip-precondition', 7)
+            ->willReturn(8);
+
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn(new User('owner@example.com'));
+
+        $processor = new TripUpdateProcessor(
+            $this->messageBus,
+            $this->tripStateManager,
+            $this->computationTracker,
+            new ComputationDependencyResolver(),
+            $this->idempotencyChecker,
+            $generationTracker,
+            $security,
+            new TripLocker(),
+        );
+
+        $old = new TripRequest();
+        $old->sourceUrl = 'https://www.komoot.com/tour/123';
+        $old->maxDistancePerDay = 80.0;
+
+        $incoming = new TripRequest();
+        $incoming->sourceUrl = 'https://www.komoot.com/tour/123';
+        $incoming->maxDistancePerDay = 120.0;
+
+        $this->tripStateManager->method('getRequest')->willReturn($old);
+        $this->computationTracker->method('getStatuses')->willReturn([]);
+        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
+        $this->messageBus->method('dispatch')
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $request = new Request();
+        $request->headers->set(IfMatch::HEADER, '"7"');
+
+        $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request]);
+    }
+
     #[Test]
     public function resolvesTheChangeBeforeTheWriteAliasesTheOldRequest(): void
     {

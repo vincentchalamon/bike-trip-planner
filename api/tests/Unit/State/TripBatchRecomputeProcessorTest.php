@@ -18,6 +18,8 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Service\ComputationDependencyResolver;
 use App\Service\TripAnalysisDispatcher;
 use App\State\TripBatchRecomputeProcessor;
+use App\Concurrency\IfMatch;
+use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -114,6 +116,68 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $processor->process($request, new Post(), ['id' => 't']);
 
         return $dispatched;
+    }
+
+    /**
+     * A processor wired to the given generation tracker, with everything else stubbed flat.
+     */
+    private function recomputeProcessor(TripGenerationTrackerInterface $generationTracker): TripBatchRecomputeProcessor
+    {
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([
+            new Stage(tripId: 't', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord),
+        ]);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static fn (object $message): Envelope => new Envelope($message),
+        );
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 16, 'failed' => 0, 'total' => 16]);
+
+        return new TripBatchRecomputeProcessor(
+            $tripStateManager,
+            $generationTracker,
+            new ComputationDependencyResolver(),
+            $messageBus,
+            $computationTracker,
+            new TripAnalysisDispatcher($messageBus),
+            new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
+        );
+    }
+
+    /**
+     * The batch carries the client's `If-Match` into the version bump.
+     *
+     * The comparison itself happens inside the repository, under the write lock, so what is
+     * checkable here is the wiring — and the wiring is what would silently rot: the helper
+     * above stubs `increment()` to answer the same value whatever it is handed, so a dropped
+     * or miswired precondition fails nothing (#1292 review). Meanwhile the functional test
+     * for this endpoint is answered by the fail-fast check in the processor decorator and
+     * never reaches this call at all.
+     */
+    #[Test]
+    public function carriesTheClientPreconditionIntoTheVersionBump(): void
+    {
+        $generationTracker = $this->createMock(TripGenerationTrackerInterface::class);
+        $generationTracker->expects(self::once())
+            ->method('increment')
+            ->with('t', 7)
+            ->willReturn(8);
+
+        $request = new Request();
+        $request->headers->set(IfMatch::HEADER, '"7"');
+
+        $this->recomputeProcessor($generationTracker)->process(
+            new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
+            new Post(),
+            ['id' => 't'],
+            ['request' => $request],
+        );
     }
 
     #[Test]

@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Enum\SourceType;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
@@ -163,6 +164,39 @@ final class TripPreconditionTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(412);
         self::assertSame($before, $this->repository()->getRequest(self::TRIP_ID)?->fatigueFactor);
+    }
+
+    /**
+     * `POST /trips/{id}/recompute` is the other operation that moves the version through
+     * `increment()` rather than through a stage write, and it had no precondition coverage.
+     *
+     * Its ordering is already right — the bump precedes every dispatch — but nothing pinned
+     * it: the processor's unit test stubs `increment()` to return a fixed value whatever its
+     * arguments, so dropping the precondition would have failed nothing (#1292 review).
+     */
+    #[Test]
+    public function aStaleBatchRecomputeIsRefusedWithoutDispatchingAnything(): void
+    {
+        $this->seedTrip();
+        $stale = $this->currentVersion();
+        $stageId = $this->stageIdAt(self::TRIP_ID, 0);
+        $this->repository()->bumpVersion(self::TRIP_ID);
+
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $transport->reset();
+
+        $this->client->request('POST', \sprintf('/trips/%s/recompute', self::TRIP_ID), $this->asOwner([
+            'If-Match' => \sprintf('"%d"', $stale),
+            'Content-Type' => 'application/ld+json',
+        ]) + ['json' => ['modifications' => [[
+            'stageId' => $stageId,
+            'type' => 'distance',
+            'label' => 'Day 1 shortened',
+        ]]]]);
+
+        self::assertResponseStatusCodeSame(412);
+        self::assertSame([], $transport->getSent(), 'A refused batch must not have re-dispatched anything.');
     }
 
     /**
