@@ -306,9 +306,13 @@ export const apiClient = createClient<paths>({
 });
 
 apiClient.use(requestIdMiddleware);
-apiClient.use(authMiddleware);
-// Last, so the 401 retry rebuilt by authMiddleware still carries the precondition.
+// Before authMiddleware, never after: openapi-fetch runs `onResponse` in *reverse*
+// registration order, so registered last this would have run on the raw 401 — before
+// authMiddleware refreshed the token and rebuilt the response — and the retried request's
+// ETag would never have been captured. Same reasoning as requestIdMiddleware above, and
+// pinned by "captures the ETag of the response rebuilt after a 401 refresh and retry".
 apiClient.use(preconditionMiddleware);
+apiClient.use(authMiddleware);
 
 export interface ApiError {
   type: "validation" | "bad_request" | "not_found" | "stale" | "network";

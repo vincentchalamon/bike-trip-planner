@@ -129,3 +129,69 @@ describe("apiClient 401 retry (recette #649 #8)", () => {
     expect(String(bodies[1] ?? "")).toContain("komoot");
   });
 });
+
+describe("trip version precondition (ADR-067)", () => {
+  const TRIP_ID = "01936f6e-0000-7000-8000-0000000000aa";
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("pins the version last seen for a trip, and * for one never read", async () => {
+    const { getTripVersion, preconditionHeader, rememberTripVersion } =
+      await import("./client");
+
+    rememberTripVersion(
+      `https://localhost/trips/${TRIP_ID}/detail`,
+      new Response(null, { status: 200, headers: { ETag: '"7"' } }),
+    );
+
+    expect(getTripVersion(TRIP_ID)).toBe(7);
+    expect(preconditionHeader(TRIP_ID)).toEqual({ "If-Match": '"7"' });
+    expect(preconditionHeader("01936f6e-0000-7000-8000-0000000000bb")).toEqual({
+      "If-Match": "*",
+    });
+  });
+
+  // Regression (#1292 review): openapi-fetch runs `onResponse` in *reverse* registration
+  // order, so a precondition middleware registered after authMiddleware runs on the raw 401
+  // and never on the response the refresh-and-retry rebuilds. The version then stays behind
+  // on exactly the case this contract exists for — a token expiring mid-edit — and every
+  // later edit is refused. Registration order is the whole fix, and nothing else pins it.
+  it("captures the ETag of the response rebuilt after a 401 refresh and retry", async () => {
+    let calls = 0;
+    const fetchMock = vi.fn(async () => {
+      calls += 1;
+
+      return calls === 1
+        ? new Response("{}", { status: 401 })
+        : new Response("{}", { status: 202, headers: { ETag: '"12"' } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://localhost");
+    vi.resetModules();
+
+    const { useAuthStore } = await import("@/store/auth-store");
+    useAuthStore.setState({
+      accessToken: "stale-token",
+      silentRefresh: vi.fn(async () => {
+        useAuthStore.setState({ accessToken: "fresh-token" });
+        return true;
+      }),
+    } as never);
+
+    const { apiClient, getTripVersion, preconditionHeader } =
+      await import("./client");
+    await apiClient.DELETE("/trips/{tripId}/stages/{stageId}", {
+      params: {
+        path: { tripId: TRIP_ID, stageId: "stage-1" },
+        header: preconditionHeader(TRIP_ID),
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getTripVersion(TRIP_ID)).toBe(12);
+  });
+});

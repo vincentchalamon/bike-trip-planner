@@ -116,5 +116,8 @@ export const preconditionMiddleware: Middleware = {
 };
 
 export const api = createClient<paths>({ baseUrl: API_BASE_URL });
-api.use(authMiddleware);
+// Before authMiddleware: openapi-fetch runs `onResponse` in *reverse* registration order, so
+// the other way round this would have run on the raw 401, before authMiddleware refreshed the
+// token and rebuilt the response, and never seen the retried request's ETag.
 api.use(preconditionMiddleware);
+api.use(authMiddleware);
