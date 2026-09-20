@@ -16,6 +16,7 @@ use App\Engine\FixedSchedule;
 use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
@@ -154,7 +155,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lat: $stage->startPoint->lat,
                         lon: $stage->startPoint->lon,
                     );
-                    $stage->addAlert($alert);
                     $alerts[] = ['code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value, 'type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
@@ -175,7 +175,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                         lat: $stage->startPoint->lat,
                         lon: $stage->startPoint->lon,
                     );
-                    $stage->addAlert($alert);
                     $alerts[] = ['code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value, 'type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
@@ -205,25 +204,26 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $this->poiLabels->displayName('water_point', $locale),
                 );
 
-                $payload = [
+                // Same array to both consumers (ADR-068), the empty one included: a rerun that
+                // finds nothing has to clear the previous alerts on a live client too, or the
+                // database and the open page disagree until a reload.
+                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
+                $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
                     'resupply' => $this->resupplyToArray($stage->resupply),
-                ];
-
-                if ([] !== $alerts) {
-                    $payload['alerts'] = $alerts;
-                }
-
-                $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, $payload);
+                    'alerts' => $alerts,
+                ]);
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);
 
-                if ([] !== $clusteredMarkers) {
-                    $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
-                        'stageId' => $stage->id,
-                        'markers' => $clusteredMarkers,
-                    ]);
-                }
+                // Published and persisted unconditionally, empty list included: the timeline is
+                // recomputed wholesale, so an empty result has to clear a previous one on both
+                // sides rather than leave it standing.
+                $this->tripStateManager->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
+                $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
+                    'stageId' => $stage->id,
+                    'markers' => $clusteredMarkers,
+                ]);
             }
 
             // Persist the curated resupply with an atomic per-column UPDATE per stage

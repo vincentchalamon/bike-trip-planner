@@ -17,8 +17,14 @@ import type {
 import { EMPTY_RESUPPLY } from "./schemas";
 import type { AlertData, StageData } from "./schemas";
 
-/** A stage alert carrying the client-only `_group` tag added by the store. */
-export type StageAlert = AlertData & { _group?: string };
+/**
+ * A stage alert, carrying the group that owns it.
+ *
+ * The tag used to be a client-only `_group` the store bolted on at hydration, because the
+ * server did not say which producer an alert came from. It does now (ADR-068), so there is
+ * one field instead of two and nothing left to guess.
+ */
+export type StageAlert = AlertData;
 
 /**
  * Convert an enriched stage wire payload (from `trip_ready` / `stage_updated`)
@@ -44,7 +50,10 @@ export function enrichedPayloadToStageData(
     startLabel: null,
     endLabel: null,
     weather: payload.weather,
-    alerts: (payload.alerts ?? []).map((a) => ({ ...a, _group: "terrain" })),
+    // The server stamps the owning group on every alert (ADR-068). Tagging them all
+    // `terrain` here was safe only while terrain was the one persisted group: with
+    // thirteen of them, the first terrain_alerts event would have wiped the other twelve.
+    alerts: payload.alerts ?? [],
     resupply: payload.resupply,
     accommodations: payload.accommodations,
     selectedAccommodation: payload.selectedAccommodation,
@@ -255,7 +264,7 @@ export function dropStaleDateAlerts(stages: StageData[]): StageData[] {
   return stages.map((stage) => ({
     ...stage,
     alerts: (stage.alerts as StageAlert[]).filter(
-      (a) => a._group !== "calendar",
+      (a) => a.group !== "calendar",
     ),
   }));
 }
@@ -325,9 +334,11 @@ function replaceStageAlerts(
 ): StageData[] {
   return patchStage(stages, stageId, (stage) => {
     const kept = (stage.alerts as StageAlert[]).filter(
-      (a) => a._group !== group,
+      (a) => a.group !== group,
     );
-    const tagged: StageAlert[] = alerts.map((a) => ({ ...a, _group: group }));
+    // Still tagged here: a live payload carries its own group, but stamping it keeps the
+    // reducer correct for one built before the field travelled.
+    const tagged: StageAlert[] = alerts.map((a) => ({ ...a, group }));
     return { ...stage, alerts: [...kept, ...tagged] };
   });
 }
@@ -506,7 +517,9 @@ export function reduceMercureEvent(
         ...s,
         resupply: event.data.resupply,
       }));
-      if (event.data.alerts && event.data.alerts.length > 0) {
+      // Presence, not emptiness: the handler always sends the key, and an empty list
+      // is a result — the scan ran and found nothing, so the previous alerts go.
+      if (event.data.alerts) {
         stages = replaceStageAlerts(
           stages,
           event.data.stageId,
@@ -539,7 +552,8 @@ export function reduceMercureEvent(
             ? searchRadiusKm
             : s.accommodationSearchRadiusKm,
       }));
-      if (event.data.alerts && event.data.alerts.length > 0) {
+      // Presence, not emptiness — see the pois_scanned case above.
+      if (event.data.alerts) {
         stages = replaceStageAlerts(
           stages,
           stageId,
@@ -577,7 +591,7 @@ export function reduceMercureEvent(
       const cleared = state.stages.map((s) => ({
         ...s,
         alerts: (s.alerts as StageAlert[]).filter(
-          (a) => a._group !== "calendar",
+          (a) => a.group !== "calendar",
         ),
       }));
       const grouped = groupAlerts(event.data.alerts, (a) => ({

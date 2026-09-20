@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -68,6 +69,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);
             $stageCount = \count($stages);
+            $alertsData = [];
 
             for ($i = 0; $i < $stageCount; ++$i) {
                 $stage = $stages[$i];
@@ -84,35 +86,19 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     'averageSpeed' => $averageSpeed,
                 ];
 
-                $stage->alerts = [];
-                $alerts = $this->analyzerRegistry->analyze($stage, $context);
-                foreach ($alerts as $alert) {
-                    $stage->addAlert($alert);
-                }
-            }
-
-            // Persist alerts with an atomic per-column UPDATE per stage (recette #649).
-            // AnalyzeTerrain is the authority for persisted alerts; the extra
-            // lunch/seasonal alerts from pois/accommodations are delivered live via
-            // Mercure only.
-            foreach ($stages as $stage) {
-                $this->tripStateManager->updateStageAlerts($tripId, $stage->id, array_values($stage->alerts));
-            }
-
-            // Coordinates and contextual actions are part of the live payload: the
-            // frontend must be able to zoom to a discontinuity without waiting for a
-            // reload through TripDetailProvider (issue #863).
-            // Keyed by stage identity, like every other stage-scoped event since ADR-066.
-            // It was still keyed by array position after that migration, so no key matched
-            // a stage and the client dropped every live terrain alert — invisible because
-            // terrain is the one group that is persisted, so a reload brought them back.
-            $alertsData = [];
-            foreach ($stages as $stage) {
+                // Built once, in the shape that goes both to the database and to the wire:
+                // the two consumers cannot drift when they read the same array (ADR-068).
+                // Coordinates and contextual actions belong to that shape — the frontend
+                // must be able to zoom to a discontinuity without a reload (issue #863).
+                //
+                // Keyed by stage identity, like every stage-scoped event since ADR-066.
                 $alertsData[$stage->id] = array_map(
                     $this->stagePayloadMapper->alertToPayload(...),
-                    $stage->alerts,
+                    $this->analyzerRegistry->analyze($stage, $context),
                 );
             }
+
+            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
 
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
                 'alertsByStage' => $alertsData,

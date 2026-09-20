@@ -7,16 +7,13 @@ namespace App\Tests\Functional;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\AlertAction;
-use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\AlertCode;
-use App\Enum\AlertType;
+use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\DBAL\Connection;
@@ -138,29 +135,31 @@ final class TripDetailTest extends ApiTestCase
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         );
-        $stage->alerts = [
-            new Alert(
-                code: AlertCode::CONTINUITY_GAP_CRITICAL,
-                type: AlertType::CRITICAL,
-                message: 'Discontinuity',
-                lat: 48.1,
-                lon: 2.2,
-                action: new AlertAction(
-                    kind: AlertActionKind::NAVIGATE,
-                    label: 'Voir la discontinuité sur la carte',
-                    payload: ['lat' => 48.1, 'lon' => 2.2],
-                ),
-            ),
-            new Alert(
-                code: AlertCode::ELEVATION_GAIN,
-                type: AlertType::WARNING,
-                message: 'Elevation',
-                action: new AlertAction(kind: AlertActionKind::AUTO_FIX, label: 'Couper l\'étape en deux'),
-            ),
-            // Persisted before issue #876: no code at all, must still serialise.
-            new Alert(code: null, type: AlertType::NUDGE, message: 'No action at all'),
-        ];
         $repo->storeStages(self::TRIP_ID, [$stage]);
+        // Written by the producer, not carried by storeStages(): enrichment columns belong to
+        // the computations that fill them (ADR-068). Stored in the shape the producer
+        // publishes, so /detail serves exactly what Mercure pushed.
+        $repo->updateStageAlertsForGroup(self::TRIP_ID, $stage->id, AlertGroup::TERRAIN, [
+            [
+                'code' => AlertCode::CONTINUITY_GAP_CRITICAL->value,
+                'type' => 'critical',
+                'message' => 'Discontinuity',
+                'lat' => 48.1,
+                'lon' => 2.2,
+                'action' => [
+                    'kind' => 'navigate',
+                    'label' => 'Voir la discontinuité sur la carte',
+                    'payload' => ['lat' => 48.1, 'lon' => 2.2],
+                ],
+            ],
+            [
+                'code' => AlertCode::ELEVATION_GAIN->value,
+                'type' => 'warning',
+                'message' => 'Elevation',
+            ],
+            // Persisted before issue #876: no code at all, must still serialise.
+            ['code' => null, 'type' => 'nudge', 'message' => 'No action at all'],
+        ]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
@@ -171,6 +170,7 @@ final class TripDetailTest extends ApiTestCase
 
         $alerts = $response->toArray(false)['stages'][0]['alerts'];
         $this->assertCount(3, $alerts);
+        $this->assertSame(['terrain', 'terrain', 'terrain'], array_column($alerts, 'group'));
 
         $this->assertSame([
             'kind' => 'navigate',

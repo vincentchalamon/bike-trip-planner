@@ -170,9 +170,9 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
             <<<'SQL'
                 INSERT INTO stage (id, trip_id, position, day_number, distance, elevation, elevation_loss,
                                    start_lat, start_lon, start_ele, end_lat, end_lon, end_ele,
-                                   geometry, is_rest_day, alerts, pois, accommodations, on_cycle_network)
+                                   geometry, is_rest_day, alerts_by_group, pois, accommodations, on_cycle_network)
                 VALUES (:id, :trip, :position, :dayNumber, 10, 0, 0, 48, 2, 0, 48, 2, 0,
-                        '[]', false, '[]', '[]', '[]', 0)
+                        '[]', false, '{}', '[]', '[]', 0)
                 SQL,
             [
                 'id' => Uuid::v7()->toRfc4122(),

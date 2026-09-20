@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertGroup;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Lock\LockFactory;
@@ -85,11 +86,62 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
         });
     }
 
-    /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
+    /**
+     * Locked only when the implementation underneath needs it.
+     *
+     * A group write is not inherently a read-modify-write sequence: against Postgres it is a
+     * single `jsonb_set` UPDATE, so two producers finishing at once cannot lose each other's
+     * work and the lock would only serialise a dozen handlers that run in parallel by design
+     * (ADR-068). But that property belongs to the storage engine, not to this decorator —
+     * the transient implementation stores the collection as one blob and does read, modify
+     * and write it back. {@see MergesGroupWritesAtomically} is how an implementation says
+     * which of the two it is.
+     *
+     * @param list<array<string, mixed>> $alerts
+     */
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
-        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $alerts): void {
-            $this->decorated->updateStageAlerts($tripId, $stageId, $alerts);
+        $this->forGroupWrite($tripId, function () use ($tripId, $stageId, $group, $alerts): void {
+            $this->decorated->updateStageAlertsForGroup($tripId, $stageId, $group, $alerts);
+        });
+    }
+
+    /**
+     * @param array<string, list<array<string, mixed>>> $alertsByStageId
+     *
+     * @see self::updateStageAlertsForGroup() for when this takes the lock
+     */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
+    {
+        $this->forGroupWrite($tripId, function () use ($tripId, $group, $alertsByStageId): void {
+            $this->decorated->updateTripAlertsForGroup($tripId, $group, $alertsByStageId);
+        });
+    }
+
+    private function forGroupWrite(string $tripId, \Closure $write): void
+    {
+        if ($this->decorated instanceof MergesGroupWritesAtomically) {
+            $write();
+
+            return;
+        }
+
+        $this->withStagesLock($tripId, $write);
+    }
+
+    /** @param list<Event> $events */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void
+    {
+        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $events): void {
+            $this->decorated->updateStageEvents($tripId, $stageId, $events);
+        });
+    }
+
+    /** @param list<array<string, mixed>> $markers */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void
+    {
+        $this->withStagesLock($tripId, function () use ($tripId, $stageId, $markers): void {
+            $this->decorated->updateStageSupplyTimeline($tripId, $stageId, $markers);
         });
     }
 

@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\State\TripDetailProvider;
 
 /**
@@ -100,6 +101,11 @@ final readonly class TripDetail
                         'relativeWindDirection' => ['type' => 'string'],
                     ]], ['type' => 'null']]],
                     'alerts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        // The producer that owns the alert, and the unit in which alerts are
+                        // replaced (ADR-068). Enumerated, so `core/schema.d.ts` types it as a
+                        // literal union and a group the server does not know breaks the
+                        // frontend build — which is why no drift test guards this list.
+                        'group' => ['type' => 'string', 'enum' => AlertGroup::VALUES],
                         // Stable rule-variant identifier; null on alerts persisted before issue #876.
                         // Enumerated so this endpoint gives consumers the same literal union as
                         // the Alert resource, instead of a bare string.
@@ -114,6 +120,63 @@ final readonly class TripDetail
                             'label' => ['type' => 'string'],
                             'payload' => ['type' => 'object', 'additionalProperties' => true],
                         ]], ['type' => 'null']]],
+                        // Producer-specific fields, carried verbatim rather than normalised
+                        // away (ADR-068). Enumerated rather than left to
+                        // `additionalProperties`, which would make the whole item type
+                        // degenerate to `unknown` on the client and take the `group` union —
+                        // and the guard that depends on it — down with it.
+                        'source' => ['type' => 'string'],
+                        'poiName' => ['type' => 'string'],
+                        'poiType' => ['type' => 'string'],
+                        'poiLat' => ['type' => 'number'],
+                        'poiLon' => ['type' => 'number'],
+                        'distanceFromRoute' => ['type' => 'number'],
+                        'openingHours' => ['type' => 'string'],
+                        'estimatedPrice' => ['type' => 'number'],
+                        'description' => ['type' => 'string'],
+                        'wikidataId' => ['type' => 'string'],
+                        'imageUrl' => ['type' => 'string'],
+                        'wikipediaUrl' => ['type' => 'string'],
+                        'osmType' => ['oneOf' => [['type' => 'string', 'enum' => ['node', 'way', 'relation']], ['type' => 'null']]],
+                        'osmId' => ['oneOf' => [['type' => 'integer'], ['type' => 'null']]],
+                    ]]],
+                    // Persisted since ADR-068 and served here, not only over SSE: the
+                    // anonymous share page receives no SSE at all.
+                    'events' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'name' => ['type' => 'string'],
+                        'type' => ['type' => 'string'],
+                        'lat' => ['type' => 'number'],
+                        'lon' => ['type' => 'number'],
+                        'startDate' => ['type' => 'string', 'format' => 'date-time'],
+                        'endDate' => ['type' => 'string', 'format' => 'date-time'],
+                        'url' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'description' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'priceMin' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
+                        'distanceToEndPoint' => ['type' => 'number'],
+                        'source' => ['type' => 'string'],
+                        'wikidataId' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'imageUrl' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'wikipediaUrl' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'openingHours' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                    ]]],
+                    'supplyTimeline' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'type' => ['type' => 'string', 'enum' => ['water', 'food', 'both']],
+                        'distanceFromStart' => ['type' => 'number'],
+                        'lat' => ['type' => 'number'],
+                        'lon' => ['type' => 'number'],
+                        'water' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                            'name' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                            'lat' => ['type' => 'number'],
+                            'lon' => ['type' => 'number'],
+                            'distanceFromStart' => ['type' => 'number'],
+                        ]]],
+                        'food' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                            'name' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                            'category' => ['type' => 'string'],
+                            'lat' => ['type' => 'number'],
+                            'lon' => ['type' => 'number'],
+                            'distanceFromStart' => ['type' => 'number'],
+                        ]]],
                     ]]],
                     // Curated resupply suggestions (#1099), replacing the raw POI dump.
                     'resupply' => ['type' => 'object', 'properties' => [

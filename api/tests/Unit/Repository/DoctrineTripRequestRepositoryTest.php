@@ -8,20 +8,16 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\AlertAction;
-use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
-use App\Enum\AlertCode;
-use App\Enum\AlertType;
+use App\Enum\AlertGroup;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
+use App\Mapper\EventArrayMapper;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -69,7 +65,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new EventArrayMapper());
     }
 
     #[Test]
@@ -112,7 +108,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
 
-        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new EventArrayMapper());
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
@@ -153,14 +149,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             humidity: 55,
             comfortIndex: 8,
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_TAILWIND,
-        );
-
-        $alert = new Alert(
-            code: AlertCode::WIND_HEADWIND,
-            type: AlertType::WARNING,
-            message: 'Strong wind expected',
-            lat: 48.0,
-            lon: 3.5,
         );
 
         $poi = new PointOfInterest(
@@ -216,7 +204,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             isRestDay: false,
         );
         $stageDto->weather = $weather;
-        $stageDto->addAlert($alert);
+        $stageDto->setAlertsForGroup(AlertGroup::WIND, [
+            ['code' => 'wind_headwind', 'type' => 'warning', 'message' => 'Strong wind expected'],
+        ]);
         $stageDto->resupply = new Resupply(foodAtLunch: [$poi]);
         $stageDto->addAccommodation($accommodation);
         $stageDto->selectedAccommodation = $selectedAccommodation;
@@ -265,12 +255,11 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame(8, $result->weather->comfortIndex);
         self::assertSame(WeatherForecast::RELATIVE_WIND_TAILWIND, $result->weather->relativeWindDirection);
 
-        // Alerts
-        self::assertCount(1, $result->alerts);
-        self::assertSame(AlertType::WARNING, $result->alerts[0]->type);
-        self::assertSame('Strong wind expected', $result->alerts[0]->message);
-        self::assertSame(48.0, $result->alerts[0]->lat);
-        self::assertSame(3.5, $result->alerts[0]->lon);
+        // Alerts do NOT survive this round-trip, on purpose: storeStages() writes the
+        // structure and the enrichment columns belong to the producers that compute them
+        // (ADR-068). Carrying them back from the DTO is how a structural edit used to
+        // replay a stale snapshot over a worker's write.
+        self::assertSame([], $result->alerts);
 
         // Resupply (persisted in the repurposed pois column)
         self::assertNotNull($result->resupply);
@@ -541,64 +530,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
-    public function culturalPoiAlertRoundtrip(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')
-            ->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        $this->entityManager->expects(self::once())
-            ->method('flush');
-
-        $culturalAlert = new CulturalPoiAlert(
-            code: AlertCode::CULTURAL_POI_SUGGESTION,
-            type: AlertType::NUDGE,
-            message: 'Nearby: Château de Fontainebleau',
-            lat: 48.4,
-            lon: 2.7,
-            poiName: 'Château de Fontainebleau',
-            poiType: 'castle',
-            poiLat: 48.4010,
-            poiLon: 2.7004,
-            distanceFromRoute: 350,
-        );
-
-        $stageDto = new StageDto(
-            tripId: $tripId,
-            dayNumber: 1,
-            distance: 85.2,
-            elevation: 920.0,
-            startPoint: new Coordinate(48.8566, 2.3522, 35.0),
-            endPoint: new Coordinate(47.9983, 3.5736, 180.0),
-        );
-        $stageDto->addAlert($culturalAlert);
-
-        $this->repository->storeStages($tripId, [$stageDto]);
-
-        $stages = $this->repository->getStages($tripId);
-
-        self::assertNotNull($stages);
-        self::assertCount(1, $stages);
-        self::assertCount(1, $stages[0]->alerts);
-
-        $resultAlert = $stages[0]->alerts[0];
-        self::assertInstanceOf(CulturalPoiAlert::class, $resultAlert);
-        self::assertSame(AlertType::NUDGE, $resultAlert->type);
-        self::assertSame('Nearby: Château de Fontainebleau', $resultAlert->message);
-        self::assertSame(48.4, $resultAlert->lat);
-        self::assertSame(2.7, $resultAlert->lon);
-        self::assertSame('Château de Fontainebleau', $resultAlert->poiName);
-        self::assertSame('castle', $resultAlert->poiType);
-        self::assertSame(48.4010, $resultAlert->poiLat);
-        self::assertSame(2.7004, $resultAlert->poiLon);
-        self::assertSame(350, $resultAlert->distanceFromRoute);
-    }
-
-    #[Test]
     public function rawPointsUsesCache(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
@@ -850,217 +781,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
-    public function alertActionRoundtrip(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-
-        $stageDto = new StageDto(
-            tripId: $tripId,
-            dayNumber: 1,
-            distance: 42.0,
-            elevation: 100.0,
-            startPoint: new Coordinate(48.0, 2.0, 0.0),
-            endPoint: new Coordinate(48.1, 2.1, 0.0),
-        );
-        $stageDto->addAlert(new Alert(
-            code: AlertCode::CONTINUITY_GAP_CRITICAL,
-            type: AlertType::CRITICAL,
-            message: 'Discontinuity between stage 1 and 2',
-            lat: 48.05,
-            lon: 2.05,
-            action: new AlertAction(
-                kind: AlertActionKind::NAVIGATE,
-                label: 'Voir la discontinuité sur la carte',
-                payload: ['lat' => 48.05, 'lon' => 2.05],
-            ),
-        ));
-
-        $this->repository->storeStages($tripId, [$stageDto]);
-
-        $stages = $this->repository->getStages($tripId);
-
-        self::assertNotNull($stages);
-        $action = $stages[0]->alerts[0]->action;
-        self::assertInstanceOf(AlertAction::class, $action);
-        self::assertSame(AlertActionKind::NAVIGATE, $action->kind);
-        self::assertSame('Voir la discontinuité sur la carte', $action->label);
-        self::assertSame(['lat' => 48.05, 'lon' => 2.05], $action->payload);
-    }
-
-    #[Test]
-    public function alertPersistedWithoutActionIsRestoredWithoutAction(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        // Alerts persisted before issue #863 carry no "action" key at all.
-        $stageEntity = new \App\Entity\Stage($trip);
-        $stageEntity->setPosition(0);
-        $stageEntity->setDayNumber(1);
-        $stageEntity->setDistance(10.0);
-        $stageEntity->setElevation(100.0);
-        $stageEntity->setStartLat(48.0);
-        $stageEntity->setStartLon(2.0);
-        $stageEntity->setEndLat(48.1);
-        $stageEntity->setEndLon(2.1);
-        $stageEntity->setAlerts([
-            ['type' => 'warning', 'message' => 'Legacy alert', 'lat' => 48.0, 'lon' => 2.0],
-        ]);
-        $trip->addStage($stageEntity);
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        $stages = $this->repository->getStages($tripId);
-
-        self::assertNotNull($stages);
-        self::assertCount(1, $stages[0]->alerts);
-        self::assertSame('Legacy alert', $stages[0]->alerts[0]->message);
-        self::assertNull($stages[0]->alerts[0]->action);
-    }
-
-    #[Test]
-    public function alertCodeSurvivesThePersistenceRoundTrip(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-
-        $stageDto = new StageDto(
-            tripId: $tripId,
-            dayNumber: 1,
-            distance: 42.0,
-            elevation: 100.0,
-            startPoint: new Coordinate(48.0, 2.0, 0.0),
-            endPoint: new Coordinate(48.1, 2.1, 0.0),
-        );
-        $stageDto->addAlert(new Alert(
-            code: AlertCode::FORD_CROSSING_WET,
-            type: AlertType::WARNING,
-            message: 'Ford crossing with rain forecast',
-            lat: 48.05,
-            lon: 2.05,
-        ));
-
-        $this->repository->storeStages($tripId, [$stageDto]);
-
-        $stages = $this->repository->getStages($tripId);
-
-        self::assertNotNull($stages);
-        self::assertSame(AlertCode::FORD_CROSSING_WET, $stages[0]->alerts[0]->code);
-    }
-
-    #[Test]
-    public function alertPersistedWithoutCodeIsRestoredWithoutCode(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        // Alerts persisted before issue #876 carry no "code" key at all, and a code
-        // retired since then no longer resolves: both must degrade to null, not throw.
-        $stageEntity = new \App\Entity\Stage($trip);
-        $stageEntity->setPosition(0);
-        $stageEntity->setDayNumber(1);
-        $stageEntity->setDistance(10.0);
-        $stageEntity->setElevation(100.0);
-        $stageEntity->setStartLat(48.0);
-        $stageEntity->setStartLon(2.0);
-        $stageEntity->setEndLat(48.1);
-        $stageEntity->setEndLon(2.1);
-        $stageEntity->setAlerts([
-            ['type' => 'warning', 'message' => 'Alert with no code'],
-            ['code' => 'surface_missing_data', 'type' => 'nudge', 'message' => 'Alert with a retired code'],
-        ]);
-        $trip->addStage($stageEntity);
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        $stages = $this->repository->getStages($tripId);
-
-        self::assertNotNull($stages);
-        self::assertCount(2, $stages[0]->alerts);
-        self::assertNull($stages[0]->alerts[0]->code);
-        self::assertSame('Alert with no code', $stages[0]->alerts[0]->message);
-        self::assertNull($stages[0]->alerts[1]->code);
-        self::assertSame('Alert with a retired code', $stages[0]->alerts[1]->message);
-    }
-
-    #[Test]
-    public function arrayToAlertThrowsOnUnknownClassDiscriminator(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        // Manually set stages with a fake _class discriminator via entity
-        $stageEntity = new \App\Entity\Stage($trip);
-        $stageEntity->setPosition(0);
-        $stageEntity->setDayNumber(1);
-        $stageEntity->setDistance(10.0);
-        $stageEntity->setElevation(100.0);
-        $stageEntity->setStartLat(48.0);
-        $stageEntity->setStartLon(2.0);
-        $stageEntity->setEndLat(48.1);
-        $stageEntity->setEndLon(2.1);
-        $stageEntity->setAlerts([
-            ['type' => 'warning', 'message' => 'test', '_class' => 'UnknownAlertType'],
-        ]);
-        $trip->addStage($stageEntity);
-
-        $this->entityManager->method('find')
-            ->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessageIsOrContains('Unhandled Alert subclass "UnknownAlertType"');
-
-        $this->repository->getStages($tripId);
-    }
-
-    #[Test]
-    public function alertToArrayThrowsOnUnhandledSubclass(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-
-        // Concrete readonly subclass not registered in alertToArray
-        $unknownAlert = new UnknownAlertStub(code: null, type: AlertType::WARNING, message: 'x');
-
-        $stageDto = new StageDto(
-            tripId: $tripId,
-            dayNumber: 1,
-            distance: 10.0,
-            elevation: 0.0,
-            startPoint: new Coordinate(0.0, 0.0, 0.0),
-            endPoint: new Coordinate(1.0, 1.0, 0.0),
-        );
-        $stageDto->addAlert($unknownAlert);
-
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessageIsOrContains('Unhandled Alert subclass');
-
-        $this->repository->storeStages($tripId, [$stageDto]);
-    }
-
-    #[Test]
     public function storeStagesSkipsPostGisScansWhenGeometryIsUnchanged(): void
     {
         // #787: the heavy PostGIS metrics are geometry-derived, so a second store
@@ -1157,6 +877,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($em);
 
-        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage);
+        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage, new EventArrayMapper());
     }
 }

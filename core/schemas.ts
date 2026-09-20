@@ -26,6 +26,10 @@ export const AlertActionSchema = z.object({
 });
 
 export const AlertSchema = z.object({
+  // The producer that owns this alert (ADR-068). The server stamps it on every alert it
+  // serves or publishes; without it the hydration path had to guess, and guessed "terrain"
+  // for all thirteen groups.
+  group: z.string().optional(),
   // Stable rule-variant identifier (backend `App\Enum\AlertCode`). Absent/null on
   // alerts persisted before it existed, hence the fallback in `alertKey`.
   code: z.string().nullable().optional(),

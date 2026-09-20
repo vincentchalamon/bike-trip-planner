@@ -279,8 +279,8 @@ describe("dropStaleDateAlerts", () => {
     const stages = [
       stage({
         alerts: [
-          { ...alert({ message: "sunday" }), _group: "calendar" } as StageAlert,
-          { ...alert({ message: "terrain" }), _group: "terrain" } as StageAlert,
+          { ...alert({ message: "sunday" }), group: "calendar" } as StageAlert,
+          { ...alert({ message: "terrain" }), group: "terrain" } as StageAlert,
         ],
       }),
     ];
@@ -292,7 +292,7 @@ describe("dropStaleDateAlerts", () => {
   it("does not mutate the input stages", () => {
     const stages = [
       stage({
-        alerts: [{ ...alert(), _group: "calendar" } as StageAlert],
+        alerts: [{ ...alert(), group: "calendar" } as StageAlert],
       }),
     ];
     dropStaleDateAlerts(stages);

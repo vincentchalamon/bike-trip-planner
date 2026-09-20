@@ -16,6 +16,7 @@ use ApiPlatform\OpenApi\Model\Response;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
+use App\Enum\AlertGroup;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
@@ -213,8 +214,50 @@ final class Stage
 
     public ?WeatherForecast $weather = null;
 
-    /** @var Alert[] */
-    public array $alerts = [];
+    /**
+     * Alerts partitioned by the producer that owns them (ADR-068).
+     *
+     * The grouping is what lets one enrichment re-run replace its own alerts and leave the
+     * twelve others alone. It lives on the DTO and not only in the database because the
+     * transient store serialises this object as-is.
+     *
+     * Each alert is the array its producer built for the wire — not an {@see Alert} object.
+     * Normalising would drop `poiName`, `imageUrl`, `openingHours`, `estimatedPrice`,
+     * `wikidataId` and `distanceFromRoute`, which only some producers emit and none of which
+     * the model declares. Same array to the database and to Mercure: parity by construction.
+     *
+     * @var array<string, list<array<string, mixed>>>
+     */
+    public array $alertsByGroup = [];
+
+    /**
+     * Water and food markers ordered along the stage, as published (#778).
+     *
+     * @var list<array<string, mixed>>
+     */
+    public array $supplyTimeline = [];
+
+    /**
+     * Every alert, flattened, in group order.
+     *
+     * A virtual property rather than a method: the flat view is what nearly every reader
+     * wants, and a hook keeps those readers untouched while making it impossible to assign a
+     * list that belongs to no producer.
+     *
+     * @var list<array<string, mixed>>
+     */
+    public array $alerts {
+        get {
+            $flat = [];
+            foreach ($this->alertsByGroup as $group => $alerts) {
+                foreach ($alerts as $alert) {
+                    $flat[] = ['group' => $group] + $alert;
+                }
+            }
+
+            return $flat;
+        }
+    }
 
     public ?Resupply $resupply = null;
 
@@ -268,9 +311,20 @@ final class Stage
         $this->id = $id ?? Uuid::v7()->toRfc4122();
     }
 
-    public function addAlert(Alert $alert): void
+    /**
+     * Replaces one producer's alerts, leaving the others untouched.
+     *
+     * An empty result keeps the key, it does not remove it: an absent group means the
+     * producer has never run for this stage, an empty one that it ran and found nothing
+     * (ADR-068). Dropping the key here would make the transient implementation report
+     * "never computed" where the Doctrine one — which always writes `{computedAt, alerts}`
+     * — reports "computed, nothing found".
+     *
+     * @param list<array<string, mixed>> $alerts
+     */
+    public function setAlertsForGroup(AlertGroup $group, array $alerts): void
     {
-        $this->alerts[] = $alert;
+        $this->alertsByGroup[$group->value] = $alerts;
     }
 
     public function addAccommodation(Accommodation $accommodation): void

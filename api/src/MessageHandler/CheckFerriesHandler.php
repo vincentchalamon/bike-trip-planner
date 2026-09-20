@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -104,6 +105,11 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
                     ];
                 }
             }
+
+            // Same array to the database and to the wire (ADR-068): grouped by the stage
+            // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
+            // second is renumbered by every structural edit and is derived on read.
+            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::FERRY, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::FERRY_ALERTS, [
                 'alerts' => $alerts,

@@ -237,7 +237,79 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
       },
     });
     expect(next.stages[0]!.resupply.foodAtLunch).toHaveLength(1);
-    expect((next.stages[0]!.alerts[0] as StageAlert)._group).toBe("pois");
+    expect((next.stages[0]!.alerts[0] as StageAlert).group).toBe("pois");
+  });
+
+  // Regression (ADR-068): both reducers used to require a non-empty list, so a rerun
+  // that found nothing updated the database and left the open page showing the alert
+  // it had just cleared — until a reload.
+  it("an empty pois_scanned alerts list clears the group instead of being ignored", () => {
+    const hydrated = stage({
+      alerts: [
+        {
+          group: "pois",
+          type: "nudge",
+          message: "no water",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "pois_scanned",
+      data: {
+        stageId: "stage-1",
+        resupply: {
+          foodAtLunch: [],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
+        alerts: [],
+      },
+    });
+
+    expect(
+      (next.stages[0]!.alerts as StageAlert[]).map((a) => a.group),
+    ).toEqual(["ferry"]);
+  });
+
+  it("an empty accommodations_found alerts list clears the group too", () => {
+    const hydrated = stage({
+      alerts: [
+        {
+          group: "accommodations",
+          type: "warning",
+          message: "none nearby",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "accommodations_found",
+      data: { stageId: "stage-1", accommodations: [], alerts: [] },
+    });
+
+    expect(
+      (next.stages[0]!.alerts as StageAlert[]).map((a) => a.group),
+    ).toEqual(["ferry"]);
   });
 
   it("supply_timeline replaces the stage markers", () => {
@@ -333,7 +405,62 @@ describe("reduceMercureEvent — alert groups", () => {
     });
     expect(next.stages[0]!.alerts).toHaveLength(0);
     expect(next.stages[1]!.alerts).toHaveLength(1);
-    expect((next.stages[1]!.alerts[0] as StageAlert)._group).toBe("terrain");
+    expect((next.stages[1]!.alerts[0] as StageAlert).group).toBe("terrain");
+  });
+
+  // Regression (ADR-068): the hydrate used to stamp `terrain` on every persisted alert,
+  // because terrain was the only group ever written. With thirteen groups persisted, that
+  // guess made the first terrain_alerts event wipe the twelve others — which would have
+  // cancelled the whole point of persisting them.
+  it("a terrain_alerts event leaves the other hydrated groups alone", () => {
+    const hydrated = stage({
+      dayNumber: 1,
+      alerts: [
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "calendar",
+          type: "nudge",
+          message: "Sunday",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "terrain",
+          type: "warning",
+          message: "old gravel",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "terrain_alerts",
+      data: {
+        alertsByStage: {
+          "stage-1": [
+            { type: "warning", message: "fresh gravel", lat: null, lon: null },
+          ],
+        },
+      },
+    });
+
+    const groups = (next.stages[0]!.alerts as StageAlert[])
+      .map((a) => a.group)
+      .sort();
+    expect(groups).toEqual(["calendar", "ferry", "terrain"]);
+    // Terrain was replaced, not appended to.
+    const terrain = (next.stages[0]!.alerts as StageAlert[]).filter(
+      (a) => a.group === "terrain",
+    );
+    expect(terrain).toHaveLength(1);
+    expect(terrain[0]!.message).toBe("fresh gravel");
   });
 
   it("alert groups coexist: a later group never blanks another analyzer's alerts", () => {
@@ -362,7 +489,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const sources = state.stages[0]!.alerts.map(
-      (a) => (a as StageAlert)._group,
+      (a) => (a as StageAlert).group,
     ).sort();
     expect(sources).toEqual(["terrain", "wind"]);
   });
@@ -373,7 +500,7 @@ describe("reduceMercureEvent — alert groups", () => {
       message: "Sunday",
       lat: null,
       lon: null,
-      _group: "calendar",
+      group: "calendar",
     };
     const state = baseState({
       stages: [stage(), stage({ alerts: [{ ...stale }] })],
@@ -427,7 +554,7 @@ describe("reduceMercureEvent — alert groups", () => {
   });
 
   // Field-mapping coverage for the remaining groups: each must land on the
-  // right stage, carry its `_group` tag, and preserve the mapped message /
+  // right stage, carry its `group` tag, and preserve the mapped message /
   // source / action — a swapped mapping would otherwise only be caught by the
   // no-fallthrough smoke test, which stays green on a wrong field.
   it("bike_shop_alerts tags the stage alert with the bike_shop group", () => {
@@ -446,7 +573,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("bike_shop");
+    expect(a.group).toBe("bike_shop");
     expect(a.message).toBe("Vélociste");
   });
 
@@ -467,7 +594,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("water_point");
+    expect(a.group).toBe("water_point");
     expect(a.source).toBe("water_point");
   });
 
@@ -487,7 +614,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("health_service");
+    expect(a.group).toBe("health_service");
     expect(a.message).toBe("Pharmacie");
   });
 
@@ -514,7 +641,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("cultural_poi");
+    expect(a.group).toBe("cultural_poi");
     expect(a.source).toBe("cultural_poi");
     expect(a.poiName).toBe("Louvre");
   });
@@ -540,7 +667,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("railway_station");
+    expect(a.group).toBe("railway_station");
     expect(a.source).toBe("railway_station");
     expect(a.action?.payload).toEqual({ lat: 1, lon: 2 });
   });
@@ -568,7 +695,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("border_crossing");
+    expect(a.group).toBe("border_crossing");
     expect(a.source).toBe("border_crossing");
   });
 
@@ -595,7 +722,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("ford");
+    expect(a.group).toBe("ford");
     expect(a.source).toBe("ford");
   });
 });
@@ -607,14 +734,14 @@ describe("reduceMercureEvent — structural / terminal events", () => {
       message: "museum",
       lat: null,
       lon: null,
-      _group: "cultural_poi",
+      group: "cultural_poi",
     };
     const terrain: StageAlert = {
       type: "warning",
       message: "gravel",
       lat: null,
       lon: null,
-      _group: "terrain",
+      group: "terrain",
     };
     const state = baseState({
       stages: [stage({ alerts: [{ ...cultural }, { ...terrain }] })],

@@ -87,15 +87,48 @@ class Stage
     #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $weather = null;
 
-    /** @var list<array<string, mixed>> */
-    #[ORM\Column(type: 'jsonb')]
-    private array $alerts = [];
+    /**
+     * Alerts, partitioned by the producer that owns them (ADR-068).
+     *
+     * `{group: {computedAt: string, alerts: list<array>}}`. The partition is what lets one
+     * enrichment re-run replace its own alerts and leave the twelve others intact, and it is
+     * why a single flat list would not do.
+     *
+     * An **absent key** and an **empty `alerts` list** say different things: the first means
+     * the producer has never run for this stage, the second that it ran and found nothing.
+     * Nothing else in the model carries that distinction.
+     *
+     * Written only through the targeted `updateStage*ForGroup` methods, never by
+     * `storeStages()`: a structural edit must not carry an enrichment snapshot back.
+     *
+     * @var array<string, array{computedAt: string, alerts: list<array<string, mixed>>}>
+     */
+    #[ORM\Column(type: 'jsonb', options: ['default' => '{}'])]
+    private array $alertsByGroup = [];
 
     // Repurposed to hold the curated resupply object (#1099); a pre-#1099 row may
     // still hold the legacy flat POI list, so the shape is either.
     /** @var array<array-key, mixed> */
     #[ORM\Column(type: 'jsonb')]
     private array $pois = [];
+
+    /**
+     * Cultural and sporting events near the stage. Published over SSE since #1024 but never
+     * persisted until ADR-068, so a reload or the anonymous share page lost them.
+     *
+     * @var list<array<string, mixed>>
+     */
+    #[ORM\Column(type: 'jsonb', options: ['default' => '[]'])]
+    private array $events = [];
+
+    /**
+     * Water and food markers ordered along the stage. Same story as {@see self::$events}:
+     * client-side only until ADR-068.
+     *
+     * @var list<array<string, mixed>>
+     */
+    #[ORM\Column(type: 'jsonb', options: ['default' => '[]'])]
+    private array $supplyTimeline = [];
 
     /** @var list<array<string, mixed>> */
     #[ORM\Column(type: 'jsonb')]
@@ -342,16 +375,63 @@ class Stage
         return $this;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function getAlerts(): array
+    /** @return array<string, array{computedAt: string, alerts: list<array<string, mixed>>}> */
+    public function getAlertsByGroup(): array
     {
-        return $this->alerts;
+        return $this->alertsByGroup;
     }
 
-    /** @param list<array<string, mixed>> $alerts */
-    public function setAlerts(array $alerts): self
+    /** @param array<string, array{computedAt: string, alerts: list<array<string, mixed>>}> $alertsByGroup */
+    public function setAlertsByGroup(array $alertsByGroup): self
     {
-        $this->alerts = $alerts;
+        $this->alertsByGroup = $alertsByGroup;
+
+        return $this;
+    }
+
+    /**
+     * Every alert the stage carries, in no particular order, each tagged with its group.
+     *
+     * The flat view the read path wants; the grouping stays the storage concern.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getAlerts(): array
+    {
+        $flat = [];
+        foreach ($this->alertsByGroup as $group => $entry) {
+            foreach ($entry['alerts'] ?? [] as $alert) {
+                $flat[] = ['group' => $group] + $alert;
+            }
+        }
+
+        return $flat;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function getEvents(): array
+    {
+        return $this->events;
+    }
+
+    /** @param list<array<string, mixed>> $events */
+    public function setEvents(array $events): self
+    {
+        $this->events = $events;
+
+        return $this;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function getSupplyTimeline(): array
+    {
+        return $this->supplyTimeline;
+    }
+
+    /** @param list<array<string, mixed>> $supplyTimeline */
+    public function setSupplyTimeline(array $supplyTimeline): self
+    {
+        $this->supplyTimeline = $supplyTimeline;
 
         return $this;
     }

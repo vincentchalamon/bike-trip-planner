@@ -506,10 +506,10 @@ export const useTripStore = create<TripState>()(
         if (state.stages[stageIndex]) {
           const taggedAlerts: StageAlert[] = alerts.map((a) => ({
             ...a,
-            _group: source,
+            group: source,
           }));
           const kept = (state.stages[stageIndex].alerts as StageAlert[]).filter(
-            (a) => a._group !== source,
+            (a) => a.group !== source,
           );
           state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }

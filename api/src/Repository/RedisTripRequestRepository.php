@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\AlertGroup;
 use App\Concurrency\VersionPrecondition;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -89,9 +90,44 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     /** @param list<Stage> $stages */
     public function storeStages(string $tripId, array $stages): void
     {
-        $this->set($this->stagesKey($tripId), $stages);
+        $this->set($this->stagesKey($tripId), $this->keepingEnrichment($tripId, $stages));
         // Any write of the collection is a structural change (see TripRequest::$version).
         $this->bumpVersion($tripId);
+    }
+
+    /**
+     * Carries the enrichment columns over from what is stored, instead of taking them from
+     * the incoming DTOs.
+     *
+     * The Doctrine implementation gets this for free — `applyDtoToEntity()` simply never
+     * touches those columns (ADR-068). Here the whole collection *is* the storage unit, so
+     * the partition has to be performed by hand, or a structural edit would replay whatever
+     * snapshot the processor read over a producer's write. The contract suite is what caught
+     * the two implementations disagreeing.
+     *
+     * @param list<Stage> $stages
+     *
+     * @return list<Stage>
+     */
+    private function keepingEnrichment(string $tripId, array $stages): array
+    {
+        $stored = [];
+        foreach ($this->getStages($tripId) ?? [] as $existing) {
+            $stored[$existing->id] = $existing;
+        }
+
+        foreach ($stages as $stage) {
+            $existing = $stored[$stage->id] ?? null;
+            if (!$existing instanceof Stage) {
+                continue;
+            }
+
+            $stage->alertsByGroup = $existing->alertsByGroup;
+            $stage->events = $existing->events;
+            $stage->supplyTimeline = $existing->supplyTimeline;
+        }
+
+        return $stages;
     }
 
     /**
@@ -197,11 +233,37 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         });
     }
 
-    /** @param list<Alert> $alerts */
-    public function updateStageAlerts(string $tripId, string $stageId, array $alerts): void
+    /** @param list<array<string, mixed>> $alerts */
+    public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
-        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($alerts): void {
-            $stage->alerts = $alerts;
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($group, $alerts): void {
+            $stage->setAlertsForGroup($group, $alerts);
+        });
+    }
+
+    /** @param array<string, list<array<string, mixed>>> $alertsByStageId */
+    public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
+    {
+        // Every stage, not only those carrying alerts: one that dropped out of the new set
+        // has to lose the group rather than keep a stale entry.
+        foreach ($this->getStages($tripId) ?? [] as $stage) {
+            $this->updateStageAlertsForGroup($tripId, $stage->id, $group, $alertsByStageId[$stage->id] ?? []);
+        }
+    }
+
+    /** @param list<Event> $events */
+    public function updateStageEvents(string $tripId, string $stageId, array $events): void
+    {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($events): void {
+            $stage->events = $events;
+        });
+    }
+
+    /** @param list<array<string, mixed>> $markers */
+    public function updateStageSupplyTimeline(string $tripId, string $stageId, array $markers): void
+    {
+        $this->updateStageField($tripId, $stageId, static function (Stage $stage) use ($markers): void {
+            $stage->supplyTimeline = $markers;
         });
     }
 

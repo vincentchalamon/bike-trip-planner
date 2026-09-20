@@ -73,6 +73,14 @@ These bit Sprint 51 — each was green on a dev machine and red in CI, or vice-v
 - **A stacked PR whose base you retarget may not re-trigger CI.** After a squash-merge of a parent, retargeting the child's base to `main` **and** force-pushing sometimes fires no workflow run at all (the head shows "no checks reported"). **Close and reopen the PR** to re-trigger — no noise commit needed.
 - **Editing an `#[ApiResource]` class docblock drifts `core/schema.d.ts`.** The class-level PHPDoc becomes the resource `description` in the exported OpenAPI, so changing it — even just prose — fails the `OpenAPI → TS drift` CI job until you regenerate (same for any DTO shape change, e.g. a field becoming required → `enabled: boolean | null`). Regen: `bin/console api:openapi:export > pwa/openapi.json` (php container) then `npm run typegen --workspace pwa` (writes `../core/schema.d.ts`), and commit the result.
 - **Bind a uuid-column parameter as `Uuid`, never a raw string.** A DQL comparison against a `uuid` FK (`IDENTITY(x.user) = :userId`) needs `->setParameter('userId', Uuid::fromString($userId))` — a raw string skips the `uuid` DBAL conversion and **silently matches nothing**, not a loud error. A unit test that stubs the `QueryBuilder` can't catch it (the value never round-trips); cover it with a `KernelTestCase` + `#[ResetDatabase]` integration test against real Postgres.
+- **A worktree with no `node_modules` silently type-checks the *main* checkout's `core`.** Node
+  resolution walks up from `.claude/worktrees/<name>/pwa` and finds the repository root's
+  `node_modules`, where `@btp/core` symlinks to the **main checkout's** `core/`. So `tsc` runs
+  green against code you did not write, an injected type error goes unnoticed, and a contract
+  guard in `core/` appears inert. This is worse than the empty-volume failure below, which at
+  least fails loudly. Run `npm install` **from the worktree root** (not from `pwa/`, which
+  installs without workspace linking) and check `node_modules/@btp/core -> ../../core` before
+  trusting any frontend check.
 - **The full mobile `jest` suite flakes locally on `notifications`/`ShareSheet`.** Running every suite in the dev docker env non-deterministically fails those two (act-warning/timing under parallel load); each passes in isolation and the **same two fail on a clean `origin/main`**. It is an environment artifact, not your diff — don't conclude the branch is broken. CI is the gate; confirm a suspected regression by running the affected suite alone.
 - **`landing-page.spec.ts:193` (#649) is a known Playwright flake.** The "stale cookie (refresh fails) falls back to the landing" test intermittently hits `strict mode violation: getByTestId('landing-page') resolved to 2 elements` (SSR + client `<main>` both briefly mounted during the fallback). Red then green across identical runs, unrelated to any diff — re-run rather than chase it.
 

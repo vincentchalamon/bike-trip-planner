@@ -7,7 +7,6 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\NotExposed;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
@@ -33,7 +32,14 @@ final class StageResponse
 
     public ?WeatherForecast $weather = null;
 
-    /** @var Alert[] */
+    /**
+     * Alerts in the shape their producer published, each tagged with its `group` (ADR-068).
+     *
+     * Not `Alert[]`: normalising would drop the fields only some producers emit — `poiName`,
+     * `imageUrl`, `openingHours`, `estimatedPrice`, `wikidataId`, `distanceFromRoute`.
+     *
+     * @var list<array<string, mixed>>
+     */
     public array $alerts = [];
 
     public ?Resupply $resupply = null;

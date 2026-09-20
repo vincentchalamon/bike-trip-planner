@@ -1009,87 +1009,6 @@ export interface components {
          *     URL identifier, so there is no IDOR surface.
          */
         "Account.jsonld": components["schemas"]["HydraItemBaseSchema"] & Record<string, never>;
-        "Alert.fit": {
-            /**
-             * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
-             * @enum {string|null}
-             */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
-            /** @enum {string} */
-            type?: "critical" | "warning" | "nudge";
-            message?: string;
-            lat?: number | null;
-            lon?: number | null;
-            /** @description Optional contextual action for this alert. */
-            action?: components["schemas"]["AlertAction.fit"] | null;
-        };
-        "Alert.gpx": {
-            /**
-             * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
-             * @enum {string|null}
-             */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
-            /** @enum {string} */
-            type?: "critical" | "warning" | "nudge";
-            message?: string;
-            lat?: number | null;
-            lon?: number | null;
-            /** @description Optional contextual action for this alert. */
-            action?: components["schemas"]["AlertAction.gpx"] | null;
-        };
-        "Alert.jsonld": {
-            /**
-             * @description Stable identifier of the rule variant that raised this alert. Null on alerts persisted before the code was introduced (issue #876).
-             * @enum {string|null}
-             */
-            code?: "continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet" | null;
-            /** @enum {string} */
-            type?: "critical" | "warning" | "nudge";
-            message?: string;
-            lat?: number | null;
-            lon?: number | null;
-            /** @description Optional contextual action for this alert. */
-            action?: components["schemas"]["AlertAction.jsonld"] | null;
-        };
-        "AlertAction.fit": {
-            /**
-             * @description Type of action: auto_fix, detour, navigate, dismiss.
-             * @enum {string}
-             */
-            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
-            /** @description Human-readable label for the action button. */
-            label: string;
-            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
-            payload?: {
-                [key: string]: unknown;
-            };
-        };
-        "AlertAction.gpx": {
-            /**
-             * @description Type of action: auto_fix, detour, navigate, dismiss.
-             * @enum {string}
-             */
-            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
-            /** @description Human-readable label for the action button. */
-            label: string;
-            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
-            payload?: {
-                [key: string]: unknown;
-            };
-        };
-        "AlertAction.jsonld": {
-            /**
-             * @description Type of action: auto_fix, detour, navigate, dismiss.
-             * @enum {string}
-             */
-            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
-            /** @description Human-readable label for the action button. */
-            label: string;
-            /** @description Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982). */
-            payload?: {
-                [key: string]: unknown;
-            };
-        };
         Auth: {
             /** Format: email */
             email: string;
@@ -1593,7 +1512,10 @@ export interface components {
             /** @description The stage's stable identity, and what its IRI is built from (ADR-066). */
             id?: string;
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
-            alerts?: components["schemas"]["Alert.jsonld"][];
+            /** @description Alerts in the shape their producer published, each tagged with its `group` (ADR-068). */
+            alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.jsonld"] | null;
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
@@ -1628,7 +1550,20 @@ export interface components {
              */
             id?: string | null;
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
-            alerts?: components["schemas"]["Alert.fit"][];
+            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
+            alertsByGroup?: {
+                [key: string]: {
+                    [key: string]: string | null;
+                }[];
+            };
+            /** @description Water and food markers ordered along the stage, as published (#778). */
+            supplyTimeline?: {
+                [key: string]: string | null;
+            }[];
+            /** @description Every alert, flattened, in group order. */
+            readonly alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
@@ -1666,7 +1601,20 @@ export interface components {
              */
             id?: string | null;
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
-            alerts?: components["schemas"]["Alert.gpx"][];
+            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
+            alertsByGroup?: {
+                [key: string]: {
+                    [key: string]: string | null;
+                }[];
+            };
+            /** @description Water and food markers ordered along the stage, as published (#778). */
+            supplyTimeline?: {
+                [key: string]: string | null;
+            }[];
+            /** @description Every alert, flattened, in group order. */
+            readonly alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
@@ -1704,7 +1652,20 @@ export interface components {
              */
             id?: string | null;
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
-            alerts?: components["schemas"]["Alert.jsonld"][];
+            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
+            alertsByGroup?: {
+                [key: string]: {
+                    [key: string]: string | null;
+                }[];
+            };
+            /** @description Water and food markers ordered along the stage, as published (#778). */
+            supplyTimeline?: {
+                [key: string]: string | null;
+            }[];
+            /** @description Every alert, flattened, in group order. */
+            readonly alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.jsonld"] | null;
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
@@ -1959,6 +1920,8 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
+                    /** @enum {string} */
+                    group?: "terrain" | "pois" | "accommodations" | "calendar" | "wind" | "bike_shop" | "water_point" | "health_service" | "cultural_poi" | "railway_station" | "border_crossing" | "ferry" | "ford";
                     code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
@@ -1973,6 +1936,59 @@ export interface components {
                             [key: string]: unknown;
                         };
                     } | null;
+                    source?: string;
+                    poiName?: string;
+                    poiType?: string;
+                    poiLat?: number;
+                    poiLon?: number;
+                    distanceFromRoute?: number;
+                    openingHours?: string;
+                    estimatedPrice?: number;
+                    description?: string;
+                    wikidataId?: string;
+                    imageUrl?: string;
+                    wikipediaUrl?: string;
+                    osmType?: ("node" | "way" | "relation") | null;
+                    osmId?: number | null;
+                }[];
+                events?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    endDate?: string;
+                    url?: string | null;
+                    description?: string | null;
+                    priceMin?: number | null;
+                    distanceToEndPoint?: number;
+                    source?: string;
+                    wikidataId?: string | null;
+                    imageUrl?: string | null;
+                    wikipediaUrl?: string | null;
+                    openingHours?: string | null;
+                }[];
+                supplyTimeline?: {
+                    /** @enum {string} */
+                    type?: "water" | "food" | "both";
+                    distanceFromStart?: number;
+                    lat?: number;
+                    lon?: number;
+                    water?: {
+                        name?: string | null;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
+                    food?: {
+                        name?: string | null;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
                 }[];
                 resupply?: {
                     foodAtLunch?: {
@@ -2085,7 +2101,20 @@ export interface components {
              */
             id?: string | null;
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
-            alerts?: components["schemas"]["Alert.fit"][];
+            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
+            alertsByGroup?: {
+                [key: string]: {
+                    [key: string]: string | null;
+                }[];
+            };
+            /** @description Water and food markers ordered along the stage, as published (#778). */
+            supplyTimeline?: {
+                [key: string]: string | null;
+            }[];
+            /** @description Every alert, flattened, in group order. */
+            readonly alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
@@ -2123,7 +2152,20 @@ export interface components {
              */
             id?: string | null;
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
-            alerts?: components["schemas"]["Alert.gpx"][];
+            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
+            alertsByGroup?: {
+                [key: string]: {
+                    [key: string]: string | null;
+                }[];
+            };
+            /** @description Water and food markers ordered along the stage, as published (#778). */
+            supplyTimeline?: {
+                [key: string]: string | null;
+            }[];
+            /** @description Every alert, flattened, in group order. */
+            readonly alerts?: {
+                [key: string]: string | null;
+            }[];
             resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
@@ -2242,6 +2284,8 @@ export interface components {
                     relativeWindDirection?: string;
                 } | null;
                 alerts?: {
+                    /** @enum {string} */
+                    group?: "terrain" | "pois" | "accommodations" | "calendar" | "wind" | "bike_shop" | "water_point" | "health_service" | "cultural_poi" | "railway_station" | "border_crossing" | "ferry" | "ford";
                     code?: ("continuity_gap_critical" | "continuity_gap_warning" | "elevation_gain" | "steep_gradient" | "surface_rough" | "traffic_main_road" | "traffic_secondary_road_fast" | "traffic_secondary_road_slow" | "ebike_range_exceeded" | "sunset_arrival_after_twilight" | "calendar_public_holiday" | "calendar_sunday" | "wind_headwind" | "wind_gusts_strong" | "comfort_poor_conditions" | "heat_extreme" | "cold_extreme" | "rain_heavy" | "bike_shop_none_nearby" | "resupply_none_on_stage" | "resupply_closed_at_passage" | "accommodation_seasonal_closure" | "water_point_gap" | "rest_day_suggested" | "cultural_poi_suggestion" | "railway_station_none_nearby" | "health_service_none_nearby" | "border_crossing" | "ferry_crossing" | "ford_crossing_dry" | "ford_crossing_wet") | null;
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
@@ -2256,6 +2300,59 @@ export interface components {
                             [key: string]: unknown;
                         };
                     } | null;
+                    source?: string;
+                    poiName?: string;
+                    poiType?: string;
+                    poiLat?: number;
+                    poiLon?: number;
+                    distanceFromRoute?: number;
+                    openingHours?: string;
+                    estimatedPrice?: number;
+                    description?: string;
+                    wikidataId?: string;
+                    imageUrl?: string;
+                    wikipediaUrl?: string;
+                    osmType?: ("node" | "way" | "relation") | null;
+                    osmId?: number | null;
+                }[];
+                events?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    endDate?: string;
+                    url?: string | null;
+                    description?: string | null;
+                    priceMin?: number | null;
+                    distanceToEndPoint?: number;
+                    source?: string;
+                    wikidataId?: string | null;
+                    imageUrl?: string | null;
+                    wikipediaUrl?: string | null;
+                    openingHours?: string | null;
+                }[];
+                supplyTimeline?: {
+                    /** @enum {string} */
+                    type?: "water" | "food" | "both";
+                    distanceFromStart?: number;
+                    lat?: number;
+                    lon?: number;
+                    water?: {
+                        name?: string | null;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
+                    food?: {
+                        name?: string | null;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
                 }[];
                 resupply?: {
                     foodAtLunch?: {

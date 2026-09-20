@@ -14,6 +14,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -236,20 +237,19 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                             $locale,
                         ),
                     );
-                    $stage->addAlert($alert);
                     $alertsToPublish[] = ['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
-                $payload = [
+                // Same array to both consumers (ADR-068), the empty one included: a rerun that
+                // finds nothing has to clear the previous alerts on a live client too, or the
+                // database and the open page disagree until a reload.
+                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
+                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, [
                     'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
-                ];
-                if ([] !== $alertsToPublish) {
-                    $payload['alerts'] = $alertsToPublish;
-                }
-
-                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
+                    'alerts' => $alertsToPublish,
+                ]);
             }
 
             // Persist accommodations with an atomic per-column UPDATE, only for the

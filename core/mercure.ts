@@ -1,3 +1,5 @@
+import type { components } from "./schema";
+
 // Mercure SSE wire payloads shared by web and mobile. Pure type declarations
 // (no runtime), mirrored from the backend publishers (StagePayloadMapper et al.).
 // Moved out of pwa/src/lib/mercure/types.ts into core/ so the mobile thin store
@@ -71,6 +73,28 @@ export interface WeatherPayload {
   } | null;
 }
 
+/**
+ * Every alert producer, mirrored from `App\Enum\AlertGroup`.
+ *
+ * Not trusted to stay in step by hand: the server enumerates the same list into the OpenAPI
+ * schema, and {@link ALERT_GROUPS_MATCH_THE_SCHEMA} below fails the build the moment the two
+ * diverge. That is why no cross-language drift test guards this list.
+ */
+export type AlertGroup =
+  | "terrain"
+  | "pois"
+  | "accommodations"
+  | "calendar"
+  | "wind"
+  | "bike_shop"
+  | "water_point"
+  | "health_service"
+  | "cultural_poi"
+  | "railway_station"
+  | "border_crossing"
+  | "ferry"
+  | "ford";
+
 export interface AlertActionPayload {
   kind: "auto_fix" | "detour" | "navigate" | "dismiss";
   label: string;
@@ -78,6 +102,13 @@ export interface AlertActionPayload {
 }
 
 export interface AlertPayload {
+  /**
+   * The producer that owns this alert, and the unit in which alerts are replaced (ADR-068).
+   *
+   * Sent by the server on every alert, live and persisted alike. Optional only because a
+   * live payload built before the group travelled may still be in flight.
+   */
+  group?: AlertGroup;
   /** Stable rule-variant identifier (backend `App\Enum\AlertCode`); null on legacy persisted alerts. */
   code?: string | null;
   type: "critical" | "warning" | "nudge";
@@ -524,3 +555,42 @@ type _Complete =
       };
 
 export const MERCURE_EVENT_TYPES_ARE_EXHAUSTIVE: _Complete = true;
+
+/**
+ * The same list, as the generated schema sees it.
+ *
+ * `/trips/{id}/detail` enumerates the groups, so `openapi-typescript` turns them into a
+ * literal union. Reading it back here means a group added, renamed or removed on the server
+ * shows up as a compile error on both clients rather than as alerts that silently land in
+ * the wrong bucket.
+ */
+type SchemaAlertGroup = NonNullable<
+  NonNullable<
+    NonNullable<
+      components["schemas"]["TripDetail.jsonld"]["stages"]
+    >[number]["alerts"]
+  >[number]["group"]
+>;
+
+/**
+ * Compile-time equality between {@link AlertGroup} and the schema's union: assigning `true`
+ * fails to type-check unless each is assignable to the other, so neither a group missing
+ * here nor one missing there can pass.
+ */
+type _AlertGroupsMatch = [AlertGroup] extends [SchemaAlertGroup]
+  ? [SchemaAlertGroup] extends [AlertGroup]
+    ? true
+    : {
+        ERROR_schema_has_groups_missing_from_AlertGroup: Exclude<
+          SchemaAlertGroup,
+          AlertGroup
+        >;
+      }
+  : {
+      ERROR_AlertGroup_has_groups_missing_from_the_schema: Exclude<
+        AlertGroup,
+        SchemaAlertGroup
+      >;
+    };
+
+export const ALERT_GROUPS_MATCH_THE_SCHEMA: _AlertGroupsMatch = true;

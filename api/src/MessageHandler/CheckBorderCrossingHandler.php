@@ -10,6 +10,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -63,6 +64,9 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             $checkPoints = $this->buildCheckPoints($stages);
 
             if (\count($checkPoints) < 2) {
+                // Nothing found is a result, not an absence of one: the group is cleared so a
+                // previous run's alerts do not survive as stale.
+                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, []);
                 $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                     'alerts' => [],
                 ]);
@@ -126,6 +130,11 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                     'lon' => $crossingPoint->lon,
                 ];
             }
+
+            // Same array to the database and to the wire (ADR-068): grouped by the stage
+            // it addresses, without `stageId`/`dayNumber` — the first is the key, the
+            // second is renumbered by every structural edit and is derived on read.
+            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                 'alerts' => $alerts,

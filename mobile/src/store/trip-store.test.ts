@@ -83,11 +83,15 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
     );
   });
 
-  it('stageDataFromDetail tags persisted alerts with the terrain group', () => {
+  // The server stamps the owning group now (ADR-068); the hydrate used to invent `terrain`
+  // for every alert, which would have wiped twelve groups out of thirteen.
+  it('stageDataFromDetail keeps the group the server sent', () => {
     const mapped = stageDataFromDetail(
-      apiStage({ alerts: [{ type: 'nudge', message: 'x', lat: null, lon: null }] }),
+      apiStage({
+        alerts: [{ group: 'ferry', type: 'nudge', message: 'x', lat: null, lon: null }],
+      }),
     );
-    expect((mapped.alerts[0] as { _group?: string })._group).toBe('terrain');
+    expect(mapped.alerts[0]?.group).toBe('ferry');
   });
 
   it('applyStageUpdate reconciles via core (preserves prev label on a stable endpoint)', () => {
