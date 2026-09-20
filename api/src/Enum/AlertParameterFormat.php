@@ -38,6 +38,14 @@ enum AlertParameterFormat: string
     /** Same category, in the form that stands in for a missing name ("a museum"). */
     case POI_DISPLAY_NAME = 'poi_display_name';
 
+    /**
+     * An ISO 3166-1 alpha-2 code, named in the reader's language through ICU.
+     *
+     * ICU rather than a catalogue key per country: the list is closed, already translated
+     * everywhere, and would otherwise be ~250 keys to maintain by hand.
+     */
+    case COUNTRY = 'country';
+
     /** @var list<string> */
     public const array VALUES = [
         self::DISTANCE->value,
@@ -47,5 +55,6 @@ enum AlertParameterFormat: string
         self::SURFACE_LIST->value,
         self::POI_LABEL->value,
         self::POI_DISPLAY_NAME->value,
+        self::COUNTRY->value,
     ];
 }

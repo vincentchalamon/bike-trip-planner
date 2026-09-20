@@ -30,7 +30,6 @@ use App\Geo\TimezoneResolverInterface;
  *  - 'startDate'     (\DateTimeImmutable|null) — trip start date; falls back to today
  *  - 'departureHour' (int)                     — rider departure hour (default 8)
  *  - 'averageSpeed'  (float)                   — rider average speed km/h (default 15.0)
- *  - 'locale'        (string)                  — translation locale (default 'en')
  */
 final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
 {

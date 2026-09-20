@@ -44,10 +44,16 @@ wrong in an English sentence, and a stored `"5 km"` is not a number any client c
 `parameters` now holds the raw value — metres, a percentage, a count — and `parameterFormats`
 names how to render each. A placeholder absent from that map is interpolated as-is.
 
-Two of the formats are not number formatting at all. Surface names (`gravel`, `tracktype=grade4`)
-and POI categories were themselves translations *inside* a parameter, so storing them rendered
-would have left a French word inside an English sentence. They travel as raw OSM values and the
-renderer names them, falling back rather than leaking a raw tag.
+Three of the formats are not number formatting at all. Surface names (`gravel`,
+`tracktype=grade4`), POI categories and country names were themselves translations *inside* a
+parameter, so storing them rendered would have left a French word inside an English sentence —
+"You are entering Allemagne". They travel as raw values (an OSM tag, an ISO 3166-1 code) and
+the renderer names them, falling back rather than leaking the raw value.
+
+The country goes through ICU rather than the catalogue, which is what
+`AdminBoundaryRepository` already does when a boundary carries no localised OSM name: the list
+is closed and already translated everywhere, so a key per country would be ~250 entries to
+maintain by hand for no gain.
 
 This is what makes the contract better for an API client than the old one: it receives the
 metres, not a string it would have to parse back.

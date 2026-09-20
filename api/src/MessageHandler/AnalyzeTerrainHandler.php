@@ -79,7 +79,6 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $context = [
                     'nextStage' => $stages[$i + 1] ?? null,
                     'tripDays' => $stageCount,
-                    'locale' => $locale,
                     'ebikeMode' => $ebikeMode,
                     'osmWays' => $waysByStage[$i] ?? [],
                     'allStages' => $stages,

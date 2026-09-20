@@ -11,6 +11,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -57,9 +58,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::BORDER_CROSSING, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::BORDER_CROSSING, function () use ($tripId, $stages): void {
             // Collect unique points to query: start of first stage + end of each stage
             $checkPoints = $this->buildCheckPoints($stages);
 
@@ -75,7 +74,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             }
 
             // Resolve country for each checkpoint via ST_Covers against the local boundaries
-            $countries = $this->resolveCountries($checkPoints, $locale);
+            $countries = $this->resolveCountries($checkPoints);
 
             // Detect border crossings: when consecutive countries differ
             $alerts = [];
@@ -115,6 +114,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                     'type' => AlertType::NUDGE->value,
                     'messageKey' => 'alert.border_crossing.nudge',
                     'parameters' => ['%country%' => $currentCountry],
+                    'parameterFormats' => ['%country%' => AlertParameterFormat::COUNTRY->value],
                     'action' => [
                         'kind' => AlertActionKind::NAVIGATE->value,
                         'labelKey' => 'alert.border_crossing.action',
@@ -169,11 +169,13 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
      *
      * @return list<string|null>
      */
-    private function resolveCountries(array $points, string $locale): array
+    private function resolveCountries(array $points): array
     {
         $countries = [];
         foreach ($points as $point) {
-            $countries[] = $this->adminBoundaryRepository->findCountryAt($point->lat, $point->lon, $locale);
+            // The ISO code, not the localised name: the name is what the reader's language
+            // decides (ADR-069), and comparing codes is what detects a crossing anyway.
+            $countries[] = $this->adminBoundaryRepository->findCountryCodeAt($point->lat, $point->lon);
         }
 
         return $countries;

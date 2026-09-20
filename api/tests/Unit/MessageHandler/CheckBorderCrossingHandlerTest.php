@@ -65,7 +65,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
     {
         $repository = $this->createStub(AdminBoundaryRepositoryInterface::class);
         $index = 0;
-        $repository->method('findCountryAt')->willReturnCallback(
+        $repository->method('findCountryCodeAt')->willReturnCallback(
             static function () use ($countriesInOrder, &$index): ?string {
                 return $countriesInOrder[$index++] ?? null;
             },
@@ -110,7 +110,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager($stages);
 
         // Checkpoints: Lille (France), Courtrai (Belgium), Renaix (Belgium)
-        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium', 'Belgium']);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE', 'BE']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -160,7 +160,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager($stages);
 
         // All checkpoints resolve to France
-        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'France', 'France']);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'FR', 'FR']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -211,7 +211,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager($stages);
 
         // Checkpoints: France → Belgium → France → Belgium
-        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium', 'France', 'Belgium']);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE', 'FR', 'BE']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -264,7 +264,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager($stages);
 
         // One point resolves to France, the other lies outside every stored boundary
-        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', null]);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', null]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -295,7 +295,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium']);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())

@@ -154,6 +154,24 @@ final class AlertRendererTest extends TestCase
     }
 
     /**
+     * A country name is a translation too. Storing the one the boundary carried at compute
+     * time is how "You are entering Allemagne" reaches an English reader.
+     */
+    #[Test]
+    public function aCountryCodeIsNamedInTheReadersLanguage(): void
+    {
+        $stored = [[
+            'messageKey' => 'alert.border_crossing.nudge',
+            'parameters' => ['%country%' => 'DE'],
+            'parameterFormats' => ['%country%' => AlertParameterFormat::COUNTRY->value],
+        ]];
+        $renderer = $this->createAlertRenderer();
+
+        self::assertStringContainsString('Germany', $this->messageOf($renderer->render($stored, 1, 'en')));
+        self::assertStringContainsString('Allemagne', $this->messageOf($renderer->render($stored, 1, 'fr')));
+    }
+
+    /**
      * An OSM value the catalogue has no entry for must not reach the rider as a raw tag.
      */
     #[Test]

@@ -118,7 +118,20 @@ final readonly class AlertRenderer
             AlertParameterFormat::SURFACE_LIST => $this->surfaceList($value, $locale),
             AlertParameterFormat::POI_LABEL => $this->poiLabels->label($this->toString($value), $locale),
             AlertParameterFormat::POI_DISPLAY_NAME => $this->poiLabels->displayName($this->toString($value), $locale),
+            AlertParameterFormat::COUNTRY => $this->countryName($this->toString($value), $locale),
         };
+    }
+
+    /**
+     * The leading dash makes ICU read the value as a region subtag rather than a language,
+     * which is how {@see \App\Osm\AdminBoundaryRepository} already resolves a country it
+     * has no localised OSM name for. An unknown code is echoed rather than dropped.
+     */
+    private function countryName(string $code, string $locale): string
+    {
+        $name = \Locale::getDisplayRegion('-'.$code, $locale);
+
+        return \is_string($name) && '' !== $name ? $name : $code;
     }
 
     private function surfaceList(mixed $value, string $locale): string

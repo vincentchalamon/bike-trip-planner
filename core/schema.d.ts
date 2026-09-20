@@ -1931,7 +1931,7 @@ export interface components {
                         [key: string]: unknown;
                     };
                     parameterFormats?: {
-                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name";
+                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name" | "country";
                     };
                     lat?: number | null;
                     lon?: number | null;
@@ -2303,7 +2303,7 @@ export interface components {
                         [key: string]: unknown;
                     };
                     parameterFormats?: {
-                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name";
+                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name" | "country";
                     };
                     lat?: number | null;
                     lon?: number | null;
