@@ -61,7 +61,9 @@ services:
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${DOMAIN:-localhost}|php$$}
+      # Parenthesised on purpose: `^a|php$` parses as `(^a)|(php$)`, which matches
+      # any host merely starting with the domain or ending in `php`.
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^(${DOMAIN:-localhost}|php)$$}
       # A regex (nelmio_cors origin_regex). The default covers the dev origins;
       # prod/preview override it with their own host (see the deploy overlays).
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}
@@ -177,7 +179,9 @@ services:
     environment:
       APP_ENV: prod
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${DOMAIN:-localhost}|php$$}
+      # Parenthesised on purpose: `^a|php$` parses as `(^a)|(php$)`, which matches
+      # any host merely starting with the domain or ending in `php`.
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^(${DOMAIN:-localhost}|php)$$}
       # A regex (nelmio_cors origin_regex). The default covers the dev origins;
       # prod/preview override it with their own host (see the deploy overlays).
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}

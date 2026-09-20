@@ -3,7 +3,10 @@
 .claude/worktrees/
 .mcp.json
 # /.env is versioned (dev defaults, no secrets) and read automatically by docker
-# compose. Local overrides go in the shell, or here.
+# compose. Override a value by exporting it in your shell — that is the only
+# mechanism: compose reads no `.env.local`. This entry is a safety net for a
+# developer who creates one out of Next.js/Symfony habit, so it never gets
+# committed even though nothing reads it.
 /.env.local
 openapi.*
 .playwright-mcp/
