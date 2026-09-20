@@ -131,8 +131,8 @@ final class ScanPoisHandlerTest extends TestCase
             new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

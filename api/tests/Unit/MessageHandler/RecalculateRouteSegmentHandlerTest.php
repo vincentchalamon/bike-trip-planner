@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -23,6 +24,8 @@ use Symfony\Component\Uid\Uuid;
 
 final class RecalculateRouteSegmentHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function invokePublishesRoutingResult(): void
     {
@@ -77,6 +80,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $tripStateManager,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -110,6 +114,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $tripStateManager,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -152,6 +157,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $tripStateManager,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(

@@ -9,7 +9,6 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
-use App\Format\DecimalFormatter;
 use App\Enum\AlertType;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -44,7 +43,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
+        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator);
     }
 
     #[Test]
@@ -195,39 +194,6 @@ final class SteepGradientAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('distanceBetween')->willReturn(120.0);
-
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
-
-        $stage = $this->createStageWithGeometry([
-            new Coordinate(45.0, 5.0, 200.0),
-            new Coordinate(45.001, 5.0, 210.0),
-            new Coordinate(45.002, 5.0, 220.0),
-            new Coordinate(45.003, 5.0, 230.0),
-            new Coordinate(45.004, 5.0, 240.0),
-            new Coordinate(45.005, 5.0, 250.0),
-        ]);
-
-        $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.steep_gradient.warning', 'alerts', 'fr'], $translationKeys);
-    }
-
-    #[Test]
     public function noAlertForRestDay(): void
     {
         $stage = new Stage(
@@ -279,12 +245,7 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn($segmentMeters);
 
-        $analyzer = new SteepGradientAnalyzer(
-            $distanceCalculator,
-            $this->createAlertTranslator(),
-            $this->createDistanceFormatter(),
-            new DecimalFormatter(),
-        );
+        $analyzer = new SteepGradientAnalyzer($distanceCalculator);
 
         $geometry = [];
         for ($i = 0; $i <= 5; ++$i) {
@@ -293,7 +254,7 @@ final class SteepGradientAnalyzerTest extends TestCase
 
         $alerts = $analyzer->analyze($this->createStageWithGeometry($geometry), ['locale' => $locale]);
 
-        $this->assertSame($expected, $alerts[0]->message);
+        $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
 
     /**

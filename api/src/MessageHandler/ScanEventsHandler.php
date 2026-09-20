@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -40,8 +41,9 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private EventSourceRegistry $eventSources,
         private EventArrayMapper $eventMapper,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanEvents $message): void

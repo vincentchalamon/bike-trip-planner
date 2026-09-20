@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
@@ -23,6 +24,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckFordsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
@@ -43,8 +46,8 @@ final class CheckFordsHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $fordRepository,
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 
@@ -115,7 +118,7 @@ final class CheckFordsHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 'alert.ford.nudge' === $alerts[0]['message']
+                        && 'alert.ford.nudge' === $alerts[0]['messageKey']
                         && 'navigate' === $alerts[0]['action']['kind'];
                 }),
             );
@@ -140,7 +143,7 @@ final class CheckFordsHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && 'alert.ford.warning' === $alerts[0]['message'];
+                        && 'alert.ford.warning' === $alerts[0]['messageKey'];
                 }),
             );
 

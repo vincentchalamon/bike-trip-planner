@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\EbikeRangeAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -16,6 +17,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class EbikeRangeAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private EbikeRangeAnalyzer $analyzer;
 
     #[\Override]
@@ -95,7 +98,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
         $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('"%range%":0', $alerts[0]->message);
+        $this->assertSame(0, $alerts[0]->parameters['%range%']);
     }
 
     #[Test]
@@ -138,28 +141,6 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new EbikeRangeAnalyzer($translator, $this->chargingStationRepository(null));
-        $stage = $this->createStage(distance: 90.0, elevation: 0.0);
-
-        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true, 'locale' => 'fr']);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.ebike_range.warning', 'alerts', 'fr'], $translationKeys);
-    }
-
-    #[Test]
     public function noAlertForRestDay(): void
     {
         $stage = new Stage(
@@ -193,7 +174,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        return new EbikeRangeAnalyzer($translator, $this->chargingStationRepository($charger));
+        return new EbikeRangeAnalyzer($this->chargingStationRepository($charger));
     }
 
     /**

@@ -29,7 +29,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new TrafficDangerAnalyzer($translator, $this->createDistanceFormatter());
+        $this->analyzer = new TrafficDangerAnalyzer();
     }
 
     #[Test]
@@ -454,7 +454,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
     #[Test]
     public function renderedMessageSumsLengthsInKilometres(string $locale, string $expected): void
     {
-        $analyzer = new TrafficDangerAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+        $analyzer = new TrafficDangerAnalyzer();
 
         $alerts = $analyzer->analyze($this->createStage(), [
             'locale' => $locale,
@@ -464,7 +464,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
             ],
         ]);
 
-        $this->assertSame($expected, $alerts[0]->message);
+        $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
 
     private function createStage(): Stage

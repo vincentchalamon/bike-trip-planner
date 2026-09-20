@@ -12,10 +12,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertType;
-use App\Format\DecimalFormatter;
-use App\Format\DistanceFormatter;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
 {
@@ -25,9 +23,6 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
 
     public function __construct(
         private DistanceCalculatorInterface $distanceCalculator,
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
-        private DecimalFormatter $decimalFormatter,
     ) {
     }
 
@@ -42,9 +37,6 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
         if (\count($geometry) < 2) {
             return [];
         }
-
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
 
         $alerts = [];
         $sectionStart = 0;
@@ -71,7 +63,7 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
                 $sectionDistance += $segmentDistance;
                 $sectionElevationGain += $elevationDiff;
             } elseif ($inSteepSection) {
-                $alert = $this->buildAlertIfQualified($geometry[$sectionStart], $sectionDistance, $sectionElevationGain, $locale);
+                $alert = $this->buildAlertIfQualified($geometry[$sectionStart], $sectionDistance, $sectionElevationGain);
                 if ($alert instanceof Alert) {
                     $alerts[] = $alert;
                 }
@@ -82,7 +74,7 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
 
         // Flush trailing steep section
         if ($inSteepSection) {
-            $alert = $this->buildAlertIfQualified($geometry[$sectionStart], $sectionDistance, $sectionElevationGain, $locale);
+            $alert = $this->buildAlertIfQualified($geometry[$sectionStart], $sectionDistance, $sectionElevationGain);
             if ($alert instanceof Alert) {
                 $alerts[] = $alert;
             }
@@ -96,7 +88,7 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
         return 20;
     }
 
-    private function buildAlertIfQualified(Coordinate $start, float $distance, float $elevationGain, string $locale): ?Alert
+    private function buildAlertIfQualified(Coordinate $start, float $distance, float $elevationGain): ?Alert
     {
         if ($distance < self::MIN_DISTANCE_METERS) {
             return null;
@@ -107,20 +99,20 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
         return new Alert(
             code: AlertCode::STEEP_GRADIENT,
             type: AlertType::WARNING,
-            message: $this->translator->trans(
-                'alert.steep_gradient.warning',
-                [
-                    '%gradient%' => $this->decimalFormatter->format($averageGradient, $locale, 1, 1),
-                    '%distance%' => $this->distanceFormatter->format($distance, $locale),
-                ],
-                'alerts',
-                $locale,
-            ),
+            messageKey: 'alert.steep_gradient.warning',
+            parameters: [
+                '%gradient%' => $averageGradient,
+                '%distance%' => $distance,
+            ],
+            parameterFormats: [
+                '%gradient%' => AlertParameterFormat::DECIMAL_ONE->value,
+                '%distance%' => AlertParameterFormat::DISTANCE->value,
+            ],
             lat: $start->lat,
             lon: $start->lon,
             action: new AlertAction(
                 kind: AlertActionKind::NAVIGATE,
-                label: $this->translator->trans('alert.steep_gradient.action', [], 'alerts', $locale),
+                labelKey: 'alert.steep_gradient.action',
                 payload: ['lat' => $start->lat, 'lon' => $start->lon],
             ),
         );

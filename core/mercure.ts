@@ -97,6 +97,14 @@ export type AlertGroup =
 
 export interface AlertActionPayload {
   kind: "auto_fix" | "detour" | "navigate" | "dismiss";
+  /**
+   * Catalogue key of the label; what the server stores (ADR-069).
+   *
+   * Optional for the same reason `group` is: a payload built before the key travelled may
+   * still be in flight, and no client needs it — `label` is already rendered.
+   */
+  labelKey?: string;
+  /** The label itself, rendered by the server in the reader's language. */
   label: string;
   payload: Record<string, unknown>;
 }
@@ -112,7 +120,20 @@ export interface AlertPayload {
   /** Stable rule-variant identifier (backend `App\Enum\AlertCode`); null on legacy persisted alerts. */
   code?: string | null;
   type: "critical" | "warning" | "nudge";
+  /**
+   * The sentence, rendered by the server in the reader's language (ADR-069).
+   *
+   * Derived from `messageKey` and `parameters` at read time, not stored: the same row reads
+   * French to one account and English to the next, with nothing recomputed.
+   */
   message: string;
+  /** Catalogue key the message was rendered from. */
+  messageKey?: string;
+  /**
+   * The message arguments, raw and unformatted — a distance in metres, a gradient in
+   * percent. Kept next to the sentence so a client can phrase its own.
+   */
+  parameters?: Record<string, string | number | string[]>;
   lat: number | null;
   lon: number | null;
   source?: string;

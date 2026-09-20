@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -23,7 +25,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Detects cultural POIs (museums, monuments, castles, churches, viewpoints)
@@ -57,10 +58,10 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private PoiLabelResolver $poiLabels,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckCulturalPois $message): void
@@ -139,24 +140,21 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     // category instead of repeating a raw slug as both name and type.
                     $rawName = $poi['name'];
                     $name = $rawName ?? $this->poiLabels->displayName($poi['type'], $locale);
-                    $alertMessage = $this->translator->trans(
-                        null === $rawName ? 'alert.cultural_poi.suggestion_unnamed' : 'alert.cultural_poi.suggestion',
-                        [
-                            '%stage%' => $stage->dayNumber,
-                            '%name%' => $name,
-                            '%type%' => $this->poiLabels->label($poi['type'], $locale),
-                            '%distance%' => $poi['distanceFromRoute'],
-                        ],
-                        'alerts',
-                        $locale,
-                    );
+                    // The unnamed phrasing announces the POI by its category, so it needs no
+                    // `%name%`; both variants are the same rule, hence the same code.
+                    $parameters = ['%type%' => $poi['type'], '%distance%' => $poi['distanceFromRoute']];
+                    if (null !== $rawName) {
+                        $parameters['%name%'] = $rawName;
+                    }
 
                     $alert = [
                         'stageId' => $stage->id,
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::CULTURAL_POI_SUGGESTION->value,
                         'type' => AlertType::NUDGE->value,
-                        'message' => $alertMessage,
+                        'messageKey' => null === $rawName ? 'alert.cultural_poi.suggestion_unnamed' : 'alert.cultural_poi.suggestion',
+                        'parameters' => $parameters,
+                        'parameterFormats' => ['%type%' => AlertParameterFormat::POI_LABEL->value],
                         'lat' => $poi['lat'],
                         'lon' => $poi['lon'],
                         'poiName' => $name,
@@ -214,7 +212,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }

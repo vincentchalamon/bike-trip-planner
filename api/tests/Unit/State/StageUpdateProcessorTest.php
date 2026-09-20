@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -26,6 +27,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class StageUpdateProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     use MutateStagesStubTrait;
 
     /** @var list<array{lat: float, lon: float, ele: float}> */
@@ -119,7 +122,12 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
 
         $processor = new StageUpdateProcessor(
@@ -217,7 +225,12 @@ final class StageUpdateProcessorTest extends TestCase
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+                $this->createStub(ComputationTrackerInterface::class),
+                $this->createStub(TripRequestRepositoryInterface::class),
+                $this->createAlertRenderer(),
+                $this->createReaderLocale(),
+            ),
             new TripLocker(),
             new StageLocator(),
         );
@@ -285,7 +298,12 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
 
         $processor = new StageUpdateProcessor(
@@ -353,7 +371,12 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
 
         $processor = new StageUpdateProcessor(
@@ -402,7 +425,12 @@ final class StageUpdateProcessorTest extends TestCase
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+                $this->createStub(ComputationTrackerInterface::class),
+                $this->createStub(TripRequestRepositoryInterface::class),
+                $this->createAlertRenderer(),
+                $this->createReaderLocale(),
+            ),
             new TripLocker(),
             new StageLocator(),
         );
@@ -467,7 +495,12 @@ final class StageUpdateProcessorTest extends TestCase
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+                $this->createStub(ComputationTrackerInterface::class),
+                $this->createStub(TripRequestRepositoryInterface::class),
+                $this->createAlertRenderer(),
+                $this->createReaderLocale(),
+            ),
             new TripLocker(),
             new StageLocator(),
         );

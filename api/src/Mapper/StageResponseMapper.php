@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Mapper;
 
+use App\Alert\AlertRenderer;
+use App\Alert\ReaderLocale;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\Trip;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Repository\TripRequestRepositoryInterface;
 
 /**
  * Builds a {@see StageResponse} from a {@see Stage} explicitly.
@@ -26,6 +29,9 @@ final readonly class StageResponseMapper
 {
     public function __construct(
         private ComputationTrackerInterface $computationTracker,
+        private TripRequestRepositoryInterface $trips,
+        private AlertRenderer $alertRenderer,
+        private ReaderLocale $readerLocale,
     ) {
     }
 
@@ -47,7 +53,12 @@ final readonly class StageResponseMapper
         $response->label = $stage->label;
         $response->isRestDay = $stage->isRestDay;
         $response->weather = $stage->weather;
-        $response->alerts = $stage->alerts;
+        // Rendered for whoever asked for this response, not for whoever computed it (ADR-069).
+        $response->alerts = $this->alertRenderer->render(
+            $stage->alerts,
+            $stage->dayNumber,
+            $this->readerLocale->or($this->trips->getLocale($stage->tripId) ?? 'en'),
+        );
         // Always serialize a resupply object (skip_null_values would omit a null
         // one, breaking the response schema — it is a required field like the old
         // pois array was).

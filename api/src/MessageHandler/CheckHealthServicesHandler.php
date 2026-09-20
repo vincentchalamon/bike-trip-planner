@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -22,7 +23,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Checks for pharmacies, hospitals and clinics within 15 km of each stage.
@@ -49,11 +49,10 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         private TripRequestRepositoryInterface $tripStateManager,
         private HealthServiceRepositoryInterface $healthServiceRepository,
         private GeoDistanceInterface $haversine,
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckHealthServices $message): void
@@ -66,9 +65,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages): void {
             // Read health services from the local-first index along the route corridor (ADR-040).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
@@ -110,15 +107,9 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::HEALTH_SERVICE_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
-                    'message' => $this->translator->trans(
-                        'alert.health_service.nudge',
-                        [
-                            '%stage%' => $stage->dayNumber,
-                            '%threshold%' => $this->distanceFormatter->format(self::HEALTH_SERVICE_PROXIMITY_METERS, $locale),
-                        ],
-                        'alerts',
-                        $locale,
-                    ),
+                    'messageKey' => 'alert.health_service.nudge',
+                    'parameters' => ['%threshold%' => self::HEALTH_SERVICE_PROXIMITY_METERS],
+                    'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
                 ];
             }
 
@@ -128,7 +119,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::HEALTH_SERVICE, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::HEALTH_SERVICE_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }

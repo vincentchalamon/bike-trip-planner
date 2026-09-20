@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -20,7 +21,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Flags stages whose route takes a ferry crossing.
@@ -43,10 +43,10 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private FerryRepositoryInterface $ferryRepository,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckFerries $message): void
@@ -59,9 +59,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::FERRIES, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::FERRIES, function () use ($tripId, $stages): void {
             $alerts = [];
 
             foreach ($stages as $stage) {
@@ -89,15 +87,10 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::FERRY_CROSSING->value,
                         'type' => AlertType::WARNING->value,
-                        'message' => $this->translator->trans(
-                            'alert.ferry.warning',
-                            ['%stage%' => $stage->dayNumber],
-                            'alerts',
-                            $locale,
-                        ),
+                        'messageKey' => 'alert.ferry.warning',
                         'action' => [
                             'kind' => AlertActionKind::NAVIGATE->value,
-                            'label' => $this->translator->trans('alert.ferry.action', [], 'alerts', $locale),
+                            'labelKey' => 'alert.ferry.action',
                             'payload' => ['lat' => $ferry['lat'], 'lon' => $ferry['lon']],
                         ],
                         'lat' => $ferry['lat'],
@@ -112,7 +105,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::FERRY, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::FERRY_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\RestDayNudgeAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -15,6 +16,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class RestDayNudgeAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private TranslatorInterface $translator;
 
     #[\Override]
@@ -29,7 +32,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noAlertWithoutContext(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator);
+        $analyzer = new RestDayNudgeAnalyzer();
         $stage = $this->createStage(3, false);
 
         $alerts = $analyzer->analyze($stage, []);
@@ -40,7 +43,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noAlertBelowThreshold(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -54,7 +57,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function nudgeOnNthConsecutiveDay(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -74,7 +77,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noNudgeOnLastStage(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -90,7 +93,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noNudgeOnDayBeforeThreshold(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -105,7 +108,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noNudgeAfterRestDay(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -131,7 +134,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noNudgeWhenNextDayIsRestDay(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         // Fri(1), Sat(2), new(3) reach the 3-day threshold, but a rest day is
         // planned right after (4) so the nudge is moot — recette.
         $stages = [
@@ -150,7 +153,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function noNudgeOnRestDayItself(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = [
             $this->createStage(1, false),
             $this->createStage(2, false),
@@ -166,7 +169,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function nudgeEmittedEveryNthDay(): void
     {
-        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $analyzer = new RestDayNudgeAnalyzer(3);
         $stages = array_map(
             fn (int $n): Stage => $this->createStage($n, false),
             range(1, 7),
@@ -177,37 +180,10 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $alertsDay6 = $analyzer->analyze($stages[5], ['allStages' => $stages]);
 
         $this->assertCount(1, $alertsDay3);
-        $this->assertStringContainsString('3', $alertsDay3[0]->message); // consecutive count = 3
+        $this->assertStringContainsString('3', $this->renderMessage($alertsDay3[0])); // consecutive count = 3
         $this->assertSame([], $alertsDay4);
         $this->assertCount(1, $alertsDay6);
-        $this->assertStringContainsString('6', $alertsDay6[0]->message); // consecutive count = 6, not threshold 3
-    }
-
-    #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new RestDayNudgeAnalyzer($translator, 3);
-        $stages = [
-            $this->createStage(1, false),
-            $this->createStage(2, false),
-            $this->createStage(3, false),
-            $this->createStage(4, false),
-        ];
-
-        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages, 'locale' => 'fr']);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.rest_day.nudge', 'alerts', 'fr'], $translationKeys);
+        $this->assertStringContainsString('6', $this->renderMessage($alertsDay6[0])); // consecutive count = 6, not threshold 3
     }
 
     #[Test]

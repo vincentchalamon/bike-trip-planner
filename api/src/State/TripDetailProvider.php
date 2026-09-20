@@ -14,6 +14,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
+use App\Alert\AlertRenderer;
+use App\Alert\ReaderLocale;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\EventArrayMapper;
@@ -40,6 +42,8 @@ final readonly class TripDetailProvider implements ProviderInterface
         private ComputationTrackerInterface $computationTracker,
         private WeatherForecastSerializer $weatherSerializer,
         private EventArrayMapper $eventMapper,
+        private AlertRenderer $alertRenderer,
+        private ReaderLocale $readerLocale,
     ) {
     }
 
@@ -68,6 +72,10 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         $statuses = $this->computationTracker->getStatuses($id);
 
+        // Whoever is reading, in their own language (ADR-069). Anonymous on /s/{shortCode}:
+        // nobody chose a language, so the trip owner's stands in.
+        $locale = $this->readerLocale->or($this->tripStateManager->getLocale($id) ?? 'en');
+
         return new TripDetail(
             id: $request->id->toRfc4122(),
             title: $request->title,
@@ -88,7 +96,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
             weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
-            stages: array_map($this->serializeStage(...), $stages),
+            stages: array_map(fn (Stage $stage): array => $this->serializeStage($stage, $locale), $stages),
         );
     }
 
@@ -167,7 +175,7 @@ final readonly class TripDetailProvider implements ProviderInterface
      *
      * @return array<string, mixed>
      */
-    private function serializeStage(Stage $stage): array
+    private function serializeStage(Stage $stage, string $locale): array
     {
         return [
             // Emitted but not yet contractual: see StagePayloadMapper::toPayload().
@@ -188,7 +196,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
             // Passed through as the producer wrote it, `group` included: normalising here is
             // what used to drop the richer fields some producers emit (ADR-068).
-            'alerts' => $stage->alerts,
+            'alerts' => $this->alertRenderer->render($stage->alerts, $stage->dayNumber, $locale),
             // Persisted since ADR-068, and served here for the same reason the alerts are:
             // an anonymous visitor to /s/{shortCode} never receives SSE, so a payload the
             // producer only published is a payload they never see.

@@ -63,7 +63,7 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
             $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, $group, [[
                 'code' => null,
                 'type' => 'nudge',
-                'message' => \sprintf('Alert from %s', $group->value),
+                'messageKey' => \sprintf('alert.from.%s', $group->value),
             ]]);
         }
 
@@ -134,10 +134,10 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
 
         $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
         $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::FERRY, [
-            ['code' => 'ferry_crossing', 'type' => 'warning', 'message' => 'Ferry'],
+            ['code' => 'ferry_crossing', 'type' => 'warning', 'messageKey' => 'alert.ferry.warning'],
         ]);
         $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, [
-            ['code' => 'elevation_gain', 'type' => 'warning', 'message' => 'Climb'],
+            ['code' => 'elevation_gain', 'type' => 'warning', 'messageKey' => 'alert.elevation.warning'],
         ]);
         // Terrain runs again and finds nothing; the ferry must not go with it.
         $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, []);
@@ -151,7 +151,7 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         $alerts = $response->toArray(false)['stages'][0]['alerts'];
 
         self::assertSame(['ferry'], array_column($alerts, 'group'));
-        self::assertSame('Ferry', $alerts[0]['message']);
+        self::assertSame('alert.ferry.warning', $alerts[0]['messageKey']);
     }
 
     private function createShare(): string

@@ -1926,11 +1926,19 @@ export interface components {
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;
+                    messageKey?: string;
+                    parameters?: {
+                        [key: string]: unknown;
+                    };
+                    parameterFormats?: {
+                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name" | "country";
+                    };
                     lat?: number | null;
                     lon?: number | null;
                     action?: {
                         /** @enum {string} */
                         kind?: "navigate" | "dismiss";
+                        labelKey?: string;
                         label?: string;
                         payload?: {
                             [key: string]: unknown;
@@ -2290,11 +2298,19 @@ export interface components {
                     /** @enum {string} */
                     type?: "critical" | "warning" | "nudge";
                     message?: string;
+                    messageKey?: string;
+                    parameters?: {
+                        [key: string]: unknown;
+                    };
+                    parameterFormats?: {
+                        [key: string]: "distance" | "distance_km" | "decimal" | "decimal_1" | "surface_list" | "poi_label" | "poi_display_name" | "country";
+                    };
                     lat?: number | null;
                     lon?: number | null;
                     action?: {
                         /** @enum {string} */
                         kind?: "navigate" | "dismiss";
+                        labelKey?: string;
                         label?: string;
                         payload?: {
                             [key: string]: unknown;

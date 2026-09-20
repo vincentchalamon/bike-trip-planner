@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
@@ -31,6 +32,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class FetchWeatherHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function stage(int $day, float $lat, float $lon): Stage
     {
         return new Stage(
@@ -110,6 +113,7 @@ final class FetchWeatherHandlerTest extends TestCase
             new WeatherForecastDeriver(new WmoWeatherMapper($translator)),
             new WeatherForecastSerializer(),
             $messageBus,
+            $this->createAlertRenderer(),
         );
     }
 

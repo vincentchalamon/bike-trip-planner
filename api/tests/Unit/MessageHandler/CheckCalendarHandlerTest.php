@@ -66,7 +66,6 @@ final class CheckCalendarHandlerTest extends TestCase
             $tripStateManager,
             $publisher,
             $this->adminBoundaryRepository(['FR']),
-            $this->createAlertTranslator(),
         );
         $handler(new CheckCalendar('trip-1'));
     }
@@ -122,7 +121,6 @@ final class CheckCalendarHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
         AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        ?TranslatorInterface $translator = null,
     ): CheckCalendarHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
@@ -146,8 +144,8 @@ final class CheckCalendarHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $adminBoundaryRepository,
-            $translator ?? $stubTranslator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

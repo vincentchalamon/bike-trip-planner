@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\Accommodation\CandidateRanker;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -26,7 +26,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
@@ -55,10 +54,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private GeometryDistributorInterface $distributor,
         private SeasonalityCheckerInterface $seasonalityChecker,
         private CandidateRanker $ranker,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanAccommodations $message): void
@@ -89,11 +88,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         $request = $this->tripStateManager->getRequest($tripId);
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
         $enabledAccommodationTypes = $message->enabledAccommodationTypes;
         $isExpandScan = $message->isExpandScan;
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex, $enabledAccommodationTypes, $isExpandScan): void {
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $radiusMeters, $stageIndex, $enabledAccommodationTypes, $isExpandScan): void {
             // Preserve original stage keys so distributor output maps directly without re-mapping
             $stagesToProcess = (null !== $stageIndex && isset($stages[$stageIndex]))
                 ? [$stageIndex => $stages[$stageIndex]]
@@ -227,17 +225,13 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 $alertsToPublish = [];
                 // Warn if all detected accommodations are likely closed during this period
                 if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => $a['possibleClosed'])) {
-                    $alert = new Alert(
-                        code: AlertCode::ACCOMMODATION_SEASONAL_CLOSURE,
-                        type: AlertType::WARNING,
-                        message: $this->translator->trans(
-                            'alert.accommodation.seasonal_warning',
-                            ['%stage%' => $stage->dayNumber],
-                            'alerts',
-                            $locale,
-                        ),
-                    );
-                    $alertsToPublish[] = ['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alertsToPublish[] = [
+                        'code' => AlertCode::ACCOMMODATION_SEASONAL_CLOSURE->value,
+                        'type' => AlertType::WARNING->value,
+                        'messageKey' => 'alert.accommodation.seasonal_warning',
+                        'lat' => null,
+                        'lon' => null,
+                    ];
                 }
 
                 // Same array to both consumers (ADR-068), the empty one included: a rerun that
@@ -248,7 +242,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
-                    'alerts' => $alertsToPublish,
+                    'alerts' => $this->alertRenderer->render($alertsToPublish, $stage->dayNumber, $this->tripStateManager->getLocale($tripId) ?? 'en'),
                 ]);
             }
 

@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -23,7 +24,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Checks for railway stations within 10 km of each stage endpoint.
@@ -46,11 +46,10 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
         private TripRequestRepositoryInterface $tripStateManager,
         private RailwayStationRepositoryInterface $railwayStationRepository,
         private GeoDistanceInterface $haversine,
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckRailwayStations $message): void
@@ -63,9 +62,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::RAILWAY_STATIONS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::RAILWAY_STATIONS, function () use ($tripId, $stages): void {
             // Collect all stage endpoints (start + end of each stage)
             $endPoints = $this->collectEndpoints($stages);
 
@@ -105,21 +102,15 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::RAILWAY_STATION_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
-                    'message' => $this->translator->trans(
-                        'alert.railway_station.nudge',
-                        [
-                            '%stage%' => $stage->dayNumber,
-                            '%threshold%' => $this->distanceFormatter->format(self::STATION_PROXIMITY_METERS, $locale),
-                        ],
-                        'alerts',
-                        $locale,
-                    ),
+                    'messageKey' => 'alert.railway_station.nudge',
+                    'parameters' => ['%threshold%' => self::STATION_PROXIMITY_METERS],
+                    'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
                 ];
 
                 if (null !== $nearestStation) {
                     $alert['action'] = [
                         'kind' => AlertActionKind::NAVIGATE->value,
-                        'label' => $this->translator->trans('alert.railway_station.action', [], 'alerts', $locale),
+                        'labelKey' => 'alert.railway_station.action',
                         'payload' => ['lat' => $nearestStation['lat'], 'lon' => $nearestStation['lon']],
                     ];
                     $alert['lat'] = $nearestStation['lat'];
@@ -135,7 +126,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::RAILWAY_STATION, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::RAILWAY_STATION_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }

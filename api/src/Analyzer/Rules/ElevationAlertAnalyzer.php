@@ -11,16 +11,10 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
 {
     private const float THRESHOLD_METERS = 1200.0;
-
-    public function __construct(
-        private TranslatorInterface $translator,
-    ) {
-    }
 
     public function analyze(Stage $stage, array $context = []): array
     {
@@ -33,25 +27,18 @@ final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
-
         $splitAtKm = round($stage->distance / 2, 1);
 
         return [new Alert(
             code: AlertCode::ELEVATION_GAIN,
             type: AlertType::WARNING,
-            message: $this->translator->trans(
-                'alert.elevation.warning',
-                ['%elevation%' => (int) $stage->elevation],
-                'alerts',
-                $locale,
-            ),
+            messageKey: 'alert.elevation.warning',
+            parameters: ['%elevation%' => (int) $stage->elevation],
             lat: $stage->startPoint->lat,
             lon: $stage->startPoint->lon,
             action: new AlertAction(
                 kind: AlertActionKind::AUTO_FIX,
-                label: $this->translator->trans('alert.elevation.action', [], 'alerts', $locale),
+                labelKey: 'alert.elevation.action',
                 payload: ['splitAtKm' => $splitAtKm],
             ),
         )];

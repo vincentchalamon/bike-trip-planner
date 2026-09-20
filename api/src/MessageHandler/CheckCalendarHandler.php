@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -21,7 +22,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Yasumi\Holiday;
 use Yasumi\ProviderInterface;
 use Yasumi\Yasumi;
@@ -58,10 +58,10 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckCalendar $message): void
@@ -95,10 +95,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                         $stageDate,
                         AlertCode::CALENDAR_PUBLIC_HOLIDAY,
                         null !== $holidayName ? 'alert.calendar.nudge' : 'alert.calendar.unnamed_nudge',
-                        null !== $holidayName
-                            ? ['%stage%' => $stage->dayNumber, '%holiday%' => $holidayName]
-                            : ['%stage%' => $stage->dayNumber],
-                        $locale,
+                        null !== $holidayName ? ['%holiday%' => $holidayName] : [],
                     );
                 } elseif ('7' === $stageDate->format('N')) {
                     $alerts[] = $this->buildAlert(
@@ -106,8 +103,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                         $stageDate,
                         AlertCode::CALENDAR_SUNDAY,
                         'alert.calendar.sunday_nudge',
-                        ['%stage%' => $stage->dayNumber],
-                        $locale,
+                        [],
                     );
                 }
             }
@@ -118,7 +114,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::CALENDAR_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }
@@ -126,9 +122,9 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     /**
      * @param array<string, int|string> $parameters
      *
-     * @return array{stageId: string, dayNumber: int, code: string, type: string, date: string, message: string, action: array{kind: string, label: string, payload: array<string, mixed>}}
+     * @return array{stageId: string, dayNumber: int, code: string, type: string, date: string, messageKey: string, parameters: array<string, int|string>, action: array{kind: string, labelKey: string, payload: array<string, mixed>}}
      */
-    private function buildAlert(Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters, string $locale): array
+    private function buildAlert(Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters): array
     {
         return [
             'stageId' => $stage->id,
@@ -136,10 +132,11 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             'code' => $code->value,
             'type' => AlertType::NUDGE->value,
             'date' => $stageDate->format('Y-m-d'),
-            'message' => $this->translator->trans($translationKey, $parameters, 'alerts', $locale),
+            'messageKey' => $translationKey,
+            'parameters' => $parameters,
             'action' => [
                 'kind' => AlertActionKind::DISMISS->value,
-                'label' => $this->translator->trans('alert.calendar.action', [], 'alerts', $locale),
+                'labelKey' => 'alert.calendar.action',
                 'payload' => [],
             ],
         ];

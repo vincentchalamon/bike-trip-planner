@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -21,7 +23,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Detects international border crossings along the route.
@@ -41,10 +42,10 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckBorderCrossing $message): void
@@ -57,9 +58,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::BORDER_CROSSING, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::BORDER_CROSSING, function () use ($tripId, $stages): void {
             // Collect unique points to query: start of first stage + end of each stage
             $checkPoints = $this->buildCheckPoints($stages);
 
@@ -75,7 +74,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             }
 
             // Resolve country for each checkpoint via ST_Covers against the local boundaries
-            $countries = $this->resolveCountries($checkPoints, $locale);
+            $countries = $this->resolveCountries($checkPoints);
 
             // Detect border crossings: when consecutive countries differ
             $alerts = [];
@@ -113,17 +112,12 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::BORDER_CROSSING->value,
                     'type' => AlertType::NUDGE->value,
-                    'message' => $this->translator->trans(
-                        'alert.border_crossing.nudge',
-                        [
-                            '%country%' => $currentCountry,
-                        ],
-                        'alerts',
-                        $locale,
-                    ),
+                    'messageKey' => 'alert.border_crossing.nudge',
+                    'parameters' => ['%country%' => $currentCountry],
+                    'parameterFormats' => ['%country%' => AlertParameterFormat::COUNTRY->value],
                     'action' => [
                         'kind' => AlertActionKind::NAVIGATE->value,
-                        'label' => $this->translator->trans('alert.border_crossing.action', [], 'alerts', $locale),
+                        'labelKey' => 'alert.border_crossing.action',
                         'payload' => ['lat' => $crossingPoint->lat, 'lon' => $crossingPoint->lon],
                     ],
                     'lat' => $crossingPoint->lat,
@@ -137,7 +131,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }
@@ -175,11 +169,13 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
      *
      * @return list<string|null>
      */
-    private function resolveCountries(array $points, string $locale): array
+    private function resolveCountries(array $points): array
     {
         $countries = [];
         foreach ($points as $point) {
-            $countries[] = $this->adminBoundaryRepository->findCountryAt($point->lat, $point->lon, $locale);
+            // The ISO code, not the localised name: the name is what the reader's language
+            // decides (ADR-069), and comparing codes is what detects a crossing anyway.
+            $countries[] = $this->adminBoundaryRepository->findCountryCodeAt($point->lat, $point->lon);
         }
 
         return $countries;

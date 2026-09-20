@@ -71,7 +71,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
         );
 
-        $alert = new Alert(code: AlertCode::STEEP_GRADIENT, type: AlertType::WARNING, message: 'steep gradient');
+        $alert = new Alert(code: AlertCode::STEEP_GRADIENT, type: AlertType::WARNING, messageKey: 'alert.steep_gradient.warning');
 
         $readItem = $this->createMock(CacheItemInterface::class);
         $readItem->method('isHit')->willReturn(true);
@@ -83,7 +83,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
             ->method('set')
             ->with(self::callback(static fn (array $stages): bool => 1 === \count($stages)
                 // the alert is written, tagged with the group that owns it...
-                && [['group' => 'terrain', 'code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message]] === $stages[0]->alerts
+                && [['group' => 'terrain', 'code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->messageKey]] === $stages[0]->alerts
                 // ...without wiping the weather a sibling handler already persisted.
                 && $stages[0]->weather instanceof WeatherForecast
                 && '10d' === $stages[0]->weather->icon));
@@ -107,7 +107,7 @@ final class RedisTripRequestRepositoryTest extends TestCase
         );
         $this->cache->expects(self::atLeastOnce())->method('save');
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::TERRAIN, [['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message]]);
+        $this->repository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::TERRAIN, [['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->messageKey]]);
     }
 
     #[Test]

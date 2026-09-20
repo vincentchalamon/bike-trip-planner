@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -50,9 +51,10 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         private WeatherForecastDeriver $deriver,
         private WeatherForecastSerializer $serializer,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(FetchWeather $message): void

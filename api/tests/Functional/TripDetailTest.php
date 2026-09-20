@@ -143,22 +143,25 @@ final class TripDetailTest extends ApiTestCase
             [
                 'code' => AlertCode::CONTINUITY_GAP_CRITICAL->value,
                 'type' => 'critical',
-                'message' => 'Discontinuity',
+                'messageKey' => 'alert.continuity.critical',
+                'parameters' => ['%distance%' => 600.0],
+                'parameterFormats' => ['%distance%' => 'distance_km'],
                 'lat' => 48.1,
                 'lon' => 2.2,
                 'action' => [
                     'kind' => 'navigate',
-                    'label' => 'Voir la discontinuité sur la carte',
+                    'labelKey' => 'alert.continuity.action',
                     'payload' => ['lat' => 48.1, 'lon' => 2.2],
                 ],
             ],
             [
                 'code' => AlertCode::ELEVATION_GAIN->value,
                 'type' => 'warning',
-                'message' => 'Elevation',
+                'messageKey' => 'alert.elevation.warning',
+                'parameters' => ['%elevation%' => 1500],
             ],
             // Persisted before issue #876: no code at all, must still serialise.
-            ['code' => null, 'type' => 'nudge', 'message' => 'No action at all'],
+            ['code' => null, 'type' => 'nudge', 'messageKey' => 'alert.lunch.nudge'],
         ]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
@@ -172,10 +175,12 @@ final class TripDetailTest extends ApiTestCase
         $this->assertCount(3, $alerts);
         $this->assertSame(['terrain', 'terrain', 'terrain'], array_column($alerts, 'group'));
 
+        // The label is rendered here, from the key the producer stored (ADR-069).
         $this->assertSame([
             'kind' => 'navigate',
-            'label' => 'Voir la discontinuité sur la carte',
             'payload' => ['lat' => 48.1, 'lon' => 2.2],
+            'labelKey' => 'alert.continuity.action',
+            'label' => 'Voir la discontinuité sur la carte',
         ], $alerts[0]['action']);
         $this->assertEqualsWithDelta(48.1, $alerts[0]['lat'], 0.0001);
         $this->assertEqualsWithDelta(2.2, $alerts[0]['lon'], 0.0001);

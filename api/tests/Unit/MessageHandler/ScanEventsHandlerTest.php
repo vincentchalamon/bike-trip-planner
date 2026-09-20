@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -26,6 +27,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class ScanEventsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createStage(int $dayNumber, bool $isRestDay = false): Stage
     {
         return new Stage(
@@ -58,6 +61,7 @@ final class ScanEventsHandlerTest extends TestCase
             new EventSourceRegistry([$eventSource], new NearbyNameDeduplicator(new HaversineDistance()), new HaversineDistance()),
             new EventArrayMapper(),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

@@ -13,7 +13,6 @@ use App\ApiResource\Stage;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Osm\ChargingStationRepositoryInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
 {
@@ -25,7 +24,6 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
     private const int CORRIDOR_RADIUS_METERS = 2000;
 
     public function __construct(
-        private TranslatorInterface $translator,
         private ChargingStationRepositoryInterface $chargingStationRepository,
     ) {
     }
@@ -48,9 +46,6 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
-
         // Point the cyclist to the nearest charger along the stage corridor (ADR-040).
         $nearestCharger = $this->findNearestCharger($stage);
 
@@ -58,12 +53,13 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
             return [new Alert(
                 code: AlertCode::EBIKE_RANGE_EXCEEDED,
                 type: AlertType::WARNING,
-                message: $this->buildMessage($stage, $effectiveRange, $locale),
+                messageKey: 'alert.ebike_range.warning',
+                parameters: $this->messageParameters($stage, $effectiveRange),
                 lat: $nearestCharger['lat'],
                 lon: $nearestCharger['lon'],
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.ebike_range.charging_action', [], 'alerts', $locale),
+                    labelKey: 'alert.ebike_range.charging_action',
                     payload: [
                         'lat' => $nearestCharger['lat'],
                         'lon' => $nearestCharger['lon'],
@@ -77,10 +73,11 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
         return [new Alert(
             code: AlertCode::EBIKE_RANGE_EXCEEDED,
             type: AlertType::WARNING,
-            message: $this->buildMessage($stage, $effectiveRange, $locale),
+            messageKey: 'alert.ebike_range.warning',
+            parameters: $this->messageParameters($stage, $effectiveRange),
             action: new AlertAction(
                 kind: AlertActionKind::AUTO_FIX,
-                label: $this->translator->trans('alert.ebike_range.action', [], 'alerts', $locale),
+                labelKey: 'alert.ebike_range.action',
                 payload: ['maxDistance' => round($effectiveRange, 1)],
             ),
         )];
@@ -91,18 +88,13 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
         return 20;
     }
 
-    private function buildMessage(Stage $stage, float $effectiveRange, string $locale): string
+    /** @return array<string, int> */
+    private function messageParameters(Stage $stage, float $effectiveRange): array
     {
-        return $this->translator->trans(
-            'alert.ebike_range.warning',
-            [
-                '%stage%' => $stage->dayNumber,
-                '%distance%' => (int) round($stage->distance),
-                '%range%' => (int) round($effectiveRange),
-            ],
-            'alerts',
-            $locale,
-        );
+        return [
+            '%distance%' => (int) round($stage->distance),
+            '%range%' => (int) round($effectiveRange),
+        ];
     }
 
     /**

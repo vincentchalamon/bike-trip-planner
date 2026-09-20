@@ -10,9 +10,8 @@ use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertType;
-use App\Format\DistanceFormatter;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 {
@@ -26,12 +25,6 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
     private const int NUDGE_MAX_SPEED = 50;
 
-    public function __construct(
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
-    ) {
-    }
-
     public function analyze(Stage $stage, array $context = []): array
     {
         // A rest day is not ridden: its traffic exposure is irrelevant.
@@ -41,9 +34,6 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         /** @var list<array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
-
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
 
         $criticalSegments = [];
         $warningSegments = [];
@@ -85,23 +75,20 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $criticalSegments) {
             $first = $criticalSegments[0];
-            $totalLength = $this->distanceFormatter->format(array_sum(array_column($criticalSegments, 'length')), $locale);
+            $totalLength = array_sum(array_column($criticalSegments, 'length'));
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
                 code: AlertCode::TRAFFIC_MAIN_ROAD,
                 type: AlertType::CRITICAL,
-                message: $this->translator->trans(
-                    'alert.traffic.critical',
-                    ['%count%' => \count($criticalSegments), '%length%' => $totalLength],
-                    'alerts',
-                    $locale,
-                ),
+                messageKey: 'alert.traffic.critical',
+                parameters: ['%count%' => \count($criticalSegments), '%length%' => $totalLength],
+                parameterFormats: ['%length%' => AlertParameterFormat::DISTANCE->value],
                 lat: $lat,
                 lon: $lon,
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    labelKey: 'alert.traffic.action',
                     payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($criticalSegments)],
                 ),
             );
@@ -109,23 +96,20 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $warningSegments) {
             $first = $warningSegments[0];
-            $totalLength = $this->distanceFormatter->format(array_sum(array_column($warningSegments, 'length')), $locale);
+            $totalLength = array_sum(array_column($warningSegments, 'length'));
             $lat = $first['lat'] ?? $stage->startPoint->lat;
             $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
                 code: AlertCode::TRAFFIC_SECONDARY_ROAD_FAST,
                 type: AlertType::WARNING,
-                message: $this->translator->trans(
-                    'alert.traffic.warning',
-                    ['%count%' => \count($warningSegments), '%length%' => $totalLength],
-                    'alerts',
-                    $locale,
-                ),
+                messageKey: 'alert.traffic.warning',
+                parameters: ['%count%' => \count($warningSegments), '%length%' => $totalLength],
+                parameterFormats: ['%length%' => AlertParameterFormat::DISTANCE->value],
                 lat: $lat,
                 lon: $lon,
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    labelKey: 'alert.traffic.action',
                     payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($warningSegments)],
                 ),
             );
@@ -133,7 +117,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         if ([] !== $nudgeSegments) {
             $first = $nudgeSegments[0];
-            $totalLength = $this->distanceFormatter->format(array_sum(array_column($nudgeSegments, 'length')), $locale);
+            $totalLength = array_sum(array_column($nudgeSegments, 'length'));
             $speeds = array_filter(array_map(
                 fn (array $w): ?int => $this->parseMaxspeed($w['maxspeed'] ?? ''),
                 $nudgeSegments,
@@ -144,17 +128,14 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
             $alerts[] = new Alert(
                 code: AlertCode::TRAFFIC_SECONDARY_ROAD_SLOW,
                 type: AlertType::NUDGE,
-                message: $this->translator->trans(
-                    'alert.traffic.nudge',
-                    ['%count%' => \count($nudgeSegments), '%maxspeed%' => $maxspeed, '%length%' => $totalLength],
-                    'alerts',
-                    $locale,
-                ),
+                messageKey: 'alert.traffic.nudge',
+                parameters: ['%count%' => \count($nudgeSegments), '%maxspeed%' => $maxspeed, '%length%' => $totalLength],
+                parameterFormats: ['%length%' => AlertParameterFormat::DISTANCE->value],
                 lat: $lat,
                 lon: $lon,
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    labelKey: 'alert.traffic.action',
                     payload: ['lat' => $lat, 'lon' => $lon, 'segments' => $this->collectSegments($nudgeSegments)],
                 ),
             );

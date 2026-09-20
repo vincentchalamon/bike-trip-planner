@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\State\TripDetailProvider;
 
@@ -111,12 +112,22 @@ final readonly class TripDetail
                         // the Alert resource, instead of a bare string.
                         'code' => ['oneOf' => [['type' => 'string', 'enum' => AlertCode::VALUES], ['type' => 'null']]],
                         'type' => ['type' => 'string', 'enum' => ['critical', 'warning', 'nudge']],
+                        // Rendered here, in the reader's language, from the two fields below
+                        // (ADR-069). The row itself holds no prose, so the same alert reads
+                        // French to one account and English to the next.
                         'message' => ['type' => 'string'],
+                        'messageKey' => ['type' => 'string'],
+                        // Raw and unformatted: metres, not "2.4 km". Served next to the
+                        // sentence so a client can phrase its own — an agent answering in a
+                        // language this server was never told about.
+                        'parameters' => ['type' => 'object', 'additionalProperties' => true],
+                        'parameterFormats' => ['type' => 'object', 'additionalProperties' => ['type' => 'string', 'enum' => AlertParameterFormat::VALUES]],
                         'lat' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
                         'lon' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
                         // Contextual action, restricted to the kinds the frontend wires (issue #863).
                         'action' => ['oneOf' => [['type' => 'object', 'properties' => [
                             'kind' => ['type' => 'string', 'enum' => ['navigate', 'dismiss']],
+                            'labelKey' => ['type' => 'string'],
                             'label' => ['type' => 'string'],
                             'payload' => ['type' => 'object', 'additionalProperties' => true],
                         ]], ['type' => 'null']]],

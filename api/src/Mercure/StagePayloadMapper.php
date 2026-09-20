@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mercure;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
@@ -24,8 +25,10 @@ use App\Weather\WeatherForecastSerializer;
  */
 final readonly class StagePayloadMapper
 {
-    public function __construct(private WeatherForecastSerializer $weatherSerializer)
-    {
+    public function __construct(
+        private WeatherForecastSerializer $weatherSerializer,
+        private AlertRenderer $alertRenderer,
+    ) {
     }
 
     /**
@@ -33,7 +36,7 @@ final readonly class StagePayloadMapper
      *
      * @return array<string, mixed>
      */
-    public function toPayload(Stage $stage): array
+    public function toPayload(Stage $stage, string $locale): array
     {
         return [
             // Emitted but not yet consumed: the clients still address stages by position.
@@ -55,7 +58,11 @@ final readonly class StagePayloadMapper
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
             // Already in wire shape, each tagged with its group: the producers build it
             // once and hand the same array to the database and to Mercure (ADR-068).
-            'alerts' => $stage->alerts,
+            //
+            // Rendered in the trip's language, because that is the only reader here: an
+            // anonymous visitor gets no SSE, so the audience for this payload is the owner
+            // whose account locale the trip carries (ADR-069).
+            'alerts' => $this->alertRenderer->render($stage->alerts, $stage->dayNumber, $locale),
             'resupply' => $this->resupplyToPayload($stage->resupply),
             'accommodations' => array_map(
                 $this->accommodationToPayload(...),
@@ -78,9 +85,9 @@ final readonly class StagePayloadMapper
      *
      * @return list<array<string, mixed>>
      */
-    public function toPayloadList(array $stages): array
+    public function toPayloadList(array $stages, string $locale): array
     {
-        return array_map($this->toPayload(...), $stages);
+        return array_map(fn (Stage $stage): array => $this->toPayload($stage, $locale), $stages);
     }
 
     /**
@@ -94,7 +101,9 @@ final readonly class StagePayloadMapper
         $payload = [
             'code' => $alert->code?->value,
             'type' => $alert->type->value,
-            'message' => $alert->message,
+            'messageKey' => $alert->messageKey,
+            'parameters' => $alert->parameters,
+            'parameterFormats' => $alert->parameterFormats,
             'lat' => $alert->lat,
             'lon' => $alert->lon,
         ];

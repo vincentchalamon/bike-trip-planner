@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Osm;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
@@ -47,6 +48,8 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 final class ScanPoisCorridorTest extends KernelTestCase
 {
+    use AlertMessageTestTrait;
+
     use ResetDatabase;
 
     /** @var list<array<string, mixed>> */
@@ -224,8 +227,8 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $this->createStub(RiderTimeEstimatorInterface::class),
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
 
         $handler(new ScanPois('trip-1'));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\WeatherForecast;
@@ -11,10 +12,10 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Format\DecimalFormatter;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
@@ -22,7 +23,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
@@ -51,11 +51,10 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private TranslatorInterface $translator,
-        private DecimalFormatter $decimalFormatter,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(AnalyzeWind $message): void
@@ -68,9 +67,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages): void {
             /** @var list<Stage> $headwindStages */
             $headwindStages = [];
             /** @var list<Stage> $poorComfortStages */
@@ -132,7 +129,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
             $dismissAction = new AlertAction(
                 kind: AlertActionKind::DISMISS,
-                label: $this->translator->trans('alert.wind.action', [], 'alerts', $locale),
+                labelKey: 'alert.wind.action',
             );
 
             $alerts = [];
@@ -151,15 +148,14 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                         $stage,
                         AlertCode::WIND_HEADWIND,
                         'alert.wind.stage',
-                        ['%threshold%' => $this->decimalFormatter->format(self::WIND_SPEED_THRESHOLD_KMH, $locale)],
+                        ['%threshold%' => self::WIND_SPEED_THRESHOLD_KMH],
                         $dismissAction,
-                        $locale,
                     );
                 }
             }
 
             foreach ($poorComfortStages as $stage) {
-                $alerts[] = $this->stageAlert($stage, AlertCode::COMFORT_POOR_CONDITIONS, 'alert.comfort.stage', [], $dismissAction, $locale);
+                $alerts[] = $this->stageAlert($stage, AlertCode::COMFORT_POOR_CONDITIONS, 'alert.comfort.stage', [], $dismissAction);
             }
 
             foreach ($heatStages as $stage) {
@@ -167,9 +163,8 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     $stage,
                     AlertCode::HEAT_EXTREME,
                     'alert.heat.stage',
-                    ['%threshold%' => $this->decimalFormatter->format(self::HEAT_APPARENT_MAX_C, $locale)],
+                    ['%threshold%' => self::HEAT_APPARENT_MAX_C],
                     $dismissAction,
-                    $locale,
                 );
             }
 
@@ -178,9 +173,8 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     $stage,
                     AlertCode::COLD_EXTREME,
                     'alert.cold.stage',
-                    ['%threshold%' => $this->decimalFormatter->format(self::COLD_APPARENT_MIN_C, $locale)],
+                    ['%threshold%' => self::COLD_APPARENT_MIN_C],
                     $dismissAction,
-                    $locale,
                 );
             }
 
@@ -189,9 +183,8 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     $stage,
                     AlertCode::RAIN_HEAVY,
                     'alert.rain.stage',
-                    ['%threshold%' => $this->decimalFormatter->format(self::RAIN_HEAVY_MM, $locale)],
+                    ['%threshold%' => self::RAIN_HEAVY_MM],
                     $dismissAction,
-                    $locale,
                 );
             }
 
@@ -200,9 +193,8 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     $stage,
                     AlertCode::WIND_GUSTS_STRONG,
                     'alert.gusts.stage',
-                    ['%threshold%' => $this->decimalFormatter->format(self::WIND_GUSTS_STRONG_KMH, $locale)],
+                    ['%threshold%' => self::WIND_GUSTS_STRONG_KMH],
                     $dismissAction,
-                    $locale,
                 );
             }
 
@@ -212,27 +204,32 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::WIND, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }
 
     /**
-     * @param array<string, string> $parameters
+     * @param array<string, int|float> $parameters
      *
      * @return array<string, mixed>
      */
-    private function stageAlert(Stage $stage, AlertCode $code, string $key, array $parameters, AlertAction $action, string $locale): array
+    private function stageAlert(Stage $stage, AlertCode $code, string $key, array $parameters, AlertAction $action): array
     {
         return [
             'stageId' => $stage->id,
             'dayNumber' => $stage->dayNumber,
             'code' => $code->value,
             'type' => AlertType::WARNING->value,
-            'message' => $this->translator->trans($key, $parameters, 'alerts', $locale),
+            'messageKey' => $key,
+            'parameters' => $parameters,
+            'parameterFormats' => array_map(
+                static fn (): string => AlertParameterFormat::DECIMAL->value,
+                $parameters,
+            ),
             'action' => [
                 'kind' => $action->kind->value,
-                'label' => $action->label,
+                'labelKey' => $action->labelKey,
                 'payload' => $action->payload,
             ],
         ];

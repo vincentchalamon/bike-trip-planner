@@ -29,7 +29,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new SurfaceAlertAnalyzer($translator, $this->createDistanceFormatter());
+        $this->analyzer = new SurfaceAlertAnalyzer();
     }
 
     #[Test]
@@ -182,11 +182,10 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
-        // Both components are reported, not the raw composite string.
-        // Both components are translated now (issue #862), so the stub echoes their keys.
-        $this->assertStringContainsString('surface.gravel', $alerts[0]->message);
-        $this->assertStringContainsString('surface.dirt', $alerts[0]->message);
+        $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
+        // Both components are reported, not the raw composite string — and raw, so the
+        // reader's language decides how they are named (ADR-069).
+        self::assertSame(['gravel', 'dirt'], $alerts[0]->parameters['%surface%']);
     }
 
     #[Test]
@@ -228,9 +227,9 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         // Only the rough-surface warning: the missing-surface-data rule was dropped
         // as a tag-presence alert (issue #861).
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
         // The fallback signal is translated as well, so no raw tag expression leaks.
-        $this->assertStringContainsString('surface.tracktype_'.$tracktype, $alerts[0]->message);
+        self::assertSame(['tracktype='.$tracktype], $alerts[0]->parameters['%surface%']);
     }
 
     #[Test]
@@ -261,8 +260,8 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
-        $this->assertStringContainsString('surface.smoothness_very_bad', $alerts[0]->message);
+        $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
+        self::assertSame(['smoothness=very_bad'], $alerts[0]->parameters['%surface%']);
     }
 
     #[Test]
@@ -364,7 +363,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
     }
 
     #[Test]
@@ -406,7 +405,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     #[Test]
     public function renderedMessageUsesKilometresAndTranslatedSurfaces(string $locale, string $expected): void
     {
-        $analyzer = new SurfaceAlertAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+        $analyzer = new SurfaceAlertAnalyzer();
 
         $alerts = $analyzer->analyze($this->createStage(), [
             'locale' => $locale,
@@ -416,24 +415,24 @@ final class SurfaceAlertAnalyzerTest extends TestCase
             ],
         ]);
 
-        $this->assertSame($expected, $alerts[0]->message);
+        $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
 
     #[DataProvider('unpavedSurfaceProvider')]
     #[Test]
     public function frenchMessageNeverLeaksARawSurfaceTag(string $surface): void
     {
-        $analyzer = new SurfaceAlertAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+        $analyzer = new SurfaceAlertAnalyzer();
 
         $alerts = $analyzer->analyze($this->createStage(), [
             'locale' => 'fr',
             'osmWays' => [['surface' => $surface, 'length' => 600.0]],
         ]);
 
-        $this->assertStringNotContainsString($surface, $alerts[0]->message);
+        $this->assertStringNotContainsString($surface, $this->renderMessage($alerts[0], 1, 'fr'));
         $this->assertStringNotContainsString(
             'revêtement non documenté',
-            $alerts[0]->message,
+            $this->renderMessage($alerts[0], 1, 'fr'),
             \sprintf('Surface "%s" has no "surface.%s" translation.', $surface, $surface),
         );
     }

@@ -11,7 +11,6 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Suggests a rest day after every N consecutive cycling days (default: 3).
@@ -24,7 +23,6 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
     private const int DEFAULT_CONSECUTIVE_DAYS_THRESHOLD = 3;
 
     public function __construct(
-        private TranslatorInterface $translator,
         private int $consecutiveDaysThreshold = self::DEFAULT_CONSECUTIVE_DAYS_THRESHOLD,
     ) {
     }
@@ -35,9 +33,6 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
         if ($stage->isRestDay) {
             return [];
         }
-
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
 
         /** @var list<Stage> $allStages */
         $allStages = $context['allStages'] ?? [];
@@ -94,18 +89,11 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
         return [new Alert(
             code: AlertCode::REST_DAY_SUGGESTED,
             type: AlertType::NUDGE,
-            message: $this->translator->trans(
-                'alert.rest_day.nudge',
-                [
-                    '%stage%' => $stage->dayNumber,
-                    '%days%' => $consecutiveCount,
-                ],
-                'alerts',
-                $locale,
-            ),
+            messageKey: 'alert.rest_day.nudge',
+            parameters: ['%days%' => $consecutiveCount],
             action: new AlertAction(
                 kind: AlertActionKind::AUTO_FIX,
-                label: $this->translator->trans('alert.rest_day.action', [], 'alerts', $locale),
+                labelKey: 'alert.rest_day.action',
                 payload: ['afterStage' => $stage->dayNumber],
             ),
         )];

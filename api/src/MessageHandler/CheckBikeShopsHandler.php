@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -22,7 +23,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
@@ -42,10 +42,10 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private BikeShopRepositoryInterface $bikeShopRepository,
         private GeoDistanceInterface $haversine,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckBikeShops $message): void
@@ -72,9 +72,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages): void {
             // Read bike shops from the local-first index along the route corridor (ADR-040).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
@@ -120,15 +118,10 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     'dayNumber' => $stage->dayNumber,
                     'code' => AlertCode::BIKE_SHOP_NONE_NEARBY->value,
                     'type' => AlertType::NUDGE->value,
-                    'message' => $this->translator->trans(
-                        'alert.bike_shop.nudge',
-                        ['%stage%' => $stage->dayNumber],
-                        'alerts',
-                        $locale,
-                    ),
+                    'messageKey' => 'alert.bike_shop.nudge',
                     'action' => null !== $nearestShop ? [
                         'kind' => AlertActionKind::NAVIGATE->value,
-                        'label' => $this->translator->trans('alert.bike_shop.action', [], 'alerts', $locale),
+                        'labelKey' => 'alert.bike_shop.action',
                         'payload' => ['lat' => $nearestShop['lat'], 'lon' => $nearestShop['lon']],
                     ] : null,
                 ];
@@ -140,7 +133,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, $this->groupByStage($stagesWithoutBikeShop));
 
             $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, [
-                'alerts' => $stagesWithoutBikeShop,
+                'alerts' => $this->renderForWire($tripId, $stagesWithoutBikeShop),
             ]);
         }, $generation);
     }

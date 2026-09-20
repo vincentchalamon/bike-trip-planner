@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
@@ -21,7 +22,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Flags stages whose route crosses a ford, contextualised by the weather.
@@ -47,10 +47,10 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private FordRepositoryInterface $fordRepository,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckFords $message): void
@@ -63,9 +63,7 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::FORDS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::FORDS, function () use ($tripId, $stages): void {
             $alerts = [];
 
             foreach ($stages as $stage) {
@@ -96,15 +94,10 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'code' => ($raining ? AlertCode::FORD_CROSSING_WET : AlertCode::FORD_CROSSING_DRY)->value,
                         'type' => ($raining ? AlertType::WARNING : AlertType::NUDGE)->value,
-                        'message' => $this->translator->trans(
-                            $raining ? 'alert.ford.warning' : 'alert.ford.nudge',
-                            ['%stage%' => $stage->dayNumber],
-                            'alerts',
-                            $locale,
-                        ),
+                        'messageKey' => $raining ? 'alert.ford.warning' : 'alert.ford.nudge',
                         'action' => [
                             'kind' => AlertActionKind::NAVIGATE->value,
-                            'label' => $this->translator->trans('alert.ford.action', [], 'alerts', $locale),
+                            'labelKey' => 'alert.ford.action',
                             'payload' => ['lat' => $ford['lat'], 'lon' => $ford['lon']],
                         ],
                         'lat' => $ford['lat'],
@@ -119,7 +112,7 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::FORD, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::FORD_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         }, $generation);
     }
