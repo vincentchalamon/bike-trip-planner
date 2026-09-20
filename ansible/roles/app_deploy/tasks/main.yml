@@ -38,13 +38,18 @@
     mode: "0640"
   no_log: true
 
-- name: Render the prod .env (all runtime secrets relocated from Coolify)
+# Rendered OUTSIDE app_dir on purpose. The repo now versions a `.env` holding the
+# dev defaults, and deploy-prod runs `git checkout --force <tag>` in app_dir — a
+# prod env file living there would be overwritten by every deploy, booting the
+# stack with empty secrets. deploy-prod passes this path via `--env-file`, which
+# also stops compose auto-loading the repo's `.env`.
+- name: Render the prod env file (all runtime secrets relocated from Coolify)
   ansible.builtin.template:
     src: env.j2
-    dest: "{{ app_dir }}/.env"
-    owner: "{{ deploy_user }}"
+    dest: "{{ etc_dir }}/app.env"
+    owner: root
     group: "{{ deploy_user }}"
-    mode: "0600"
+    mode: "0640"
   no_log: true
 
 - name: Render the prod deploy hook

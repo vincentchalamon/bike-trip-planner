@@ -8,6 +8,7 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
 
@@ -15,6 +16,7 @@ use Zenstruck\Foundry\Test\Factories;
 final class AuthRequestLinkTest extends ApiTestCase
 {
     use Factories;
+    use MailerAssertionsTrait;
 
     #[\Override]
     public static function setUpBeforeClass(): void
@@ -44,6 +46,30 @@ final class AuthRequestLinkTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertArrayHasKey('message', $data);
         $this->assertNotEmpty($data['message']);
+    }
+
+    /**
+     * No send site sets a From of its own: the address comes from
+     * framework.mailer.headers.from, fed by MAILER_SENDER_EMAIL. Without this
+     * test, dropping the header would silently ship mail from an empty sender.
+     */
+    #[Test]
+    public function magicLinkEmailIsSentFromTheConfiguredSenderAddress(): void
+    {
+        $em = $this->getEntityManager();
+        $user = new User('sender@example.com');
+        $em->persist($user);
+        $em->flush();
+
+        self::createClient()->request('POST', '/auth/request-link', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'sender@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailHeaderSame($email, 'From', 'Bike Trip Planner <noreply@phpunit.example>');
     }
 
     #[Test]

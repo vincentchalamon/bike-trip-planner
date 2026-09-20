@@ -32,7 +32,7 @@ and trigger the incident workflow.
 ### Account
 
 1. Create a free account on <https://uptimerobot.com> with the team alias
-   `oncall@biketrip.mooo.com` (or any shared inbox). Free tier allows 50
+   `oncall@bike-trip-planner.com` (or any shared inbox). Free tier allows 50
    monitors at 5-minute intervals; we use one.
 2. Enable **two-factor authentication** on the account.
 
@@ -42,7 +42,7 @@ and trigger the incident workflow.
 
 - **Monitor Type**: `HTTP(s)`
 - **Friendly Name**: `biketrip-healthz`
-- **URL**: `https://biketrip.mooo.com/api/healthz`
+- **URL**: `https://www.bike-trip-planner.com/api/healthz`
 - **Monitoring Interval**: `5 minutes` (free tier minimum)
 - **Monitor Timeout**: `30 seconds`
 - **HTTP Method**: `GET`

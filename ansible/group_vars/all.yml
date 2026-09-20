@@ -60,17 +60,21 @@ valhalla_tiles_seed_force: false
 pg_reference_project: "pg-reference"
 pg_reference_image: "postgis/postgis:18-3.6-alpine"
 
-# --- App runtime env (non-secret half of prod .env) --------------------------
-server_name: "www.{{ domain }}"
-frontend_url: "https://www.{{ domain }}"
-mercure_public_url: "https://www.{{ domain }}/.well-known/mercure"
+# --- App runtime env (non-secret half of the prod env file) ------------------
+# SERVER_NAME / FRONTEND_URL / MERCURE_PUBLIC_URL / TRUSTED_HOSTS are NOT set
+# here: deploy/prod/compose.yaml derives them from ${DOMAIN}, and its
+# `environment:` block wins over the env file, so a value here would be dead.
+#
 # Real client IP (plan W5.2): cloudflared and Traefik both live on docker
 # bridge networks, so trust the private ranges. Symfony then reads the real IP
 # from the X-Forwarded-For that cloudflared sets and Traefik forwards, for
 # rate-limiting, logs and AccessRequestHmac.
 trusted_proxies: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-trusted_hosts: "^(www\\.{{ domain | regex_escape }}|php)$"
 valhalla_base_uri: "http://valhalla:8002"
+# Transactional sender + GDPR/legal contact. Deliberately independent of
+# `domain`: the sending domain may differ from the served one (SPF/DKIM).
+mailer_sender_email: "noreply@bike-trip-planner.com"
+contact_email: "contact@bike-trip-planner.com"
 app_release: ""
 
 # Prod images (arm64) pushed to GHCR by GHA (plan W4). Consumed by the prod

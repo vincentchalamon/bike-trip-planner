@@ -30,6 +30,8 @@
         <env name="MESSENGER_FAILED_DSN" value="in-memory://" force="true" />
 
         <env name="MAILER_DSN" value="null://null"/>
+        <!-- Fixed sender so the From assertion does not depend on the ambient env. -->
+        <env name="MAILER_SENDER_EMAIL" value="noreply@phpunit.example" force="true"/>
         <env name="ACCESS_REQUEST_HMAC_SECRET" value="test-hmac-secret-for-phpunit" force="true"/>
         <!-- Match the test JWT keypair passphrase (CI generates keys with `-pass pass:test`;
              neutralises the empty JWT_PASSPHRASE injected by compose.dev.yaml). -->

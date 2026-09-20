@@ -20,7 +20,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -50,8 +49,6 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private RateLimiterFactory $accessRequestIpLimiter,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
-        #[Autowire(env: 'MAILER_SENDER_EMAIL')]
-        private string $senderEmail = 'noreply@bike-trip-planner.com',
     ) {
     }
 
@@ -122,7 +119,6 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         ]);
 
         $emailMessage = new Email()
-            ->from(new Address($this->senderEmail, 'Bike Trip Planner'))
             ->to($email)
             ->subject($this->translator->trans('access_request.email.verify.subject', [], 'access_request'))
             ->html($html);

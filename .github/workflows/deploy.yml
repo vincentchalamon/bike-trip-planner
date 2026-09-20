@@ -203,6 +203,11 @@ jobs:
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       # Repo checkout path on the VM (Ansible-provisioned). Defaults if unset.
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
+      # Prod env file, rendered by Ansible OUTSIDE the checkout: `git checkout
+      # --force` below would otherwise overwrite it with the repo's versioned
+      # `.env` (dev defaults only). Passing it explicitly also stops compose
+      # auto-loading that `.env`.
+      ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
       TAG: ${{ github.ref_name }}
     steps:
       - name: Deploy over SSH
@@ -217,6 +222,7 @@ jobs:
             exit 0
           fi
           repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
+          env_file="${ENV_FILE:-/etc/bike-trip-planner/app.env}"
           # TAG is github.ref_name (the pushed tag). It is expanded on the runner
           # and re-parsed by the remote bash, so reject anything that isn't a plain
           # vMAJOR.MINOR.PATCH tag before it is ever interpolated — git tag names
@@ -238,13 +244,16 @@ jobs:
             ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
           fi
           # Check out the tag on the VM and roll the stack, pulling the images
-          # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
-          # the runner; the remote shell receives a fully-resolved script.
+          # this run just pushed by tag (--pull always). $repo_dir/$env_file/$TAG
+          # expand on the runner; the remote shell receives a fully-resolved script.
+          # --env-file points at the Ansible-rendered prod env OUTSIDE the checkout,
+          # which the `git checkout --force` above would otherwise clobber with the
+          # repo's versioned `.env` (dev defaults).
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
           cd "${repo_dir}"
           git fetch --tags --force
           git checkout --force "${TAG}"
-          docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+          docker compose --env-file "${env_file}" -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
           EOF
 
   smoke-test:
@@ -254,10 +263,9 @@ jobs:
     # A tag-skipped deploy-prod counts as "success" for needs, so pin to tags:
     # never probe real prod (nor dispatch an incident) on a PR build.
     if: success() && github.ref_type == 'tag'
-    # Prod host to probe. Defaults to the current value so nothing breaks before
-    # cutover; set PROD_HEALTH_URL to https://www.${DOMAIN} at cutover.
+    # Prod host to probe. Override PROD_HEALTH_URL only to probe another host.
     env:
-      HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || 'https://biketrip.mooo.com' }}
+      HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || 'https://www.bike-trip-planner.com' }}
     steps:
       - name: Wait for the new image to roll
         run: sleep 60
@@ -359,7 +367,7 @@ jobs:
           # preview must never inherit prod secrets.
           # TODO(PR-I / Ansible): provision this preview.env on the VM with
           #   preview-scoped, NON-PROD values — a dedicated Mercure key, dedicated
-          #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET, a null/sink MAILER_DSN,
+          #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET + APP_SECRET, a null/sink MAILER_DSN,
           #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds, and the
           #   dedicated preview JWT keypair paths (PREVIEW_JWT_PRIVATE_KEY_PATH /
           #   PREVIEW_JWT_PUBLIC_KEY_PATH — distinct from prod, see deploy/preview

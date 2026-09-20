@@ -11,5 +11,10 @@ TAG="${1:?usage: deploy-prod.sh <tag>}"
 git fetch --tags --prune
 git checkout "refs/tags/${TAG}"
 
-docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml pull
-docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d
+# --env-file: the prod env file lives outside app_dir (the checkout above would
+# overwrite it) and replaces the repo's versioned `.env`, which only holds dev
+# defaults.
+ENV_FILE="{{ etc_dir }}/app.env"
+
+docker compose --env-file "${ENV_FILE}" -p prod -f compose.yaml -f deploy/prod/compose.yaml pull
+docker compose --env-file "${ENV_FILE}" -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d

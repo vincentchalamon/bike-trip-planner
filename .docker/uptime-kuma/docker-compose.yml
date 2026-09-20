@@ -31,14 +31,14 @@ services:
       # automatically; these labels mirror the convention used by other
       # Coolify-managed services for the project.
       - "traefik.enable=true"
-      - "traefik.http.routers.uptime-kuma.rule=Host(`status.biketrip.mooo.com`)"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`${MONITORING_HOST:-status.${DOMAIN:-bike-trip-planner.com}}`)"
       - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
       - "traefik.http.routers.uptime-kuma.tls=true"
       - "traefik.http.routers.uptime-kuma.tls.certresolver=letsencrypt"
       - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
       # Optional: HTTP -> HTTPS redirect (Coolify usually handles this
       # globally, kept here for environments where it isn't enabled).
-      - "traefik.http.routers.uptime-kuma-http.rule=Host(`status.biketrip.mooo.com`)"
+      - "traefik.http.routers.uptime-kuma-http.rule=Host(`${MONITORING_HOST:-status.${DOMAIN:-bike-trip-planner.com}}`)"
       - "traefik.http.routers.uptime-kuma-http.entrypoints=web"
       - "traefik.http.routers.uptime-kuma-http.middlewares=uptime-kuma-redirect"
       - "traefik.http.middlewares.uptime-kuma-redirect.redirectscheme.scheme=https"

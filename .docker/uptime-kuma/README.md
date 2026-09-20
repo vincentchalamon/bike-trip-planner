@@ -24,12 +24,12 @@ acts as the off-host safety net.
 3. Name the resource `uptime-kuma`. Paste the content of
    [`docker-compose.yml`](./docker-compose.yml) (or point the resource at this
    path in the repository).
-4. Set the **domain** to `https://status.biketrip.mooo.com`. Coolify will
+4. Set the **domain** to `https://status.bike-trip-planner.com`. Coolify will
    provision the Let's Encrypt certificate via Traefik automatically (FreeDNS
-   `mooo.com` A record must already point at the VM public IP).
+   the DNS A record must already point at the VM public IP).
 5. Click **Deploy**. Wait for the healthcheck to turn green
    (`curl -f http://localhost:3001` succeeds).
-6. Open `https://status.biketrip.mooo.com` and create the **admin** account
+6. Open `https://status.bike-trip-planner.com` and create the **admin** account
    (only the first visitor can register; subsequent visitors land on the login
    page).
 
@@ -46,12 +46,12 @@ sync with the deployed configuration.
 
 | # | Type     | Target                                                              | Interval | Retries | Severity | Notes                                                       |
 | - | -------- | ------------------------------------------------------------------- | -------- | ------- | -------- | ----------------------------------------------------------- |
-| 1 | HTTP(s)  | `https://biketrip.mooo.com/api/healthz`                             | 60 s     | 2       | **P1**   | Liveness probe. Must answer `200` with body `ok`.           |
-| 2 | HTTP(s)  | `https://biketrip.mooo.com/api/health`                              | 300 s    | 2       | **P2**   | Readiness probe (DB + Redis + Mercure). `503` = degraded.   |
-| 3 | Keyword  | `https://biketrip.mooo.com/`, keyword `Bike Trip Planner`           | 300 s    | 2       | **P1**   | Detects PWA shell regressions (blank page, SSR crash).      |
-| 4 | DNS      | `biketrip.mooo.com`, resolver `1.1.1.1`, record type `A`            | 300 s    | 2       | **P2**   | Detects FreeDNS / DynDNS expiration.                        |
-| 5 | HTTP(s)  | `https://biketrip.mooo.com/.well-known/mercure?topic=test`          | 300 s    | 2       | **P2**   | Accept HTTP status `200,401`. Anything `5xx` = down.        |
-| 6 | JSON query | `https://biketrip.mooo.com/api/health`                            | 3600 s   | 1       | **P3**   | Reference-data freshness: alert when the local index is stale (ADR-041). |
+| 1 | HTTP(s)  | `https://www.bike-trip-planner.com/api/healthz`                             | 60 s     | 2       | **P1**   | Liveness probe. Must answer `200` with body `ok`.           |
+| 2 | HTTP(s)  | `https://www.bike-trip-planner.com/api/health`                              | 300 s    | 2       | **P2**   | Readiness probe (DB + Redis + Mercure). `503` = degraded.   |
+| 3 | Keyword  | `https://www.bike-trip-planner.com/`, keyword `Bike Trip Planner`           | 300 s    | 2       | **P1**   | Detects PWA shell regressions (blank page, SSR crash).      |
+| 4 | DNS      | `www.bike-trip-planner.com`, resolver `1.1.1.1`, record type `A`            | 300 s    | 2       | **P2**   | Detects FreeDNS / DynDNS expiration.                        |
+| 5 | HTTP(s)  | `https://www.bike-trip-planner.com/.well-known/mercure?topic=test`          | 300 s    | 2       | **P2**   | Accept HTTP status `200,401`. Anything `5xx` = down.        |
+| 6 | JSON query | `https://www.bike-trip-planner.com/api/health`                            | 3600 s   | 1       | **P3**   | Reference-data freshness: alert when the local index is stale (ADR-041). |
 
 ### Per-monitor configuration tips
 
@@ -121,7 +121,7 @@ so the incident workflow (#P1.3) can react automatically.
 
 **Settings → Status Pages → New Status Page**:
 
-- **Slug**: `public` (final URL: `https://status.biketrip.mooo.com/status/public`)
+- **Slug**: `public` (final URL: `https://status.bike-trip-planner.com/status/public`)
 - **Title**: `Bike Trip Planner — Status`
 - **Theme**: Auto
 - **Published**: yes

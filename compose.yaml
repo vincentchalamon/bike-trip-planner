@@ -49,7 +49,9 @@ services:
       # Serve HTTPS (self-signed for localhost) for browsers on :443,
       # and plain HTTP on :80 for internal Docker services (workers -> Mercure).
       # http://php is restricted to the Docker service hostname only.
-      SERVER_NAME: ${SERVER_NAME:-localhost}, http://php
+      # Every origin below derives from DOMAIN (the DNS zone, `.env`); SERVER_NAME
+      # stays overridable for a tunnel host (scripts/ngrok-recette.sh).
+      SERVER_NAME: ${SERVER_NAME:-${DOMAIN:-localhost}}, http://php
       PWA_UPSTREAM: pwa:3000
       # Valhalla routing base URI. Defaults to the in-stack service (dev/recette/CI
       # start it under the `routing` profile); prod points it at the shared Valhalla
@@ -57,11 +59,22 @@ services:
       VALHALLA_BASE_URI: ${VALHALLA_BASE_URI:-http://valhalla:8002}
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://localhost}"
+      MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      # Parenthesised on purpose: `^a|php$` parses as `(^a)|(php$)`, which matches
+      # any host merely starting with the domain or ending in `php`.
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^(${DOMAIN:-localhost}|php)$$}
+      # A regex (nelmio_cors origin_regex). The default covers the dev origins;
+      # prod/preview override it with their own host (see the deploy overlays).
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}
+      # Base URI the router uses when there is no request (CLI, workers).
+      DEFAULT_URI: ${DEFAULT_URI:-https://${DOMAIN:-localhost}}
+      # Signs CSRF tokens, signed URIs and remember-me cookies. Empty here so the
+      # boot guard fails closed rather than silently reusing api/.env's committed
+      # dev value — same discipline as MERCURE_JWT_KEY / REFRESH_TOKEN_ENC_KEY.
+      APP_SECRET: "${APP_SECRET:-}"
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
-      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${DOMAIN:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
@@ -83,8 +96,11 @@ services:
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
       MAILER_DSN: "${MAILER_DSN:-}"
+      # Sender of every transactional email (framework.mailer.headers.from). Not
+      # derived from DOMAIN: the sending domain may differ from the served one.
+      MAILER_SENDER_EMAIL: "${MAILER_SENDER_EMAIL:-noreply@bike-trip-planner.com}"
       ACCESS_REQUEST_HMAC_SECRET: "${ACCESS_REQUEST_HMAC_SECRET:-}"
       # FCM service-account JSON key for push notifications (epic #1051). Forwarded
       # from the Coolify/host env; empty here so FcmCredentials fails closed rather
@@ -163,9 +179,20 @@ services:
     environment:
       APP_ENV: prod
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      # Parenthesised on purpose: `^a|php$` parses as `(^a)|(php$)`, which matches
+      # any host merely starting with the domain or ending in `php`.
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^(${DOMAIN:-localhost}|php)$$}
+      # A regex (nelmio_cors origin_regex). The default covers the dev origins;
+      # prod/preview override it with their own host (see the deploy overlays).
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}
+      # Base URI the router uses when there is no request (CLI, workers).
+      DEFAULT_URI: ${DEFAULT_URI:-https://${DOMAIN:-localhost}}
+      # Signs CSRF tokens, signed URIs and remember-me cookies. Empty here so the
+      # boot guard fails closed rather than silently reusing api/.env's committed
+      # dev value — same discipline as MERCURE_JWT_KEY / REFRESH_TOKEN_ENC_KEY.
+      APP_SECRET: "${APP_SECRET:-}"
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
-      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${DOMAIN:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
@@ -184,8 +211,11 @@ services:
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
       MAILER_DSN: "${MAILER_DSN:-}"
+      # Sender of every transactional email (framework.mailer.headers.from). Not
+      # derived from DOMAIN: the sending domain may differ from the served one.
+      MAILER_SENDER_EMAIL: "${MAILER_SENDER_EMAIL:-noreply@bike-trip-planner.com}"
       ACCESS_REQUEST_HMAC_SECRET: "${ACCESS_REQUEST_HMAC_SECRET:-}"
       # FCM service-account JSON key for push notifications (epic #1051). Forwarded
       # from the Coolify/host env; empty here so FcmCredentials fails closed rather
@@ -236,6 +266,9 @@ services:
         # bundle tree-shakes it out. Override to "true" only for the mocked E2E
         # build (CI bake args, dev).
         NEXT_PUBLIC_ENABLE_TEST_HOOKS: "${NEXT_PUBLIC_ENABLE_TEST_HOOKS:-false}"
+        # GDPR/legal contact. One root-level CONTACT_EMAIL feeds the framework
+        # prefixes here and EXPO_PUBLIC_CONTACT_EMAIL in the mobile build.
+        NEXT_PUBLIC_CONTACT_EMAIL: "${CONTACT_EMAIL:-contact@bike-trip-planner.com}"
         # Client API + Mercure origins. Empty by default → the browser uses the
         # SAME origin it was served from (relative API calls, same-origin Mercure
         # hub), so the build is origin-agnostic: it works on https://localhost, in
@@ -271,6 +304,7 @@ services:
       # after the user grants analytics consent (cookie banner, #385).
       NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
       NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
+      NEXT_PUBLIC_CONTACT_EMAIL: "${CONTACT_EMAIL:-contact@bike-trip-planner.com}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
       # Android App Links (ADR-053): the /.well-known/assetlinks.json route reads

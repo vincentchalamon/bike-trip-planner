@@ -33,6 +33,10 @@
 x-preview-env: &preview-env
   FRONTEND_URL: "https://pr-${PR_NUMBER}.${DOMAIN}"
   MERCURE_PUBLIC_URL: "https://pr-${PR_NUMBER}.${DOMAIN}/.well-known/mercure"
+  # Base URI the router uses when there is no request (CLI, workers).
+  DEFAULT_URI: "https://pr-${PR_NUMBER}.${DOMAIN}"
+  # nelmio_cors origin_regex: this preview's origin only.
+  CORS_ALLOW_ORIGIN: "^https://pr-${PR_NUMBER}\\.${DOMAIN}$$"
   # Host forwarded by Cloudflare -> Traefik is pr-<n>.${DOMAIN}; php also answers to
   # the internal `php` name (worker -> Mercure). Anything else Symfony rejects.
   TRUSTED_HOSTS: "^(pr-${PR_NUMBER}\\.${DOMAIN}|php)$$"

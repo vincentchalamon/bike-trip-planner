@@ -1,15 +1,11 @@
 // Expo dynamic config. The static config lives in app.json; here we derive the
 // Android App Link intent-filter host from EXPO_PUBLIC_API_URL so no build ships
-// an App Link permanently wired to a throwaway dev tunnel. A non-dev build without
-// the var fails closed, mirroring src/api/config.ts.
-const DEV_FALLBACK = 'https://epidermis-sandlot-headrest.ngrok-free.dev';
-
+// an App Link permanently wired to a throwaway dev tunnel. Fails closed without
+// the var, mirroring src/api/config.ts.
 function appLinkHost() {
-  const url =
-    process.env.EXPO_PUBLIC_API_URL ??
-    (process.env.NODE_ENV === 'development' ? DEV_FALLBACK : undefined);
+  const url = process.env.EXPO_PUBLIC_API_URL;
   if (!url) {
-    throw new Error('EXPO_PUBLIC_API_URL must be set for non-development builds');
+    throw new Error('EXPO_PUBLIC_API_URL must be set (see mobile/.env)');
   }
   return new URL(url).host;
 }
@@ -22,9 +18,13 @@ module.exports = ({ config }) => ({
       {
         action: 'VIEW',
         autoVerify: true,
+        // This list REPLACES app.json's android.intentFilters, so every App Link
+        // path must be declared here — a filter left in app.json never reaches
+        // the build.
         data: [
           { scheme: 'https', host: appLinkHost(), pathPrefix: '/auth/verify' },
           { scheme: 'https', host: appLinkHost(), pathPrefix: '/account/email-change/verify' },
+          { scheme: 'https', host: appLinkHost(), pathPrefix: '/s/' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },

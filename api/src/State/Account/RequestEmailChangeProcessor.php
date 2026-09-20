@@ -20,7 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -102,7 +101,6 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         ]);
 
         $message = new Email()
-            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($newEmail)
             ->subject($this->translator->trans('email_change.email.subject', [], 'account', $locale))
             ->html($html);

@@ -41,6 +41,16 @@ case "${REFRESH_TOKEN_ENC_KEY:-}" in
 		;;
 esac
 
+# Fail closed: APP_SECRET signs CSRF tokens, signed URIs and remember-me cookies.
+# Unset, it falls back to the value committed in api/.env, which anyone with the
+# source can read — so every signature the app trusts would be forgeable.
+case "${APP_SECRET:-}" in
+	'' | 'a3a0c73d8f8e1b3d54e4c7f8e2a9f1c0')
+		echo 'FATAL: APP_SECRET is unset or still the committed dev default; refusing to boot. Set a strong APP_SECRET.' >&2
+		exit 1
+		;;
+esac
+
 if [ "${MIGRATIONS_ON_BOOT:-false}" = "true" ]; then
 	# Wait for the database to accept connections before migrating. The compose
 	# healthcheck (pg_isready) can briefly report ready during Postgres' init

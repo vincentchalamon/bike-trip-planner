@@ -34,7 +34,7 @@ and cloudflared publish no host ports.
 | `docker` | Docker Engine + compose plugin (arm64), `edge` + `btp-shared` networks, optional GHCR login |
 | `traefik` | Traefik as the single reverse proxy — Docker provider, plain HTTP, **no ACME**, no published ports |
 | `cloudflared` | Cloudflare Tunnel with a **locally-managed `config.yml`** (wildcard `*.${DOMAIN}` + `www.${DOMAIN}` -> `http://traefik:80`), credentials from Vault |
-| `app_deploy` | Repo checkout (for compose bind mounts), prod `.env` + JWT PEM from Vault, `deploy-prod.sh` hook, optional events-refresh timer |
+| `app_deploy` | Repo checkout (for compose bind mounts), prod env file (`/etc/bike-trip-planner/app.env`) + JWT PEM from Vault, `deploy-prod.sh` hook, optional events-refresh timer |
 | `shared_infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared`, seed `valhalla-tiles` volume from a shipped tar |
 | `backup` | Nightly PG-app backup: `pg_dump` -> `age` (recipient-only) -> `rclone` to B2 and/or OCI, GFS retention, via a systemd timer (`btp-backup.timer`). On-demand with `make backup-now`. PG-reference is NOT backed up (reproducible). See [ADR-062](../docs/adr/adr-062-backup-and-disaster-recovery.md). |
 
@@ -79,15 +79,21 @@ ansible-vault encrypt vault.yml         # encrypt in place (edit later: ansible-
 
 `vault.yml` relocates **every** runtime secret that used to live in Coolify
 (see `../docs/runbooks/secrets-inventory.md`, updated by plan W9): JWT keypair +
-passphrase, `MERCURE_JWT_KEY`, `REFRESH_TOKEN_ENC_KEY`,
+passphrase, `APP_SECRET`, `MERCURE_JWT_KEY`, `REFRESH_TOKEN_ENC_KEY`,
 `ACCESS_REQUEST_HMAC_SECRET`, `FCM_SERVICE_ACCOUNT_JSON`, `MAILER_DSN` (Brevo),
 DB creds, `REFERENCE_DATABASE_URL`, `SENTRY_DSN`, the Cloudflare Tunnel
 credentials, and the backup secrets (`AGE_RECIPIENT` public key, `B2_*`, `OCI_*`
 — ADR-062). `VALHALLA_BASE_URI` is a non-secret in `group_vars/all.yml`.
 
-> **`.env` gotcha:** docker compose interpolates `$` in `.env`. If a secret
-> value contains a literal `$`, double it as `$$` in `vault.yml`.
-> **FCM JSON** must be a single line (`jq -c . key.json`) — `.env` is line-oriented.
+> **Env-file gotcha:** docker compose interpolates `$` in the env file. If a
+> secret value contains a literal `$`, double it as `$$` in `vault.yml`.
+> **FCM JSON** must be a single line (`jq -c . key.json`) — the file is line-oriented.
+>
+> **Why `/etc/bike-trip-planner/app.env` and not `{{ app_dir }}/.env`:** the repo
+> now versions a root `.env` (dev defaults), and `deploy-prod` does a forced
+> checkout in `app_dir` — a prod env file there would be overwritten on every
+> deploy. `deploy-prod.sh` and the GHA job pass this path with `--env-file`,
+> which also stops compose auto-loading the repo's `.env`.
 
 ## Run
 
