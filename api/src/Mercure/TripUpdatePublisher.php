@@ -98,7 +98,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     public function publishTripReady(string $tripId, array $stages, array $summary): void
     {
         $data = [
-            'stages' => $this->stagePayloadMapper->toPayloadList($stages),
+            'stages' => $this->stagePayloadMapper->toPayloadList($stages, $this->tripStateManager->getLocale($tripId) ?? 'en'),
             'computationStatus' => $summary['status'] ?? [],
         ];
 
@@ -118,7 +118,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         $this->publish($tripId, MercureEventType::STAGE_UPDATED, [
             'stageId' => $stage->id,
             'position' => $position,
-            'stage' => $this->stagePayloadMapper->toPayload($stage),
+            'stage' => $this->stagePayloadMapper->toPayload($stage, $this->tripStateManager->getLocale($tripId) ?? 'en'),
         ]);
     }
 }

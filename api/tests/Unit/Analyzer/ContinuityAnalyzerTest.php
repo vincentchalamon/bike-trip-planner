@@ -113,12 +113,12 @@ final class ContinuityAnalyzerTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn(600.0);
 
-        $analyzer = new ContinuityAnalyzer($distanceCalculator, $this->createAlertTranslator(), $this->createDistanceFormatter());
+        $analyzer = new ContinuityAnalyzer($distanceCalculator);
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
 
         $alerts = $analyzer->analyze($stage, ['locale' => $locale, 'nextStage' => $this->createStage(45.11, 5.1, 45.2, 5.2)]);
 
-        $this->assertSame($expected, $alerts[0]->message);
+        $this->assertSame($expected, $this->renderMessage($alerts[0]));
     }
 
     private function makeAnalyzer(float $distanceBetweenMeters = 0.0): ContinuityAnalyzer
@@ -131,7 +131,7 @@ final class ContinuityAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        return new ContinuityAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter());
+        return new ContinuityAnalyzer($distanceCalculator);
     }
 
     #[Test]

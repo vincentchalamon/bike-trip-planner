@@ -14,8 +14,8 @@ final readonly class AlertAction
     public function __construct(
         #[ApiProperty(description: 'Type of action: auto_fix, detour, navigate, dismiss.', required: true)]
         public AlertActionKind $kind,
-        #[ApiProperty(description: 'Human-readable label for the action button.', required: true)]
-        public string $label,
+        #[ApiProperty(description: 'Translation key of the action button label, in the `alerts` catalogue. Rendered at read time (ADR-069).', required: true)]
+        public string $labelKey,
         #[ApiProperty(
             description: 'Machine-readable payload for the action. A `navigate` action carries `lat`/`lon` and, for the terrain rules, `segments`: the ordered geometry of the concerned road stretch as a list of `[lat, lon]` polylines, highlighted on the internal map (issue #982).',
             openapiContext: ['type' => 'object', 'additionalProperties' => true],
@@ -29,7 +29,7 @@ final readonly class AlertAction
      * (issue #397): `auto_fix` and `detour` would render a dead disabled button,
      * so they are not delivered at all.
      *
-     * @return array{kind: string, label: string, payload: array<string, mixed>}|null
+     * @return array{kind: string, labelKey: string, payload: array<string, mixed>}|null
      */
     public function toDeliverablePayload(): ?array
     {
@@ -39,7 +39,7 @@ final readonly class AlertAction
 
         return [
             'kind' => $this->kind->value,
-            'label' => $this->label,
+            'labelKey' => $this->labelKey,
             'payload' => $this->payload,
         ];
     }

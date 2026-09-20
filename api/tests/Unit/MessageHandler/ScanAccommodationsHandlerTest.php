@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\Accommodation\CandidateRanker;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
@@ -29,6 +30,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanAccommodationsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createStage(string $tripId, float $endLat = 48.5, float $endLon = 2.5): Stage
     {
         return new Stage(
@@ -72,8 +75,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $distributor,
             $seasonalityChecker,
             new CandidateRanker(),
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

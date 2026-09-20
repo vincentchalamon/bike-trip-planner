@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -31,6 +32,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class AnalyzeTerrainHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createStage(string $tripId = 'trip-1', int $dayNumber = 1): Stage
     {
         return new Stage(
@@ -86,8 +89,9 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $analyzerRegistry,
             $waysRepository,
             $distributor,
-            new StagePayloadMapper(new WeatherForecastSerializer()),
+            new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 
@@ -184,7 +188,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $alert = new Alert(code: AlertCode::SURFACE_ROUGH, type: AlertType::WARNING, message: 'Unpaved road detected', lat: 48.0, lon: 2.0);
+        $alert = new Alert(code: AlertCode::SURFACE_ROUGH, type: AlertType::WARNING, messageKey: 'alert.surface.warning', lat: 48.0, lon: 2.0);
         $analyzerRegistry = $this->createStub(AnalyzerRegistryInterface::class);
         $analyzerRegistry->method('analyze')->willReturn([$alert]);
 
@@ -240,12 +244,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $navigateAlert = new Alert(
             code: AlertCode::CONTINUITY_GAP_CRITICAL,
             type: AlertType::CRITICAL,
-            message: 'Discontinuité',
+            messageKey: 'alert.continuity.critical',
             lat: 48.1,
             lon: 2.2,
             action: new AlertAction(
                 kind: AlertActionKind::NAVIGATE,
-                label: 'Voir la discontinuité sur la carte',
+                labelKey: 'alert.continuity.action',
                 payload: ['lat' => 48.1, 'lon' => 2.2],
             ),
         );
@@ -254,12 +258,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $autoFixAlert = new Alert(
             code: AlertCode::ELEVATION_GAIN,
             type: AlertType::WARNING,
-            message: 'Important dénivelé',
+            messageKey: 'alert.elevation.warning',
             lat: 48.3,
             lon: 2.4,
             action: new AlertAction(
                 kind: AlertActionKind::AUTO_FIX,
-                label: "Couper l'étape en deux",
+                labelKey: 'alert.elevation.action',
                 payload: ['splitAt' => 40.0],
             ),
         );
@@ -293,11 +297,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $this->assertSame(48.1, $alerts[0]['lat']);
         $this->assertSame(2.2, $alerts[0]['lon']);
-        $this->assertSame([
-            'kind' => 'navigate',
-            'label' => 'Voir la discontinuité sur la carte',
-            'payload' => ['lat' => 48.1, 'lon' => 2.2],
-        ], $alerts[0]['action']);
+        // The published copy is rendered: the key travels to the database, the sentence to
+        // the open page (ADR-069).
+        self::assertSame('navigate', $alerts[0]['action']['kind']);
+        self::assertSame('alert.continuity.action', $alerts[0]['action']['labelKey']);
+        self::assertSame('View the gap on the map', $alerts[0]['action']['label']);
+        self::assertSame(['lat' => 48.1, 'lon' => 2.2], $alerts[0]['action']['payload']);
 
         $this->assertSame(48.3, $alerts[1]['lat']);
         $this->assertSame(2.4, $alerts[1]['lon']);

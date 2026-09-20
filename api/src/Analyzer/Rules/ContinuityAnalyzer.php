@@ -11,9 +11,8 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertType;
-use App\Format\DistanceFormatter;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Deliberately has no `isRestDay` guard: a rest day duplicates the previous stage's
@@ -29,8 +28,6 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
 
     public function __construct(
         private DistanceCalculatorInterface $distanceCalculator,
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
     ) {
     }
 
@@ -43,30 +40,20 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
-
         $gapMeters = $this->distanceCalculator->distanceBetween($stage->endPoint, $nextStage->startPoint);
 
         if ($gapMeters > self::CRITICAL_THRESHOLD_METERS) {
             return [new Alert(
                 code: AlertCode::CONTINUITY_GAP_CRITICAL,
                 type: AlertType::CRITICAL,
-                message: $this->translator->trans(
-                    'alert.continuity.critical',
-                    [
-                        '%distance%' => $this->distanceFormatter->formatKilometers($gapMeters, $locale),
-                        '%from%' => $stage->dayNumber,
-                        '%to%' => $nextStage->dayNumber,
-                    ],
-                    'alerts',
-                    $locale,
-                ),
+                messageKey: 'alert.continuity.critical',
+                parameters: ['%distance%' => $gapMeters],
+                parameterFormats: ['%distance%' => AlertParameterFormat::DISTANCE_KM->value],
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.continuity.action', [], 'alerts', $locale),
+                    labelKey: 'alert.continuity.action',
                     payload: ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon],
                 ),
             )];
@@ -76,21 +63,13 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
             return [new Alert(
                 code: AlertCode::CONTINUITY_GAP_WARNING,
                 type: AlertType::WARNING,
-                message: $this->translator->trans(
-                    'alert.continuity.warning',
-                    [
-                        '%gap%' => (int) $gapMeters,
-                        '%from%' => $stage->dayNumber,
-                        '%to%' => $nextStage->dayNumber,
-                    ],
-                    'alerts',
-                    $locale,
-                ),
+                messageKey: 'alert.continuity.warning',
+                parameters: ['%gap%' => (int) $gapMeters],
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,
                 action: new AlertAction(
                     kind: AlertActionKind::NAVIGATE,
-                    label: $this->translator->trans('alert.continuity.action', [], 'alerts', $locale),
+                    labelKey: 'alert.continuity.action',
                     payload: ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon],
                 ),
             )];

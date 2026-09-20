@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -25,6 +26,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckBikeShopsHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     /**
      * @return list<Stage>
      */
@@ -93,8 +96,8 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $tripStateManager,
             $bikeShopRepository,
             $haversine,
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

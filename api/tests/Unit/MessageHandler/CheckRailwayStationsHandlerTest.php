@@ -133,9 +133,8 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             $tripStateManager,
             $railwayStationRepository,
             $haversine,
-            $this->createAlertTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

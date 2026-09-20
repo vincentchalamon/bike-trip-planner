@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -32,6 +33,8 @@ use Symfony\Component\Uid\Uuid;
 #[AllowMockObjectsWithoutExpectations]
 final class RestDayInsertProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     use MutateStagesStubTrait;
 
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
@@ -48,7 +51,12 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->stubMutateStages($this->tripStateManager);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $this->stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
 
         $this->processor = new RestDayInsertProcessor(

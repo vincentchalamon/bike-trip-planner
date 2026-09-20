@@ -66,7 +66,6 @@ final class CheckCalendarHandlerTest extends TestCase
             $tripStateManager,
             $publisher,
             $this->adminBoundaryRepository(['FR']),
-            $this->createAlertTranslator(),
         );
         $handler(new CheckCalendar('trip-1'));
     }
@@ -146,8 +145,8 @@ final class CheckCalendarHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $adminBoundaryRepository,
-            $translator ?? $stubTranslator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

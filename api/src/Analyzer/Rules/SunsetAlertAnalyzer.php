@@ -13,7 +13,6 @@ use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Geo\TimezoneResolverInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Emits a WARNING alert when the estimated arrival time exceeds civil twilight end
@@ -37,7 +36,6 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
 {
     public function __construct(
         private RiderTimeEstimatorInterface $riderTimeEstimator,
-        private TranslatorInterface $translator,
         private TimezoneResolverInterface $timezoneResolver,
     ) {
     }
@@ -54,9 +52,6 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $departureHour = $context['departureHour'] ?? 8;
         /** @var float $averageSpeed */
         $averageSpeed = $context['averageSpeed'] ?? 15.0;
-        /** @var string $locale */
-        $locale = $context['locale'] ?? 'en';
-
         // The stage's own day number carries the offset, so nothing has to be threaded
         // through the analysis context. It used to come from a 'stageIndex' context key,
         // which a rename elsewhere silently reduced to its `?? 0` default — every stage
@@ -119,21 +114,16 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         return [new Alert(
             code: AlertCode::SUNSET_ARRIVAL_AFTER_TWILIGHT,
             type: AlertType::WARNING,
-            message: $this->translator->trans(
-                'alert.sunset.warning',
-                [
-                    '%stage%' => $stage->dayNumber,
-                    '%sunset%' => $sunsetHm,
-                    '%twilight%' => $twilightHm,
-                ],
-                'alerts',
-                $locale,
-            ),
+            messageKey: 'alert.sunset.warning',
+            parameters: [
+                '%sunset%' => $sunsetHm,
+                '%twilight%' => $twilightHm,
+            ],
             lat: $stage->endPoint->lat,
             lon: $stage->endPoint->lon,
             action: new AlertAction(
                 kind: AlertActionKind::AUTO_FIX,
-                label: $this->translator->trans('alert.sunset.action', [], 'alerts', $locale),
+                labelKey: 'alert.sunset.action',
                 payload: ['departureHour' => $suggestedDeparture],
             ),
         )];

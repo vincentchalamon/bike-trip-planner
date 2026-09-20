@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -30,6 +31,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class GenerateStagesHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function structuralComputation(
         TripRequestRepositoryInterface $tripStateManager,
         PacingEngineInterface $pacingEngine,
@@ -64,6 +67,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $structuralComputation,
             new TripAnalysisDispatcher($messageBus),
             $messageBus,
+            $this->createAlertRenderer(),
         );
     }
 

@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertCode;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -24,7 +25,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
@@ -43,11 +43,10 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
-        private TranslatorInterface $translator,
-        private DistanceFormatter $distanceFormatter,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckWaterPoints $message): void
@@ -60,9 +59,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::WATER_POINTS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::WATER_POINTS, function () use ($tripId, $stages): void {
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
@@ -102,18 +99,12 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'code' => AlertCode::WATER_POINT_GAP->value,
                         'type' => AlertType::NUDGE->value,
-                        'message' => $this->translator->trans(
-                            'alert.water.nudge',
-                            [
-                                '%stage%' => $stage->dayNumber,
-                                '%threshold%' => $this->distanceFormatter->format(self::WATER_GAP_THRESHOLD_KM * 1000, $locale),
-                            ],
-                            'alerts',
-                            $locale,
-                        ),
+                        'messageKey' => 'alert.water.nudge',
+                        'parameters' => ['%threshold%' => self::WATER_GAP_THRESHOLD_KM * 1000],
+                        'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
                         'action' => null !== $nearestWp ? [
                             'kind' => AlertActionKind::NAVIGATE->value,
-                            'label' => $this->translator->trans('alert.water.action', [], 'alerts', $locale),
+                            'labelKey' => 'alert.water.action',
                             'payload' => ['lat' => $nearestWp['lat'], 'lon' => $nearestWp['lon']],
                         ] : null,
                     ];
@@ -126,7 +117,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::WATER_POINT, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::WATER_POINT_ALERTS, [
-                'alerts' => $alerts,
+                'alerts' => $this->renderForWire($tripId, $alerts),
                 'waterPointsByStage' => $waterPointsByStage,
             ]);
         }, $generation);

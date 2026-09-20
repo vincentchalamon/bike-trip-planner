@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -22,6 +23,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckFerriesHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
@@ -45,8 +48,8 @@ final class CheckFerriesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $ferryRepository,
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

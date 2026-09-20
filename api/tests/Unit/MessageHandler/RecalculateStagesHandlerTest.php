@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -22,6 +23,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class RecalculateStagesHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
@@ -38,6 +41,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $messageBus,
+            $this->createAlertRenderer(),
         );
     }
 

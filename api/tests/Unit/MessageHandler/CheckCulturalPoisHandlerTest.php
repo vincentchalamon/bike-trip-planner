@@ -174,8 +174,8 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $distributor,
             $haversine,
             new PoiLabelResolver($translator),
-            $translator,
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

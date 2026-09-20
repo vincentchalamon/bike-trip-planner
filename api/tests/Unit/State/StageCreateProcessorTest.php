@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageRequest;
@@ -23,6 +24,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageCreateProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function lockedTripThrowsHttpException(): void
     {
@@ -37,7 +40,12 @@ final class StageCreateProcessorTest extends TestCase
         $distanceCalculator->method('distanceBetween')->willReturn(0.0);
 
 
-        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
         $processor = new StageCreateProcessor(
             $tripStateManager,

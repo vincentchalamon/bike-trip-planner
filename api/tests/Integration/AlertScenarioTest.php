@@ -18,7 +18,6 @@ use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Integration tests using GPX scenario fixtures to verify alert analyzers
@@ -27,16 +26,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final class AlertScenarioTest extends TestCase
 {
     private const string FIXTURES_DIR = __DIR__.'/../fixtures/scenarios/';
-
-    private function createTranslator(): TranslatorInterface
-    {
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
-        );
-
-        return $translator;
-    }
 
     private function createHaversineDistanceCalculator(): DistanceCalculatorInterface
     {
@@ -65,12 +54,7 @@ final class AlertScenarioTest extends TestCase
     {
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'steep-gradient.gpx');
 
-        $analyzer = new SteepGradientAnalyzer(
-            $this->createHaversineDistanceCalculator(),
-            $this->createTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
-            new DecimalFormatter(),
-        );
+        $analyzer = new SteepGradientAnalyzer($this->createHaversineDistanceCalculator());
 
         $alerts = $analyzer->analyze($stage);
 
@@ -88,7 +72,7 @@ final class AlertScenarioTest extends TestCase
         // Verify the fixture produces >1200m D+
         $this->assertGreaterThan(1200.0, $stage->elevation, 'High elevation GPX should have >1200m D+.');
 
-        $analyzer = new ElevationAlertAnalyzer($this->createTranslator());
+        $analyzer = new ElevationAlertAnalyzer();
         $alerts = $analyzer->analyze($stage);
 
         $this->assertCount(1, $alerts);
@@ -102,11 +86,7 @@ final class AlertScenarioTest extends TestCase
 
         $this->assertCount(2, $stages, 'Continuity gap GPX should have 2 segments.');
 
-        $analyzer = new ContinuityAnalyzer(
-            $this->createHaversineDistanceCalculator(),
-            $this->createTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
-        );
+        $analyzer = new ContinuityAnalyzer($this->createHaversineDistanceCalculator());
 
         $alerts = $analyzer->analyze($stages[0], ['nextStage' => $stages[1]]);
 
@@ -125,7 +105,7 @@ final class AlertScenarioTest extends TestCase
         $this->assertGreaterThan(60.0, $stage->distance, 'E-bike GPX should have distance > effective range.');
         $this->assertGreaterThan(400.0, $stage->elevation, 'E-bike GPX should have significant elevation.');
 
-        $analyzer = new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository());
+        $analyzer = new EbikeRangeAnalyzer($this->createChargingStationRepository());
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => true]);
 
         $this->assertCount(1, $alerts);
@@ -137,7 +117,7 @@ final class AlertScenarioTest extends TestCase
     {
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'ebike-out-of-range.gpx');
 
-        $analyzer = new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository());
+        $analyzer = new EbikeRangeAnalyzer($this->createChargingStationRepository());
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => false]);
 
         $this->assertSame([], $alerts);
@@ -209,14 +189,9 @@ final class AlertScenarioTest extends TestCase
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'nominal-no-alerts.gpx');
 
         $analyzer = match ($analyzerClass) {
-            SteepGradientAnalyzer::class => new SteepGradientAnalyzer(
-                $this->createHaversineDistanceCalculator(),
-                $this->createTranslator(),
-                new DistanceFormatter(new DecimalFormatter()),
-                new DecimalFormatter(),
-            ),
-            ElevationAlertAnalyzer::class => new ElevationAlertAnalyzer($this->createTranslator()),
-            EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository()),
+            SteepGradientAnalyzer::class => new SteepGradientAnalyzer($this->createHaversineDistanceCalculator()),
+            ElevationAlertAnalyzer::class => new ElevationAlertAnalyzer(),
+            EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createChargingStationRepository()),
             default => throw new \LogicException(\sprintf('Unknown analyzer class: %s', $analyzerClass)),
         };
 
@@ -233,11 +208,7 @@ final class AlertScenarioTest extends TestCase
     {
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'nominal-no-alerts.gpx');
 
-        $analyzer = new ContinuityAnalyzer(
-            $this->createHaversineDistanceCalculator(),
-            $this->createTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
-        );
+        $analyzer = new ContinuityAnalyzer($this->createHaversineDistanceCalculator());
 
         // No next stage → no continuity alert
         $alerts = $analyzer->analyze($stage);

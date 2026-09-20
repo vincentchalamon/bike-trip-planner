@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -30,6 +31,8 @@ use Symfony\Component\Uid\Uuid;
 #[AllowMockObjectsWithoutExpectations]
 final class StagePoiWaypointProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
     private MockObject&MessageBusInterface $messageBus;
@@ -43,7 +46,12 @@ final class StagePoiWaypointProcessorTest extends TestCase
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
+        $this->stageResponseMapper = new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
@@ -130,7 +138,12 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $processor = new StagePoiWaypointProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        ),
             $generationTracker,
             new TripLocker(),
             new StageLocator(),

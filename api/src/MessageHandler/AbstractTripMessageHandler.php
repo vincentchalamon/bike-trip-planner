@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
@@ -24,6 +25,7 @@ abstract readonly class AbstractTripMessageHandler
         protected LoggerInterface $logger,
         protected TripRequestRepositoryInterface $tripRequestRepository,
         protected MessageBusInterface $messageBus,
+        protected AlertRenderer $alertRenderer,
     ) {
         // The gate is a stateless collaborator built from dependencies the handler
         // already receives, so we construct it here rather than threading the
@@ -66,6 +68,23 @@ abstract readonly class AbstractTripMessageHandler
         }
 
         return $grouped;
+    }
+
+    /**
+     * Renders a flat published alert list in the trip's language.
+     *
+     * The trip locale and not the reader's, because on this channel there is only one
+     * reader: an anonymous visitor receives no SSE, so the audience is the owner whose
+     * account locale the trip carries (ADR-069). A GET renders the same rows again, for
+     * whoever asked.
+     *
+     * @param list<array<string, mixed>> $alerts
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function renderForWire(string $tripId, array $alerts): array
+    {
+        return $this->alertRenderer->renderFlat($alerts, $this->tripRequestRepository->getLocale($tripId) ?? 'en');
     }
 
     protected function isStale(string $tripId, ?int $messageGeneration): bool

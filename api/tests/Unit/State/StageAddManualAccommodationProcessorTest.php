@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -28,6 +29,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class StageAddManualAccommodationProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     use MutateStagesStubTrait;
 
     /** @return list<Stage> */
@@ -66,7 +69,12 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         return new StageAddManualAccommodationProcessor(
             $repo,
             $bus,
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        ),
             new TripLocker(),
             new StageLocator(),
             $geocoder,

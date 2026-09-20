@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\ApiResource\TripRequest;
@@ -23,6 +24,8 @@ use Symfony\Component\Uid\Uuid;
 #[AllowMockObjectsWithoutExpectations]
 final class StageSelectAccommodationProcessorTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function lockedTripThrowsHttpException(): void
     {
@@ -36,7 +39,12 @@ final class StageSelectAccommodationProcessorTest extends TestCase
         $processor = new StageSelectAccommodationProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
-            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            new StageResponseMapper(
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createAlertRenderer(),
+            $this->createReaderLocale(),
+        ),
             new TripLocker(),
             new StageLocator(),
         );

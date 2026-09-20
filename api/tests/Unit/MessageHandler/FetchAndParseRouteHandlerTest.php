@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -23,6 +24,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class FetchAndParseRouteHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function aFailedFetchPublishesAClearValidationErrorWithoutRetrying(): void
     {
@@ -63,6 +66,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $messageBus,
+            $this->createAlertRenderer(),
         );
 
         // The handler must return normally (computation marked done), not re-throw.

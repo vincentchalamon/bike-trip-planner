@@ -21,10 +21,16 @@ use App\Enum\AlertType;
  */
 final readonly class CulturalPoiAlert extends Alert
 {
+    /**
+     * @param array<string, string|int|float|list<string>> $parameters
+     * @param array<string, string>                        $parameterFormats
+     */
     public function __construct(
         ?AlertCode $code,
         AlertType $type,
-        string $message,
+        string $messageKey,
+        array $parameters = [],
+        array $parameterFormats = [],
         ?float $lat = null,
         ?float $lon = null,
         #[ApiProperty(description: 'POI name as found in OpenStreetMap or DataTourisme.')]
@@ -63,6 +69,6 @@ final readonly class CulturalPoiAlert extends Alert
         #[ApiProperty(description: 'OpenStreetMap object id. Null when the entry does not come from OSM.')]
         public ?int $osmId = null,
     ) {
-        parent::__construct($code, $type, $message, $lat, $lon, $action);
+        parent::__construct($code, $type, $messageKey, $parameters, $parameterFormats, $lat, $lon, $action);
     }
 }

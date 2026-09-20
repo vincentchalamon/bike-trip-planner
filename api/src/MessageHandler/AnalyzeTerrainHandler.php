@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertRenderer;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -45,8 +46,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private StagePayloadMapper $stagePayloadMapper,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(AnalyzeTerrain $message): void
@@ -70,6 +72,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);
             $stageCount = \count($stages);
             $alertsData = [];
+            $renderedByStage = [];
 
             for ($i = 0; $i < $stageCount; ++$i) {
                 $stage = $stages[$i];
@@ -96,12 +99,16 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     $this->stagePayloadMapper->alertToPayload(...),
                     $this->analyzerRegistry->analyze($stage, $context),
                 );
+                // The wire copy is the same array read in the trip's language (ADR-069).
+                // Rendered per stage because the owning day number is what `%stage%` and
+                // the continuity pair resolve against, and it is deliberately not stored.
+                $renderedByStage[$stage->id] = $this->alertRenderer->render($alertsData[$stage->id], $stage->dayNumber, $locale);
             }
 
             $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
 
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
-                'alertsByStage' => $alertsData,
+                'alertsByStage' => $renderedByStage,
             ]);
         }, $generation);
     }

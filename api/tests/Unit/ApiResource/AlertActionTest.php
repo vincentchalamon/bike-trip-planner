@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ApiResource;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
@@ -14,17 +15,19 @@ use PHPUnit\Framework\TestCase;
 
 final class AlertActionTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function alertActionHasCorrectProperties(): void
     {
         $action = new AlertAction(
             kind: AlertActionKind::AUTO_FIX,
-            label: 'Split stage',
+            labelKey: 'Split stage',
             payload: ['splitAt' => 45.0],
         );
 
         $this->assertSame(AlertActionKind::AUTO_FIX, $action->kind);
-        $this->assertSame('Split stage', $action->label);
+        $this->assertSame('Split stage', $action->labelKey);
         $this->assertSame(['splitAt' => 45.0], $action->payload);
     }
 
@@ -33,7 +36,7 @@ final class AlertActionTest extends TestCase
     {
         $action = new AlertAction(
             kind: AlertActionKind::DISMISS,
-            label: 'Dismiss',
+            labelKey: 'Dismiss',
         );
 
         $this->assertSame([], $action->payload);
@@ -62,24 +65,24 @@ final class AlertActionTest extends TestCase
     {
         $action = new AlertAction(
             kind: AlertActionKind::NAVIGATE,
-            label: 'Zoom to location',
+            labelKey: 'Zoom to location',
             payload: ['lat' => 44.6, 'lon' => 4.5],
         );
 
         $alert = new Alert(
             code: AlertCode::STEEP_GRADIENT,
             type: AlertType::WARNING,
-            message: 'Steep gradient detected',
+            messageKey: 'alert.steep_gradient.warning',
             lat: 44.6,
             lon: 4.5,
             action: $action,
         );
 
         $this->assertSame(AlertType::WARNING, $alert->type);
-        $this->assertSame('Steep gradient detected', $alert->message);
+        $this->assertSame('Steep gradient detected', $this->renderMessage($alert));
         $this->assertNotNull($alert->action);
         $this->assertSame(AlertActionKind::NAVIGATE, $alert->action->kind);
-        $this->assertSame('Zoom to location', $alert->action->label);
+        $this->assertSame('Zoom to location', $alert->action->labelKey);
         $this->assertSame(['lat' => 44.6, 'lon' => 4.5], $alert->action->payload);
     }
 
@@ -89,7 +92,7 @@ final class AlertActionTest extends TestCase
         $alert = new Alert(
             code: AlertCode::SURFACE_ROUGH,
             type: AlertType::WARNING,
-            message: 'Route non goudronnée sur 3km',
+            messageKey: 'alert.surface.warning',
         );
 
         $this->assertNull($alert->action);
@@ -100,7 +103,7 @@ final class AlertActionTest extends TestCase
     {
         $action = new AlertAction(
             kind: AlertActionKind::AUTO_FIX,
-            label: 'Apply fix',
+            labelKey: 'Apply fix',
             payload: [
                 'stageIndex' => 0,
                 'adjustments' => ['splitAt' => 45.0, 'newTarget' => 60.0],

@@ -106,9 +106,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
             $waterPointRepository,
             $distributor,
             $haversine,
-            $this->createAlertTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

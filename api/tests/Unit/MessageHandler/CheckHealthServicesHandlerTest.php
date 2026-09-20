@@ -134,9 +134,8 @@ final class CheckHealthServicesHandlerTest extends TestCase
             $tripStateManager,
             $healthServiceRepository,
             $haversine,
-            $this->createAlertTranslator(),
-            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

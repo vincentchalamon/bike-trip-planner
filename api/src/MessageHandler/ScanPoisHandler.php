@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\ApiResource\Model\Alert;
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
@@ -32,7 +32,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
@@ -62,10 +61,10 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private ResupplyBuilder $resupplyBuilder,
         private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
+        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanPois $message): void
@@ -148,14 +147,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // is skipped — its POIs are still scanned and published (useful on the spot).
                 $alerts = [];
                 if (!$stage->isRestDay && $stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($fullPois)) {
-                    $alert = new Alert(
-                        code: AlertCode::RESUPPLY_NONE_ON_STAGE,
-                        type: AlertType::NUDGE,
-                        message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
-                        lat: $stage->startPoint->lat,
-                        lon: $stage->startPoint->lon,
-                    );
-                    $alerts[] = ['code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value, 'type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alerts[] = [
+                        'code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value,
+                        'type' => AlertType::NUDGE->value,
+                        'messageKey' => 'alert.lunch.nudge',
+                        'lat' => $stage->startPoint->lat,
+                        'lon' => $stage->startPoint->lon,
+                    ];
                 }
 
                 // Resupply timing warning: warn when every resupply POI on this stage is
@@ -163,19 +161,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
 
                 if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($fullPois, $stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
-                    $alert = new Alert(
-                        code: AlertCode::RESUPPLY_CLOSED_AT_PASSAGE,
-                        type: AlertType::WARNING,
-                        message: $this->translator->trans(
-                            'alert.resupply.timing_warning',
-                            ['%stage%' => $stage->dayNumber],
-                            'alerts',
-                            $locale,
-                        ),
-                        lat: $stage->startPoint->lat,
-                        lon: $stage->startPoint->lon,
-                    );
-                    $alerts[] = ['code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value, 'type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                    $alerts[] = [
+                        'code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value,
+                        'type' => AlertType::WARNING->value,
+                        'messageKey' => 'alert.resupply.timing_warning',
+                        'lat' => $stage->startPoint->lat,
+                        'lon' => $stage->startPoint->lon,
+                    ];
                 }
 
                 // Position food + water along the route (shared by the resupply
@@ -211,7 +203,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
                     'resupply' => $this->resupplyToArray($stage->resupply),
-                    'alerts' => $alerts,
+                    'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripStateManager->getLocale($tripId) ?? 'en'),
                 ]);
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);

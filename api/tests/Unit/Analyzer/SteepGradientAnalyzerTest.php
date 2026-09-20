@@ -44,7 +44,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
+        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator);
     }
 
     #[Test]
@@ -210,7 +210,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
+        $analyzer = new SteepGradientAnalyzer($distanceCalculator);
 
         $stage = $this->createStageWithGeometry([
             new Coordinate(45.0, 5.0, 200.0),
@@ -279,12 +279,7 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn($segmentMeters);
 
-        $analyzer = new SteepGradientAnalyzer(
-            $distanceCalculator,
-            $this->createAlertTranslator(),
-            $this->createDistanceFormatter(),
-            new DecimalFormatter(),
-        );
+        $analyzer = new SteepGradientAnalyzer($distanceCalculator);
 
         $geometry = [];
         for ($i = 0; $i <= 5; ++$i) {
@@ -293,7 +288,7 @@ final class SteepGradientAnalyzerTest extends TestCase
 
         $alerts = $analyzer->analyze($this->createStageWithGeometry($geometry), ['locale' => $locale]);
 
-        $this->assertSame($expected, $alerts[0]->message);
+        $this->assertSame($expected, $this->renderMessage($alerts[0]));
     }
 
     /**

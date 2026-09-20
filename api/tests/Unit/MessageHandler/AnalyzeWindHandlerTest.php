@@ -127,9 +127,8 @@ final class AnalyzeWindHandlerTest extends TestCase
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
-            $translator ?? $stubTranslator,
-            new DecimalFormatter(),
             $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
         );
     }
 

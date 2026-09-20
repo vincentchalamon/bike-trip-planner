@@ -25,7 +25,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new ElevationAlertAnalyzer($translator);
+        $this->analyzer = new ElevationAlertAnalyzer();
     }
 
     #[Test]
@@ -88,7 +88,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new ElevationAlertAnalyzer($translator);
+        $analyzer = new ElevationAlertAnalyzer();
         $stage = $this->createStage(1500.0);
 
         $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
@@ -110,7 +110,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new ElevationAlertAnalyzer($translator);
+        $analyzer = new ElevationAlertAnalyzer();
         $stage = $this->createStage(1500.0);
 
         $alerts = $analyzer->analyze($stage);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\SunsetAlertAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -20,6 +21,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SunsetAlertAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private TranslatorInterface $translator;
 
     private Stub&RiderTimeEstimatorInterface $riderTimeEstimator;
@@ -38,7 +41,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $this->analyzer = new SunsetAlertAnalyzer(
             $this->riderTimeEstimator,
-            $this->translator,
             $this->timezoneResolver(),
         );
     }
@@ -113,7 +115,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.sunset.warning', $alerts[0]->message);
+        $this->assertStringContainsString('alert.sunset.warning', $this->renderMessage($alerts[0]));
     }
 
     #[Test]
@@ -133,8 +135,8 @@ final class SunsetAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('21:57', $alerts[0]->message);
-        $this->assertStringContainsString('22:40', $alerts[0]->message);
+        $this->assertStringContainsString('21:57', $this->renderMessage($alerts[0]));
+        $this->assertStringContainsString('22:40', $this->renderMessage($alerts[0]));
     }
 
     #[Test]
@@ -173,7 +175,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
-        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $translator, $this->timezoneResolver());
+        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->timezoneResolver());
         $stage = $this->createStage(lat: 48.85, lon: 2.35);
 
         $alerts = $analyzer->analyze($stage, [
@@ -214,8 +216,8 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->assertCount(1, $june);
         $this->assertCount(1, $september);
         $this->assertGreaterThan(
-            $this->reportedSunset($september[0]->message),
-            $this->reportedSunset($june[0]->message),
+            $this->reportedSunset($this->renderMessage($september[0])),
+            $this->reportedSunset($this->renderMessage($june[0])),
         );
     }
 
@@ -235,7 +237,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         // estimateTimeAtDistance should NOT be called for polar conditions
         $riderTimeEstimator = $this->createMock(RiderTimeEstimatorInterface::class);
         $riderTimeEstimator->expects($this->never())->method('estimateTimeAtDistance');
-        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->translator, $this->timezoneResolver());
+        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->timezoneResolver());
 
         $alerts = $analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
