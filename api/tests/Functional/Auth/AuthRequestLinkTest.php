@@ -69,7 +69,7 @@ final class AuthRequestLinkTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $email = self::getMailerMessage();
         self::assertNotNull($email);
-        self::assertEmailHeaderSame($email, 'From', '"Bike Trip Planner" <noreply@phpunit.example>');
+        self::assertEmailHeaderSame($email, 'From', 'Bike Trip Planner <noreply@phpunit.example>');
     }
 
     #[Test]
