@@ -65,7 +65,7 @@ final class AlertActionTest extends TestCase
     {
         $action = new AlertAction(
             kind: AlertActionKind::NAVIGATE,
-            labelKey: 'Zoom to location',
+            labelKey: 'alert.steep_gradient.action',
             payload: ['lat' => 44.6, 'lon' => 4.5],
         );
 
@@ -79,10 +79,10 @@ final class AlertActionTest extends TestCase
         );
 
         $this->assertSame(AlertType::WARNING, $alert->type);
-        $this->assertSame('Steep gradient detected', $this->renderMessage($alert));
+        $this->assertSame('alert.steep_gradient.warning', $alert->messageKey);
         $this->assertNotNull($alert->action);
         $this->assertSame(AlertActionKind::NAVIGATE, $alert->action->kind);
-        $this->assertSame('Zoom to location', $alert->action->labelKey);
+        $this->assertSame('alert.steep_gradient.action', $alert->action->labelKey);
         $this->assertSame(['lat' => 44.6, 'lon' => 4.5], $alert->action->payload);
     }
 

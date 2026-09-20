@@ -164,5 +164,4 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 
         return [];
     }
-
 }

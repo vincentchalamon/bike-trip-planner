@@ -12,8 +12,6 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
-use App\Format\DecimalFormatter;
-use App\Format\DistanceFormatter;
 use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;

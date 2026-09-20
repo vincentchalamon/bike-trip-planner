@@ -121,7 +121,6 @@ final class CheckCalendarHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
         AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        ?TranslatorInterface $translator = null,
     ): CheckCalendarHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);

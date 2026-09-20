@@ -40,11 +40,11 @@ final class StageSelectAccommodationProcessorTest extends TestCase
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             new StageResponseMapper(
-            $this->createStub(ComputationTrackerInterface::class),
-            $this->createStub(TripRequestRepositoryInterface::class),
-            $this->createAlertRenderer(),
-            $this->createReaderLocale(),
-        ),
+                $this->createStub(ComputationTrackerInterface::class),
+                $this->createStub(TripRequestRepositoryInterface::class),
+                $this->createAlertRenderer(),
+                $this->createReaderLocale(),
+            ),
             new TripLocker(),
             new StageLocator(),
         );

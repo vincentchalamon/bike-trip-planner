@@ -10,7 +10,6 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Format\DecimalFormatter;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
@@ -65,7 +64,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, null, $this->createAlertTranslator());
+        $handler = $this->createHandler($tripStateManager, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -107,7 +106,6 @@ final class AnalyzeWindHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
         ?TripGenerationTrackerInterface $generationTracker = null,
-        ?TranslatorInterface $translator = null,
     ): AnalyzeWindHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);

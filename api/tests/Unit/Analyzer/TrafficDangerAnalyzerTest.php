@@ -464,7 +464,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
             ],
         ]);
 
-        $this->assertSame($expected, $this->renderMessage($alerts[0]));
+        $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
 
     private function createStage(): Stage

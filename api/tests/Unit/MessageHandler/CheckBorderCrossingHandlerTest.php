@@ -125,7 +125,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                         && 'nudge' === $alerts[0]['type']
                         && str_contains((string) $alerts[0]['message'], 'Belgium')
                         && 'navigate' === $alerts[0]['action']['kind']
-                        && 'alert.border_crossing.action' === $alerts[0]['action']['label']
+                        && 'alert.border_crossing.action' === $alerts[0]['action']['labelKey']
                         && $stages[0]->id === $alerts[0]['stageId'];
                 }),
             );

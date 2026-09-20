@@ -118,7 +118,7 @@ final class CheckFordsHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 'alert.ford.nudge' === $alerts[0]['message']
+                        && 'alert.ford.nudge' === $alerts[0]['messageKey']
                         && 'navigate' === $alerts[0]['action']['kind'];
                 }),
             );
@@ -143,7 +143,7 @@ final class CheckFordsHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && 'alert.ford.warning' === $alerts[0]['message'];
+                        && 'alert.ford.warning' === $alerts[0]['messageKey'];
                 }),
             );
 

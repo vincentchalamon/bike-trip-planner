@@ -98,7 +98,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
         $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
 
         $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('"%range%":0', $this->renderMessage($alerts[0]));
+        $this->assertSame(0, $alerts[0]->parameters['%range%']);
     }
 
     #[Test]
@@ -138,28 +138,6 @@ final class EbikeRangeAnalyzerTest extends TestCase
         $this->assertSame(48.001, $alerts[0]->action->payload['lat']);
         $this->assertSame(2.0, $alerts[0]->action->payload['lon']);
         $this->assertSame(80.0, $alerts[0]->action->payload['maxDistance']);
-    }
-
-    #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new EbikeRangeAnalyzer($this->chargingStationRepository(null));
-        $stage = $this->createStage(distance: 90.0, elevation: 0.0);
-
-        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true, 'locale' => 'fr']);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.ebike_range.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]

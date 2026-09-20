@@ -206,9 +206,10 @@ final class AnalyzeTerrainHandlerTest extends TestCase
                     self::assertArrayNotHasKey(0, $data['alertsByStage']);
                     $alerts = $data['alertsByStage'][$stage->id] ?? [];
 
+                    // The key travels to the database, the rendered sentence to the page.
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && 'Unpaved road detected' === $alerts[0]['message'];
+                        && 'alert.surface.warning' === $alerts[0]['messageKey'];
                 }),
             );
 
@@ -301,7 +302,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         // the open page (ADR-069).
         self::assertSame('navigate', $alerts[0]['action']['kind']);
         self::assertSame('alert.continuity.action', $alerts[0]['action']['labelKey']);
-        self::assertSame('View the gap on the map', $alerts[0]['action']['label']);
+        // Rendered in the trip's language, which this trip declares as French.
+        self::assertSame('Voir la discontinuité sur la carte', $alerts[0]['action']['label']);
         self::assertSame(['lat' => 48.1, 'lon' => 2.2], $alerts[0]['action']['payload']);
 
         $this->assertSame(48.3, $alerts[1]['lat']);

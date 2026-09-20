@@ -102,23 +102,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function warningMessageContainsTranslationKey(): void
-    {
-        $stage = $this->createStage(lat: 48.85, lon: 2.35);
-
-        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
-
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
-
-        $this->assertCount(1, $alerts);
-        $this->assertStringContainsString('alert.sunset.warning', $this->renderMessage($alerts[0]));
-    }
-
-    #[Test]
     public function displaysSunsetAndTwilightInLocalTime(): void
     {
         // Paris on 21 June 2026: sunset 21:57 CEST / 19:57 UTC, civil twilight end
@@ -159,35 +142,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        /** @var Stub&RiderTimeEstimatorInterface $riderTimeEstimator */
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
-
-        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->timezoneResolver());
-        $stage = $this->createStage(lat: 48.85, lon: 2.35);
-
-        $alerts = $analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'locale' => 'fr',
-        ]);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.sunset.warning', 'alerts', 'fr'], $translationKeys);
-    }
-
-    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, SunsetAlertAnalyzer::getPriority());
@@ -216,16 +170,9 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->assertCount(1, $june);
         $this->assertCount(1, $september);
         $this->assertGreaterThan(
-            $this->reportedSunset($this->renderMessage($september[0])),
-            $this->reportedSunset($this->renderMessage($june[0])),
+            $september[0]->parameters['%sunset%'],
+            $june[0]->parameters['%sunset%'],
         );
-    }
-
-    private function reportedSunset(string $message): string
-    {
-        self::assertSame(1, preg_match('/"%sunset%":"(\d{2}:\d{2})"/', $message, $matches), $message);
-
-        return $matches[1];
     }
 
     #[Test]

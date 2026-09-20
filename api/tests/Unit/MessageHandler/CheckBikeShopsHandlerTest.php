@@ -168,7 +168,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
                     // A missing service:bicycle:repair tag must not produce its own variant.
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains($message, 'No bike shop on stage 1')
+                        && str_contains($message, 'No bike shops detected on stage 1')
                         && 'navigate' === $action['kind']
                         && 48.5 === $payload['lat']
                         && 2.5 === $payload['lon'];
@@ -198,7 +198,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1')
+                        && str_contains((string) $alerts[0]['message'], 'No bike shops detected on stage 1')
                         && null === $alerts[0]['action'];
                 }),
             );

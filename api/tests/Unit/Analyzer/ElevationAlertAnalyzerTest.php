@@ -76,50 +76,6 @@ final class ElevationAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function usesLocaleFromContext(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new ElevationAlertAnalyzer();
-        $stage = $this->createStage(1500.0);
-
-        $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.elevation.warning', 'alerts', 'fr'], $translationKeys);
-    }
-
-    #[Test]
-    public function defaultsToEnglishLocale(): void
-    {
-        $translationKeys = [];
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
-                $translationKeys[] = [$id, $domain, $locale];
-
-                return $id;
-            }
-        );
-
-        $analyzer = new ElevationAlertAnalyzer();
-        $stage = $this->createStage(1500.0);
-
-        $alerts = $analyzer->analyze($stage);
-
-        $this->assertCount(1, $alerts);
-        $this->assertContains(['alert.elevation.warning', 'alerts', 'en'], $translationKeys);
-    }
-
-    #[Test]
     public function noAlertForRestDay(): void
     {
         $stage = new Stage(
