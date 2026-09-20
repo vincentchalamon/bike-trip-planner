@@ -31,7 +31,7 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface, MergesGroupWritesAtomically
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
@@ -577,7 +577,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
-    /** @param list<Alert> $alerts */
     /** @param list<array<string, mixed>> $alerts */
     public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
@@ -613,10 +612,11 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
      * Under READ COMMITTED a blocked UPDATE re-evaluates against the row version the winner
      * committed, which is exactly what makes that true.
      *
-     * Deliberately outside {@see LockingTripRequestRepository}'s per-trip lock: those handlers
-     * run in parallel by design, and serialising them behind a lock with a 3-second bounded
-     * acquire would turn a burst into failed computations. The lock exists for read-modify-write
-     * sequences; this is neither.
+     * Deliberately outside {@see LockingTripRequestRepository}'s per-trip lock — which is what
+     * {@see MergesGroupWritesAtomically} on this class buys: those handlers run in parallel by
+     * design, and serialising them behind a lock with a 3-second bounded acquire would turn a
+     * burst into failed computations. The lock exists for read-modify-write sequences; this is
+     * neither. An implementation that does not merge in place keeps the lock.
      *
      * Raw SQL because DQL cannot express a JSONB path write. Same reason and same shape as
      * {@see MagicLinkRepository::consume()}.

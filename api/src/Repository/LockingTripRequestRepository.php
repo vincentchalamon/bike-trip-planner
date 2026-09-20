@@ -87,29 +87,46 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
     }
 
     /**
-     * Straight through, with no lock — unlike every other write in this class.
+     * Locked only when the implementation underneath needs it.
      *
-     * The group writes are not read-modify-write sequences: each is a single UPDATE whose
-     * merge Postgres performs, so two producers finishing at once cannot lose each other's
-     * work (ADR-068). Taking the per-trip lock would instead serialise a dozen handlers that
-     * run in parallel by design, behind a 3-second bounded acquire that turns a burst into
-     * failed computations.
+     * A group write is not inherently a read-modify-write sequence: against Postgres it is a
+     * single `jsonb_set` UPDATE, so two producers finishing at once cannot lose each other's
+     * work and the lock would only serialise a dozen handlers that run in parallel by design
+     * (ADR-068). But that property belongs to the storage engine, not to this decorator —
+     * the transient implementation stores the collection as one blob and does read, modify
+     * and write it back. {@see MergesGroupWritesAtomically} is how an implementation says
+     * which of the two it is.
      *
      * @param list<array<string, mixed>> $alerts
      */
     public function updateStageAlertsForGroup(string $tripId, string $stageId, AlertGroup $group, array $alerts): void
     {
-        $this->decorated->updateStageAlertsForGroup($tripId, $stageId, $group, $alerts);
+        $this->forGroupWrite($tripId, function () use ($tripId, $stageId, $group, $alerts): void {
+            $this->decorated->updateStageAlertsForGroup($tripId, $stageId, $group, $alerts);
+        });
     }
 
     /**
      * @param array<string, list<array<string, mixed>>> $alertsByStageId
      *
-     * @see self::updateStageAlertsForGroup() for why this takes no lock
+     * @see self::updateStageAlertsForGroup() for when this takes the lock
      */
     public function updateTripAlertsForGroup(string $tripId, AlertGroup $group, array $alertsByStageId): void
     {
-        $this->decorated->updateTripAlertsForGroup($tripId, $group, $alertsByStageId);
+        $this->forGroupWrite($tripId, function () use ($tripId, $group, $alertsByStageId): void {
+            $this->decorated->updateTripAlertsForGroup($tripId, $group, $alertsByStageId);
+        });
+    }
+
+    private function forGroupWrite(string $tripId, \Closure $write): void
+    {
+        if ($this->decorated instanceof MergesGroupWritesAtomically) {
+            $write();
+
+            return;
+        }
+
+        $this->withStagesLock($tripId, $write);
     }
 
     /** @param list<Event> $events */

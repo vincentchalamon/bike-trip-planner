@@ -65,6 +65,13 @@ read-modify-write sequences; these are not. Routing twelve parallel handlers thr
 with a three-second bounded acquire would turn a burst of enrichments into failed
 computations.
 
+But the property belongs to the **storage engine**, not to the decorator, which wraps the
+interface precisely so it need not know what it holds. The transient implementation stores
+the collection as one blob and *does* read, modify and write it back. So the marker
+`MergesGroupWritesAtomically` is what an implementation uses to claim the exemption, and the
+decorator keeps the lock for everyone else. Hoisting a Postgres-specific guarantee into
+shared code is how the recette #649 lost update would have come back.
+
 One wrinkle worth recording: an empty PHP array encodes as `[]`, not `{}`, so a stage that has
 never been enriched holds a JSON *array*, and `jsonb_set` refuses a text path against one. The
 statement normalises with `jsonb_typeof` before merging.

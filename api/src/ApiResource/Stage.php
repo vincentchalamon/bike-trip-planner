@@ -314,16 +314,16 @@ final class Stage
     /**
      * Replaces one producer's alerts, leaving the others untouched.
      *
+     * An empty result keeps the key, it does not remove it: an absent group means the
+     * producer has never run for this stage, an empty one that it ran and found nothing
+     * (ADR-068). Dropping the key here would make the transient implementation report
+     * "never computed" where the Doctrine one — which always writes `{computedAt, alerts}`
+     * — reports "computed, nothing found".
+     *
      * @param list<array<string, mixed>> $alerts
      */
     public function setAlertsForGroup(AlertGroup $group, array $alerts): void
     {
-        if ([] === $alerts) {
-            unset($this->alertsByGroup[$group->value]);
-
-            return;
-        }
-
         $this->alertsByGroup[$group->value] = $alerts;
     }
 

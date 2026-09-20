@@ -334,7 +334,13 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         ]);
         $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, []);
 
-        self::assertSame([], ($this->repository->getStages($tripId) ?? [])[0]->alerts);
+        $stage = ($this->repository->getStages($tripId) ?? [])[0];
+        self::assertSame([], $stage->alerts);
+        // The key stays: "ran and found nothing" is not "never ran", and nothing else in the
+        // model carries that distinction. Asserting only on the flat view would let an
+        // implementation drop the key and still look right.
+        self::assertArrayHasKey(AlertGroup::BIKE_SHOP->value, $stage->alertsByGroup);
+        self::assertArrayNotHasKey(AlertGroup::FERRY->value, $stage->alertsByGroup);
     }
 
     /**
