@@ -38,12 +38,9 @@ export function stageDataFromDetail(s: ApiStage): StageData {
     startLabel: s.startLabel ?? null,
     endLabel: s.endLabel ?? null,
     weather: (s.weather as StageData['weather']) ?? null,
-    // Tag persisted alerts with their producing group so a later terrain_alerts
-    // event replaces rather than duplicates them (mirrors the web hydrate, #794).
-    alerts: ((s.alerts as StageData['alerts']) ?? []).map((a) => ({
-      ...a,
-      _group: 'terrain',
-    })),
+    // Every producer persists its own alerts now, each carrying its group (ADR-068) —
+    // assuming 'terrain' here would have wiped twelve of them on the first event.
+    alerts: (s.alerts as StageData['alerts']) ?? [],
     resupply: (s.resupply as StageData['resupply']) ?? EMPTY_RESUPPLY,
     accommodations: (s.accommodations as StageData['accommodations']) ?? [],
     selectedAccommodation:

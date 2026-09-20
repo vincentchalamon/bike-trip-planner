@@ -237,7 +237,7 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
       },
     });
     expect(next.stages[0]!.resupply.foodAtLunch).toHaveLength(1);
-    expect((next.stages[0]!.alerts[0] as StageAlert)._group).toBe("pois");
+    expect((next.stages[0]!.alerts[0] as StageAlert).group).toBe("pois");
   });
 
   it("supply_timeline replaces the stage markers", () => {
@@ -333,7 +333,7 @@ describe("reduceMercureEvent — alert groups", () => {
     });
     expect(next.stages[0]!.alerts).toHaveLength(0);
     expect(next.stages[1]!.alerts).toHaveLength(1);
-    expect((next.stages[1]!.alerts[0] as StageAlert)._group).toBe("terrain");
+    expect((next.stages[1]!.alerts[0] as StageAlert).group).toBe("terrain");
   });
 
   it("alert groups coexist: a later group never blanks another analyzer's alerts", () => {
@@ -362,7 +362,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const sources = state.stages[0]!.alerts.map(
-      (a) => (a as StageAlert)._group,
+      (a) => (a as StageAlert).group,
     ).sort();
     expect(sources).toEqual(["terrain", "wind"]);
   });
@@ -373,7 +373,7 @@ describe("reduceMercureEvent — alert groups", () => {
       message: "Sunday",
       lat: null,
       lon: null,
-      _group: "calendar",
+      group: "calendar",
     };
     const state = baseState({
       stages: [stage(), stage({ alerts: [{ ...stale }] })],
@@ -427,7 +427,7 @@ describe("reduceMercureEvent — alert groups", () => {
   });
 
   // Field-mapping coverage for the remaining groups: each must land on the
-  // right stage, carry its `_group` tag, and preserve the mapped message /
+  // right stage, carry its `group` tag, and preserve the mapped message /
   // source / action — a swapped mapping would otherwise only be caught by the
   // no-fallthrough smoke test, which stays green on a wrong field.
   it("bike_shop_alerts tags the stage alert with the bike_shop group", () => {
@@ -446,7 +446,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("bike_shop");
+    expect(a.group).toBe("bike_shop");
     expect(a.message).toBe("Vélociste");
   });
 
@@ -467,7 +467,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("water_point");
+    expect(a.group).toBe("water_point");
     expect(a.source).toBe("water_point");
   });
 
@@ -487,7 +487,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("health_service");
+    expect(a.group).toBe("health_service");
     expect(a.message).toBe("Pharmacie");
   });
 
@@ -514,7 +514,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("cultural_poi");
+    expect(a.group).toBe("cultural_poi");
     expect(a.source).toBe("cultural_poi");
     expect(a.poiName).toBe("Louvre");
   });
@@ -540,7 +540,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("railway_station");
+    expect(a.group).toBe("railway_station");
     expect(a.source).toBe("railway_station");
     expect(a.action?.payload).toEqual({ lat: 1, lon: 2 });
   });
@@ -568,7 +568,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("border_crossing");
+    expect(a.group).toBe("border_crossing");
     expect(a.source).toBe("border_crossing");
   });
 
@@ -595,7 +595,7 @@ describe("reduceMercureEvent — alert groups", () => {
       },
     });
     const a = next.stages[0]!.alerts[0] as StageAlert;
-    expect(a._group).toBe("ford");
+    expect(a.group).toBe("ford");
     expect(a.source).toBe("ford");
   });
 });
@@ -607,14 +607,14 @@ describe("reduceMercureEvent — structural / terminal events", () => {
       message: "museum",
       lat: null,
       lon: null,
-      _group: "cultural_poi",
+      group: "cultural_poi",
     };
     const terrain: StageAlert = {
       type: "warning",
       message: "gravel",
       lat: null,
       lon: null,
-      _group: "terrain",
+      group: "terrain",
     };
     const state = baseState({
       stages: [stage({ alerts: [{ ...cultural }, { ...terrain }] })],

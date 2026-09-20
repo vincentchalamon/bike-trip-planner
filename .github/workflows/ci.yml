@@ -892,6 +892,11 @@ jobs:
         run: npm ci
       - name: Run TypeScript Check
         run: npm run test:ts --workspace pwa
+      # `core` is consumed through a workspace symlink, so tsc treats it as a dependency and
+      # never checks its sources: a blatant type error in the package both clients share went
+      # unnoticed. It has always had a usable tsconfig; this just runs it (ADR-068).
+      - name: Run TypeScript Check (core)
+        run: npm run typecheck --workspace core
 
   unit-tests:
     name: Unit Tests (Vitest)

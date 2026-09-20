@@ -123,12 +123,9 @@ function TripLoader({ tripId }: { tripId: string }) {
           // Tag persisted alerts with their producing group so a later
           // `terrain_alerts` Mercure event (e.g. after selecting an
           // accommodation) REPLACES rather than duplicates them. Since #794,
-          // AnalyzeTerrain is the sole writer of the persisted alerts column,
-          // so that group is always "terrain" (recette #649 round 7, #2).
-          alerts: ((s.alerts as StageData["alerts"]) ?? []).map((a) => ({
-            ...a,
-            _group: "terrain",
-          })),
+          // Every producer persists its own alerts now, each carrying its group
+          // (ADR-068) — assuming "terrain" here would have wiped twelve of them.
+          alerts: (s.alerts as StageData["alerts"]) ?? [],
           resupply: (s.resupply as StageData["resupply"]) ?? EMPTY_RESUPPLY,
           accommodations:
             (s.accommodations as StageData["accommodations"]) ?? [],
