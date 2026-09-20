@@ -7,6 +7,7 @@ namespace App\Tests\Contract;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
+use App\Enum\AlertGroup;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -218,6 +219,144 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
 
         $this->repository->updateStageLabels($tripId, $stages[0]->id, 'Lyon', null);
         self::assertSame($afterWrite, $this->repository->getVersion($tripId));
+    }
+
+    /**
+     * Two producers writing different groups on the same stage must both survive.
+     *
+     * This is the property that lets thirteen enrichments run in parallel without a lock:
+     * each replaces its own key and leaves the others alone (ADR-068). A read-modify-write of
+     * the whole column would keep only the last writer.
+     */
+    #[Test]
+    public function oneGroupWriteLeavesTheOtherGroupsAlone(): void
+    {
+        $tripId = $this->seedTrip();
+        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FERRY, [
+            ['code' => 'ferry_crossing', 'type' => 'warning', 'message' => 'Ferry'],
+        ]);
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CALENDAR, [
+            ['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday'],
+        ]);
+
+        $groups = array_column(($this->repository->getStages($tripId) ?? [])[0]->alerts, 'group');
+        sort($groups);
+        self::assertSame(['calendar', 'ferry'], $groups);
+    }
+
+    /** Re-running one producer replaces its own alerts rather than appending to them. */
+    #[Test]
+    public function reRunningAProducerReplacesItsOwnGroup(): void
+    {
+        $tripId = $this->seedTrip();
+        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
+            ['code' => 'ford_crossing_wet', 'type' => 'warning', 'message' => 'Wet ford'],
+        ]);
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
+            ['code' => 'ford_crossing_dry', 'type' => 'nudge', 'message' => 'Dry ford'],
+        ]);
+
+        $alerts = ($this->repository->getStages($tripId) ?? [])[0]->alerts;
+        self::assertCount(1, $alerts);
+        self::assertSame('ford_crossing_dry', $alerts[0]['code']);
+    }
+
+    /**
+     * A trip-wide replacement clears the group on the stages the new set does not mention.
+     *
+     * The calendar check recomputes every stage at once, so a stage that dropped out has to
+     * lose its nudge — the "Sunday bug" the client mirrors in `reconciliation.ts`. A loop over
+     * the new set alone cannot express "and clear everyone else".
+     */
+    #[Test]
+    public function aTripWideReplacementClearsTheStagesItDoesNotMention(): void
+    {
+        $tripId = $this->seedTrip();
+        $ids = $this->idsOf($tripId);
+
+        $this->repository->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
+            $ids[0] => [['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday']],
+            $ids[1] => [['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday']],
+        ]);
+        $this->repository->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
+            $ids[1] => [['code' => 'calendar_public_holiday', 'type' => 'nudge', 'message' => 'Holiday']],
+        ]);
+
+        $after = $this->repository->getStages($tripId) ?? [];
+        self::assertSame([], $after[0]->alerts, 'A stage outside the new set keeps no stale nudge.');
+        self::assertCount(1, $after[1]->alerts);
+        self::assertSame('calendar_public_holiday', $after[1]->alerts[0]['code']);
+    }
+
+    /**
+     * Alerts come back exactly as the producer wrote them.
+     *
+     * These fields are the ones {@see \App\ApiResource\Model\Alert} does not model, and that
+     * normalising used to drop on the way through.
+     */
+    #[Test]
+    public function producerSpecificFieldsSurviveTheRoundTrip(): void
+    {
+        $tripId = $this->seedTrip();
+        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CULTURAL_POI, [[
+            'code' => 'cultural_poi_suggestion',
+            'type' => 'nudge',
+            'message' => 'Abbey',
+            'poiName' => 'Abbaye de Fontenay',
+            'openingHours' => 'Mo-Su 10:00-18:00',
+            'estimatedPrice' => 12.5,
+            'wikidataId' => 'Q1145',
+        ]]);
+
+        $alert = ($this->repository->getStages($tripId) ?? [])[0]->alerts[0];
+        self::assertSame('Abbaye de Fontenay', $alert['poiName']);
+        self::assertSame('Mo-Su 10:00-18:00', $alert['openingHours']);
+        self::assertSame(12.5, $alert['estimatedPrice']);
+        self::assertSame('Q1145', $alert['wikidataId']);
+        self::assertSame('cultural_poi', $alert['group']);
+    }
+
+    /** An empty result clears the group: found nothing is a result, not an absence of one. */
+    #[Test]
+    public function anEmptyResultClearsTheGroup(): void
+    {
+        $tripId = $this->seedTrip();
+        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, [
+            ['code' => 'bike_shop_none_nearby', 'type' => 'nudge', 'message' => 'No shop'],
+        ]);
+        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, []);
+
+        self::assertSame([], ($this->repository->getStages($tripId) ?? [])[0]->alerts);
+    }
+
+    /**
+     * A structural edit must not carry an enrichment snapshot back over a producer's write.
+     *
+     * `storeStages()` writes the structure; the enrichment columns belong to the targeted
+     * writers. This is the partition lot A deferred and ADR-068 introduces.
+     */
+    #[Test]
+    public function storingTheCollectionDoesNotTouchTheAlerts(): void
+    {
+        $tripId = $this->seedTrip();
+        $stages = $this->repository->getStages($tripId) ?? [];
+
+        $this->repository->updateStageAlertsForGroup($tripId, $stages[0]->id, AlertGroup::FERRY, [
+            ['code' => 'ferry_crossing', 'type' => 'warning', 'message' => 'Ferry'],
+        ]);
+
+        // A stale snapshot on purpose: these DTOs were read before the alert was written.
+        $this->repository->storeStages($tripId, $stages);
+
+        self::assertCount(1, ($this->repository->getStages($tripId) ?? [])[0]->alerts);
     }
 
     #[Test]

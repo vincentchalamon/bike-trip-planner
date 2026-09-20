@@ -90,9 +90,44 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     /** @param list<Stage> $stages */
     public function storeStages(string $tripId, array $stages): void
     {
-        $this->set($this->stagesKey($tripId), $stages);
+        $this->set($this->stagesKey($tripId), $this->keepingEnrichment($tripId, $stages));
         // Any write of the collection is a structural change (see TripRequest::$version).
         $this->bumpVersion($tripId);
+    }
+
+    /**
+     * Carries the enrichment columns over from what is stored, instead of taking them from
+     * the incoming DTOs.
+     *
+     * The Doctrine implementation gets this for free — `applyDtoToEntity()` simply never
+     * touches those columns (ADR-068). Here the whole collection *is* the storage unit, so
+     * the partition has to be performed by hand, or a structural edit would replay whatever
+     * snapshot the processor read over a producer's write. The contract suite is what caught
+     * the two implementations disagreeing.
+     *
+     * @param list<Stage> $stages
+     *
+     * @return list<Stage>
+     */
+    private function keepingEnrichment(string $tripId, array $stages): array
+    {
+        $stored = [];
+        foreach ($this->getStages($tripId) ?? [] as $existing) {
+            $stored[$existing->id] = $existing;
+        }
+
+        foreach ($stages as $stage) {
+            $existing = $stored[$stage->id] ?? null;
+            if (!$existing instanceof Stage) {
+                continue;
+            }
+
+            $stage->alertsByGroup = $existing->alertsByGroup;
+            $stage->events = $existing->events;
+            $stage->supplyTimeline = $existing->supplyTimeline;
+        }
+
+        return $stages;
     }
 
     /**

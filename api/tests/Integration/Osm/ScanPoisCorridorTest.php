@@ -48,6 +48,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class ScanPoisCorridorTest extends KernelTestCase
 {
     use ResetDatabase;
+
     /** @var list<array<string, mixed>> */
     private array $writtenAlerts = [];
 

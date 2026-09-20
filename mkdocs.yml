@@ -146,6 +146,7 @@ nav:
       - adr/adr-064-mcp-server-as-third-api-client.md
       - adr/adr-066-stable-stage-identity.md
       - adr/adr-067-optimistic-concurrency-on-trip-edits.md
+      - adr/adr-068-enrichment-durability-by-group.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:

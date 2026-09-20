@@ -336,6 +336,61 @@ describe("reduceMercureEvent — alert groups", () => {
     expect((next.stages[1]!.alerts[0] as StageAlert).group).toBe("terrain");
   });
 
+  // Regression (ADR-068): the hydrate used to stamp `terrain` on every persisted alert,
+  // because terrain was the only group ever written. With thirteen groups persisted, that
+  // guess made the first terrain_alerts event wipe the twelve others — which would have
+  // cancelled the whole point of persisting them.
+  it("a terrain_alerts event leaves the other hydrated groups alone", () => {
+    const hydrated = stage({
+      dayNumber: 1,
+      alerts: [
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "calendar",
+          type: "nudge",
+          message: "Sunday",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "terrain",
+          type: "warning",
+          message: "old gravel",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "terrain_alerts",
+      data: {
+        alertsByStage: {
+          "stage-1": [
+            { type: "warning", message: "fresh gravel", lat: null, lon: null },
+          ],
+        },
+      },
+    });
+
+    const groups = (next.stages[0]!.alerts as StageAlert[])
+      .map((a) => a.group)
+      .sort();
+    expect(groups).toEqual(["calendar", "ferry", "terrain"]);
+    // Terrain was replaced, not appended to.
+    const terrain = (next.stages[0]!.alerts as StageAlert[]).filter(
+      (a) => a.group === "terrain",
+    );
+    expect(terrain).toHaveLength(1);
+    expect(terrain[0]!.message).toBe("fresh gravel");
+  });
+
   it("alert groups coexist: a later group never blanks another analyzer's alerts", () => {
     let state = baseState({ stages: [stage()] });
     state = reduceMercureEvent(state, {
