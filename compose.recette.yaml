@@ -34,6 +34,9 @@ x-recette-env: &recette-env
   # Non-default token-encryption key so the SEC-003 fail-closed boot guard passes
   # locally (encrypts refresh tokens at rest).
   REFRESH_TOKEN_ENC_KEY: recette-refresh-token-enc-key
+  # Non-default app secret so the fail-closed boot guard passes locally (signs
+  # CSRF tokens, signed URIs and remember-me cookies).
+  APP_SECRET: recette-app-secret
   # Non-empty secret so AccessRequestHmacService boots (ADR-029): the early-access
   # confirmation email is signed with it. Prod stays fail-closed on the empty default.
   ACCESS_REQUEST_HMAC_SECRET: recette-access-request-hmac-secret

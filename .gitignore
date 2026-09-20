@@ -2,7 +2,9 @@
 .claude/settings.local.json
 .claude/worktrees/
 .mcp.json
-/.env
+# /.env is versioned (dev defaults, no secrets) and read automatically by docker
+# compose. Local overrides go in the shell, or here.
+/.env.local
 openapi.*
 .playwright-mcp/
 

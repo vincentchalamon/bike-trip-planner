@@ -6,10 +6,28 @@ Bike Trip Planner is deployed on Oracle Cloud Always Free (ARM A1). The VM is pr
 
 1. **`build-images`** — Builds the `php`, `pwa` and `provisioner` Docker images for `linux/arm64` (matrix) on a native `ubuntu-24.04-arm` runner, then pushes them to `ghcr.io/vincentchalamon/bike-trip-planner-<service>:<sha>` (plus a `:<tag>` mirror for `v*` releases, or a `:pr-<n>` tag for same-repo PR preview builds). Images are always referenced by SHA in production — no mutable `:latest` tag.
 2. **`upload-sourcemaps`** — Installs the PWA and runs `next build` with all `SENTRY_*` vars present, so `withSentryConfig` creates the GlitchTip release matching `<sha>` and uploads the source maps during the build itself (then deletes the `.map` files). No separate `@sentry/cli` upload step. Skipped automatically when GlitchTip secrets are absent. The image build deliberately omits `SENTRY_AUTH_TOKEN`, so the deployed bundle never ships source maps.
-3. **`deploy-prod`** (tag only) — SSHes to the VM (`SSH_HOST`/`SSH_USER`/`SSH_KEY`), checks out the tag and runs `docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always`, pulling the images this run just pushed by tag. The `deploy/prod/compose.yaml` overlay drops the base's published `80`/`443` (`ports: !reset []`), adds the Traefik router labels and joins the `edge` + `btp-shared` networks. The job **no-ops when the SSH secrets are absent** (forks, and before the Ansible/SSH infra exists), the same transition-safety contract the old Coolify webhook had.
+3. **`deploy-prod`** (tag only) — SSHes to the VM (`SSH_HOST`/`SSH_USER`/`SSH_KEY`), checks out the tag and runs `docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always`, pulling the images this run just pushed by tag. The env file is rendered by Ansible **outside** the checkout on purpose: the repo versions a `.env` holding dev defaults, which the forced checkout above would otherwise restore over the prod values. The `deploy/prod/compose.yaml` overlay drops the base's published `80`/`443` (`ports: !reset []`), adds the Traefik router labels and joins the `edge` + `btp-shared` networks. The job **no-ops when the SSH secrets are absent** (forks, and before the Ansible/SSH infra exists), the same transition-safety contract the old Coolify webhook had.
 4. **`smoke-test`** — Waits 60 s, then probes `${PROD_HEALTH_URL}/api/healthz` (3 retries, 90 s budget) and `/api/health` (asserts top-level `status == "ok"`, trusting the controller's own readiness verdict rather than per-dependency entries). On failure, raises a `repository_dispatch` event of type `uptime_alert` which is picked up by `.github/workflows/incident-create.yml` (P1.3) to open a P1 incident issue.
 
 Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-and-rollback-strategy.md)). GHCR retains images by SHA and by tag (the `build-images` job prunes to the 10 most recent versions per image), so any recent release is a rollback target — rollback = redeploy the previous tag (below).
+
+## Environment variables
+
+One variable is mandatory, the other two have working defaults.
+
+| Variable | Required | Default | Role |
+| --- | --- | --- | --- |
+| `DOMAIN` | yes (prod) | `localhost` | The DNS zone. `SERVER_NAME`, `FRONTEND_URL`, `TRUSTED_HOSTS`, `CORS_ALLOW_ORIGIN`, `DEFAULT_URI`, `MERCURE_PUBLIC_URL`, the Traefik router and the `pr-<n>.${DOMAIN}` previews all derive from it. |
+| `MAILER_SENDER_EMAIL` | no | `noreply@bike-trip-planner.com` | Sender of every transactional email (`framework.mailer.headers.from`). |
+| `CONTACT_EMAIL` | no | `contact@bike-trip-planner.com` | GDPR/legal contact. Compose maps it onto `NEXT_PUBLIC_CONTACT_EMAIL`; the APK build maps it onto `EXPO_PUBLIC_CONTACT_EMAIL`. |
+
+The **zone**, not the served host, is the root variable: Compose can concatenate (`https://www.${DOMAIN}`) but cannot split, and both the previews (`pr-<n>.${DOMAIN}`) and the Cloudflare wildcard (`*.${DOMAIN}`) need the zone. The `www.` prefix lives in `deploy/prod/compose.yaml`.
+
+The two addresses are deliberately *not* derived from `DOMAIN`: in dev that would yield `noreply@localhost` (no TLD), and in production the sending domain may legitimately differ from the served one (SPF/DKIM/DMARC).
+
+**Where they come from.** The repo versions a root `.env` holding the dev defaults, auto-loaded by Compose; override any of them by exporting the variable in your shell, which wins over the file. Production reads a separate file rendered by Ansible at `/etc/bike-trip-planner/app.env` and passed with `--env-file`, so the repo's `.env` is never read there. Per-PR previews use their own `preview.env`, likewise outside any checkout.
+
+`APP_SECRET`, `MERCURE_JWT_KEY`, `REFRESH_TOKEN_ENC_KEY` and `ACCESS_REQUEST_HMAC_SECRET` are **absent** from the versioned `.env` on purpose — the prod entrypoint refuses to boot on an unset or default value.
 
 ## Required GitHub Actions secrets
 
@@ -17,7 +35,7 @@ Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-
 | --- | --- | --- |
 | `GITHUB_TOKEN` | always (native) | Push images to GHCR; no manual setup needed. |
 | `SENTRY_AUTH_TOKEN` | source-map upload | GlitchTip auth token with `project:releases` scope. |
-| `SENTRY_URL` | source-map upload | Base URL of the self-hosted GlitchTip instance (e.g. `https://errors.biketrip.mooo.com/`). |
+| `SENTRY_URL` | source-map upload | Base URL of the self-hosted GlitchTip instance (e.g. `https://errors.bike-trip-planner.com/`). |
 | `SENTRY_ORG` | source-map upload | GlitchTip organisation slug. |
 | `SENTRY_PROJECT` | source-map upload | GlitchTip PWA project slug. |
 | `NEXT_PUBLIC_SENTRY_DSN` | image build + source-map upload | Sentry/GlitchTip client DSN inlined into the PWA bundle at build time. Without it, `Sentry.init` runs with an undefined DSN and client-side error capture is silently disabled in production. |
@@ -25,7 +43,8 @@ Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-
 | `SSH_USER` | prod deploy | SSH user with rights to the repo checkout and Docker on the VM. |
 | `SSH_KEY` | prod deploy | Private SSH key for the deploy user; its public key is provisioned into `authorized_keys` by Ansible. |
 | `SSH_KNOWN_HOSTS` | prod deploy (recommended) | Pinned VM host key; when set it is trusted instead of a live `ssh-keyscan` (TOFU), closing the first-contact MITM window. Populate once the Ansible/SSH infra is in place. |
-| `PROD_HEALTH_URL` | prod deploy | Base URL the smoke-test probes (`https://www.${DOMAIN}`); defaults to the current host until cutover. |
+| `PROD_HEALTH_URL` | prod deploy (optional) | Base URL the smoke-test probes. Defaults to `https://www.bike-trip-planner.com`; set it only to probe another host. |
+| `PROD_ENV_FILE` | prod deploy (optional) | Path to the Ansible-rendered prod env file on the VM. Defaults to `/etc/bike-trip-planner/app.env`. |
 | `INCIDENT_DISPATCH_TOKEN` | smoke-test failure | Fine-grained PAT (`Contents: write`, `Issues: write`) used to trigger `repository_dispatch` (see P1.3 / ADR-031). Rotate every 90 days. |
 
 When the Sentry/GlitchTip secrets are missing, the `upload-sourcemaps` job is skipped cleanly rather than failing. The `deploy-prod` job behaves the same way: missing `SSH_HOST`/`SSH_USER`/`SSH_KEY` means the deploy is a no-op (useful for forks or before the Ansible/SSH infra is provisioned) — a tag push still builds and pushes the images.

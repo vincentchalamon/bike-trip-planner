@@ -1082,7 +1082,7 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 - **Tests E2E :** `tests/recette/sprint-38.spec.ts` (nouveaux scénarios perf + résilience)
 - **Checklist manuelle :**
   - [ ] `make phpbench` exécute les 7 benchs, baselines stockées dans `docs/perf/baselines/<release>/`
-  - [ ] `make perf-load TARGET=https://biketrip.mooo.com` exécute les 5 scénarios k6 cold + hot, baselines stockées
+  - [ ] `make perf-load TARGET=https://www.bike-trip-planner.com` exécute les 5 scénarios k6 cold + hot, baselines stockées
   - [ ] Workflow CI `perf.yml` exécute Lighthouse desktop + mobile à chaque PR avec assertions
   - [ ] Page `/eco` publique affiche l'empreinte carbone mesurée, lien depuis footer
   - [ ] Sentry/GlitchTip Performance UI montre les transactions custom (Valhalla, TripDetail, Mercure, etc.)
@@ -1130,7 +1130,7 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
   - [ ] `make backup-now` produit un dump chiffré localement + uploads OCI + B2.
   - [ ] `rclone ls b2:btp-backups` montre le dump du jour.
   - [ ] OCI lifecycle retention et B2 Object Lock vérifiés (tentative de delete via UI doit échouer).
-  - [ ] `curl https://biketrip.mooo.com/internal/backup/status` retourne JSON avec `age_seconds < 90000`.
+  - [ ] `curl https://www.bike-trip-planner.com/internal/backup/status` retourne JSON avec `age_seconds < 90000`.
   - [ ] Uptime Kuma monitor "backup-freshness" actif et green.
   - [ ] Drill manuel complet : suivre `docs/runbooks/disaster-recovery.md` § "Procédure générique" sur DB ephemeral → `/api/health` green.
   - [ ] Test restauration sélective : `restore-table.sh trip "id='<uuid>'"` réinjecte sans casser FK.

@@ -28,10 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
-      # Inlined into the JS bundle at build time; a non-dev build fails closed
-      # without it (see mobile-release-build.md). Point vars.MOBILE_API_URL at the
-      # API host reachable from the phone once it exists.
-      EXPO_PUBLIC_API_URL: ${{ vars.MOBILE_API_URL || 'https://biketrip.mooo.com' }}
+      # Inlined into the JS bundle at build time; the app fails closed without
+      # them (see mobile-release-build.md). Defaults are the production values —
+      # override with the repo variables only to build against another host.
+      EXPO_PUBLIC_API_URL: ${{ vars.MOBILE_API_URL || 'https://www.bike-trip-planner.com' }}
+      EXPO_PUBLIC_WEB_URL: ${{ vars.MOBILE_WEB_URL || 'https://www.bike-trip-planner.com' }}
+      EXPO_PUBLIC_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL || 'contact@bike-trip-planner.com' }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@v7

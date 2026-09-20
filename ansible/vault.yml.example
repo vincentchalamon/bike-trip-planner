@@ -31,6 +31,7 @@ vault_jwt_public_key: |
 vault_jwt_passphrase: "REPLACE_ME"
 
 # --- Mercure / tokens / HMAC -------------------------------------------------
+vault_app_secret: "REPLACE_ME"                    # APP_SECRET (CSRF, signed URIs)
 vault_mercure_jwt_key: "REPLACE_ME"               # MERCURE_JWT_KEY (HS256)
 vault_refresh_token_enc_key: "REPLACE_ME"         # REFRESH_TOKEN_ENC_KEY (SEC-003)
 vault_access_request_hmac_secret: "REPLACE_ME"    # ACCESS_REQUEST_HMAC_SECRET (SEC-004)

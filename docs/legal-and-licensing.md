@@ -35,7 +35,8 @@ How each source is used and cached: [External data sources](external-data-source
 
 Authoritative text lives on the in-app `/privacy` page. Key points, as implemented:
 
-- **Controller / contact:** the project publisher (Vincent Chalamon); `contact@bike-trip-planner.app`.
+- **Controller / contact:** the project publisher (Vincent Chalamon); the address configured
+  via `CONTACT_EMAIL` (default `contact@bike-trip-planner.com`).
 - **Legal bases:** email processing for magic-link sign-in and account management
   (Art. 6(1)(b) GDPR); anonymous audience measurement on legitimate interest (Art. 6(1)(f)).
 - **Data stored:** account email; trip configuration (title, dates, rider profile, stages,
@@ -54,6 +55,6 @@ Authoritative text lives on the in-app `/privacy` page. Key points, as implement
   [ADR-034](adr/adr-034-usage-analytics-plausible.md).
 - **Error tracking:** self-hosted **GlitchTip** (Sentry-compatible). See [ADR-031](adr/adr-031-error-tracking-strategy.md).
 
-> The contact address (`contact@bike-trip-planner.app`) and the "host details on request" line
-> are placeholders in the current build; replace them with real, monitored values before a
-> public production launch.
+> The contact address comes from the root-level `CONTACT_EMAIL` (mapped onto
+> `NEXT_PUBLIC_CONTACT_EMAIL` / `EXPO_PUBLIC_CONTACT_EMAIL`). Point it at a real, monitored
+> mailbox — and replace the "host details on request" line — before a public production launch.

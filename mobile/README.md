@@ -94,10 +94,19 @@ the app at another environment, rebuild with a different `EXPO_PUBLIC_API_URL`.
 The API base URL is read from `EXPO_PUBLIC_API_URL`. Create `mobile/.env`:
 
 ```dotenv
-EXPO_PUBLIC_API_URL=https://epidermis-sandlot-headrest.ngrok-free.dev
+EXPO_PUBLIC_API_URL=https://<your-tunnel>.ngrok-free.dev
+EXPO_PUBLIC_WEB_URL=https://<your-tunnel>.ngrok-free.dev
+EXPO_PUBLIC_CONTACT_EMAIL=contact@bike-trip-planner.com
 ```
 
-If unset, the client falls back to that same ngrok host (see `src/api/config.ts`).
+There is no built-in fallback: without `EXPO_PUBLIC_API_URL` the app throws at
+startup (`src/api/config.ts`), and `app.config.js` refuses to resolve the Android
+App Link host. A hardcoded tunnel goes stale and could later be claimed by a
+third party, with magic-link tokens and JWTs at stake. `EXPO_PUBLIC_WEB_URL`
+(the origin serving `/s/<code>`) fails closed the same way in a non-dev build.
+
+The release APK gets these from `.github/workflows/mobile-apk.yml`, which
+defaults them to the production host and `CONTACT_EMAIL`.
 `EXPO_PUBLIC_*` vars are inlined at bundle time, so restart Metro after changing it.
 
 Once authenticated, every request carries an `Authorization: Bearer <jwt>` header

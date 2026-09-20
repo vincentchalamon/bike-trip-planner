@@ -30,9 +30,8 @@ export const SITE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost";
 
 /**
  * GDPR/legal contact address shown on the legal & privacy pages. Each
- * self-hosted instance sets its own mailbox via `NEXT_PUBLIC_CONTACT_EMAIL`
- * (build-time inlined); the default is a generic RFC 2606 placeholder so the
- * upstream build never ships a real address.
+ * self-hosted instance sets its own mailbox via the root-level `CONTACT_EMAIL`,
+ * which compose maps onto `NEXT_PUBLIC_CONTACT_EMAIL` (build-time inlined).
  */
 export const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.org";
+  process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@bike-trip-planner.com";

@@ -87,7 +87,7 @@ fields and falls back to `unknown`.
       "culprit": "App\\MessageHandler\\ComputeStageHandler::__invoke",
       "level": "error",
       "count": 12,
-      "web_url": "https://errors.biketrip.mooo.com/issues/4242",
+      "web_url": "https://errors.bike-trip-planner.com/issues/4242",
       "tags": { "request_id": "0192c0d8-7e3a-7000-9f3a-4f6d5b2c8a91" }
     },
     "environment": "production",
@@ -105,7 +105,7 @@ Fingerprint: `sha256("<culprit>::<title>")[:12]`.
   "event_type": "uptime_alert",
   "client_payload": {
     "monitor_name": "biketrip-healthz",
-    "monitor_url": "https://biketrip.mooo.com/api/healthz",
+    "monitor_url": "https://www.bike-trip-planner.com/api/healthz",
     "status": "down",
     "message": "Connection timed out after 10s",
     "heartbeat": { "ping": 10000 }
@@ -151,7 +151,7 @@ curl -X POST \
     "event_type": "uptime_alert",
     "client_payload": {
       "monitor_name": "manual-test",
-      "monitor_url": "https://biketrip.mooo.com/api/healthz",
+      "monitor_url": "https://www.bike-trip-planner.com/api/healthz",
       "status": "down",
       "message": "Manual dispatch test"
     }

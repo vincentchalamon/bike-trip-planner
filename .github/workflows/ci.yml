@@ -660,6 +660,9 @@ jobs:
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
       REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
+      # Non-default so the fail-closed boot guard passes (the prod image refuses
+      # to boot on the committed dev APP_SECRET).
+      APP_SECRET: "ci-test-app-secret"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -747,6 +750,9 @@ jobs:
       # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
       # refuses to boot on the committed dev token-encryption key).
       REFRESH_TOKEN_ENC_KEY: "ci-test-refresh-enc-key"
+      # Non-default so the fail-closed boot guard passes (the prod image refuses
+      # to boot on the committed dev APP_SECRET).
+      APP_SECRET: "ci-test-app-secret"
     steps:
       - name: Checkout
         uses: actions/checkout@v7

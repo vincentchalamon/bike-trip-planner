@@ -22,6 +22,10 @@
 x-prod-env: &prod-env
   FRONTEND_URL: "https://www.${DOMAIN}"
   MERCURE_PUBLIC_URL: "https://www.${DOMAIN}/.well-known/mercure"
+  # Base URI the router uses when there is no request (CLI, workers).
+  DEFAULT_URI: "https://www.${DOMAIN}"
+  # nelmio_cors origin_regex: the public origin only.
+  CORS_ALLOW_ORIGIN: "^https://www\\.${DOMAIN}$$"
   # The Host header forwarded by Cloudflare -> Traefik is www.${DOMAIN}; php also
   # answers to the internal `php` service name (worker -> Mercure). Anything else
   # is rejected by Symfony's trusted-host guard.
