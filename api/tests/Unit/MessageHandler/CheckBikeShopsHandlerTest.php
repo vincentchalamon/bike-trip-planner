@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
@@ -252,10 +253,23 @@ final class CheckBikeShopsHandlerTest extends TestCase
     {
         // BR-06: trips of 5 days or fewer skip the check entirely, but must still mark
         // the computation done so trip generation does not hang waiting for a result.
-        $tripStateManager = $this->tripStateManager('trip-1', 5);
+        //
+        // And they must clear the group rather than merely skip (ADR-068): a longer trip
+        // shortened to five days re-dispatches this check, and this branch keeps firing on
+        // every later edit — so an alert left standing here is left standing for good.
+        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($this->createStages('trip-1', 5));
+        $tripStateManager->expects($this->once())
+            ->method('updateTripAlertsForGroup')
+            ->with('trip-1', AlertGroup::BIKE_SHOP, []);
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->never())->method('publish');
+        $published = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')->willReturnCallback(
+            static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
+                $published[] = $payload;
+            },
+        );
 
         $computationTracker = $this->createMock(ComputationTrackerInterface::class);
         $computationTracker->expects($this->once())
@@ -270,5 +284,8 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $computationTracker,
         );
         $handler(new CheckBikeShops('trip-1'));
+
+        // A live client has to learn it too, or it keeps rendering what the database dropped.
+        self::assertSame([['alerts' => []]], $published);
     }
 }
