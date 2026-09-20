@@ -127,10 +127,10 @@ final class AlertLocaleAtReadTest extends ApiTestCase
         ]);
         $this->assertResponseIsSuccessful();
 
+        /** @var list<array<string, mixed>> $alerts */
         $alerts = $response->toArray(false)['stages'][0]['alerts'];
         \assert(\is_array($alerts));
 
-        /* @var list<array<string, mixed>> $alerts */
         return $alerts;
     }
 

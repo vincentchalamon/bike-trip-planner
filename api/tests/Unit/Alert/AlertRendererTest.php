@@ -24,7 +24,7 @@ final class AlertRendererTest extends TestCase
     /**
      * @param list<array<string, mixed>> $rendered
      */
-    private static function messageOf(array $rendered, int $index = 0): string
+    private function messageOf(array $rendered, int $index = 0): string
     {
         $message = $rendered[$index]['message'];
         \assert(\is_string($message));
@@ -37,12 +37,12 @@ final class AlertRendererTest extends TestCase
      *
      * @return array<string, mixed>
      */
-    private static function actionOf(array $rendered): array
+    private function actionOf(array $rendered): array
     {
+        /** @var array<string, mixed> $action */
         $action = $rendered[0]['action'];
         \assert(\is_array($action));
 
-        /* @var array<string, mixed> $action */
         return $action;
     }
 
@@ -63,11 +63,11 @@ final class AlertRendererTest extends TestCase
 
         self::assertSame(
             'Significant elevation: 1500m D+ on this stage.',
-            self::messageOf($renderer->render($stored, 1, 'en')),
+            $this->messageOf($renderer->render($stored, 1, 'en')),
         );
         self::assertSame(
             'Important dénivelé positif : 1500m D+ sur cette étape.',
-            self::messageOf($renderer->render($stored, 1, 'fr')),
+            $this->messageOf($renderer->render($stored, 1, 'fr')),
         );
     }
 
@@ -88,7 +88,7 @@ final class AlertRendererTest extends TestCase
             ],
         ]], 1, $locale);
 
-        self::assertSame($expected, self::messageOf($rendered));
+        self::assertSame($expected, $this->messageOf($rendered));
     }
 
     /**
@@ -111,9 +111,9 @@ final class AlertRendererTest extends TestCase
         $stored = [['messageKey' => 'alert.ferry.warning']];
         $renderer = $this->createAlertRenderer();
 
-        self::assertStringContainsString('Stage 2 ', self::messageOf($renderer->render($stored, 2, 'en')));
+        self::assertStringContainsString('Stage 2 ', $this->messageOf($renderer->render($stored, 2, 'en')));
         // The very same row, after an edit renumbered its stage.
-        self::assertStringContainsString('Stage 7 ', self::messageOf($renderer->render($stored, 7, 'en')));
+        self::assertStringContainsString('Stage 7 ', $this->messageOf($renderer->render($stored, 7, 'en')));
     }
 
     /**
@@ -129,7 +129,7 @@ final class AlertRendererTest extends TestCase
             'parameterFormats' => ['%distance%' => AlertParameterFormat::DISTANCE_KM->value],
         ]], 3, 'en');
 
-        self::assertSame('Discontinuity: 0.6 km between stage 3 and 4.', self::messageOf($rendered));
+        self::assertSame('Discontinuity: 0.6 km between stage 3 and 4.', $this->messageOf($rendered));
     }
 
     /**
@@ -149,8 +149,8 @@ final class AlertRendererTest extends TestCase
         ]];
         $renderer = $this->createAlertRenderer();
 
-        self::assertStringContainsString('(gravel, dirt)', self::messageOf($renderer->render($stored, 1, 'en')));
-        self::assertStringContainsString('(gravier, terre)', self::messageOf($renderer->render($stored, 1, 'fr')));
+        self::assertStringContainsString('(gravel, dirt)', $this->messageOf($renderer->render($stored, 1, 'en')));
+        self::assertStringContainsString('(gravier, terre)', $this->messageOf($renderer->render($stored, 1, 'fr')));
     }
 
     /**
@@ -168,7 +168,7 @@ final class AlertRendererTest extends TestCase
             ],
         ]], 1, 'en');
 
-        self::assertStringNotContainsString('moon_dust', self::messageOf($rendered));
+        self::assertStringNotContainsString('moon_dust', $this->messageOf($rendered));
     }
 
     /**
@@ -187,9 +187,9 @@ final class AlertRendererTest extends TestCase
             ],
         ]], 1, 'fr');
 
-        self::assertSame('Traversée en ferry', self::actionOf($rendered)['label']);
+        self::assertSame('Traversée en ferry', $this->actionOf($rendered)['label']);
         // The key survives, so a client that prefers to translate on its own still can.
-        self::assertSame('alert.ferry.action', self::actionOf($rendered)['labelKey']);
+        self::assertSame('alert.ferry.action', $this->actionOf($rendered)['labelKey']);
     }
 
     /**
@@ -204,8 +204,8 @@ final class AlertRendererTest extends TestCase
             ['dayNumber' => 5, 'messageKey' => 'alert.ferry.warning'],
         ], 'en');
 
-        self::assertStringContainsString('Stage 2 ', self::messageOf($rendered));
-        self::assertStringContainsString('Stage 5 ', self::messageOf($rendered, 1));
+        self::assertStringContainsString('Stage 2 ', $this->messageOf($rendered));
+        self::assertStringContainsString('Stage 5 ', $this->messageOf($rendered, 1));
     }
 
     /**
