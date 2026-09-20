@@ -140,6 +140,44 @@ final readonly class TripDetail
                         'osmType' => ['oneOf' => [['type' => 'string', 'enum' => ['node', 'way', 'relation']], ['type' => 'null']]],
                         'osmId' => ['oneOf' => [['type' => 'integer'], ['type' => 'null']]],
                     ]]],
+                    // Persisted since ADR-068 and served here, not only over SSE: the
+                    // anonymous share page receives no SSE at all.
+                    'events' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'name' => ['type' => 'string'],
+                        'type' => ['type' => 'string'],
+                        'lat' => ['type' => 'number'],
+                        'lon' => ['type' => 'number'],
+                        'startDate' => ['type' => 'string', 'format' => 'date-time'],
+                        'endDate' => ['type' => 'string', 'format' => 'date-time'],
+                        'url' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'description' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'priceMin' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
+                        'distanceToEndPoint' => ['type' => 'number'],
+                        'source' => ['type' => 'string'],
+                        'wikidataId' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'imageUrl' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'wikipediaUrl' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                        'openingHours' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                    ]]],
+                    'supplyTimeline' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'type' => ['type' => 'string', 'enum' => ['water', 'food', 'both']],
+                        'distanceFromStart' => ['type' => 'number'],
+                        'lat' => ['type' => 'number'],
+                        'lon' => ['type' => 'number'],
+                        'water' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                            'name' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                            'lat' => ['type' => 'number'],
+                            'lon' => ['type' => 'number'],
+                            'distanceFromStart' => ['type' => 'number'],
+                        ]]],
+                        'food' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                            'name' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
+                            'category' => ['type' => 'string'],
+                            'lat' => ['type' => 'number'],
+                            'lon' => ['type' => 'number'],
+                            'distanceFromStart' => ['type' => 'number'],
+                        ]]],
+                    ]]],
                     // Curated resupply suggestions (#1099), replacing the raw POI dump.
                     'resupply' => ['type' => 'object', 'properties' => [
                         'foodAtLunch' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [

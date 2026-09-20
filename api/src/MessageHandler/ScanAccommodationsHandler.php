@@ -240,18 +240,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $alertsToPublish[] = ['code' => $alert->code?->value, 'type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
-                $payload = [
+                // Same array to both consumers (ADR-068), the empty one included: a rerun that
+                // finds nothing has to clear the previous alerts on a live client too, or the
+                // database and the open page disagree until a reload.
+                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
+                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, [
                     'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
-                ];
-                if ([] !== $alertsToPublish) {
-                    $payload['alerts'] = $alertsToPublish;
-                }
-
-                // Same array to both consumers (ADR-068). Already per-stage, so no regrouping.
-                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
-                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
+                    'alerts' => $alertsToPublish,
+                ]);
             }
 
             // Persist accommodations with an atomic per-column UPDATE, only for the

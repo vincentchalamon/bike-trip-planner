@@ -1951,6 +1951,45 @@ export interface components {
                     osmType?: ("node" | "way" | "relation") | null;
                     osmId?: number | null;
                 }[];
+                events?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    endDate?: string;
+                    url?: string | null;
+                    description?: string | null;
+                    priceMin?: number | null;
+                    distanceToEndPoint?: number;
+                    source?: string;
+                    wikidataId?: string | null;
+                    imageUrl?: string | null;
+                    wikipediaUrl?: string | null;
+                    openingHours?: string | null;
+                }[];
+                supplyTimeline?: {
+                    /** @enum {string} */
+                    type?: "water" | "food" | "both";
+                    distanceFromStart?: number;
+                    lat?: number;
+                    lon?: number;
+                    water?: {
+                        name?: string | null;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
+                    food?: {
+                        name?: string | null;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
+                }[];
                 resupply?: {
                     foodAtLunch?: {
                         name?: string;
@@ -2275,6 +2314,45 @@ export interface components {
                     wikipediaUrl?: string;
                     osmType?: ("node" | "way" | "relation") | null;
                     osmId?: number | null;
+                }[];
+                events?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    endDate?: string;
+                    url?: string | null;
+                    description?: string | null;
+                    priceMin?: number | null;
+                    distanceToEndPoint?: number;
+                    source?: string;
+                    wikidataId?: string | null;
+                    imageUrl?: string | null;
+                    wikipediaUrl?: string | null;
+                    openingHours?: string | null;
+                }[];
+                supplyTimeline?: {
+                    /** @enum {string} */
+                    type?: "water" | "food" | "both";
+                    distanceFromStart?: number;
+                    lat?: number;
+                    lon?: number;
+                    water?: {
+                        name?: string | null;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
+                    food?: {
+                        name?: string | null;
+                        category?: string;
+                        lat?: number;
+                        lon?: number;
+                        distanceFromStart?: number;
+                    }[];
                 }[];
                 resupply?: {
                     foodAtLunch?: {

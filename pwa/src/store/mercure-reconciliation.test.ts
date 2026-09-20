@@ -240,6 +240,78 @@ describe("reduceMercureEvent — per-stage enrichment", () => {
     expect((next.stages[0]!.alerts[0] as StageAlert).group).toBe("pois");
   });
 
+  // Regression (ADR-068): both reducers used to require a non-empty list, so a rerun
+  // that found nothing updated the database and left the open page showing the alert
+  // it had just cleared — until a reload.
+  it("an empty pois_scanned alerts list clears the group instead of being ignored", () => {
+    const hydrated = stage({
+      alerts: [
+        {
+          group: "pois",
+          type: "nudge",
+          message: "no water",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "pois_scanned",
+      data: {
+        stageId: "stage-1",
+        resupply: {
+          foodAtLunch: [],
+          waterMorning: null,
+          waterAfternoon: null,
+          foodAtArrival: [],
+        },
+        alerts: [],
+      },
+    });
+
+    expect(
+      (next.stages[0]!.alerts as StageAlert[]).map((a) => a.group),
+    ).toEqual(["ferry"]);
+  });
+
+  it("an empty accommodations_found alerts list clears the group too", () => {
+    const hydrated = stage({
+      alerts: [
+        {
+          group: "accommodations",
+          type: "warning",
+          message: "none nearby",
+          lat: null,
+          lon: null,
+        },
+        {
+          group: "ferry",
+          type: "warning",
+          message: "Ferry",
+          lat: null,
+          lon: null,
+        },
+      ],
+    });
+
+    const next = reduceMercureEvent(baseState({ stages: [hydrated] }), {
+      type: "accommodations_found",
+      data: { stageId: "stage-1", accommodations: [], alerts: [] },
+    });
+
+    expect(
+      (next.stages[0]!.alerts as StageAlert[]).map((a) => a.group),
+    ).toEqual(["ferry"]);
+  });
+
   it("supply_timeline replaces the stage markers", () => {
     const marker = {
       type: "water" as const,

@@ -87,6 +87,26 @@ implementation stores the whole collection as one blob, so it has to carry them 
 **the contract suite is what caught the two disagreeing**, which is the reason that suite
 exists.
 
+### An empty result is a result, on both sides
+
+A producer that reruns and finds nothing must clear what it wrote before — in the database
+*and* on an open page. Two handlers persisted the empty list but omitted the `alerts` key
+from their Mercure payload, and the two matching reducers required `alerts.length > 0`, so a
+live client kept showing an alert the database no longer held until the next reload. Both
+sides now key on **presence, not emptiness**.
+
+`events` and `supply_timeline` follow the same rule, and a rest day is written as empty
+rather than skipped: now that the column survives the next edit, a stage that becomes a rest
+day would otherwise keep a previous run's events permanently.
+
+### Persisted is not the same as served
+
+Writing a column buys nothing until the read path returns it. `/detail` — which is what the
+anonymous share page renders — serialised neither `events` nor `supplyTimeline`, and the
+three client hydrations defaulted both to `[]`. The producers wrote, the database held, and
+the page still showed nothing. Both are now in the serialisation, in the OpenAPI schema and
+in all three hydrations.
+
 ### The group travels on the wire
 
 Three hydration points tagged every persisted alert `_group: "terrain"`. Harmless while

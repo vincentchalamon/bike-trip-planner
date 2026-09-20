@@ -517,7 +517,9 @@ export function reduceMercureEvent(
         ...s,
         resupply: event.data.resupply,
       }));
-      if (event.data.alerts && event.data.alerts.length > 0) {
+      // Presence, not emptiness: the handler always sends the key, and an empty list
+      // is a result — the scan ran and found nothing, so the previous alerts go.
+      if (event.data.alerts) {
         stages = replaceStageAlerts(
           stages,
           event.data.stageId,
@@ -550,7 +552,8 @@ export function reduceMercureEvent(
             ? searchRadiusKm
             : s.accommodationSearchRadiusKm,
       }));
-      if (event.data.alerts && event.data.alerts.length > 0) {
+      // Presence, not emptiness — see the pois_scanned case above.
+      if (event.data.alerts) {
         stages = replaceStageAlerts(
           stages,
           stageId,

@@ -10,6 +10,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\EventSource\EventSourceRegistry;
+use App\Mapper\EventArrayMapper;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
@@ -37,6 +38,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private EventSourceRegistry $eventSources,
+        private EventArrayMapper $eventMapper,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -66,32 +68,25 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate): void {
             foreach ($stages as $i => $stage) {
-                if ($stage->isRestDay) {
-                    continue;
-                }
-
-                $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $events = $this->fetchEventsForStage($stage, $stageDate);
-
-                if ([] === $events) {
-                    continue;
-                }
+                // A rest day is not scanned, and carries no events: the empty write below
+                // clears whatever a previous run left on a stage that has since become one.
+                $events = $stage->isRestDay
+                    ? []
+                    : $this->fetchEventsForStage($stage, $startDate->modify(\sprintf('+%d days', $i)));
 
                 foreach ($events as $event) {
                     $stage->addEvent($event);
                 }
 
+                // Written and published unconditionally, the empty list included (ADR-068).
+                // Events were the last enrichment delivered over SSE and persisted nowhere,
+                // so the anonymous share page and a reload lost them entirely.
+                $this->tripStateManager->updateStageEvents($tripId, $stage->id, $events);
                 $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
                     'stageId' => $stage->id,
-                    'events' => array_map($this->eventToArray(...), $events),
+                    'events' => array_map($this->eventMapper->toArray(...), $events),
                 ]);
-
             }
-
-            // Events are not a persisted stage column (no Stage::events DB column);
-            // they are delivered live via Mercure above. The previous storeStages()
-            // call persisted nothing useful and re-wrote the whole stages collection,
-            // wiping concurrent weather/accommodations writes (recette #649).
         }, $generation);
     }
 
@@ -135,29 +130,5 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         return $events;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function eventToArray(Event $e): array
-    {
-        return [
-            'name' => $e->name,
-            'type' => $e->type,
-            'lat' => $e->lat,
-            'lon' => $e->lon,
-            'startDate' => $e->startDate->format(\DateTimeInterface::ATOM),
-            'endDate' => $e->endDate->format(\DateTimeInterface::ATOM),
-            'url' => $e->url,
-            'description' => $e->description,
-            'priceMin' => $e->priceMin,
-            'distanceToEndPoint' => $e->distanceToEndPoint,
-            'source' => $e->source,
-            'wikidataId' => $e->wikidataId,
-            'imageUrl' => $e->imageUrl,
-            'wikipediaUrl' => $e->wikipediaUrl,
-            'openingHours' => $e->openingHours,
-        ];
     }
 }

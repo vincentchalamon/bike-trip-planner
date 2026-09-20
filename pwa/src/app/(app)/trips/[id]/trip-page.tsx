@@ -135,8 +135,12 @@ function TripLoader({ tripId }: { tripId: string }) {
           accommodationSearchRadiusKm: 5,
           isRestDay: s.isRestDay ?? false,
           onCycleNetwork: s.onCycleNetwork ?? 0,
-          supplyTimeline: [],
-          events: [],
+          // Persisted and served since ADR-068. Defaulting these to [] was the
+          // read-side half of the same hole: the producers wrote them, /detail
+          // returned them, and the hydrate threw them away.
+          supplyTimeline:
+            (s.supplyTimeline as StageData["supplyTimeline"]) ?? [],
+          events: (s.events as StageData["events"]) ?? [],
         };
       });
 

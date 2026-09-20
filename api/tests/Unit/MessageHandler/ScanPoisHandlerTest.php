@@ -438,7 +438,8 @@ final class ScanPoisHandlerTest extends TestCase
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
         $data = array_first($poisScannedEvents)['payload'];
-        self::assertArrayNotHasKey('alerts', $data);
+        // The key is always sent, so an empty list clears a previous run on a live client.
+        self::assertSame([], $data['alerts']);
     }
 
     #[Test]

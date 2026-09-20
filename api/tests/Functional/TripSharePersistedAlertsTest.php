@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
@@ -82,6 +83,44 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         sort($expected);
 
         self::assertSame($expected, $groups, 'Every producer must survive to the public page.');
+    }
+
+    /**
+     * Events took the same path as the alerts: published over SSE, written nowhere.
+     *
+     * Their own end-to-end proof, because {@see ScanEventsHandler} was the one producer the
+     * first round of ADR-068 left unwired, and no alert assertion would have caught it.
+     */
+    #[Test]
+    public function anAnonymousVisitorSeesThePersistedEvents(): void
+    {
+        $repository = $this->doctrineRepository();
+        $this->seedTrip($repository);
+
+        $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $repository->updateStageEvents(self::TRIP_ID, $stageId, [new Event(
+            name: 'Festival de Jazz',
+            type: 'festival',
+            lat: 45.5,
+            lon: 6.5,
+            startDate: new \DateTimeImmutable('2026-07-10'),
+            endDate: new \DateTimeImmutable('2026-07-14'),
+            url: 'https://festival.example.com',
+            distanceToEndPoint: 1200.0,
+            source: 'datatourisme',
+        )]);
+
+        $shortCode = $this->createShare();
+        $response = $this->client->request('GET', \sprintf('/s/%s', $shortCode), [
+            'headers' => ['Accept' => 'application/ld+json'],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $events = $response->toArray(false)['stages'][0]['events'];
+
+        self::assertCount(1, $events);
+        self::assertSame('Festival de Jazz', $events[0]['name']);
+        self::assertSame('https://festival.example.com', $events[0]['url']);
     }
 
     /**

@@ -47,8 +47,10 @@ export function stageDataFromDetail(s: ApiStage): StageData {
       (s.selectedAccommodation as StageData['selectedAccommodation']) ?? null,
     accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     isRestDay: s.isRestDay ?? false,
-    supplyTimeline: [],
-    events: [],
+    // Persisted and served since ADR-068 — see the web hydrate for why defaulting
+    // these to [] threw away what the producers had just written.
+    supplyTimeline: (s.supplyTimeline as StageData['supplyTimeline']) ?? [],
+    events: (s.events as StageData['events']) ?? [],
   };
 }
 

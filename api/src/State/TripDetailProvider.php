@@ -16,6 +16,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Mapper\EventArrayMapper;
 use App\Enum\ComputationName;
 use App\Enum\TripStatus;
 use App\Repository\DoctrineTripRequestRepository;
@@ -38,6 +39,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         private TripLocker $tripLocker,
         private ComputationTrackerInterface $computationTracker,
         private WeatherForecastSerializer $weatherSerializer,
+        private EventArrayMapper $eventMapper,
     ) {
     }
 
@@ -187,6 +189,11 @@ final readonly class TripDetailProvider implements ProviderInterface
             // Passed through as the producer wrote it, `group` included: normalising here is
             // what used to drop the richer fields some producers emit (ADR-068).
             'alerts' => $stage->alerts,
+            // Persisted since ADR-068, and served here for the same reason the alerts are:
+            // an anonymous visitor to /s/{shortCode} never receives SSE, so a payload the
+            // producer only published is a payload they never see.
+            'events' => array_map($this->eventMapper->toArray(...), $stage->events),
+            'supplyTimeline' => $stage->supplyTimeline,
             'resupply' => $this->serializeResupply($stage->resupply),
             'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
