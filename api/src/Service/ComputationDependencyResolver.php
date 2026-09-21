@@ -147,14 +147,17 @@ final readonly class ComputationDependencyResolver
                     break;
 
                 case 'dates':
-                    // Dates alone recalculate no stage, so there is no RecalculateStages to
-                    // carry the trigger and the set is emitted directly.
-                    $needed = $this->add($needed, ComputationTrigger::DATES, $hasDates);
+                    // Recorded, not built: if this batch also moves a line there will be a
+                    // RecalculateStages to carry both triggers, and building the date set
+                    // here as well would dispatch the five computations common to the two
+                    // sets twice.
+                    $datesAlsoShift = true;
                     break;
 
                 case 'pacing':
                     // Pacing changes affect all stages (fatigue factor, elevation penalty, etc.)
                     array_push($recalcIndices, ...array_keys($stageIds));
+                    // Re-pacing redraws every stage and moves every stage onto a new date.
                     $datesAlsoShift = true;
                     break;
             }
@@ -174,19 +177,23 @@ final readonly class ComputationDependencyResolver
             $recalcIndices,
         )));
 
-        // Build RecalculateStages message (skip accommodation scan since we handle it separately)
+        // One message carries everything this batch invalidated, so the handler dispatches
+        // the union once (ADR-070). A distance edit keeps the stage count, so no date moves
+        // unless the batch also asked for it.
         if ([] !== $recalcStageIds) {
             $messages[] = new RecalculateStages(
                 $tripId,
                 $recalcStageIds,
                 skipAccommodationScan: true,
-                // Re-pacing moves every stage onto a different date as well as a different
-                // line; a distance edit keeps the stage count, so no date moves.
                 triggers: $datesAlsoShift
                     ? [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES]
                     : [ComputationTrigger::GEOMETRY],
                 generation: $generation,
             );
+        } elseif ($datesAlsoShift) {
+            // Dates alone recalculate no stage, so there is no message to carry the trigger
+            // and the set is built here instead.
+            $needed = $this->add($needed, ComputationTrigger::DATES, $hasDates);
         }
 
         // Build per-stage ScanAccommodations messages

@@ -198,17 +198,23 @@ final class ComputationDependencyResolverTest extends TestCase
 
         $classes = $this->classesOf($messages);
 
-        // All three modification types contribute their required handlers
-        $this->assertContains(RecalculateStages::class, $classes);
-        $this->assertContains(ScanAccommodations::class, $classes);
-        $this->assertContains(ScanPois::class, $classes);
-        $this->assertContains(AnalyzeTerrain::class, $classes);
-        $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
-        $this->assertContains(ScanEvents::class, $classes);
-
-        // Exactly one RecalculateStages message (deduplicated)
+        // Exactly one RecalculateStages, carrying everything the batch invalidated: the
+        // accommodation and distance edits moved lines, the dates entry moved dates.
         $this->assertCount(1, array_filter($messages, static fn (object $m): bool => $m instanceof RecalculateStages));
+        $this->assertSame(
+            [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            $this->recalculateOf($messages)->triggers,
+        );
+
+        // Per-stage accommodation scans stay here: they are scoped to the edited stages, and
+        // the message above holds them back with skipAccommodationScan for that reason.
+        $this->assertContains(ScanAccommodations::class, $classes);
+
+        // Nothing else. The five computations that read both a line and a date would
+        // otherwise go out twice — once here, once from the handler (ADR-070).
+        foreach ([ScanPois::class, AnalyzeTerrain::class, ScanEvents::class, FetchWeather::class, CheckCalendar::class] as $carriedByTheMessage) {
+            $this->assertNotContains($carriedByTheMessage, $classes);
+        }
     }
 
     #[Test]
