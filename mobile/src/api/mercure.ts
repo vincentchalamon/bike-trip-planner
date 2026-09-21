@@ -34,7 +34,8 @@ export function subscribeToTrip(
   onEvent: (event: MercureEvent) => void,
 ): TripSubscription {
   const url = new URL(`${API_BASE_URL}/.well-known/mercure`);
-  url.searchParams.set('topic', `/trips/${tripId}`);
+  // Mercure 1.0: `topic` became `match` (exact) / `match_urlpattern`.
+  url.searchParams.set('match', `/trips/${tripId}`);
 
   const es = new EventSource(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },

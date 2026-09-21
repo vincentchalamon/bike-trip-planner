@@ -265,7 +265,7 @@ describe('ConfigSheet slider screen-reader actions', () => {
 describe('ConfigSheet dates deep-link (maquette 05a)', () => {
   it('schedules a scroll to the dates section when opened with initialSection', () => {
     const raf = jest
-      .spyOn(global, 'requestAnimationFrame')
+      .spyOn(globalThis, 'requestAnimationFrame')
       .mockImplementation((cb: FrameRequestCallback) => {
         cb(0);
         return 0;
@@ -277,7 +277,7 @@ describe('ConfigSheet dates deep-link (maquette 05a)', () => {
 
   it('does not scroll when opened without initialSection', () => {
     const raf = jest
-      .spyOn(global, 'requestAnimationFrame')
+      .spyOn(globalThis, 'requestAnimationFrame')
       .mockImplementation(() => 0);
     render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
     expect(raf).not.toHaveBeenCalled();

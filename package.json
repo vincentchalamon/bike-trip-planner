@@ -11,7 +11,7 @@
     "tmp": "^0.2.6",
     "hono": "^4.13.0",
     "postcss": "^8.5.25",
-    "playwright-core": "1.63.0",
+    "playwright-core": "^1.63.0",
     "sharp": "^0.35.4",
     "js-yaml": "^4.3.2",
     "minimatch": "^10.1.1",
@@ -20,7 +20,9 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "eslint": "^9.39.5",
+    "react": "~19.2.8",
+    "react-dom": "~19.2.8",
+    "typescript": "~5.9.3"
   }
 }

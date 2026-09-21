@@ -44,9 +44,12 @@ export class MercureClient {
     if (this.closed) return;
 
     const url = new URL(this.mercureHubUrl);
-    url.searchParams.set("topic", this.topic);
+    // Mercure 1.0: `topic` became `match` (exact) / `match_urlpattern`. The topic
+    // is a fully interpolated `/trips/{id}`, so it is an exact match. Any other
+    // parameter under the `match` prefix is rejected by the hub with a 400.
+    url.searchParams.set("match", this.topic);
 
-    // withCredentials ensures the mercureAuthorization cookie is sent cross-origin
+    // withCredentials ensures the __Secure-mercure_access_token cookie is sent cross-origin
     this.eventSource = new EventSource(url.toString(), {
       withCredentials: true,
     });
@@ -97,7 +100,7 @@ export class MercureClient {
   /**
    * Re-fetches the trip detail endpoint to obtain a fresh subscriber cookie.
    *
-   * The backend sets the `mercureAuthorization` cookie on trip-related responses.
+   * The backend sets the `__Secure-mercure_access_token` cookie on trip-related responses.
    * By hitting the detail endpoint, we trigger cookie renewal without side effects.
    */
   private async refreshMercureAuth(): Promise<void> {

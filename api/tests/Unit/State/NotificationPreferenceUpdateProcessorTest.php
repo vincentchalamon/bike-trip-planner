@@ -47,9 +47,7 @@ final class NotificationPreferenceUpdateProcessorTest extends TestCase
         // A concurrent PUT for the same (user, category) inserted first: the flush
         // inside save() hits the unique constraint. The processor must translate it
         // to a 409, not let a 500 leak (same guard as DeviceTokenRegisterProcessor).
-        $uniqueException = $this->getMockBuilder(UniqueConstraintViolationException::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $uniqueException = $this->createStub(UniqueConstraintViolationException::class);
         $this->preferences->expects($this->once())->method('save')->willThrowException($uniqueException);
 
         $this->expectException(ConflictHttpException::class);

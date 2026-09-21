@@ -11,7 +11,7 @@ use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the weather-safety batch lookup (#1124): the coverage
@@ -20,10 +20,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * endDate) and the exclusion of ended, future, undated and anonymous trips. Only
  * exercised through stubs elsewhere, so a dropped filter would go undetected.
  */
+#[ResetDatabase]
 final class OwnedTripFinderTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private EntityManagerInterface $em;
 
     private DoctrineTripRequestRepository $repository;

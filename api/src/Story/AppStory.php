@@ -15,7 +15,7 @@ final class AppStory extends Story
     public function build(): void
     {
         // Trip 1: Entre Sensée et Escaut
-        $trip1 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
+        $trip1 = TripFactory::createOne([
             'title' => 'Entre Sensée et Escaut',
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2795080048',
             'startDate' => new \DateTimeImmutable('2026-05-01'),
@@ -115,7 +115,7 @@ final class AppStory extends Story
         ]);
 
         // Trip 2: L'Odyssée des Eaux Royales
-        $trip2 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
+        $trip2 = TripFactory::createOne([
             'title' => "L'Odyssée des Eaux Royales",
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2796682420',
             'startDate' => new \DateTimeImmutable('2026-05-14'),
@@ -215,7 +215,7 @@ final class AppStory extends Story
         ]);
 
         // Trip 3: L'Échappée Sauvage (no dates)
-        $trip3 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
+        $trip3 = TripFactory::createOne([
             'title' => "L'Échappée Sauvage",
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2796709729',
             'startDate' => null,
@@ -271,7 +271,7 @@ final class AppStory extends Story
         ]);
 
         // Trip 4: La Boucle du Houblon & du Souvenir (no dates)
-        $trip4 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
+        $trip4 = TripFactory::createOne([
             'title' => 'La Boucle du Houblon & du Souvenir',
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2796700993',
             'startDate' => null,
@@ -349,7 +349,7 @@ final class AppStory extends Story
         ]);
 
         // Trip 5: La Route de l'Eau, de la Lys à l'Aa (no dates)
-        $trip5 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
+        $trip5 = TripFactory::createOne([
             'title' => "La Route de l'Eau, de la Lys à l'Aa",
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2795061591',
             'startDate' => null,

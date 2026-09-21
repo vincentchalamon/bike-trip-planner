@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
@@ -14,7 +14,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 /**
  * Proves every object-level authorization expression still denies, after ADR-063
@@ -35,8 +34,10 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class TransportAgnosticAuthorizationTest extends ApiTestCase
 {
-    use Factories;
     use JwtAuthTestTrait;
+
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-0000000004aa';
 
@@ -45,12 +46,6 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
     private User $owner;
 
     private string $ownerToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

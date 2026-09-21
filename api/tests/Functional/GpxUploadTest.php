@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
@@ -25,17 +25,14 @@ final class GpxUploadTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
+
     private const string FIXTURES_DIR = __DIR__.'/../fixtures';
 
     private Client $client;
 
     private string $jwtToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

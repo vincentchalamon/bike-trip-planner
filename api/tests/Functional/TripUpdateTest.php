@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Symfony\Component\Uid\Uuid;
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
@@ -20,7 +20,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
@@ -28,7 +27,6 @@ final class TripUpdateTest extends ApiTestCase
 {
     use EditsTripsTrait;
 
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000001';
@@ -89,7 +87,7 @@ final class TripUpdateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
         // todo check response content
     }
@@ -107,7 +105,7 @@ final class TripUpdateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
         // todo check response content
 
@@ -384,7 +382,7 @@ final class TripUpdateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
         // todo check response content
 
@@ -409,7 +407,7 @@ final class TripUpdateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
         // todo check response content
 
@@ -438,7 +436,7 @@ final class TripUpdateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
         // todo check response content
 

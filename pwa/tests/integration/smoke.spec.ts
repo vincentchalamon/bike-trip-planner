@@ -104,6 +104,17 @@ test.describe("Integration smoke test", () => {
     await page.waitForURL("/", { timeout: 15000 });
 
     // 4. Import a route via GPX upload (synchronous structural pacing).
+    //    Record the hub subscription on the way: the mocked suite fakes SSE with
+    //    a CustomEvent and never touches the hub, so this is the only place the
+    //    Mercure wire protocol is actually exercised.
+    const mercureUrls: string[] = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/.well-known/mercure")) {
+        mercureUrls.push(url);
+      }
+    });
+
     await expandGpxCard(page);
     await page.getByTestId("gpx-file-input").setInputFiles(GPX_FIXTURE);
     await page.waitForURL(/\/trips\/(?!new\b)/, { timeout: 30000 });
@@ -117,5 +128,24 @@ test.describe("Integration smoke test", () => {
       timeout: 30000,
     });
     await expect(page.getByTestId("total-distance")).toBeVisible();
+
+    // 6. Mercure protocol 1.0 guard. `topic=` was replaced by `match=` and the
+    //    cookie renamed to `__Secure-mercure_access_token`; both are silent
+    //    breakages (the stream just never delivers), so assert them explicitly.
+    await expect
+      .poll(() => mercureUrls.length, {
+        message: "the trip view never subscribed to the Mercure hub",
+        timeout: 15000,
+      })
+      .toBeGreaterThan(0);
+
+    const subscription = new URL(mercureUrls[mercureUrls.length - 1]!);
+    expect(subscription.searchParams.get("match")).toMatch(/^\/trips\//);
+    expect(subscription.searchParams.has("topic")).toBe(false);
+
+    const cookies = await page.context().cookies();
+    expect(cookies.map((c) => c.name)).toContain(
+      "__Secure-mercure_access_token",
+    );
   });
 });

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\AccessRequest;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
@@ -15,13 +15,10 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class CreateUserCommandTest extends ApiTestCase
 {
-    use Factories;
-
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');

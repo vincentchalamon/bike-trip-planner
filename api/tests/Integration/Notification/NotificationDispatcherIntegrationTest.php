@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Wires NotificationDispatcher to the REAL NotificationPreferenceRepository (#1124):
@@ -23,10 +23,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * lookup against real Postgres, which the stubbed unit test cannot exercise. Guards
  * that a regression in that lookup (e.g. the uuid-binding) would surface here.
  */
+#[ResetDatabase]
 final class NotificationDispatcherIntegrationTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private EntityManagerInterface $em;
 
     private NotificationPreferenceRepository $repository;

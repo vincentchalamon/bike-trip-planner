@@ -99,7 +99,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     services:
       database:
@@ -181,7 +181,7 @@ jobs:
       (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     services:
       database:
@@ -246,7 +246,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -281,7 +281,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -390,7 +390,7 @@ jobs:
           echo "$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
-        uses: docker://oskarstark/php-cs-fixer-ga
+        uses: docker://oskarstark/php-cs-fixer-ga@sha256:f175bb76984b1e530fc225ec4272a86c03d978e0c46f891cd191ae5ce0e54432
         with:
           args: --config=api/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 
@@ -425,7 +425,7 @@ jobs:
           echo "$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
-        uses: docker://oskarstark/php-cs-fixer-ga
+        uses: docker://oskarstark/php-cs-fixer-ga@sha256:f175bb76984b1e530fc225ec4272a86c03d978e0c46f891cd191ae5ce0e54432
         with:
           args: --config=provisioner/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 
@@ -437,7 +437,7 @@ jobs:
       (needs.changes.outputs.docs == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: davidanson/markdownlint-cli2
+      image: davidanson/markdownlint-cli2:v0.23.3
       options: --user root
     steps:
       - name: Checkout
@@ -475,7 +475,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -494,7 +494,7 @@ jobs:
       (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -513,7 +513,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -550,7 +550,7 @@ jobs:
       (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -582,7 +582,7 @@ jobs:
       (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -614,7 +614,7 @@ jobs:
       (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
-      image: docker.io/esoledad/php:8.5
+      image: docker.io/esoledad/php:8.5@sha256:20b408b7cc9c2391a537e16cf498a84e4303d6dd881050307c0901cdad264ae4
       options: --user root
     steps:
       - name: Checkout
@@ -676,7 +676,7 @@ jobs:
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@d3418bd7d0e9324001bca92fa8ba175ea7e6dc9b # v7.3.0
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
           load: true
           files: |
@@ -766,7 +766,7 @@ jobs:
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@d3418bd7d0e9324001bca92fa8ba175ea7e6dc9b # v7.3.0
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
           load: true
           files: |

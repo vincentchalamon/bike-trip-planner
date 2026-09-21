@@ -8,17 +8,16 @@ use App\Osm\FordRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first ford read layer (ADR-040): seeds a
  * real PostGIS ford point in osm.fords and asserts the proximity detection the
  * ford alert relies on (a stage whose route passes close to the ford).
  */
+#[ResetDatabase]
 final class FordIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private const int TOLERANCE = 25;
 
     private Connection $connection;

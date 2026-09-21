@@ -19,10 +19,14 @@ services:
     read_only: false
     environment:
       APP_ENV: dev
-      # Mercure demo UI + permissive CORS for local development.
+      # Mercure playground + permissive CORS for local development. `demo` was
+      # renamed `playground` in Mercure 1.0 (and `ui` to `debugger`), and an
+      # unknown directive is now a fatal config error rather than a silent no-op:
+      # leaving `demo` here stops the hub from booting. Never enable `playground`
+      # outside dev — it mints an all-access token and forces anonymous access.
       MERCURE_EXTRA_DIRECTIVES: |-
         cors_origins *
-        demo
+        playground
       MAILER_DSN: smtp://mailcatcher:1025
       # Early-access email verification (ADR-029). Prod stays fail-closed on an
       # empty secret; dev needs a non-empty value or AccessRequestHmacService

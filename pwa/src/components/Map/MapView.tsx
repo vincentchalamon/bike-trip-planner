@@ -357,17 +357,21 @@ export const MapView = memo(function MapView({
       // Accommodation link dashed line (empty by default, updated on hover)
       addAccommodationLinkLayer(map);
 
-      map.on("click", "route-hover-target", (e: maplibregl.MapLayerMouseEvent) => {
-        const features = e.features;
-        if (!features?.length) return;
-        const dayNumber = features[0]?.properties?.dayNumber as
-          number | undefined;
-        if (dayNumber === undefined) return;
-        const idx = activeStagesRef.current.findIndex(
-          (s) => s.dayNumber === dayNumber,
-        );
-        if (idx !== -1) onStageClickRef.current(idx);
-      });
+      map.on(
+        "click",
+        "route-hover-target",
+        (e: maplibregl.MapLayerMouseEvent) => {
+          const features = e.features;
+          if (!features?.length) return;
+          const dayNumber = features[0]?.properties?.dayNumber as
+            number | undefined;
+          if (dayNumber === undefined) return;
+          const idx = activeStagesRef.current.findIndex(
+            (s) => s.dayNumber === dayNumber,
+          );
+          if (idx !== -1) onStageClickRef.current(idx);
+        },
+      );
 
       map.on("mouseenter", "route-hover-target", () => {
         map.getCanvas().style.cursor = "pointer";

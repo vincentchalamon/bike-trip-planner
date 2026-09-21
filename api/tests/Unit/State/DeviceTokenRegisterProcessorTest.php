@@ -57,9 +57,7 @@ final class DeviceTokenRegisterProcessorTest extends TestCase
 
         // A concurrent request inserted the same token first: flush hits the unique
         // constraint. The processor must translate it to a 409, not let a 500 leak.
-        $uniqueException = $this->getMockBuilder(UniqueConstraintViolationException::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $uniqueException = $this->createStub(UniqueConstraintViolationException::class);
         $this->entityManager->expects($this->once())->method('flush')->willThrowException($uniqueException);
 
         $this->expectException(ConflictHttpException::class);

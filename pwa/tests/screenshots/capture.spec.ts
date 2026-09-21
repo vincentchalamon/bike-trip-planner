@@ -83,7 +83,6 @@ test.describe("desktop", () => {
       clip: { ...CLIP_16_9 },
     });
   });
-
 });
 
 test.describe("mobile", () => {

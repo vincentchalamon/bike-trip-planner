@@ -10,9 +10,9 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
- * Attaches a Mercure subscriber JWT to responses that create or access a trip.
+ * Attaches a Mercure subscriber access token to responses that create or access a trip.
  *
- * Listens on kernel.response and injects the `mercureAuthorization` cookie for
+ * Listens on kernel.response and injects the `__Secure-mercure_access_token` cookie for
  * endpoints matching `/trips/{uuid}` patterns.
  *
  * Matched routes:
@@ -45,10 +45,8 @@ final readonly class MercureSubscriberListener
 
         $tripId = $this->extractTripId($path, $method);
 
-        if (null === $tripId) {
-            // For POST /trips and POST /trips/gpx-upload, the trip ID is in the response body
-            $tripId = $this->extractTripIdFromResponseBody($path, $method, $response);
-        }
+        // For POST /trips and POST /trips/gpx-upload, the trip ID is in the response body
+        $tripId ??= $this->extractTripIdFromResponseBody($path, $method, $response);
 
         if (null === $tripId) {
             return;

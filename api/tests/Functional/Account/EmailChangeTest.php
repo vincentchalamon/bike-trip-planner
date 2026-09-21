@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Account;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\EmailChangeToken;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -13,18 +13,12 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Mailer\EventListener\MessageLoggerListener;
 use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class EmailChangeTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
 
     private function getEntityManager(): EntityManagerInterface
     {

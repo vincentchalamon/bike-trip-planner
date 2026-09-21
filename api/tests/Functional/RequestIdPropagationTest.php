@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Message\FetchAndParseRoute;
 use App\Messenger\CorrelationIdStamp;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,13 +23,10 @@ final class RequestIdPropagationTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
-    private string $jwtToken;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
+
+    private string $jwtToken;
 
     #[\Override]
     protected function setUp(): void

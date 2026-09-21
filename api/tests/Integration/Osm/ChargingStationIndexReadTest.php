@@ -8,17 +8,16 @@ use App\Osm\ChargingStationRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first e-bike charging read layer (ADR-040):
  * exercises the real PostGIS `osm.charging_stations` table with seeded rows and
  * asserts the ST_DWithin corridor filtering used by the e-bike-range alert.
  */
+#[ResetDatabase]
 final class ChargingStationIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

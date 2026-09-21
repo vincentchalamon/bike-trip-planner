@@ -15,7 +15,7 @@ use Doctrine\ORM\Query;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Characterisation of what a stage re-read actually sees once the caller has already
@@ -35,10 +35,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * the Redis implementation in the `test` environment, so the interface would exercise a
  * blob in Redis and never touch SQL.
  */
+#[ResetDatabase]
 final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private DoctrineTripRequestRepository $repository;
 
     private EntityManagerInterface $entityManager;

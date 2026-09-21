@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -22,7 +22,6 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class StageAddManualAccommodationTest extends ApiTestCase
@@ -30,7 +29,6 @@ final class StageAddManualAccommodationTest extends ApiTestCase
     use EditsTripsTrait;
 
     use AddressesStagesByIdTrait;
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-0000000000a1';
@@ -117,7 +115,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);

@@ -149,6 +149,7 @@ nav:
       - adr/adr-068-enrichment-durability-by-group.md
       - adr/adr-069-alerts-rendered-at-read.md
       - adr/adr-070-freshness-is-dispatch-completeness.md
+      - adr/adr-071-dependency-version-policy-and-ceilings.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:

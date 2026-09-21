@@ -11,7 +11,7 @@ use App\Repository\DeviceTokenRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the notify-by-userId lookup (#1123): findByUserId binds
@@ -19,10 +19,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * Postgres — the unit test stubs the QueryBuilder and never validates the parameter
  * type. A raw-string bind would silently match nothing (ADR-058: no silent no-op).
  */
+#[ResetDatabase]
 final class DeviceTokenRepositoryIntegrationTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private EntityManagerInterface $em;
 
     private DeviceTokenRepository $repository;

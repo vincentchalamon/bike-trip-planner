@@ -1320,9 +1320,9 @@ export interface components {
             "@type": string;
         };
         /**
-         * @description Delivers the per-trip Mercure subscriber JWT in the response body.
+         * @description Delivers the per-trip Mercure subscriber access token in the response body.
          *
-         *     The browser receives this token as the HttpOnly `mercureAuthorization` cookie
+         *     The browser receives this token as the HttpOnly `__Secure-mercure_access_token` cookie
          *     ({@see \App\Mercure\MercureSubscriberListener}), which a non-browser client
          *     (React Native) cannot read. This resource exposes the same token — signed with
          *     the same HMAC secret and scoped to `/trips/{id}` for 1h — through a readable

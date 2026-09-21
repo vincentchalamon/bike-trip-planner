@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -14,15 +14,12 @@ final class GeocodeTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
+
     private Client $client;
 
     private string $jwtToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

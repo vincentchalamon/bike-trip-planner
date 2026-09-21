@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Functional coverage for `POST /trips/{id}/nearby-pois` (#934).
@@ -22,10 +21,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * `outOfCoverage`, which is enough to exercise auth, the provider 404, the
  * denormalizer 400 and the radius clamp echo.
  */
+#[ResetDatabase]
 final class NearbyPoiSearchTest extends ApiTestCase
 {
-    use ResetDatabase;
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-00000000934a';

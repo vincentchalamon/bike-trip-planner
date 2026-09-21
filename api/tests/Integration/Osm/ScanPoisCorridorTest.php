@@ -37,7 +37,7 @@ use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * End-to-end coverage of the local-first POI/water cut-over (ADR-040): runs the
@@ -46,11 +46,11 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * detected from the index and that the lunch nudge fires from deterministic data
  * (no more empty-on-error false positive) — only when no resupply POI is in range.
  */
+#[ResetDatabase]
 final class ScanPoisCorridorTest extends KernelTestCase
 {
     use AlertMessageTestTrait;
 
-    use ResetDatabase;
 
     /** @var list<array<string, mixed>> */
     private array $writtenAlerts = [];

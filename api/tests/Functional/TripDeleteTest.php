@@ -5,19 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Symfony\Component\Uid\Uuid;
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
 final class TripDeleteTest extends ApiTestCase
 {
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000201';

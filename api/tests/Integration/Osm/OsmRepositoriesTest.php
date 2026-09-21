@@ -13,17 +13,16 @@ use App\Osm\WaterPointRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first Tier-1 read layer (ADR-040): exercises
  * the real PostGIS `osm` schema with seeded rows and asserts the ST_DWithin
  * corridor / radius / category filtering for each repository.
  */
+#[ResetDatabase]
 final class OsmRepositoriesTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     private int $osmId = 0;

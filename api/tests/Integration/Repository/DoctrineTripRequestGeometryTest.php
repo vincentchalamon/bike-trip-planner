@@ -13,17 +13,16 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for {@see \App\Repository\DoctrineTripRequestRepository::getStageGeometry}:
  * the in-ride detour input (issue #932). It must read the single `geometry` JSONB column
  * without hydrating the stage aggregate (weather, POIs, accommodations…).
  */
+#[ResetDatabase]
 final class DoctrineTripRequestGeometryTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private TripRequestRepositoryInterface $repository;
 
     private EntityManagerInterface $entityManager;

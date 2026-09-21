@@ -76,6 +76,11 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${DOMAIN:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      # Mercure 1.0 access tokens are RFC 9068: the `iss` the backend mints must
+      # match the Caddyfile `issuer` block, and the `aud` must match the hub's
+      # `resource_identifier` (MERCURE_PUBLIC_URL). Derived from DOMAIN like every
+      # other origin.
+      MERCURE_ISSUER: ${MERCURE_ISSUER:-https://${DOMAIN:-localhost}}
       # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
       # closed rather than silently using the committed dev default.
@@ -194,6 +199,11 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${DOMAIN:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      # Mercure 1.0 access tokens are RFC 9068: the `iss` the backend mints must
+      # match the Caddyfile `issuer` block, and the `aud` must match the hub's
+      # `resource_identifier` (MERCURE_PUBLIC_URL). Derived from DOMAIN like every
+      # other origin.
+      MERCURE_ISSUER: ${MERCURE_ISSUER:-https://${DOMAIN:-localhost}}
       # Encrypts refresh tokens at rest (SEC-003). Forwarded from the Coolify/host
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
       # closed rather than silently using the committed dev default.

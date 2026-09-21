@@ -38,8 +38,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = new Request();
         $request->attributes->set(RequestIdListener::ATTRIBUTE, '0193e7c1-1234-7000-9000-abcdef000001');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -59,8 +58,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = new Request();
         $request->headers->set(RequestIdListener::HEADER, '0193e7c1-1234-7000-9000-abcdef000002');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -97,8 +95,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = new Request();
         $request->attributes->set('tripId', '11111111-1111-7000-9000-000000000001');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -116,8 +113,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = Request::create('/trips/22222222-2222-7000-9000-000000000002');
         $request->attributes->set('id', '22222222-2222-7000-9000-000000000002');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -135,8 +131,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = Request::create('/users/33333333-3333-7000-9000-000000000003');
         $request->attributes->set('id', '33333333-3333-7000-9000-000000000003');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -154,8 +149,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = new Request();
         $request->attributes->set(RequestIdListener::ATTRIBUTE, 'attr-value');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
@@ -191,8 +185,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $request = new Request();
         $request->attributes->set(RequestIdListener::ATTRIBUTE, 'http-value');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);

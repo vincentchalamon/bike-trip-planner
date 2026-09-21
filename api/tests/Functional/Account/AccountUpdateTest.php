@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Account;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 /**
  * `PATCH /users/me` — the write ADR-063 had to open.
@@ -24,13 +23,8 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class AccountUpdateTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
 
     private function getEntityManager(): EntityManagerInterface
     {

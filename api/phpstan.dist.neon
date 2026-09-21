@@ -52,3 +52,10 @@ parameters:
           path: tests/Functional/Auth/*
         - identifier: missingType.iterableValue
           path: tests/Functional/Auth/*
+        # `.env.local.php` is produced by `composer dump-env prod` (prod image
+        # build only) and is gitignored, so it is legitimately absent in dev, in
+        # CI and in a fresh worktree. The `@include` in the Symfony skeleton's
+        # bootstrap is written to tolerate exactly that. Surfaced by the
+        # include.fileNotFound rule, new in PHPStan 2.2.14's bleeding edge.
+        - identifier: include.fileNotFound
+          path: config/bootstrap.php

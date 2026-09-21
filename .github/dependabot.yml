@@ -9,20 +9,46 @@ updates:
       interval: weekly
     labels:
       - dependencies
+  # Compose files carry their own image pins (postgis, redis, valhalla) and the
+  # docker ecosystem above only looks at Dockerfiles, so they need their own entry
+  # — otherwise those tags drift unwatched, as traefik and cloudflared did.
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploy/*
+      - /.docker/glitchtip
+      - /.docker/uptime-kuma
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
   - package-ecosystem: composer
-    directory: /api
+    directories:
+      - /api
+      # Second, independent Composer project (its own phpstan/phpunit/rector).
+      - /provisioner
+      # bamarni/composer-bin-plugin namespaces: php-cs-fixer lives here, and CI
+      # drifted from it unnoticed.
+      - /api/vendor-bin/*
+      - /provisioner/vendor-bin/*
     schedule:
       interval: daily
     labels:
       - dependencies
     open-pull-requests-limit: 0 # open Pull Requests for security updates only
+  # npm workspaces: the root manifest holds the security `overrides`, and `core`
+  # and `mobile` were watched by nothing at all.
   - package-ecosystem: npm
-    directory: /pwa
+    directories:
+      - /
+      - /pwa
+      - /core
+      - /mobile
     schedule:
       interval: daily
     labels:

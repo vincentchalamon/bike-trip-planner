@@ -9,7 +9,7 @@ use App\Osm\WktGeometry;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first ways read layer (ADR-040): seeds real
@@ -18,10 +18,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  *
  * @phpstan-import-type WayRow from WaysRepository
  */
+#[ResetDatabase]
 final class WaysIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     /** The production corridor half-width (AnalyzeTerrainHandler). */
     private const int RADIUS_METERS = 20;
 

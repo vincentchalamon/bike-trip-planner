@@ -91,11 +91,11 @@ typescript-check: ## Run TypeScript Check
 hadolint: ## Run Hadolint on Dockerfiles
 	@status=0; for f in $$(find .docker -name Dockerfile); do \
 		echo "=> $$f"; \
-		docker run --rm -i hadolint/hadolint < "$$f" || status=1; \
+		docker run --rm -i hadolint/hadolint:v2.15.1 < "$$f" || status=1; \
 	done; exit $$status
 
 markdownlint: ## Run Markdownlint
-	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!**/node_modules/**" "!pwa/.next/**"
+	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2:v0.23.3 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!**/node_modules/**" "!pwa/.next/**"
 
 link-check: ## Check Markdown links & anchors (internal fatal; use `make link-check -- --external` to gate on external URLs)
 	@docker run --rm -v $(CURDIR):/app -w /app node:26-slim node scripts/check-md-links.mjs $(ARGS)
@@ -270,11 +270,11 @@ routing-publish: ## Ship the built routing graph to a server (e.g. make routing-
 	@test -n "$(ARGS)" || { echo "Usage: make routing-publish <user@host> <slug> [slug...] (e.g. make routing-publish deploy@prod-host france belgium)"; exit 1; }
 	@ARTIFACT="valhalla-$$(echo $(ROUTING_PUBLISH_SLUGS) | tr ' ' '-')-$$(date +%Y%m).tar.gz" && \
 	VOL=$$(docker volume ls -q | grep valhalla-tiles) && \
-	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar && \
+	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine:3.24 tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar && \
 	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz" && \
 	rm -f "$$ARTIFACT" && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) stop valhalla' && \
-	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f /tmp/valhalla-tiles.tar.gz' && \
+	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine:3.24 sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine:3.24 tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f /tmp/valhalla-tiles.tar.gz' && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) restart valhalla'
 
 ## --- 💾 Backup & DR ---

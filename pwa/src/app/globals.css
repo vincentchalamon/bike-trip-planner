@@ -5,211 +5,211 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-serif: var(--font-fraunces);
-  --font-sans: var(--font-inter-tight);
-  --font-mono: var(--font-jetbrains-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-brand: var(--brand);
-  --color-brand-light: var(--brand-light);
-  --color-brand-hover: var(--brand-hover);
-  --color-brand-fill: var(--brand-fill);
-  --color-brand-fill-hover: var(--brand-fill-hover);
-  --color-muted-icon: var(--muted-icon);
-  --color-diff-highlight: var(--diff-highlight);
-  /* ── Semantic design tokens (sprint 25+) ────────────────────────────── */
-  --color-accent-brand: var(--accent-brand);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-ink: var(--accent-ink);
-  --color-surface: var(--surface);
-  --color-ink: var(--ink);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-serif: var(--font-fraunces);
+    --font-sans: var(--font-inter-tight);
+    --font-mono: var(--font-jetbrains-mono);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 12px);
+    --radius-4xl: calc(var(--radius) + 16px);
+    --color-brand: var(--brand);
+    --color-brand-light: var(--brand-light);
+    --color-brand-hover: var(--brand-hover);
+    --color-brand-fill: var(--brand-fill);
+    --color-brand-fill-hover: var(--brand-fill-hover);
+    --color-muted-icon: var(--muted-icon);
+    --color-diff-highlight: var(--diff-highlight);
+    /* ── Semantic design tokens (sprint 25+) ────────────────────────────── */
+    --color-accent-brand: var(--accent-brand);
+    --color-accent-soft: var(--accent-soft);
+    --color-accent-ink: var(--accent-ink);
+    --color-surface: var(--surface);
+    --color-ink: var(--ink);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * LIGHT MODE — warm paper / ink charcoal / amber accent
  * ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --radius: 0.625rem;
+    --radius: 0.625rem;
 
-  /* ── Sprint 25 design scales (spacing + shadows) ────────────────────── */
-  /* Defined as plain CSS variables (not @theme) to avoid generating       */
-  /* Tailwind utility classes that would conflict with transition-all and */
-  /* trigger Playwright stability timeouts. Reference via var() in CSS or */
-  /* style props.                                                         */
-  --spacing-xs: 6px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-base: 16px;
-  --spacing-lg: 22px;
-  --spacing-xl: 28px;
-  --spacing-2xl: 36px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 64px;
+    /* ── Sprint 25 design scales (spacing + shadows) ────────────────────── */
+    /* Defined as plain CSS variables (not @theme) to avoid generating       */
+    /* Tailwind utility classes that would conflict with transition-all and */
+    /* trigger Playwright stability timeouts. Reference via var() in CSS or */
+    /* style props.                                                         */
+    --spacing-xs: 6px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-base: 16px;
+    --spacing-lg: 22px;
+    --spacing-xl: 28px;
+    --spacing-2xl: 36px;
+    --spacing-3xl: 48px;
+    --spacing-4xl: 64px;
 
-  --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.08);
-  --shadow-medium: 0 4px 12px rgb(0 0 0 / 0.12);
-  --shadow-strong: 0 8px 24px rgb(0 0 0 / 0.16);
+    --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.08);
+    --shadow-medium: 0 4px 12px rgb(0 0 0 / 0.12);
+    --shadow-strong: 0 8px 24px rgb(0 0 0 / 0.16);
 
-  /* ── Brand (amber) ────────────────────────────────────────────────────── */
-  /* --brand is the Tailwind alias used by every existing component.         */
-  /* Darkened from #c2671e to #a8561a for WCAG AA (4.5:1): white-on-brand    */
-  /* and brand-text-on-surface (a11y LH-A11Y-HOME / H12).                    */
-  --brand: #a8561a;
-  /* Soft amber for hovers, backgrounds, shimmer tints                       */
-  --brand-light: #fdf0e6;
-  /* Darker amber for hover states (darker than --brand, ≥ 3:1 on brand-light) */
-  --brand-hover: #8c4716;
-  /* Filled-button background: amber guaranteed ≥ 4.5:1 with white text in     */
-  /* both modes. In light it equals --brand; in dark it stays this dark amber  */
-  /* (vs the lighter accent --brand #e08040 which fails white-on-fill at 2.86) */
-  --brand-fill: #a8561a;
-  --brand-fill-hover: #8c4716;
-  /* Darkened from #9da5a7 (2.34:1 on --background, fails WCAG 1.4.11's 3:1     */
-  /* non-text minimum for icon-only controls) to 3.20:1. Parity with mobile     */
-  /* tokens.ts mutedIcon (#1233 / #1242).                                       */
-  --muted-icon: #858c8e;
-  --diff-highlight: oklch(0.97 0.12 60);
+    /* ── Brand (amber) ────────────────────────────────────────────────────── */
+    /* --brand is the Tailwind alias used by every existing component.         */
+    /* Darkened from #c2671e to #a8561a for WCAG AA (4.5:1): white-on-brand    */
+    /* and brand-text-on-surface (a11y LH-A11Y-HOME / H12).                    */
+    --brand: #a8561a;
+    /* Soft amber for hovers, backgrounds, shimmer tints                       */
+    --brand-light: #fdf0e6;
+    /* Darker amber for hover states (darker than --brand, ≥ 3:1 on brand-light) */
+    --brand-hover: #8c4716;
+    /* Filled-button background: amber guaranteed ≥ 4.5:1 with white text in     */
+    /* both modes. In light it equals --brand; in dark it stays this dark amber  */
+    /* (vs the lighter accent --brand #e08040 which fails white-on-fill at 2.86) */
+    --brand-fill: #a8561a;
+    --brand-fill-hover: #8c4716;
+    /* Darkened from #9da5a7 (2.34:1 on --background, fails WCAG 1.4.11's 3:1     */
+    /* non-text minimum for icon-only controls) to 3.20:1. Parity with mobile     */
+    /* tokens.ts mutedIcon (#1233 / #1242).                                       */
+    --muted-icon: #858c8e;
+    --diff-highlight: oklch(0.97 0.12 60);
 
-  /* ── Semantic tokens ──────────────────────────────────────────────────── */
-  /* accent-brand = amber principal (darkened to #a8561a for WCAG AA)        */
-  --accent-brand: #a8561a;
-  /* accent-soft = warm sand for diff/highlight backgrounds                  */
-  --accent-soft: #fdf0e6;
-  /* accent-ink = deep brown, AA contrast on surface (#faf7f0)               */
-  --accent-ink: #6b2d00;
-  /* surface = warm paper (replaces pure white)                              */
-  --surface: #faf7f0;
-  /* ink = ink charcoal (replaces pure black)                                */
-  --ink: #1a1814;
+    /* ── Semantic tokens ──────────────────────────────────────────────────── */
+    /* accent-brand = amber principal (darkened to #a8561a for WCAG AA)        */
+    --accent-brand: #a8561a;
+    /* accent-soft = warm sand for diff/highlight backgrounds                  */
+    --accent-soft: #fdf0e6;
+    /* accent-ink = deep brown, AA contrast on surface (#faf7f0)               */
+    --accent-ink: #6b2d00;
+    /* surface = warm paper (replaces pure white)                              */
+    --surface: #faf7f0;
+    /* ink = ink charcoal (replaces pure black)                                */
+    --ink: #1a1814;
 
-  /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
-  --background: #faf7f0;
-  --foreground: #1a1814;
-  --card: #faf7f0;
-  --card-foreground: #1a1814;
-  --popover: #faf7f0;
-  --popover-foreground: #1a1814;
-  --primary: #1a1814;
-  --primary-foreground: #faf7f0;
-  --secondary: oklch(0.965 0.012 60);
-  --secondary-foreground: #1a1814;
-  --muted: oklch(0.965 0.012 60);
-  --muted-foreground: oklch(0.5 0.04 60);
-  --accent: oklch(0.965 0.012 60);
-  --accent-foreground: #1a1814;
-  /* Darkened from oklch(0.577 0.245 27.325) (~#e7000b, 4.46:1 on --background,  */
-  /* just under WCAG AA's 4.5:1 for normal text) to #d0000a (5.32:1). White on   */
-  /* this stays AA for filled destructive buttons (5.70:1). Parity with mobile   */
-  /* tokens.ts destructive (#1233 / #1242).                                      */
-  --destructive: #d0000a;
-  --border: oklch(0.91 0.02 60);
-  --input: oklch(0.91 0.02 60);
-  --ring: oklch(0.65 0.1 60);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.975 0.01 60);
-  --sidebar-foreground: #1a1814;
-  --sidebar-primary: #1a1814;
-  --sidebar-primary-foreground: #faf7f0;
-  --sidebar-accent: oklch(0.965 0.012 60);
-  --sidebar-accent-foreground: #1a1814;
-  --sidebar-border: oklch(0.91 0.02 60);
-  --sidebar-ring: oklch(0.65 0.1 60);
+    /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
+    --background: #faf7f0;
+    --foreground: #1a1814;
+    --card: #faf7f0;
+    --card-foreground: #1a1814;
+    --popover: #faf7f0;
+    --popover-foreground: #1a1814;
+    --primary: #1a1814;
+    --primary-foreground: #faf7f0;
+    --secondary: oklch(0.965 0.012 60);
+    --secondary-foreground: #1a1814;
+    --muted: oklch(0.965 0.012 60);
+    --muted-foreground: oklch(0.5 0.04 60);
+    --accent: oklch(0.965 0.012 60);
+    --accent-foreground: #1a1814;
+    /* Darkened from oklch(0.577 0.245 27.325) (~#e7000b, 4.46:1 on --background,  */
+    /* just under WCAG AA's 4.5:1 for normal text) to #d0000a (5.32:1). White on   */
+    /* this stays AA for filled destructive buttons (5.70:1). Parity with mobile   */
+    /* tokens.ts destructive (#1233 / #1242).                                      */
+    --destructive: #d0000a;
+    --border: oklch(0.91 0.02 60);
+    --input: oklch(0.91 0.02 60);
+    --ring: oklch(0.65 0.1 60);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --sidebar: oklch(0.975 0.01 60);
+    --sidebar-foreground: #1a1814;
+    --sidebar-primary: #1a1814;
+    --sidebar-primary-foreground: #faf7f0;
+    --sidebar-accent: oklch(0.965 0.012 60);
+    --sidebar-accent-foreground: #1a1814;
+    --sidebar-border: oklch(0.91 0.02 60);
+    --sidebar-ring: oklch(0.65 0.1 60);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * DARK MODE — deep charcoal / warm amber accent
  * ═══════════════════════════════════════════════════════════════════════════ */
 .dark {
-  /* ── Brand (amber, brightened for dark backgrounds) ──────────────────── */
-  --brand: #e08040;
-  --brand-light: #2e1a08;
-  --brand-hover: #f09050;
-  /* Filled-button background stays dark amber so white text keeps ≥ 4.5:1     */
-  /* (the bright accent --brand #e08040 gives only 2.86:1 with white).         */
-  --brand-fill: #a8561a;
-  --brand-fill-hover: #8c4716;
-  --muted-icon: #6b7275;
-  --diff-highlight: oklch(0.32 0.08 60);
+    /* ── Brand (amber, brightened for dark backgrounds) ──────────────────── */
+    --brand: #e08040;
+    --brand-light: #2e1a08;
+    --brand-hover: #f09050;
+    /* Filled-button background stays dark amber so white text keeps ≥ 4.5:1     */
+    /* (the bright accent --brand #e08040 gives only 2.86:1 with white).         */
+    --brand-fill: #a8561a;
+    --brand-fill-hover: #8c4716;
+    --muted-icon: #6b7275;
+    --diff-highlight: oklch(0.32 0.08 60);
 
-  /* ── Semantic tokens ──────────────────────────────────────────────────── */
-  --accent-brand: #e08040;
-  --accent-soft: #2e1a08;
-  --accent-ink: #ffd4a8;
-  --surface: #1a1814;
-  --ink: #f5f0e8;
+    /* ── Semantic tokens ──────────────────────────────────────────────────── */
+    --accent-brand: #e08040;
+    --accent-soft: #2e1a08;
+    --accent-ink: #ffd4a8;
+    --surface: #1a1814;
+    --ink: #f5f0e8;
 
-  /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
-  --background: #1a1814;
-  --foreground: #f5f0e8;
-  --card: oklch(0.19 0.015 60);
-  --card-foreground: #f5f0e8;
-  --popover: oklch(0.19 0.015 60);
-  --popover-foreground: #f5f0e8;
-  --primary: #f5f0e8;
-  --primary-foreground: #1a1814;
-  --secondary: oklch(0.26 0.02 60);
-  --secondary-foreground: #f5f0e8;
-  --muted: oklch(0.26 0.02 60);
-  --muted-foreground: oklch(0.68 0.04 60);
-  --accent: oklch(0.26 0.02 60);
-  --accent-foreground: #f5f0e8;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.1 60);
-  --chart-1: oklch(0.75 0.18 60);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.19 0.015 60);
-  --sidebar-foreground: #f5f0e8;
-  --sidebar-primary: oklch(0.75 0.18 60);
-  --sidebar-primary-foreground: #f5f0e8;
-  --sidebar-accent: oklch(0.26 0.02 60);
-  --sidebar-accent-foreground: #f5f0e8;
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.55 0.1 60);
+    /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
+    --background: #1a1814;
+    --foreground: #f5f0e8;
+    --card: oklch(0.19 0.015 60);
+    --card-foreground: #f5f0e8;
+    --popover: oklch(0.19 0.015 60);
+    --popover-foreground: #f5f0e8;
+    --primary: #f5f0e8;
+    --primary-foreground: #1a1814;
+    --secondary: oklch(0.26 0.02 60);
+    --secondary-foreground: #f5f0e8;
+    --muted: oklch(0.26 0.02 60);
+    --muted-foreground: oklch(0.68 0.04 60);
+    --accent: oklch(0.26 0.02 60);
+    --accent-foreground: #f5f0e8;
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.55 0.1 60);
+    --chart-1: oklch(0.75 0.18 60);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.19 0.015 60);
+    --sidebar-foreground: #f5f0e8;
+    --sidebar-primary: oklch(0.75 0.18 60);
+    --sidebar-primary-foreground: #f5f0e8;
+    --sidebar-accent: oklch(0.26 0.02 60);
+    --sidebar-accent-foreground: #f5f0e8;
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.55 0.1 60);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -219,101 +219,101 @@
 
 /* Forest variant — earthy green accent */
 :root[data-theme="forest"] {
-  --brand: #3a7c47;
-  --brand-light: #eaf4ec;
-  --brand-hover: #2e6338;
-  --brand-fill: #3a7c47;
-  --brand-fill-hover: #2e6338;
-  --accent-brand: #3a7c47;
-  --accent-soft: #eaf4ec;
-  --accent-ink: #1a3d22;
-  --diff-highlight: oklch(0.97 0.1 145);
-  --ring: oklch(0.55 0.12 145);
+    --brand: #3a7c47;
+    --brand-light: #eaf4ec;
+    --brand-hover: #2e6338;
+    --brand-fill: #3a7c47;
+    --brand-fill-hover: #2e6338;
+    --accent-brand: #3a7c47;
+    --accent-soft: #eaf4ec;
+    --accent-ink: #1a3d22;
+    --diff-highlight: oklch(0.97 0.1 145);
+    --ring: oklch(0.55 0.12 145);
 }
 
 .dark[data-theme="forest"],
 [data-theme="forest"] .dark,
 :root[data-theme="forest"] .dark {
-  --brand: #5aad6a;
-  --brand-light: #0d2e14;
-  --brand-hover: #72c47e;
-  --brand-fill: #3a7c47;
-  --brand-fill-hover: #2e6338;
-  --accent-brand: #5aad6a;
-  --accent-soft: #0d2e14;
-  --accent-ink: #b8f0c0;
-  --diff-highlight: oklch(0.32 0.1 145);
-  --ring: oklch(0.55 0.12 145);
+    --brand: #5aad6a;
+    --brand-light: #0d2e14;
+    --brand-hover: #72c47e;
+    --brand-fill: #3a7c47;
+    --brand-fill-hover: #2e6338;
+    --accent-brand: #5aad6a;
+    --accent-soft: #0d2e14;
+    --accent-ink: #b8f0c0;
+    --diff-highlight: oklch(0.32 0.1 145);
+    --ring: oklch(0.55 0.12 145);
 }
 
 /* Indigo variant — cool blue-purple accent */
 :root[data-theme="indigo"] {
-  --brand: #4a5eb8;
-  --brand-light: #edf0fb;
-  --brand-hover: #3a4ea8;
-  --brand-fill: #4a5eb8;
-  --brand-fill-hover: #3a4ea8;
-  --accent-brand: #4a5eb8;
-  --accent-soft: #edf0fb;
-  --accent-ink: #1e2860;
-  --diff-highlight: oklch(0.97 0.1 270);
-  --ring: oklch(0.55 0.15 270);
+    --brand: #4a5eb8;
+    --brand-light: #edf0fb;
+    --brand-hover: #3a4ea8;
+    --brand-fill: #4a5eb8;
+    --brand-fill-hover: #3a4ea8;
+    --accent-brand: #4a5eb8;
+    --accent-soft: #edf0fb;
+    --accent-ink: #1e2860;
+    --diff-highlight: oklch(0.97 0.1 270);
+    --ring: oklch(0.55 0.15 270);
 }
 
 .dark[data-theme="indigo"],
 [data-theme="indigo"] .dark,
 :root[data-theme="indigo"] .dark {
-  --brand: #7a8ee0;
-  --brand-light: #131828;
-  --brand-hover: #9aacf0;
-  --brand-fill: #4a5eb8;
-  --brand-fill-hover: #3a4ea8;
-  --accent-brand: #7a8ee0;
-  --accent-soft: #131828;
-  --accent-ink: #c8d4ff;
-  --diff-highlight: oklch(0.32 0.1 270);
-  --ring: oklch(0.55 0.15 270);
+    --brand: #7a8ee0;
+    --brand-light: #131828;
+    --brand-hover: #9aacf0;
+    --brand-fill: #4a5eb8;
+    --brand-fill-hover: #3a4ea8;
+    --accent-brand: #7a8ee0;
+    --accent-soft: #131828;
+    --accent-ink: #c8d4ff;
+    --diff-highlight: oklch(0.32 0.1 270);
+    --ring: oklch(0.55 0.15 270);
 }
 
 /* Brick variant — warm red-terracotta accent */
 :root[data-theme="brick"] {
-  --brand: #b84040;
-  --brand-light: #faeaea;
-  --brand-hover: #9a3030;
-  --brand-fill: #b84040;
-  --brand-fill-hover: #9a3030;
-  --accent-brand: #b84040;
-  --accent-soft: #faeaea;
-  --accent-ink: #5a1010;
-  --diff-highlight: oklch(0.97 0.1 20);
-  --ring: oklch(0.55 0.18 20);
+    --brand: #b84040;
+    --brand-light: #faeaea;
+    --brand-hover: #9a3030;
+    --brand-fill: #b84040;
+    --brand-fill-hover: #9a3030;
+    --accent-brand: #b84040;
+    --accent-soft: #faeaea;
+    --accent-ink: #5a1010;
+    --diff-highlight: oklch(0.97 0.1 20);
+    --ring: oklch(0.55 0.18 20);
 }
 
 .dark[data-theme="brick"],
 [data-theme="brick"] .dark,
 :root[data-theme="brick"] .dark {
-  --brand: #e07070;
-  --brand-light: #2a0a0a;
-  --brand-hover: #f09090;
-  --brand-fill: #b84040;
-  --brand-fill-hover: #9a3030;
-  --accent-brand: #e07070;
-  --accent-soft: #2a0a0a;
-  --accent-ink: #ffc8c8;
-  --diff-highlight: oklch(0.32 0.1 20);
-  --ring: oklch(0.55 0.18 20);
+    --brand: #e07070;
+    --brand-light: #2a0a0a;
+    --brand-hover: #f09090;
+    --brand-fill: #b84040;
+    --brand-fill-hover: #9a3030;
+    --accent-brand: #e07070;
+    --accent-soft: #2a0a0a;
+    --accent-ink: #ffc8c8;
+    --diff-highlight: oklch(0.32 0.1 20);
+    --ring: oklch(0.55 0.18 20);
 }
 
 @keyframes indeterminate {
-  0% {
-    transform: translateX(-100%) scaleX(0.3);
-  }
-  50% {
-    transform: translateX(0%) scaleX(0.6);
-  }
-  100% {
-    transform: translateX(100%) scaleX(0.3);
-  }
+    0% {
+        transform: translateX(-100%) scaleX(0.3);
+    }
+    50% {
+        transform: translateX(0%) scaleX(0.6);
+    }
+    100% {
+        transform: translateX(100%) scaleX(0.3);
+    }
 }
 
 /**
@@ -322,28 +322,28 @@
  * matching the store expiry timer in use-mercure.ts.
  */
 @keyframes diff-highlight {
-  0% {
-    background-color: var(--color-diff-highlight);
-  }
-  30% {
-    background-color: var(--color-diff-highlight);
-  }
-  100% {
-    background-color: transparent;
-  }
+    0% {
+        background-color: var(--color-diff-highlight);
+    }
+    30% {
+        background-color: var(--color-diff-highlight);
+    }
+    100% {
+        background-color: transparent;
+    }
 }
 
 .diff-highlight {
-  animation: diff-highlight 3s ease-out forwards;
+    animation: diff-highlight 3s ease-out forwards;
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
 }
 
 /* ─── driver.js onboarding tour overrides ─────────────────────────────────── */
@@ -351,86 +351,86 @@
 /* respects the current theme (light / dark) and matches the UI typography.   */
 
 .driver-popover.onboarding-popover {
-  background-color: var(--popover);
-  color: var(--popover-foreground);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--font-sans), system-ui, sans-serif;
-  box-shadow:
-    0 10px 25px -5px oklch(0 0 0 / 20%),
-    0 4px 10px -2px oklch(0 0 0 / 10%);
-  max-width: 340px;
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    box-shadow:
+        0 10px 25px -5px oklch(0 0 0 / 20%),
+        0 4px 10px -2px oklch(0 0 0 / 10%);
+    max-width: 340px;
 }
 
 .driver-popover.onboarding-popover .driver-popover-title {
-  color: var(--popover-foreground);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1.4;
-  margin-bottom: 0.375rem;
+    color: var(--popover-foreground);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 0.375rem;
 }
 
 .driver-popover.onboarding-popover .driver-popover-description {
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-  line-height: 1.55;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    line-height: 1.55;
 }
 
 .driver-popover.onboarding-popover .driver-popover-progress-text {
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
 }
 
 /* Navigation buttons */
 .driver-popover.onboarding-popover .driver-popover-navigation-btns button {
-  background-color: var(--secondary);
-  color: var(--secondary-foreground);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) - 2px);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  padding: 0.3125rem 0.75rem;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  text-shadow: none;
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.3125rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    text-shadow: none;
 }
 
 .driver-popover.onboarding-popover
-  .driver-popover-navigation-btns
-  button:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
+    .driver-popover-navigation-btns
+    button:hover {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
 }
 
 /* "Next" / "Done" button uses the brand colour (filled, white text -> use     */
 /* --brand-fill so it keeps WCAG AA contrast in dark mode, like the buttons).   */
 .driver-popover.onboarding-popover .driver-popover-next-btn {
-  background-color: var(--brand-fill) !important;
-  color: #ffffff !important;
-  border-color: var(--brand-fill) !important;
+    background-color: var(--brand-fill) !important;
+    color: #ffffff !important;
+    border-color: var(--brand-fill) !important;
 }
 
 .driver-popover.onboarding-popover .driver-popover-next-btn:hover {
-  background-color: var(--brand-fill-hover) !important;
-  border-color: var(--brand-fill-hover) !important;
+    background-color: var(--brand-fill-hover) !important;
+    border-color: var(--brand-fill-hover) !important;
 }
 
 /* Close (×) button */
 .driver-popover.onboarding-popover .driver-popover-close-btn {
-  color: var(--muted-foreground);
+    color: var(--muted-foreground);
 }
 
 .driver-popover.onboarding-popover .driver-popover-close-btn:hover {
-  color: var(--foreground);
+    color: var(--foreground);
 }
 
 /* Arrow */
 .driver-popover.onboarding-popover .driver-popover-arrow {
-  border-color: var(--border) transparent transparent transparent;
+    border-color: var(--border) transparent transparent transparent;
 }
 
 /* Highlight border uses brand colour */
 .driver-overlay.driver-overlay-animated {
-  transition: all 0.25s ease;
+    transition: all 0.25s ease;
 }
 /* ─────────────────────────────────────────────────────────────────────────── */

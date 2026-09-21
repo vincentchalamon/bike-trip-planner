@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use ApiPlatform\Test\Client;
 use App\Concurrency\IfMatch;
 
 /**

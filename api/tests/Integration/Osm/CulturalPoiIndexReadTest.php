@@ -8,17 +8,16 @@ use App\Osm\CulturalPoiRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first cultural-POI read layer (ADR-040):
  * exercises the real PostGIS osm.cultural_pois table with seeded rows and asserts
  * the ST_DWithin corridor filtering plus the wikidata column mapping.
  */
+#[ResetDatabase]
 final class CulturalPoiIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

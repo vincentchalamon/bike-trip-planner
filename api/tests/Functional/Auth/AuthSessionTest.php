@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
@@ -13,7 +13,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 /**
  * `GET /auth/session` — read-only session introspection (recette #649 #8, ADR-047).
@@ -25,13 +24,8 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class AuthSessionTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
 
     private function getEntityManager(): EntityManagerInterface
     {

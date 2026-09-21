@@ -446,9 +446,7 @@ final class OpeningHoursParser
             // such date.
             foreach (self::HOLIDAY_LOCALES as $locale) {
                 $key = $locale.'-'.$year;
-                if (!isset(self::$yasumiCache[$key])) {
-                    self::$yasumiCache[$key] = Yasumi::create($locale, $year);
-                }
+                self::$yasumiCache[$key] ??= Yasumi::create($locale, $year);
 
                 if (self::$yasumiCache[$key]->isHoliday($needle)) {
                     return true;

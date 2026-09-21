@@ -180,7 +180,13 @@ final class TripRequest
 
     /** @var Collection<int, Stage> */
     #[ORM\OneToMany(targetEntity: Stage::class, mappedBy: 'trip', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[ORM\OrderBy(['position' => 'ASC'])]
+    // `\SortDirection` is the global enum PHP ships natively in 8.6; on 8.5 it
+    // comes from symfony/polyfill-php86, required explicitly in composer.json
+    // because we name the class ourselves rather than inheriting it from
+    // doctrine/orm. Doctrine's own deprecation asks for this enum by name —
+    // Doctrine\Common\Collections\Order is a different thing, used by the
+    // Collections criteria API, not by #[ORM\OrderBy].
+    #[ORM\OrderBy(['position' => \SortDirection::Ascending])]
     #[ApiProperty(readable: false, writable: false)]
     public Collection $stages;
 
