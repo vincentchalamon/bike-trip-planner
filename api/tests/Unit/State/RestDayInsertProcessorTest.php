@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Service\EnrichmentMessageFactory;
+use App\Service\TripAnalysisDispatcher;
 use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
@@ -11,6 +13,11 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
+use App\Message\ScanEvents;
+use App\Message\ScanAccommodations;
+use App\Message\ScanPois;
+use App\Message\CheckFerries;
+use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -65,6 +72,7 @@ final class RestDayInsertProcessorTest extends TestCase
             $this->stageResponseMapper,
             new TripLocker(),
             new StageLocator(),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
     }
 
@@ -245,7 +253,7 @@ final class RestDayInsertProcessorTest extends TestCase
     }
 
     #[Test]
-    public function dispatchesFetchWeatherAndCheckCalendarWhenStartDateIsSet(): void
+    public function insertingARestDayRecomputesEverythingTheDateShiftInvalidates(): void
     {
         $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
@@ -259,9 +267,10 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $dispatchedMessages = [];
-        // RecalculateStages + AnalyzeTerrain (pacing/rest-day nudge re-run) +
-        // FetchWeather + CheckCalendar = 4 dispatches when a start date is set.
-        $this->messageBus->expects($this->exactly(4))
+        // RecalculateStages + AnalyzeTerrain (the rest-day nudge, a layout concern) + the
+        // date-dependent set minus terrain: weather, holidays, events, and the two whose
+        // verdicts read a stage date — the resupply weekday and the seasonal month (ADR-070).
+        $this->messageBus->expects($this->exactly(7))
             ->method('dispatch')
             ->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
                 $dispatchedMessages[] = $msg;
@@ -278,6 +287,16 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->assertSame('trip-1', $weatherMessages[0]->tripId);
         $this->assertCount(1, $calendarMessages);
         $this->assertSame('trip-1', $calendarMessages[0]->tripId);
-        $this->assertCount(1, $terrainMessages);
+        $this->assertCount(1, $terrainMessages, 'Terrain is dispatched once, for the nudge, not again by the date set.');
+
+        // A rest day adds no geometry, so nothing corridor-only may be re-scanned.
+        $classes = array_map(static fn (object $m): string => $m::class, $dispatchedMessages);
+        $this->assertNotContains(CheckWaterPoints::class, $classes);
+        $this->assertNotContains(CheckFerries::class, $classes);
+
+        // The three a date shift used to leave stale.
+        $this->assertContains(ScanPois::class, $classes);
+        $this->assertContains(ScanAccommodations::class, $classes);
+        $this->assertContains(ScanEvents::class, $classes);
     }
 }

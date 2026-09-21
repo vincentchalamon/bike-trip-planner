@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Service\EnrichmentMessageFactory;
+use App\Service\TripAnalysisDispatcher;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -11,6 +13,15 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\CheckCalendar;
+use App\Message\ScanEvents;
+use App\Message\ResolveStageLabels;
+use App\Message\CheckFerries;
+use App\Message\CheckBorderCrossing;
+use App\Message\CheckCulturalPois;
+use App\Message\CheckRailwayStations;
+use App\Message\CheckHealthServices;
+use App\Message\CheckWaterPoints;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
@@ -42,6 +53,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             $tripStateManager,
             $messageBus,
             $this->createAlertRenderer(),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
         );
     }
 
@@ -123,6 +135,70 @@ final class RecalculateStagesHandlerTest extends TestCase
         $handler = $this->createHandler($tripStateManager, $publisher, $messageBus, $generationTracker);
 
         $handler(new RecalculateStages('trip-1', [], generation: 3));
+    }
+
+    /**
+     * The gap ADR-070 closes: this handler used to name five computations out of twelve, so a
+     * stage merge — which concatenates two geometries — left seven groups holding alerts
+     * drawn from the line that no longer existed.
+     */
+    #[Test]
+    public function aGeometryChangeRedispatchesEveryComputationDrawnFromTheLine(): void
+    {
+        $makeStage = static fn (int $day): Stage => new Stage(
+            tripId: 'trip-1',
+            dayNumber: $day,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $stages = [$makeStage(1), $makeStage(2)];
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+
+        /** @var list<object> $dispatched */
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message;
+
+                return new Envelope($message);
+            }
+        );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $this->createStub(TripUpdatePublisherInterface::class),
+            $messageBus,
+        );
+
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [$stages[0]->id]));
+
+        $classes = array_map(static fn (object $m): string => $m::class, $dispatched);
+
+        foreach ([
+            CheckWaterPoints::class,
+            CheckHealthServices::class,
+            CheckRailwayStations::class,
+            CheckCulturalPois::class,
+            CheckBorderCrossing::class,
+            CheckFerries::class,
+            ResolveStageLabels::class,
+        ] as $missedBefore) {
+            $this->assertContains($missedBefore, $classes);
+        }
+
+        // Still dispatched, and the reason a naive split into two disjoint sets would have
+        // been wrong: events sit near the stage end point as well as on its date.
+        $this->assertContains(ScanEvents::class, $classes);
+
+        // Holidays fall on a date the line cannot move.
+        $this->assertNotContains(CheckCalendar::class, $classes);
     }
 
     #[Test]

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripModification;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
+use App\Message\CheckBorderCrossing;
+use App\Message\CheckFerries;
 use App\Message\CheckCulturalPois;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -31,7 +34,7 @@ final class ComputationDependencyResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resolver = new ComputationDependencyResolver();
+        $this->resolver = new ComputationDependencyResolver(new EnrichmentMessageFactory());
     }
 
     #[Test]
@@ -93,15 +96,25 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(CheckBikeShops::class, $classes);
     }
 
+    /**
+     * A distance edit moves the line, so it invalidates everything drawn from the line —
+     * including the four groups this resolver used to leave out (ADR-070).
+     */
     #[Test]
-    public function distanceModificationWithDatesTriggersWeatherAndCalendar(): void
+    public function distanceModificationTriggersEveryGeometryDependentComputation(): void
     {
         $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
         $classes = $this->classesOf($messages);
         $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
+        foreach ([CheckCulturalPois::class, CheckFerries::class, CheckBorderCrossing::class] as $missedBefore) {
+            $this->assertContains($missedBefore, $classes);
+        }
+
+        // The stage count is unchanged, so every stage keeps its day number and its calendar
+        // date: the holidays cannot have moved. This used to be dispatched anyway.
+        $this->assertNotContains(CheckCalendar::class, $classes);
     }
 
     #[Test]
@@ -113,6 +126,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $classes = $this->classesOf($messages);
         $this->assertNotContains(FetchWeather::class, $classes);
         $this->assertNotContains(CheckCalendar::class, $classes);
+        $this->assertNotContains(ScanEvents::class, $classes);
     }
 
     #[Test]
@@ -125,7 +139,15 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(FetchWeather::class, $classes);
         $this->assertContains(CheckCalendar::class, $classes);
         $this->assertContains(ScanEvents::class, $classes);
-        $this->assertContains(CheckCulturalPois::class, $classes);
+
+        // The three that a date change used to leave on the old date: the resupply verdict
+        // keeps a weekday, the seasonal one a month, the sunset alert a date (ADR-070).
+        $this->assertContains(ScanPois::class, $classes);
+        $this->assertContains(AnalyzeTerrain::class, $classes);
+
+        // Cultural POIs are suggestions along the corridor and read no date at all; they
+        // used to be re-scanned on every date change for nothing.
+        $this->assertNotContains(CheckCulturalPois::class, $classes);
 
         // Dates alone do NOT trigger route recalculation
         $this->assertNotContains(RecalculateStages::class, $classes);

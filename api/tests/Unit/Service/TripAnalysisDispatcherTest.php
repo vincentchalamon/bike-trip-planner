@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripRequest;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
@@ -64,10 +65,16 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch($tripId, $request, $generation);
 
+        // Compared as a set: the full pipeline is a fan-out onto an async bus, so which
+        // messages go out is the contract and the order they go out in is not. Since
+        // ADR-070 that order follows the ComputationName enum rather than a hand-written
+        // list, and pinning it would only record an implementation detail.
         $dispatchedClasses = array_map(static fn (object $m): string => $m::class, $dispatched);
+        sort($dispatchedClasses);
+        sort($expectedMessages);
         $this->assertSame($expectedMessages, $dispatchedClasses);
 
         foreach ($dispatched as $message) {
@@ -98,7 +105,7 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch('trip-1', $request);
 
         $this->assertInstanceOf(ScanAccommodations::class, $scanAccommodations);
@@ -125,7 +132,7 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch('trip-1', $request);
 
         $this->assertNotEmpty($generations);

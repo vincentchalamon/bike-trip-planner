@@ -16,12 +16,9 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckCalendar;
 use App\Message\FetchAndParseRoute;
-use App\Message\FetchWeather;
 use App\Message\GenerateStages;
-use App\Message\ScanAccommodations;
+use App\Service\TripAnalysisDispatcher;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -41,6 +38,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
 
@@ -133,29 +131,24 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
 
     private function dispatchComputation(string $tripId, ComputationName $computation, int $generation): void
     {
-        match ($computation) {
-            ComputationName::ROUTE => $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation)),
-            ComputationName::STAGES => $this->messageBus->dispatch(new GenerateStages($tripId, $generation)),
-            ComputationName::TERRAIN => $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation)),
-            ComputationName::WEATHER => $this->messageBus->dispatch(new FetchWeather($tripId, $generation)),
-            ComputationName::CALENDAR => $this->messageBus->dispatch(new CheckCalendar($tripId, $generation)),
-            ComputationName::ACCOMMODATIONS => $this->dispatchAccommodationsScan($tripId, $generation),
-            // These computations are cascaded internally by their parent handlers,
-            // not dispatched directly as root computations from a PATCH operation.
-            // If a new ComputationName appears here unexpectedly, fail-fast to surface the gap.
-            default => throw new \LogicException(\sprintf('No direct dispatch registered for computation "%s" in %s. Add it to PARAMETER_DEPENDENCIES or wire its dispatch here.', $computation->value, self::class)),
-        };
-    }
+        // Only the two root computations are built here. Every enrichment goes through the
+        // dispatcher that already owns that mapping, so a PATCH and a structural edit cannot
+        // disagree about which message a computation means (ADR-070).
+        if (ComputationName::ROUTE === $computation) {
+            $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
 
-    private function dispatchAccommodationsScan(string $tripId, int $generation): void
-    {
+            return;
+        }
+
+        if (ComputationName::STAGES === $computation) {
+            $this->messageBus->dispatch(new GenerateStages($tripId, $generation));
+
+            return;
+        }
+
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
 
-        $this->messageBus->dispatch(new ScanAccommodations(
-            $tripId,
-            enabledAccommodationTypes: $request->enabledAccommodationTypes,
-            generation: $generation,
-        ));
+        $this->analysisDispatcher->dispatchOne($tripId, $request, $computation, $generation);
     }
 }

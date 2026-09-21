@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\Service\EnrichmentMessageFactory;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -65,7 +66,7 @@ final class GenerateStagesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $structuralComputation,
-            new TripAnalysisDispatcher($messageBus),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             $messageBus,
             $this->createAlertRenderer(),
         );

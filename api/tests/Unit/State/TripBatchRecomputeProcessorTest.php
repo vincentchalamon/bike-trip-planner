@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Service\EnrichmentMessageFactory;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -48,10 +49,10 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $processor = new TripBatchRecomputeProcessor(
             $this->createStub(TripRequestRepositoryInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
-            new ComputationDependencyResolver(),
+            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $this->createStub(ComputationTrackerInterface::class),
-            new TripAnalysisDispatcher($messageBus),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             $limiter,
         );
 
@@ -102,10 +103,10 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $processor = new TripBatchRecomputeProcessor(
             $tripStateManager,
             $generationTracker,
-            new ComputationDependencyResolver(),
+            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $computationTracker,
-            new TripAnalysisDispatcher($messageBus),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
 
@@ -142,10 +143,10 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         return new TripBatchRecomputeProcessor(
             $tripStateManager,
             $generationTracker,
-            new ComputationDependencyResolver(),
+            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $computationTracker,
-            new TripAnalysisDispatcher($messageBus),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
     }

@@ -9,14 +9,12 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\ComputationName;
+use App\Enum\ComputationTrigger;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckBikeShops;
 use App\Message\RecalculateStages;
-use App\Message\ScanAccommodations;
-use App\Message\ScanEvents;
-use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -32,6 +30,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
@@ -90,25 +89,26 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $this->publisher->publishStageUpdated($tripId, $stage, $positions[$stage->id]);
         }
 
-        // Dispatch POI/Accommodation/BikeShop scans for affected stages
+        // The line moved, so everything drawn from it is now wrong. Which computations those
+        // are is declared on ComputationName::triggers(), not listed here: this method used
+        // to name five of the twelve, which is how a merge left seven groups holding alerts
+        // computed against the pre-merge line (ADR-070).
         if ([] !== $affected && !$message->skipGeographicScans) {
-            $this->messageBus->dispatch(new ScanPois($tripId, $generation));
-            if (!$message->skipAccommodationScan) {
-                $request = $this->tripStateManager->getRequest($tripId);
-                \assert($request instanceof TripRequest);
-                foreach ($affected as $stage) {
-                    $this->messageBus->dispatch(new ScanAccommodations(
-                        $tripId,
-                        stageId: $stage->id,
-                        enabledAccommodationTypes: $request->enabledAccommodationTypes,
-                        generation: $generation,
-                    ));
-                }
-            }
+            $request = $this->tripStateManager->getRequest($tripId);
+            \assert($request instanceof TripRequest);
 
-            $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
-            $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
+            $this->analysisDispatcher->dispatchFor(
+                $tripId,
+                $request,
+                [ComputationTrigger::GEOMETRY],
+                $generation,
+                // Accommodation scans hit an external source per stage, so they stay scoped
+                // to the stages this edit touched; every other computation is trip-wide.
+                scopedStageIds: array_map(static fn (Stage $stage): string => $stage->id, $affected),
+                // An accommodation edit moves the next stage's start point, so the geometry
+                // set is right — but re-scanning would overwrite the choice just made.
+                except: $message->skipAccommodationScan ? [ComputationName::ACCOMMODATIONS] : [],
+            );
         }
     }
 }

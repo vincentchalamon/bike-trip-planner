@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Service\EnrichmentMessageFactory;
+use App\Service\TripAnalysisDispatcher;
 use ApiPlatform\Metadata\Delete;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
+use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ApiResource\TripRequest;
@@ -63,6 +66,7 @@ final class StageDeleteProcessorTest extends TestCase
             $this->distanceCalculator,
             new TripLocker(),
             new StageLocator(),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
     }
 
@@ -154,7 +158,7 @@ final class StageDeleteProcessorTest extends TestCase
     }
 
     #[Test]
-    public function deletingRestDayAlwaysDispatchesWeatherAndCalendar(): void
+    public function deletingARestDayRecomputesEverythingTheDateShiftInvalidates(): void
     {
         $coord = new Coordinate(lat: 45.0, lon: 5.0);
 
@@ -168,7 +172,11 @@ final class StageDeleteProcessorTest extends TestCase
         $dispatchedMessages = [];
         // RecalculateStages + AnalyzeTerrain (rest-day nudge restored on the
         // preceding day) + FetchWeather + CheckCalendar = 4 for a rest-day delete.
-        $this->messageBus->expects($this->exactly(4))
+        // RecalculateStages + the date-dependent set: weather, holidays, events, and the
+        // three whose verdicts read a stage date — the resupply weekday, the seasonal month,
+        // and the sunset alert. Terrain arrives through that set, which is what restores the
+        // rest-day nudge now that this path no longer dispatches it by hand (ADR-070).
+        $this->messageBus->expects($this->exactly(7))
             ->method('dispatch')
             ->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
                 $dispatchedMessages[] = $msg;
@@ -185,6 +193,12 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertSame('trip-1', $weatherMessages[0]->tripId);
         $this->assertCount(1, $calendarMessages);
         $this->assertSame('trip-1', $calendarMessages[0]->tripId);
+
+        $classes = array_map(static fn (object $m): string => $m::class, $dispatchedMessages);
+        $this->assertContains(AnalyzeTerrain::class, $classes, 'The rest-day nudge still gets re-run.');
+
+        // Removing a rest day changes no geometry, so nothing corridor-only re-scans.
+        $this->assertNotContains(CheckWaterPoints::class, $classes);
         $this->assertCount(1, $terrainMessages);
     }
 
@@ -207,6 +221,7 @@ final class StageDeleteProcessorTest extends TestCase
             $this->createStub(DistanceCalculatorInterface::class),
             new TripLocker(),
             new StageLocator(),
+            new TripAnalysisDispatcher($this->createStub(MessageBusInterface::class), new EnrichmentMessageFactory()),
         );
 
         try {

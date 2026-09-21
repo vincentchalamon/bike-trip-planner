@@ -13,12 +13,11 @@ use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
+use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -33,6 +32,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private DistanceCalculatorInterface $distanceCalculator,
         private TripLocker $tripLocker,
         private StageLocator $stageLocator,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
 
@@ -97,14 +97,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         // removal affects none, which an empty list would read as "all".
         $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: $isRestDayDeletion, generation: $generation));
-        // Deleting a rest day skips geographic scans (no geometry change) but the
-        // rest-day nudge is context-dependent: removing the rest day must restore
-        // the "consider a rest day" nudge on the day that preceded it. Re-run the
-        // terrain/pacing analysis explicitly since RecalculateStages won't (recette).
-        if ($isRestDayDeletion) {
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
-        }
-
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so removing a
         // stage shifts the end date back so the global range, the export and a
@@ -117,8 +109,18 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
         }
 
-        $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-        $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
+        // Removing a stage shifts every later one onto a new calendar date, so everything
+        // date-driven is now wrong — not just the weather and the holidays (ADR-070).
+        //
+        // Terrain rides along in that set, which is what restores the "consider a rest day"
+        // nudge on the preceding day after a rest day is removed: RecalculateStages skips the
+        // geographic scans in that case, so this used to need its own dispatch (recette).
+        $this->analysisDispatcher->dispatchFor(
+            $tripId,
+            $tripRequest,
+            [ComputationTrigger::DATES],
+            $generation,
+        );
     }
 
     /**

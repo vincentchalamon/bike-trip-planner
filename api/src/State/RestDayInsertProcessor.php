@@ -13,12 +13,13 @@ use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\Mapper\StageResponseMapper;
+use App\Enum\ComputationName;
+use App\Enum\ComputationTrigger;
 use App\Message\AnalyzeTerrain;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -33,6 +34,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private StageResponseMapper $stageResponseMapper,
         private TripLocker $tripLocker,
         private StageLocator $stageLocator,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
 
@@ -122,8 +124,18 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         if ($startDate instanceof \DateTimeImmutable) {
             $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
+            // A rest day adds no geometry but shifts every later stage onto a new calendar
+            // date, so everything date-driven is now wrong — not just the weather and the
+            // holidays this used to name (ADR-070).
+            $this->analysisDispatcher->dispatchFor(
+                $tripId,
+                $tripRequest,
+                [ComputationTrigger::DATES],
+                $generation,
+                // Terrain is already on its way just above, for the rest-day nudge — a
+                // layout concern that holds whether or not the trip has dates.
+                except: [ComputationName::TERRAIN],
+            );
         }
 
         return $this->stageResponseMapper->map($restDay);
