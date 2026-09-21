@@ -42,7 +42,7 @@ ENV GOTOOLCHAIN=auto
 # libphp, which a plain `go install` inherits and then fails to link against
 # ("unknown symbol stderr in pcrel"). xcaddy itself needs no cgo; only the
 # frankenphp build below does, and it sets the flags explicitly.
-RUN CGO_ENABLED=0 go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+RUN CGO_ENABLED=0 go install github.com/caddyserver/xcaddy/cmd/xcaddy@v0.4.7
 
 RUN set -eux; \
 	CGO_ENABLED=1 \
@@ -56,7 +56,9 @@ RUN set -eux; \
 		--with github.com/dunglas/mercure/caddy@v1.0.0 \
 		--with github.com/dunglas/vulcain/caddy \
 		--with github.com/dunglas/caddy-cbrotli; \
-	/usr/local/bin/frankenphp build-info | grep -q 'dunglas/mercure/caddy\s*v1\.0\.0'
+	/usr/local/bin/frankenphp build-info > /tmp/build-info.txt; \
+	grep -q 'dunglas/mercure/caddy\s*v1\.0\.0' /tmp/build-info.txt; \
+	rm /tmp/build-info.txt
 
 
 # Base FrankenPHP image

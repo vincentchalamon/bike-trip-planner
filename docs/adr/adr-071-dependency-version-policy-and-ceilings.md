@@ -50,9 +50,32 @@ condition, not on a hunch.
 | Symfony `8.1.*` | Nothing — 8.1 is the current stable | 8.2 is released |
 
 Note the shape of three of these: **the constraint that bites is not the one you declare.**
-`~19.2.8` on React and `~6.0` on TypeScript exist because npm hoists a single copy for the
-whole workspace, so a bump in `mobile` silently changes what `pwa` builds against. Check the
-resolved tree (`npm ls <pkg>`), not the manifests.
+`~19.2.8` on React and `~6.0` on TypeScript exist because of how npm arranges the workspace,
+not because of what any manifest asks for. Check the resolved tree (`npm ls <pkg>`), not the
+manifests.
+
+### Shared tooling is declared at the workspace root
+
+When two workspaces ask for different versions of the same package, npm stops hoisting it and
+nests a copy in each. Anything that *is* hoisted then cannot resolve it at all. That is not
+hypothetical: with `typescript` declared only in `pwa` (5.9) and `mobile` (6.0), a clean
+`npm ci` left the root without one, and the hoisted `openapi-typescript` died with
+`Cannot find package 'typescript'`. The same happened to `eslint`, declared only in `pwa`,
+which the hoisted `eslint-plugin-react` could not find.
+
+Worse, it is unstable rather than simply broken: whether npm hoists one of the two or neither
+depends on resolution order, so the same manifests can produce a working tree and a broken one.
+An incremental `npm install` and a clean `npm ci` disagreed here, which is exactly how this
+reached CI green locally and red in the pipeline.
+
+So `eslint` and `typescript` are declared in the **root** `devDependencies` — the version the
+hoisted tooling should see (TypeScript 5.9, which `openapi-typescript` and `typescript-eslint`
+both accept). Workspaces that need a different one, like `mobile` on TypeScript 6, keep their
+own nested copy and are unaffected. `react`/`react-dom` were already at the root for the same
+reason.
+
+Rule of thumb: if a package is consumed by something npm hoists, declare it at the root.
+Reproduce with `rm -rf node_modules && npm ci`, never with an incremental install.
 
 ## Consequences
 

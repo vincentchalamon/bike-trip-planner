@@ -390,7 +390,7 @@ jobs:
           echo "$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
-        uses: docker://oskarstark/php-cs-fixer-ga:3.26.0
+        uses: docker://oskarstark/php-cs-fixer-ga@sha256:f175bb76984b1e530fc225ec4272a86c03d978e0c46f891cd191ae5ce0e54432
         with:
           args: --config=api/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 
@@ -425,7 +425,7 @@ jobs:
           echo "$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
-        uses: docker://oskarstark/php-cs-fixer-ga:3.26.0
+        uses: docker://oskarstark/php-cs-fixer-ga@sha256:f175bb76984b1e530fc225ec4272a86c03d978e0c46f891cd191ae5ce0e54432
         with:
           args: --config=provisioner/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 

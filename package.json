@@ -20,7 +20,9 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
     "react": "~19.2.8",
-    "react-dom": "~19.2.8"
+    "react-dom": "~19.2.8",
+    "typescript": "~5.9.3"
   }
 }
