@@ -136,6 +136,22 @@ final class StageCreateTest extends ApiTestCase
         // New stage should be at position 1 (0-indexed)
         $this->assertSame(2, $stages[1]->dayNumber);
         $this->assertEqualsWithDelta(44.0, $stages[1]->startPoint->lat, 0.001);
+
+        // Inserting mid-trip reindexes everything after it, so every one of those stages
+        // moves a day later. The accommodation scan is scoped to this list, so naming only
+        // the new stage left their seasonal verdicts on the old month (ADR-070).
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $recalculate = array_values(array_filter(
+            array_map(static fn (Envelope $envelope): object => $envelope->getMessage(), $transport->getSent()),
+            static fn (object $message): bool => $message instanceof RecalculateStages,
+        ));
+
+        $this->assertCount(1, $recalculate);
+        $this->assertSame(
+            [$stages[1]->id, $stages[2]->id, $stages[3]->id],
+            $recalculate[0]->affectedStageIds,
+        );
     }
 
     #[Test]
