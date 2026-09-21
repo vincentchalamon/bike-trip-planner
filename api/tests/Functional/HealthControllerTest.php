@@ -15,13 +15,10 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HealthControllerTest extends ApiTestCase
 {
-    private Client $client;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
+
+    private Client $client;
 
     #[\Override]
     protected function setUp(): void

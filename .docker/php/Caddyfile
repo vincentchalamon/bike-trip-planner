@@ -15,6 +15,14 @@
 {$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
+    # Access logging. This used to carry a filter redacting the `authorization`
+    # query parameter, which Mercure 0.x accepted; the 1.0 hub rejects that
+    # parameter outright (RFC 9700 forbids access tokens in URLs), so there is
+    # nothing left to redact — but the directive itself has to stay, since
+    # dropping it turns access logging off and takes the X-Request-Id
+    # correlation trail below with it.
+    log
+
     root /app/public
 
     # Native mobile clients opt out of compression. React Native's okhttp advertises

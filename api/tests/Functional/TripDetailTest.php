@@ -28,6 +28,9 @@ final class TripDetailTest extends ApiTestCase
     use AddressesStagesByIdTrait;
     use JwtAuthTestTrait;
 
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000301';
 
     private Client $client;
@@ -35,12 +38,6 @@ final class TripDetailTest extends ApiTestCase
     private User $testUser;
 
     private string $jwtToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

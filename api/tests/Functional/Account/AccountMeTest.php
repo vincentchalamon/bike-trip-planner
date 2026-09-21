@@ -15,10 +15,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class AccountMeTest extends ApiTestCase
 {
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
 
     private function getEntityManager(): EntityManagerInterface
     {

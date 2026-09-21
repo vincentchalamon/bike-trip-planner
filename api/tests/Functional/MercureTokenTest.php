@@ -22,6 +22,9 @@ final class MercureTokenTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000401';
 
     private Client $client;
@@ -29,12 +32,6 @@ final class MercureTokenTest extends ApiTestCase
     private User $testUser;
 
     private string $jwtToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

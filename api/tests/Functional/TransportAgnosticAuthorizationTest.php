@@ -36,6 +36,9 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
+    #[\Override]
+    protected static ?bool $alwaysBootKernel = false;
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-0000000004aa';
 
     private Client $client;
@@ -43,12 +46,6 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
     private User $owner;
 
     private string $ownerToken;
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
 
     #[\Override]
     protected function setUp(): void

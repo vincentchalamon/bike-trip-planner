@@ -17,10 +17,7 @@ final class AuthRequestLinkTest extends ApiTestCase
     use MailerAssertionsTrait;
 
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
 
     private function getEntityManager(): EntityManagerInterface
     {

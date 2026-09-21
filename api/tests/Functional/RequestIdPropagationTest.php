@@ -23,13 +23,10 @@ final class RequestIdPropagationTest extends ApiTestCase
 {
     use JwtAuthTestTrait;
 
-    private string $jwtToken;
-
     #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    protected static ?bool $alwaysBootKernel = false;
+
+    private string $jwtToken;
 
     #[\Override]
     protected function setUp(): void
