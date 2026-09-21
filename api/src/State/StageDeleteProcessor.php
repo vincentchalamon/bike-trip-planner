@@ -13,9 +13,7 @@ use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
+use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
@@ -93,18 +91,29 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         // hand us whichever version won the race after the lock was released.
         $generation = $write->version;
 
-        // Only the stage that absorbed the deleted one needs recomputing; a plain
-        // removal affects none, which an empty list would read as "all".
-        $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: $isRestDayDeletion, generation: $generation));
-        // Deleting a rest day skips geographic scans (no geometry change) but the
-        // rest-day nudge is context-dependent: removing the rest day must restore
-        // the "consider a rest day" nudge on the day that preceded it. Re-run the
-        // terrain/pacing analysis explicitly since RecalculateStages won't (recette).
-        if ($isRestDayDeletion) {
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
-        }
-
+        // The stage that absorbed the deleted geometry, and every stage after it: the
+        // reindex below moves each of them one day earlier, and the accommodation scan is
+        // the one computation scoped to this list — naming only the merge target left the
+        // seasonal verdict on the old month for all the rest (ADR-070). A plain removal
+        // names none, which an empty list reads as "all".
+        $affected = null !== $mergedIndex && isset($stages[$mergedIndex])
+            ? array_map(static fn (Stage $stage): string => $stage->id, \array_slice($stages, $mergedIndex))
+            : [];
+        // Removing a stage shifts every later one onto a new calendar date; removing a
+        // ridden stage also moves the line. Both travel on the one message so the handler
+        // dispatches their union once — sending the date set separately here is what would
+        // re-run the five computations that sit in both sets twice (ADR-070).
+        //
+        // Terrain rides along in the date set, which is what restores the "consider a rest
+        // day" nudge on the preceding day after a rest day is removed (recette).
+        $this->messageBus->dispatch(new RecalculateStages(
+            $tripId,
+            $affected,
+            triggers: $isRestDayDeletion
+                ? [ComputationTrigger::DATES]
+                : [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            generation: $generation,
+        ));
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so removing a
         // stage shifts the end date back so the global range, the export and a
@@ -117,8 +126,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
         }
 
-        $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-        $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
     }
 
     /**

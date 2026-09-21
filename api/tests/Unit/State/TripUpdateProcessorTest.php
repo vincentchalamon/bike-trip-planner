@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Service\EnrichmentMessageFactory;
+use App\Service\TripAnalysisDispatcher;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
@@ -63,6 +65,7 @@ final class TripUpdateProcessorTest extends TestCase
             $generationTracker,
             $security,
             new TripLocker(),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
     }
 
@@ -91,6 +94,7 @@ final class TripUpdateProcessorTest extends TestCase
             $generationTracker,
             $security,
             new TripLocker(),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
 
         try {
@@ -171,6 +175,7 @@ final class TripUpdateProcessorTest extends TestCase
             $generationTracker,
             $security,
             new TripLocker(),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
 
         $old = new TripRequest();

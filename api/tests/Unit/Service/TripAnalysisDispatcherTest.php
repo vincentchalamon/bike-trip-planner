@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripRequest;
+use App\Enum\ComputationName;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
@@ -33,6 +35,7 @@ final class TripAnalysisDispatcherTest extends TestCase
         $tripId = 'trip-1';
         $generation = 3;
         $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('+1 month');
         $request->enabledAccommodationTypes = ['hotel', 'camp_site'];
 
         $expectedMessages = [
@@ -64,10 +67,16 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch($tripId, $request, $generation);
 
+        // Compared as a set: the full pipeline is a fan-out onto an async bus, so which
+        // messages go out is the contract and the order they go out in is not. Since
+        // ADR-070 that order follows the ComputationName enum rather than a hand-written
+        // list, and pinning it would only record an implementation detail.
         $dispatchedClasses = array_map(static fn (object $m): string => $m::class, $dispatched);
+        sort($dispatchedClasses);
+        sort($expectedMessages);
         $this->assertSame($expectedMessages, $dispatchedClasses);
 
         foreach ($dispatched as $message) {
@@ -98,7 +107,7 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch('trip-1', $request);
 
         $this->assertInstanceOf(ScanAccommodations::class, $scanAccommodations);
@@ -125,12 +134,77 @@ final class TripAnalysisDispatcherTest extends TestCase
                 return new Envelope($message);
             });
 
-        $dispatcher = new TripAnalysisDispatcher($messageBus);
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
         $dispatcher->dispatch('trip-1', $request);
 
         $this->assertNotEmpty($generations);
         foreach ($generations as $value) {
             $this->assertNull($value);
         }
+    }
+
+    /**
+     * A trip with no start date has no calendar date to resolve against, and the three
+     * computations that need one fall back to today rather than skipping — so dispatching
+     * them would leave a holiday or a forecast dated from whenever the trip was touched
+     * (ADR-070).
+     */
+    #[Test]
+    public function atripWithNoStartDateSkipsTheComputationsThatNeedOne(): void
+    {
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message::class;
+
+                return new Envelope($message);
+            }
+        );
+
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
+        $dispatcher->dispatch('trip-1', new TripRequest(), 1);
+
+        $this->assertNotContains(FetchWeather::class, $dispatched);
+        $this->assertNotContains(CheckCalendar::class, $dispatched);
+        $this->assertNotContains(ScanEvents::class, $dispatched);
+
+        // Everything drawn from the line still runs: a date is not what makes it true.
+        $this->assertContains(ScanPois::class, $dispatched);
+        $this->assertContains(AnalyzeTerrain::class, $dispatched);
+        $this->assertContains(CheckFerries::class, $dispatched);
+    }
+
+    /**
+     * The path a PATCH takes, and a PATCH is how a trip loses its dates. Clearing the start
+     * date used to leave a forecast and a public-holiday alert dated from today on a trip
+     * that no longer had any (ADR-070).
+     */
+    #[Test]
+    public function dispatchingOneComputationHonoursTheSameStartDateGuard(): void
+    {
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message::class;
+
+                return new Envelope($message);
+            }
+        );
+
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
+        $dateless = new TripRequest();
+
+        foreach ([ComputationName::WEATHER, ComputationName::CALENDAR, ComputationName::EVENTS] as $needsADate) {
+            $dispatcher->dispatchOne('trip-1', $dateless, $needsADate, 1);
+        }
+
+        $this->assertCount(0, $dispatched);
+
+        // Everything drawn from the line goes out regardless: a date is not what makes it true.
+        $dispatcher->dispatchOne('trip-1', $dateless, ComputationName::TERRAIN, 1);
+        $this->assertCount(1, $dispatched);
+        $this->assertContains(AnalyzeTerrain::class, $dispatched);
     }
 }

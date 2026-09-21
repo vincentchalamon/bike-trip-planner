@@ -91,8 +91,12 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(ComputationName::STAGES, $result);
     }
 
+    /**
+     * A start date shifts every stage's calendar date, so it invalidates everything that
+     * reads one — not just the weather and the holidays this used to name (ADR-070).
+     */
     #[Test]
-    public function startDateChangeReturnsWeatherAndCalendar(): void
+    public function startDateChangeReturnsEverythingThatReadsAStageDate(): void
     {
         $old = $this->createRequest('https://www.komoot.com/tour/123', '2026-07-01');
         $new = $this->createRequest('https://www.komoot.com/tour/123', '2026-08-01');
@@ -101,6 +105,18 @@ final class ComputationDependencyResolverTest extends TestCase
 
         $this->assertContains(ComputationName::WEATHER, $result);
         $this->assertContains(ComputationName::CALENDAR, $result);
+        $this->assertContains(ComputationName::EVENTS, $result);
+
+        // The three that used to be left behind: the resupply verdict kept the old weekday,
+        // the seasonal one the old month, and the sunset alert the old date.
+        $this->assertContains(ComputationName::POIS, $result);
+        $this->assertContains(ComputationName::ACCOMMODATIONS, $result);
+        $this->assertContains(ComputationName::TERRAIN, $result);
+
+        // A date cannot move the line, so nothing corridor-only re-runs.
+        $this->assertNotContains(ComputationName::WATER_POINTS, $result);
+        $this->assertNotContains(ComputationName::FERRIES, $result);
+
         $this->assertNotContains(ComputationName::ROUTE, $result);
         $this->assertNotContains(ComputationName::STAGES, $result);
     }

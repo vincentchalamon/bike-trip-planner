@@ -13,9 +13,7 @@ use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\Mapper\StageResponseMapper;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
+use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
@@ -106,13 +104,15 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
             static fn (Stage $stage): string => $stage->id,
             \array_slice($stages, $index + 1),
         );
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: true, generation: $generation));
-        // Re-run the terrain/pacing analysis across all stages: geographic scans
-        // are skipped (a rest day adds no geometry), but the rest-day nudge is
-        // context-dependent on the rest-day layout — inserting one must suppress
-        // the "consider a rest day" nudge on the preceding day (recette).
-        $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
-
+        // A rest day adds no geometry but shifts every later stage onto a new calendar date,
+        // so the dates alone are what it invalidated. Terrain rides along in that set, which
+        // is what re-runs the rest-day nudge on the preceding day (recette).
+        $this->messageBus->dispatch(new RecalculateStages(
+            $tripId,
+            $affected,
+            triggers: [ComputationTrigger::DATES],
+            generation: $generation,
+        ));
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so adding a
         // rest day shifts the end date forward so the global range, the export and
@@ -122,8 +122,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         if ($startDate instanceof \DateTimeImmutable) {
             $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->stageResponseMapper->map($restDay);

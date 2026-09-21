@@ -5,18 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\ApiResource\TripModification;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckBikeShops;
-use App\Message\CheckCalendar;
-use App\Message\CheckCulturalPois;
-use App\Message\CheckHealthServices;
-use App\Message\CheckRailwayStations;
-use App\Message\CheckWaterPoints;
-use App\Message\FetchWeather;
+use App\Enum\ComputationName;
+use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
-use App\Message\ScanEvents;
-use App\Message\ScanPois;
 
 /**
  * Resolves the minimal set of Messenger messages to dispatch for a batch of modifications.
@@ -35,6 +27,45 @@ use App\Message\ScanPois;
  */
 final readonly class ComputationDependencyResolver
 {
+    /**
+     * Pointless on a trip with no start date: each needs a calendar date to resolve against.
+     *
+     * @var list<ComputationName>
+     */
+    private const array REQUIRES_DATES = [
+        ComputationName::WEATHER,
+        ComputationName::CALENDAR,
+        ComputationName::EVENTS,
+    ];
+
+    public function __construct(
+        private EnrichmentMessageFactory $messageFactory,
+    ) {
+    }
+
+    /**
+     * Adds every enrichment the trigger invalidates.
+     *
+     * A trip with no dates is dropped from the date-driven ones: there is no stage date to
+     * compute a forecast, a holiday or an event against.
+     *
+     * @param array<string, ComputationName> $needed
+     *
+     * @return array<string, ComputationName>
+     */
+    private function add(array $needed, ComputationTrigger $trigger, bool $hasDates): array
+    {
+        foreach (ComputationName::dependingOn($trigger) as $computation) {
+            if (!$hasDates && \in_array($computation, self::REQUIRES_DATES, true)) {
+                continue;
+            }
+
+            $needed[$computation->value] = $computation;
+        }
+
+        return $needed;
+    }
+
     /**
      * The modification names a stage by identity; the dependency rules are expressed in
      * terms of "and the ones after it", so the identity is resolved against the current
@@ -72,16 +103,13 @@ final readonly class ComputationDependencyResolver
         $messages = [];
         $recalcIndices = [];
         $accommodationScanIndices = [];
-        $needsPois = false;
-        $needsTerrain = false;
-        $needsBikeShops = false;
-        $needsWaterPoints = false;
-        $needsHealthServices = false;
-        $needsRailwayStations = false;
-        $needsWeather = false;
-        $needsCalendar = false;
-        $needsEvents = false;
-        $needsCulturalPois = false;
+        // Which enrichments a modification invalidates is declared on
+        // ComputationName::triggers(), not listed here (ADR-070). Ten booleans holding the
+        // same knowledge is how this class came to miss the same three computations on a
+        // date change as the other resolver did, independently.
+        /** @var array<string, ComputationName> $needed */
+        $needed = [];
+        $datesAlsoShift = false;
 
         foreach ($modifications as $modification) {
             switch ($modification->type) {
@@ -113,34 +141,24 @@ final readonly class ComputationDependencyResolver
                         }
                     }
 
-                    $needsPois = true;
-                    $needsTerrain = true;
-                    $needsBikeShops = true;
-                    $needsWaterPoints = true;
-                    $needsHealthServices = true;
-                    $needsRailwayStations = true;
-                    if ($hasDates) {
-                        $needsWeather = true;
-                        $needsCalendar = true;
-                    }
-
+                    // Nothing added here: the RecalculateStages built below carries
+                    // ComputationTrigger::GEOMETRY, and its handler dispatches that set.
+                    // Listing it again is what dispatched the overlap twice.
                     break;
 
                 case 'dates':
-                    $needsWeather = true;
-                    $needsCalendar = true;
-                    $needsEvents = true;
-                    $needsCulturalPois = true;
+                    // Recorded, not built: if this batch also moves a line there will be a
+                    // RecalculateStages to carry both triggers, and building the date set
+                    // here as well would dispatch the five computations common to the two
+                    // sets twice.
+                    $datesAlsoShift = true;
                     break;
 
                 case 'pacing':
                     // Pacing changes affect all stages (fatigue factor, elevation penalty, etc.)
                     array_push($recalcIndices, ...array_keys($stageIds));
-                    if ($hasDates) {
-                        $needsWeather = true;
-                        $needsCalendar = true;
-                    }
-
+                    // Re-pacing redraws every stage and moves every stage onto a new date.
+                    $datesAlsoShift = true;
                     break;
             }
         }
@@ -159,14 +177,23 @@ final readonly class ComputationDependencyResolver
             $recalcIndices,
         )));
 
-        // Build RecalculateStages message (skip accommodation scan since we handle it separately)
+        // One message carries everything this batch invalidated, so the handler dispatches
+        // the union once (ADR-070). A distance edit keeps the stage count, so no date moves
+        // unless the batch also asked for it.
         if ([] !== $recalcStageIds) {
             $messages[] = new RecalculateStages(
                 $tripId,
                 $recalcStageIds,
                 skipAccommodationScan: true,
+                triggers: $datesAlsoShift
+                    ? [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES]
+                    : [ComputationTrigger::GEOMETRY],
                 generation: $generation,
             );
+        } elseif ($datesAlsoShift) {
+            // Dates alone recalculate no stage, so there is no message to carry the trigger
+            // and the set is built here instead.
+            $needed = $this->add($needed, ComputationTrigger::DATES, $hasDates);
         }
 
         // Build per-stage ScanAccommodations messages
@@ -183,45 +210,21 @@ final readonly class ComputationDependencyResolver
             );
         }
 
-        // Build optional enrichment messages
-        if ($needsPois) {
-            $messages[] = new ScanPois($tripId, $generation);
+        // Dropped only when the loop just above already covered them: that loop is fed by an
+        // 'accommodation' or 'distance' edit, never by 'dates' alone. Unsetting
+        // unconditionally left a pure date change re-scanning no accommodation at all, so
+        // the seasonal verdict kept the old month — the very defect this closes.
+        if ([] !== $accommodationScanIndices) {
+            unset($needed[ComputationName::ACCOMMODATIONS->value]);
         }
 
-        if ($needsTerrain) {
-            $messages[] = new AnalyzeTerrain($tripId, $generation);
-        }
-
-        if ($needsBikeShops) {
-            $messages[] = new CheckBikeShops($tripId, $generation);
-        }
-
-        if ($needsWaterPoints) {
-            $messages[] = new CheckWaterPoints($tripId, $generation);
-        }
-
-        if ($needsHealthServices) {
-            $messages[] = new CheckHealthServices($tripId, $generation);
-        }
-
-        if ($needsRailwayStations) {
-            $messages[] = new CheckRailwayStations($tripId, $generation);
-        }
-
-        if ($needsWeather) {
-            $messages[] = new FetchWeather($tripId, $generation);
-        }
-
-        if ($needsCalendar) {
-            $messages[] = new CheckCalendar($tripId, $generation);
-        }
-
-        if ($needsEvents) {
-            $messages[] = new ScanEvents($tripId, $generation);
-        }
-
-        if ($needsCulturalPois) {
-            $messages[] = new CheckCulturalPois($tripId, $generation);
+        foreach ($needed as $computation) {
+            $messages[] = $this->messageFactory->create(
+                $computation,
+                $tripId,
+                $generation,
+                $enabledAccommodationTypes,
+            );
         }
 
         return $messages;

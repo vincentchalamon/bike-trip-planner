@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Enum\ComputationTrigger;
+use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripModification;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
@@ -31,7 +33,7 @@ final class ComputationDependencyResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resolver = new ComputationDependencyResolver();
+        $this->resolver = new ComputationDependencyResolver(new EnrichmentMessageFactory());
     }
 
     #[Test]
@@ -88,20 +90,38 @@ final class ComputationDependencyResolverTest extends TestCase
 
         $this->assertContains(RecalculateStages::class, $classes);
         $this->assertContains(ScanAccommodations::class, $classes);
-        $this->assertContains(ScanPois::class, $classes);
-        $this->assertContains(AnalyzeTerrain::class, $classes);
-        $this->assertContains(CheckBikeShops::class, $classes);
+
+        // The line moved, and RecalculateStages carries that so its handler dispatches the
+        // geometry set once. Emitting those enrichments here as well is what sent the five
+        // computations common to both sets twice (ADR-070).
+        $this->assertNotContains(ScanPois::class, $classes);
+        $this->assertNotContains(AnalyzeTerrain::class, $classes);
+        $this->assertNotContains(CheckBikeShops::class, $classes);
+        $this->assertSame([ComputationTrigger::GEOMETRY], $this->recalculateOf($messages)->triggers);
     }
 
+    /**
+     * A distance edit moves the line, so it invalidates everything drawn from the line —
+     * including the four groups this resolver used to leave out (ADR-070).
+     */
+    /**
+     * A distance edit moves the line. What that invalidates is declared once and travels on
+     * the message, so this resolver states the trigger instead of listing computations —
+     * which is how it came to be missing four of them (ADR-070).
+     */
     #[Test]
-    public function distanceModificationWithDatesTriggersWeatherAndCalendar(): void
+    public function distanceModificationMarksTheEditAsGeometryOnly(): void
     {
         $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
-        $classes = $this->classesOf($messages);
-        $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
+        $recalculate = $this->recalculateOf($messages);
+        $this->assertSame([ComputationTrigger::GEOMETRY], $recalculate->triggers);
+
+        // The stage count is unchanged, so every stage keeps its day number and its calendar
+        // date: no date moved, and the holidays cannot have.
+        $this->assertNotContains(ComputationTrigger::DATES, $recalculate->triggers);
+        $this->assertNotContains(CheckCalendar::class, $this->classesOf($messages));
     }
 
     #[Test]
@@ -113,6 +133,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $classes = $this->classesOf($messages);
         $this->assertNotContains(FetchWeather::class, $classes);
         $this->assertNotContains(CheckCalendar::class, $classes);
+        $this->assertNotContains(ScanEvents::class, $classes);
     }
 
     #[Test]
@@ -125,7 +146,19 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(FetchWeather::class, $classes);
         $this->assertContains(CheckCalendar::class, $classes);
         $this->assertContains(ScanEvents::class, $classes);
-        $this->assertContains(CheckCulturalPois::class, $classes);
+
+        // The three that a date change used to leave on the old date: the resupply verdict
+        // keeps a weekday, the seasonal one a month, the sunset alert a date (ADR-070).
+        $this->assertContains(ScanPois::class, $classes);
+        $this->assertContains(AnalyzeTerrain::class, $classes);
+
+        // Nothing scoped the accommodation scan to a stage here, so the trip-wide one has to
+        // survive: dropping it unconditionally left the seasonal verdict on the old month.
+        $this->assertContains(ScanAccommodations::class, $classes);
+
+        // Cultural POIs are suggestions along the corridor and read no date at all; they
+        // used to be re-scanned on every date change for nothing.
+        $this->assertNotContains(CheckCulturalPois::class, $classes);
 
         // Dates alone do NOT trigger route recalculation
         $this->assertNotContains(RecalculateStages::class, $classes);
@@ -143,15 +176,17 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
-    public function pacingModificationWithDatesTriggersWeatherAndCalendar(): void
+    public function pacingModificationInvalidatesBothTheLineAndTheDates(): void
     {
         $modification = new TripModification(type: 'pacing', label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
-        $classes = $this->classesOf($messages);
-        $this->assertContains(RecalculateStages::class, $classes);
-        $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
+        // Re-pacing redraws every stage and moves every stage onto a different date, so the
+        // one message carries both triggers and its handler dispatches their union once.
+        $this->assertSame(
+            [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            $this->recalculateOf($messages)->triggers,
+        );
     }
 
     #[Test]
@@ -167,17 +202,23 @@ final class ComputationDependencyResolverTest extends TestCase
 
         $classes = $this->classesOf($messages);
 
-        // All three modification types contribute their required handlers
-        $this->assertContains(RecalculateStages::class, $classes);
-        $this->assertContains(ScanAccommodations::class, $classes);
-        $this->assertContains(ScanPois::class, $classes);
-        $this->assertContains(AnalyzeTerrain::class, $classes);
-        $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
-        $this->assertContains(ScanEvents::class, $classes);
-
-        // Exactly one RecalculateStages message (deduplicated)
+        // Exactly one RecalculateStages, carrying everything the batch invalidated: the
+        // accommodation and distance edits moved lines, the dates entry moved dates.
         $this->assertCount(1, array_filter($messages, static fn (object $m): bool => $m instanceof RecalculateStages));
+        $this->assertSame(
+            [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            $this->recalculateOf($messages)->triggers,
+        );
+
+        // Per-stage accommodation scans stay here: they are scoped to the edited stages, and
+        // the message above holds them back with skipAccommodationScan for that reason.
+        $this->assertContains(ScanAccommodations::class, $classes);
+
+        // Nothing else. The five computations that read both a line and a date would
+        // otherwise go out twice — once here, once from the handler (ADR-070).
+        foreach ([ScanPois::class, AnalyzeTerrain::class, ScanEvents::class, FetchWeather::class, CheckCalendar::class] as $carriedByTheMessage) {
+            $this->assertNotContains($carriedByTheMessage, $classes);
+        }
     }
 
     #[Test]
@@ -228,5 +269,19 @@ final class ComputationDependencyResolverTest extends TestCase
         }
 
         return null;
+    }
+
+    /**
+     * @param list<object> $messages
+     */
+    private function recalculateOf(array $messages): RecalculateStages
+    {
+        foreach ($messages as $message) {
+            if ($message instanceof RecalculateStages) {
+                return $message;
+            }
+        }
+
+        self::fail('No RecalculateStages message was produced.');
     }
 }

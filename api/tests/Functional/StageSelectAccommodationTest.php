@@ -165,9 +165,13 @@ final class StageSelectAccommodationTest extends ApiTestCase
             $transport->getSent(),
         );
 
+        // One message, carrying what the edit invalidated: selecting an accommodation moves
+        // the next stage's start point and nothing else. Weather rides on that geometry
+        // trigger rather than being dispatched a second time here, and the holidays cannot
+        // have moved since no stage changed date (ADR-070).
         $this->assertContains(RecalculateStages::class, $messageClasses);
-        $this->assertContains(FetchWeather::class, $messageClasses);
-        $this->assertContains(CheckCalendar::class, $messageClasses);
+        $this->assertNotContains(FetchWeather::class, $messageClasses);
+        $this->assertNotContains(CheckCalendar::class, $messageClasses);
     }
 
     private function seedTripWithSelectedAccommodation(string $tripId): void

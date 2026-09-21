@@ -6,6 +6,7 @@ namespace App\ComputationTracker;
 
 use App\ApiResource\TripRequest;
 use App\Enum\ComputationName;
+use App\Enum\ComputationTrigger;
 
 final class ComputationDependencyResolver
 {
@@ -16,7 +17,12 @@ final class ComputationDependencyResolver
         'fatigueFactor' => [ComputationName::STAGES],        // cascade subtree
         'elevationPenalty' => [ComputationName::STAGES],     // cascade subtree
         'maxDistancePerDay' => [ComputationName::STAGES],    // cascade subtree
-        'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
+        // Left blank on purpose: a start date shifts every stage's calendar date, so the
+        // answer is "whatever depends on dates" (ADR-070) and is resolved from
+        // ComputationName::triggers() rather than listed here. Listing it by hand is how
+        // POIS, ACCOMMODATIONS and TERRAIN came to be missing — the resupply verdict kept
+        // the old weekday, the seasonal one the old month, and the sunset alert the old date.
+        'startDate' => [],
         'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
         'departureHour' => [ComputationName::TERRAIN, ComputationName::WEATHER], // sunset estimate + weather riding window
         'averageSpeed' => [ComputationName::TERRAIN, ComputationName::WEATHER],  // sunset estimate + weather riding window
@@ -34,10 +40,16 @@ final class ComputationDependencyResolver
         $computations = [];
 
         foreach (self::PARAMETER_DEPENDENCIES as $parameter => $deps) {
-            if ($this->parameterChanged($old, $new, $parameter)) {
-                foreach ($deps as $dep) {
-                    $computations[$dep->value] = $dep;
-                }
+            if (!$this->parameterChanged($old, $new, $parameter)) {
+                continue;
+            }
+
+            if ('startDate' === $parameter) {
+                $deps = ComputationName::dependingOn(ComputationTrigger::DATES);
+            }
+
+            foreach ($deps as $dep) {
+                $computations[$dep->value] = $dep;
             }
         }
 

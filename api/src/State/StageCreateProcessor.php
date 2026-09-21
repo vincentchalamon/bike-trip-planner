@@ -15,8 +15,7 @@ use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
 use App\Engine\DistanceCalculatorInterface;
 use App\Mapper\StageResponseMapper;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
+use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
@@ -97,7 +96,18 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         \assert(null !== $position && $newStage instanceof Stage);
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$newStage->id], generation: $generation));
+        // The new stage and every stage after it: inserting mid-trip reindexes the rest, so
+        // each of them moves one day later. The accommodation scan is the one computation
+        // scoped to this list — naming only the new stage left every downstream seasonal
+        // verdict on the old month (ADR-070).
+        $affected = array_map(static fn (Stage $stage): string => $stage->id, \array_slice($write->stages, $position));
+
+        $this->messageBus->dispatch(new RecalculateStages(
+            $tripId,
+            $affected,
+            triggers: [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            generation: $generation,
+        ));
 
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so adding a
@@ -108,8 +118,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         if ($startDate instanceof \DateTimeImmutable) {
             $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->stageResponseMapper->map($newStage);
