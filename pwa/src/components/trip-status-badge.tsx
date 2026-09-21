@@ -1,10 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { components } from "@btp/core/schema";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type TripStatus = "draft" | "analyzing" | "analyzed";
+// Taken from the generated schema rather than restated: a hand-written copy silently
+// survived the server gaining `failed` (ADR-072), which is the drift the type contract
+// exists to catch.
+type TripStatus = NonNullable<
+  components["schemas"]["Trip.TripListItem.jsonld"]["status"]
+>;
 
 export function TripStatusBadge({
   status,
@@ -14,6 +20,21 @@ export function TripStatusBadge({
   className?: string;
 }) {
   const t = useTranslations("tripList");
+
+  if (status === ("failed" satisfies TripStatus)) {
+    return (
+      <Badge
+        variant="secondary"
+        className={cn(
+          "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-700",
+          className,
+        )}
+        data-testid="status-failed"
+      >
+        {t("status_failed")}
+      </Badge>
+    );
+  }
 
   if (status === ("analyzing" satisfies TripStatus)) {
     return (

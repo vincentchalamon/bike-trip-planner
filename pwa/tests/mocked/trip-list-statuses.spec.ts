@@ -36,8 +36,21 @@ const MOCK_TRIPS_WITH_STATUSES = {
       updatedAt: "2025-07-01T00:00:00+00:00",
       status: "analyzed",
     },
+    {
+      // Every computation failed. This used to arrive as `analyzed` and wear the
+      // green badge, indistinguishable from the trip above (ADR-072).
+      id: "01936f6e-0000-7000-8000-000000000204",
+      title: "Échec Vosges",
+      totalDistance: 180.0,
+      stageCount: 3,
+      startDate: "2025-10-01T00:00:00+00:00",
+      endDate: "2025-10-03T00:00:00+00:00",
+      createdAt: "2025-07-15T00:00:00+00:00",
+      updatedAt: "2025-07-15T00:00:00+00:00",
+      status: "failed",
+    },
   ],
-  totalItems: 3,
+  totalItems: 4,
 };
 
 test.describe("trip list statuses", () => {
@@ -90,12 +103,23 @@ test.describe("trip list statuses", () => {
     await expect(analyzedBadge).toBeVisible();
   });
 
-  test("all three status badges are visible simultaneously", async ({
+  test("displays failed status badge when every computation failed", async ({
+    page,
+  }) => {
+    await expect(page.getByText("Échec Vosges")).toBeVisible();
+    // Its own badge: before the union gained `failed`, this value fell through to
+    // the draft branch.
+    await expect(page.getByTestId("status-failed").first()).toBeVisible();
+    await expect(page.getByTestId("status-draft")).toHaveCount(1);
+  });
+
+  test("all four status badges are visible simultaneously", async ({
     page,
   }) => {
     await expect(page.getByTestId("status-draft").first()).toBeVisible();
     await expect(page.getByTestId("status-analyzing").first()).toBeVisible();
     await expect(page.getByTestId("status-analyzed").first()).toBeVisible();
+    await expect(page.getByTestId("status-failed").first()).toBeVisible();
   });
 
   test("clicking draft trip navigates to trip detail", async ({ page }) => {

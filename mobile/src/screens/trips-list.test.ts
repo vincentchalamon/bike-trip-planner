@@ -36,6 +36,16 @@ describe('badgeColors', () => {
     });
   });
 
+  // Not a draft: a trip whose every computation failed used to arrive as `analyzed`
+  // and wear the green badge (ADR-072).
+  it('uses the red danger tokens when the analysis failed', () => {
+    expect(badgeColors(theme, 'failed')).toEqual({
+      bg: 'dangerSoft',
+      fg: 'dangerInk',
+      border: 'dangerBorder',
+    });
+  });
+
   it('uses neutral tokens for a draft', () => {
     expect(badgeColors(theme, 'draft')).toEqual({
       bg: 'muted',

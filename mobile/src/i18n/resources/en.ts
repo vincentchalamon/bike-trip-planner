@@ -65,6 +65,7 @@ export const en: typeof fr = {
       draft: 'Draft',
       analyzing: 'Analyzing',
       analyzed: 'Analyzed',
+      failed: 'Analysis failed',
     },
   },
   create: {

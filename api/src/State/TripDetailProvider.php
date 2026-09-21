@@ -20,6 +20,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\EventArrayMapper;
 use App\Enum\ComputationName;
+use App\Enum\WeatherAvailability;
 use App\Enum\TripStatus;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Weather\WeatherForecastSerializer;
@@ -72,6 +73,10 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         $statuses = $this->computationTracker->getStatuses($id);
 
+        // Read once: the stages need it too, to tell a forecast that came back empty from one
+        // that has not been fetched yet.
+        $weatherStatus = $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses);
+
         // Whoever is reading, in their own language (ADR-069). Anonymous on /s/{shortCode}:
         // nobody chose a language, so the trip owner's stands in.
         $locale = $this->readerLocale->or($this->tripStateManager->getLocale($id) ?? 'en');
@@ -95,8 +100,12 @@ final readonly class TripDetailProvider implements ProviderInterface
             // Fallback for trips persisted before the status column existed: infer
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
-            weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
-            stages: array_map(fn (Stage $stage): array => $this->serializeStage($stage, $locale), $stages),
+            weatherStatus: $weatherStatus,
+            categoryStatus: $this->deriveCategoryStatuses($statuses),
+            stages: array_map(
+                fn (Stage $stage): array => $this->serializeStage($stage, $locale, $request->startDate, $weatherStatus),
+                $stages,
+            ),
         );
     }
 
@@ -113,6 +122,36 @@ final readonly class TripDetailProvider implements ProviderInterface
             ComputationName::cases(),
             static fn (ComputationName $c): bool => $c->category() === $category,
         ));
+    }
+
+    /**
+     * Where each family of enrichments stands.
+     *
+     * The per-block rule already existed and was already generic; it was simply only ever
+     * called for the weather, leaving a client unable to tell a terrain scan that had failed
+     * from one still running (ADR-072). A category with nothing tracked is left out rather
+     * than reported as an outcome.
+     *
+     * @param array<string, string>|null $statuses
+     *
+     * @return array<string, string>
+     */
+    private function deriveCategoryStatuses(?array $statuses): array
+    {
+        $byCategory = [];
+        foreach (ComputationName::cases() as $computation) {
+            $category = $computation->category();
+            if (isset($byCategory[$category])) {
+                continue;
+            }
+
+            $status = $this->deriveBlockStatus($this->computationsInCategory($category), $statuses);
+            if (null !== $status) {
+                $byCategory[$category] = $status;
+            }
+        }
+
+        return $byCategory;
     }
 
     /**
@@ -171,11 +210,45 @@ final readonly class TripDetailProvider implements ProviderInterface
     }
 
     /**
+     * Why this stage has no forecast, or null when the question does not arise (ADR-072).
+     *
+     * Derived here rather than stored: "too far ahead" is a statement about today, so a stored
+     * answer would rot.
+     *
+     * `past` and `beyond_horizon` are facts about the calendar — true whether or not the
+     * computation has run — so they are answered straight away. `unavailable` is a claim about
+     * the computation ("it ran and came back with nothing, a recompute may help"), so it is
+     * withheld until the weather block has settled: stages exist from the ROUTE computation
+     * onwards, long before WEATHER completes, and calling that `unavailable` would tell a
+     * reader to retry work that is still in flight. Until then the stage simply has no
+     * forecast *yet*, which is what `weatherStatus` says.
+     */
+    private function weatherAvailability(Stage $stage, ?\DateTimeImmutable $startDate, ?string $weatherStatus): ?string
+    {
+        if ($stage->weather instanceof WeatherForecast) {
+            return null;
+        }
+
+        $availability = WeatherAvailability::forStage(
+            $startDate?->modify(\sprintf('+%d days', $stage->dayNumber - 1)),
+            // UTC, like FetchWeatherHandler: stage dates are normalized to UTC midnight, and a
+            // local `today` would put the horizon a day off for a stage sitting exactly on it.
+            new \DateTimeImmutable('today', new \DateTimeZone('UTC')),
+        );
+
+        if (WeatherAvailability::UNAVAILABLE === $availability && !\in_array($weatherStatus, ['done', 'failed'], true)) {
+            return null;
+        }
+
+        return $availability?->value;
+    }
+
+    /**
      * Converts a Stage DTO to the JSON shape the frontend Zustand store expects.
      *
      * @return array<string, mixed>
      */
-    private function serializeStage(Stage $stage, string $locale): array
+    private function serializeStage(Stage $stage, string $locale, ?\DateTimeImmutable $startDate, ?string $weatherStatus): array
     {
         return [
             // Emitted but not yet contractual: see StagePayloadMapper::toPayload().
@@ -194,6 +267,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
+            'weatherAvailability' => $this->weatherAvailability($stage, $startDate, $weatherStatus),
             // Passed through as the producer wrote it, `group` included: normalising here is
             // what used to drop the richer fields some producers emit (ADR-068).
             'alerts' => $this->alertRenderer->render($stage->alerts, $stage->dayNumber, $locale),

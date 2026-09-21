@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\ComputationTracker\ComputationStatusStore;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
@@ -31,7 +32,7 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface, MergesGroupWritesAtomically
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, ComputationStatusStore, OwnedTripFinderInterface, MergesGroupWritesAtomically
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
@@ -529,6 +530,114 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $this->getEntityManager()->flush();
 
         return $trip->version;
+    }
+
+    /**
+     * Mirrors the enrichment status map onto the trip row (ADR-072).
+     *
+     * A targeted UPDATE rather than a managed-entity write: this runs from a worker that has
+     * no business hydrating the aggregate.
+     *
+     * @param array<string, string> $statuses
+     */
+    public function replaceComputationStatus(string $tripId, array $statuses): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\ApiResource\TripRequest t SET t.computationStatus = :value WHERE t.id = :tripId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('value', $statuses, 'jsonb')
+            ->execute();
+    }
+
+    /**
+     * Merges one computation's status into the map, in the database rather than in PHP.
+     *
+     * Five workers settle concurrently and the tracker's lock covers only its own Redis
+     * read-modify-write, not a round trip to Postgres on the far side of it. Reading the map
+     * here and writing it back whole would let the worker that read first and landed last
+     * erase another's entry — invisibly, since the mirror is only read once the cache is
+     * gone. `||` merges the one key server-side, so arrival order stops mattering.
+     */
+    public function mergeComputationStatus(string $tripId, string $computation, string $status): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trip SET computation_status = computation_status || CAST(:entry AS jsonb) WHERE id = :tripId',
+            [
+                'entry' => json_encode([$computation => $status], \JSON_THROW_ON_ERROR),
+                'tripId' => $tripId,
+            ],
+        );
+    }
+
+    /**
+     * The mirrored map, or null when the trip is unknown.
+     *
+     * An empty map means "nothing has settled yet", which is not the same as null: the
+     * caller distinguishes an unknown trip from one whose computations are all still running.
+     *
+     * Reads the column rather than a hydrated entity: the two writers above go straight to
+     * SQL, which leaves an already-managed `TripRequest` holding the old map.
+     *
+     * @return array<string, string>|null
+     */
+    public function getComputationStatus(string $tripId): ?array
+    {
+        if (!Uuid::isValid($tripId)) {
+            return null;
+        }
+
+        /** @var array{computationStatus: array<string, string>}|null $row */
+        $row = $this->getEntityManager()->createQuery(
+            'SELECT t.computationStatus AS computationStatus FROM App\ApiResource\TripRequest t WHERE t.id = :tripId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
+
+        return $row['computationStatus'] ?? null;
+    }
+
+    /**
+     * The mirrored maps of several trips, in one query.
+     *
+     * @param list<string> $tripIds
+     *
+     * @return array<string, array<string, string>>
+     */
+    public function getComputationStatusBatch(array $tripIds): array
+    {
+        $uuids = array_values(array_filter(
+            array_map(static fn (string $id): ?Uuid => Uuid::isValid($id) ? Uuid::fromString($id) : null, $tripIds),
+        ));
+
+        if ([] === $uuids) {
+            return [];
+        }
+
+        /** @var list<array{id: Uuid|string, computationStatus: array<string, string>}> $rows */
+        $rows = $this->getEntityManager()->createQuery(
+            'SELECT t.id AS id, t.computationStatus AS computationStatus FROM App\ApiResource\TripRequest t WHERE t.id IN (:ids)',
+        )
+            ->setParameter('ids', $uuids)
+            ->getArrayResult();
+
+        $byTripId = [];
+        foreach ($rows as $row) {
+            // Same hedge as getStageIdByDayNumber(): array hydration of a uuid column is not
+            // contractually an object.
+            $id = $row['id'] instanceof Uuid ? $row['id']->toRfc4122() : $row['id'];
+            $byTripId[$id] = $row['computationStatus'];
+        }
+
+        return $byTripId;
     }
 
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string

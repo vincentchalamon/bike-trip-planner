@@ -46,10 +46,11 @@ final class TripDetailTest extends ApiTestCase
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
     }
 
-    private function seedTrip(string $tripId): DoctrineTripRequestRepository
+    private function seedTrip(string $tripId, ?\DateTimeImmutable $startDate = null): DoctrineTripRequestRepository
     {
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
+        $request->startDate = $startDate;
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
@@ -262,6 +263,217 @@ final class TripDetailTest extends ApiTestCase
 
         $data = $this->fetchDetail();
         $this->assertSame('done', $data['weatherStatus']);
+    }
+
+    /**
+     * The tracker held every category all along; only the weather was ever exposed, so a
+     * client could not tell a terrain scan that had failed from one still running (ADR-072).
+     */
+    #[Test]
+    public function detailReportsEveryCategoryNotJustTheWeather(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::ROUTE,
+            ComputationName::POIS,
+            ComputationName::ACCOMMODATIONS,
+            ComputationName::TERRAIN,
+            ComputationName::WEATHER,
+            ComputationName::CALENDAR,
+        ]);
+        foreach ([ComputationName::ROUTE, ComputationName::POIS, ComputationName::ACCOMMODATIONS, ComputationName::WEATHER, ComputationName::CALENDAR] as $done) {
+            $tracker->markDone(self::TRIP_ID, $done);
+        }
+
+        $tracker->markFailed(self::TRIP_ID, ComputationName::TERRAIN);
+
+        $data = $this->fetchDetail();
+
+        $this->assertSame([
+            'route' => 'done',
+            'points_of_interest' => 'done',
+            'accommodations' => 'done',
+            'terrain_security' => 'failed',
+            'weather' => 'done',
+            'context' => 'done',
+        ], $data['categoryStatus']);
+    }
+
+    /**
+     * Five causes used to collapse into one null forecast. "Too far ahead" is a statement
+     * about today, so it is derived at read rather than stored (ADR-072).
+     */
+    #[Test]
+    public function aStageBeyondTheForecastHorizonSaysWhyItHasNoWeather(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today +20 days'));
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $this->assertSame('beyond_horizon', $this->firstStage()['weatherAvailability']);
+    }
+
+    #[Test]
+    public function aStageAlreadyBehindUsSaysSoRatherThanReadingAsMissing(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today -10 days'));
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $this->assertSame('past', $this->firstStage()['weatherAvailability']);
+    }
+
+    /**
+     * `unavailable` means the fetch happened and came back with nothing, so it must not be the
+     * answer while the fetch is still in flight. Stages exist from the ROUTE computation
+     * onwards, long before WEATHER settles, so this is most of the analysis — and telling a
+     * reader to retry work still running is exactly the wrong advice.
+     */
+    #[Test]
+    public function aStageWithinTheHorizonWaitsForTheFetchBeforeCallingItUnavailable(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today +2 days'));
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [ComputationName::WEATHER, ComputationName::WIND]);
+
+        $this->assertNull($this->firstStage()['weatherAvailability']);
+        $this->assertSame('running', $this->fetchDetail()['weatherStatus']);
+
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markDone(self::TRIP_ID, ComputationName::WIND);
+
+        // Settled with no forecast for a stage two days out: now it really is unavailable.
+        $this->assertSame('unavailable', $this->firstStage()['weatherAvailability']);
+    }
+
+    /**
+     * A trip with no dates gets no answer, on purpose. `past` and `beyond_horizon` are claims
+     * about a calendar the user has not set, and falling back to today would invent one.
+     * ADR-070's guard withholds WEATHER from dispatch for such a trip, so there is nothing to
+     * explain: `weatherStatus` says the computation has not run.
+     */
+    #[Test]
+    public function anUndatedTripIsNotGivenABorrowedCalendar(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [ComputationName::WEATHER]);
+
+        // Stages are a plain array inside the resource, so their nulls survive serialization:
+        // "no answer" reads as an explicit null rather than an absent key.
+        $this->assertNull($this->firstStage()['weatherAvailability']);
+        $this->assertSame('running', $this->fetchDetail()['weatherStatus']);
+    }
+
+    /**
+     * The assertion the PR exists for: the tracker cache is left empty — which is what a
+     * trip older than the 30-minute TTL looks like — and the answer still comes back, from
+     * the mirrored column (ADR-072). Before it, a trip whose every computation had failed
+     * reported success on both read paths.
+     */
+    #[Test]
+    public function stateOutlivesTheCacheThatHeldIt(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        // Written straight to the column, never through the tracker: the in-memory cache
+        // the `test` environment uses has nothing, exactly as an expired Redis key would.
+        $repo->replaceComputationStatus(self::TRIP_ID, [
+            'route' => 'failed',
+            'stages' => 'failed',
+            'weather' => 'failed',
+        ]);
+
+        $detail = $this->fetchDetail();
+        $this->assertSame('failed', $detail['weatherStatus']);
+        $categories = $detail['categoryStatus'];
+        $this->assertIsArray($categories);
+        $this->assertSame('failed', $categories['route']);
+
+        // The list reads many trips at once, so the fallback has its own batched query —
+        // exercised here against real hydration, not only through the mocked store.
+        $this->assertSame(
+            [self::TRIP_ID => ['route' => 'failed', 'stages' => 'failed', 'weather' => 'failed']],
+            $repo->getComputationStatusBatch([self::TRIP_ID]),
+        );
+
+        $list = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ])->toArray(false);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('failed', $list['member'][0]['status']);
+    }
+
+    /**
+     * A settling computation writes its own entry and nothing else, so two workers landing at
+     * once cannot erase each other (ADR-072). Initialization is the one wholesale write: the
+     * column must not keep answering with the previous generation's verdicts.
+     */
+    #[Test]
+    public function aSettlingComputationDoesNotOverwriteItsNeighbours(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::ROUTE,
+            ComputationName::TERRAIN,
+            ComputationName::WEATHER,
+        ]);
+
+        $this->assertSame(
+            ['route' => 'pending', 'terrain' => 'pending', 'weather' => 'pending'],
+            $repo->getComputationStatus(self::TRIP_ID),
+        );
+
+        $tracker->markFailed(self::TRIP_ID, ComputationName::TERRAIN);
+
+        $this->assertSame(
+            ['route' => 'pending', 'terrain' => 'failed', 'weather' => 'pending'],
+            $repo->getComputationStatus(self::TRIP_ID),
+        );
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function firstStage(): array
+    {
+        $stages = $this->fetchDetail()['stages'];
+        $this->assertIsArray($stages);
+        $stage = $stages[0];
+        $this->assertIsArray($stage);
+
+        return $stage;
+    }
+
+    private function stageDto(): StageDto
+    {
+        return new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 85.5,
+            elevation: 1200.0,
+            startPoint: new Coordinate(45.0, 6.0, 1000.0),
+            endPoint: new Coordinate(45.5, 6.5, 800.0),
+            geometry: [new Coordinate(45.0, 6.0, 1000.0)],
+        );
     }
 
     /**

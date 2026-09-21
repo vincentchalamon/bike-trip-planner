@@ -477,6 +477,7 @@
     "status_draft": "Brouillon",
     "status_analyzing": "En cours d'analyse",
     "status_analyzed": "Analysé",
+    "status_failed": "Analyse en échec",
     "totalDistance": "Distance totale",
     "stageCount": "Nombre d'étapes",
     "openTrip": "Ouvrir le voyage « {title} »",
