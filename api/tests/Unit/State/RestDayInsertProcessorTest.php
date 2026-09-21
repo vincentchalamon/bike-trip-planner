@@ -10,8 +10,6 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Enum\ComputationTrigger;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\StageResponseMapper;
@@ -216,8 +214,14 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->assertSame([ComputationTrigger::DATES], $recalculate[0]->triggers);
     }
 
+    /**
+     * The processor states what the edit invalidated and nothing more, whether or not the
+     * trip has dates. Which of those computations actually go out is the dispatcher's call,
+     * and its own guard covers it — asserting the absence of messages this processor never
+     * builds would pass for the wrong reason (ADR-070).
+     */
     #[Test]
-    public function doesNotDispatchWeatherAndCalendarWhenNoStartDate(): void
+    public function declaresTheDateShiftEvenOnATripWithNoStartDate(): void
     {
         $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
@@ -239,10 +243,9 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
-        $weatherMessages = array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather);
-        $calendarMessages = array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar);
-        $this->assertCount(0, $weatherMessages);
-        $this->assertCount(0, $calendarMessages);
+        $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
+        $this->assertCount(1, $recalculate);
+        $this->assertSame([ComputationTrigger::DATES], $recalculate[0]->triggers);
     }
 
     #[Test]
