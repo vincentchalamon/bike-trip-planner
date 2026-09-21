@@ -622,7 +622,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return [];
         }
 
-        /** @var list<array{id: Uuid, computationStatus: array<string, string>}> $rows */
+        /** @var list<array{id: Uuid|string, computationStatus: array<string, string>}> $rows */
         $rows = $this->getEntityManager()->createQuery(
             'SELECT t.id AS id, t.computationStatus AS computationStatus FROM App\ApiResource\TripRequest t WHERE t.id IN (:ids)',
         )
@@ -631,7 +631,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
         $byTripId = [];
         foreach ($rows as $row) {
-            $byTripId[$row['id']->toRfc4122()] = $row['computationStatus'];
+            // Same hedge as getStageIdByDayNumber(): array hydration of a uuid column is not
+            // contractually an object.
+            $id = $row['id'] instanceof Uuid ? $row['id']->toRfc4122() : $row['id'];
+            $byTripId[$id] = $row['computationStatus'];
         }
 
         return $byTripId;

@@ -328,6 +328,33 @@ final class TripDetailTest extends ApiTestCase
     }
 
     /**
+     * `unavailable` means the fetch happened and came back with nothing, so it must not be the
+     * answer while the fetch is still in flight. Stages exist from the ROUTE computation
+     * onwards, long before WEATHER settles, so this is most of the analysis — and telling a
+     * reader to retry work still running is exactly the wrong advice.
+     */
+    #[Test]
+    public function aStageWithinTheHorizonWaitsForTheFetchBeforeCallingItUnavailable(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today +2 days'));
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [ComputationName::WEATHER, ComputationName::WIND]);
+
+        $this->assertNull($this->firstStage()['weatherAvailability']);
+        $this->assertSame('running', $this->fetchDetail()['weatherStatus']);
+
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markDone(self::TRIP_ID, ComputationName::WIND);
+
+        // Settled with no forecast for a stage two days out: now it really is unavailable.
+        $this->assertSame('unavailable', $this->firstStage()['weatherAvailability']);
+    }
+
+    /**
      * A trip with no dates gets no answer, on purpose. `past` and `beyond_horizon` are claims
      * about a calendar the user has not set, and falling back to today would invent one.
      * ADR-070's guard withholds WEATHER from dispatch for such a trip, so there is nothing to
@@ -376,6 +403,13 @@ final class TripDetailTest extends ApiTestCase
         $categories = $detail['categoryStatus'];
         $this->assertIsArray($categories);
         $this->assertSame('failed', $categories['route']);
+
+        // The list reads many trips at once, so the fallback has its own batched query —
+        // exercised here against real hydration, not only through the mocked store.
+        $this->assertSame(
+            [self::TRIP_ID => ['route' => 'failed', 'stages' => 'failed', 'weather' => 'failed']],
+            $repo->getComputationStatusBatch([self::TRIP_ID]),
+        );
 
         $list = $this->client->request('GET', '/trips', [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),

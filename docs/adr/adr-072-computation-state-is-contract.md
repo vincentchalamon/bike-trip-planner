@@ -122,8 +122,15 @@ Five causes used to collapse into a single null forecast. A stage-level field no
 | `beyond_horizon` | further out than 16 days | not yet: come back later |
 | `unavailable` | empty provider, failed batch, uncovered window | yes, a recompute may help |
 
-Absent when the forecast is there, and absent when nothing has been computed yet — that second
-distinction is what `weatherStatus` is for.
+Absent when the forecast is there. The third row also waits: stages exist from the ROUTE
+computation onwards, long before WEATHER completes, so a within-horizon stage has no forecast
+*yet* for most of the analysis — and `unavailable` claims the opposite, that the fetch happened
+and came back empty. It is therefore withheld until the weather block has settled; until then
+`weatherStatus` says what is going on.
+
+The two calendar rows do not wait. They are true whether or not the computation has run, and
+telling a reader on day one that a stage is beyond the horizon is better than a spinner that
+resolves to nothing.
 
 It is **derived at read, not stored**. "Too far ahead" is a statement about today: a stored
 answer would rot, exactly as the stored verdicts lot B declined to introduce would have. The

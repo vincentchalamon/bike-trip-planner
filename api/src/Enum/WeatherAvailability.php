@@ -14,7 +14,9 @@ namespace App\Enum;
  *
  * Five distinct causes used to collapse into a bare `null`, so a client could not tell a trip
  * scheduled too far ahead from one whose provider had failed. Absent means the forecast is
- * there, or nothing has been computed yet; `weatherStatus` carries that second distinction.
+ * there — or, for {@see self::UNAVAILABLE} alone, that the weather block has not settled yet
+ * and the stage has no forecast *yet*; `weatherStatus` carries that distinction. The two
+ * calendar answers need no computation to be true, so they do not wait for one.
  */
 enum WeatherAvailability: string
 {

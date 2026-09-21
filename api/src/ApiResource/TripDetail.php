@@ -111,8 +111,10 @@ final readonly class TripDetail
                     'onCycleNetwork' => ['type' => 'number', 'format' => 'float', 'minimum' => 0, 'maximum' => 1],
                     // Why there is no forecast, when there is none — a past stage and one
                     // beyond the provider's horizon used to be the same bare null (ADR-072).
-                    // Null when the forecast is there, and when nothing has been computed
-                    // yet; `weatherStatus` carries that second distinction.
+                    // Null when the forecast is there. `unavailable` is also withheld until
+                    // the weather block has settled: before that the stage has no forecast
+                    // *yet*, which `weatherStatus` says. The two calendar answers do not
+                    // wait — they are true whether or not the computation has run.
                     'weatherAvailability' => ['oneOf' => [['type' => 'string', 'enum' => WeatherAvailability::VALUES], ['type' => 'null']]],
                     'weather' => ['oneOf' => [['type' => 'object', 'properties' => [
                         'icon' => ['type' => 'string'],
