@@ -30,8 +30,8 @@ final readonly class TripListItem
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $updatedAt,
         #[ApiProperty(
-            description: 'Computed trip status: draft | analyzing | analyzed',
-            schema: ['type' => 'string', 'enum' => ['draft', 'analyzing', 'analyzed']],
+            description: 'Computed trip status. `failed` means every enrichment that settled did so in failure — a partial failure still reads `analyzed`, since the trip is usable (ADR-072).',
+            schema: ['type' => 'string', 'enum' => ['draft', 'analyzing', 'analyzed', 'failed']],
         )]
         public string $status = 'draft',
     ) {

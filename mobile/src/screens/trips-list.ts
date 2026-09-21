@@ -4,7 +4,10 @@ import type { TripListItem } from '../api/trips';
 // Pure trips-list helpers, extracted from the screen so the status/badge logic is
 // unit-testable (the codebase's convention — see trip-actions.ts, use-trips.ts).
 
-export type TripStatus = 'draft' | 'analyzing' | 'analyzed';
+// Taken from the generated schema rather than restated: a hand-written copy silently
+// survived the server gaining `failed` (ADR-072), which is the drift the type contract
+// exists to catch.
+export type TripStatus = NonNullable<TripListItem['status']>;
 
 export function statusOf(item: Pick<TripListItem, 'status'>): TripStatus {
   return (item.status ?? 'draft') as TripStatus;
@@ -17,8 +20,15 @@ export interface BadgeColors {
 }
 
 /** Theme tokens for the status badge on a trip card: brand-amber while analysing,
- * green once analysed, neutral for a draft. */
+ * green once analysed, red when every computation failed, neutral for a draft. */
 export function badgeColors(theme: Theme, status: TripStatus): BadgeColors {
+  if (status === 'failed') {
+    return {
+      bg: theme.colors.dangerSoft,
+      fg: theme.colors.dangerInk,
+      border: theme.colors.dangerBorder,
+    };
+  }
   if (status === 'analyzing') {
     return {
       bg: theme.colors.accentSoft,

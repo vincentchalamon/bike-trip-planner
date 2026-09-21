@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
+use App\Enum\WeatherAvailability;
 use App\Enum\AlertGroup;
 use App\State\TripDetailProvider;
 
@@ -61,10 +62,29 @@ final readonly class TripDetail
         )]
         public string $status,
         #[ApiProperty(
-            description: 'Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).',
+            description: 'Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.',
             openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', null]],
         )]
         public ?string $weatherStatus,
+        /**
+         * Where each family of enrichments stands, keyed by
+         * {@see \App\Enum\ComputationName::category()}.
+         *
+         * Only the weather block was exposed before (ADR-072), so a client reloading
+         * mid-analysis could not tell a terrain scan that had failed from one still running.
+         * A category is absent when none of its computations is tracked, which a client reads
+         * as "nothing to say" rather than as an outcome.
+         *
+         * @var array<string, string>
+         */
+        #[ApiProperty(
+            description: 'Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked.',
+            openapiContext: [
+                'type' => 'object',
+                'additionalProperties' => ['type' => 'string', 'enum' => ['running', 'done', 'failed']],
+            ],
+        )]
+        public array $categoryStatus,
         #[ApiProperty(openapiContext: [
             'type' => 'array',
             'items' => [
@@ -89,6 +109,11 @@ final readonly class TripDetail
                     'endLabel' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                     'isRestDay' => ['type' => 'boolean'],
                     'onCycleNetwork' => ['type' => 'number', 'format' => 'float', 'minimum' => 0, 'maximum' => 1],
+                    // Why there is no forecast, when there is none — a past stage and one
+                    // beyond the provider's horizon used to be the same bare null (ADR-072).
+                    // Null when the forecast is there, and when nothing has been computed
+                    // yet; `weatherStatus` carries that second distinction.
+                    'weatherAvailability' => ['oneOf' => [['type' => 'string', 'enum' => WeatherAvailability::VALUES], ['type' => 'null']]],
                     'weather' => ['oneOf' => [['type' => 'object', 'properties' => [
                         'icon' => ['type' => 'string'],
                         'description' => ['type' => 'string'],

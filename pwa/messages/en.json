@@ -477,6 +477,7 @@
     "status_draft": "Draft",
     "status_analyzing": "Analyzing...",
     "status_analyzed": "Analyzed",
+    "status_failed": "Analysis failed",
     "totalDistance": "Total distance",
     "stageCount": "Stage count",
     "openTrip": "Open trip \"{title}\"",

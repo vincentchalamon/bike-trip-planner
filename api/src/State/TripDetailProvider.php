@@ -20,6 +20,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\EventArrayMapper;
 use App\Enum\ComputationName;
+use App\Enum\WeatherAvailability;
 use App\Enum\TripStatus;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Weather\WeatherForecastSerializer;
@@ -96,7 +97,11 @@ final readonly class TripDetailProvider implements ProviderInterface
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
             weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
-            stages: array_map(fn (Stage $stage): array => $this->serializeStage($stage, $locale), $stages),
+            categoryStatus: $this->deriveCategoryStatuses($statuses),
+            stages: array_map(
+                fn (Stage $stage): array => $this->serializeStage($stage, $locale, $request->startDate),
+                $stages,
+            ),
         );
     }
 
@@ -113,6 +118,36 @@ final readonly class TripDetailProvider implements ProviderInterface
             ComputationName::cases(),
             static fn (ComputationName $c): bool => $c->category() === $category,
         ));
+    }
+
+    /**
+     * Where each family of enrichments stands.
+     *
+     * The per-block rule already existed and was already generic; it was simply only ever
+     * called for the weather, leaving a client unable to tell a terrain scan that had failed
+     * from one still running (ADR-072). A category with nothing tracked is left out rather
+     * than reported as an outcome.
+     *
+     * @param array<string, string>|null $statuses
+     *
+     * @return array<string, string>
+     */
+    private function deriveCategoryStatuses(?array $statuses): array
+    {
+        $byCategory = [];
+        foreach (ComputationName::cases() as $computation) {
+            $category = $computation->category();
+            if (isset($byCategory[$category])) {
+                continue;
+            }
+
+            $status = $this->deriveBlockStatus($this->computationsInCategory($category), $statuses);
+            if (null !== $status) {
+                $byCategory[$category] = $status;
+            }
+        }
+
+        return $byCategory;
     }
 
     /**
@@ -175,7 +210,7 @@ final readonly class TripDetailProvider implements ProviderInterface
      *
      * @return array<string, mixed>
      */
-    private function serializeStage(Stage $stage, string $locale): array
+    private function serializeStage(Stage $stage, string $locale, ?\DateTimeImmutable $startDate): array
     {
         return [
             // Emitted but not yet contractual: see StagePayloadMapper::toPayload().
@@ -194,6 +229,18 @@ final readonly class TripDetailProvider implements ProviderInterface
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
+            // Why there is no forecast, when there is none. Derived here rather than stored:
+            // "too far ahead" is a statement about today, so a stored answer would rot
+            // (ADR-072). Null when the forecast is present — nothing to explain.
+            'weatherAvailability' => $stage->weather instanceof WeatherForecast
+                ? null
+                : WeatherAvailability::forStage(
+                    $startDate?->modify(\sprintf('+%d days', $stage->dayNumber - 1)),
+                    // UTC, like FetchWeatherHandler: stage dates are normalized to UTC
+                    // midnight, and a local `today` would put the horizon a day off for a
+                    // stage sitting exactly on it.
+                    new \DateTimeImmutable('today', new \DateTimeZone('UTC')),
+                )?->value,
             // Passed through as the producer wrote it, `group` included: normalising here is
             // what used to drop the richer fields some producers emit (ADR-068).
             'alerts' => $this->alertRenderer->render($stage->alerts, $stage->dayNumber, $locale),

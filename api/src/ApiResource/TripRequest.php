@@ -153,6 +153,23 @@ final class TripRequest
     public int $version = 1;
 
     /**
+     * Mirror of the enrichment status map, written as each computation settles (ADR-072).
+     *
+     * The live map lives in Redis under a 30-minute TTL, which is shorter than the life of a
+     * trip: past it the state did not merely go cold, it ceased to exist anywhere, and both
+     * read paths fell back to "there are stages, so it must be analysed" — reporting success
+     * for a trip whose every computation had failed.
+     *
+     * The same reasoning that moved {@see self::$version} out of Redis, for the same reason.
+     * Redis stays the hot path; this is what answers once it is gone.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: 'jsonb', options: ['default' => '{}'])]
+    #[ApiProperty(readable: false, writable: false)]
+    public array $computationStatus = [];
+
+    /**
      * True when the route falls (even partly) outside the provisioned coverage
      * area: the trip is display-only (no Valhalla rerouting).
      *

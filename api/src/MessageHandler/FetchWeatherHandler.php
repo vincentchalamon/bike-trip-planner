@@ -12,6 +12,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\ComputationName;
+use App\Enum\WeatherAvailability;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
@@ -33,9 +34,6 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 {
-    /** Open-Meteo forecast horizon: no reliable hourly beyond ~16 days out. */
-    private const int FORECAST_HORIZON_DAYS = 16;
-
     private const int CACHE_TTL_SECONDS = 10800; // 3 hours
 
     public function __construct(
@@ -72,7 +70,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $request, $stages, $locale, $generation): void {
             $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
-            $horizonEnd = $today->modify(\sprintf('+%d days', self::FORECAST_HORIZON_DAYS));
+            $horizonEnd = $today->modify(\sprintf('+%d days', WeatherAvailability::HORIZON_DAYS));
             $baseDate = $request->startDate ?? $today;
 
             // Phase 1: per-stage context (date/window/bearing) + raw cache lookup.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\ComputationTracker\ComputationStatusStore;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
@@ -31,7 +32,7 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, OwnedTripFinderInterface, MergesGroupWritesAtomically
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, ComputationStatusStore, OwnedTripFinderInterface, MergesGroupWritesAtomically
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
@@ -529,6 +530,88 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $this->getEntityManager()->flush();
 
         return $trip->version;
+    }
+
+    /**
+     * Mirrors the enrichment status map onto the trip row (ADR-072).
+     *
+     * A targeted UPDATE rather than a managed-entity write: this runs from a worker that has
+     * no business hydrating the aggregate, and the surrounding computation already holds its
+     * own lock.
+     *
+     * @param array<string, string> $statuses
+     */
+    public function storeComputationStatus(string $tripId, array $statuses): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\ApiResource\TripRequest t SET t.computationStatus = :value WHERE t.id = :tripId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('value', $statuses, 'jsonb')
+            ->execute();
+    }
+
+    /**
+     * The mirrored map, or null when the trip is unknown.
+     *
+     * An empty map means "nothing has settled yet", which is not the same as null: the
+     * caller distinguishes an unknown trip from one whose computations are all still running.
+     *
+     * Reads the column rather than a hydrated entity: {@see storeComputationStatus()} writes
+     * by DQL UPDATE, which leaves an already-managed `TripRequest` holding the old map.
+     *
+     * @return array<string, string>|null
+     */
+    public function getComputationStatus(string $tripId): ?array
+    {
+        if (!Uuid::isValid($tripId)) {
+            return null;
+        }
+
+        /** @var array{computationStatus: array<string, string>}|null $row */
+        $row = $this->getEntityManager()->createQuery(
+            'SELECT t.computationStatus AS computationStatus FROM App\ApiResource\TripRequest t WHERE t.id = :tripId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
+
+        return $row['computationStatus'] ?? null;
+    }
+
+    /**
+     * The mirrored maps of several trips, in one query.
+     *
+     * @param list<string> $tripIds
+     *
+     * @return array<string, array<string, string>>
+     */
+    public function getComputationStatusBatch(array $tripIds): array
+    {
+        $uuids = array_values(array_filter(
+            array_map(static fn (string $id): ?Uuid => Uuid::isValid($id) ? Uuid::fromString($id) : null, $tripIds),
+        ));
+
+        if ([] === $uuids) {
+            return [];
+        }
+
+        /** @var list<array{id: Uuid, computationStatus: array<string, string>}> $rows */
+        $rows = $this->getEntityManager()->createQuery(
+            'SELECT t.id AS id, t.computationStatus AS computationStatus FROM App\ApiResource\TripRequest t WHERE t.id IN (:ids)',
+        )
+            ->setParameter('ids', $uuids)
+            ->getArrayResult();
+
+        $byTripId = [];
+        foreach ($rows as $row) {
+            $byTripId[$row['id']->toRfc4122()] = $row['computationStatus'];
+        }
+
+        return $byTripId;
     }
 
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string

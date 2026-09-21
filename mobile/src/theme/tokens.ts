@@ -54,6 +54,10 @@ export interface ThemeColors {
   successSoft: string;
   successInk: string;
   successBorder: string;
+  // Soft red counterpart, for the "analysis failed" badge (ADR-072).
+  dangerSoft: string;
+  dangerInk: string;
+  dangerBorder: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -105,6 +109,9 @@ export const lightColors: ThemeColors = {
   successSoft: '#eaf4ec',
   successInk: '#1a3d22',
   successBorder: '#cfe6d4',
+  dangerSoft: '#f9e9ea',
+  dangerInk: '#6b0208',
+  dangerBorder: '#efcccf',
 };
 
 export const darkColors: ThemeColors = {
@@ -151,6 +158,9 @@ export const darkColors: ThemeColors = {
   successSoft: '#0d2e14',
   successInk: '#b8f0c0',
   successBorder: 'rgba(120,200,140,0.25)',
+  dangerSoft: '#3a1012',
+  dangerInk: '#ffc9cb',
+  dangerBorder: 'rgba(255,100,103,0.25)',
 };
 
 // Spacing scale (px) — mirrors --spacing-* in globals.css.

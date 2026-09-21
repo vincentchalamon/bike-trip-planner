@@ -64,6 +64,7 @@ export const fr = {
       draft: 'Brouillon',
       analyzing: "En cours d'analyse",
       analyzed: 'Analysé',
+      failed: 'Analyse en échec',
     },
   },
   create: {

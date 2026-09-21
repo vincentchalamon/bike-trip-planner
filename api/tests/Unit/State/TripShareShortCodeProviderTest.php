@@ -63,6 +63,7 @@ final class TripShareShortCodeProviderTest extends TestCase
             outOfZone: false,
             status: 'ready',
             weatherStatus: null,
+            categoryStatus: [],
             stages: [],
         );
         $this->tripDetailProvider->expects($this->once())->method('provide')->willReturn($detail);

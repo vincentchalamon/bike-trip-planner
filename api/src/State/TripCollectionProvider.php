@@ -162,10 +162,10 @@ final readonly class TripCollectionProvider implements ProviderInterface
      * - "analyzing" : at least one computation is still pending or running
      * - "analyzed"  : at least one computation reached `done` (results available)
      *
-     * The computation-tracking cache has a 30-minute TTL, so a fully analyzed
-     * trip eventually loses its `$statuses` map. In that case we fall back to
-     * the durable `$stageCount` (persisted in PostgreSQL) so the trip keeps
-     * reporting "analyzed" instead of reverting to "draft".
+     * The map itself is now durable past the cache's 30-minute TTL
+     * ({@see \App\ComputationTracker\PersistingComputationTracker}), so the fallback on
+     * `$stageCount` below only catches a trip that never had a computation tracked at all —
+     * not, as before, every trip older than half an hour.
      *
      * @param array<string, string>|null $statuses
      */
@@ -176,6 +176,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         }
 
         $hasDone = false;
+        $hasFailed = false;
         foreach ($statuses as $status) {
             if ('pending' === $status || 'running' === $status) {
                 return 'analyzing';
@@ -183,6 +184,8 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
             if ('done' === $status) {
                 $hasDone = true;
+            } elseif ('failed' === $status) {
+                $hasFailed = true;
             }
         }
 
@@ -191,6 +194,15 @@ final readonly class TripCollectionProvider implements ProviderInterface
         // so the user can retry without the list being stuck on "analyzed".
         if (!$hasDone && 0 === $stageCount) {
             return 'draft';
+        }
+
+        // Nothing succeeded, but stages exist. This used to answer 'analyzed', so a trip
+        // whose every computation had failed was indistinguishable in the list from one
+        // that had worked (ADR-072). The rule matches
+        // TripDetailProvider::deriveBlockStatus(): a partial failure still leaves a usable
+        // trip and stays 'analyzed'.
+        if ($hasFailed && !$hasDone) {
+            return 'failed';
         }
 
         return 'analyzed';

@@ -72,12 +72,16 @@ final class TripCollectionProviderTest extends TestCase
             'draft',
         ];
 
-        yield 'all failed but some stages persisted → analyzed' => [
+        // Used to answer 'analyzed', which made a trip whose every computation had failed
+        // indistinguishable in the list from one that had worked (ADR-072).
+        yield 'all failed but some stages persisted → failed' => [
             ['route' => 'failed', 'stages' => 'failed'],
             2,
-            'analyzed',
+            'failed',
         ];
 
+        // A partial failure still leaves a usable trip: only an all-failed terminal map
+        // reads as 'failed'.
         yield 'mixed done + failed → analyzed' => [
             ['route' => 'done', 'stages' => 'failed', 'weather' => 'done'],
             5,

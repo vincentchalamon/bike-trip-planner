@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\ComputationTracker\ComputationTracker;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\NullTripUpdatePublisher;
 use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -53,6 +55,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ->autowire(false)
             ->autoconfigure(false);
     }
+
+    // Two implementations exist since the persisting decorator (ADR-071), so the interface
+    // no longer resolves on its own. It points at the decorated service id, which is the
+    // decorator itself.
+    $services->alias(ComputationTrackerInterface::class, ComputationTracker::class);
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);

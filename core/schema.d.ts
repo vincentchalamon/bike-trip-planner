@@ -1729,7 +1729,7 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             /** @enum {string} */
-            status?: "draft" | "analyzing" | "analyzed";
+            status?: "draft" | "analyzing" | "analyzed" | "failed";
         };
         "Trip.TripRequest": {
             sourceUrl: string | null;
@@ -1871,10 +1871,14 @@ export interface components {
              */
             status?: "draft" | "ready";
             /**
-             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.
              * @enum {string|null}
              */
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
+            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. */
+            categoryStatus?: {
+                [key: string]: "running" | "done" | "failed";
+            };
             /** @description Serialized stage DTOs */
             stages?: {
                 /** Format: uuid */
@@ -1907,6 +1911,7 @@ export interface components {
                 isRestDay?: boolean;
                 /** Format: float */
                 onCycleNetwork?: number;
+                weatherAvailability?: ("past" | "beyond_horizon" | "unavailable") | null;
                 weather?: {
                     icon?: string;
                     description?: string;
@@ -2243,10 +2248,14 @@ export interface components {
              */
             status?: "draft" | "ready";
             /**
-             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.
              * @enum {string|null}
              */
             weatherStatus?: "pending" | "running" | "done" | "failed" | null;
+            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. */
+            categoryStatus?: {
+                [key: string]: "running" | "done" | "failed";
+            };
             /** @description Serialized stage DTOs */
             stages?: {
                 /** Format: uuid */
@@ -2279,6 +2288,7 @@ export interface components {
                 isRestDay?: boolean;
                 /** Format: float */
                 onCycleNetwork?: number;
+                weatherAvailability?: ("past" | "beyond_horizon" | "unavailable") | null;
                 weather?: {
                     icon?: string;
                     description?: string;
