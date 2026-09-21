@@ -153,6 +153,44 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertSame([ComputationTrigger::GEOMETRY, ComputationTrigger::DATES], $recalculate[0]->triggers);
     }
 
+    /**
+     * A merge shifts every later stage one day earlier, and the accommodation scan is the one
+     * computation scoped to the affected list. Naming only the stage that absorbed the
+     * geometry left every stage past the merge point with a seasonal verdict computed for the
+     * old month — the defect ADR-070 exists to close, in the shape it takes here.
+     */
+    #[Test]
+    public function aMergeNamesEveryStageWhoseDateShifts(): void
+    {
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+        $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
+        $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 70.0, elevation: 400.0, startPoint: $coord, endPoint: $coord);
+        $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
+        $stage3 = new Stage(tripId: 'trip-1', dayNumber: 4, distance: 60.0, elevation: 300.0, startPoint: $coord, endPoint: $coord);
+
+        $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2, $stage3]);
+        $this->tripStateManager->method('getSourceType')->willReturn(null);
+
+        $dispatchedMessages = [];
+        $this->messageBus->method('dispatch')->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
+            $dispatchedMessages[] = $msg;
+
+            return new Envelope($msg);
+        });
+
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => $stage1->id]);
+
+        $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
+        $this->assertCount(1, $recalculate);
+
+        // Both halves: the line moved where the merge happened, the dates moved everywhere after.
+        $this->assertSame([ComputationTrigger::GEOMETRY, ComputationTrigger::DATES], $recalculate[0]->triggers);
+
+        // The stages left standing after the merge, not just the one that absorbed it.
+        $this->assertGreaterThan(1, \count($recalculate[0]->affectedStageIds));
+        $this->assertContains($stage3->id, $recalculate[0]->affectedStageIds);
+    }
+
     #[Test]
     public function deletingARestDayInvalidatesTheDatesAndNotTheLine(): void
     {

@@ -91,9 +91,14 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         // hand us whichever version won the race after the lock was released.
         $generation = $write->version;
 
-        // Only the stage that absorbed the deleted one needs recomputing; a plain
-        // removal affects none, which an empty list would read as "all".
-        $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
+        // The stage that absorbed the deleted geometry, and every stage after it: the
+        // reindex below moves each of them one day earlier, and the accommodation scan is
+        // the one computation scoped to this list — naming only the merge target left the
+        // seasonal verdict on the old month for all the rest (ADR-070). A plain removal
+        // names none, which an empty list reads as "all".
+        $affected = null !== $mergedIndex && isset($stages[$mergedIndex])
+            ? array_map(static fn (Stage $stage): string => $stage->id, \array_slice($stages, $mergedIndex))
+            : [];
         // Removing a stage shifts every later one onto a new calendar date; removing a
         // ridden stage also moves the line. Both travel on the one message so the handler
         // dispatches their union once — sending the date set separately here is what would
