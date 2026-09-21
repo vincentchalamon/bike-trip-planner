@@ -5,10 +5,7 @@ import {
 
 // The filterable list is shared, framework-free, from @btp/core (ADR-055, #1046);
 // re-exported here so the public `@/lib/accommodation-types` path stays stable.
-export {
-  FILTERABLE_ACCOMMODATION_TYPES,
-  type FilterableAccommodationType,
-};
+export { FILTERABLE_ACCOMMODATION_TYPES, type FilterableAccommodationType };
 
 /**
  * All supported accommodation types for filtering.

@@ -93,8 +93,8 @@ describe('subscribeTokenRotation', () => {
     listener({ type: 'android', data: 'fcm-token-rotated' });
     // The listener re-registers fire-and-forget; flush the permission + token
     // fetch microtasks before asserting the POST landed.
-    await new Promise((r) => setImmediate(r));
-    await new Promise((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(() => r()));
+    await new Promise<void>((r) => setImmediate(() => r()));
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
