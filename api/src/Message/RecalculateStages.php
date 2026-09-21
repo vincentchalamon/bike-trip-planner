@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Enum\ComputationTrigger;
+
 final readonly class RecalculateStages
 {
     /**
@@ -17,17 +19,25 @@ final readonly class RecalculateStages
      * An empty list means "all stages" — deliberately kept as such rather than expanded
      * to identifiers at send time, which would miss stages created in between.
      *
-     * @param list<string> $affectedStageIds
-     * @param bool         $skipAccommodationScan skip only the accommodation scan (POIs, bike shops and terrain still run)
-     * @param bool         $skipGeographicScans   Skip ALL geographic scans (POIs, accommodations, bike shops, terrain).
-     *                                            Takes precedence over $skipAccommodationScan: when true,
-     *                                            $skipAccommodationScan is irrelevant.
+     * @param list<string>             $affectedStageIds
+     * @param list<ComputationTrigger> $triggers              What this edit invalidated, so the
+     *                                                        handler re-runs the union once
+     *                                                        (ADR-070). A rest-day edit passes
+     *                                                        DATES alone: it shifts every later
+     *                                                        stage's date without moving a metre
+     *                                                        of line. Empty means the stages are
+     *                                                        recomputed and nothing is enriched.
+     * @param bool                     $skipAccommodationScan held back even when the triggers
+     *                                                        cover it: an accommodation edit
+     *                                                        moves the next stage's start point,
+     *                                                        but re-scanning would overwrite the
+     *                                                        choice the rider just made
      */
     public function __construct(
         public string $tripId,
         public array $affectedStageIds,
         public bool $skipAccommodationScan = false,
-        public bool $skipGeographicScans = false,
+        public array $triggers = [ComputationTrigger::GEOMETRY],
         public ?int $generation = null,
     ) {
     }

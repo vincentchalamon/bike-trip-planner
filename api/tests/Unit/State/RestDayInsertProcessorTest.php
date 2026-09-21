@@ -4,20 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
-use App\Service\EnrichmentMessageFactory;
-use App\Service\TripAnalysisDispatcher;
 use App\Tests\Unit\AlertMessageTestTrait;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\Message\AnalyzeTerrain;
+use App\Enum\ComputationTrigger;
 use App\Message\CheckCalendar;
-use App\Message\ScanEvents;
-use App\Message\ScanAccommodations;
-use App\Message\ScanPois;
-use App\Message\CheckFerries;
-use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -72,7 +65,6 @@ final class RestDayInsertProcessorTest extends TestCase
             $this->stageResponseMapper,
             new TripLocker(),
             new StageLocator(),
-            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
         );
     }
 
@@ -220,7 +212,8 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->assertCount(3, $recalculate[0]->affectedStageIds);
         $this->assertSame([$stage1->id, $stage2->id], \array_slice($recalculate[0]->affectedStageIds, 1));
         // Geographic scans must be skipped: inserting a rest day does not change geography
-        $this->assertTrue($recalculate[0]->skipGeographicScans);
+        // A rest day moves no geometry: the dates alone are what it invalidated.
+        $this->assertSame([ComputationTrigger::DATES], $recalculate[0]->triggers);
     }
 
     #[Test]
@@ -253,9 +246,9 @@ final class RestDayInsertProcessorTest extends TestCase
     }
 
     #[Test]
-    public function insertingARestDayRecomputesEverythingTheDateShiftInvalidates(): void
+    public function insertingARestDayInvalidatesTheDatesAndNotTheLine(): void
     {
-        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+        $coord = new Coordinate(48.0, 2.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $tripRequest = new TripRequest();
@@ -267,10 +260,9 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $dispatchedMessages = [];
-        // RecalculateStages + AnalyzeTerrain (the rest-day nudge, a layout concern) + the
-        // date-dependent set minus terrain: weather, holidays, events, and the two whose
-        // verdicts read a stage date — the resupply weekday and the seasonal month (ADR-070).
-        $this->messageBus->expects($this->exactly(7))
+        // One message. What the edit invalidated travels on it, so the handler dispatches
+        // that set once instead of the processor sending its own overlapping half (ADR-070).
+        $this->messageBus->expects($this->exactly(1))
             ->method('dispatch')
             ->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
                 $dispatchedMessages[] = $msg;
@@ -280,23 +272,11 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => $stage0->id]);
 
-        $weatherMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather));
-        $calendarMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar));
-        $terrainMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof AnalyzeTerrain));
-        $this->assertCount(1, $weatherMessages);
-        $this->assertSame('trip-1', $weatherMessages[0]->tripId);
-        $this->assertCount(1, $calendarMessages);
-        $this->assertSame('trip-1', $calendarMessages[0]->tripId);
-        $this->assertCount(1, $terrainMessages, 'Terrain is dispatched once, for the nudge, not again by the date set.');
+        $recalculate = $dispatchedMessages[0];
+        $this->assertInstanceOf(RecalculateStages::class, $recalculate);
 
-        // A rest day adds no geometry, so nothing corridor-only may be re-scanned.
-        $classes = array_map(static fn (object $m): string => $m::class, $dispatchedMessages);
-        $this->assertNotContains(CheckWaterPoints::class, $classes);
-        $this->assertNotContains(CheckFerries::class, $classes);
-
-        // The three a date shift used to leave stale.
-        $this->assertContains(ScanPois::class, $classes);
-        $this->assertContains(ScanAccommodations::class, $classes);
-        $this->assertContains(ScanEvents::class, $classes);
+        // A rest day adds no geometry; it only pushes every later stage onto a new date.
+        // Terrain rides along in that set, which re-runs the rest-day nudge (recette).
+        $this->assertSame([ComputationTrigger::DATES], $recalculate->triggers);
     }
 }

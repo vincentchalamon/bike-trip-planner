@@ -17,7 +17,6 @@ use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -32,7 +31,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private DistanceCalculatorInterface $distanceCalculator,
         private TripLocker $tripLocker,
         private StageLocator $stageLocator,
-        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
 
@@ -96,7 +94,21 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         // Only the stage that absorbed the deleted one needs recomputing; a plain
         // removal affects none, which an empty list would read as "all".
         $affected = null !== $mergedIndex && isset($stages[$mergedIndex]) ? [$stages[$mergedIndex]->id] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipGeographicScans: $isRestDayDeletion, generation: $generation));
+        // Removing a stage shifts every later one onto a new calendar date; removing a
+        // ridden stage also moves the line. Both travel on the one message so the handler
+        // dispatches their union once — sending the date set separately here is what would
+        // re-run the five computations that sit in both sets twice (ADR-070).
+        //
+        // Terrain rides along in the date set, which is what restores the "consider a rest
+        // day" nudge on the preceding day after a rest day is removed (recette).
+        $this->messageBus->dispatch(new RecalculateStages(
+            $tripId,
+            $affected,
+            triggers: $isRestDayDeletion
+                ? [ComputationTrigger::DATES]
+                : [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            generation: $generation,
+        ));
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so removing a
         // stage shifts the end date back so the global range, the export and a
@@ -109,18 +121,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
         }
 
-        // Removing a stage shifts every later one onto a new calendar date, so everything
-        // date-driven is now wrong — not just the weather and the holidays (ADR-070).
-        //
-        // Terrain rides along in that set, which is what restores the "consider a rest day"
-        // nudge on the preceding day after a rest day is removed: RecalculateStages skips the
-        // geographic scans in that case, so this used to need its own dispatch (recette).
-        $this->analysisDispatcher->dispatchFor(
-            $tripId,
-            $tripRequest,
-            [ComputationTrigger::DATES],
-            $generation,
-        );
     }
 
     /**

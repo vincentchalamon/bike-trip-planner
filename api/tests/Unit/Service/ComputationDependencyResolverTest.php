@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Enum\ComputationTrigger;
 use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripModification;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
-use App\Message\CheckBorderCrossing;
-use App\Message\CheckFerries;
 use App\Message\CheckCulturalPois;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -91,30 +90,38 @@ final class ComputationDependencyResolverTest extends TestCase
 
         $this->assertContains(RecalculateStages::class, $classes);
         $this->assertContains(ScanAccommodations::class, $classes);
-        $this->assertContains(ScanPois::class, $classes);
-        $this->assertContains(AnalyzeTerrain::class, $classes);
-        $this->assertContains(CheckBikeShops::class, $classes);
+
+        // The line moved, and RecalculateStages carries that so its handler dispatches the
+        // geometry set once. Emitting those enrichments here as well is what sent the five
+        // computations common to both sets twice (ADR-070).
+        $this->assertNotContains(ScanPois::class, $classes);
+        $this->assertNotContains(AnalyzeTerrain::class, $classes);
+        $this->assertNotContains(CheckBikeShops::class, $classes);
+        $this->assertSame([ComputationTrigger::GEOMETRY], $this->recalculateOf($messages)->triggers);
     }
 
     /**
      * A distance edit moves the line, so it invalidates everything drawn from the line —
      * including the four groups this resolver used to leave out (ADR-070).
      */
+    /**
+     * A distance edit moves the line. What that invalidates is declared once and travels on
+     * the message, so this resolver states the trigger instead of listing computations —
+     * which is how it came to be missing four of them (ADR-070).
+     */
     #[Test]
-    public function distanceModificationTriggersEveryGeometryDependentComputation(): void
+    public function distanceModificationMarksTheEditAsGeometryOnly(): void
     {
         $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
-        $classes = $this->classesOf($messages);
-        $this->assertContains(FetchWeather::class, $classes);
-        foreach ([CheckCulturalPois::class, CheckFerries::class, CheckBorderCrossing::class] as $missedBefore) {
-            $this->assertContains($missedBefore, $classes);
-        }
+        $recalculate = $this->recalculateOf($messages);
+        $this->assertSame([ComputationTrigger::GEOMETRY], $recalculate->triggers);
 
         // The stage count is unchanged, so every stage keeps its day number and its calendar
-        // date: the holidays cannot have moved. This used to be dispatched anyway.
-        $this->assertNotContains(CheckCalendar::class, $classes);
+        // date: no date moved, and the holidays cannot have.
+        $this->assertNotContains(ComputationTrigger::DATES, $recalculate->triggers);
+        $this->assertNotContains(CheckCalendar::class, $this->classesOf($messages));
     }
 
     #[Test]
@@ -165,15 +172,17 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
-    public function pacingModificationWithDatesTriggersWeatherAndCalendar(): void
+    public function pacingModificationInvalidatesBothTheLineAndTheDates(): void
     {
         $modification = new TripModification(type: 'pacing', label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
-        $classes = $this->classesOf($messages);
-        $this->assertContains(RecalculateStages::class, $classes);
-        $this->assertContains(FetchWeather::class, $classes);
-        $this->assertContains(CheckCalendar::class, $classes);
+        // Re-pacing redraws every stage and moves every stage onto a different date, so the
+        // one message carries both triggers and its handler dispatches their union once.
+        $this->assertSame(
+            [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            $this->recalculateOf($messages)->triggers,
+        );
     }
 
     #[Test]
@@ -250,5 +259,19 @@ final class ComputationDependencyResolverTest extends TestCase
         }
 
         return null;
+    }
+
+    /**
+     * @param list<object> $messages
+     */
+    private function recalculateOf(array $messages): RecalculateStages
+    {
+        foreach ($messages as $message) {
+            if ($message instanceof RecalculateStages) {
+                return $message;
+            }
+        }
+
+        self::fail('No RecalculateStages message was produced.');
     }
 }

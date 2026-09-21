@@ -67,6 +67,18 @@ lands, so they follow `WEATHER`. `ROUTE`, `STAGES` and `ROUTE_SEGMENT` are not e
 `ComputationTriggerTest` asserts that every other case declares at least one trigger, so a
 new enrichment cannot be added without deciding — that guard is the point of the table.
 
+### What was invalidated travels on the message
+
+The geometry and date sets overlap on five computations — `POIS`, `ACCOMMODATIONS`, `TERRAIN`,
+`EVENTS` and `WEATHER` all read the line *and* a date. So an edit that moves both, which a
+stage deletion does, must not dispatch each set separately: the overlap would go out twice.
+
+`RecalculateStages` therefore carries the triggers, and its handler dispatches their union
+once. That replaces the `skipGeographicScans` flag with something that says what it means — a
+rest-day edit passes `DATES` alone, because it shifts every later stage's date without moving
+a metre of line — and it removes the second dispatch mechanism rather than asking each sender
+to reason about what the first one will already have done.
+
 ### One factory for the message
 
 `EnrichmentMessageFactory` maps a computation to its message. Three callers used to hold their
@@ -87,11 +99,9 @@ Two dispatches that used to be hand-written disappear: `distance` no longer re-r
 calendar (the stage count is unchanged, so no stage changed date) and a date change no longer
 re-scans cultural POIs (they read no date at all). Both were over-dispatching.
 
-`StageDeleteProcessor` no longer dispatches `AnalyzeTerrain` by hand for a rest-day deletion:
-the date set carries it, which is what restores the "consider a rest day" nudge on the
-preceding day. `RestDayInsertProcessor` keeps its explicit dispatch — the nudge is a *layout*
-concern that holds even on a trip with no dates — and excludes terrain from the date set to
-avoid dispatching it twice.
+Both rest-day paths got simpler rather than longer: each now sends one `RecalculateStages`
+carrying `DATES` and nothing else. The hand-written `AnalyzeTerrain` dispatch that re-ran the
+"consider a rest day" nudge is gone from both — terrain rides along in the date set.
 
 ## What this leaves open
 

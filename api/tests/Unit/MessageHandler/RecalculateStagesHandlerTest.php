@@ -13,7 +13,9 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Enum\ComputationTrigger;
 use App\Message\CheckCalendar;
+use App\Message\FetchWeather;
 use App\Message\ScanEvents;
 use App\Message\ResolveStageLabels;
 use App\Message\CheckFerries;
@@ -22,6 +24,8 @@ use App\Message\CheckCulturalPois;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckHealthServices;
 use App\Message\CheckWaterPoints;
+use App\Message\ScanPois;
+use App\Message\AnalyzeTerrain;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
@@ -97,7 +101,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
 
-        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [], skipGeographicScans: true));
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [], triggers: []));
     }
 
     #[Test]
@@ -199,6 +203,66 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         // Holidays fall on a date the line cannot move.
         $this->assertNotContains(CheckCalendar::class, $classes);
+    }
+
+    /**
+     * The overlap that a second dispatch mechanism used to create.
+     *
+     * Five computations sit in both sets — POIS, ACCOMMODATIONS, TERRAIN, EVENTS and WEATHER
+     * all read the line *and* a date. When the geometry set was dispatched here and the date
+     * set by the sender, a merge re-ran those five twice. Both now travel on one message, so
+     * the union goes out once (ADR-070).
+     */
+    #[Test]
+    public function anEditInvalidatingBothTheLineAndTheDatesDispatchesTheUnionOnce(): void
+    {
+        $makeStage = static fn (int $day): Stage => new Stage(
+            tripId: 'trip-1',
+            dayNumber: $day,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $stages = [$makeStage(1), $makeStage(2)];
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+
+        /** @var list<object> $dispatched */
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message;
+
+                return new Envelope($message);
+            }
+        );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $this->createStub(TripUpdatePublisherInterface::class),
+            $messageBus,
+        );
+
+        $handler(new RecalculateStages(
+            tripId: 'trip-1',
+            affectedStageIds: [$stages[0]->id],
+            triggers: [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+        ));
+
+        $classes = array_map(static fn (object $m): string => $m::class, $dispatched);
+        $counts = array_count_values($classes);
+
+        foreach ([ScanPois::class, AnalyzeTerrain::class, ScanEvents::class, FetchWeather::class] as $inBothSets) {
+            $this->assertSame(1, $counts[$inBothSets] ?? 0, \sprintf('%s must be dispatched exactly once.', $inBothSets));
+        }
+
+        // The date half brings in the one computation the line alone never would.
+        $this->assertContains(CheckCalendar::class, $classes);
     }
 
     #[Test]

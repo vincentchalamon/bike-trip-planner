@@ -109,6 +109,7 @@ final readonly class ComputationDependencyResolver
         // date change as the other resolver did, independently.
         /** @var array<string, ComputationName> $needed */
         $needed = [];
+        $datesAlsoShift = false;
 
         foreach ($modifications as $modification) {
             switch ($modification->type) {
@@ -140,21 +141,21 @@ final readonly class ComputationDependencyResolver
                         }
                     }
 
-                    $needed = $this->add($needed, ComputationTrigger::GEOMETRY, $hasDates);
-
+                    // Nothing added here: the RecalculateStages built below carries
+                    // ComputationTrigger::GEOMETRY, and its handler dispatches that set.
+                    // Listing it again is what dispatched the overlap twice.
                     break;
 
                 case 'dates':
+                    // Dates alone recalculate no stage, so there is no RecalculateStages to
+                    // carry the trigger and the set is emitted directly.
                     $needed = $this->add($needed, ComputationTrigger::DATES, $hasDates);
                     break;
 
                 case 'pacing':
                     // Pacing changes affect all stages (fatigue factor, elevation penalty, etc.)
                     array_push($recalcIndices, ...array_keys($stageIds));
-                    if ($hasDates) {
-                        $needed = $this->add($needed, ComputationTrigger::DATES, $hasDates);
-                    }
-
+                    $datesAlsoShift = true;
                     break;
             }
         }
@@ -179,6 +180,11 @@ final readonly class ComputationDependencyResolver
                 $tripId,
                 $recalcStageIds,
                 skipAccommodationScan: true,
+                // Re-pacing moves every stage onto a different date as well as a different
+                // line; a distance edit keeps the stage count, so no date moves.
+                triggers: $datesAlsoShift
+                    ? [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES]
+                    : [ComputationTrigger::GEOMETRY],
                 generation: $generation,
             );
         }

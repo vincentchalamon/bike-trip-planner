@@ -10,7 +10,6 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Enum\ComputationTrigger;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
@@ -89,18 +88,19 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $this->publisher->publishStageUpdated($tripId, $stage, $positions[$stage->id]);
         }
 
-        // The line moved, so everything drawn from it is now wrong. Which computations those
-        // are is declared on ComputationName::triggers(), not listed here: this method used
-        // to name five of the twelve, which is how a merge left seven groups holding alerts
-        // computed against the pre-merge line (ADR-070).
-        if ([] !== $affected && !$message->skipGeographicScans) {
+        // What the edit invalidated travels on the message, and the union is dispatched
+        // here, once. This method used to name five computations out of twelve — which is
+        // how a merge left seven groups holding alerts drawn from the pre-merge line — and
+        // the senders made up the difference themselves, dispatching the overlap twice
+        // (ADR-070).
+        if ([] !== $affected && [] !== $message->triggers) {
             $request = $this->tripStateManager->getRequest($tripId);
             \assert($request instanceof TripRequest);
 
             $this->analysisDispatcher->dispatchFor(
                 $tripId,
                 $request,
-                [ComputationTrigger::GEOMETRY],
+                $message->triggers,
                 $generation,
                 // Accommodation scans hit an external source per stage, so they stay scoped
                 // to the stages this edit touched; every other computation is trip-wide.
