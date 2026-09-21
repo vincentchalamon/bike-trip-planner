@@ -210,9 +210,13 @@ final readonly class ComputationDependencyResolver
             );
         }
 
-        // Accommodations are dispatched per stage just above, so the trip-wide one the
-        // table would produce is dropped here.
-        unset($needed[ComputationName::ACCOMMODATIONS->value]);
+        // Dropped only when the loop just above already covered them: that loop is fed by an
+        // 'accommodation' or 'distance' edit, never by 'dates' alone. Unsetting
+        // unconditionally left a pure date change re-scanning no accommodation at all, so
+        // the seasonal verdict kept the old month — the very defect this closes.
+        if ([] !== $accommodationScanIndices) {
+            unset($needed[ComputationName::ACCOMMODATIONS->value]);
+        }
 
         foreach ($needed as $computation) {
             $messages[] = $this->messageFactory->create(

@@ -152,6 +152,10 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(ScanPois::class, $classes);
         $this->assertContains(AnalyzeTerrain::class, $classes);
 
+        // Nothing scoped the accommodation scan to a stage here, so the trip-wide one has to
+        // survive: dropping it unconditionally left the seasonal verdict on the old month.
+        $this->assertContains(ScanAccommodations::class, $classes);
+
         // Cultural POIs are suggestions along the corridor and read no date at all; they
         // used to be re-scanned on every date change for nothing.
         $this->assertNotContains(CheckCulturalPois::class, $classes);
