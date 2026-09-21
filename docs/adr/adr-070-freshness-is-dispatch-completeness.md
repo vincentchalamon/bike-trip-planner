@@ -86,8 +86,10 @@ back to `today` rather than skipping when the trip has none. Dispatching them an
 merely wasteful: the trip keeps a holiday or a forecast dated from whenever it happened to be
 edited — the wrong-but-persistent alert this whole lot exists to prevent.
 
-The guard lives in the dispatcher, next to the table, rather than at each sender. Per-caller
-guards are what the four tables were.
+The guard lives in the dispatcher, next to the table, rather than at each sender — per-caller
+guards are what the four tables were. It sits on `dispatchOne()`, which the trigger-driven
+path funnels through and which a `PATCH` reaches directly; a `PATCH` is also how a trip
+*loses* its dates, and clearing them must not leave a forecast behind either.
 
 `TERRAIN` is not in that list: it also triggers on geometry, so it still runs, and the sunset
 alert inside it keeps its own `today` fallback. That one is left open below.

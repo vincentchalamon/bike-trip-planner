@@ -74,14 +74,8 @@ final readonly class TripAnalysisDispatcher
         array $scopedStageIds = [],
         array $except = [],
     ): void {
-        $hasStartDate = $request->startDate instanceof \DateTimeImmutable;
-
         foreach (ComputationName::dependingOn(...$triggers) as $computation) {
             if (\in_array($computation, $except, true)) {
-                continue;
-            }
-
-            if (!$hasStartDate && \in_array($computation, self::REQUIRES_A_START_DATE, true)) {
                 continue;
             }
 
@@ -111,6 +105,10 @@ final readonly class TripAnalysisDispatcher
 
     /**
      * Dispatches a single enrichment, for callers that resolved one by name.
+     *
+     * Carries the start-date guard rather than leaving it to {@see dispatchFor()}, which
+     * funnels through here: this is also the method a PATCH reaches, and a PATCH is how a
+     * trip loses its dates.
      */
     public function dispatchOne(
         string $tripId,
@@ -118,6 +116,10 @@ final readonly class TripAnalysisDispatcher
         ComputationName $computation,
         ?int $generation = null,
     ): void {
+        if (!$request->startDate instanceof \DateTimeImmutable && \in_array($computation, self::REQUIRES_A_START_DATE, true)) {
+            return;
+        }
+
         $this->messageBus->dispatch($this->messageFactory->create(
             $computation,
             $tripId,

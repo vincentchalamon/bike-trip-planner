@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Service;
 
 use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripRequest;
+use App\Enum\ComputationName;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
@@ -172,5 +173,38 @@ final class TripAnalysisDispatcherTest extends TestCase
         $this->assertContains(ScanPois::class, $dispatched);
         $this->assertContains(AnalyzeTerrain::class, $dispatched);
         $this->assertContains(CheckFerries::class, $dispatched);
+    }
+
+    /**
+     * The path a PATCH takes, and a PATCH is how a trip loses its dates. Clearing the start
+     * date used to leave a forecast and a public-holiday alert dated from today on a trip
+     * that no longer had any (ADR-070).
+     */
+    #[Test]
+    public function dispatchingOneComputationHonoursTheSameStartDateGuard(): void
+    {
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message::class;
+
+                return new Envelope($message);
+            }
+        );
+
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
+        $dateless = new TripRequest();
+
+        foreach ([ComputationName::WEATHER, ComputationName::CALENDAR, ComputationName::EVENTS] as $needsADate) {
+            $dispatcher->dispatchOne('trip-1', $dateless, $needsADate, 1);
+        }
+
+        $this->assertCount(0, $dispatched);
+
+        // Everything drawn from the line goes out regardless: a date is not what makes it true.
+        $dispatcher->dispatchOne('trip-1', $dateless, ComputationName::TERRAIN, 1);
+        $this->assertCount(1, $dispatched);
+        $this->assertContains(AnalyzeTerrain::class, $dispatched);
     }
 }
