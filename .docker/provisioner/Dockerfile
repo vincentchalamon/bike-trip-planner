@@ -1,5 +1,5 @@
 # Stage 1: Composer dependencies
-FROM php:8.5-cli-bookworm AS deps
+FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b0f712e192ad09e1bf AS deps
 
 # hadolint ignore=DL3008
 RUN apt-get update \
@@ -9,7 +9,7 @@ RUN apt-get update \
     	unzip \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:a5f59b9fd2faf31218632be4809dc6491761085e8064c31dc3b84378c48c248b /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 COPY provisioner/composer.json provisioner/composer.lock ./
@@ -18,7 +18,7 @@ COPY provisioner/ ./
 RUN composer dump-autoload --classmap-authoritative --no-dev
 
 # Stage 2: Dev (sources bind-mounted via compose.yaml)
-FROM php:8.5-cli-bookworm AS dev
+FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b0f712e192ad09e1bf AS dev
 
 # osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
@@ -33,12 +33,12 @@ RUN apt-get update \
 # `make coverage`/`coverage-ci` on the provisioner leg (same driver as the php dev
 # image), off by default so normal `make test-php` is unaffected; the coverage
 # targets set XDEBUG_MODE=coverage per run.
-ADD --checksum=sha256:7c133ae4b9490d912287188c62ea570729cfa74f0ea357e4be672ce696b4aa29 \
-    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
+ADD --checksum=sha256:4fb76a1fb1085e1e2148f3919b8e9ba8429f749b3cc96fa785a23f173192dc9a \
+    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.27/install-php-extensions /usr/local/bin/
 RUN install-php-extensions xdebug zip
 ENV XDEBUG_MODE=off
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:a5f59b9fd2faf31218632be4809dc6491761085e8064c31dc3b84378c48c248b /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
@@ -55,7 +55,7 @@ RUN chmod +x /usr/local/bin/provisioner-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/provisioner-entrypoint.sh"]
 
 # Stage 3: Production
-FROM php:8.5-cli-bookworm AS prod
+FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b0f712e192ad09e1bf AS prod
 
 # osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
@@ -67,8 +67,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # zip drives the DataTourisme flux import (ext-zip → ZipArchive).
-ADD --checksum=sha256:7c133ae4b9490d912287188c62ea570729cfa74f0ea357e4be672ce696b4aa29 \
-    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
+ADD --checksum=sha256:4fb76a1fb1085e1e2148f3919b8e9ba8429f749b3cc96fa785a23f173192dc9a \
+    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.27/install-php-extensions /usr/local/bin/
 RUN install-php-extensions zip
 
 WORKDIR /app
