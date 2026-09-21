@@ -41,16 +41,41 @@ column on `trip` mirrors the tracked map; Redis stays the hot path.
 ### A decorator, not a change to the tracker
 
 `App\ComputationTracker\PersistingComputationTracker` decorates `ComputationTrackerInterface`,
-the same shape as `LockingTripRequestRepository`. On write it delegates, then mirrors the whole
-map; on read it delegates, and falls back to the column when the cache returns `null`.
+the same shape as `LockingTripRequestRepository`. On write it delegates, then mirrors; on read
+it delegates, and falls back to the column when the cache returns `null`.
 
 The point of that shape is that **neither provider changes to gain durability**. They ask the
 interface; the fallback is underneath. Three Mercure payloads, two DTOs and the frontend read
 `getStatuses()`'s shape, and none of them move.
 
-It writes the whole map rather than the entry that changed: the map is a handful of short
-strings, and a full write leaves the column consistent whatever order the five workers settle
-in.
+### It mirrors the entry that moved, not the map
+
+The first cut wrote the whole map on every transition, on the reasoning that a full write leaves
+the column consistent whatever order the workers settle in. That is only true if each write
+lands in the order its read was taken, and nothing makes it so. `ComputationTracker` serialises
+its **own** Redis read-modify-write behind a per-trip lock; the decorator's round trip to
+Postgres happens outside it. Two of the five workers settling at once can each read the map,
+then land their writes in the opposite order — and the one that read first, landing last,
+erases the other's entry.
+
+Nothing would show it. While the cache is alive the mirror is never read; the loss only surfaces
+once the TTL passes, as a trip reporting success on a computation that failed. That is the bug
+this ADR exists to close, reintroduced probabilistically.
+
+So a settling computation writes **its own key**, merged server-side with Postgres's `||`:
+
+```sql
+UPDATE trip SET computation_status = computation_status || CAST(:entry AS jsonb) WHERE id = :id
+```
+
+One statement, atomic per row, order-independent. The status is read back from the tracker
+rather than restated in the decorator, so the two cannot drift on the vocabulary.
+
+`initializeComputations()` is the one wholesale write, because it is the one moment the whole
+map changes at once: a generation starting over. Without it the column would keep answering with
+the previous generation's verdicts until each was individually overwritten. `resetComputation()`
+is mirrored too — it is not a settling, but it undoes one, and a column left claiming `done` for
+work about to be redone would outlive the cache saying otherwise.
 
 ### Mirrored on settling, not on the gate closing
 
@@ -63,8 +88,9 @@ re-dispatching the whole pipeline. A snapshot anchored there would never be writ
 edited mid-analysis, which is precisely the trip whose state a client most needs.
 
 So the mirror happens on each terminal transition, `markDone` and `markFailed`. Not on
-`markRunning`: while a computation runs the cache is alive by construction, and the durable
-copy only has to answer once it is gone. About eighteen small `UPDATE`s per generation.
+`markRunning`: while a computation runs the cache is alive by construction, the durable copy
+only has to answer once it is gone, and the entry it would write is the one initialization
+already put there. About eighteen small `UPDATE`s per generation.
 
 ### It stores through a narrow interface of its own
 
@@ -129,6 +155,14 @@ expired key gave, and the same fallback behaviour as before for trips that preda
   phase 3.
 - **`computedAt`** in `alerts_by_group`, which ADR-070 flagged as written and never read, is
   still written and still never read. Lot C found no use for it; it should go.
+- **A trip with no start date reports `running` forever** on `weather` and `context`.
+  `initializeComputations()` marks the whole pipeline `pending`, and ADR-070's guard then
+  withholds `WEATHER`, `CALENDAR` and `EVENTS` from dispatch — so those entries never move.
+  The state is accurate (nothing was computed, and nothing will be until dates are set) and
+  `weatherAvailability` is correctly absent, but making the state readable is what made this
+  visible: three of the six categories now advertise work that is not going to happen. The fix
+  belongs with the guard, not with the mirror — either initialization skips what the dispatcher
+  will withhold, or the vocabulary gains a term for "withheld".
 
 ## Alternatives considered
 

@@ -328,6 +328,29 @@ final class TripDetailTest extends ApiTestCase
     }
 
     /**
+     * A trip with no dates gets no answer, on purpose. `past` and `beyond_horizon` are claims
+     * about a calendar the user has not set, and falling back to today would invent one.
+     * ADR-070's guard withholds WEATHER from dispatch for such a trip, so there is nothing to
+     * explain: `weatherStatus` says the computation has not run.
+     */
+    #[Test]
+    public function anUndatedTripIsNotGivenABorrowedCalendar(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [ComputationName::WEATHER]);
+
+        // Stages are a plain array inside the resource, so their nulls survive serialization:
+        // "no answer" reads as an explicit null rather than an absent key.
+        $this->assertNull($this->firstStage()['weatherAvailability']);
+        $this->assertSame('running', $this->fetchDetail()['weatherStatus']);
+    }
+
+    /**
      * The assertion the PR exists for: the tracker cache is left empty — which is what a
      * trip older than the 30-minute TTL looks like — and the answer still comes back, from
      * the mirrored column (ADR-072). Before it, a trip whose every computation had failed
@@ -342,7 +365,7 @@ final class TripDetailTest extends ApiTestCase
 
         // Written straight to the column, never through the tracker: the in-memory cache
         // the `test` environment uses has nothing, exactly as an expired Redis key would.
-        $repo->storeComputationStatus(self::TRIP_ID, [
+        $repo->replaceComputationStatus(self::TRIP_ID, [
             'route' => 'failed',
             'stages' => 'failed',
             'weather' => 'failed',
@@ -360,6 +383,37 @@ final class TripDetailTest extends ApiTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertSame('failed', $list['member'][0]['status']);
+    }
+
+    /**
+     * A settling computation writes its own entry and nothing else, so two workers landing at
+     * once cannot erase each other (ADR-072). Initialization is the one wholesale write: the
+     * column must not keep answering with the previous generation's verdicts.
+     */
+    #[Test]
+    public function aSettlingComputationDoesNotOverwriteItsNeighbours(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::ROUTE,
+            ComputationName::TERRAIN,
+            ComputationName::WEATHER,
+        ]);
+
+        $this->assertSame(
+            ['route' => 'pending', 'terrain' => 'pending', 'weather' => 'pending'],
+            $repo->getComputationStatus(self::TRIP_ID),
+        );
+
+        $tracker->markFailed(self::TRIP_ID, ComputationName::TERRAIN);
+
+        $this->assertSame(
+            ['route' => 'pending', 'terrain' => 'failed', 'weather' => 'pending'],
+            $repo->getComputationStatus(self::TRIP_ID),
+        );
     }
 
     /**

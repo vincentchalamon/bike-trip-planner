@@ -14,8 +14,22 @@ namespace App\ComputationTracker;
  */
 interface ComputationStatusStore
 {
-    /** @param array<string, string> $statuses */
-    public function storeComputationStatus(string $tripId, array $statuses): void;
+    /**
+     * Overwrites the whole map — a generation starting over, and nothing else.
+     *
+     * @param array<string, string> $statuses
+     */
+    public function replaceComputationStatus(string $tripId, array $statuses): void;
+
+    /**
+     * Writes one computation's status into the map, leaving the others alone.
+     *
+     * Five workers settle concurrently, so a read-then-overwrite of the whole map loses
+     * whichever write was read first and landed last — silently, because while the cache is
+     * alive nothing reads the mirror. This is one statement the database merges, so the order
+     * the workers arrive in stops mattering.
+     */
+    public function mergeComputationStatus(string $tripId, string $computation, string $status): void;
 
     /**
      * The mirrored map, or null when the trip is unknown.

@@ -36,14 +36,21 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
     ) {
     }
 
+    /**
+     * The one place the whole map is written at once, because it is the one place the whole
+     * map changes at once: a generation starting over. Without it the column would carry the
+     * previous generation's verdicts until each was individually overwritten.
+     */
     public function initializeComputations(string $tripId, array $computations): void
     {
         $this->inner->initializeComputations($tripId, $computations);
+        $this->trips->replaceComputationStatus($tripId, $this->inner->getStatuses($tripId) ?? []);
     }
 
     /**
-     * Not mirrored: while a computation is running the cache is alive by construction, and
-     * the durable copy only has to answer once it is gone.
+     * Not mirrored: while a computation is running the cache is alive by construction, the
+     * durable copy only has to answer once it is gone, and the entry it would write is the
+     * one `initializeComputations()` already put there.
      */
     public function markRunning(string $tripId, ComputationName $computation): void
     {
@@ -53,18 +60,23 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
     public function markDone(string $tripId, ComputationName $computation): void
     {
         $this->inner->markDone($tripId, $computation);
-        $this->mirror($tripId);
+        $this->mirror($tripId, $computation);
     }
 
     public function markFailed(string $tripId, ComputationName $computation): void
     {
         $this->inner->markFailed($tripId, $computation);
-        $this->mirror($tripId);
+        $this->mirror($tripId, $computation);
     }
 
+    /**
+     * Mirrored although it is not a terminal transition: it undoes one, and a column left
+     * claiming `done` for work about to be redone would outlive the cache saying otherwise.
+     */
     public function resetComputation(string $tripId, ComputationName $computation): void
     {
         $this->inner->resetComputation($tripId, $computation);
+        $this->mirror($tripId, $computation);
     }
 
     public function claimReadyPublication(string $tripId): bool
@@ -114,12 +126,24 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
     }
 
     /**
-     * Writes the whole map rather than the one entry that changed: the map is a handful of
-     * short strings, and a full write leaves the column consistent whatever order the five
-     * workers settle in.
+     * Writes the one entry that changed, never the whole map.
+     *
+     * The tracker's lock covers its own Redis read-modify-write and stops there, so two
+     * workers settling at once can each read the map, then land their writes here in the
+     * opposite order — the second erasing the first's entry. That loss is invisible while the
+     * cache is alive, and becomes a trip reporting success on a computation that failed once
+     * the TTL passes: the very bug this class exists to close.
+     *
+     * The status is read back from the tracker rather than restated here, so the two cannot
+     * drift on the vocabulary.
      */
-    private function mirror(string $tripId): void
+    private function mirror(string $tripId, ComputationName $computation): void
     {
-        $this->trips->storeComputationStatus($tripId, $this->inner->getStatuses($tripId) ?? []);
+        $status = ($this->inner->getStatuses($tripId) ?? [])[$computation->value] ?? null;
+        if (null === $status) {
+            return;
+        }
+
+        $this->trips->mergeComputationStatus($tripId, $computation->value, $status);
     }
 }

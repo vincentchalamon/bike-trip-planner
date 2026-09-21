@@ -71,34 +71,81 @@ final class PersistingComputationTrackerTest extends TestCase
     }
 
     /**
-     * Only terminal transitions are mirrored: while a computation runs the cache is alive by
-     * construction, and a write per intermediate step would buy nothing.
+     * Only transitions are mirrored: while a computation runs the cache is alive by
+     * construction, and the entry a `running` would write is the one initialization put there.
      */
     #[Test]
     public function runningIsNotMirroredButSettlingIs(): void
     {
         $inner = $this->createStub(ComputationTrackerInterface::class);
-        $inner->method('getStatuses')->willReturn(['terrain' => 'done']);
+        $inner->method('getStatuses')->willReturn(['terrain' => 'done', 'weather' => 'failed']);
 
-        $written = [];
-        $trips = $this->createStub(ComputationStatusStore::class);
-        $trips->method('storeComputationStatus')->willReturnCallback(
-            static function (string $tripId, array $statuses) use (&$written): void {
-                $written[] = $statuses;
-            },
-        );
+        $trips = $this->createMock(ComputationStatusStore::class);
+        $trips->expects($this->exactly(2))->method('mergeComputationStatus');
 
         $tracker = new PersistingComputationTracker($inner, $trips);
 
         $tracker->markRunning('trip-1', ComputationName::TERRAIN);
-        self::assertCount(0, $written, 'A running computation keeps the cache alive on its own.');
-
         $tracker->markDone('trip-1', ComputationName::TERRAIN);
         $tracker->markFailed('trip-1', ComputationName::WEATHER);
-        self::assertCount(2, $written);
+    }
 
-        // The whole map, not the one entry that moved: five workers settle in no fixed order.
-        self::assertSame(['terrain' => 'done'], $written[0]);
+    /**
+     * The one entry that moved, never the whole map: the tracker's lock ends at its own Redis
+     * write, so two workers settling at once could otherwise land their read-then-overwrite in
+     * the opposite order and erase each other — silently, since the mirror is only read once
+     * the cache is gone.
+     */
+    #[Test]
+    public function aSettledComputationIsMirroredOnItsOwn(): void
+    {
+        $inner = $this->createStub(ComputationTrackerInterface::class);
+        $inner->method('getStatuses')->willReturn(['route' => 'done', 'terrain' => 'failed']);
+
+        $trips = $this->createMock(ComputationStatusStore::class);
+        $trips->expects($this->once())
+            ->method('mergeComputationStatus')
+            ->with('trip-1', 'terrain', 'failed');
+        $trips->expects($this->never())->method('replaceComputationStatus');
+
+        new PersistingComputationTracker($inner, $trips)->markFailed('trip-1', ComputationName::TERRAIN);
+    }
+
+    /**
+     * The exception: a generation starting over replaces the map wholesale, so the column does
+     * not keep answering with the previous generation's verdicts.
+     */
+    #[Test]
+    public function initializationReplacesTheWholeMap(): void
+    {
+        $inner = $this->createStub(ComputationTrackerInterface::class);
+        $inner->method('getStatuses')->willReturn(['route' => 'pending', 'terrain' => 'pending']);
+
+        $trips = $this->createMock(ComputationStatusStore::class);
+        $trips->expects($this->once())
+            ->method('replaceComputationStatus')
+            ->with('trip-1', ['route' => 'pending', 'terrain' => 'pending']);
+
+        new PersistingComputationTracker($inner, $trips)
+            ->initializeComputations('trip-1', [ComputationName::ROUTE, ComputationName::TERRAIN]);
+    }
+
+    /**
+     * A reset is not a settling, but it undoes one: a column left claiming `done` for work
+     * about to be redone would outlive the cache saying otherwise.
+     */
+    #[Test]
+    public function aResetIsMirroredToo(): void
+    {
+        $inner = $this->createStub(ComputationTrackerInterface::class);
+        $inner->method('getStatuses')->willReturn(['terrain' => 'pending']);
+
+        $trips = $this->createMock(ComputationStatusStore::class);
+        $trips->expects($this->once())
+            ->method('mergeComputationStatus')
+            ->with('trip-1', 'terrain', 'pending');
+
+        new PersistingComputationTracker($inner, $trips)->resetComputation('trip-1', ComputationName::TERRAIN);
     }
 
     /**

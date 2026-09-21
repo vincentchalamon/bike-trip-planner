@@ -536,12 +536,11 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
      * Mirrors the enrichment status map onto the trip row (ADR-072).
      *
      * A targeted UPDATE rather than a managed-entity write: this runs from a worker that has
-     * no business hydrating the aggregate, and the surrounding computation already holds its
-     * own lock.
+     * no business hydrating the aggregate.
      *
      * @param array<string, string> $statuses
      */
-    public function storeComputationStatus(string $tripId, array $statuses): void
+    public function replaceComputationStatus(string $tripId, array $statuses): void
     {
         if (!Uuid::isValid($tripId)) {
             return;
@@ -556,13 +555,37 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     }
 
     /**
+     * Merges one computation's status into the map, in the database rather than in PHP.
+     *
+     * Five workers settle concurrently and the tracker's lock covers only its own Redis
+     * read-modify-write, not a round trip to Postgres on the far side of it. Reading the map
+     * here and writing it back whole would let the worker that read first and landed last
+     * erase another's entry — invisibly, since the mirror is only read once the cache is
+     * gone. `||` merges the one key server-side, so arrival order stops mattering.
+     */
+    public function mergeComputationStatus(string $tripId, string $computation, string $status): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trip SET computation_status = computation_status || CAST(:entry AS jsonb) WHERE id = :tripId',
+            [
+                'entry' => json_encode([$computation => $status], \JSON_THROW_ON_ERROR),
+                'tripId' => $tripId,
+            ],
+        );
+    }
+
+    /**
      * The mirrored map, or null when the trip is unknown.
      *
      * An empty map means "nothing has settled yet", which is not the same as null: the
      * caller distinguishes an unknown trip from one whose computations are all still running.
      *
-     * Reads the column rather than a hydrated entity: {@see storeComputationStatus()} writes
-     * by DQL UPDATE, which leaves an already-managed `TripRequest` holding the old map.
+     * Reads the column rather than a hydrated entity: the two writers above go straight to
+     * SQL, which leaves an already-managed `TripRequest` holding the old map.
      *
      * @return array<string, string>|null
      */
