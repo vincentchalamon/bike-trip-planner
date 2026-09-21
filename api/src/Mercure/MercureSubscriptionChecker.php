@@ -13,9 +13,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * currently has a live subscriber (#1124).
  *
  * Used to suppress the `analysisDone` push when the rider is already watching the
- * trip in real time. The hub exposes `GET /.well-known/mercure/subscriptions/{topic}`
- * (enabled by the `subscriptions` directive in the Caddy Mercure config); the
- * request is authorised with a short-lived server-side JWT.
+ * trip in real time. The hub exposes
+ * `GET /.well-known/mercure/subscriptions/{match_type}/{match}` (enabled by the
+ * `subscriptions` directive in the Caddy Mercure config); the request is
+ * authorised with a short-lived server-side access token.
  *
  * The hub is reached through the host-locked `mercure.health.client` (ADR-011);
  * the requested URL is built from the trusted MERCURE_URL and a validated trip id,
@@ -37,7 +38,9 @@ final readonly class MercureSubscriptionChecker implements MercureSubscriptionCh
     public function hasActiveSubscriber(string $tripId): bool
     {
         $topic = \sprintf('/trips/%s', $tripId);
-        $url = rtrim($this->mercureUrl, '/').'/subscriptions/'.rawurlencode($topic);
+        // Protocol 1.0 route: /subscriptions/{match_type}/{match}. The match type
+        // segment is new — 0.x addressed the topic directly under /subscriptions/.
+        $url = rtrim($this->mercureUrl, '/').'/subscriptions/exact/'.rawurlencode($topic);
 
         try {
             $response = $this->mercureClient->request('GET', $url, [

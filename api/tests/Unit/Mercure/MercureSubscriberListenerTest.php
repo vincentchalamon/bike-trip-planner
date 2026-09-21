@@ -26,7 +26,7 @@ final class MercureSubscriberListenerTest extends TestCase
     protected function setUp(): void
     {
         $this->listener = new MercureSubscriberListener(
-            new MercureTokenIssuer('test-mercure-secret-key-that-is-at-least-256-bits-long!'),
+            new MercureTokenIssuer(TestHubFactory::create()),
         );
     }
 
@@ -52,7 +52,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
-        self::assertSame('mercureAuthorization', $cookies[0]->getName());
+        self::assertSame('__Secure-mercure_access_token', $cookies[0]->getName());
         self::assertNotEmpty($cookies[0]->getValue());
     }
 
@@ -67,7 +67,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
-        self::assertSame('mercureAuthorization', $cookies[0]->getName());
+        self::assertSame('__Secure-mercure_access_token', $cookies[0]->getName());
     }
 
     #[Test]
@@ -81,7 +81,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
-        self::assertSame('mercureAuthorization', $cookies[0]->getName());
+        self::assertSame('__Secure-mercure_access_token', $cookies[0]->getName());
     }
 
     #[Test]

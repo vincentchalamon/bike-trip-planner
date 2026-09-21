@@ -15,15 +15,6 @@
 {$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
-    log {
-        # Redact the authorization query parameter that can be set by Mercure
-        format filter {
-            request>uri query {
-                replace authorization REDACTED
-            }
-        }
-    }
-
     root /app/public
 
     # Native mobile clients opt out of compression. React Native's okhttp advertises
@@ -78,20 +69,42 @@
     vars @valid_request_id correlation_id {http.request.header.X-Request-Id}
     request_header X-Request-Id "{vars.correlation_id}"
 
+    # Mercure hub, protocol 1.0. The module is rebuilt at v1.0.0 by the
+    # frankenphp_builder stage (the upstream image ships 0.24.2) — see the
+    # Dockerfile and the ADR-037 addendum.
+    #
+    # Deliberately NOT in `protocol_version_compatibility` mode: it weakens
+    # access-token validation to keep 0.x clients working, and every client here
+    # (PWA, mobile, the backend's own subscription check) speaks 1.0.
     mercure {
         # Transport to use (default to Bolt)
         transport bolt {
             path /data/mercure.db
         }
-        # Publisher JWT key
-        publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
-        # Subscriber JWT key
-        subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
+        # Trusted token issuer: the identifier MUST equal the `iss` claim the
+        # backend mints (mercure.jwt.claims.iss, config/packages/mercure.php).
+        # The algorithm is left to the module's default (HS256 for a raw secret):
+        # passing an unset {env.*} placeholder would hand it an empty argument.
+        issuer {$MERCURE_ISSUER} {
+            publisher {
+                jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+            }
+            subscriber {
+                jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+            }
+        }
+        # Expected `aud` of every access token. Pinned rather than derived from
+        # the request, because the backend publishes through the internal
+        # MERCURE_URL (http://php/...) while browsers subscribe on the public
+        # one — an unpinned hub would expect a different audience per origin.
+        resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
         # Allow anonymous subscribers (double-check that it's what you want)
         anonymous
         # Enable the subscription API (double-check that it's what you want)
         subscriptions
-        # Extra directives
+        # Extra directives. Careful: since 1.0 an unknown directive here is a
+        # fatal config error rather than a silent no-op (`ui` became `debugger`,
+        # `demo` became `playground`).
         {$MERCURE_EXTRA_DIRECTIVES}
     }
 

@@ -34,7 +34,7 @@ final class MercureSubscriptionCheckerTest extends TestCase
         self::assertNotNull($captured);
         self::assertSame('GET', $captured['method']);
         self::assertSame(
-            self::MERCURE_URL.'/subscriptions/'.rawurlencode('/trips/'.self::TRIP_ID),
+            self::MERCURE_URL.'/subscriptions/exact/'.rawurlencode('/trips/'.self::TRIP_ID),
             $captured['url'],
         );
         $authHeaders = array_filter(
@@ -77,6 +77,6 @@ final class MercureSubscriptionCheckerTest extends TestCase
 
     private function tokenIssuer(): MercureTokenIssuer
     {
-        return new MercureTokenIssuer('a-test-mercure-secret-that-is-long-enough');
+        return new MercureTokenIssuer(TestHubFactory::create());
     }
 }

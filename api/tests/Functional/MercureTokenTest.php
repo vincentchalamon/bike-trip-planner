@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
@@ -16,12 +16,10 @@ use Lcobucci\JWT\Token\Plain;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class MercureTokenTest extends ApiTestCase
 {
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000401';
@@ -84,9 +82,18 @@ final class MercureTokenTest extends ApiTestCase
             'The token must be signed with the Mercure hub secret.',
         );
 
-        $mercure = $parsed->claims()->get('mercure');
-        $this->assertIsArray($mercure);
-        $this->assertSame([\sprintf('/trips/%s', self::TRIP_ID)], $mercure['subscribe'] ?? null);
+        // Mercure 1.0 access token (RFC 9068): the bespoke `mercure` claim is gone,
+        // replaced by an `authorization_details` array scoped to the trip topic.
+        $this->assertSame('at+jwt', $parsed->headers()->get('typ'));
+
+        $details = $parsed->claims()->get('authorization_details');
+        $this->assertSame([
+            [
+                'type' => 'https://mercure.rocks/authorization-detail',
+                'actions' => ['subscribe'],
+                'topics' => [['match' => \sprintf('/trips/%s', self::TRIP_ID)]],
+            ],
+        ], $details);
     }
 
     #[Test]
