@@ -34,6 +34,7 @@ final class TripAnalysisDispatcherTest extends TestCase
         $tripId = 'trip-1';
         $generation = 3;
         $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('+1 month');
         $request->enabledAccommodationTypes = ['hotel', 'camp_site'];
 
         $expectedMessages = [
@@ -139,5 +140,37 @@ final class TripAnalysisDispatcherTest extends TestCase
         foreach ($generations as $value) {
             $this->assertNull($value);
         }
+    }
+
+    /**
+     * A trip with no start date has no calendar date to resolve against, and the three
+     * computations that need one fall back to today rather than skipping — so dispatching
+     * them would leave a holiday or a forecast dated from whenever the trip was touched
+     * (ADR-070).
+     */
+    #[Test]
+    public function atripWithNoStartDateSkipsTheComputationsThatNeedOne(): void
+    {
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message::class;
+
+                return new Envelope($message);
+            }
+        );
+
+        $dispatcher = new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory());
+        $dispatcher->dispatch('trip-1', new TripRequest(), 1);
+
+        $this->assertNotContains(FetchWeather::class, $dispatched);
+        $this->assertNotContains(CheckCalendar::class, $dispatched);
+        $this->assertNotContains(ScanEvents::class, $dispatched);
+
+        // Everything drawn from the line still runs: a date is not what makes it true.
+        $this->assertContains(ScanPois::class, $dispatched);
+        $this->assertContains(AnalyzeTerrain::class, $dispatched);
+        $this->assertContains(CheckFerries::class, $dispatched);
     }
 }

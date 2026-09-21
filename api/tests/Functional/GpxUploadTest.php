@@ -170,8 +170,12 @@ final class GpxUploadTest extends ApiTestCase
         // longer dispatched; instead the async enrichment fan-out is dispatched directly.
         $this->assertNotContains(GenerateStages::class, $dispatched);
         $this->assertContains(ScanPois::class, $dispatched);
-        $this->assertContains(FetchWeather::class, $dispatched);
         $this->assertContains(AnalyzeTerrain::class, $dispatched);
+
+        // The upload carries no dates, so the forecast is withheld rather than computed for
+        // today and then kept (ADR-070). It arrives once the rider sets a start date, which
+        // is a trigger of its own.
+        $this->assertNotContains(FetchWeather::class, $dispatched);
     }
 
     #[Test]

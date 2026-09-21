@@ -162,7 +162,9 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('+1 month');
+        $tripStateManager->method('getRequest')->willReturn($request);
 
         /** @var list<object> $dispatched */
         $dispatched = [];
@@ -229,7 +231,9 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('+1 month');
+        $tripStateManager->method('getRequest')->willReturn($request);
 
         /** @var list<object> $dispatched */
         $dispatched = [];

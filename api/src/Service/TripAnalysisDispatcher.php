@@ -21,6 +21,20 @@ use Symfony\Component\Messenger\MessageBusInterface;
  */
 final readonly class TripAnalysisDispatcher
 {
+    /**
+     * Needs a calendar date to resolve against, so a trip without a start date gets none of
+     * them. Dispatching them anyway would not be merely wasteful: each falls back to today
+     * rather than skipping, so the trip would keep a holiday or a forecast dated from
+     * whenever it happened to be edited (ADR-070).
+     *
+     * @var list<ComputationName>
+     */
+    private const array REQUIRES_A_START_DATE = [
+        ComputationName::WEATHER,
+        ComputationName::CALENDAR,
+        ComputationName::EVENTS,
+    ];
+
     public function __construct(
         private MessageBusInterface $messageBus,
         private EnrichmentMessageFactory $messageFactory,
@@ -60,8 +74,14 @@ final readonly class TripAnalysisDispatcher
         array $scopedStageIds = [],
         array $except = [],
     ): void {
+        $hasStartDate = $request->startDate instanceof \DateTimeImmutable;
+
         foreach (ComputationName::dependingOn(...$triggers) as $computation) {
             if (\in_array($computation, $except, true)) {
+                continue;
+            }
+
+            if (!$hasStartDate && \in_array($computation, self::REQUIRES_A_START_DATE, true)) {
                 continue;
             }
 

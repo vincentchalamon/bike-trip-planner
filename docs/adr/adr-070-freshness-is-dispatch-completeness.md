@@ -79,6 +79,19 @@ rest-day edit passes `DATES` alone, because it shifts every later stage's date w
 a metre of line — and it removes the second dispatch mechanism rather than asking each sender
 to reason about what the first one will already have done.
 
+### A trip with no start date gets none of the date-driven work
+
+`WEATHER`, `CALENDAR` and `EVENTS` need a calendar date to resolve against, and each falls
+back to `today` rather than skipping when the trip has none. Dispatching them anyway is not
+merely wasteful: the trip keeps a holiday or a forecast dated from whenever it happened to be
+edited — the wrong-but-persistent alert this whole lot exists to prevent.
+
+The guard lives in the dispatcher, next to the table, rather than at each sender. Per-caller
+guards are what the four tables were.
+
+`TERRAIN` is not in that list: it also triggers on geometry, so it still runs, and the sunset
+alert inside it keeps its own `today` fallback. That one is left open below.
+
 ### One factory for the message
 
 `EnrichmentMessageFactory` maps a computation to its message. Three callers used to hold their
@@ -119,10 +132,10 @@ carrying `DATES` and nothing else. The hand-written `AnalyzeTerrain` dispatch th
   needs it. It should be removed unless lot C finds a use — the "never computed" versus
   "computed, found nothing" distinction is already carried by an absent key versus an empty
   list.
-- **A trip with no start date** falls back to `today` in three places
-  (`CheckCalendarHandler:86`, `SunsetAlertAnalyzer:58`, `FetchWeatherHandler:74`), which
-  freezes the alert on the day it was computed. This is the only genuine clock drift outside
-  the weather, and no trigger can catch it — nothing changed. Lot C.
+- **`SunsetAlertAnalyzer:58`** still falls back to `today` on a trip with no start date, and
+  unlike the weather and the holidays it cannot simply be withheld: it lives inside `TERRAIN`,
+  which the geometry triggers on its own. The alert is therefore frozen on the day it was
+  computed. No trigger can catch that — nothing changed. Lot C.
 - **Weather beyond about fourteen days** is not stale but *unavailable*, a third state next to
   "failed" and "not yet computed". Lot C, as ADR-068 already recorded.
 - **The seasonal verdict** is the one place where deriving at read would remove a costly
