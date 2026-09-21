@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\AccessRequest;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 /**
  * Tests IP-based rate limiting on POST /access-requests.
@@ -20,8 +19,6 @@ use Zenstruck\Foundry\Test\Factories;
 #[ResetDatabase]
 final class AccessRequestThrottlingTest extends ApiTestCase
 {
-    use Factories;
-
     /**
      * Verifies that after exactly 3 requests, the 4th is rate-limited.
      * This single test validates both "first 3 accepted" and "4th rejected".

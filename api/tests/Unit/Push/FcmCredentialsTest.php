@@ -14,7 +14,7 @@ final class FcmCredentialsTest extends TestCase
     public function failsClosedOnAnEmptyKey(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageIsOrContains('FCM_SERVICE_ACCOUNT_JSON must be configured');
+        $this->expectExceptionMessage('FCM_SERVICE_ACCOUNT_JSON must be configured');
 
         new FcmCredentials('')->projectId();
     }
@@ -23,7 +23,7 @@ final class FcmCredentialsTest extends TestCase
     public function failsClosedOnAMissingField(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageIsOrContains('is missing the "client_email" field');
+        $this->expectExceptionMessage('is missing the "client_email" field');
 
         new FcmCredentials((string) json_encode(['project_id' => 'p', 'private_key' => 'k']))->clientEmail();
     }

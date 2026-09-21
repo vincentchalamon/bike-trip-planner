@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Message\FetchAndParseRoute;
 use App\Messenger\CorrelationIdStamp;
 use PHPUnit\Framework\Attributes\Test;

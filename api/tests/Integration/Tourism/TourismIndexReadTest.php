@@ -11,17 +11,16 @@ use App\Tourism\FoodPoiRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first DataTourisme read layer (ADR-040):
  * seeds real rows in the tourism schema and asserts the corridor / radius /
  * date filtering each repository performs against PostGIS.
  */
+#[ResetDatabase]
 final class TourismIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

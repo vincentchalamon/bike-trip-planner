@@ -11,16 +11,15 @@ use App\Repository\NotificationPreferenceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the per-category opt-in store (#1124): the default
  * fallback when no row exists, the stored override, and the opted-in user lookup.
  */
+#[ResetDatabase]
 final class NotificationPreferenceRepositoryTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private EntityManagerInterface $em;
 
     private NotificationPreferenceRepository $repository;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Account;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\DeviceToken;
 use App\Entity\User;
 use App\Enum\DevicePlatform;
@@ -12,13 +12,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class DeviceTokenTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
     public static function setUpBeforeClass(): void
     {

@@ -56,7 +56,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('t')
             ->from(TripRequest::class, 't')
-            ->orderBy('t.createdAt', 'DESC')
+            ->orderBy('t.createdAt', \SortDirection::Descending)
             ->andWhere('t.user = :user')
             ->setParameter('user', $user);
 

@@ -9,7 +9,7 @@ use App\InRide\InRidePoiRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first in-ride read layer (ADR-040): each of
@@ -18,10 +18,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * whitelist, e-bike sockets) applied — replacing the runtime Overpass in-ride
  * scan.
  */
+#[ResetDatabase]
 final class InRidePoiIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

@@ -5,20 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Auth;
 
 use Symfony\Contracts\HttpClient\ResponseInterface;
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class AuthRefreshTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
     public static function setUpBeforeClass(): void
     {

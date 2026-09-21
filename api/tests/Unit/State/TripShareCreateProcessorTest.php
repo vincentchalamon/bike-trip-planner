@@ -183,9 +183,7 @@ final class TripShareCreateProcessorTest extends TestCase
         $this->entityManager->expects($this->once())->method('find')->willReturn($trip);
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
-        $uniqueException = $this->getMockBuilder(UniqueConstraintViolationException::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $uniqueException = $this->createStub(UniqueConstraintViolationException::class);
 
         $this->persistProcessor->expects($this->once())->method('process')->willThrowException($uniqueException);
 

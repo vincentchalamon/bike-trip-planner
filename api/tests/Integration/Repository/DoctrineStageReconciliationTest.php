@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * {@see DoctrineTripRequestRepository::storeStages()} reconciles the persisted rows
@@ -25,10 +25,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * {@see TripRequestRepositoryInterface} to the Redis implementation in the `test`
  * environment, so the interface would never exercise the SQL path under test here.
  */
+#[ResetDatabase]
 final class DoctrineStageReconciliationTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private DoctrineTripRequestRepository $repository;
 
     private EntityManagerInterface $entityManager;

@@ -4,20 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class AuthVerifyTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
     public static function setUpBeforeClass(): void
     {

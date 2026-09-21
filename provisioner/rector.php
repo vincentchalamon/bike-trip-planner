@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
-use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\Set\ValueObject\SetList;
 
 return RectorConfig::configure()
@@ -22,7 +21,6 @@ return RectorConfig::configure()
         SetList::INSTANCEOF,
         SetList::PRIVATIZATION,
         SetList::TYPE_DECLARATION,
-        PHPUnitSetList::PHPUNIT_120,
     ])
     ->withAttributesSets()
     ->withComposerBased(phpunit: true, symfony: true)

@@ -9,15 +9,15 @@
         "ext-iconv": "*",
         "ext-intl": "*",
         "ext-xmlreader": "*",
-        "api-platform/doctrine-orm": "^4.3.18",
-        "api-platform/symfony": "^4.3.18",
+        "api-platform/doctrine-orm": "^5.0",
+        "api-platform/symfony": "^5.0",
         "azuyalabs/yasumi": "^2.11",
-        "doctrine/doctrine-bundle": "^3.3.1",
+        "doctrine/doctrine-bundle": "^3.3.2",
         "doctrine/doctrine-migrations-bundle": "^4.0.1",
-        "doctrine/orm": "^3.7.0",
+        "doctrine/orm": "^3.7.1",
         "lcobucci/jwt": "^5.6",
         "lexik/jwt-authentication-bundle": "^3.2",
-        "martin-georgiev/postgresql-for-doctrine": "^4.7.0",
+        "martin-georgiev/postgresql-for-doctrine": "^4.8.0",
         "mjaschen/phpgeo": "^6.0.4",
         "nelmio/cors-bundle": "^2.6.1",
         "phpdocumentor/reflection-docblock": "^6.0.3",
@@ -32,10 +32,11 @@
         "symfony/http-client": "8.1.*",
         "symfony/lock": "8.1.*",
         "symfony/mailer": "8.1.*",
-        "symfony/mercure-bundle": "^0.4.3",
+        "symfony/mercure": "^0.8",
+        "symfony/mercure-bundle": "^0.5",
         "symfony/messenger": "8.1.*",
         "symfony/mime": "8.1.*",
-        "symfony/monolog-bundle": "^4.0.2",
+        "symfony/monolog-bundle": "^4.1.0",
         "symfony/object-mapper": "8.1.*",
         "symfony/property-access": "8.1.*",
         "symfony/property-info": "8.1.*",
@@ -49,8 +50,7 @@
         "symfony/twig-bundle": "8.1.*",
         "symfony/uid": "8.1.*",
         "symfony/validator": "8.1.*",
-        "symfony/yaml": "8.1.*",
-        "symplify/config-transformer": "^12.5.0"
+        "symfony/yaml": "8.1.*"
     },
     "config": {
         "allow-plugins": {
@@ -83,7 +83,8 @@
         "symfony/polyfill-php81": "*",
         "symfony/polyfill-php82": "*",
         "symfony/polyfill-php83": "*",
-        "symfony/polyfill-php84": "*"
+        "symfony/polyfill-php84": "*",
+        "symfony/polyfill-php85": "*"
     },
     "scripts": {
         "auto-scripts": {
@@ -92,11 +93,11 @@
         },
         "post-install-cmd": [
             "@auto-scripts",
-            "vendor/bin/config-transformer"
+            "@php -r \"file_exists('vendor/bin/config-transformer') || exit(0); passthru('vendor/bin/config-transformer', $code); exit($code);\""
         ],
         "post-update-cmd": [
             "@auto-scripts",
-            "vendor/bin/config-transformer"
+            "@php -r \"file_exists('vendor/bin/config-transformer') || exit(0); passthru('vendor/bin/config-transformer', $code); exit($code);\""
         ]
     },
     "conflict": {
@@ -114,19 +115,21 @@
         }
     },
     "require-dev": {
+        "api-platform/test": "^5.0",
         "bamarni/composer-bin-plugin": "^1.9.1",
         "ekino/phpstan-banned-code": "^3.2",
         "justinrainbow/json-schema": "^6.12.0",
         "phpstan/extension-installer": "^1.4.3",
-        "phpstan/phpstan": "^2.2.13",
+        "phpstan/phpstan": "^2.2.14",
         "phpstan/phpstan-phpunit": "^2.0.18",
         "phpstan/phpstan-symfony": "^2.0.20",
-        "phpunit/phpunit": "^13.3.3",
-        "rector/rector": "~2.5.9",
+        "phpunit/phpunit": "^12.5.35",
+        "rector/rector": "^2.6.7",
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "8.1.*",
         "symfony/stopwatch": "8.1.*",
         "symfony/web-profiler-bundle": "8.1.*",
-        "zenstruck/foundry": "^2.12.1"
+        "symplify/config-transformer": "^12.5.0",
+        "zenstruck/foundry": "^2.13.0"
     }
 }

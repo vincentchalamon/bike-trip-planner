@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Symfony\Component\Uid\Uuid;
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -19,7 +19,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
@@ -28,7 +27,6 @@ final class StageCreateTest extends ApiTestCase
     use EditsTripsTrait;
 
     use AddressesStagesByIdTrait;
-    use Factories;
     use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000010';
@@ -98,11 +96,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
     }
 
     #[Test]
@@ -120,11 +118,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
         $this->assertSame(2, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -169,11 +167,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
         $this->assertSame(1, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -202,11 +200,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -231,11 +229,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -364,11 +362,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
@@ -397,11 +395,11 @@ final class StageCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame('Stage', $data['@type']);
         $this->assertSame(2, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */

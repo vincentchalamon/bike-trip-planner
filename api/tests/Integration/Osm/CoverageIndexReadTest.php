@@ -8,7 +8,7 @@ use App\Osm\CoverageRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first coverage-polygon read layer (ADR-040):
@@ -16,10 +16,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * test the API uses to flag display-only trips, including the "unknown coverage"
  * fallbacks (empty table / NULL geom) that must never block the user.
  */
+#[ResetDatabase]
 final class CoverageIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

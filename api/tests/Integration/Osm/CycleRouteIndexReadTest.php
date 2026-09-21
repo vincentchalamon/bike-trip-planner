@@ -8,7 +8,7 @@ use App\Osm\CycleRouteRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first cycle-network read layer (ADR-040):
@@ -16,10 +16,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * "on cycle network" fraction the API computes (length of the stage within a
  * tolerance of a cycle route over the stage length).
  */
+#[ResetDatabase]
 final class CycleRouteIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private const int TOLERANCE = 30;
 
     private Connection $connection;

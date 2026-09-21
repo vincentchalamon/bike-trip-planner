@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Symfony\Component\Uid\Uuid;
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\Stage;
@@ -16,13 +16,11 @@ use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class TripDuplicateTest extends ApiTestCase
 {
-    use ResetDatabase;
-    use Factories;
     use JwtAuthTestTrait;
 
     private Client $client;
@@ -93,7 +91,7 @@ final class TripDuplicateTest extends ApiTestCase
         );
 
         $this->assertResponseStatusCodeSame(201);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
 
         $data = $response->toArray(false);
         $this->assertNotEmpty($data['id']);

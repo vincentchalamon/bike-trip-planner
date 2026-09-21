@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
@@ -42,7 +42,7 @@ final class TripCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
 
         $data = $response->toArray(false);
@@ -119,7 +119,7 @@ final class TripCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
 
         $data = $response->toArray(false);
@@ -141,7 +141,7 @@ final class TripCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
 
         $data = $response->toArray(false);
@@ -224,7 +224,7 @@ final class TripCreateTest extends ApiTestCase
         // POST only validates NotBlank(groups: ['trip_request:create'])
         // URL format validation is in Default group, not triggered here
         $this->assertResponseStatusCodeSame(202);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
 
         $data = $response->toArray(false);

@@ -14,7 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Uid\Uuid;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Proves that stage writes are actually serialised, without racing two processes and
@@ -23,10 +23,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * The lock is exercised through the decorated interface, so this covers whichever
  * implementation the environment resolves to.
  */
+#[ResetDatabase]
 final class LockingTripRequestRepositoryTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private TripRequestRepositoryInterface $repository;
 
     private LockFactory $lockFactory;

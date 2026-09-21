@@ -12,7 +12,7 @@ use App\Osm\AccommodationRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * End-to-end coverage of the local-first accommodation cut-over (ADR-040): runs
@@ -22,10 +22,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * category filtering, and that columns/tags map onto the candidate shape (charge
  * to exact price, website to url, wikidata to wikidataId).
  */
+#[ResetDatabase]
 final class AccommodationIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

@@ -42,7 +42,7 @@ final readonly class AccountExportProvider implements ProviderInterface
             ->leftJoin('t.stages', 's')
             ->where('t.user = :user')
             ->setParameter('user', $user)
-            ->orderBy('t.createdAt', 'ASC')
+            ->orderBy('t.createdAt', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
 

@@ -8,17 +8,16 @@ use App\Osm\FerryRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first ferry read layer (ADR-040): seeds a
  * real PostGIS ferry line in osm.ferries and asserts the proximity detection the
  * ferry-crossing alert relies on (a stage whose route follows the ferry line).
  */
+#[ResetDatabase]
 final class FerryIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private const int TOLERANCE = 100;
 
     private Connection $connection;

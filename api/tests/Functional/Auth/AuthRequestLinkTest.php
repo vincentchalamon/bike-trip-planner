@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class AuthRequestLinkTest extends ApiTestCase
 {
-    use Factories;
     use MailerAssertionsTrait;
 
     #[\Override]

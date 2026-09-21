@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Account;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Tests\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\Entity\AccessRequest;
 use App\Entity\MagicLink;
@@ -19,13 +19,10 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
-use Zenstruck\Foundry\Test\Factories;
 
 #[ResetDatabase]
 final class AccountDeleteTest extends ApiTestCase
 {
-    use Factories;
-
     #[\Override]
     public static function setUpBeforeClass(): void
     {

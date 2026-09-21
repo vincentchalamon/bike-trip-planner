@@ -8,7 +8,7 @@ use App\Osm\AdminBoundaryRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Integration coverage for the local-first admin-boundary read layer (ADR-040):
@@ -17,10 +17,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * and of the locality (replacing the Nominatim reverse lookup, #880), plus the
  * localized-name fallback chain (name:<locale> → name:en → name).
  */
+#[ResetDatabase]
 final class AdminBoundaryIndexReadTest extends KernelTestCase
 {
-    use ResetDatabase;
-
     private Connection $connection;
 
     protected function setUp(): void

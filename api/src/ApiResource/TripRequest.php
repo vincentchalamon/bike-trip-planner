@@ -180,7 +180,7 @@ final class TripRequest
 
     /** @var Collection<int, Stage> */
     #[ORM\OneToMany(targetEntity: Stage::class, mappedBy: 'trip', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[ORM\OrderBy(['position' => 'ASC'])]
+    #[ORM\OrderBy(['position' => \SortDirection::Ascending])]
     #[ApiProperty(readable: false, writable: false)]
     public Collection $stages;
 

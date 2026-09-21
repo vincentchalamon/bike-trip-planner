@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Tests\ApiTestCase;
+use ApiPlatform\Test\Client;
 use Symfony\Component\Uid\Uuid;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
-use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
 final class TripListTest extends ApiTestCase
 {
-    use Factories;
     use JwtAuthTestTrait;
 
     private Client $client;
@@ -73,7 +71,7 @@ final class TripListTest extends ApiTestCase
         ]);
 
         $this->assertResponseIsSuccessful();
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json');
 
         $data = $response->toArray(false);
         $this->assertArrayHasKey('member', $data);

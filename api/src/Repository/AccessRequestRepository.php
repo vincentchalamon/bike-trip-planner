@@ -54,7 +54,7 @@ final class AccessRequestRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('ar')
             ->where('ar.status = :status')
             ->setParameter('status', AccessRequestStatus::VERIFIED)
-            ->orderBy('ar.verifiedAt', 'ASC')
+            ->orderBy('ar.verifiedAt', \SortDirection::Ascending)
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 

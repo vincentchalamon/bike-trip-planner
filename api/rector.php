@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
-use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\Set\ValueObject\SetList;
 
 $rector = RectorConfig::configure()
@@ -26,7 +25,6 @@ $rector = RectorConfig::configure()
         SetList::INSTANCEOF,
         SetList::PRIVATIZATION,
         SetList::TYPE_DECLARATION,
-        PHPUnitSetList::PHPUNIT_120,
     ])
     ->withAttributesSets()
     ->withImportNames(importShortClasses: false, removeUnusedImports: true)

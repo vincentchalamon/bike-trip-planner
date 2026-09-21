@@ -23,8 +23,7 @@ final class SendCorrelationIdMiddlewareTest extends TestCase
         $request = new Request();
         $request->attributes->set(RequestIdListener::ATTRIBUTE, 'req-stamp');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $middleware = new SendCorrelationIdMiddleware($stack);
 
@@ -49,8 +48,7 @@ final class SendCorrelationIdMiddlewareTest extends TestCase
         $request = new Request();
         $request->attributes->set(RequestIdListener::ATTRIBUTE, 'should-not-override');
 
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $middleware = new SendCorrelationIdMiddleware($stack);
 
@@ -88,8 +86,7 @@ final class SendCorrelationIdMiddlewareTest extends TestCase
     public function testIsNoopWhenRequestAttributeMissing(): void
     {
         $request = new Request();
-        $stack = new RequestStack();
-        $stack->push($request);
+        $stack = new RequestStack([$request]);
 
         $middleware = new SendCorrelationIdMiddleware($stack);
 

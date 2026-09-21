@@ -164,7 +164,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         // Every resolved country lacks a Yasumi provider: fall back to France rather
         // than reporting no holiday at all.
         if ([] === $providers && [self::FALLBACK_COUNTRY_CODE] !== $countryCodes) {
-            $providers = $this->createProviders([self::FALLBACK_COUNTRY_CODE], $years, $yasumiLocale);
+            return $this->createProviders([self::FALLBACK_COUNTRY_CODE], $years, $yasumiLocale);
         }
 
         return $providers;
