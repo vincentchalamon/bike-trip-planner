@@ -15,8 +15,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\Mapper\StageResponseMapper;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\StageWriteResult;
@@ -165,11 +163,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         }
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipAccommodationScan: true, generation: $generation));
-
-        if ($request->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
-        }
 
         return $this->stageResponseMapper->map($stage);
     }

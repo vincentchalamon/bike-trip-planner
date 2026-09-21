@@ -99,6 +99,13 @@ Two dispatches that used to be hand-written disappear: `distance` no longer re-r
 calendar (the stage count is unchanged, so no stage changed date) and a date change no longer
 re-scans cultural POIs (they read no date at all). Both were over-dispatching.
 
+Seven senders lost a hand-written dispatch rather than gaining one. Five of them — stage
+create, update, move, and the two accommodation edits — used to dispatch `FetchWeather`
+themselves because the handler never did; now that weather rides on the geometry trigger,
+keeping theirs would have sent it twice. Four also dispatched `CheckCalendar` on edits that
+move no stage onto a new date, which was over-dispatching; stage create and move, which do
+shift the later dates, now declare `DATES` on the message instead.
+
 Both rest-day paths got simpler rather than longer: each now sends one `RecalculateStages`
 carrying `DATES` and nothing else. The hand-written `AnalyzeTerrain` dispatch that re-ran the
 "consider a rest day" nudge is gone from both — terrain rides along in the date set.

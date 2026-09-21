@@ -17,8 +17,6 @@ use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
 use App\Geo\GeocoderInterface;
 use App\Mapper\StageResponseMapper;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
@@ -134,11 +132,6 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
         }
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, skipAccommodationScan: true, generation: $generation));
-
-        if ($request->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
-        }
 
         return $this->stageResponseMapper->map($stage);
     }

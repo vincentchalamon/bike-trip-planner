@@ -18,8 +18,6 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Mapper\StageResponseMapper;
-use App\Message\CheckCalendar;
-use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
@@ -124,11 +122,6 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             : [$stage->id];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
 
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
-        }
 
         return $this->stageResponseMapper->map($stages[$index] ?? $stage);
     }
