@@ -53,9 +53,19 @@ describe("parseApiError", () => {
     });
   });
 
-  it("returns network error for 422 without violations array", () => {
-    // 422 but body doesn't match ViolationBody shape → falls through
+  it("reads detail on a 422 that carries no violations", () => {
+    // Not every 422 comes from the validator: the GPX upload answers RFC 7807 with a
+    // `detail` and no violations (unparsable file, no track points). Treating that as a
+    // network error threw away the only explanation the server gave.
     expect(parseApiError(422, { detail: "something" })).toEqual({
+      type: "validation",
+      message: "something",
+      violations: [],
+    });
+  });
+
+  it("returns network error for a 422 with no usable body", () => {
+    expect(parseApiError(422, null)).toEqual({
       type: "network",
       message: "",
     });

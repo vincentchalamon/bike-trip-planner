@@ -375,6 +375,16 @@ export function parseApiError(status: number, body: unknown): ApiError {
     };
   }
 
+  // A 422 carrying no violations is still RFC 7807 and still explains itself in
+  // `detail` — the GPX upload answers exactly that (unparsable file, no track points).
+  if (status === 422 && hasDetail(body)) {
+    return {
+      type: "validation",
+      message: body.detail ?? "",
+      violations: [],
+    };
+  }
+
   if (status === 404) {
     return {
       type: "not_found",
@@ -558,10 +568,15 @@ export async function uploadGpxFile(
   });
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    return { data: null, error: body?.error ?? "Upload failed", response: res };
+    // The endpoint answers RFC 7807 like the rest of the API, so read it with the
+    // shared parser instead of the `{error}` shape it used to have on its own.
+    const body = (await res.json().catch(() => null)) as unknown;
+    const apiError = parseApiError(res.status, body);
+    return {
+      data: null,
+      error: apiError.message !== "" ? apiError.message : "Upload failed",
+      response: res,
+    };
   }
 
   const data = (await res.json()) as GpxUploadResponse;
