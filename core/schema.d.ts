@@ -4371,6 +4371,17 @@ export interface operations {
                         totalElevation: number;
                         /** @description Total elevation loss in meters */
                         totalElevationLoss: number;
+                        /**
+                         * @description Structural readiness: the stages are computed synchronously (ADR-043)
+                         * @enum {string}
+                         */
+                        status: "draft" | "ready";
+                        /** @description True once the start date is today or in the past */
+                        isLocked: boolean;
+                        /** @description The synchronously computed stages */
+                        stages: {
+                            [key: string]: unknown;
+                        }[];
                     };
                 };
             };

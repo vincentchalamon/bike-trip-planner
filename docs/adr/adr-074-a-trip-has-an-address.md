@@ -145,6 +145,13 @@ client reads it on those two.
 
 ## What this leaves open
 
+- **`GpxUploadOpenApiDecorator` states the upload response by hand**, because the endpoint is a
+  plain controller and nothing derives its schema from the body. Adding `isLocked` to the body
+  without adding it there drifted the generated types from the runtime response, and the
+  schema-drift check in CI could not see it: it regenerates *from that file*. Two fields,
+  `status` and `stages`, had been shipping undeclared for the same reason. All three are
+  declared now, but the file remains hand-maintained — the next field added to that body will
+  drift the same way, silently, and only a review will catch it.
 - **`TripGpxProvider` used to write `$context['trip_stages']`** so the normalizers could reuse
   the fetched stages. `$context` is passed by value, so the mutation never propagated and both
   normalizers reload the stages themselves — the docblock promised an optimisation that was
