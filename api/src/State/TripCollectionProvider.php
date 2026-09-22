@@ -205,6 +205,10 @@ final readonly class TripCollectionProvider implements ProviderInterface
             return 'failed';
         }
 
+        // `superseded` lands here, and deliberately keeps its own answer rather than gaining
+        // one: a trip whose computations were abandoned when it moved still has the stages
+        // the previous generation produced, so it reads 'analyzed'. It is not `failed` —
+        // nothing broke — and not `analyzing` — nothing is running (ADR-073).
         return 'analyzed';
     }
 }

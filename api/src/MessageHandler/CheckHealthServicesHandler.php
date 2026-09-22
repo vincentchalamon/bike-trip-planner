@@ -58,7 +58,6 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
     public function __invoke(CheckHealthServices $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -121,6 +120,6 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             $this->publisher->publish($tripId, MercureEventType::HEALTH_SERVICE_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 }

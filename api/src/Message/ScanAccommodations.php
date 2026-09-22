@@ -7,7 +7,7 @@ namespace App\Message;
 use App\ApiResource\AccommodationScanRequest;
 use App\ApiResource\TripRequest;
 
-final readonly class ScanAccommodations
+final readonly class ScanAccommodations implements BelongsToATripGeneration
 {
     /**
      * Scans accommodations for a whole trip, or for one stage when $stageId is given.

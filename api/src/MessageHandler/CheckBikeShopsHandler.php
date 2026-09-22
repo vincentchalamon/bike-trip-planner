@@ -51,7 +51,6 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
     public function __invoke(CheckBikeShops $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -135,7 +134,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $stagesWithoutBikeShop),
             ]);
-        }, $generation);
+        });
     }
 
     /**

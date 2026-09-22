@@ -27,6 +27,13 @@ enum MercureEventType: string
     case EVENTS_FOUND = 'events_found';
     case VALIDATION_ERROR = 'validation_error';
     case COMPUTATION_ERROR = 'computation_error';
+    /**
+     * Signal-only event: the trip moved, and these computations were abandoned rather than
+     * finished (ADR-073). Not a failure — nothing broke and nothing will be retried; the
+     * client stops waiting on them, and the envelope's `version` is the one that superseded
+     * them. Published once per generation bump, with the whole list.
+     */
+    case COMPUTATIONS_SUPERSEDED = 'computations_superseded';
     case TRIP_COMPLETE = 'trip_complete';
     /**
      * Progress-only event published by every handler when it finishes.

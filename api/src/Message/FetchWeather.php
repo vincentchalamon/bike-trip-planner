@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-final readonly class FetchWeather
+final readonly class FetchWeather implements BelongsToATripGeneration
 {
     public function __construct(
         public string $tripId,

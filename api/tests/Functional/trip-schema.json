@@ -57,7 +57,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "stages": {
@@ -66,7 +67,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "pois": {
@@ -75,7 +77,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "accommodations": {
@@ -84,7 +87,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "terrain": {
@@ -93,7 +97,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "weather": {
@@ -102,7 +107,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "calendar": {
@@ -111,7 +117,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "wind": {
@@ -120,7 +127,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "bike_shops": {
@@ -129,7 +137,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "water_points": {
@@ -138,7 +147,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "cultural_pois": {
@@ -147,7 +157,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "railway_stations": {
@@ -156,7 +167,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "health_services": {
@@ -165,7 +177,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "border_crossing": {
@@ -174,7 +187,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "ferries": {
@@ -183,7 +197,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "fords": {
@@ -192,7 +207,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         },
         "events": {
@@ -201,7 +217,8 @@
             "pending",
             "running",
             "done",
-            "failed"
+            "failed",
+            "superseded"
           ]
         }
       }

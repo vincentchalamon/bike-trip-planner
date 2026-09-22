@@ -49,12 +49,11 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     public function __invoke(ScanEvents $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
 
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
-            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
 
             return;
         }
@@ -63,7 +62,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $startDate = $request?->startDate;
 
         if (!$startDate instanceof \DateTimeImmutable) {
-            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
 
             return;
         }
@@ -89,7 +88,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     'events' => array_map($this->eventMapper->toArray(...), $events),
                 ]);
             }
-        }, $generation);
+        });
     }
 
     /**

@@ -33,15 +33,9 @@ abstract readonly class AbstractTripMessageHandler
         // setter (which manual instantiations — e.g. integration tests — skip,
         // leaving the readonly property uninitialized). The terminal-gate logic
         // stays single-sourced in TripCompletionGate.
-        $this->completionGate = new TripCompletionGate($this->computationTracker, $this->publisher, $this->messageBus);
+        $this->completionGate = new TripCompletionGate($this->computationTracker, $this->publisher, $this->messageBus, $this->generationTracker);
     }
 
-    /**
-     * Returns true when the message generation is outdated.
-     *
-     * A null generation means the message was dispatched without versioning
-     * (e.g. cascading child messages) — these are never considered stale.
-     */
     /**
      * Turns the flat alert list a producer publishes into the per-stage map it persists.
      *
@@ -87,24 +81,13 @@ abstract readonly class AbstractTripMessageHandler
         return $this->alertRenderer->renderFlat($alerts, $this->tripRequestRepository->getLocale($tripId) ?? 'en');
     }
 
-    protected function isStale(string $tripId, ?int $messageGeneration): bool
-    {
-        if (null === $messageGeneration) {
-            return false;
-        }
-
-        $current = $this->generationTracker->current($tripId);
-
-        if (null === $current) {
-            return false;
-        }
-
-        return $messageGeneration < $current;
-    }
-
     /**
      * Executes the handler body with computation tracking.
      * Marks computation as running, executes callback, then marks done.
+     *
+     * No staleness check: a message the trip has moved past never reaches a handler at all
+     * since {@see \App\Messenger\StaleMessageMiddleware} (ADR-073). The check used to live
+     * here, and in two other places that had begun to differ.
      *
      * On exception: publishes the error event and re-throws so Messenger can
      * retry. The computation is intentionally NOT marked `failed` here — that
@@ -119,19 +102,7 @@ abstract readonly class AbstractTripMessageHandler
         string $tripId,
         ComputationName $computation,
         callable $callback,
-        ?int $messageGeneration = null,
     ): void {
-        if ($this->isStale($tripId, $messageGeneration)) {
-            $this->logger->info('Discarding stale message.', [
-                'tripId' => $tripId,
-                'computation' => $computation->value,
-                'messageGeneration' => $messageGeneration,
-                'currentGeneration' => $this->generationTracker->current($tripId),
-            ]);
-
-            return;
-        }
-
         $this->computationTracker->markRunning($tripId, $computation);
 
         $startTime = hrtime(true);
@@ -175,7 +146,7 @@ abstract readonly class AbstractTripMessageHandler
      * helper so a single handler failure does not stall the progress bar
      * (failed statuses still count toward the total settled steps).
      *
-     * @return array{completed: int, failed: int, total: int}
+     * @return array{completed: int, failed: int, settled: int, total: int}
      */
     private function publishProgress(string $tripId, ComputationName $step): array
     {

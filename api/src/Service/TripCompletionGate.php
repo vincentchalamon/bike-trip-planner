@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -14,7 +15,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
  *
  * Publishes the TRIP_COMPLETE Mercure event and dispatches the terminal
  * {@see AllEnrichmentsCompleted} message once every initialised computation has
- * settled (status `done` OR `failed`).
+ * settled — `done`, `failed`, or `superseded` since ADR-073. Before that third one existed,
+ * a single message the trip had moved past left its computation `pending` for good and this
+ * condition could never hold again.
  *
  * Extracted from {@see \App\MessageHandler\AbstractTripMessageHandler} so the
  * gate can be re-evaluated from two places:
@@ -38,6 +41,7 @@ final readonly class TripCompletionGate
         private ComputationTrackerInterface $computationTracker,
         private TripUpdatePublisherInterface $publisher,
         private MessageBusInterface $messageBus,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -48,15 +52,19 @@ final readonly class TripCompletionGate
     {
         $progress = $this->computationTracker->getProgress($tripId);
 
-        $allSettled = $progress['total'] > 0
-            && $progress['completed'] + $progress['failed'] === $progress['total'];
-
-        if (!$allSettled) {
+        if (0 === $progress['total'] || $progress['settled'] !== $progress['total']) {
             return;
         }
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
         $this->publisher->publishTripComplete($tripId, $statuses);
-        $this->messageBus->dispatch(new AllEnrichmentsCompleted($tripId));
+
+        // Which generation settled, so the publication can be claimed per generation rather
+        // than once per trip. Read here rather than threaded in: if an edit lands between this
+        // read and the handler, the message is of the older generation and the middleware
+        // discards it — which is the right answer, the newer generation will settle in turn.
+        $this->messageBus->dispatch(
+            new AllEnrichmentsCompleted($tripId, $this->generationTracker->current($tripId)),
+        );
     }
 }

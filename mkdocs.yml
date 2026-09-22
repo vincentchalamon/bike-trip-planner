@@ -151,6 +151,7 @@ nav:
       - adr/adr-070-freshness-is-dispatch-completeness.md
       - adr/adr-071-dependency-version-policy-and-ceilings.md
       - adr/adr-072-computation-state-is-contract.md
+      - adr/adr-073-supersession-settles-and-says-so.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:

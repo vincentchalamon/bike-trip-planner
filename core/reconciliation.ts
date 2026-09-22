@@ -822,6 +822,24 @@ export function reduceMercureEvent(
         ? state
         : { ...state, recomputingStages: new Set(NO_RECOMPUTING) };
 
+    case "computations_superseded":
+      // Record the outcome without touching stage data: the abandoned work produced none,
+      // and the generation that superseded it is already recomputing (ADR-073). Stage
+      // recomputation markers are deliberately left alone — the newer generation's
+      // `stage_updated` events are what clear them.
+      return {
+        ...state,
+        computationStatus: event.data.computations.reduce<
+          Record<string, string>
+        >(
+          (statuses, computation) => ({
+            ...statuses,
+            [computation]: "superseded",
+          }),
+          state.computationStatus,
+        ),
+      };
+
     default: {
       // Exhaustiveness: every MercureEvent variant must have a case above.
       const _exhaustive: never = event;

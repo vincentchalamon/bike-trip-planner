@@ -67,6 +67,19 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         ]);
     }
 
+    public function publishComputationsSuperseded(string $tripId, array $computations): void
+    {
+        $this->publish($tripId, MercureEventType::COMPUTATIONS_SUPERSEDED, [
+            'computations' => array_map(static fn (ComputationName $c): string => $c->value, $computations),
+            // The categories too, because that is the granularity both clients render a
+            // per-block spinner at; deriving it client-side would duplicate
+            // ComputationName::category() in TypeScript.
+            'categories' => array_values(array_unique(
+                array_map(static fn (ComputationName $c): string => $c->category(), $computations),
+            )),
+        ]);
+    }
+
     /** @param array<string, string> $computationStatus */
     public function publishTripComplete(string $tripId, array $computationStatus): void
     {

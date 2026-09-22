@@ -63,7 +63,7 @@ final readonly class TripDetail
         public string $status,
         #[ApiProperty(
             description: 'Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.',
-            openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', null]],
+            openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', 'superseded', null]],
         )]
         public ?string $weatherStatus,
         /**
@@ -78,10 +78,10 @@ final readonly class TripDetail
          * @var array<string, string>
          */
         #[ApiProperty(
-            description: 'Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked.',
+            description: 'Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. `superseded` means the trip moved on before those computations settled and they were abandoned — nothing failed, and nothing is still running.',
             openapiContext: [
                 'type' => 'object',
-                'additionalProperties' => ['type' => 'string', 'enum' => ['running', 'done', 'failed']],
+                'additionalProperties' => ['type' => 'string', 'enum' => ['running', 'done', 'failed', 'superseded']],
             ],
         )]
         public array $categoryStatus,

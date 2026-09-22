@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\Mercure\TripUpdatePublisherInterface;
 use App\Service\EnrichmentMessageFactory;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripCompletionGate;
+use Psr\Log\NullLogger;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
+use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Concurrency\IfMatch;
@@ -66,6 +70,7 @@ final class TripUpdateProcessorTest extends TestCase
             $security,
             new TripLocker(),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
+            $this->inertSupersession(),
         );
     }
 
@@ -95,6 +100,7 @@ final class TripUpdateProcessorTest extends TestCase
             $security,
             new TripLocker(),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
+            $this->inertSupersession(),
         );
 
         try {
@@ -176,6 +182,7 @@ final class TripUpdateProcessorTest extends TestCase
             $security,
             new TripLocker(),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
+            $this->inertSupersession(),
         );
 
         $old = new TripRequest();
@@ -258,5 +265,28 @@ final class TripUpdateProcessorTest extends TestCase
         $this->messageBus->expects($this->never())->method('dispatch');
 
         $this->processor->process($request, new Patch(), ['id' => $tripId]);
+    }
+
+    /**
+     * A real one, inert. It is `final readonly` so it cannot be doubled, and against a tracker
+     * that knows no statuses it settles nothing. Its own behaviour is covered by
+     * ComputationSupersessionTest.
+     */
+    private function inertSupersession(): ComputationSupersession
+    {
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $tracker = $this->createStub(ComputationTrackerInterface::class);
+
+        return new ComputationSupersession(
+            $tracker,
+            $publisher,
+            new TripCompletionGate(
+                $tracker,
+                $publisher,
+                $this->createStub(MessageBusInterface::class),
+                $this->createStub(TripGenerationTrackerInterface::class),
+            ),
+            new NullLogger(),
+        );
     }
 }

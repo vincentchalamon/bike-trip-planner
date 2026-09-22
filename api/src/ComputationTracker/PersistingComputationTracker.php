@@ -69,6 +69,26 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
         $this->mirror($tripId, $computation);
     }
 
+    public function markSupersededUnlessSettled(string $tripId, ComputationName $computation): bool
+    {
+        $written = $this->inner->markSupersededUnlessSettled($tripId, $computation);
+        if ($written) {
+            $this->mirror($tripId, $computation);
+        }
+
+        return $written;
+    }
+
+    public function rearmIfSettled(string $tripId, ComputationName $computation): bool
+    {
+        $written = $this->inner->rearmIfSettled($tripId, $computation);
+        if ($written) {
+            $this->mirror($tripId, $computation);
+        }
+
+        return $written;
+    }
+
     /**
      * Mirrored although it is not a terminal transition: it undoes one, and a column left
      * claiming `done` for work about to be redone would outlive the cache saying otherwise.
@@ -79,9 +99,9 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
         $this->mirror($tripId, $computation);
     }
 
-    public function claimReadyPublication(string $tripId): bool
+    public function claimReadyPublication(string $tripId, ?int $generation = null): bool
     {
-        return $this->inner->claimReadyPublication($tripId);
+        return $this->inner->claimReadyPublication($tripId, $generation);
     }
 
     public function getProgress(string $tripId): array

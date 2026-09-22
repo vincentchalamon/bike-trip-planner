@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\ResolveStageLabels;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -28,7 +27,6 @@ final readonly class ResolveStageLabelsHandler
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -36,14 +34,10 @@ final readonly class ResolveStageLabelsHandler
     {
         $tripId = $message->tripId;
 
-        // Skip a superseded generation: a newer recompute may have moved the stage
-        // endpoints, so resolving labels for the old ones would persist them
-        // against the wrong dayNumbers.
-        $current = $this->generationTracker->current($tripId);
-        if (null !== $message->generation && null !== $current && $message->generation < $current) {
-            return;
-        }
-
+        // A superseded generation never gets here (ADR-073): the comparison this handler used
+        // to rewrite by hand now lives once, in StaleMessageMiddleware. The reason it needs
+        // one at all is unchanged — a newer recompute may have moved the stage endpoints, so
+        // resolving labels for the old ones would persist them against the wrong dayNumbers.
         $stages = $this->tripStateManager->getStages($tripId);
         if (null === $stages) {
             return;

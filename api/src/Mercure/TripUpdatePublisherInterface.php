@@ -28,6 +28,17 @@ interface TripUpdatePublisherInterface
 
     public function publishComputationError(string $tripId, string $computation, string $message, bool $retryable = true): void;
 
+    /**
+     * Announces the computations a generation bump abandoned (ADR-073).
+     *
+     * Once per bump with the whole list, not once per computation: a client only needs to
+     * learn that this much stopped being computed, and the envelope's `version` already names
+     * the generation that superseded them.
+     *
+     * @param list<ComputationName> $computations
+     */
+    public function publishComputationsSuperseded(string $tripId, array $computations): void;
+
     /** @param array<string, string> $computationStatus */
     public function publishTripComplete(string $tripId, array $computationStatus): void;
 

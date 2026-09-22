@@ -70,7 +70,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     public function __invoke(ScanPois $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -224,7 +223,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             foreach ($stages as $stage) {
                 $this->tripStateManager->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
             }
-        }, $generation);
+        });
     }
 
     /**

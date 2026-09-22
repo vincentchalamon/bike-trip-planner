@@ -21,6 +21,9 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
 
     private const string FAILED = 'failed';
 
+    /** Terminal, and not a failure: the trip moved past this computation before it settled. */
+    private const string SUPERSEDED = 'superseded';
+
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
@@ -54,14 +57,70 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         $this->updateStatus($tripId, $computation, self::FAILED);
     }
 
+    /**
+     * Compare-and-set, under the same lock as every other status write: the caller runs after
+     * a generation bump, and a worker of the newer generation may already have settled this
+     * computation. Writing over a `done` would report abandoned work that in fact succeeded.
+     */
+    public function markSupersededUnlessSettled(string $tripId, ComputationName $computation): bool
+    {
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
+
+        try {
+            $statuses = $this->getStatuses($tripId) ?? [];
+            $current = $statuses[$computation->value] ?? null;
+
+            if (self::PENDING !== $current && self::RUNNING !== $current) {
+                return false;
+            }
+
+            $statuses[$computation->value] = self::SUPERSEDED;
+            $this->set($this->statusKey($tripId), $statuses);
+
+            return true;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * The dual, and cheap on the common path: a computation that is already `pending` or
+     * `running` is read and left alone, without taking the lock or writing.
+     */
+    public function rearmIfSettled(string $tripId, ComputationName $computation): bool
+    {
+        $current = ($this->getStatuses($tripId) ?? [])[$computation->value] ?? null;
+        if (null === $current || self::PENDING === $current || self::RUNNING === $current) {
+            return false;
+        }
+
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
+
+        try {
+            $statuses = $this->getStatuses($tripId) ?? [];
+            if (!isset($statuses[$computation->value])) {
+                return false;
+            }
+
+            $statuses[$computation->value] = self::PENDING;
+            $this->set($this->statusKey($tripId), $statuses);
+
+            return true;
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function resetComputation(string $tripId, ComputationName $computation): void
     {
         $this->updateStatus($tripId, $computation, self::PENDING);
     }
 
-    public function claimReadyPublication(string $tripId): bool
+    public function claimReadyPublication(string $tripId, ?int $generation = null): bool
     {
-        $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId));
+        $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId, $generation));
         if ($item->isHit()) {
             return false;
         }
@@ -78,22 +137,30 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     {
         $statuses = $this->getStatuses($tripId);
         if (null === $statuses) {
-            return ['completed' => 0, 'failed' => 0, 'total' => 0];
+            return ['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 0];
         }
 
         $completed = 0;
         $failed = 0;
+        $settled = 0;
         foreach ($statuses as $status) {
             if (self::DONE === $status) {
                 ++$completed;
+                ++$settled;
             } elseif (self::FAILED === $status) {
                 ++$failed;
+                ++$settled;
+            } elseif (self::SUPERSEDED === $status) {
+                // Terminal, but neither a success nor a failure: it counts towards the gate
+                // and towards nothing the progress bar renders (ADR-073).
+                ++$settled;
             }
         }
 
         return [
             'completed' => $completed,
             'failed' => $failed,
+            'settled' => $settled,
             'total' => \count($statuses),
         ];
     }
@@ -181,8 +248,16 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return \sprintf('trip.%s.computation_status', $tripId);
     }
 
-    private function readyClaimedKey(string $tripId): string
+    /**
+     * Scoped to the generation that settled.
+     *
+     * It used to be one key per trip, with a 30-minute TTL and nothing ever clearing it — not
+     * `initializeComputations()`, not `resetComputation()`. So the first generation to publish
+     * `trip_ready` claimed the slot for every generation after it, and an edited trip never
+     * announced that it was ready again (ADR-073).
+     */
+    private function readyClaimedKey(string $tripId, ?int $generation): string
     {
-        return \sprintf('trip.%s.ready_claimed', $tripId);
+        return \sprintf('trip.%s.ready_claimed.%s', $tripId, $generation ?? 'none');
     }
 }

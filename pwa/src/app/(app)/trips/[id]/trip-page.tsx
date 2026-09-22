@@ -184,7 +184,16 @@ function TripLoader({ tripId }: { tripId: string }) {
       // weather spinner reflects server-side progress on reload (a running
       // block keeps spinning; a done/failed block renders its terminal state).
       // Mercure events keep it live afterwards.
-      ui.setBlockStatus("weather", data.weatherStatus ?? null);
+      //
+      // `superseded` maps to no status at all: the block has no answer because the
+      // work was abandoned when the trip moved (ADR-073), and the spinner must stop
+      // without claiming a failure. Same treatment as the live event.
+      ui.setBlockStatus(
+        "weather",
+        data.weatherStatus === "superseded"
+          ? null
+          : (data.weatherStatus ?? null),
+      );
     }
 
     async function fetchDetail(): Promise<Response | null> {

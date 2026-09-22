@@ -52,7 +52,6 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
     public function __invoke(CheckFerries $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -107,6 +106,6 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::FERRY_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 }

@@ -55,7 +55,6 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     public function __invoke(CheckRailwayStations $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -128,7 +127,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             $this->publisher->publish($tripId, MercureEventType::RAILWAY_STATION_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 
     /**

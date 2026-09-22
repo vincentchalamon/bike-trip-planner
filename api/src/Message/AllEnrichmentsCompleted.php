@@ -12,10 +12,18 @@ namespace App\Message;
  * pipeline does not exist yet, the handler short-circuits and publishes the terminal
  * `TRIP_READY` Mercure event directly so the frontend can swap state atomically.
  */
-final readonly class AllEnrichmentsCompleted
+final readonly class AllEnrichmentsCompleted implements BelongsToATripGeneration
 {
+    /**
+     * @param ?int $generation Which generation settled. It was the one pipeline message without
+     *                         one, which had two consequences: the terminal event could not be
+     *                         discarded when the trip had moved past it, and the publication
+     *                         claim could not be scoped to a generation — so no generation
+     *                         after the first ever published a second `trip_ready` (ADR-073).
+     */
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }

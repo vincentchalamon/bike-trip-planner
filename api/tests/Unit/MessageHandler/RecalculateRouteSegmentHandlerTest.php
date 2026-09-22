@@ -68,7 +68,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             );
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 

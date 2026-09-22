@@ -12,6 +12,7 @@ use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
+use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
@@ -39,6 +40,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private Security $security,
         private TripLocker $tripLocker,
         private TripAnalysisDispatcher $analysisDispatcher,
+        private ComputationSupersession $supersession,
     ) {
     }
 
@@ -118,6 +120,13 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
                 $this->computationTracker->resetComputation($id, $computation);
                 $this->dispatchComputation($id, $computation, $generation);
             }
+
+            // The bump above invalidated every message in flight, and only the resolver's
+            // subset was just re-armed. Everything else that was still running is abandoned:
+            // say so, or it stays `pending` and the completion gate never closes again
+            // (ADR-073). This processor is where that was worst — the recompute endpoint has
+            // always guarded itself, by re-running the whole pipeline instead.
+            $this->supersession->settleWhatWasNotRedispatched($id, $computationsToTrigger);
         }
 
         $statuses = $this->computationTracker->getStatuses($id) ?? [];

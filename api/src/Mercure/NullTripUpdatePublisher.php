@@ -25,6 +25,10 @@ final readonly class NullTripUpdatePublisher implements TripUpdatePublisherInter
     {
     }
 
+    public function publishComputationsSuperseded(string $tripId, array $computations): void
+    {
+    }
+
     /** @param array<string, string> $computationStatus */
     public function publishTripComplete(string $tripId, array $computationStatus): void
     {

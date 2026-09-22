@@ -52,7 +52,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
         GeometryDistributorInterface $distributor,
     ): ScanAccommodationsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $seasonalityChecker = $this->createStub(SeasonalityCheckerInterface::class);
         $seasonalityChecker->method('isLikelyOpen')->willReturn(null);

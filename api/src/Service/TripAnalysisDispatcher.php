@@ -44,10 +44,12 @@ final readonly class TripAnalysisDispatcher
     /**
      * Dispatches every enrichment for the given trip — the full pipeline, after stages are
      * generated or on an explicit `POST /trips/{id}/analyze`.
+     *
+     * @return list<ComputationName> what was actually dispatched
      */
-    public function dispatch(string $tripId, TripRequest $request, ?int $generation = null): void
+    public function dispatch(string $tripId, TripRequest $request, ?int $generation = null): array
     {
-        $this->dispatchFor(
+        return $this->dispatchFor(
             $tripId,
             $request,
             [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
@@ -65,6 +67,13 @@ final readonly class TripAnalysisDispatcher
      *                                                 them — an accommodation edit moves the
      *                                                 line but must not re-scan over the
      *                                                 choice the rider just made
+     *
+     * @return list<ComputationName> what was actually dispatched. Narrower than the triggers
+     *                               ask for whenever `$except` holds one back or
+     *                               {@see dispatchOne()} withholds one for want of a start
+     *                               date — and the caller needs to know which, because
+     *                               everything invalidated and not re-dispatched is now
+     *                               superseded (ADR-073).
      */
     public function dispatchFor(
         string $tripId,
@@ -73,7 +82,9 @@ final readonly class TripAnalysisDispatcher
         ?int $generation = null,
         array $scopedStageIds = [],
         array $except = [],
-    ): void {
+    ): array {
+        $dispatched = [];
+
         foreach (ComputationName::dependingOn(...$triggers) as $computation) {
             if (\in_array($computation, $except, true)) {
                 continue;
@@ -89,10 +100,14 @@ final readonly class TripAnalysisDispatcher
                     ));
                 }
 
+                $dispatched[] = $computation;
+
                 continue;
             }
 
-            $this->dispatchOne($tripId, $request, $computation, $generation);
+            if ($this->dispatchOne($tripId, $request, $computation, $generation)) {
+                $dispatched[] = $computation;
+            }
         }
 
         // Reverse-geocoded end-point labels move with the line, so they belong to the geometry
@@ -101,6 +116,8 @@ final readonly class TripAnalysisDispatcher
         if (\in_array(ComputationTrigger::GEOMETRY, $triggers, true)) {
             $this->messageBus->dispatch(new ResolveStageLabels($tripId, $generation));
         }
+
+        return $dispatched;
     }
 
     /**
@@ -109,15 +126,17 @@ final readonly class TripAnalysisDispatcher
      * Carries the start-date guard rather than leaving it to {@see dispatchFor()}, which
      * funnels through here: this is also the method a PATCH reaches, and a PATCH is how a
      * trip loses its dates.
+     *
+     * @return bool false when the guard withheld it
      */
     public function dispatchOne(
         string $tripId,
         TripRequest $request,
         ComputationName $computation,
         ?int $generation = null,
-    ): void {
+    ): bool {
         if (!$request->startDate instanceof \DateTimeImmutable && \in_array($computation, self::REQUIRES_A_START_DATE, true)) {
-            return;
+            return false;
         }
 
         $this->messageBus->dispatch($this->messageFactory->create(
@@ -126,5 +145,7 @@ final readonly class TripAnalysisDispatcher
             $generation,
             $request->enabledAccommodationTypes,
         ));
+
+        return true;
     }
 }
