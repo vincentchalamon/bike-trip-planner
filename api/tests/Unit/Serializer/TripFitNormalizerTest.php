@@ -45,7 +45,7 @@ final class TripFitNormalizerTest extends TestCase
         $repository->method('getTitle')->willReturn('My Trip');
 
         $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc'), 'fit');
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
 
         self::assertIsArray($result);
         self::assertSame('My Trip', $result['courseName']);
@@ -84,7 +84,7 @@ final class TripFitNormalizerTest extends TestCase
         $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc'), 'fit');
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
 
         /** @var list<array{name: string, type: string, lat: float, lon: float}> $waypoints */
         $waypoints = $result['waypoints'];
@@ -102,7 +102,7 @@ final class TripFitNormalizerTest extends TestCase
         $repository->method('getStages')->willReturn([]);
 
         $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc'), 'fit');
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
 
         self::assertSame([], $result['points']);
         self::assertSame([], $result['waypoints']);
@@ -114,7 +114,7 @@ final class TripFitNormalizerTest extends TestCase
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripFitNormalizer($repository);
 
-        $trip = new Trip('trip-abc');
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $stage = new Stage('t', 1, 1.0, 0.0, new Coordinate(0, 0), new Coordinate(0, 0));
 
         self::assertTrue($normalizer->supportsNormalization($trip, 'fit'));

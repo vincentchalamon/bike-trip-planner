@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\State\TripLocker;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\AccommodationScanRequest;
 use App\ApiResource\TripRequest;
@@ -32,7 +33,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
 
         $this->expectException(NotFoundHttpException::class);
 
@@ -67,7 +68,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
 
         $data = new AccommodationScanRequest();
         $data->radiusKm = $radiusKm;
@@ -97,7 +98,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }
@@ -125,7 +126,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }

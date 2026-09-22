@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\State\TripLocker;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -44,6 +45,7 @@ final class TripDuplicateProcessorTest extends TestCase
             $this->createStub(ComputationTrackerInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             $security,
+            new TripLocker(),
             $this->createStub(CacheItemPoolInterface::class),
             $limiter,
         );

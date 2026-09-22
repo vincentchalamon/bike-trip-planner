@@ -37,6 +37,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
+        private TripLocker $tripLocker,
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
         #[Autowire(service: 'limiter.trip_duplicate')]
@@ -128,6 +129,10 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         return new Trip(
             id: $newTripIdString,
             computationStatus: $statuses,
+            // The duplicate inherits the source's startDate above, so cloning a past-dated
+            // trip produces a locked one. Defaulting this to false said the opposite
+            // (ADR-074).
+            isLocked: $this->tripLocker->isLocked($duplicate),
         );
     }
 

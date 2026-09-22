@@ -26,7 +26,7 @@ interface GpxUploadServiceInterface
     /**
      * @param list<Coordinate> $points
      *
-     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int, status: string, stages: list<array<string, mixed>>}
+     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int, status: string, isLocked: bool, stages: list<array<string, mixed>>}
      */
     public function createTrip(
         array $points,

@@ -131,6 +131,7 @@ final readonly class GpxUploadController
             // ADR-043: structural data is computed synchronously, so the response
             // already carries the persisted status and the computed stages.
             'status' => $result['status'],
+            'isLocked' => $result['isLocked'],
             'stages' => $result['stages'],
         ];
 

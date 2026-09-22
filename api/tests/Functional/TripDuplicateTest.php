@@ -37,11 +37,11 @@ final class TripDuplicateTest extends ApiTestCase
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000002';
 
-    private function seedTrip(string $tripId): void
+    private function seedTrip(string $tripId, ?\DateTimeImmutable $startDate = null): void
     {
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = $startDate ?? new \DateTimeImmutable('2026-07-01');
         $request->fatigueFactor = 0.85;
         $request->elevationPenalty = 40.0;
         $request->title = 'Test Trip';
@@ -167,5 +167,44 @@ final class TripDuplicateTest extends ApiTestCase
             $this->assertArrayHasKey($computation->value, $data['computationStatus']);
             $this->assertSame('done', $data['computationStatus'][$computation->value]);
         }
+    }
+
+    /**
+     * The duplicate inherits the source's start date, so cloning a trip that has already
+     * started produces a locked one. `isLocked` defaulted to `false` and was emitted anyway —
+     * not absent, just wrong (ADR-074).
+     */
+    #[Test]
+    public function duplicatingAStartedTripReportsTheDuplicateAsLocked(): void
+    {
+        $this->seedTrip(self::TRIP_ID, startDate: new \DateTimeImmutable('today -2 days'));
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/duplicate', self::TRIP_ID),
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+        );
+
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertTrue($response->toArray(false)['isLocked']);
+    }
+
+    /**
+     * Where the created resource can be read, for a client that does not parse the JSON-LD
+     * body (ADR-074).
+     */
+    #[Test]
+    public function theCreatedTripIsPointedAtByLocation(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/duplicate', self::TRIP_ID),
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+        );
+
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertResponseHeaderSame('Location', '/trips/'.$response->toArray(false)['id']);
     }
 }

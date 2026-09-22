@@ -28,6 +28,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -59,6 +60,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         return new Trip(
             id: $tripId,
             computationStatus: $statuses,
+            isLocked: $this->tripLocker->isLocked($tripRequest),
         );
     }
 }

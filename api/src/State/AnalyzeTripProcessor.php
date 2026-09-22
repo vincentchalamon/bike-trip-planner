@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -59,6 +60,7 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -103,6 +105,7 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
         return new Trip(
             id: $tripId,
             computationStatus: $statuses,
+            isLocked: $this->tripLocker->isLocked($data),
         );
     }
 
@@ -111,6 +114,6 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
      */
     private function isAnalysisRunning(array $statuses): bool
     {
-        return array_any(self::ANALYSIS_COMPUTATIONS, fn (ComputationName $computation): bool => ($statuses[$computation->value] ?? null) === 'running');
+        return array_any(self::ANALYSIS_COMPUTATIONS, fn (ComputationName $computation): bool => ($statuses[$computation->value] ?? null) === ComputationStatus::RUNNING->value);
     }
 }

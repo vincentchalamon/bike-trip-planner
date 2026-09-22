@@ -47,7 +47,7 @@ final class TripShareGpxProviderTest extends TestCase
             ->with('Ab3kX9mP')
             ->willReturn($share);
 
-        $tripResource = new Trip((string) $tripId);
+        $tripResource = new Trip((string) $tripId, computationStatus: [], isLocked: false);
         $this->tripGpxProvider->expects($this->once())->method('provide')->willReturn($tripResource);
 
         $result = $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP']);
