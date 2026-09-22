@@ -7,6 +7,7 @@ namespace App\Mercure;
 use App\ApiResource\Stage;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -17,6 +18,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         private StagePayloadMapper $stagePayloadMapper,
         private CurrentCorrelationIdProvider $correlationIdProvider,
         private TripRequestRepositoryInterface $tripStateManager,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -47,7 +49,20 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
             private: true,
         );
 
-        $this->hub->publish($update);
+        // A hub outage must never fail the work that produced the event. Handlers publish
+        // *after* markDone(), and outside executeWithTracking()'s try/catch: letting this throw
+        // replayed the whole computation four times (retry 3/1000/2) and left the message in
+        // `failed`, which nothing consumes — all for an event whose content is retrievable by
+        // GET anyway (ADR-065).
+        try {
+            $this->hub->publish($update);
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Mercure publish failed for trip {tripId}: {message}', [
+                'tripId' => $tripId,
+                'type' => $type->value,
+                'message' => $throwable->getMessage(),
+            ]);
+        }
     }
 
     public function publishValidationError(string $tripId, string $code, string $message): void
