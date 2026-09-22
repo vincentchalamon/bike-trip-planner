@@ -37,6 +37,19 @@ interface ComputationTrackerInterface
      */
     public function markSupersededUnlessSettled(string $tripId, ComputationName $computation): bool;
 
+    /**
+     * Puts a settled computation back to `pending` because a message for it has just been
+     * dispatched.
+     *
+     * The dual of {@see markSupersededUnlessSettled()}, and what keeps that one honest: a
+     * computation with work in flight must never read as terminal, or the completion gate
+     * settles on it before the work starts (ADR-073). Only touches a terminal status — a
+     * `pending` or `running` computation is already armed and a write would be noise.
+     *
+     * Returns true when the status was actually written.
+     */
+    public function rearmIfSettled(string $tripId, ComputationName $computation): bool;
+
     public function resetComputation(string $tripId, ComputationName $computation): void;
 
     /**

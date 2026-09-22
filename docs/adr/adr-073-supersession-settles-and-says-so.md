@@ -106,6 +106,32 @@ Two sites own that decision today, and both already owned it:
 computation outside the dispatched set, cascade `WEATHER → WIND/FORDS` for the reason
 `ComputationFailureSubscriber` already documents, and re-evaluate the gate.
 
+### And the caller does not know what its dispatch cascades into
+
+That is the half the first implementation got wrong, and it is worse than the defect it was
+fixing.
+
+`PATCH /trips/{id}` on `fatigueFactor` re-dispatches `STAGES` alone — so every enrichment is
+marked `superseded`, correctly as far as that processor can tell. But `GenerateStagesHandler`
+re-runs the **whole** enrichment pipeline from inside its own tracked computation, and then
+settles: `markDone(STAGES)` followed by `evaluate()`. At that moment the freshly dispatched
+POIS, WEATHER and the rest are still sitting at `superseded`, which is terminal. The gate
+fires on a generation whose enrichments have not started — publishing `trip_ready` with
+nothing in it — and the per-generation claim, being one-shot, then drops the *real* completion
+as a duplicate. `WEATHER → WIND/FORDS` has the same shape one level down.
+
+Teaching the settler about those cascades would mean a second copy of knowledge the handlers
+already hold, which is the shape ADR-070 spent an ADR removing. So the invariant is held from
+the other end instead: **a computation with a message in flight never reads as terminal.**
+`RearmDispatchedComputationMiddleware` sits on the send side of the bus and puts a settled
+computation back to `pending` when a message for it is dispatched — resolved through
+`ComputationFailureSubscriber::MESSAGE_TO_COMPUTATION`, the same CI-guarded table, so no fourth
+one is written.
+
+It costs nothing per cascade and covers the ones not written yet, because every dispatch goes
+through the bus. On the common path it is a read and no write: a computation that is already
+`pending` or `running` is left alone without taking the lock.
+
 ### `/recompute` keeps the opposite strategy
 
 `TripBatchRecomputeProcessor` is untouched. It re-runs the whole pipeline when the analysis has
@@ -185,6 +211,12 @@ status rather than to a failure, because the block has no answer and nothing fai
 **Marking from the consumer.** The first design, and wrong for the reason set out above. It is
 worth recording because it looks obviously right: the middleware knows the message is superseded,
 so it seems like the natural place to say so. It is the place with the least information.
+
+**Expanding the settler's dispatched set through the cascades** — `STAGES` implies the whole
+pipeline, `WEATHER` implies wind and fords. Correct, and two lines. Rejected because both facts
+are already stated in the handlers that perform those cascades, and a second copy is what
+ADR-070 exists to have removed; it would also have to be maintained as new cascades appear,
+with nothing to catch a missed one.
 
 **Keying the status map by generation.** `trip.{id}.computation_status.{generation}` would make a
 late worker's write harmless by construction, and would have subsumed the claim-key fix as well.

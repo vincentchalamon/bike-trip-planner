@@ -15,6 +15,7 @@ use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -528,5 +529,57 @@ final class TripUpdateTest extends ApiTestCase
 
         // And the trip can reach a terminal state again, which is the point.
         $this->assertNotContains('pending', array_values(array_diff_key($statuses, ['stages' => null])));
+    }
+
+    /**
+     * The other half of the same story, and the one the test above cannot see.
+     *
+     * A `PATCH` on `fatigueFactor` re-dispatches `STAGES` alone, so every enrichment is marked
+     * superseded — correctly, as far as this processor knows. But `GenerateStagesHandler` then
+     * re-runs the *whole* enrichment pipeline from inside its own tracked computation. Without
+     * the dispatch re-arming them, those computations would still read terminal when that
+     * handler settles, `TripCompletionGate` would fire on a generation whose enrichments had
+     * not started, and the one-shot publication claim would swallow the real `trip_ready`
+     * (ADR-073).
+     *
+     * The assertion is on the dispatch, not on a consumed message: this suite never runs a
+     * worker, so what has to be pinned is that a dispatched computation is armed.
+     */
+    #[Test]
+    public function aComputationTheCascadeWillRerunIsNotLeftSettled(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $container = self::getContainer();
+        /** @var ComputationTrackerInterface $tracker */
+        $tracker = $container->get(ComputationTrackerInterface::class);
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = $container->get(TripRequestRepositoryInterface::class);
+
+        $tracker->markRunning(self::TRIP_ID, ComputationName::POIS);
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
+            'json' => ['fatigueFactor' => 0.8],
+        ]);
+        $this->assertResponseStatusCodeSame(202);
+
+        // As far as the PATCH could tell, the POI scan was abandoned.
+        $this->assertSame('superseded', ($tracker->getStatuses(self::TRIP_ID) ?? [])['pois'] ?? null);
+
+        // Now replay what the worker does: the stages handler re-dispatches the whole pipeline.
+        $request = $repo->getRequest(self::TRIP_ID);
+        self::assertInstanceOf(TripRequest::class, $request);
+
+        /** @var TripAnalysisDispatcher $dispatcher */
+        $dispatcher = $container->get(TripAnalysisDispatcher::class);
+        $dispatcher->dispatch(self::TRIP_ID, $request, generation: 2);
+
+        $statuses = $tracker->getStatuses(self::TRIP_ID) ?? [];
+        $this->assertSame('pending', $statuses['pois'] ?? null, 'A re-dispatched computation must not stay terminal.');
+
+        // Which is what keeps the gate from settling on work that has not started.
+        $progress = $tracker->getProgress(self::TRIP_ID);
+        $this->assertNotSame($progress['total'], $progress['settled']);
     }
 }

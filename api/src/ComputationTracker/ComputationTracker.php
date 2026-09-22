@@ -84,6 +84,35 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         }
     }
 
+    /**
+     * The dual, and cheap on the common path: a computation that is already `pending` or
+     * `running` is read and left alone, without taking the lock or writing.
+     */
+    public function rearmIfSettled(string $tripId, ComputationName $computation): bool
+    {
+        $current = ($this->getStatuses($tripId) ?? [])[$computation->value] ?? null;
+        if (null === $current || self::PENDING === $current || self::RUNNING === $current) {
+            return false;
+        }
+
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
+
+        try {
+            $statuses = $this->getStatuses($tripId) ?? [];
+            if (!isset($statuses[$computation->value])) {
+                return false;
+            }
+
+            $statuses[$computation->value] = self::PENDING;
+            $this->set($this->statusKey($tripId), $statuses);
+
+            return true;
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function resetComputation(string $tripId, ComputationName $computation): void
     {
         $this->updateStatus($tripId, $computation, self::PENDING);

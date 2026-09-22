@@ -26,6 +26,13 @@ use Psr\Log\LoggerInterface;
  * newer generation had already recorded, or — worse — mark a computation terminal while that
  * generation's work was still queued, closing the gate early. The caller here has neither
  * problem: it runs before the new work can finish, and it knows exactly what it dispatched.
+ *
+ * What the caller does *not* know is what its own dispatch cascades into — a `PATCH` on
+ * `fatigueFactor` re-dispatches `STAGES` alone, and `GenerateStagesHandler` then re-runs the
+ * whole pipeline from inside it. Everything marked here would be back in flight while still
+ * reading terminal. Rather than give this class a second copy of the cascade knowledge the
+ * handlers already hold, {@see \App\Messenger\RearmDispatchedComputationMiddleware} holds the
+ * invariant from the other end: a computation with a message in flight is never terminal.
  */
 final readonly class ComputationSupersession
 {

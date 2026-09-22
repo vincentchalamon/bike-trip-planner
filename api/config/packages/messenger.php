@@ -25,6 +25,7 @@ use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Message\SendPushNotification;
 use App\Messenger\HandleCorrelationIdMiddleware;
+use App\Messenger\RearmDispatchedComputationMiddleware;
 use App\Messenger\SendCorrelationIdMiddleware;
 use App\Messenger\StaleMessageMiddleware;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -38,8 +39,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'middleware' => [
                         SendCorrelationIdMiddleware::class,
                         HandleCorrelationIdMiddleware::class,
-                        // Last of the three, so a discarded message still carries its
-                        // correlation id into the log line that records the discard.
+                        // Last, so a discarded message still carries its correlation id into
+                        // the log line that records the discard.
+                        RearmDispatchedComputationMiddleware::class,
                         StaleMessageMiddleware::class,
                     ],
                 ],
