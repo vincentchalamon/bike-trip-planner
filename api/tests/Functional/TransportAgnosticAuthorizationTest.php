@@ -59,9 +59,11 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
      *
      * Keyed by the expression's source location so a failure names the line to fix.
      *
-     * The third element is the `Accept` header: the two export operations declare
-     * only gpx/fit, and content negotiation rejects anything else with a 406 *before*
-     * the security stage, which would make the denial assertions vacuous.
+     * The third element is the `Accept` header. `GET /trips/{id}` used to declare gpx and fit
+     * only, so content negotiation rejected anything else with a 406 *before* the security
+     * stage and this case had to ask for GPX to reach the voter at all. It answers JSON-LD
+     * since ADR-074, so the denial is now asserted the same way as every other operation here;
+     * the per-stage export below still declares gpx/fit only.
      *
      * @return iterable<string, array{string, string, string}>
      */
@@ -72,7 +74,7 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
         $gpx = 'application/gpx+xml';
 
         // is_granted('TRIP_VIEW', id) — keyed on the trip's own identifier
-        yield 'Trip.php:155 GET /trips/{id} (export)' => ['GET', '/trips/'.$trip, $gpx];
+        yield 'Trip.php:155 GET /trips/{id}' => ['GET', '/trips/'.$trip, $jsonLd];
         yield 'TripRoute.php:24 GET /trips/{id}/route' => ['GET', sprintf('/trips/%s/route', $trip), $jsonLd];
         yield 'TripDetail.php:29 GET /trips/{id}/detail' => ['GET', sprintf('/trips/%s/detail', $trip), $jsonLd];
         yield 'MercureToken.php:37 GET /trips/{id}/mercure-token' => ['GET', sprintf('/trips/%s/mercure-token', $trip), $jsonLd];

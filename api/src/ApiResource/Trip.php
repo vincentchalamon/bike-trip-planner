@@ -148,13 +148,19 @@ use App\State\TripUpdateProcessor;
             processor: TripUpdateProcessor::class,
             extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
         ),
+        // The canonical read, and the address every write response hands out as `@id`. It
+        // declared gpx and fit only, so it answered 406 to `application/ld+json` — content
+        // negotiation refusing the IRI the API itself distributes, ahead of the security stage
+        // (ADR-074). One operation, three formats: `{._format}` already routes the two
+        // downloads, and the URLs do not move.
         new Get(
             uriTemplate: '/trips/{id}{._format}',
             outputFormats: [
+                'jsonld' => ['application/ld+json'],
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],
             ],
-            openapi: new Operation(summary: 'Download the full trip as a single GPX or FIT file containing all stages.'),
+            openapi: new Operation(summary: 'Read a trip, or download it as a single GPX or FIT file containing all stages.'),
             security: "is_granted('TRIP_VIEW', id)",
             provider: TripGpxProvider::class,
         ),
@@ -169,13 +175,24 @@ use App\State\TripUpdateProcessor;
 )]
 final readonly class Trip
 {
+    // Every parameter is required, on purpose (ADR-074). None of the three properties is in a
+    // serialization group, so a default is never *absent* from the body — it is emitted.
+    // `computationStatus = []` and `isLocked = false` meant four processors answered a 202
+    // claiming nothing was being computed and the trip was unlocked, which for a duplicate of
+    // a past-dated trip was simply false. Required parameters make the compiler name every
+    // site instead.
+    //
+    // Deliberately not a docblock: API Platform reads PHPDoc, and would publish this paragraph
+    // as the schema description of the resource — or, on the constructor, of all three
+    // properties at once, overwriting the one `computationStatus` has below.
+
     /**
      * @param array<string, string> $computationStatus Map of ComputationName->value to status string
      */
     public function __construct(
         public string $id,
-        public array $computationStatus = [],
-        public bool $isLocked = false,
+        public array $computationStatus,
+        public bool $isLocked,
     ) {
     }
 }

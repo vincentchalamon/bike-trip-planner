@@ -568,8 +568,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download the full trip as a single GPX or FIT file containing all stages.
-         * @description Download the full trip as a single GPX or FIT file containing all stages.
+         * Read a trip, or download it as a single GPX or FIT file containing all stages.
+         * @description Read a trip, or download it as a single GPX or FIT file containing all stages.
          */
         get: operations["api_trips_id_get"];
         put?: never;
@@ -4416,6 +4416,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/ld+json": components["schemas"]["Trip.jsonld"];
                     "application/gpx+xml": components["schemas"]["Trip.gpx"];
                     "application/vnd.ant.fit": components["schemas"]["Trip.fit"];
                 };

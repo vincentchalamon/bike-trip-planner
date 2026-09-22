@@ -7,17 +7,23 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Trip;
+use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Provides a {@see Trip} resource for GPX export.
+ * Serves `GET /trips/{id}` — the canonical read of a trip, in JSON-LD, GPX or FIT (ADR-074).
  *
- * Validates that the trip exists and has computed stages before returning
- * the Trip object. The already-fetched stages are passed through the
- * serialization context under the {@code trip_stages} key so that
- * {@see \App\Serializer\TripGpxNormalizer} can reuse them without an
- * additional Redis round-trip.
+ * It used to serve the two export formats only, and to return a bare `new Trip($id)` because
+ * that is all the GPX and FIT normalizers need. The address itself answered 406 to
+ * `application/ld+json`, so the `@id` every write response hands out was not dereferenceable.
+ * Declaring the format was the easy half; the body is this class.
+ *
+ * `computationStatus` and `isLocked` are what the write responses already carry, so the
+ * canonical read carries the same. The export normalizers ignore both and reload the stages
+ * themselves.
  *
  * @implements ProviderInterface<Trip>
  */
@@ -25,6 +31,8 @@ final readonly class TripGpxProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private ComputationTrackerInterface $computationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -36,14 +44,31 @@ final readonly class TripGpxProvider implements ProviderInterface
     {
         $id = $uriVariables['id'] ?? '';
 
-        $stages = $this->tripStateManager->getStages($id);
-
-        if (null === $stages) {
+        $request = $this->tripStateManager->getRequest($id);
+        if (!$request instanceof TripRequest) {
             throw new TripNotFoundException();
         }
 
-        $context['trip_stages'] = $stages;
+        // The two reads do not have the same prerequisites. A file with no stages in it is not
+        // a file, so the export still refuses; but a trip whose stages have not been computed
+        // yet is a perfectly ordinary trip, and its address has to answer — `POST /trips`
+        // hands out that `@id` before any stage exists.
+        if ('jsonld' !== $this->formatOf($context) && null === $this->tripStateManager->getStages($id)) {
+            throw new TripNotFoundException();
+        }
 
-        return new Trip($id);
+        return new Trip(
+            id: $id,
+            computationStatus: $this->computationTracker->getStatuses($id) ?? [],
+            isLocked: $this->tripLocker->isLocked($request),
+        );
+    }
+
+    /** @param array<string, mixed> $context */
+    private function formatOf(array $context): string
+    {
+        $request = $context['request'] ?? null;
+
+        return $request instanceof Request ? ($request->getRequestFormat('jsonld') ?? 'jsonld') : 'jsonld';
     }
 }
