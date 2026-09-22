@@ -111,7 +111,17 @@ final readonly class HealthController
         // the core trip flow which lives entirely in PG-app. An unreachable or
         // unprovisioned reference DB degrades features, it never takes readiness
         // down (ADR-040/060).
-        $required = ['postgres', 'redis', 'mercure', 'valhalla'];
+        //
+        // mercure is non-required for the same reason, since ADR-065: it is the
+        // invalidation channel, not a source of truth. Everything it carries is
+        // retrievable by GET, a publish failure no longer fails the work that produced
+        // it, and a client that misses an event resynchronises on its next read. An
+        // unreachable hub costs latency, not correctness.
+        //
+        // messenger is required, and it is the point of this list: the whole product
+        // answers 202 and delegates to a worker, so no live consumer means nothing the
+        // API accepts will ever complete (ADR-075).
+        $required = ['postgres', 'redis', 'valhalla', 'messenger'];
         $status = 'ok';
         foreach ($required as $dep) {
             if ('ok' !== ($deps[$dep]['status'] ?? 'down')) {

@@ -143,8 +143,12 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
-    public function readinessReturns503WhenMercureIsUnreachable(): void
+    public function readinessReportsMercureDownWithoutFlippingStatus(): void
     {
+        // Mercure is the invalidation channel, not a source of truth (ADR-065): everything
+        // it carries is retrievable by GET, and publishing no longer fails the work that
+        // produced the event. An unreachable hub is reported and costs latency, not
+        // correctness — it must not take the whole API down.
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 0, 'error' => 'connection refused']),
@@ -152,10 +156,48 @@ final class HealthControllerTest extends ApiTestCase
 
         $response = $this->client->request('GET', '/api/health');
 
+        $this->assertResponseStatusCodeSame(200);
+
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertSame('down', $data['deps']['mercure']['status']);
+    }
+
+    #[Test]
+    public function readinessTurnsDegradedWhenNoWorkerIsAlive(): void
+    {
+        // The criterion this whole probe exists for (#510). Nothing consumes, so nothing
+        // the API accepts will ever finish — and until now that answered 200.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+        $this->clearWorkerHeartbeats();
+
+        $response = $this->client->request('GET', '/api/health');
+
         $this->assertResponseStatusCodeSame(503);
 
         $data = $response->toArray(false);
-        $this->assertSame('down', $data['deps']['mercure']['status']);
+        $this->assertSame('degraded', $data['status']);
+        $this->assertSame('down', $data['deps']['messenger']['status']);
+        $this->assertSame(0, $data['deps']['messenger']['workers_alive']);
+    }
+
+    #[Test]
+    public function readinessTurnsDegradedWhenTheLastBeatIsOlderThanTheAliveWindow(): void
+    {
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+        $this->clearWorkerHeartbeats();
+        $this->stubStaleWorkerHeartbeat();
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertSame(0, $response->toArray(false)['deps']['messenger']['workers_alive']);
     }
 
     #[Test]
@@ -488,5 +530,29 @@ final class HealthControllerTest extends ApiTestCase
         \assert(\is_string($redisUrl), 'REDIS_URL must be set for the health suite');
 
         return new WorkerHeartbeat(new RedisHealthClientFactory($redisUrl), 'test');
+    }
+
+    private function clearWorkerHeartbeats(): void
+    {
+        $heartbeat = $this->workerHeartbeat();
+        $this->testRedis()->del($heartbeat->key());
+    }
+
+    private function stubStaleWorkerHeartbeat(): void
+    {
+        $heartbeat = $this->workerHeartbeat();
+        $this->testRedis()->zAdd(
+            $heartbeat->key(),
+            time() - WorkerHeartbeat::ALIVE_WINDOW - 1,
+            'worker-that-stopped-beating',
+        );
+    }
+
+    private function testRedis(): \Redis
+    {
+        $redisUrl = $_SERVER['REDIS_URL'] ?? $_ENV['REDIS_URL'] ?? null;
+        \assert(\is_string($redisUrl), 'REDIS_URL must be set for the health suite');
+
+        return (new RedisHealthClientFactory($redisUrl))->create();
     }
 }
