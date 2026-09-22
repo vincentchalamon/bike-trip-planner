@@ -13,10 +13,11 @@ use ApiPlatform\Metadata\ApiProperty;
  * dates, distance/stage counts, title, and computed status.
  * Full trip data (stages, computation status…) is fetched separately on the detail page.
  *
- * Status values:
- *   - "draft"     : trip has no computed stages yet (no analysis run)
+ * Status values, derived by {@see \App\State\TripCollectionProvider::computeStatus()}:
+ *   - "draft"     : nothing computed yet, or nothing succeeded and no stage was persisted
  *   - "analyzing" : analysis is currently in progress (computations pending/running)
- *   - "analyzed"  : all computations are done or failed (full results available)
+ *   - "analyzed"  : results are available
+ *   - "failed"    : every computation failed, but stages from an earlier run remain
  */
 final readonly class TripListItem
 {

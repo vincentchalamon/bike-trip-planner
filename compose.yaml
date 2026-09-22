@@ -474,11 +474,13 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    # volatile-lru protects the Messenger queue (its list keys carry no TTL, so
-    # they are never evicted) while letting the TTL-bearing OSM/weather caches be
-    # evicted under pressure — so enqueue (LPUSH) writes keep succeeding instead of
-    # failing with OOM as they would under noeviction. maxmemory sits below the
-    # container limit to leave room for Redis overhead.
+    # volatile-lru protects the Messenger queue (the transport's streams carry no TTL,
+    # so they are never evicted) while letting the TTL-bearing OSM/weather caches be
+    # evicted under pressure — so enqueue (XADD) writes keep succeeding instead of
+    # failing with OOM as they would under noeviction. The worker heartbeat set does
+    # carry a TTL and is therefore evictable, but it is rewritten every few seconds and
+    # holds one member per replica, so it is the last candidate the LRU would pick.
+    # maxmemory sits below the container limit to leave room for Redis overhead.
     # See docs/runbooks/redis-out-of-memory.md and issue #566.
     command:
       - redis-server

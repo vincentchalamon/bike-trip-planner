@@ -63,9 +63,17 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
-        // Use Redis-backed repository in tests (no database available in PHPUnit).
-        // TODO: add Foundry-based KernelTestCase integration tests with a real test database
-        // to cover JSONB round-trips, UUID handling, and migration correctness (#56).
+        // Keeps the transient repository as the default in tests. The old justification —
+        // "no database available in PHPUnit" — has been false for a long time: ApiTestCase
+        // boots Foundry against a real Postgres, api/src/Factory holds the factories, and
+        // tests/Integration/Repository covers the JSONB round-trips and UUID handling the
+        // TODO here used to ask for.
+        //
+        // What is still true is that this alias is load-bearing, and quietly so: swapping it
+        // would send the whole suite through Doctrine at once, and code has since been built
+        // around it — PersistingComputationTracker writes through ComputationStatusStore
+        // precisely because this alias would otherwise keep its durability untested. Removing
+        // it is its own piece of work, not a comment fix.
         $services->alias(TripRequestRepositoryInterface::class, RedisTripRequestRepository::class);
     } else {
         $services->alias(TripUpdatePublisherInterface::class, TripUpdatePublisher::class);
