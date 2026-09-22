@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notification;
 
+use App\Enum\ComputationStatus;
 use App\Enum\NotificationCategory;
 use App\Mercure\MercureSubscriptionCheckerInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -45,7 +46,9 @@ final readonly class AnalysisNotifier
         }
 
         $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
-        $key = \in_array('failed', $statuses, true) ? 'failed' : 'done';
+        $key = \in_array(ComputationStatus::FAILED->value, $statuses, true)
+            ? ComputationStatus::FAILED->value
+            : ComputationStatus::DONE->value;
 
         $this->dispatcher->dispatch(
             $ownerId,

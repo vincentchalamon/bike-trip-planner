@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Concurrency\TripVersionEtag;
@@ -190,30 +191,30 @@ final readonly class TripDetailProvider implements ProviderInterface
         $hasDone = false;
         $hasFailed = false;
         foreach ($present as $status) {
-            if ('pending' === $status || 'running' === $status) {
-                return 'running';
+            if (!ComputationStatus::tryFrom($status)?->isSettled()) {
+                return ComputationStatus::RUNNING->value;
             }
 
-            if ('done' === $status) {
+            if (ComputationStatus::DONE->value === $status) {
                 $hasDone = true;
-            } elseif ('failed' === $status) {
+            } elseif (ComputationStatus::FAILED->value === $status) {
                 $hasFailed = true;
             }
         }
 
         // All present statuses are terminal here (no pending/running returned above).
         if ($hasDone) {
-            return 'done';
+            return ComputationStatus::DONE->value;
         }
 
         if ($hasFailed) {
-            return 'failed';
+            return ComputationStatus::FAILED->value;
         }
 
         // Nothing succeeded and nothing failed: every computation in this block was abandoned
         // when the trip moved past it (ADR-073). Not a failure — there is nothing to retry and
         // nothing broke.
-        return 'superseded';
+        return ComputationStatus::SUPERSEDED->value;
     }
 
     /**
@@ -243,7 +244,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             new \DateTimeImmutable('today', new \DateTimeZone('UTC')),
         );
 
-        if (WeatherAvailability::UNAVAILABLE === $availability && !\in_array($weatherStatus, ['done', 'failed'], true)) {
+        if (WeatherAvailability::UNAVAILABLE === $availability && !\in_array($weatherStatus, [ComputationStatus::DONE->value, ComputationStatus::FAILED->value], true)) {
             return null;
         }
 

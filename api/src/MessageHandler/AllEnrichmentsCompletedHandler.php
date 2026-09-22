@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Enum\ComputationStatus;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
@@ -55,9 +56,9 @@ final readonly class AllEnrichmentsCompletedHandler
 
         $this->logger->info('All enrichments completed for trip {tripId} ({completed} done, {failed} failed, {superseded} superseded of {total}).', [
             'tripId' => $tripId,
-            'completed' => $counts['done'] ?? 0,
-            'failed' => $counts['failed'] ?? 0,
-            'superseded' => $counts['superseded'] ?? 0,
+            'completed' => $counts[ComputationStatus::DONE->value] ?? 0,
+            'failed' => $counts[ComputationStatus::FAILED->value] ?? 0,
+            'superseded' => $counts[ComputationStatus::SUPERSEDED->value] ?? 0,
             'total' => \count($statuses),
         ]);
 

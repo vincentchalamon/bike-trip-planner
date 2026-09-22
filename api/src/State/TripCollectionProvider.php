@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Enum\ComputationStatus;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\Pagination\Pagination;
@@ -178,13 +179,13 @@ final readonly class TripCollectionProvider implements ProviderInterface
         $hasDone = false;
         $hasFailed = false;
         foreach ($statuses as $status) {
-            if ('pending' === $status || 'running' === $status) {
+            if (!ComputationStatus::tryFrom($status)?->isSettled()) {
                 return 'analyzing';
             }
 
-            if ('done' === $status) {
+            if (ComputationStatus::DONE->value === $status) {
                 $hasDone = true;
-            } elseif ('failed' === $status) {
+            } elseif (ComputationStatus::FAILED->value === $status) {
                 $hasFailed = true;
             }
         }
