@@ -163,9 +163,9 @@ final readonly class TripDetailProvider implements ProviderInterface
      *   - `$statuses === null`                  → null (nothing tracked, e.g. expired TTL)
      *   - no block computation present at all    → null (front falls back to data presence)
      *   - at least one `pending` or `running`    → 'running'
-     *   - all present are `done`                 → 'done'
-     *   - all present are terminal, ≥1 `failed`,
-     *     0 `done`                               → 'failed'
+     *   - all terminal, ≥1 `done`                → 'done'
+     *   - all terminal, 0 `done`, ≥1 `failed`    → 'failed'
+     *   - all terminal, only `superseded`        → 'superseded'
      *
      * @param list<ComputationName>      $computationNames
      * @param array<string, string>|null $statuses
@@ -202,11 +202,18 @@ final readonly class TripDetailProvider implements ProviderInterface
         }
 
         // All present statuses are terminal here (no pending/running returned above).
-        if ($hasFailed && !$hasDone) {
+        if ($hasDone) {
+            return 'done';
+        }
+
+        if ($hasFailed) {
             return 'failed';
         }
 
-        return 'done';
+        // Nothing succeeded and nothing failed: every computation in this block was abandoned
+        // when the trip moved past it (ADR-073). Not a failure — there is nothing to retry and
+        // nothing broke.
+        return 'superseded';
     }
 
     /**

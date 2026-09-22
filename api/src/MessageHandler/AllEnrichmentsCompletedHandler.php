@@ -38,9 +38,13 @@ final readonly class AllEnrichmentsCompletedHandler
     {
         $tripId = $message->tripId;
 
-        if (!$this->computationTracker->claimReadyPublication($tripId)) {
+        // Claimed per generation: the claim used to be one key per trip that nothing ever
+        // cleared, so the first generation to get here silenced every generation after it and
+        // an edited trip never announced itself ready again (ADR-073).
+        if (!$this->computationTracker->claimReadyPublication($tripId, $message->generation)) {
             $this->logger->info('AllEnrichmentsCompleted already handled for trip {tripId} — skipping duplicate.', [
                 'tripId' => $tripId,
+                'generation' => $message->generation,
             ]);
 
             return;
@@ -49,10 +53,11 @@ final readonly class AllEnrichmentsCompletedHandler
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
         $counts = array_count_values($statuses);
 
-        $this->logger->info('All enrichments completed for trip {tripId} ({completed} done, {failed} failed of {total}).', [
+        $this->logger->info('All enrichments completed for trip {tripId} ({completed} done, {failed} failed, {superseded} superseded of {total}).', [
             'tripId' => $tripId,
             'completed' => $counts['done'] ?? 0,
             'failed' => $counts['failed'] ?? 0,
+            'superseded' => $counts['superseded'] ?? 0,
             'total' => \count($statuses),
         ]);
 

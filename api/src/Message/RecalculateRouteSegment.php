@@ -11,7 +11,7 @@ namespace App\Message;
  * number of intervening edits, and a stale index would rewrite the geometry of a
  * different stage — a silent corruption rather than a lost write (ADR-066).
  */
-final readonly class RecalculateRouteSegment
+final readonly class RecalculateRouteSegment implements BelongsToATripGeneration
 {
     public function __construct(
         public string $tripId,

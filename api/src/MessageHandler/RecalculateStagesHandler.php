@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
@@ -30,6 +31,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
         private TripAnalysisDispatcher $analysisDispatcher,
+        private ComputationSupersession $supersession,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
     }
@@ -38,16 +40,6 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
     {
         $tripId = $message->tripId;
         $generation = $message->generation;
-
-        if ($this->isStale($tripId, $generation)) {
-            $this->logger->info('Discarding stale RecalculateStages message.', [
-                'tripId' => $tripId,
-                'messageGeneration' => $generation,
-                'currentGeneration' => $this->generationTracker->current($tripId),
-            ]);
-
-            return;
-        }
 
         $stages = $this->tripStateManager->getStages($tripId);
 
@@ -93,11 +85,12 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // how a merge left seven groups holding alerts drawn from the pre-merge line — and
         // the senders made up the difference themselves, dispatching the overlap twice
         // (ADR-070).
+        $dispatched = [];
         if ([] !== $affected && [] !== $message->triggers) {
             $request = $this->tripStateManager->getRequest($tripId);
             \assert($request instanceof TripRequest);
 
-            $this->analysisDispatcher->dispatchFor(
+            $dispatched = $this->analysisDispatcher->dispatchFor(
                 $tripId,
                 $request,
                 $message->triggers,
@@ -110,5 +103,10 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
                 except: $message->skipAccommodationScan ? [ComputationName::ACCOMMODATIONS] : [],
             );
         }
+
+        // The seven structural edits all bump the generation inside `mutateStages()` and all
+        // funnel here, so this is where what they stranded gets settled: everything that was
+        // still in flight and is not in the set just re-dispatched (ADR-073).
+        $this->supersession->settleWhatWasNotRedispatched($tripId, $dispatched);
     }
 }

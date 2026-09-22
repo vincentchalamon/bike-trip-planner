@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service;
 
 use App\ComputationTracker\ComputationTracker;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\AllEnrichmentsCompleted;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -84,8 +85,69 @@ final class TripCompletionGateTest extends TestCase
         $this->gate($publisher, $bus)->evaluate('unknown-trip');
     }
 
-    private function gate(TripUpdatePublisherInterface $publisher, MessageBusInterface $bus): TripCompletionGate
+    /**
+     * A computation the trip moved past is terminal, so it closes the gate like any other —
+     * which is the whole point: left `pending`, one superseded message made the settled
+     * condition unreachable for good (ADR-073).
+     */
+    #[Test]
+    public function aSupersededComputationSettlesTheGateLikeAnyOtherTerminalOne(): void
     {
-        return new TripCompletionGate($this->tracker, $publisher, $bus);
+        $this->tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::ROUTE,
+            ComputationName::STAGES,
+        ]);
+        $this->tracker->markDone(self::TRIP_ID, ComputationName::ROUTE);
+        $this->tracker->markSupersededUnlessSettled(self::TRIP_ID, ComputationName::STAGES);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publishTripComplete')
+            ->with(self::TRIP_ID, ['route' => 'done', 'stages' => 'superseded']);
+
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects($this->once())
+            ->method('dispatch')
+            ->willReturn(new Envelope(new AllEnrichmentsCompleted(self::TRIP_ID)));
+
+        $this->gate($publisher, $bus)->evaluate(self::TRIP_ID);
+    }
+
+    /**
+     * The terminal message names the generation that settled, so the publication can be
+     * claimed per generation instead of once per trip.
+     */
+    #[Test]
+    public function theTerminalMessageCarriesTheGenerationThatSettled(): void
+    {
+        $this->tracker->initializeComputations(self::TRIP_ID, [ComputationName::ROUTE]);
+        $this->tracker->markDone(self::TRIP_ID, ComputationName::ROUTE);
+
+        $dispatched = null;
+        $bus = $this->createStub(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched = $message;
+
+                return new Envelope($message);
+            },
+        );
+
+        $this->gate($this->createStub(TripUpdatePublisherInterface::class), $bus, generation: 7)
+            ->evaluate(self::TRIP_ID);
+
+        $this->assertInstanceOf(AllEnrichmentsCompleted::class, $dispatched);
+        $this->assertSame(7, $dispatched->generation);
+    }
+
+    private function gate(
+        TripUpdatePublisherInterface $publisher,
+        MessageBusInterface $bus,
+        ?int $generation = null,
+    ): TripCompletionGate {
+        $generations = $this->createStub(TripGenerationTrackerInterface::class);
+        $generations->method('current')->willReturn($generation);
+
+        return new TripCompletionGate($this->tracker, $publisher, $bus, $generations);
     }
 }

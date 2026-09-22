@@ -248,6 +248,23 @@ function dispatchEvent(
       }
       break;
     }
+
+    case "computations_superseded":
+      // No toast: nothing failed, and the edit that superseded these is the user's own. The
+      // spinner has to stop all the same — until ADR-073 these computations stayed `pending`
+      // for good and it never did.
+      //
+      // Cleared rather than marked failed: the block has no answer, which is what `null`
+      // means here. The reducer has already recorded `superseded` in `computationStatus`,
+      // where the outcome belongs. `setProcessing` is left alone — the generation that
+      // superseded them is running right now.
+      if (
+        event.data.computations.includes("weather") ||
+        event.data.computations.includes("wind")
+      ) {
+        ui.setBlockStatus("weather", null);
+      }
+      break;
   }
 }
 

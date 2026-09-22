@@ -1874,10 +1874,10 @@ export interface components {
              * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.
              * @enum {string|null}
              */
-            weatherStatus?: "pending" | "running" | "done" | "failed" | null;
-            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. */
+            weatherStatus?: "pending" | "running" | "done" | "failed" | "superseded" | null;
+            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. `superseded` means the trip moved on before those computations settled and they were abandoned — nothing failed, and nothing is still running. */
             categoryStatus?: {
-                [key: string]: "running" | "done" | "failed";
+                [key: string]: "running" | "done" | "failed" | "superseded";
             };
             /** @description Serialized stage DTOs */
             stages?: {
@@ -2251,10 +2251,10 @@ export interface components {
              * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked. Superseded by `categoryStatus`, which carries this value under the `weather` key.
              * @enum {string|null}
              */
-            weatherStatus?: "pending" | "running" | "done" | "failed" | null;
-            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. */
+            weatherStatus?: "pending" | "running" | "done" | "failed" | "superseded" | null;
+            /** @description Status of each enrichment family, keyed by category. A category is absent when none of its computations is tracked. `superseded` means the trip moved on before those computations settled and they were abandoned — nothing failed, and nothing is still running. */
             categoryStatus?: {
-                [key: string]: "running" | "done" | "failed";
+                [key: string]: "running" | "done" | "failed" | "superseded";
             };
             /** @description Serialized stage DTOs */
             stages?: {

@@ -51,7 +51,6 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
     public function __invoke(CheckBorderCrossing $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -133,7 +132,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 
     /**

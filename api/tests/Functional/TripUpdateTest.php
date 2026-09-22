@@ -487,4 +487,46 @@ final class TripUpdateTest extends ApiTestCase
             ],
         ]);
     }
+
+    /**
+     * The assertion this whole change exists for (ADR-073).
+     *
+     * A `PATCH` mid-analysis bumps the generation, which invalidates every message in flight,
+     * and re-arms only the subset its resolver names. Everything else was abandoned. Until
+     * now nothing said so: those computations stayed `pending`, `completed + failed === total`
+     * became unreachable, and the trip never announced itself complete or ready again — the
+     * loader spun on both clients for the rest of the trip's life.
+     */
+    #[Test]
+    public function editingDuringAnAnalysisSettlesTheWorkItAbandons(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $container = self::getContainer();
+        /** @var ComputationTrackerInterface $tracker */
+        $tracker = $container->get(ComputationTrackerInterface::class);
+
+        // Mid-analysis: the route is in, everything else is still in flight.
+        $tracker->markDone(self::TRIP_ID, ComputationName::ROUTE);
+        $tracker->markRunning(self::TRIP_ID, ComputationName::TERRAIN);
+
+        $before = $tracker->getProgress(self::TRIP_ID);
+        $this->assertNotSame($before['total'], $before['settled'], 'Precondition: the analysis has not settled.');
+
+        // `fatigueFactor` drives the pacing, so this re-runs the stages and their enrichments
+        // — but not the terrain scan already in flight.
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
+            'json' => ['fatigueFactor' => 0.8],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        $statuses = $tracker->getStatuses(self::TRIP_ID) ?? [];
+        $this->assertSame('superseded', $statuses['terrain'] ?? null, 'The terrain scan was abandoned and must say so.');
+        $this->assertSame('done', $statuses['route'] ?? null, 'A computation that had already settled is left alone.');
+
+        // And the trip can reach a terminal state again, which is the point.
+        $this->assertNotContains('pending', array_values(array_diff_key($statuses, ['stages' => null])));
+    }
 }

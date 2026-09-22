@@ -68,7 +68,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
      * Runs a `pacing` recompute with the given tracker progress and returns the
      * dispatched message class names.
      *
-     * @param array{completed: int, failed: int, total: int} $progress
+     * @param array{completed: int, failed: int, settled: int, total: int} $progress
      *
      * @return list<class-string>
      */
@@ -138,7 +138,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         );
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 16, 'failed' => 0, 'total' => 16]);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 16, 'failed' => 0, 'settled' => 16, 'total' => 16]);
 
         return new TripBatchRecomputeProcessor(
             $tripStateManager,
@@ -187,7 +187,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         // Some computations are still pending: a minimal recompute would strand
         // the in-flight ones (the generation bump discards them), so the full
         // enrichment pipeline must be re-dispatched instead (recette #649).
-        $dispatched = $this->recomputeWithProgress(['completed' => 7, 'failed' => 0, 'total' => 16]);
+        $dispatched = $this->recomputeWithProgress(['completed' => 7, 'failed' => 0, 'settled' => 7, 'total' => 16]);
 
         self::assertContains(ScanPois::class, $dispatched, 'Full pipeline must run while the analysis is in flight.');
         self::assertNotContains(RecalculateStages::class, $dispatched, 'Minimal resolver path must be skipped while in flight.');
@@ -198,7 +198,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
     {
         // Every computation has settled: the minimal, dependency-resolved
         // recompute is enough (and avoids re-running the whole pipeline).
-        $dispatched = $this->recomputeWithProgress(['completed' => 16, 'failed' => 0, 'total' => 16]);
+        $dispatched = $this->recomputeWithProgress(['completed' => 16, 'failed' => 0, 'settled' => 16, 'total' => 16]);
 
         self::assertContains(RecalculateStages::class, $dispatched, 'Settled trip uses the minimal resolver (RecalculateStages for pacing).');
         self::assertNotContains(ScanPois::class, $dispatched, 'Full pipeline must not run for a settled trip.');
@@ -210,7 +210,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         // getProgress() returns total=0 before initializeComputations() is called —
         // the guard must treat this the same as "settled" and fall through to the
         // minimal resolver, not the full pipeline.
-        $dispatched = $this->recomputeWithProgress(['completed' => 0, 'failed' => 0, 'total' => 0]);
+        $dispatched = $this->recomputeWithProgress(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 0]);
 
         self::assertContains(RecalculateStages::class, $dispatched, 'Uninitialized tracker must use the minimal resolver.');
         self::assertNotContains(ScanPois::class, $dispatched, 'Full pipeline must not run when total=0.');

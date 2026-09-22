@@ -458,6 +458,18 @@ export type MercureEvent =
       data: { computation: string; message: string; retryable: boolean };
     }
   | {
+      // Signal, not data: the trip moved and these computations were abandoned before they
+      // settled (ADR-073). Not an error — nothing broke, nothing will be retried, and the
+      // envelope's `version` is the one that superseded them. Published once per generation
+      // bump with the whole list, so a client stops waiting on them in one go.
+      //
+      // `categories` is the granularity both clients render a per-block spinner at; it comes
+      // from the server rather than being derived here, so `ComputationName::category()` is
+      // not re-implemented in TypeScript.
+      type: "computations_superseded";
+      data: { computations: string[]; categories: string[] };
+    }
+  | {
       type: "trip_complete";
       data: { computationStatus: Record<string, string> };
     }
@@ -554,6 +566,7 @@ export const MERCURE_EVENT_TYPES = [
   "stage_updated",
   "validation_error",
   "computation_error",
+  "computations_superseded",
 ] as const satisfies readonly MercureEvent["type"][];
 
 export type MercureEventType = (typeof MERCURE_EVENT_TYPES)[number];

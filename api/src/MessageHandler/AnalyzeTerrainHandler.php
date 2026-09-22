@@ -54,7 +54,6 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
     public function __invoke(AnalyzeTerrain $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages || [] === $stages) {
@@ -109,7 +108,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
                 'alertsByStage' => $renderedByStage,
             ]);
-        }, $generation);
+        });
     }
 
     /**

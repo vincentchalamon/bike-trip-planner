@@ -56,7 +56,6 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
     public function __invoke(CheckFords $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -114,6 +113,6 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::FORD_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 }

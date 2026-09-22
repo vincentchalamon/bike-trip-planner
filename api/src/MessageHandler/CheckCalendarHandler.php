@@ -67,7 +67,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     public function __invoke(CheckCalendar $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $request = $this->tripStateManager->getRequest($tripId);
         $stages = $this->tripStateManager->getStages($tripId);
 
@@ -116,7 +115,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::CALENDAR_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 
     /**

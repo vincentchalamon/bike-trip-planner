@@ -37,7 +37,6 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
     public function __invoke(RecalculateRouteSegment $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -68,6 +67,6 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
                     $result->coordinates,
                 ),
             ]);
-        }, $generation);
+        });
     }
 }

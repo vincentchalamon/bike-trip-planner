@@ -6,10 +6,12 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\Service\EnrichmentMessageFactory;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripCompletionGate;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -47,7 +49,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         ?TripGenerationTrackerInterface $generationTracker = null,
     ): RecalculateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         return new RecalculateStagesHandler(
             $computationTracker,
@@ -58,6 +60,15 @@ final class RecalculateStagesHandlerTest extends TestCase
             $messageBus,
             $this->createAlertRenderer(),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
+            // A real one, inert: it is `final readonly` so it cannot be doubled, and with a
+            // tracker that knows no statuses it settles nothing. What it does is covered by
+            // ComputationSupersessionTest.
+            new ComputationSupersession(
+                $computationTracker,
+                $publisher,
+                new TripCompletionGate($computationTracker, $publisher, $messageBus, $this->createStub(TripGenerationTrackerInterface::class)),
+                new NullLogger(),
+            ),
         );
     }
 
@@ -120,25 +131,6 @@ final class RecalculateStagesHandlerTest extends TestCase
         );
 
         $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: []));
-    }
-
-    #[Test]
-    public function staleMessageIsDiscardedWithoutProcessing(): void
-    {
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->never())->method('publish');
-
-        $messageBus = $this->createMock(MessageBusInterface::class);
-        $messageBus->expects($this->never())->method('dispatch');
-
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('current')->willReturn(5);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $messageBus, $generationTracker);
-
-        $handler(new RecalculateStages('trip-1', [], generation: 3));
     }
 
     /**

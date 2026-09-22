@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\EventListener;
 
 use App\ComputationTracker\ComputationTracker;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\EventListener\ComputationFailureSubscriber;
 use App\Message\AllEnrichmentsCompleted;
@@ -66,7 +67,7 @@ final class ComputationFailureSubscriberTest extends TestCase
 
         self::assertSame('failed', $this->statusOf(ComputationName::TERRAIN));
         self::assertSame(
-            ['completed' => 1, 'failed' => 1, 'total' => 2],
+            ['completed' => 1, 'failed' => 1, 'settled' => 2, 'total' => 2],
             $this->tracker->getProgress(self::TRIP_ID),
         );
     }
@@ -124,7 +125,7 @@ final class ComputationFailureSubscriberTest extends TestCase
         self::assertSame('failed', $this->statusOf(ComputationName::WIND), 'wind cascades when weather fails');
         self::assertSame('failed', $this->statusOf(ComputationName::FORDS), 'fords cascades when weather fails');
         self::assertSame(
-            ['completed' => 1, 'failed' => 3, 'total' => 4],
+            ['completed' => 1, 'failed' => 3, 'settled' => 4, 'total' => 4],
             $this->tracker->getProgress(self::TRIP_ID),
         );
     }
@@ -191,7 +192,7 @@ final class ComputationFailureSubscriberTest extends TestCase
     {
         return new ComputationFailureSubscriber(
             $this->tracker,
-            new TripCompletionGate($this->tracker, $publisher, $bus),
+            new TripCompletionGate($this->tracker, $publisher, $bus, $this->createStub(TripGenerationTrackerInterface::class)),
             new NullLogger(),
         );
     }

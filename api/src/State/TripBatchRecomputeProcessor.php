@@ -101,7 +101,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         // mid-analysis. Re-run the full enrichment pipeline for the new
         // generation instead so nothing is stranded and the gate can settle.
         $progress = $this->computationTracker->getProgress($tripId);
-        if ($progress['total'] > 0 && $progress['completed'] + $progress['failed'] < $progress['total']) {
+        if ($progress['total'] > 0 && $progress['settled'] < $progress['total']) {
             $this->analysisDispatcher->dispatch($tripId, $request, $generation);
 
             return new Trip(id: $tripId);

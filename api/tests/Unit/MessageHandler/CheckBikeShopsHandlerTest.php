@@ -74,7 +74,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
     ): CheckBikeShopsHandler {
         if (!$computationTracker instanceof ComputationTrackerInterface) {
             $stub = $this->createStub(ComputationTrackerInterface::class);
-            $stub->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+            $stub->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
             $computationTracker = $stub;
         }
 

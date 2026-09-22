@@ -125,7 +125,7 @@ final class CheckCalendarHandlerTest extends TestCase
         AdminBoundaryRepositoryInterface $adminBoundaryRepository,
     ): CheckCalendarHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $stubTranslator = $this->createStub(TranslatorInterface::class);
         $stubTranslator->method('trans')->willReturnCallback(

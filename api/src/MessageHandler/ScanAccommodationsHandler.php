@@ -63,7 +63,6 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     public function __invoke(ScanAccommodations $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $radiusMeters = $message->radiusMeters;
         $stages = $this->tripStateManager->getStages($tripId);
 
@@ -252,7 +251,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             foreach ($stagesToProcess as $stage) {
                 $this->tripStateManager->updateStageAccommodations($tripId, $stage->id, array_values($stage->accommodations));
             }
-        }, $generation);
+        });
     }
 
     /**

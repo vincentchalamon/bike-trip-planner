@@ -6,7 +6,7 @@ namespace App\Message;
 
 use App\Enum\ComputationTrigger;
 
-final readonly class RecalculateStages
+final readonly class RecalculateStages implements BelongsToATripGeneration
 {
     /**
      * Recomputes the stages affected by an edit.

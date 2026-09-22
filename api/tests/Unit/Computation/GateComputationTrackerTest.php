@@ -38,7 +38,7 @@ final class GateComputationTrackerTest extends TestCase
     public function getProgressReturnsZeroesForUnknownTrip(): void
     {
         self::assertSame(
-            ['completed' => 0, 'failed' => 0, 'total' => 0],
+            ['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 0],
             $this->tracker->getProgress('unknown-trip'),
         );
     }
@@ -53,7 +53,7 @@ final class GateComputationTrackerTest extends TestCase
         ]);
 
         self::assertSame(
-            ['completed' => 0, 'failed' => 0, 'total' => 3],
+            ['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 3],
             $this->tracker->getProgress('trip-1'),
         );
     }
@@ -72,7 +72,7 @@ final class GateComputationTrackerTest extends TestCase
         // WEATHER still pending
 
         self::assertSame(
-            ['completed' => 1, 'failed' => 1, 'total' => 3],
+            ['completed' => 1, 'failed' => 1, 'settled' => 2, 'total' => 3],
             $this->tracker->getProgress('trip-1'),
         );
     }
@@ -89,7 +89,7 @@ final class GateComputationTrackerTest extends TestCase
         $this->tracker->markRunning('trip-1', ComputationName::STAGES);
 
         self::assertSame(
-            ['completed' => 0, 'failed' => 0, 'total' => 2],
+            ['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 2],
             $this->tracker->getProgress('trip-1'),
         );
     }
@@ -107,11 +107,11 @@ final class GateComputationTrackerTest extends TestCase
         $this->tracker->markFailed('trip-2', ComputationName::ROUTE);
 
         self::assertSame(
-            ['completed' => 1, 'failed' => 0, 'total' => 1],
+            ['completed' => 1, 'failed' => 0, 'settled' => 1, 'total' => 1],
             $this->tracker->getProgress('trip-1'),
         );
         self::assertSame(
-            ['completed' => 0, 'failed' => 1, 'total' => 2],
+            ['completed' => 0, 'failed' => 1, 'settled' => 1, 'total' => 2],
             $this->tracker->getProgress('trip-2'),
         );
     }

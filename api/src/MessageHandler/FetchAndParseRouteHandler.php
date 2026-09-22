@@ -128,6 +128,6 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             }
 
             $this->messageBus->dispatch(new GenerateStages($tripId, $generation));
-        }, $generation);
+        });
     }
 }

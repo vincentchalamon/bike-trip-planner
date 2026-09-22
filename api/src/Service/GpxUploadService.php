@@ -8,6 +8,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -41,6 +42,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         private GpxRouteParserInterface $gpxParser,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
+        private TripGenerationTrackerInterface $generationTracker,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
@@ -125,7 +127,12 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         $status = $this->storeStructuralStages($tripId, $stages);
 
         // Hand off the network/LLM enrichments to the workers (unchanged async fan-out).
-        $this->analysisDispatcher->dispatch($tripId, $request);
+        //
+        // Stamped with the trip's first generation, as TripCreateProcessor does. Without it
+        // every message of a GPX-imported trip carried `generation: null`, which the staleness
+        // guard reads as "never stale" — so half the product's trips had no guard at all, and
+        // an edit made during their analysis landed on top of workers still writing (ADR-073).
+        $this->analysisDispatcher->dispatch($tripId, $request, $this->generationTracker->current($tripId));
 
         return [
             'tripId' => $tripId,

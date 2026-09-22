@@ -60,7 +60,6 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
     public function __invoke(AnalyzeWind $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -206,7 +205,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
-        }, $generation);
+        });
     }
 
     /**

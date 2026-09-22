@@ -193,7 +193,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new AnalyzeWind($tripId, $generation));
             // Ford severity depends on the per-stage forecast, so run it after weather.
             $this->messageBus->dispatch(new CheckFords($tripId, $generation));
-        }, $generation);
+        });
     }
 
     /**

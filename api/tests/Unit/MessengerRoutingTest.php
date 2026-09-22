@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Enum\ComputationName;
+use App\Message\BelongsToATripGeneration;
 use App\State\AnalyzeTripProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -99,26 +100,81 @@ final class MessengerRoutingTest extends TestCase
     }
 
     /**
+     * Every message that carries a trip declares the generation it was built for.
+     *
+     * Without the interface the staleness guard cannot see the message, and a message it
+     * cannot see is one that is never discarded — which is exactly what happened to the whole
+     * GPX fan-out, silently, for as long as the comparison lived inside the handlers
+     * (ADR-073).
+     */
+    #[Test]
+    public function everyTripScopedMessageDeclaresItsGeneration(): void
+    {
+        $missing = [];
+        foreach ($this->declaredMessageClasses() as $class) {
+            $reflection = new \ReflectionClass($class);
+
+            if (!$reflection->hasProperty('tripId') || $reflection->implementsInterface(BelongsToATripGeneration::class)) {
+                continue;
+            }
+
+            $missing[] = $reflection->getShortName();
+        }
+
+        self::assertSame([], $missing, \sprintf(
+            'Message class(es) %s carry a tripId but do not implement %s, so StaleMessageMiddleware cannot tell whether the trip has moved past them.',
+            implode(', ', $missing),
+            BelongsToATripGeneration::class,
+        ));
+    }
+
+    /**
      * Short class names of every message declared in api/src/Message.
      *
      * @return list<string>
      */
     private function declaredMessages(): array
     {
-        $dir = \dirname(__DIR__, 2).'/src/Message';
-
-        self::assertDirectoryExists($dir, 'api/src/Message not found.');
-
-        $names = [];
-        foreach (glob($dir.'/*.php') ?: [] as $file) {
-            $names[] = basename($file, '.php');
-        }
-
-        self::assertNotSame([], $names, 'No message class found in api/src/Message — the scan is broken, not the code.');
+        $names = array_map(
+            static fn (string $class): string => new \ReflectionClass($class)->getShortName(),
+            $this->declaredMessageClasses(),
+        );
 
         sort($names);
 
         return $names;
+    }
+
+    /**
+     * Fully-qualified names of the instantiable messages in api/src/Message.
+     *
+     * Reflected rather than read off the filenames: the directory also holds the
+     * {@see BelongsToATripGeneration} interface, which is not a message and must not be
+     * demanded a transport.
+     *
+     * @return list<class-string>
+     */
+    private function declaredMessageClasses(): array
+    {
+        $dir = \dirname(__DIR__, 2).'/src/Message';
+
+        self::assertDirectoryExists($dir, 'api/src/Message not found.');
+
+        $classes = [];
+        foreach (glob($dir.'/*.php') ?: [] as $file) {
+            /** @var class-string $class */
+            $class = 'App\\Message\\'.basename($file, '.php');
+
+            self::assertTrue(class_exists($class) || interface_exists($class), \sprintf('%s does not declare %s.', $file, $class));
+
+            if (class_exists($class)) {
+                $classes[] = $class;
+            }
+        }
+
+        self::assertNotSame([], $classes, 'No message class found in api/src/Message — the scan is broken, not the code.');
+
+        return $classes;
     }
 
     /**

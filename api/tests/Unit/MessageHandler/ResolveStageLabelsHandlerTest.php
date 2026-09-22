@@ -6,7 +6,6 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\ResolveStageLabels;
 use App\MessageHandler\ResolveStageLabelsHandler;
 use App\Osm\AdminBoundaryRepositoryInterface;
@@ -46,10 +45,8 @@ final class ResolveStageLabelsHandlerTest extends TestCase
                 [45.90, 4.90, 'fr', 'Villefranche-sur-Saône'],
             ]);
 
-        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $tracker->method('current')->willReturn(null);
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries, $tracker);
+        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
     }
 
@@ -79,28 +76,9 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             [0.0, 0.0, 'en', null],
         ]);
 
-        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $tracker->method('current')->willReturn(null);
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries, $tracker);
+        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
-    }
-
-    #[Test]
-    public function skipsASupersededGeneration(): void
-    {
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->expects(self::never())->method('getStages');
-        $repo->expects(self::never())->method('updateStageLabels');
-
-        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $tracker->method('current')->willReturn(5); // newer than the message's generation 2
-
-        $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
-        $boundaries->expects(self::never())->method('findLocalityAt');
-
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries, $tracker);
-        $handler(new ResolveStageLabels(self::TRIP_ID, generation: 2));
     }
 
     #[Test]
@@ -123,15 +101,13 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, $restDay->id, 'Lyon', 'Lyon');
 
-        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $tracker->method('current')->willReturn(null);
 
         // A rest day shares its endpoint with the previous arrival: exactly one
         // index lookup must serve both labels.
         $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
         $boundaries->expects(self::once())->method('findLocalityAt')->willReturn('Lyon');
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries, $tracker);
+        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
     }
 
@@ -142,13 +118,11 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $repo->method('getStages')->willReturn(null);
         $repo->expects(self::never())->method('updateStageLabels');
 
-        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $tracker->method('current')->willReturn(null);
 
         $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
         $boundaries->expects(self::never())->method('findLocalityAt');
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries, $tracker);
+        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID));
     }
 }

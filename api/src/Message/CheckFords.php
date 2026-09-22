@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-final readonly class CheckFords
+final readonly class CheckFords implements BelongsToATripGeneration
 {
     public function __construct(
         public string $tripId,

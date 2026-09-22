@@ -1001,6 +1001,7 @@ describe("Mercure contract drift guard (#1030)", () => {
       stage_updated: { stageId: "stage-1", stage: enriched() },
       validation_error: { code: "", message: "" },
       computation_error: { computation: "", message: "", retryable: false },
+      computations_superseded: { computations: [], categories: [] },
     };
 
     for (const type of MERCURE_EVENT_TYPES) {

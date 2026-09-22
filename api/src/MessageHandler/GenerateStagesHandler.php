@@ -70,6 +70,6 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             );
 
             $this->analysisDispatcher->dispatch($tripId, $request, $generation);
-        }, $generation);
+        });
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-final readonly class ScanEvents
+final readonly class ScanEvents implements BelongsToATripGeneration
 {
     public function __construct(
         public string $tripId,

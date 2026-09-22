@@ -9,7 +9,7 @@ namespace App\Message;
  * (recette #649, #3c/#9). Dispatched after stage generation so the anonymous
  * shared view and a reloaded trip render city names instead of GPS coordinates.
  */
-final readonly class ResolveStageLabels
+final readonly class ResolveStageLabels implements BelongsToATripGeneration
 {
     public function __construct(
         public string $tripId,

@@ -52,7 +52,6 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
     public function __invoke(CheckWaterPoints $message): void
     {
         $tripId = $message->tripId;
-        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -120,7 +119,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 'alerts' => $this->renderForWire($tripId, $alerts),
                 'waterPointsByStage' => $waterPointsByStage,
             ]);
-        }, $generation);
+        });
     }
 
     /**

@@ -102,11 +102,15 @@ export async function runTripLive(
         // terminal and clears the computing badge. Do NOT disarm the diff
         // baseline here: the backend completion gate (TripCompletionGate /
         // AllEnrichmentsCompletedHandler) guarantees a trip_ready always
-        // eventually follows once every pipeline computation has settled (done
-        // OR failed) — including this one — so a single non-critical failure
-        // (weather, ferries, border crossing, …) does not mean trip_ready never
-        // arrives; disarming here would drop the highlight for that common
+        // eventually follows once every pipeline computation has settled (done,
+        // failed OR superseded) — including this one — so a single non-critical
+        // failure (weather, ferries, border crossing, …) does not mean trip_ready
+        // never arrives; disarming here would drop the highlight for that common
         // partial-failure case.
+        //
+        // That guarantee was in fact false until ADR-073: one message the trip had
+        // moved past left its computation `pending` for good, the gate could never
+        // close again, and this badge span forever. `superseded` is what closes it.
         if (!event.data.retryable) store.setComputing(false);
       } else {
         // Every other event — the enrichment stream (weather, POIs,
