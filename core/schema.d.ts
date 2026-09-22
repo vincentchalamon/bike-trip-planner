@@ -4391,8 +4391,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        error?: string;
+                    "application/problem+json": {
+                        "@context": string;
+                        "@id": string;
+                        "@type": string;
+                        type: string;
+                        title: string;
+                        status: number;
+                        detail: string;
+                        description: string;
                     };
                 };
             };
@@ -4402,8 +4409,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        error?: string;
+                    "application/problem+json": {
+                        "@context": string;
+                        "@id": string;
+                        "@type": string;
+                        type: string;
+                        title: string;
+                        status: number;
+                        detail: string;
+                        description: string;
+                    };
+                };
+            };
+            /** @description Too many GPX uploads for this user */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        "@context": string;
+                        "@id": string;
+                        "@type": string;
+                        type: string;
+                        title: string;
+                        status: number;
+                        detail: string;
+                        description: string;
                     };
                 };
             };
