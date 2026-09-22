@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\OpenApi;
 
 use ApiPlatform\OpenApi\Model\PathItem;
+use App\Enum\TripStatus;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Response;
 use ApiPlatform\OpenApi\Model\MediaType;
@@ -56,8 +57,27 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                                         'totalDistance' => ['type' => 'number', 'description' => 'Total route distance in km'],
                                         'totalElevation' => ['type' => 'integer', 'description' => 'Total elevation gain in meters'],
                                         'totalElevationLoss' => ['type' => 'integer', 'description' => 'Total elevation loss in meters'],
+                                        // This schema is written by hand because the endpoint is a plain
+                                        // controller, so nothing derives it from the body and nothing
+                                        // notices when the two drift — CI regenerates the types from
+                                        // this file, not from the response. `status` and `stages` had
+                                        // been shipping undeclared; `isLocked` is what ADR-074 added.
+                                        'status' => [
+                                            'type' => 'string',
+                                            'enum' => [TripStatus::DRAFT->value, TripStatus::READY->value],
+                                            'description' => 'Structural readiness: the stages are computed synchronously (ADR-043)',
+                                        ],
+                                        'isLocked' => [
+                                            'type' => 'boolean',
+                                            'description' => 'True once the start date is today or in the past',
+                                        ],
+                                        'stages' => [
+                                            'type' => 'array',
+                                            'items' => ['type' => 'object', 'additionalProperties' => true],
+                                            'description' => 'The synchronously computed stages',
+                                        ],
                                     ],
-                                    'required' => ['@context', '@id', '@type', 'id', 'computationStatus', 'totalDistance', 'totalElevation', 'totalElevationLoss'],
+                                    'required' => ['@context', '@id', '@type', 'id', 'computationStatus', 'totalDistance', 'totalElevation', 'totalElevationLoss', 'status', 'isLocked', 'stages'],
                                 ]),
                             ),
                         ]),

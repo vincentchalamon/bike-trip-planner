@@ -41,6 +41,11 @@ final readonly class StageResponseMapper
         $response->trip = new Trip(
             id: $stage->tripId,
             computationStatus: $this->computationTracker->getStatuses($stage->tripId) ?? [],
+            // Stated, not defaulted (ADR-074): every one of the eight stage processors calls
+            // TripLocker::assertNotLocked() before it writes, so a StageResponse only ever
+            // exists for a trip that is provably unlocked. Reading the lock again here would
+            // buy a repository round-trip to learn what the guard has just established.
+            isLocked: false,
         );
         $response->id = $stage->id;
         $response->dayNumber = $stage->dayNumber;

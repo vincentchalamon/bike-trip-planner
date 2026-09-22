@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\State\TripLocker;
+use App\Enum\ComputationStatus;
 use App\ApiResource\Stage;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
@@ -43,6 +45,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
@@ -80,7 +83,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
      *
      * @param list<Coordinate> $points
      *
-     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int, status: string, stages: list<array<string, mixed>>}
+     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int, status: string, isLocked: bool, stages: list<array<string, mixed>>}
      */
     public function createTrip(
         array $points,
@@ -141,6 +144,9 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
             'totalElevation' => $totalElevation,
             'totalElevationLoss' => $totalElevationLoss,
             'status' => $status->value,
+            // The hand-built 202 body mirrors the Trip resource, so it carries what the
+            // resource carries — this was the one field it omitted (ADR-074).
+            'isLocked' => $this->tripLocker->isLocked($request),
             'stages' => $this->structuralComputation->serializeStagesForEvent($stages),
         ];
     }
@@ -237,7 +243,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         $structural = ComputationName::structuralPipeline();
         $result = [];
         foreach ($computations as $computation) {
-            $result[$computation->value] = \in_array($computation, $structural, true) ? 'done' : 'pending';
+            $result[$computation->value] = \in_array($computation, $structural, true) ? ComputationStatus::DONE->value : ComputationStatus::PENDING->value;
         }
 
         return $result;

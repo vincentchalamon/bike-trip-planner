@@ -37,6 +37,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // browser does not expose is one the client silently never reads, which would
                 // leave every edit pinning nothing.
                 'ETag',
+                // Where the accepted work can be read once it lands (ADR-074). The JSON-LD
+                // body already carries the same URI as `@id`, so this is for a consumer that
+                // does not parse JSON-LD — the agent this API is being restructured for.
+                'Location',
             ],
             'max_age' => 3600,
         ],

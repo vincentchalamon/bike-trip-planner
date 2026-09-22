@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\State\TripLocker;
 use App\Service\EnrichmentMessageFactory;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
@@ -53,6 +54,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $this->createStub(ComputationTrackerInterface::class),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
+            new TripLocker(),
             $limiter,
         );
 
@@ -107,6 +109,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
+            new TripLocker(),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
 
@@ -147,6 +150,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
+            new TripLocker(),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
     }

@@ -48,6 +48,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private ComputationTrackerInterface $computationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
+        private TripLocker $tripLocker,
         #[Autowire(service: 'limiter.trip_recompute')]
         private RateLimiterFactory $recomputeLimiter,
     ) {
@@ -104,7 +105,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         if ($progress['total'] > 0 && $progress['settled'] < $progress['total']) {
             $this->analysisDispatcher->dispatch($tripId, $request, $generation);
 
-            return new Trip(id: $tripId);
+            return $this->accepted($tripId, $request);
         }
 
         $stageIds = array_map(static fn (Stage $stage): string => $stage->id, $stages);
@@ -123,6 +124,20 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
             $this->messageBus->dispatch($message);
         }
 
-        return new Trip(id: $tripId);
+        return $this->accepted($tripId, $request);
+    }
+
+    /**
+     * Both paths answered `new Trip(id: $tripId)`, so both claimed an empty computation map and
+     * an unlocked trip — the first false the instant after dispatching, the second false for any
+     * trip whose start date has passed (ADR-074).
+     */
+    private function accepted(string $tripId, TripRequest $request): Trip
+    {
+        return new Trip(
+            id: $tripId,
+            computationStatus: $this->computationTracker->getStatuses($tripId) ?? [],
+            isLocked: $this->tripLocker->isLocked($request),
+        );
     }
 }

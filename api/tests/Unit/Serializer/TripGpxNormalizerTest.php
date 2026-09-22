@@ -46,7 +46,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository->method('getTitle')->willReturn('My Trip');
 
         $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc');
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $result = $normalizer->normalize($trip, 'gpx');
 
         self::assertIsArray($result);
@@ -88,7 +88,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc');
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $result = $normalizer->normalize($trip, 'gpx');
 
         /** @var list<array{name: string, lat: float, lon: float}> $waypoints */
@@ -105,7 +105,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository->method('getStages')->willReturn([]);
 
         $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc');
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $result = $normalizer->normalize($trip, 'gpx');
 
         self::assertSame([], $result['points']);
@@ -118,7 +118,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripGpxNormalizer($repository);
 
-        $trip = new Trip('trip-abc');
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $stage = new Stage('t', 1, 1.0, 0.0, new Coordinate(0, 0), new Coordinate(0, 0));
 
         self::assertTrue($normalizer->supportsNormalization($trip, 'gpx'));
@@ -137,7 +137,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository->method('getRequest')->willReturn($request);
 
         $normalizer = new TripGpxNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc'), 'gpx');
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'gpx');
 
         self::assertSame('https://www.komoot.com/tour/12345', $result['sourceUrl']);
     }

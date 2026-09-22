@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ComputationTracker;
 
 use App\Enum\ComputationName;
+use App\Enum\ComputationStatus;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Lock\LockFactory;
@@ -12,17 +13,6 @@ use Symfony\Component\Lock\LockFactory;
 final readonly class ComputationTracker implements ComputationTrackerInterface
 {
     private const int TTL = 1800; // 30 minutes
-
-    private const string PENDING = 'pending';
-
-    private const string RUNNING = 'running';
-
-    private const string DONE = 'done';
-
-    private const string FAILED = 'failed';
-
-    /** Terminal, and not a failure: the trip moved past this computation before it settled. */
-    private const string SUPERSEDED = 'superseded';
 
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
@@ -36,7 +26,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     {
         $statuses = [];
         foreach ($computations as $computation) {
-            $statuses[$computation->value] = self::PENDING;
+            $statuses[$computation->value] = ComputationStatus::PENDING->value;
         }
 
         $this->set($this->statusKey($tripId), $statuses);
@@ -44,17 +34,17 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
 
     public function markRunning(string $tripId, ComputationName $computation): void
     {
-        $this->updateStatus($tripId, $computation, self::RUNNING);
+        $this->updateStatus($tripId, $computation, ComputationStatus::RUNNING->value);
     }
 
     public function markDone(string $tripId, ComputationName $computation): void
     {
-        $this->updateStatus($tripId, $computation, self::DONE);
+        $this->updateStatus($tripId, $computation, ComputationStatus::DONE->value);
     }
 
     public function markFailed(string $tripId, ComputationName $computation): void
     {
-        $this->updateStatus($tripId, $computation, self::FAILED);
+        $this->updateStatus($tripId, $computation, ComputationStatus::FAILED->value);
     }
 
     /**
@@ -71,11 +61,11 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
             $statuses = $this->getStatuses($tripId) ?? [];
             $current = $statuses[$computation->value] ?? null;
 
-            if (self::PENDING !== $current && self::RUNNING !== $current) {
+            if (ComputationStatus::PENDING->value !== $current && ComputationStatus::RUNNING->value !== $current) {
                 return false;
             }
 
-            $statuses[$computation->value] = self::SUPERSEDED;
+            $statuses[$computation->value] = ComputationStatus::SUPERSEDED->value;
             $this->set($this->statusKey($tripId), $statuses);
 
             return true;
@@ -91,7 +81,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     public function rearmIfSettled(string $tripId, ComputationName $computation): bool
     {
         $current = ($this->getStatuses($tripId) ?? [])[$computation->value] ?? null;
-        if (null === $current || self::PENDING === $current || self::RUNNING === $current) {
+        if (null === $current || ComputationStatus::PENDING->value === $current || ComputationStatus::RUNNING->value === $current) {
             return false;
         }
 
@@ -104,7 +94,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
                 return false;
             }
 
-            $statuses[$computation->value] = self::PENDING;
+            $statuses[$computation->value] = ComputationStatus::PENDING->value;
             $this->set($this->statusKey($tripId), $statuses);
 
             return true;
@@ -115,7 +105,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
 
     public function resetComputation(string $tripId, ComputationName $computation): void
     {
-        $this->updateStatus($tripId, $computation, self::PENDING);
+        $this->updateStatus($tripId, $computation, ComputationStatus::PENDING->value);
     }
 
     public function claimReadyPublication(string $tripId, ?int $generation = null): bool
@@ -144,16 +134,20 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         $failed = 0;
         $settled = 0;
         foreach ($statuses as $status) {
-            if (self::DONE === $status) {
+            $parsed = ComputationStatus::tryFrom($status);
+            if (null === $parsed || !$parsed->isSettled()) {
+                continue;
+            }
+
+            // `superseded` counts here and nowhere else: terminal, so it closes the gate, but
+            // neither a success nor a failure, so it is nothing the progress bar renders
+            // (ADR-073).
+            ++$settled;
+
+            if (ComputationStatus::DONE === $parsed) {
                 ++$completed;
-                ++$settled;
-            } elseif (self::FAILED === $status) {
+            } elseif (ComputationStatus::FAILED === $parsed) {
                 ++$failed;
-                ++$settled;
-            } elseif (self::SUPERSEDED === $status) {
-                // Terminal, but neither a success nor a failure: it counts towards the gate
-                // and towards nothing the progress bar renders (ADR-073).
-                ++$settled;
             }
         }
 

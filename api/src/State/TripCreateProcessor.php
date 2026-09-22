@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -97,7 +98,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
     {
         $status = [];
         foreach ($computations as $computation) {
-            $status[$computation->value] = 'pending';
+            $status[$computation->value] = ComputationStatus::PENDING->value;
         }
 
         return $status;

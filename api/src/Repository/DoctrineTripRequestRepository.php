@@ -738,7 +738,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return;
         }
 
-        $computedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DateTimeInterface::ATOM);
         $connection = $this->getEntityManager()->getConnection();
 
         foreach ($alertsByStageId as $stageId => $alerts) {
@@ -765,7 +764,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
                 [
                     'group' => $group->value,
                     'entry' => json_encode(
-                        ['computedAt' => $computedAt, 'alerts' => array_values($alerts)],
+                        // No `computedAt` alongside: it was a wall-clock timestamp, written on
+                        // every alert write and read by nothing — flagged by ADR-070 and again
+                        // by ADR-072, removed by ADR-074. Freshness is answered by dispatch
+                        // completeness, and "never computed" versus "computed, found nothing"
+                        // by the presence of the group key.
+                        ['alerts' => array_values($alerts)],
                         \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION,
                     ),
                     'tripId' => $tripId,

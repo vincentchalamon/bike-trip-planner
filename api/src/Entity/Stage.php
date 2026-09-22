@@ -90,7 +90,7 @@ class Stage
     /**
      * Alerts, partitioned by the producer that owns them (ADR-068).
      *
-     * `{group: {computedAt: string, alerts: list<array>}}`. The partition is what lets one
+     * `{group: {alerts: list<array>}}`. The partition is what lets one
      * enrichment re-run replace its own alerts and leave the twelve others intact, and it is
      * why a single flat list would not do.
      *
@@ -101,7 +101,7 @@ class Stage
      * Written only through the targeted `updateStage*ForGroup` methods, never by
      * `storeStages()`: a structural edit must not carry an enrichment snapshot back.
      *
-     * @var array<string, array{computedAt: string, alerts: list<array<string, mixed>>}>
+     * @var array<string, array{alerts: list<array<string, mixed>>}>
      */
     #[ORM\Column(type: 'jsonb', options: ['default' => '{}'])]
     private array $alertsByGroup = [];
@@ -375,13 +375,13 @@ class Stage
         return $this;
     }
 
-    /** @return array<string, array{computedAt: string, alerts: list<array<string, mixed>>}> */
+    /** @return array<string, array{alerts: list<array<string, mixed>>}> */
     public function getAlertsByGroup(): array
     {
         return $this->alertsByGroup;
     }
 
-    /** @param array<string, array{computedAt: string, alerts: list<array<string, mixed>>}> $alertsByGroup */
+    /** @param array<string, array{alerts: list<array<string, mixed>>}> $alertsByGroup */
     public function setAlertsByGroup(array $alertsByGroup): self
     {
         $this->alertsByGroup = $alertsByGroup;
