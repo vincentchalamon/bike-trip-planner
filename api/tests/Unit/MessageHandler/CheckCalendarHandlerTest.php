@@ -199,7 +199,6 @@ final class CheckCalendarHandlerTest extends TestCase
         $this->assertSame($stage->id, $alerts[0]['stageId']);
         $this->assertSame(1, $alerts[0]['dayNumber']);
         $this->assertSame('nudge', $alerts[0]['type']);
-        $this->assertSame('2026-03-15', $alerts[0]['date']);
         $this->assertIsString($alerts[0]['message']);
         $this->assertStringContainsString('Sunday', $alerts[0]['message']);
         \assert(\is_array($alerts[0]['action']));
@@ -263,10 +262,11 @@ final class CheckCalendarHandlerTest extends TestCase
 
         $alerts = $this->publishedAlerts($stages, new \DateTimeImmutable('2026-12-28'), ['FR']);
 
-        $dates = array_column($alerts, 'date');
-        $this->assertContains('2027-01-01', $dates, "New Year's Day 2027 must be detected on a trip starting in 2026");
-        // 2027-01-03 is a Sunday, proving the loop keeps running across the year change.
-        $this->assertContains('2027-01-03', $dates);
+        // Days are counted from the start date, so day 5 is 2027-01-01 and day 7 is
+        // 2027-01-03 (a Sunday, proving the loop keeps running across the year change).
+        $days = array_column($alerts, 'dayNumber');
+        $this->assertContains(5, $days, "New Year's Day 2027 must be detected on a trip starting in 2026");
+        $this->assertContains(7, $days);
     }
 
     #[Test]

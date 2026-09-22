@@ -268,7 +268,6 @@ export type MercureEvent =
           code: string;
           type: string;
           message: string;
-          date: string;
         }[];
       };
     }
@@ -628,3 +627,136 @@ type _AlertGroupsMatch = [AlertGroup] extends [SchemaAlertGroup]
     };
 
 export const ALERT_GROUPS_MATCH_THE_SCHEMA: _AlertGroupsMatch = true;
+
+/* -------------------------------------------------------------------------- *
+ * ADR-065: Mercure is an invalidation channel, never a source of truth.
+ * -------------------------------------------------------------------------- */
+
+/**
+ * What each event is for.
+ *
+ * - `data`   — carries trip content. Every field of it must also be reachable through a
+ *              GET, which the coverage check below enforces.
+ * - `signal` — says that something happened, and carries only what is needed to say it:
+ *              progress counters, an error, a supersession notice, a "go and re-read".
+ *
+ * This half is declarative and reviewed in a pull request, not proven: no type can decide
+ * whether a payload is content or a notification. What the compiler does enforce is that
+ * the list is exhaustive, so a new event cannot slip in unclassified. `reconciliation.ts`
+ * is the cross-check: everything classified `signal` there leaves the trip data untouched
+ * (`computation_step_completed` returns the same state object outright).
+ */
+export const MERCURE_EVENT_KIND = {
+  route_parsed: "data",
+  stages_computed: "data",
+  weather_fetched: "data",
+  pois_scanned: "data",
+  accommodations_found: "data",
+  events_found: "data",
+  supply_timeline: "data",
+  terrain_alerts: "data",
+  calendar_alerts: "data",
+  wind_alerts: "data",
+  bike_shop_alerts: "data",
+  water_point_alerts: "data",
+  health_service_alerts: "data",
+  cultural_poi_alerts: "data",
+  railway_station_alerts: "data",
+  border_crossing_alerts: "data",
+  ferry_alerts: "data",
+  ford_alerts: "data",
+  route_segment_recalculated: "data",
+  trip_ready: "data",
+  stage_updated: "data",
+  trip_complete: "signal",
+  computation_step_completed: "signal",
+  computation_error: "signal",
+  computations_superseded: "signal",
+  validation_error: "signal",
+} as const satisfies Record<MercureEventType, "data" | "signal">;
+
+type SchemaOf<K extends keyof components["schemas"]> = components["schemas"][K];
+type SchemaStage = NonNullable<SchemaOf<"TripDetail.jsonld">["stages"]>[number];
+type SchemaAlert = NonNullable<NonNullable<SchemaStage["alerts"]>>[number];
+
+/**
+ * Fields of `P` that no property of `T` accounts for.
+ *
+ * Compared by key name, not by type: every property of the generated schemas is optional,
+ * so a structural `extends` would succeed on anything and prove nothing.
+ */
+type Uncovered<P, T> = Exclude<keyof P, keyof T>;
+
+type Covered<P, T, Label extends string> =
+  Uncovered<P, T> extends never
+    ? true
+    : Record<Label, Uncovered<P, T>>;
+
+/**
+ * Every event that ships a list of alerts, derived rather than listed: adding one brings
+ * it under the check with no list to remember to update.
+ */
+type AlertEventType = {
+  [K in MercureEventType]: Extract<MercureEvent, { type: K }>["data"] extends {
+    alerts: unknown[];
+  }
+    ? K
+    : never;
+}[MercureEventType];
+
+type AlertElement<K extends AlertEventType> =
+  Extract<MercureEvent, { type: K }>["data"] extends { alerts: (infer A)[] }
+    ? A
+    : never;
+
+/**
+ * An alert on the wire is an alert plus the stage it hangs off, so the target is the
+ * schema's alert widened with the two addressing fields of the stage that carries it.
+ */
+type AlertTarget = SchemaAlert & Pick<SchemaStage, "stageId" | "dayNumber">;
+
+type _AlertsAreCovered = {
+  [K in AlertEventType]: Uncovered<AlertElement<K>, AlertTarget>;
+}[AlertEventType] extends never
+  ? true
+  : {
+      ERROR_alert_fields_no_GET_returns: {
+        [K in AlertEventType]: Uncovered<AlertElement<K>, AlertTarget>;
+      }[AlertEventType];
+    };
+
+/**
+ * The reusable payload shapes, against the resources that serve them.
+ *
+ * These are the leaves of every `data` event; the envelopes around them (`alertsByStage`,
+ * `affectedStageIds`, a bare `stageId`) are addressing, not content, and are deliberately
+ * out of scope — they exist to say *where* an update lands, and no GET returns them.
+ *
+ * What this proves: no field is published over SSE that no GET can return. What it does
+ * not prove: that the values agree, or that the equivalent read is convenient.
+ * `route_segment_recalculated` carries a geometry delta whose equivalent is the whole of
+ * `/trips/{id}/route` — covered structurally, but a client still re-reads more than it
+ * was sent. That gap is named here rather than hidden.
+ */
+type _PayloadsAreCovered = [
+  Covered<CoordinatePayload, SchemaOf<"Coordinate.jsonld">, "ERROR_CoordinatePayload">,
+  Covered<PoiPayload, SchemaOf<"PointOfInterest.jsonld">, "ERROR_PoiPayload">,
+  Covered<ResupplyPayload, SchemaOf<"Resupply.jsonld">, "ERROR_ResupplyPayload">,
+  Covered<AccommodationPayload, SchemaOf<"Accommodation.jsonld">, "ERROR_AccommodationPayload">,
+  Covered<EventPayload, SchemaOf<"Event.jsonld">, "ERROR_EventPayload">,
+  Covered<HourlyWeatherSlotPayload, SchemaOf<"HourlyWeatherSlot.jsonld">, "ERROR_HourlyWeatherSlotPayload">,
+  Covered<StagePayload, SchemaStage, "ERROR_StagePayload">,
+  Covered<AlertPayload, SchemaAlert, "ERROR_AlertPayload">,
+];
+
+export const MERCURE_DATA_IS_READABLE_BY_GET: _AlertsAreCovered = true;
+export const MERCURE_PAYLOADS_MATCH_THE_SCHEMA: _PayloadsAreCovered = [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+];

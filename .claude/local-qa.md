@@ -57,6 +57,7 @@ Three traps in that command:
   writes go through the Symfony lock (ADR-066), so this now affects the repository suites.
 
 - **`-v "$PWD/docs:/docs:ro"` is required.** `AlertDocumentationTest` reads the alert-engine table at `docs/alert-engine.md` relative to the project root, i.e. `/app/../docs/alert-engine.md`. Mounting only `api/` makes it fail with `docs/alert-engine.md not found at project root` — a false alarm that looks like a real regression.
+- **`-v "$PWD/core:/core:ro"` is required for the same reason.** `MercureEventContractTest` reads `core/mercure.ts` at the project root to diff the published event list against the shared TypeScript contract. Both mounts exist only because the command mounts `api/` as `/app`; CI checks the whole repository out, so neither is needed there.
 - The test database is auto-suffixed `_test` (`doctrine.php dbname_suffix`), so this never touches the dev data.
 
 `make test-e2e` needs the PWA built and served on `https://localhost`; a worktree's changes are not in the main stack's bundle. **CI is the real gate for Playwright** — say so plainly rather than implying local coverage you did not have. Since the pre-commit hook replays `make qa`, commit with `git -c core.hooksPath=/dev/null commit` once the legs are individually green.
