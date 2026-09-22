@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * RFC 9110 §15.3.3 asks a 202 to point at something that describes the request's status, and
  * since ADR-074 that address answers.
  *
- * Read off `@id` rather than rebuilt from an IRI converter: `POST /trips/upload-gpx` composes
+ * Read off `@id` rather than rebuilt from an IRI converter: `POST /trips/gpx-upload` composes
  * its JSON-LD body by hand outside API Platform's serializer, and one listener that reads the
  * body covers both paths without either of them having to remember to stamp anything.
  */

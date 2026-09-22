@@ -427,4 +427,35 @@ final class GpxUploadTest extends ApiTestCase
         self::assertTrue($item->isHit());
         self::assertSame($user->getId()->toRfc4122(), $item->get());
     }
+
+    /**
+     * This 202 is the one body assembled by hand, outside API Platform's serializer, so it is
+     * the one that would lose its `Location` silently — a renamed or dropped `@id` key in that
+     * array, and {@see \App\EventListener\AcceptedLocationListener} has nothing to read
+     * (ADR-074). The other accepted responses are covered by TripAcceptedBodyTest and
+     * TripDuplicateTest.
+     */
+    #[Test]
+    public function theAcceptedUploadPointsAtTheTripItCreated(): void
+    {
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/valid-route.gpx',
+            'valid-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $response = $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => ['files' => ['gpxFile' => $file]],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        $data = $response->toArray(false);
+        $this->assertResponseHeaderSame('Location', '/trips/'.$data['id']);
+        // And the field the hand-built body used to omit entirely.
+        $this->assertFalse($data['isLocked']);
+    }
 }

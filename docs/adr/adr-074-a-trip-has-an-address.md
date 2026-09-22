@@ -85,7 +85,7 @@ The four operations that misreported the lock — `/recompute`, `/analyze`,
 
 A 201 or 202 now points at the resource with `Location`, read off the `@id` the body already
 carries. One response listener covers both API Platform's responses and the hand-built JSON-LD
-body of `POST /trips/upload-gpx`, without either having to remember to stamp anything.
+body of `POST /trips/gpx-upload`, without either having to remember to stamp anything.
 
 **What it buys, honestly:** nothing for the clients this project has today, which all read the
 body and find the same URI as `@id`. It is for a consumer that does not parse JSON-LD — the
