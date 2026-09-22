@@ -51,12 +51,21 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $departureHour = $context['departureHour'] ?? 8;
         /** @var float $averageSpeed */
         $averageSpeed = $context['averageSpeed'] ?? 15.0;
+        // No date, no verdict (ADR-074). This used to fall back to `today`, so the alert was
+        // frozen on whichever day the terrain scan happened to run — and unlike the weather
+        // and the holidays it cannot be withheld at dispatch, because it lives inside TERRAIN
+        // which the geometry triggers on its own (ADR-070 left this open). Withholding the
+        // verdict is the move that was available: "you will arrive after dark" is a claim
+        // about a calendar the rider has not set.
+        if (!$startDate instanceof \DateTimeImmutable) {
+            return [];
+        }
+
         // The stage's own day number carries the offset, so nothing has to be threaded
         // through the analysis context. It used to come from a 'stageIndex' context key,
         // which a rename elsewhere silently reduced to its `?? 0` default — every stage
         // then dated from the trip start (#1290 review).
-        $baseDate = $startDate ?? new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
-        $stageDate = $baseDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
+        $stageDate = $startDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
 
         if (false === $stageDate) {
             return [];

@@ -122,14 +122,22 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->assertStringContainsString('22:40', $this->renderMessage($alerts[0]));
     }
 
+    /**
+     * No date, no verdict (ADR-074).
+     *
+     * It used to fall back to `today`, so the alert was frozen on whichever day the terrain
+     * scan happened to run — and unlike the weather it cannot be withheld at dispatch, since
+     * it lives inside TERRAIN which the geometry triggers on its own (ADR-070 left this open).
+     * Withholding the verdict is the move that was available: "you will arrive after dark" is
+     * a claim about a calendar the rider has not set.
+     */
     #[Test]
-    public function noAlertWhenNoStartDateAndArrivalBeforeTwilight(): void
+    public function noVerdictWithoutAStartDate(): void
     {
-        // Uses today's date as fallback — just check that it doesn't crash with null startDate
         $stage = $this->createStage();
 
-        // Arrive at departure hour (0 riding time — before any twilight)
-        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(8.0);
+        // A late arrival, which with a borrowed `today` would have produced an alert.
+        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
         $alerts = $this->analyzer->analyze($stage, [
             'startDate' => null,
@@ -137,7 +145,6 @@ final class SunsetAlertAnalyzerTest extends TestCase
             'averageSpeed' => 15.0,
         ]);
 
-        // With arrival at 08:00, always before twilight end regardless of date/location
         $this->assertSame([], $alerts);
     }
 
