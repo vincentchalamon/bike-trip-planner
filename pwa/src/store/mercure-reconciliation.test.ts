@@ -515,7 +515,6 @@ describe("reduceMercureEvent — alert groups", () => {
             code: "SUNDAY",
             type: "nudge",
             message: "Sunday now here",
-            date: "2026-08-02",
           },
         ],
       },

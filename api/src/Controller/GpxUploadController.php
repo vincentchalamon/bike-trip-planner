@@ -70,10 +70,10 @@ final readonly class GpxUploadController
 
         try {
             $points = $this->gpxUploadService->parseGpx($content);
-        } catch (\RuntimeException $throwable) {
+        } catch (\RuntimeException $runtimeException) {
             // Swallowed without a trace until now: a malformed upload was indistinguishable
             // from a parser regression in the logs, because there were no logs.
-            $this->logger->warning('GPX upload could not be parsed.', ['exception' => $throwable]);
+            $this->logger->warning('GPX upload could not be parsed.', ['exception' => $runtimeException]);
 
             return $this->problem(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid GPX file: could not parse XML content.');
         }

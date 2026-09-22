@@ -25,17 +25,15 @@ final class WorkerHeartbeatListener
     ) {
     }
 
-    public function __invoke(WorkerRunningEvent $event): void
+    public function __invoke(): void
     {
         $now = $this->clock->now()->getTimestamp();
-
         // The event fires on every idle loop (once a second) and after every message.
         if (null !== $this->lastBeatAt && $now - $this->lastBeatAt < WorkerHeartbeat::BEAT_INTERVAL) {
             return;
         }
 
         $this->lastBeatAt = $now;
-
         try {
             // One member per container process; the hostname is unique per Compose replica.
             $this->heartbeat->beat(\sprintf('%s:%d', gethostname(), getmypid()));

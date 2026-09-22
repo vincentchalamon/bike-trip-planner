@@ -58,9 +58,12 @@ final class GpxUploadControllerTest extends TestCase
             // exception out of this plain Symfony route would not have been.
             $response = $controller($request);
 
+            $body = json_decode((string) $response->getContent(), true);
+            \assert(\is_array($body));
+
             self::assertSame(429, $response->getStatusCode());
             self::assertStringStartsWith('application/problem+json', (string) $response->headers->get('Content-Type'));
-            self::assertSame(429, json_decode((string) $response->getContent(), true)['status']);
+            self::assertSame(429, $body['status']);
         } finally {
             @unlink($tmp);
         }

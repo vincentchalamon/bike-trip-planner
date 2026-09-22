@@ -33,7 +33,7 @@ readonly class WorkerHeartbeat
 
     public function __construct(
         private RedisHealthClientFactory $redisClientFactory,
-        #[Autowire('%kernel.environment%')]
+        #[Autowire(param: 'kernel.environment')]
         private string $env,
     ) {
     }

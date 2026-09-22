@@ -10,8 +10,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\Messenger\Event\WorkerRunningEvent;
-use Symfony\Component\Messenger\Worker;
 
 #[AllowMockObjectsWithoutExpectations]
 final class WorkerHeartbeatListenerTest extends TestCase
@@ -27,9 +25,9 @@ final class WorkerHeartbeatListenerTest extends TestCase
 
         // WorkerRunningEvent fires once a second while idle; without the throttle this
         // would be a Redis round-trip per loop.
-        $listener($this->event());
+        $listener();
         $clock->sleep(5);
-        $listener($this->event());
+        $listener();
     }
 
     #[Test]
@@ -41,9 +39,9 @@ final class WorkerHeartbeatListenerTest extends TestCase
         $clock = new MockClock();
         $listener = new WorkerHeartbeatListener($heartbeat, $clock);
 
-        $listener($this->event());
+        $listener();
         $clock->sleep(WorkerHeartbeat::BEAT_INTERVAL + 1);
-        $listener($this->event());
+        $listener();
     }
 
     #[Test]
@@ -56,13 +54,8 @@ final class WorkerHeartbeatListenerTest extends TestCase
 
         // An exception here would bubble through Worker::run() and stop the consumer:
         // observability would have created the outage it exists to report.
-        $listener($this->event());
+        $listener();
 
         $this->expectNotToPerformAssertions();
-    }
-
-    private function event(): WorkerRunningEvent
-    {
-        return new WorkerRunningEvent($this->createMock(Worker::class), true);
     }
 }

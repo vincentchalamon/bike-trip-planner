@@ -40,7 +40,9 @@ final readonly class HealthController
      * group stays Symfony's default.
      */
     private const string ASYNC_STREAM = 'messages';
+
     private const string FAILED_STREAM = 'failed';
+
     private const string CONSUMER_GROUP = 'symfony';
 
     public function __construct(
@@ -303,9 +305,13 @@ final readonly class HealthController
         }
 
         foreach ($groups as $group) {
-            if (self::CONSUMER_GROUP === ($group['name'] ?? null) && isset($group['lag'])) {
-                return (int) $group['lag'];
+            if (self::CONSUMER_GROUP !== ($group['name'] ?? null)) {
+                continue;
             }
+
+            $lag = $group['lag'] ?? null;
+
+            return is_numeric($lag) ? (int) $lag : null;
         }
 
         return null;

@@ -553,6 +553,6 @@ final class HealthControllerTest extends ApiTestCase
         $redisUrl = $_SERVER['REDIS_URL'] ?? $_ENV['REDIS_URL'] ?? null;
         \assert(\is_string($redisUrl), 'REDIS_URL must be set for the health suite');
 
-        return (new RedisHealthClientFactory($redisUrl))->create();
+        return new RedisHealthClientFactory($redisUrl)->create();
     }
 }

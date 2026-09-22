@@ -296,10 +296,12 @@ final class GpxUploadTest extends ApiTestCase
         // controller directly, so the key set is asserted here and the schema itself is
         // checked over the wire by rejectsInvalidGpxWithTheApiWideErrorShape().
         $body = json_decode((string) $response->getContent(), true);
-        $this->assertSame(
-            ['@context', '@id', '@type', 'description', 'detail', 'status', 'title', 'type'],
-            $this->sortedKeys($body),
-        );
+        \assert(\is_array($body));
+
+        $keys = array_keys($body);
+        sort($keys);
+
+        $this->assertSame(['@context', '@id', '@type', 'description', 'detail', 'status', 'title', 'type'], $keys);
         $this->assertSame('File exceeds maximum size of 30 MB.', $body['detail']);
         $this->assertSame(400, $body['status']);
     }
@@ -327,19 +329,6 @@ final class GpxUploadTest extends ApiTestCase
         } finally {
             unlink($tempFile);
         }
-    }
-
-    /**
-     * @param array<string, mixed> $body
-     *
-     * @return list<string>
-     */
-    private function sortedKeys(array $body): array
-    {
-        $keys = array_keys($body);
-        sort($keys);
-
-        return $keys;
     }
 
     #[Test]
