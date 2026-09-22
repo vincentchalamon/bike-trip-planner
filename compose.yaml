@@ -442,6 +442,18 @@ services:
       - shared_buffers=256MB
       - -c
       - effective_cache_size=768MB
+      # Slow-query visibility (#510). pg_stat_statements must be preloaded at startup —
+      # CREATE EXTENSION alone does nothing without it. `track=all` counts statements
+      # inside functions too, and log_min_duration_statement prints anything over 100 ms
+      # to the container log. A single Postgres backs both PG-app and PG-référence here
+      # and in CI (ADR-060), so this one command covers both; in prod PG-référence is a
+      # separate shared instance and would need the same flags of its own.
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - log_min_duration_statement=100
     deploy:
       resources:
         limits:
@@ -474,6 +486,13 @@ services:
       - 384mb
       - --maxmemory-policy
       - volatile-lru
+      # Anything over 10 ms, last 256 entries, read with `make perf-db-report` (#510).
+      # Redis is single-threaded, so a slow command blocks every other client — the
+      # threshold is deliberately far below what would be acceptable in Postgres.
+      - --slowlog-log-slower-than
+      - "10000"
+      - --slowlog-max-len
+      - "256"
     deploy:
       resources:
         limits:

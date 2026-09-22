@@ -301,6 +301,14 @@ db-create: ## Create the database
 fixtures: ## Load Foundry dev fixtures
 	@docker compose exec php bin/console foundry:load-stories --no-interaction
 
+perf-db-report: ## Show the slowest Postgres statements and Redis commands
+	@echo "── Postgres: top 20 statements by total time ──"
+	@docker compose exec -T database psql -U "$${DATABASE_USERNAME:-app}" -d "$${DATABASE_NAME:-bike_trip_planner}" -P pager=off -c \
+		"SELECT round(total_exec_time::numeric, 1) AS total_ms, calls, round(mean_exec_time::numeric, 2) AS mean_ms, left(query, 110) AS query \
+		 FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 20;"
+	@echo "── Redis: last 25 slow commands (>10 ms) ──"
+	@docker compose exec -T redis redis-cli --no-raw SLOWLOG GET 25
+
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container
 	@docker compose exec php bash
