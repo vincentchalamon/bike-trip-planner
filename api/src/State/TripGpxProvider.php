@@ -49,17 +49,24 @@ final readonly class TripGpxProvider implements ProviderInterface
             throw new TripNotFoundException();
         }
 
+        $isCanonicalRead = 'jsonld' === $this->formatOf($context);
+
         // The two reads do not have the same prerequisites. A file with no stages in it is not
         // a file, so the export still refuses; but a trip whose stages have not been computed
         // yet is a perfectly ordinary trip, and its address has to answer — `POST /trips`
         // hands out that `@id` before any stage exists.
-        if ('jsonld' !== $this->formatOf($context) && null === $this->tripStateManager->getStages($id)) {
+        if (!$isCanonicalRead && null === $this->tripStateManager->getStages($id)) {
             throw new TripNotFoundException();
         }
 
         return new Trip(
             id: $id,
-            computationStatus: $this->computationTracker->getStatuses($id) ?? [],
+            // Not part of the gpx/fit representation: those normalizers build a file out of the
+            // stages and never read this. Asking anyway costs a cache read that falls through
+            // to a query once the cache has let go (ADR-072), on a download.
+            computationStatus: $isCanonicalRead ? ($this->computationTracker->getStatuses($id) ?? []) : [],
+            // Free — the request is already loaded — so it is answered truthfully on every
+            // path rather than fabricating a `false` for a trip that is in fact locked.
             isLocked: $this->tripLocker->isLocked($request),
         );
     }
