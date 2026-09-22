@@ -317,7 +317,7 @@ final class Stage
      * An empty result keeps the key, it does not remove it: an absent group means the
      * producer has never run for this stage, an empty one that it ran and found nothing
      * (ADR-068). Dropping the key here would make the transient implementation report
-     * "never computed" where the Doctrine one — which always writes `{computedAt, alerts}`
+     * "never computed" where the Doctrine one — which always writes `{alerts: …}`
      * — reports "computed, nothing found".
      *
      * @param list<array<string, mixed>> $alerts

@@ -104,7 +104,7 @@ final class WeatherSafetyNotifierTest extends TestCase
     {
         $stage = new Stage($trip);
         $stage->setDayNumber($dayNumber)->setIsRestDay($restDay)->setWeather($weather)->setAlertsByGroup(
-            [] === $alerts ? [] : ['terrain' => ['computedAt' => '2026-01-01T00:00:00+00:00', 'alerts' => $alerts]],
+            [] === $alerts ? [] : ['terrain' => ['alerts' => $alerts]],
         );
 
         return $stage;
