@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
 use App\Health\RedisHealthClientFactory;
+use App\Health\WorkerHeartbeat;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,6 +25,12 @@ final class HealthControllerTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
+
+        // There is no consumer behind a test kernel, so the natural state of the suite is
+        // `degraded` now that readiness requires one. Stand one in, per test, and let the
+        // tests that care about its absence clear it. The heartbeat key is namespaced by
+        // environment, so none of this reaches a dev stack sharing the same Redis.
+        $this->workerHeartbeat()->beat('phpunit');
     }
 
     #[\Override]
@@ -72,11 +79,32 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertArrayHasKey('deps', $data);
-        foreach (['postgres', 'postgres_reference', 'redis', 'mercure', 'valhalla', 'reference_data'] as $dep) {
+        foreach (['postgres', 'postgres_reference', 'redis', 'mercure', 'valhalla', 'reference_data', 'messenger'] as $dep) {
             $this->assertArrayHasKey($dep, $data['deps'], \sprintf('Missing dep %s', $dep));
             $this->assertArrayHasKey('status', $data['deps'][$dep]);
             $this->assertArrayHasKey('latency_ms', $data['deps'][$dep]);
         }
+    }
+
+    #[Test]
+    public function readinessReportsTheQueueDepthAndTheDeadLetterCountWithoutJudgingThem(): void
+    {
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+        $messenger = $response->toArray()['deps']['messenger'];
+
+        $this->assertSame(1, $messenger['workers_alive']);
+        // Reported, never a verdict: a depth threshold would be red whenever the system is
+        // merely busy — the mistake ADR-041 R5 was withdrawn for. Null when the stream was
+        // never written to, which is the normal case under the in-memory test transport.
+        $this->assertArrayHasKey('queue_depth', $messenger);
+        $this->assertArrayHasKey('failed_depth', $messenger);
+        $this->assertTrue(null === $messenger['queue_depth'] || \is_int($messenger['queue_depth']));
+        $this->assertTrue(null === $messenger['failed_depth'] || \is_int($messenger['failed_depth']));
     }
 
     #[Test]
@@ -447,5 +475,18 @@ final class HealthControllerTest extends ApiTestCase
         $container = self::getContainer();
         $container->set('routing.client', new MockHttpClient($valhalla));
         $container->set('mercure.health.client', new MockHttpClient($mercure));
+    }
+
+    /**
+     * Built here rather than pulled from the container: resolving it would initialise
+     * RedisHealthClientFactory, and TestContainer refuses to replace an already-initialised
+     * service — which is exactly what readinessReturns503WhenRedisIsDown does.
+     */
+    private function workerHeartbeat(): WorkerHeartbeat
+    {
+        $redisUrl = $_SERVER['REDIS_URL'] ?? $_ENV['REDIS_URL'] ?? null;
+        \assert(\is_string($redisUrl), 'REDIS_URL must be set for the health suite');
+
+        return new WorkerHeartbeat(new RedisHealthClientFactory($redisUrl), 'test');
     }
 }
