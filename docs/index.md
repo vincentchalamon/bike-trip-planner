@@ -53,7 +53,7 @@ See [Architecture](architecture.md) for the full picture and the reasoning behin
 | Styling | Tailwind CSS |
 | Testing | PHPUnit 13 (backend), Playwright 1.62 (E2E) |
 | Quality | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier |
-| Async | Symfony Messenger, Redis transport, 5 workers |
+| Async | Symfony Messenger, Redis transport, `WORKER_REPLICAS` workers (2 by default) |
 | Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node) |
 
 ## Explore the documentation

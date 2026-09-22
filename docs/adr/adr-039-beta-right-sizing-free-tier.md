@@ -33,7 +33,7 @@ Run **only `llama3.2:3b`**, loaded on demand rather than kept hot for both model
 
 ### 2. Split Messenger workers: `async` vs `llm`
 
-Today all messages, including `AnalyzeStageWithLlmMessage`, route to the single `async` transport consumed by `replicas: 5` (see `api/config/packages/messenger.php` and `compose.yaml`). In the beta profile, LLM work is isolated onto its own `llm` transport with a **single** dedicated consumer (`worker-llm`, 1 replica), while the non-LLM enrichments keep the `async` transport with a reduced replica count. This caps concurrent CPU-only inference to one at a time and stops a burst of trip computations from saturating all 4 cores with parallel LLaMA runs. The async (I/O-bound) work stays parallel; the LLM (CPU-bound) work is serialised.
+Today all messages, including `AnalyzeStageWithLlmMessage`, route to the single `async` transport consumed by `replicas: 5` (see `api/config/packages/messenger.php` and `compose.yaml`). *(Amendment, 22/09/2026: the replica count has since become `${WORKER_REPLICAS:-2}` — #566 capped per-replica memory — so the file this sentence points at no longer says 5. The reasoning below is unaffected; only the number it started from has moved.)* In the beta profile, LLM work is isolated onto its own `llm` transport with a **single** dedicated consumer (`worker-llm`, 1 replica), while the non-LLM enrichments keep the `async` transport with a reduced replica count. This caps concurrent CPU-only inference to one at a time and stops a burst of trip computations from saturating all 4 cores with parallel LLaMA runs. The async (I/O-bound) work stays parallel; the LLM (CPU-bound) work is serialised.
 
 ### 3. LLM endpoint seam
 

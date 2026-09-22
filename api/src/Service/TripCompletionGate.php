@@ -30,7 +30,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * never hold — leaving the frontend waiting for a terminal event that never
  * arrives (recette #649, Lot 1).
  *
- * Note: with 5 concurrent workers the check-and-dispatch is not atomic; two
+ * Note: with concurrent workers the check-and-dispatch is not atomic; two
  * workers can both observe the settled condition and both dispatch the message.
  * {@see \App\MessageHandler\AllEnrichmentsCompletedHandler} guards against
  * duplicate processing via {@see ComputationTrackerInterface::claimReadyPublication()}.
