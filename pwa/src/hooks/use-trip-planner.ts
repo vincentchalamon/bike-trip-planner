@@ -14,6 +14,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
+  newIdempotencyKey,
   parseApiError,
   preconditionHeader,
   localizedApiErrorMessage,
@@ -207,6 +208,10 @@ export function useTripPlanner() {
     try {
       const pacing = getPacingState();
       const { data, error, response } = await apiClient.POST("/trips", {
+        // One key per magic link the user submitted. Minted here rather than inside the
+        // client so a retry of this same submission would carry the same one; minting it
+        // per HTTP attempt would protect nothing (ADR-077).
+        params: { header: { "Idempotency-Key": newIdempotencyKey() } },
         body: {
           sourceUrl,
           ...pacing,

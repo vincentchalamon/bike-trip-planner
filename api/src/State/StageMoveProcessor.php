@@ -30,7 +30,6 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -47,7 +46,6 @@ final readonly class StageMoveProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         if (null === $data->toIndex) {
             throw new UnprocessableEntityHttpException('toIndex is required.');

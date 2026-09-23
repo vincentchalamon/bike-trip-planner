@@ -21,9 +21,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * against the incoming identifiers instead of deleting and re-inserting them, so a stage
  * keeps its identity across every write (ADR-066).
  *
- * The Doctrine implementation is resolved explicitly: `config/services.php` aliases
- * {@see TripRequestRepositoryInterface} to the Redis implementation in the `test`
- * environment, so the interface would never exercise the SQL path under test here.
+ * The Doctrine implementation is resolved explicitly rather than through
+ * {@see TripRequestRepositoryInterface}: what is under test is this class's SQL path.
  */
 #[ResetDatabase]
 final class DoctrineStageReconciliationTest extends KernelTestCase

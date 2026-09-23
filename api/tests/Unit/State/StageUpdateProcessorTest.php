@@ -18,10 +18,8 @@ use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
 use App\State\StageLocator;
-use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -137,7 +135,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            new TripLocker(),
             new StageLocator(),
         );
 
@@ -231,7 +228,6 @@ final class StageUpdateProcessorTest extends TestCase
                 $this->createAlertRenderer(),
                 $this->createReaderLocale(),
             ),
-            new TripLocker(),
             new StageLocator(),
         );
 
@@ -313,7 +309,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            new TripLocker(),
             new StageLocator(),
         );
 
@@ -386,7 +381,6 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $stageResponseMapper,
-            new TripLocker(),
             new StageLocator(),
         );
 
@@ -398,49 +392,6 @@ final class StageUpdateProcessorTest extends TestCase
         self::assertNotNull($storedStages);
         // Fallback: stage 1 startPoint must equal stage 0 endPoint to stay contiguous
         self::assertSame($storedStages[0]->endPoint, $storedStages[1]->startPoint);
-    }
-
-    #[Test]
-    public function lockedTripThrowsHttpException(): void
-    {
-        $p = $this->decimatedPoints;
-
-        $stages = [
-            new Stage(tripId: 't', dayNumber: 1, distance: 30.0, elevation: 10.0, startPoint: $p[0], endPoint: $p[1]),
-        ];
-
-        $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-
-        $this->stubMutateStages($tripStateManager);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
-        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
-
-        $processor = new StageUpdateProcessor(
-            $tripStateManager,
-            $this->createStub(MessageBusInterface::class),
-            $this->createStub(DistanceCalculatorInterface::class),
-            $this->createStub(ElevationCalculatorInterface::class),
-            $this->createStub(RouteSimplifierInterface::class),
-            new StageResponseMapper(
-                $this->createStub(ComputationTrackerInterface::class),
-                $this->createStub(TripRequestRepositoryInterface::class),
-                $this->createAlertRenderer(),
-                $this->createReaderLocale(),
-            ),
-            new TripLocker(),
-            new StageLocator(),
-        );
-
-        try {
-            $processor->process(new StageRequest(), new Patch(), ['tripId' => 't', 'stageId' => $stages[0]->id]);
-            self::fail('Expected HttpException to be thrown.');
-        } catch (HttpException $httpException) {
-            self::assertSame(423, $httpException->getStatusCode());
-        }
     }
 
     #[Test]
@@ -501,7 +452,6 @@ final class StageUpdateProcessorTest extends TestCase
                 $this->createAlertRenderer(),
                 $this->createReaderLocale(),
             ),
-            new TripLocker(),
             new StageLocator(),
         );
 

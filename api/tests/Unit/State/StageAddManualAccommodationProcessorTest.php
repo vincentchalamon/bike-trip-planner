@@ -17,11 +17,9 @@ use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageLocator;
-use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -75,7 +73,6 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
                 $this->createAlertRenderer(),
                 $this->createReaderLocale(),
             ),
-            new TripLocker(),
             new StageLocator(),
             $geocoder,
         );
@@ -201,28 +198,5 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
 
         $this->expectException(UnprocessableEntityHttpException::class);
         $this->processor($repo, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
-    }
-
-    #[Test]
-    public function lockedTripThrows423(): void
-    {
-        $locked = new TripRequest();
-        $locked->startDate = new \DateTimeImmutable('yesterday');
-
-        $repo = $this->createStub(TripRequestRepositoryInterface::class);
-
-        $this->stubMutateStages($repo);
-        $repo->method('getRequest')->willReturn($locked);
-        $stages = $this->twoStages();
-        $repo->method('getStages')->willReturn($stages);
-
-        $geocoder = $this->createStub(GeocoderInterface::class);
-
-        try {
-            $this->processor($repo, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
-            self::fail('Expected HttpException.');
-        } catch (HttpException $httpException) {
-            self::assertSame(423, $httpException->getStatusCode());
-        }
     }
 }

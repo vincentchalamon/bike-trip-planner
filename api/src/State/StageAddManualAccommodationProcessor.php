@@ -42,7 +42,6 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
         private GeocoderInterface $geocoder,
     ) {
@@ -61,7 +60,6 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
 
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($request);
 
         // Geocode before mutating anything: a non-resolvable/ambiguous address is a
         // 422 with nothing persisted (acceptance: rien persisté). Kept out of the

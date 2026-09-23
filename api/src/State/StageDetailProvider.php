@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\StageResponse;
 use App\Mapper\StageResponseMapper;
-use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\TripRequestRepositoryInterface;
 
 /**
  * Read one stage in full (geometry, resupply, accommodations, events, classified
@@ -19,11 +19,8 @@ use App\Repository\DoctrineTripRequestRepository;
  */
 final readonly class StageDetailProvider implements ProviderInterface
 {
-    // Persisted stages live in Postgres, but the repository *interface* is
-    // aliased to the Redis (transient) implementation in services.php; inject
-    // the Doctrine repository explicitly, like TripDetailProvider.
     public function __construct(
-        private DoctrineTripRequestRepository $tripStateManager,
+        private TripRequestRepositoryInterface $tripStateManager,
         private StageResponseMapper $mapper,
         private StageLocator $stageLocator,
     ) {

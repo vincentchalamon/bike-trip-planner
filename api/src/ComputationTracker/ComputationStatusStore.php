@@ -7,10 +7,9 @@ namespace App\ComputationTracker;
 /**
  * Where the enrichment status map is kept once the cache has let go of it (ADR-072).
  *
- * Narrow on purpose, and separate from `TripRequestRepositoryInterface`: that one is aliased
- * to the transient implementation in the `test` environment, so depending on it here would
- * mean the durability this exists for went untested. One interface, one implementation, no
- * alias.
+ * Narrow on purpose, and separate from `TripRequestRepositoryInterface`: that one expresses
+ * none of these operations, and the merge below is a server-side jsonb `||` rather than a
+ * read-modify-write. One interface, one implementation, no alias.
  */
 interface ComputationStatusStore
 {

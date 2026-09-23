@@ -14,16 +14,13 @@ use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageDeleteProcessor;
 use App\State\StageLocator;
-use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
@@ -59,7 +56,6 @@ final class StageDeleteProcessorTest extends TestCase
             $this->tripStateManager,
             $this->messageBus,
             $this->distanceCalculator,
-            new TripLocker(),
             new StageLocator(),
         );
     }
@@ -218,34 +214,5 @@ final class StageDeleteProcessorTest extends TestCase
         $recalculate = $dispatchedMessages[0];
         $this->assertInstanceOf(RecalculateStages::class, $recalculate);
         $this->assertSame([ComputationTrigger::DATES], $recalculate->triggers);
-    }
-
-    #[Test]
-    public function lockedTripThrowsHttpException(): void
-    {
-        $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-
-        $this->stubMutateStages($tripStateManager);
-        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
-        $tripStateManager->method('getStages')->willReturn([]);
-
-
-        $processor = new StageDeleteProcessor(
-            $tripStateManager,
-            $this->createStub(MessageBusInterface::class),
-            $this->createStub(DistanceCalculatorInterface::class),
-            new TripLocker(),
-            new StageLocator(),
-        );
-
-        try {
-            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
-            self::fail('Expected HttpException to be thrown.');
-        } catch (HttpException $httpException) {
-            self::assertSame(423, $httpException->getStatusCode());
-        }
     }
 }

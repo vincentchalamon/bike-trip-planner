@@ -2634,6 +2634,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_usersme_get: {
@@ -3543,6 +3550,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -3600,6 +3614,13 @@ export interface operations {
             };
             /** @description The trip has changed since the version you sent; reload it and reapply your change. */
             412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3696,6 +3717,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -3787,6 +3815,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -3873,6 +3908,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
@@ -4060,6 +4102,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -4130,6 +4179,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     "api_trips_tripIdstages_stageIdrest-day_post": {
@@ -4198,6 +4254,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -4254,7 +4317,10 @@ export interface operations {
     api_trips_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description An opaque string identifying this creation, minted once per user intent and sent again unchanged on every retry of it. Replaying it returns the trip the first call created instead of making another. Minting a fresh one per HTTP attempt protects nothing. */
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4274,7 +4340,7 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Trip.jsonld"];
                 };
             };
-            /** @description Invalid input */
+            /** @description The "Idempotency-Key" header is missing or malformed. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4295,6 +4361,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description This "Idempotency-Key" was already used for a different request body. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error occurred */
             422: {
@@ -4611,6 +4684,13 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
@@ -4688,12 +4768,22 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_idduplicate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description An opaque string identifying this creation, minted once per user intent and sent again unchanged on every retry of it. Replaying it returns the trip the first call created instead of making another. Minting a fresh one per HTTP attempt protects nothing. */
+                "Idempotency-Key": string;
+            };
             path: {
                 /** @description Trip identifier */
                 id: string;
@@ -4711,7 +4801,7 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Trip.jsonld"];
                 };
             };
-            /** @description Invalid input */
+            /** @description The "Idempotency-Key" header is missing or malformed. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4735,6 +4825,13 @@ export interface operations {
             };
             /** @description Trip not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This "Idempotency-Key" was already used for a different request body. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

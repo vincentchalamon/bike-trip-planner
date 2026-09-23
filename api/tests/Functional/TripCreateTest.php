@@ -32,7 +32,7 @@ final class TripCreateTest extends ApiTestCase
     public function createTripWithKomootTourUrl(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-001'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/123456789',
             ],
@@ -51,7 +51,7 @@ final class TripCreateTest extends ApiTestCase
     public function createTripWithKomootCollectionUrl(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-002'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/collection/12345/my-collection',
             ],
@@ -69,7 +69,7 @@ final class TripCreateTest extends ApiTestCase
     public function createTripWithLocalizedKomootUrl(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-003'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/123456789',
             ],
@@ -87,7 +87,7 @@ final class TripCreateTest extends ApiTestCase
     public function createTripWithAllOptionalFields(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-004'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/123456789',
                 'startDate' => '2026-07-01T00:00:00+00:00',
@@ -109,7 +109,7 @@ final class TripCreateTest extends ApiTestCase
     public function allComputationsInitializedAsPending(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-005'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/123456789',
             ],
@@ -131,7 +131,7 @@ final class TripCreateTest extends ApiTestCase
     public function fetchAndParseRouteMessageDispatched(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-006'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/123456789',
             ],
@@ -156,7 +156,7 @@ final class TripCreateTest extends ApiTestCase
     public function rejectsMissingSourceUrl(): void
     {
         self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-007'], $this->authHeader($this->jwtToken)),
             'json' => new \stdClass(),
         ]);
 
@@ -173,7 +173,7 @@ final class TripCreateTest extends ApiTestCase
     public function rejectsEmptySourceUrl(): void
     {
         self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-008'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => '',
             ],
@@ -192,7 +192,7 @@ final class TripCreateTest extends ApiTestCase
     public function rejectsNullSourceUrl(): void
     {
         self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-009'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => null,
             ],
@@ -212,7 +212,7 @@ final class TripCreateTest extends ApiTestCase
     public function acceptsInvalidUrlFormatOnCreate(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-010'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://example.com/not-a-real-route',
             ],
@@ -262,7 +262,7 @@ final class TripCreateTest extends ApiTestCase
     public function createTripWithValidPayloads(array $payload): void
     {
         $response = self::createClient()->request('POST', '/trips', [
-            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-011'], $this->authHeader($this->jwtToken)),
             'json' => $payload,
         ]);
 
@@ -292,7 +292,7 @@ final class TripCreateTest extends ApiTestCase
             'headers' => array_merge(
                 [
                     'Content-Type' => 'application/ld+json',
-                    // Deliberately contradicts the account preference.
+                    'Idempotency-Key' => 'idempotency-key-for-test-012',                    // Deliberately contradicts the account preference.
                     'Accept-Language' => 'fr',
                 ],
                 $this->authHeader($token),

@@ -55,7 +55,12 @@ final readonly class TripGpxProvider implements ProviderInterface
         // a file, so the export still refuses; but a trip whose stages have not been computed
         // yet is a perfectly ordinary trip, and its address has to answer — `POST /trips`
         // hands out that `@id` before any stage exists.
-        if (!$isCanonicalRead && null === $this->tripStateManager->getStages($id)) {
+        // Empty counts as absent here, and the distinction is not academic: the transient
+        // repository answered `null` until something had been written, while Doctrine answers
+        // `[]` for a trip it knows has no stages. Only the first produced this 404, so the rule
+        // this comment describes held by accident of the implementation the tests happened to
+        // run on. Both mean the same thing to an export: there is no file to build.
+        if (!$isCanonicalRead && [] === ($this->tripStateManager->getStages($id) ?? [])) {
             throw new TripNotFoundException();
         }
 

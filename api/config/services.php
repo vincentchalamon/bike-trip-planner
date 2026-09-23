@@ -9,8 +9,6 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
-use App\Repository\RedisTripRequestRepository;
-use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 
@@ -63,18 +61,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
-        // Keeps the transient repository as the default in tests. The old justification —
-        // "no database available in PHPUnit" — has been false for a long time: ApiTestCase
-        // boots Foundry against a real Postgres, api/src/Factory holds the factories, and
-        // tests/Integration/Repository covers the JSONB round-trips and UUID handling the
-        // TODO here used to ask for.
-        //
-        // What is still true is that this alias is load-bearing, and quietly so: swapping it
-        // would send the whole suite through Doctrine at once, and code has since been built
-        // around it — PersistingComputationTracker writes through ComputationStatusStore
-        // precisely because this alias would otherwise keep its durability untested. Removing
-        // it is its own piece of work, not a comment fix.
-        $services->alias(TripRequestRepositoryInterface::class, RedisTripRequestRepository::class);
+        // The trip repository is deliberately NOT aliased here any more. It used to point at a
+        // transient implementation, which meant the suite exercised a repository production
+        // never runs — and that is how `PATCH /trips/{id}` shipped dispatching nothing at all
+        // for anyone. A test that green-lights code no user reaches is worse than no test.
     } else {
         $services->alias(TripUpdatePublisherInterface::class, TripUpdatePublisher::class);
     }

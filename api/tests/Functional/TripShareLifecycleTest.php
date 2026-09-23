@@ -59,6 +59,31 @@ final class TripShareLifecycleTest extends ApiTestCase
         $repo->storeStages($tripId, [$stage]);
     }
 
+    /**
+     * The second call is refused, not silently ignored: one active link per trip is a business
+     * rule, and the partial unique index behind it is what makes the rule hold under
+     * concurrency. Nothing asserted this until now — the suite only covered recreating a link
+     * after revoking one.
+     */
+    #[Test]
+    public function aSecondActiveShareIsRefused(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID);
+
+        $this->client->request('POST', \sprintf('/trips/%s/share', self::TRIP_ID), [
+            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'json' => [],
+        ]);
+        $this->assertResponseStatusCodeSame(201);
+
+        $this->client->request('POST', \sprintf('/trips/%s/share', self::TRIP_ID), [
+            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'json' => [],
+        ]);
+
+        $this->assertResponseStatusCodeSame(409);
+    }
+
     #[Test]
     public function revokeReturns204(): void
     {

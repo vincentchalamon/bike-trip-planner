@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\Get;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Exception\TripNotFoundException;
@@ -112,9 +114,24 @@ final class TripGpxProviderTest extends TestCase
 
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getRequest')->willReturn($request);
-        $repository->method('getStages')->willReturn($withStages ? [] : null);
+        // An actual stage, not `[]`: the export refuses an empty list exactly as it refuses a
+        // missing one, and modelling "has stages" as `[]` only passed while the rule looked at
+        // `null` alone.
+        $repository->method('getStages')->willReturn($withStages ? [$this->aStage()] : null);
 
         return new TripGpxProvider($repository, $tracker, new TripLocker());
+    }
+
+    private function aStage(): Stage
+    {
+        return new Stage(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 40.0,
+            elevation: 300.0,
+            startPoint: new Coordinate(48.5, 3.0, 0.0),
+            endPoint: new Coordinate(48.6, 3.1, 0.0),
+        );
     }
 
     /** @return array<string, mixed> */

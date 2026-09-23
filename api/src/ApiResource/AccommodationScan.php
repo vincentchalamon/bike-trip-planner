@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AccommodationScanProcessor;
+use App\State\TripLockProcessor;
 
 #[ApiResource(
     shortName: 'AccommodationScan',
@@ -24,6 +25,9 @@ use App\State\AccommodationScanProcessor;
             input: AccommodationScanRequest::class,
             output: Trip::class,
             processor: AccommodationScanProcessor::class,
+            // The least guarded write in the API until now: no precondition, no rate limit, no
+            // lock, and it rewrites every stage's accommodations including the selected one.
+            extraProperties: [TripLockProcessor::EXTRA_PROPERTY => true],
         ),
     ],
 )]

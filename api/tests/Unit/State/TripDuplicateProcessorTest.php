@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\State\Idempotency;
 use App\State\TripLocker;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\TripRequest;
@@ -48,6 +49,9 @@ final class TripDuplicateProcessorTest extends TestCase
             new TripLocker(),
             $this->createStub(CacheItemPoolInterface::class),
             $limiter,
+            // Stubbed to answer "never seen before", so the limiter is what refuses: the
+            // idempotency check runs first now, and a replay would short-circuit past it.
+            $this->createStub(Idempotency::class),
         );
 
         $this->expectException(TooManyRequestsHttpException::class);

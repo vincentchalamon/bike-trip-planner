@@ -35,7 +35,6 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -53,7 +52,6 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         $stage = null;
 

@@ -18,7 +18,6 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Concurrency\IfMatch;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\IdempotencyCheckerInterface;
 use App\State\TripLocker;
 use App\State\TripUpdateProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -28,7 +27,6 @@ use PHPUnit\Framework\TestCase;
 use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -41,8 +39,6 @@ final class TripUpdateProcessorTest extends TestCase
 
     private MockObject&ComputationTrackerInterface $computationTracker;
 
-    private MockObject&IdempotencyCheckerInterface $idempotencyChecker;
-
     private TripUpdateProcessor $processor;
 
     #[\Override]
@@ -51,7 +47,6 @@ final class TripUpdateProcessorTest extends TestCase
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->computationTracker = $this->createMock(ComputationTrackerInterface::class);
-        $this->idempotencyChecker = $this->createMock(IdempotencyCheckerInterface::class);
 
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn(new User('owner@example.com'));
@@ -65,50 +60,12 @@ final class TripUpdateProcessorTest extends TestCase
             $this->tripStateManager,
             $this->computationTracker,
             new ComputationDependencyResolver(),
-            $this->idempotencyChecker,
             $generationTracker,
             $security,
             new TripLocker(),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
             $this->inertSupersession(),
         );
-    }
-
-    #[Test]
-    public function lockedTripThrowsHttpException(): void
-    {
-        $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
-
-        $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn(new User('owner@example.com'));
-
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $generationTracker->method('increment')->willReturn(1);
-        $generationTracker->method('current')->willReturn(0);
-
-        $processor = new TripUpdateProcessor(
-            $this->createStub(MessageBusInterface::class),
-            $tripStateManager,
-            $this->createStub(ComputationTrackerInterface::class),
-            new ComputationDependencyResolver(),
-            $this->createStub(IdempotencyCheckerInterface::class),
-            $generationTracker,
-            $security,
-            new TripLocker(),
-            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
-            $this->inertSupersession(),
-        );
-
-        try {
-            $processor->process(new TripRequest(), new Patch(), ['id' => 'trip-1']);
-            self::fail('Expected HttpException to be thrown.');
-        } catch (HttpException $httpException) {
-            self::assertSame(423, $httpException->getStatusCode());
-        }
     }
 
     #[Test]
@@ -125,13 +82,11 @@ final class TripUpdateProcessorTest extends TestCase
         $newRequest->sourceUrl = 'https://www.komoot.com/tour/123';
         $newRequest->enabledAccommodationTypes = $enabledTypes;
 
-        // First call: get old request for dependency resolution
-        // Second call (inside dispatchAccommodationsScan): get stored request for enabled types
-        $this->tripStateManager->method('getRequest')
-            ->willReturnOnConsecutiveCalls($oldRequest, $newRequest);
+        // The only read left is the one inside dispatchAccommodationsScan, which wants the
+        // stored (new) types. The old ones now arrive as the before-image, from the context.
+        $this->tripStateManager->method('getRequest')->willReturn($newRequest);
         $this->computationTracker->method('getStatuses')->willReturn([]);
 
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
 
         $dispatchedMessages = [];
         $this->messageBus->method('dispatch')
@@ -141,7 +96,7 @@ final class TripUpdateProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process($newRequest, new Patch(), ['id' => $tripId]);
+        $this->processor->process($newRequest, new Patch(), ['id' => $tripId], ['previous_data' => $oldRequest]);
 
         $scanMessages = array_values(array_filter(
             $dispatchedMessages,
@@ -177,7 +132,6 @@ final class TripUpdateProcessorTest extends TestCase
             $this->tripStateManager,
             $this->computationTracker,
             new ComputationDependencyResolver(),
-            $this->idempotencyChecker,
             $generationTracker,
             $security,
             new TripLocker(),
@@ -195,46 +149,45 @@ final class TripUpdateProcessorTest extends TestCase
 
         $this->tripStateManager->method('getRequest')->willReturn($old);
         $this->computationTracker->method('getStatuses')->willReturn([]);
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
         $this->messageBus->method('dispatch')
             ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
 
         $request = new Request();
         $request->headers->set(IfMatch::HEADER, '"7"');
 
-        $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request]);
+        $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request, 'previous_data' => $old]);
     }
 
     /**
-     * Regression (#1292 review): the settings comparison has to run before the write.
+     * Regression (#1292 review, then the lot D audit): the comparison must not touch the
+     * repository at all.
      *
-     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity and
-     * `storeRequest()` copies the incoming fields onto that very instance, so a comparison
-     * performed afterwards compares the new values with themselves and dispatches nothing.
-     * The functional suite cannot see it — it is aliased to the Redis implementation, which
-     * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
+     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity, and
+     * API Platform deserialises the PATCH body into that very instance — so *every* read of
+     * it, before the write as well as after, already carries the new values. Resolving
+     * against it compared the new settings with themselves and dispatched nothing, for every
+     * PATCH ever made. Moving the comparison earlier was not enough; the before-image has to
+     * come from `previous_data`, which ReadProvider clones before deserialisation.
+     *
+     * The aliasing is reproduced here: `getRequest()` returns the object the caller passes in.
      */
     #[Test]
-    public function resolvesTheChangeBeforeTheWriteAliasesTheOldRequest(): void
+    public function resolvesTheChangeAgainstTheBeforeImageRatherThanTheRepository(): void
     {
         $tripId = 'trip-alias';
 
-        $managed = new TripRequest();
-        $managed->sourceUrl = 'https://www.komoot.com/tour/123';
-        $managed->maxDistancePerDay = 80.0;
+        $before = new TripRequest();
+        $before->sourceUrl = 'https://www.komoot.com/tour/123';
+        $before->maxDistancePerDay = 80.0;
 
         $incoming = new TripRequest();
         $incoming->sourceUrl = 'https://www.komoot.com/tour/123';
         $incoming->maxDistancePerDay = 120.0;
 
-        $this->tripStateManager->method('getRequest')->willReturn($managed);
-        // What Doctrine does: the write lands on the object the reads handed out.
-        $this->tripStateManager->method('storeRequest')
-            ->willReturnCallback(static function (string $id, TripRequest $source) use ($managed): void {
-                $managed->maxDistancePerDay = $source->maxDistancePerDay;
-            });
+        // Doctrine's aliasing, in one line: the repository serves the object the deserializer
+        // populated, not the one the trip had a moment ago.
+        $this->tripStateManager->method('getRequest')->willReturn($incoming);
         $this->computationTracker->method('getStatuses')->willReturn([]);
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
 
         $dispatched = [];
         $this->messageBus->method('dispatch')
@@ -244,9 +197,9 @@ final class TripUpdateProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process($incoming, new Patch(), ['id' => $tripId]);
+        $this->processor->process($incoming, new Patch(), ['id' => $tripId], ['previous_data' => $before]);
 
-        $this->assertNotSame([], $dispatched, 'A pacing change must re-dispatch its computations; resolving after the write compares the new settings with themselves and dispatches nothing.');
+        $this->assertNotSame([], $dispatched, 'A pacing change must re-dispatch its computations; resolving against the repository compares the new settings with themselves and dispatches nothing.');
     }
 
     #[Test]
@@ -260,11 +213,10 @@ final class TripUpdateProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn($request);
         $this->computationTracker->method('getStatuses')->willReturn([]);
 
-        $this->idempotencyChecker->method('hasChanged')->willReturn(false);
 
         $this->messageBus->expects($this->never())->method('dispatch');
 
-        $this->processor->process($request, new Patch(), ['id' => $tripId]);
+        $this->processor->process($request, new Patch(), ['id' => $tripId], ['previous_data' => clone $request]);
     }
 
     /**

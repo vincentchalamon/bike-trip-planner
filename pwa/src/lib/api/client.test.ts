@@ -145,6 +145,7 @@ describe("apiClient 401 retry (recette #649 #8)", () => {
 
     const { apiClient } = await import("./client");
     await apiClient.POST("/trips", {
+      params: { header: { "Idempotency-Key": "a-key-for-the-retry-test" } },
       body: { sourceUrl: "https://www.komoot.com/fr-fr/tour/1" } as never,
     });
 

@@ -51,7 +51,11 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
 
         $this->entityManager->clear();
 
-        self::assertSame(
+        // Loose comparison, for the reason the contract case already states: JSONB round-trips
+        // a whole number back as an int. This test never saw it before — it resolves the
+        // interface, which the test environment used to alias to the in-memory implementation,
+        // so a case named after Doctrine was exercising something else entirely.
+        self::assertEquals(
             [
                 ['lat' => 48.0, 'lon' => 2.0],
                 ['lat' => 48.1, 'lon' => 2.1],

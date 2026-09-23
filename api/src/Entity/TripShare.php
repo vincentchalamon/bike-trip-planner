@@ -33,6 +33,10 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\UniqueConstraint(name: 'uniq_trip_share_token', columns: ['token'])]
 #[ORM\UniqueConstraint(name: 'uniq_trip_share_short_code', columns: ['short_code'])]
 #[ORM\Index(name: 'idx_trip_share_trip', columns: ['trip_id'])]
+// At most one active share per trip, and the whole guarantee of TripShareCreateProcessor: the
+// pre-check it makes first has a window, the constraint does not. It lived only in the SQL
+// baseline, so the entity did not say what the code relies on.
+#[ORM\UniqueConstraint(name: 'uniq_trip_share_active', columns: ['trip_id'], options: ['where' => '(deleted_at IS NULL)'])]
 #[ApiResource(
     shortName: 'TripShare',
     operations: [

@@ -14,7 +14,6 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -74,9 +73,6 @@ final class TripDuplicateTest extends ApiTestCase
             $tracker->markDone($tripId, $computation);
         }
 
-        /** @var IdempotencyCheckerInterface $idempotencyChecker */
-        $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);
-        $idempotencyChecker->saveHash($tripId, $request);
     }
 
     #[Test]
@@ -87,7 +83,7 @@ final class TripDuplicateTest extends ApiTestCase
         $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-013'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -106,7 +102,7 @@ final class TripDuplicateTest extends ApiTestCase
         $this->client->request(
             'POST',
             '/trips/00000000-0000-0000-0000-000000000000/duplicate',
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-014'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(404);
@@ -120,7 +116,7 @@ final class TripDuplicateTest extends ApiTestCase
         $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-015'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -157,7 +153,7 @@ final class TripDuplicateTest extends ApiTestCase
         $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-016'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -182,7 +178,7 @@ final class TripDuplicateTest extends ApiTestCase
         $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-017'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -201,7 +197,7 @@ final class TripDuplicateTest extends ApiTestCase
         $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-018'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);

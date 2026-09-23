@@ -42,6 +42,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private CacheItemPoolInterface $tripStateCache,
         #[Autowire(service: 'limiter.trip_duplicate')]
         private RateLimiterFactory $duplicateLimiter,
+        private Idempotency $idempotency,
     ) {
     }
 
@@ -55,6 +56,14 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         // Cap per user: duplication clones DB rows + Redis blobs (SEC-009).
         $user = $this->security->getUser();
         \assert($user instanceof User);
+
+        // Before the limiter and before the clone: a retried duplication must answer with the
+        // copy it already made, not make a second one (ADR-077).
+        $already = $this->idempotency->alreadyCreated($user, $operation);
+        if ($already instanceof Uuid) {
+            return $this->tripFor($already->toRfc4122());
+        }
+
         if (!$this->duplicateLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
             throw new TooManyRequestsHttpException();
         }
@@ -126,6 +135,15 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 
+        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($newTripIdString));
+
+        // Lost the insert race: a concurrent call carrying this key recorded its copy first, and
+        // the client has to be answered with that one. The copy committed at line 115 stays behind
+        // unreachable — the cost of committing the trip before the key (ADR-077).
+        if ($winner->toRfc4122() !== $newTripIdString) {
+            return $this->tripFor($winner->toRfc4122());
+        }
+
         return new Trip(
             id: $newTripIdString,
             computationStatus: $statuses,
@@ -133,6 +151,21 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             // trip produces a locked one. Defaulting this to false said the opposite
             // (ADR-074).
             isLocked: $this->tripLocker->isLocked($duplicate),
+        );
+    }
+
+    /**
+     * The answer a copy that already exists produces, rebuilt rather than remembered: the statuses
+     * as they stand now rather than a snapshot of the instant it was made.
+     */
+    private function tripFor(string $tripId): Trip
+    {
+        $existing = $this->tripRepository->getRequest($tripId);
+
+        return new Trip(
+            id: $tripId,
+            computationStatus: $this->computationTracker->getStatuses($tripId) ?? [],
+            isLocked: $existing instanceof TripRequest && $this->tripLocker->isLocked($existing),
         );
     }
 

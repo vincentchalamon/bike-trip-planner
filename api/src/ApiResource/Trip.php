@@ -15,7 +15,9 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\NearbyPoiSearchProcessor;
+use App\State\TripCreation;
 use App\State\PreconditionProcessor;
+use App\State\TripLockProcessor;
 use App\State\TripBatchRecomputeProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
@@ -72,6 +74,9 @@ use App\State\TripUpdateProcessor;
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
+            // A creation has no version to pin, so a retry after a dropped response makes a
+            // second complete trip. The key is what makes asking twice safe (ADR-077).
+            extraProperties: [TripCreation::REQUIRES_IDEMPOTENCY_KEY => true],
         ),
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',
@@ -86,6 +91,7 @@ use App\State\TripUpdateProcessor;
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
+            extraProperties: [TripCreation::REQUIRES_IDEMPOTENCY_KEY => true],
         ),
         new Post(
             uriTemplate: '/trips/{id}/nearby-pois{._format}',
@@ -120,6 +126,9 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: AnalyzeTripProcessor::class,
+            // Re-runs the fifteen enrichments and replaces every stage's contents. On a trip
+            // already under way that is not an edit, it is a surprise.
+            extraProperties: [TripLockProcessor::EXTRA_PROPERTY => true],
         ),
         new Post(
             uriTemplate: '/trips/{id}/recompute{._format}',
@@ -146,7 +155,7 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: TripUpdateProcessor::class,
-            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true],
+            extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true, TripLockProcessor::EXTRA_PROPERTY => true],
         ),
         // The canonical read, and the address every write response hands out as `@id`. It
         // declared gpx and fit only, so it answered 406 to `application/ld+json` — content

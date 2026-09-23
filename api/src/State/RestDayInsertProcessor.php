@@ -29,7 +29,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -46,7 +45,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         $restDay = null;
 

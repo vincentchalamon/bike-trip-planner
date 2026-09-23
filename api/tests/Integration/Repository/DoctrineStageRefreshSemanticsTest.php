@@ -30,10 +30,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * The concurrent writer is simulated with raw SQL on the DBAL connection: it bypasses
  * the unit of work exactly as a Messenger worker in another container would.
  *
- * The Doctrine implementation is resolved explicitly, never through
- * {@see TripRequestRepositoryInterface}: `config/services.php` aliases that interface to
- * the Redis implementation in the `test` environment, so the interface would exercise a
- * blob in Redis and never touch SQL.
+ * The Doctrine implementation is resolved explicitly rather than through
+ * {@see TripRequestRepositoryInterface}: what is under test is this class's SQL, not whatever
+ * the interface happens to resolve to.
  */
 #[ResetDatabase]
 final class DoctrineStageRefreshSemanticsTest extends KernelTestCase

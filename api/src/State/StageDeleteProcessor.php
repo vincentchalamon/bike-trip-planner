@@ -29,7 +29,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -45,7 +44,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         $sourceType = $this->tripStateManager->getSourceType($tripId);
         $isRestDayDeletion = false;

@@ -929,6 +929,11 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $managed->maxDistancePerDay = $source->maxDistancePerDay;
         $managed->averageSpeed = $source->averageSpeed;
         $managed->enabledAccommodationTypes = $source->enabledAccommodationTypes;
+        // Listed last because it was missing, and the omission was invisible: $managed and
+        // $source are the same managed instance whenever the caller read the trip through this
+        // repository, so every assignment here is a self-assignment. It only does anything for a
+        // caller holding a detached copy — which is exactly what storeRequest() promises to support.
+        $managed->title = $source->title;
     }
 
     /**

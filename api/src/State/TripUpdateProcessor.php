@@ -35,7 +35,6 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
         private ComputationDependencyResolver $dependencyResolver,
-        private IdempotencyCheckerInterface $idempotencyChecker,
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
@@ -58,10 +57,24 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('End date must be after start date.');
         }
 
-        // Retrieve existing request to check the persisted startDate (before applying the PATCH body)
-        $existingRequest = $this->tripStateManager->getRequest($id);
-        \assert($existingRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($existingRequest);
+        // The settings as they were before this request: what the lock must judge, and the only
+        // sound thing to compare $data against.
+        //
+        // Not a second getRequest(): under Doctrine that returns the managed entity, which is
+        // the very object API Platform just deserialised the PATCH body into (ReadProvider
+        // hands the operation provider's result to DeserializeProvider, which sets it as
+        // OBJECT_TO_POPULATE). Resolving against it compared the new values with themselves
+        // and answered "nothing changed" for every PATCH ever made. The functional suite
+        // could not see it: the repository interface was aliased to the transient
+        // implementation, which deserialises a fresh copy per read.
+        //
+        // ReadProvider already clones the resource before deserialisation and publishes it as
+        // `previous_data` — a documented processor context key ({@see ProcessorInterface}).
+        // A shallow clone is enough here: every compared field is a scalar, an array, or a
+        // DateTimeImmutable that the property hook replaces rather than mutates.
+        $oldRequest = $context['previous_data'] ?? null;
+        \assert($oldRequest instanceof TripRequest);
+        \assert($oldRequest !== $data, 'previous_data must not be the object the deserializer populated.');
 
         // Refresh locale on each PATCH: the account preference may have changed since
         // the trip was created.
@@ -69,25 +82,17 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         \assert($user instanceof User);
         $this->tripStateManager->storeLocale($id, $user->getLocale());
 
-        // Provider (TripRequestProvider) already threw 404 if the trip doesn't exist;
-        // the processor only runs when $data is a valid, non-null TripRequest.
-        // Reuse the request already fetched above for the lock check.
-        $oldRequest = $existingRequest;
-
-        // Everything that compares the old settings with the new must happen BEFORE the
-        // write, for two independent reasons.
+        // The precondition also has to guard the write rather than follow it: checked after, a
+        // stale If-Match would persist the settings and only then answer 412 — a refusal the
+        // caller is entitled to read as "nothing happened".
         //
-        // Doctrine hands out the managed entity, and storeRequest() copies the incoming
-        // fields onto that very instance — so $oldRequest is not "old" once the write has
-        // run, and resolving afterwards compares the new values with themselves. The
-        // functional suite never showed it: it is aliased to the Redis implementation, which
-        // deserialises a fresh copy per read.
-        //
-        // And the precondition has to guard the write rather than follow it. Checked after,
-        // a stale If-Match would persist the settings and only then answer 412 — a refusal
-        // the caller is entitled to read as "nothing happened".
-        $hasChanged = $this->idempotencyChecker->hasChanged($id, $data);
-        $computationsToTrigger = $hasChanged ? $this->dependencyResolver->resolve($oldRequest, $data) : [];
+        // The resolver is the whole answer. It used to sit behind a cached hash of eight
+        // fields, which was strictly less precise than the resolver's own field-by-field
+        // comparison and wrong in both directions: it omitted `departureHour` and
+        // `averageSpeed`, so an edit to either was persisted and never recomputed, and its
+        // 30-minute TTL made an identical replay re-trigger the whole pipeline.
+        $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
+        $hasChanged = [] !== $computationsToTrigger;
 
         $generation = null;
         if ([] !== $computationsToTrigger) {
@@ -102,18 +107,17 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // Always persist — non-computation fields (e.g. title) may have changed
         $this->tripStateManager->storeRequest($id, $data);
 
-        // Check idempotency for computation-triggering fields only
+        // Nothing the resolver recognises changed — a title-only edit, or the same body sent
+        // twice. The settings are saved above either way; there is simply nothing to recompute.
         if (!$hasChanged) {
             $statuses = $this->computationTracker->getStatuses($id) ?? [];
 
             return new Trip(
                 id: $id,
                 computationStatus: $statuses,
-                isLocked: $this->tripLocker->isLocked($existingRequest),
+                isLocked: $this->tripLocker->isLocked($data),
             );
         }
-
-        $this->idempotencyChecker->saveHash($id, $data);
 
         if (null !== $generation) {
             foreach ($computationsToTrigger as $computation) {

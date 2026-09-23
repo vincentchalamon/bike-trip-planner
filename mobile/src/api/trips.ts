@@ -341,10 +341,26 @@ export async function analyzeTrip(tripId: string): Promise<MutationResult> {
   return { ok: response.ok, status: response.status };
 }
 
+/**
+ * A fresh idempotency key: one opaque string per creation the user asked for (ADR-077).
+ *
+ * Defaulted at the call site so a caller that retries can hold on to its own and send the same
+ * one again — a key minted per HTTP attempt protects nothing.
+ */
+export function newIdempotencyKey(): string {
+  return globalThis.crypto.randomUUID().replace(/-/g, '');
+}
+
 /** Deep-clone a trip. Returns the new trip id, or null on failure. */
-export async function duplicateTrip(tripId: string): Promise<string | null> {
+export async function duplicateTrip(
+  tripId: string,
+  idempotencyKey: string = newIdempotencyKey(),
+): Promise<string | null> {
   const { data, error } = await api.POST('/trips/{id}/duplicate', {
-    params: { path: { id: tripId } },
+    params: {
+      path: { id: tripId },
+      header: { 'Idempotency-Key': idempotencyKey },
+    },
     headers: ld,
   });
   if (error || !data?.id) {
@@ -391,8 +407,10 @@ const CREATE_DEFAULTS = {
  */
 export async function createTrip(
   sourceUrl: string,
+  idempotencyKey: string = newIdempotencyKey(),
 ): Promise<{ id: string | null; status: number }> {
   const { data, response } = await api.POST('/trips', {
+    params: { header: { 'Idempotency-Key': idempotencyKey } },
     headers: ldBody,
     body: { sourceUrl, ...CREATE_DEFAULTS },
   });

@@ -26,9 +26,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * — and asserts every group comes back, each carrying the tag the client needs to keep them
  * apart.
  *
- * Seeded through the Doctrine repository rather than the aliased interface, because that is
- * what the share provider reads (via {@see \App\State\TripDetailProvider}); the test-env alias
- * points the interface at the transient implementation.
+ * Seeded through the repository the share provider reads
+ * (via {@see \App\State\TripDetailProvider}).
  */
 #[ResetDatabase]
 final class TripSharePersistedAlertsTest extends ApiTestCase
