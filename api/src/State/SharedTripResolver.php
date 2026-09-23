@@ -62,13 +62,17 @@ final readonly class SharedTripResolver
     /**
      * Keyed on the caller, not on the code: throttling per short code would let one client
      * walk a list of them, and there is no account to key on.
+     *
+     * An unresolvable client IP falls back to a shared bucket rather than skipping the check.
+     * Not being able to tell callers apart is a reason to throttle them together, not a reason
+     * to stop throttling — and the case is reachable by misconfiguring trusted proxies, which
+     * would silently remove the guard from the very endpoint it was added for. Same fallback
+     * as every other limiter here ({@see \App\Controller\HealthController},
+     * {@see AccessRequestCreateProcessor}).
      */
     private function throttle(): void
     {
-        $ip = $this->requestStack->getCurrentRequest()?->getClientIp();
-        if (null === $ip) {
-            return;
-        }
+        $ip = $this->requestStack->getCurrentRequest()?->getClientIp() ?? 'unknown';
 
         if (!$this->limiter->create($ip)->consume()->isAccepted()) {
             throw new TooManyRequestsHttpException();

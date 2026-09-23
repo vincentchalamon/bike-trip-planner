@@ -73,12 +73,34 @@ final class SharedTripResolverTest extends TestCase
         $resolver->resolve('Ab3kX9mP');
     }
 
-    private function resolver(int $limit, string $ip): SharedTripResolver
+    /**
+     * A caller whose IP cannot be resolved is throttled with the others, not exempted.
+     *
+     * Failing open here is reachable by misconfiguring trusted proxies, and it would remove
+     * the guard from exactly the endpoint it was added for. Not being able to tell callers
+     * apart is a reason to put them in one bucket, not a reason to stop counting.
+     */
+    #[Test]
+    public function aCallerWithNoResolvableIpIsStillThrottled(): void
     {
-        $request = Request::create('/s/Ab3kX9mP');
-        $request->server->set('REMOTE_ADDR', $ip);
+        $this->repository->method('findByShortCode')->willReturn(new TripShare(trip: new TripRequest(Uuid::v7())));
 
-        $stack = new RequestStack([$request]);
+        $resolver = $this->resolver(limit: 1, ip: null);
+        $resolver->resolve('Ab3kX9mP');
+
+        $this->expectException(TooManyRequestsHttpException::class);
+        $resolver->resolve('Ab3kX9mP');
+    }
+
+    private function resolver(int $limit, ?string $ip): SharedTripResolver
+    {
+        $stack = new RequestStack();
+
+        if (null !== $ip) {
+            $request = Request::create('/s/Ab3kX9mP');
+            $request->server->set('REMOTE_ADDR', $ip);
+            $stack = new RequestStack([$request]);
+        }
 
         return new SharedTripResolver(
             $this->repository,

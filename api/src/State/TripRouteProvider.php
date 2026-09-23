@@ -58,10 +58,14 @@ readonly class TripRouteProvider implements ProviderInterface
             // work, not just the bytes. AddHeadersProcessor bails on a non-2xx response, so
             // the validator and the Vary it was negotiated under are set here or nowhere
             // (RFC 9110 §15.4.5).
+            //
+            // `Accept` and nothing else, because that is what the 200 for this resource ships:
+            // the configured vary list never reached a response, and the two variants have to
+            // advertise the same thing or the 304 describes a negotiation the 200 never made.
             return new Response('', Response::HTTP_NOT_MODIFIED, [
                 'ETag' => $etag,
                 'Cache-Control' => 'private, no-cache',
-                'Vary' => 'Accept, Authorization, Origin',
+                'Vary' => 'Accept',
             ]);
         }
 
