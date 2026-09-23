@@ -48,7 +48,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -66,7 +65,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($request);
 
         $stage = null;
         $isDeselect = null === $data->selectedAccommodationLat || null === $data->selectedAccommodationLon;

@@ -33,7 +33,6 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
-        private TripLocker $tripLocker,
         private StageLocator $stageLocator,
     ) {
     }
@@ -50,7 +49,6 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
         $index = $this->stageLocator->indexOf($stages, $stageId);

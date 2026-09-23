@@ -76,13 +76,6 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         \assert($oldRequest instanceof TripRequest);
         \assert($oldRequest !== $data, 'previous_data must not be the object the deserializer populated.');
 
-        // The lock judges the trip as it stands, never as the body would leave it. Reading the
-        // repository here instead handed back the object the deserializer had just populated,
-        // which cut both ways: a started trip unlocked itself when the same request moved its
-        // start date into the future, and an ordinary trip refused its own edit when that date
-        // moved into the past.
-        $this->tripLocker->assertNotLocked($oldRequest);
-
         // Refresh locale on each PATCH: the account preference may have changed since
         // the trip was created.
         $user = $this->security->getUser();

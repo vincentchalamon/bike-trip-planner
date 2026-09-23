@@ -32,7 +32,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private StageResponseMapper $stageResponseMapper,
-        private TripLocker $tripLocker,
     ) {
     }
 
@@ -47,7 +46,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($tripRequest);
 
         if (null === $data->startPoint || null === $data->endPoint) {
             throw new UnprocessableEntityHttpException('startPoint and endPoint are required to create a stage.');

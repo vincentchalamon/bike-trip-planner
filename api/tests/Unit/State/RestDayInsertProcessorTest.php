@@ -16,7 +16,6 @@ use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
 use App\State\StageLocator;
-use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -61,27 +60,10 @@ final class RestDayInsertProcessorTest extends TestCase
             $this->tripStateManager,
             $this->messageBus,
             $this->stageResponseMapper,
-            new TripLocker(),
             new StageLocator(),
         );
     }
 
-    #[Test]
-    public function lockedTripThrowsHttpException(): void
-    {
-        $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
-
-        $this->tripStateManager->method('getRequest')->willReturn($lockedRequest);
-        $this->tripStateManager->method('getStages')->willReturn([]);
-
-        try {
-            $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
-            self::fail('Expected HttpException to be thrown.');
-        } catch (HttpException $httpException) {
-            self::assertSame(423, $httpException->getStatusCode());
-        }
-    }
 
     #[Test]
     public function throwsNotFoundWhenIndexIsOutOfBounds(): void

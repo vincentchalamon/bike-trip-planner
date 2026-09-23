@@ -119,11 +119,16 @@ final class TripAcceptedBodyTest extends ApiTestCase
 
     /**
      * `POST /trips/{id}/analyze` had no functional coverage whatsoever.
+     *
+     * On a trip that has not started: analysis replaces every stage's contents, so a started
+     * one refuses it outright now ({@see TripLockedTest}). The locked body is still covered,
+     * on `/recompute`, which stays open because it is the only way to settle a half-finished
+     * pipeline.
      */
     #[Test]
     public function analyzeAnswersWithTheTripItAccepted(): void
     {
-        $this->seedTrip(startDate: new \DateTimeImmutable('today -1 day'));
+        $this->seedTrip(startDate: new \DateTimeImmutable('+10 days'));
 
         $response = $this->client->request('POST', \sprintf('/trips/%s/analyze', self::TRIP_ID), [
             'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
@@ -134,7 +139,7 @@ final class TripAcceptedBodyTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertSame(self::TRIP_ID, $data['id']);
         $this->assertArrayHasKey('route', $data['computationStatus']);
-        $this->assertTrue($data['isLocked']);
+        $this->assertFalse($data['isLocked']);
     }
 
     /**
