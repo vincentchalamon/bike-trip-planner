@@ -59,6 +59,18 @@ the winner's row and answers with that trip. This is `TripShareCreateProcessor`'
 without the window its pre-check leaves open — a pattern whose own constraint, incidentally,
 existed only in the SQL baseline and is now declared on the entity that depends on it.
 
+**The row is inserted through the connection, not persisted through the ORM.**
+`UnitOfWork::commit()` closes the entity manager in its `finally` before a unique violation
+propagates, so a flush cannot survive the one event this design is built around: the recovery
+read, and everything the processor still has to do to answer, would throw `EntityManagerClosed`
+and the loser would get a 500 instead of the winner's trip. The connection is rolled back, never
+closed. `IdempotencyKey` therefore declares the table and hydrates rows without ever building
+one.
+
+The loser keeps the trip it committed before the race was decided. It is unreachable — the
+client holds the winner's identifier — and its pipeline is never dispatched, which is the same
+cost the crash window below already charges, not a new one.
+
 Scope is `(user, operation, key)`. Not global, because the key belongs to the client that minted
 it and two clients picking the same string must not be handed each other's trip. Not per trip,
 because a creation has no trip yet — which is the entire reason this exists.

@@ -8,8 +8,10 @@ use ApiPlatform\Metadata\HttpOperation;
 use App\Entity\IdempotencyKey;
 use App\Entity\User;
 use App\Repository\IdempotencyKeyRepository;
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\DBAL\Types\Types;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -41,7 +43,7 @@ readonly class Idempotency
 
     public function __construct(
         private IdempotencyKeyRepository $keys,
-        private EntityManagerInterface $entityManager,
+        private Connection $connection,
         private RequestStack $requestStack,
     ) {
     }
@@ -70,21 +72,46 @@ readonly class Idempotency
     }
 
     /**
-     * Ties the key to what it created.
+     * Ties the key to what it created, and returns the identifier the caller must answer with.
      *
      * Written rather than pre-checked: two concurrent calls carrying the same key both get here,
      * and the unique index — not a lookup — is what makes one of them lose. The loser is told
      * which trip won, and answers with that one. A pre-check alone leaves the window between
      * reading and writing wide open, which is the flaw in the share endpoint this is modelled on.
+     *
+     * Inserted through the connection rather than persisted through the ORM, because the losing
+     * insert is the whole point and `EntityManager::flush()` does not survive it:
+     * `UnitOfWork::commit()` closes the entity manager in its `finally` before the exception
+     * propagates (orm/src/UnitOfWork.php:470-472). Every Doctrine read after that — the one below,
+     * and everything the calling processor still has to do — would throw `EntityManagerClosed`,
+     * so the race this method exists to handle would answer 500. The connection is only rolled
+     * back, never closed. It also keeps the flush from carrying along whatever else the unit of
+     * work happens to hold.
      */
     public function remember(User $user, HttpOperation $operation, Uuid $resourceId): Uuid
     {
         $key = $this->key();
         $scope = $this->scope($operation);
 
+        // Outside any transaction: a violated INSERT aborts the enclosing one in Postgres, and
+        // the recovery read below would fail with it. Both creating processors commit first.
+        \assert(!$this->connection->isTransactionActive());
+
         try {
-            $this->entityManager->persist(new IdempotencyKey($user, $scope, $key, $this->digest(), $resourceId));
-            $this->entityManager->flush();
+            $this->connection->insert('idempotency_key', [
+                'id' => Uuid::v7(),
+                'user_id' => $user->getId(),
+                'operation' => $scope,
+                'idempotency_key' => $key,
+                'request_digest' => $this->digest(),
+                'resource_id' => $resourceId,
+                'created_at' => new \DateTimeImmutable(),
+            ], [
+                'id' => UuidType::NAME,
+                'user_id' => UuidType::NAME,
+                'resource_id' => UuidType::NAME,
+                'created_at' => Types::DATETIME_IMMUTABLE,
+            ]);
         } catch (UniqueConstraintViolationException) {
             $recorded = $this->keys->findRecorded($user, $scope, $key);
 

@@ -102,7 +102,15 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         // So the order is chosen to fail in the safe direction. Trip first means a crash costs a
         // duplicate; key first would leave a key pointing at a trip that was never committed, and
         // the retry would be handed an identifier for nothing at all.
-        $this->idempotency->remember($user, $operation, Uuid::fromString($tripId));
+        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($tripId));
+
+        // Lost the insert race: a concurrent call carrying this key recorded its own trip first,
+        // and the client has to be answered with that one — two requests under one key must never
+        // see two identifiers. The trip committed a few lines up stays behind unreachable, which
+        // is the same price the crash window charges; its pipeline is at least never dispatched.
+        if ($winner->toRfc4122() !== $tripId) {
+            return $this->tripFor($winner->toRfc4122());
+        }
 
         $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
 

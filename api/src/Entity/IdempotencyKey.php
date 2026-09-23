@@ -26,6 +26,11 @@ use Symfony\Component\Uid\Uuid;
  * `$requestDigest` fingerprints the body and does one thing: the same key arriving with a
  * different body is a client contradicting itself, and is answered 409. It never identifies the
  * request — `$key` does that, so two deliberate identical creations both succeed.
+ *
+ * Read here, written by {@see \App\State\Idempotency::remember()} straight through the
+ * connection: the losing insert of a race must not close the entity manager, which a flush would
+ * do. So this declares the table and the constraint the guarantee rests on, and hydrates rows —
+ * it never builds one.
  */
 #[ORM\Entity(repositoryClass: IdempotencyKeyRepository::class)]
 #[ORM\Table(name: 'idempotency_key')]
@@ -40,21 +45,20 @@ class IdempotencyKey
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     public \DateTimeImmutable $createdAt;
 
-    public function __construct(
-        #[ORM\ManyToOne(targetEntity: User::class)]
-        #[ORM\JoinColumn(name: 'user_id', nullable: false, onDelete: 'CASCADE')]
-        public User $user,
-        #[ORM\Column(name: 'operation', length: 128)]
-        public string $operation,
-        #[ORM\Column(name: 'idempotency_key', length: 255)]
-        public string $key,
-        #[ORM\Column(name: 'request_digest', length: 32)]
-        public string $requestDigest,
-        /** The trip the first call created, from which the replayed answer is rebuilt. */
-        #[ORM\Column(name: 'resource_id', type: 'uuid')]
-        public Uuid $resourceId,
-    ) {
-        $this->id = Uuid::v7();
-        $this->createdAt = new \DateTimeImmutable();
-    }
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'user_id', nullable: false, onDelete: 'CASCADE')]
+    public User $user;
+
+    #[ORM\Column(name: 'operation', length: 128)]
+    public string $operation;
+
+    #[ORM\Column(name: 'idempotency_key', length: 255)]
+    public string $key;
+
+    #[ORM\Column(name: 'request_digest', length: 32)]
+    public string $requestDigest;
+
+    /** The trip the first call created, from which the replayed answer is rebuilt. */
+    #[ORM\Column(name: 'resource_id', type: 'uuid')]
+    public Uuid $resourceId;
 }
