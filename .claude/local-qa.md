@@ -11,11 +11,20 @@ re-prefilled into every session. Read this only when you actually run QA/tests l
 Do not spend turns diagnosing this, and do not conclude the branch is broken. Run the legs individually instead, and paste **their** output as the evidence:
 
 ```bash
-# Rector + PHPStan: one-off container outside the compose memory cap
-docker run --rm -m 4g -v "$PWD/api:/app" -w /app --entrypoint sh bike-trip-planner-php:dev \
-  -c "vendor/bin/rector process --dry-run"
-docker run --rm -m 4g -v "$PWD/api:/app" -w /app -e APP_ENV=dev --entrypoint sh bike-trip-planner-php:dev \
-  -c "bin/console cache:warmup -e dev >/dev/null && vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=3G --no-progress"
+# Rector + PHPStan: one-off container outside the compose memory cap.
+#
+# `-v "$PWD/api/var:/app/var"` is NOT optional for PHPStan. The image declares
+# `VOLUME /app/var`, so without it Docker mounts an anonymous volume over that path and the
+# warmup writes the container XML into a volume the next container never sees — PHPStan then
+# dies with `Container /app/var/cache/dev/App_KernelDevDebugContainer.xml does not exist`,
+# which reads as a broken branch rather than a missing mount.
+docker run --rm -m 4g -v "$PWD/api:/app" -w /app --entrypoint vendor/bin/rector \
+  bike-trip-planner-php:dev process --dry-run
+docker run --rm -m 4g -v "$PWD/api:/app" -v "$PWD/api/var:/app/var" -w /app -e APP_ENV=dev \
+  --entrypoint bin/console bike-trip-planner-php:dev cache:warmup -e dev
+docker run --rm -m 4g -v "$PWD/api:/app" -v "$PWD/api/var:/app/var" -w /app -e APP_ENV=dev \
+  --entrypoint vendor/bin/phpstan bike-trip-planner-php:dev \
+  analyse -c phpstan.dist.neon --memory-limit=3G --no-progress
 
 # PHP-CS-Fixer (fine inside compose)
 docker run --rm -v "$PWD/api:/app" -w /app -e PHP_CS_FIXER_IGNORE_ENV=1 --entrypoint php \

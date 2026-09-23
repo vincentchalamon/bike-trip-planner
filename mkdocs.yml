@@ -157,6 +157,7 @@ nav:
       - adr/adr-075-readiness-covers-the-consumers.md
       - adr/adr-076-the-state-before-is-the-record.md
       - adr/adr-077-a-creation-carries-its-own-key.md
+      - adr/adr-078-what-an-etag-promises.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:
