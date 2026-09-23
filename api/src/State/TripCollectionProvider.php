@@ -58,6 +58,11 @@ final readonly class TripCollectionProvider implements ProviderInterface
         $qb->select('t')
             ->from(TripRequest::class, 't')
             ->orderBy('t.createdAt', \SortDirection::Descending)
+            // createdAt alone is not a total order: two trips created in the same second sit
+            // in an order the database is free to change between queries, so a tie straddling
+            // a page boundary is served twice or not at all. The identifier is a UUID v7, so
+            // it breaks the tie in the same direction time runs.
+            ->addOrderBy('t.id', \SortDirection::Descending)
             ->andWhere('t.user = :user')
             ->setParameter('user', $user);
 

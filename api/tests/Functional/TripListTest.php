@@ -200,6 +200,43 @@ final class TripListTest extends ApiTestCase
         $this->assertSame(31, $data['totalItems']);
     }
 
+    /**
+     * Paging over trips that share a createdAt must still show each of them exactly once.
+     *
+     * `trip.created_at` is `timestamp(0)`, so any two trips created in the same second tie,
+     * and a tie straddling a page boundary is served twice or not at all unless the order is
+     * total. The identifier is a UUID v7, which breaks the tie in the same direction time runs.
+     *
+     * Honest about what this proves: on three rows Postgres happens to sort deterministically,
+     * so this does not go red against the untied query. It is a regression guard — it fails if
+     * the second sort key is dropped and the list starts paging on a partial order again.
+     */
+    #[Test]
+    public function pagingOverTripsCreatedInTheSameSecondShowsEachOnce(): void
+    {
+        $ids = [];
+        for ($i = 1; $i <= 3; ++$i) {
+            $ids[] = $id = \sprintf('01936f6e-0000-7000-8000-0000000003%02d', $i);
+            $this->seedTrip($id);
+        }
+
+        $seen = [];
+        foreach ([1, 2] as $page) {
+            $response = $this->client->request('GET', \sprintf('/trips?itemsPerPage=2&page=%d', $page), [
+                'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            ]);
+            $this->assertResponseIsSuccessful();
+            $seen = array_merge($seen, array_column($response->toArray(false)['member'], 'id'));
+        }
+
+        sort($ids);
+        $unique = array_unique($seen);
+        sort($unique);
+
+        $this->assertSame($ids, array_values($unique));
+        $this->assertCount(3, $seen, 'A trip was served on both pages.');
+    }
+
     #[Test]
     public function listTripsFilterByEndDate(): void
     {
