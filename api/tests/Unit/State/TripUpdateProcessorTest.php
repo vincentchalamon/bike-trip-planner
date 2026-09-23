@@ -141,7 +141,7 @@ final class TripUpdateProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process($newRequest, new Patch(), ['id' => $tripId]);
+        $this->processor->process($newRequest, new Patch(), ['id' => $tripId], ['previous_data' => $oldRequest]);
 
         $scanMessages = array_values(array_filter(
             $dispatchedMessages,
@@ -202,37 +202,38 @@ final class TripUpdateProcessorTest extends TestCase
         $request = new Request();
         $request->headers->set(IfMatch::HEADER, '"7"');
 
-        $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request]);
+        $processor->process($incoming, new Patch(), ['id' => 'trip-precondition'], ['request' => $request, 'previous_data' => $old]);
     }
 
     /**
-     * Regression (#1292 review): the settings comparison has to run before the write.
+     * Regression (#1292 review, then the lot D audit): the comparison must not touch the
+     * repository at all.
      *
-     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity and
-     * `storeRequest()` copies the incoming fields onto that very instance, so a comparison
-     * performed afterwards compares the new values with themselves and dispatches nothing.
-     * The functional suite cannot see it — it is aliased to the Redis implementation, which
-     * deserialises a fresh copy per read — so the aliasing is reproduced here instead.
+     * {@see \App\Repository\DoctrineTripRequestRepository} hands out the managed entity, and
+     * API Platform deserialises the PATCH body into that very instance — so *every* read of
+     * it, before the write as well as after, already carries the new values. Resolving
+     * against it compared the new settings with themselves and dispatched nothing, for every
+     * PATCH ever made. Moving the comparison earlier was not enough; the before-image has to
+     * come from `previous_data`, which ReadProvider clones before deserialisation.
+     *
+     * The aliasing is reproduced here: `getRequest()` returns the object the caller passes in.
      */
     #[Test]
-    public function resolvesTheChangeBeforeTheWriteAliasesTheOldRequest(): void
+    public function resolvesTheChangeAgainstTheBeforeImageRatherThanTheRepository(): void
     {
         $tripId = 'trip-alias';
 
-        $managed = new TripRequest();
-        $managed->sourceUrl = 'https://www.komoot.com/tour/123';
-        $managed->maxDistancePerDay = 80.0;
+        $before = new TripRequest();
+        $before->sourceUrl = 'https://www.komoot.com/tour/123';
+        $before->maxDistancePerDay = 80.0;
 
         $incoming = new TripRequest();
         $incoming->sourceUrl = 'https://www.komoot.com/tour/123';
         $incoming->maxDistancePerDay = 120.0;
 
-        $this->tripStateManager->method('getRequest')->willReturn($managed);
-        // What Doctrine does: the write lands on the object the reads handed out.
-        $this->tripStateManager->method('storeRequest')
-            ->willReturnCallback(static function (string $id, TripRequest $source) use ($managed): void {
-                $managed->maxDistancePerDay = $source->maxDistancePerDay;
-            });
+        // Doctrine's aliasing, in one line: the repository serves the object the deserializer
+        // populated, not the one the trip had a moment ago.
+        $this->tripStateManager->method('getRequest')->willReturn($incoming);
         $this->computationTracker->method('getStatuses')->willReturn([]);
         $this->idempotencyChecker->method('hasChanged')->willReturn(true);
 
@@ -244,9 +245,9 @@ final class TripUpdateProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->processor->process($incoming, new Patch(), ['id' => $tripId]);
+        $this->processor->process($incoming, new Patch(), ['id' => $tripId], ['previous_data' => $before]);
 
-        $this->assertNotSame([], $dispatched, 'A pacing change must re-dispatch its computations; resolving after the write compares the new settings with themselves and dispatches nothing.');
+        $this->assertNotSame([], $dispatched, 'A pacing change must re-dispatch its computations; resolving against the repository compares the new settings with themselves and dispatches nothing.');
     }
 
     #[Test]
@@ -264,7 +265,7 @@ final class TripUpdateProcessorTest extends TestCase
 
         $this->messageBus->expects($this->never())->method('dispatch');
 
-        $this->processor->process($request, new Patch(), ['id' => $tripId]);
+        $this->processor->process($request, new Patch(), ['id' => $tripId], ['previous_data' => clone $request]);
     }
 
     /**
