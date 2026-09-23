@@ -672,6 +672,7 @@
     "validationError": "Données invalides.",
     "badRequest": "Requête invalide.",
     "notFound": "Ressource introuvable.",
+    "rateLimited": "Tu vas un peu vite. Patiente une minute avant de réessayer.",
     "tripMovedOn": "Ce voyage a changé pendant ton édition. Il a été rechargé, refais ta modification.",
     "failedUpdateDates": "Impossible de mettre à jour les dates.",
     "failedDeleteStage": "Impossible de supprimer l'étape.",
