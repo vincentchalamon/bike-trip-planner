@@ -6,8 +6,6 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Stage;
 use App\ApiResource\TripRoute;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -26,23 +24,13 @@ final readonly class TripRouteProvider implements ProviderInterface
     {
         $id = \is_string($uriVariables['id'] ?? null) ? $uriVariables['id'] : '';
 
-        $stages = $this->tripStateManager->getStages($id);
-        if (null === $stages) {
+        // The 404 used to come from getStages() answering null. It answers null for exactly
+        // one reason — the trip row is missing — which is the same reason getVersion() does,
+        // and that one costs a single column instead of the whole stage collection.
+        if (null === $this->tripStateManager->getVersion($id)) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $id));
         }
 
-        return new TripRoute(
-            id: $id,
-            stages: array_map(
-                static fn (Stage $stage): array => [
-                    'dayNumber' => $stage->dayNumber,
-                    'geometry' => array_map(
-                        static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-                        $stage->geometry,
-                    ),
-                ],
-                $stages,
-            ),
-        );
+        return new TripRoute(id: $id, stages: $this->tripStateManager->getRouteGeometry($id));
     }
 }
