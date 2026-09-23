@@ -53,10 +53,33 @@ describe("parseApiError", () => {
     });
   });
 
-  it("returns network error for 422 without violations array", () => {
-    // 422 but body doesn't match ViolationBody shape → falls through
+  it("reads detail on a 422 that carries no violations", () => {
+    // Not every 422 comes from the validator: the GPX upload answers RFC 7807 with a
+    // `detail` and no violations (unparsable file, no track points). Treating that as a
+    // network error threw away the only explanation the server gave.
     expect(parseApiError(422, { detail: "something" })).toEqual({
+      type: "validation",
+      message: "something",
+      violations: [],
+    });
+  });
+
+  it("returns network error for a 422 with no usable body", () => {
+    expect(parseApiError(422, null)).toEqual({
       type: "network",
+      message: "",
+    });
+  });
+
+  it("recognises a 429 and drops the server's untranslated detail", () => {
+    // Trip creation, duplication, recompute and the GPX upload all sit behind a limiter,
+    // and every one of them used to read "an unexpected error occurred" — which invites
+    // the retry that makes it worse. The `detail` is a hardcoded English sentence, not a
+    // rendered message (ADR-069), so it is dropped in favour of the localized fallback.
+    expect(
+      parseApiError(429, { detail: "Too many GPX uploads. Try again later." }),
+    ).toEqual({
+      type: "rate_limited",
       message: "",
     });
   });
@@ -81,6 +104,9 @@ describe("localizedApiErrorMessage", () => {
     expect(
       localizedApiErrorMessage({ type: "validation", message: "" }, t),
     ).toBe("t:errors.validationError");
+    expect(
+      localizedApiErrorMessage({ type: "rate_limited", message: "" }, t),
+    ).toBe("t:errors.rateLimited");
   });
 });
 

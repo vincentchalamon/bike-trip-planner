@@ -17,7 +17,6 @@ use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\DBAL\Connection;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Symfony\Component\Uid\Uuid;
@@ -502,41 +501,6 @@ final class TripDetailTest extends ApiTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertSame('draft', $response->toArray(false)['status']);
-    }
-
-    #[Test]
-    public function detailFallsBackToReadyForLegacyTripWithStagesAndEmptyStatus(): void
-    {
-        // Simulates a trip persisted before the status column existed: status is blank
-        // in DB, so the provider infers readiness from the presence of stages.
-        $repo = $this->seedTrip(self::TRIP_ID);
-
-        $stage = new StageDto(
-            tripId: self::TRIP_ID,
-            dayNumber: 1,
-            distance: 40.0,
-            elevation: 300.0,
-            startPoint: new Coordinate(48.5, 3.0, 0.0),
-            endPoint: new Coordinate(48.6, 3.1, 0.0),
-        );
-        $repo->storeStages(self::TRIP_ID, [$stage]);
-
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
-        \assert($connection instanceof Connection);
-        $connection->executeStatement("UPDATE trip SET status = '' WHERE id = :id", ['id' => self::TRIP_ID]);
-
-        // Drop the Doctrine identity map so the provider re-reads the blanked status
-        // from the DB instead of returning the still-managed entity (status='draft').
-        $em = self::getContainer()->get('doctrine')->getManager();
-        \assert($em instanceof EntityManagerInterface);
-        $em->clear();
-
-        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
-            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
-        ]);
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSame('ready', $response->toArray(false)['status']);
     }
 
     #[Test]

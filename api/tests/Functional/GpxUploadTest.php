@@ -290,10 +290,45 @@ final class GpxUploadTest extends ApiTestCase
         $response = $controller($request);
 
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame(
-            ['error' => 'File exceeds maximum size of 30 MB.'],
-            json_decode((string) $response->getContent(), true),
-        );
+        $this->assertStringStartsWith('application/problem+json', (string) $response->headers->get('Content-Type'));
+
+        // assertMatchesJsonSchema works off the last HTTP response, and this test calls the
+        // controller directly, so the key set is asserted here and the schema itself is
+        // checked over the wire by rejectsInvalidGpxWithTheApiWideErrorShape().
+        $body = json_decode((string) $response->getContent(), true);
+        \assert(\is_array($body));
+
+        $keys = array_keys($body);
+        sort($keys);
+
+        $this->assertSame(['@context', '@id', '@type', 'description', 'detail', 'status', 'title', 'type'], $keys);
+        $this->assertSame('File exceeds maximum size of 30 MB.', $body['detail']);
+        $this->assertSame(400, $body['status']);
+    }
+
+    #[Test]
+    public function rejectsInvalidGpxWithTheApiWideErrorShape(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test');
+        \assert(false !== $tempFile);
+        file_put_contents($tempFile, '<gpx><trk><trkseg><trkpt lat="not');
+
+        try {
+            $file = new UploadedFile($tempFile, 'broken.gpx', 'application/gpx+xml', null, true);
+
+            $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+                'extra' => ['files' => ['gpxFile' => $file]],
+            ]);
+
+            $this->assertResponseStatusCodeSame(422);
+            // RFC 7807 is on globally, but API Platform's ErrorListener only covers its own
+            // operations: this route is a plain Symfony controller and a multipart POST
+            // negotiates `html`, so nothing would have shaped this body for us.
+            $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+        } finally {
+            unlink($tempFile);
+        }
     }
 
     #[Test]

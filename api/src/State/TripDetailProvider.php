@@ -22,7 +22,6 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\EventArrayMapper;
 use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
-use App\Enum\TripStatus;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Weather\WeatherForecastSerializer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -98,9 +97,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             isLocked: $this->tripLocker->isLocked($request),
             // Persisted at stage-store time (issue #775) — no PostGIS query here.
             outOfZone: $request->outOfZone,
-            // Fallback for trips persisted before the status column existed: infer
-            // readiness from whether stages are present.
-            status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
+            status: $request->status,
             weatherStatus: $weatherStatus,
             categoryStatus: $this->deriveCategoryStatuses($statuses),
             stages: array_map(
@@ -158,10 +155,13 @@ final readonly class TripDetailProvider implements ProviderInterface
     /**
      * Aggregates the tracked statuses of a block's computations into a single label.
      *
-     * Mirrors {@see TripCollectionProvider::computeStatus()} (30-min TTL cache that
-     * can return null). Deterministic rule, evaluated against the block's
-     * computations actually present in `$statuses`:
-     *   - `$statuses === null`                  → null (nothing tracked, e.g. expired TTL)
+     * Not to be confused with {@see TripCollectionProvider::computeStatus()}: the rules
+     * rhyme, but the vocabularies do not overlap at all — this one answers
+     * running/done/failed/superseded, that one draft/analyzing/analyzed/failed.
+     *
+     * Deterministic rule, evaluated against the block's computations actually present in
+     * `$statuses`:
+     *   - `$statuses === null`                  → null (nothing tracked for this trip)
      *   - no block computation present at all    → null (front falls back to data presence)
      *   - at least one `pending` or `running`    → 'running'
      *   - all terminal, ≥1 `done`                → 'done'

@@ -158,10 +158,11 @@ final readonly class TripCollectionProvider implements ProviderInterface
     /**
      * Derives the trip status from the computation tracker data and stage count.
      *
-     * - "draft"     : no computations tracked yet, or every tracked computation
-     *                failed without ever producing a `done` state
+     * - "draft"     : no computations tracked yet, or none succeeded and no stage was
+     *                 persisted — nothing to show, so the user can start over
      * - "analyzing" : at least one computation is still pending or running
-     * - "analyzed"  : at least one computation reached `done` (results available)
+     * - "analyzed"  : results are available (≥1 `done`, or stages from a superseded run)
+     * - "failed"    : every computation failed, but stages exist from an earlier run
      *
      * The map itself is now durable past the cache's 30-minute TTL
      * ({@see \App\ComputationTracker\PersistingComputationTracker}), so the fallback on
@@ -199,12 +200,13 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         // Nothing succeeded, but stages exist. This used to answer 'analyzed', so a trip
         // whose every computation had failed was indistinguishable in the list from one
-        // that had worked (ADR-072). The rule matches
-        // TripDetailProvider::deriveBlockStatus(): a partial failure still leaves a usable
-        // trip and stays 'analyzed'.
+        // that had worked (ADR-072).
         if ($hasFailed && !$hasDone) {
             return 'failed';
         }
+
+        // A *partial* failure never reaches here: $hasDone is true, so the trip is usable
+        // and reads 'analyzed'. Only a total failure is called out.
 
         // `superseded` lands here, and deliberately keeps its own answer rather than gaining
         // one: a trip whose computations were abandoned when it moved still has the stages

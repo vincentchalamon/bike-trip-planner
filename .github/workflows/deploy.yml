@@ -286,12 +286,25 @@ jobs:
 
       - name: Probe /api/health and assert overall status
         run: |
-          response=$(curl -fsS --max-time 10 "${HEALTH_URL}/api/health")
-          echo "$response"
-          # Trust the controller's own readiness verdict (its $required list
-          # excludes optional deps like ollama), instead of asserting every
-          # entry in .deps which would false-positive on an optional degradation.
-          echo "$response" | jq -e '.status == "ok"'
+          # Retried, unlike before: readiness now requires a live Messenger consumer
+          # (ADR-075), and the workers only start once `php` is healthy (start_period
+          # 30s), with their first heartbeat a few seconds later. The sleep above left
+          # 10-20s of margin, which a slow `--pull always` eats — a green deploy would
+          # have failed on a race. A deploy that genuinely leaves no worker running
+          # must still fail here: that is the point.
+          set +e
+          for attempt in 1 2 3 4 5 6; do
+            response=$(curl -fsS --max-time 10 "${HEALTH_URL}/api/health")
+            echo "$response"
+            if echo "$response" | jq -e '.status == "ok"' >/dev/null; then
+              exit 0
+            fi
+            if [ "${attempt}" -lt 6 ]; then
+              echo "Attempt ${attempt}: readiness not ok yet, retrying in 15s..."
+              sleep 15
+            fi
+          done
+          exit 1
 
       - name: Open incident on smoke-test failure
         if: failure()

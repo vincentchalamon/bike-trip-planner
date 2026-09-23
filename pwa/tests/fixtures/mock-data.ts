@@ -366,7 +366,6 @@ export function calendarAlertsEvent(): MercureEvent {
           code: "calendar_public_holiday",
           type: "nudge",
           message: "L'etape 1 coincide avec un jour ferie (La Fete nationale)",
-          date: "2026-07-14",
         },
         {
           stageId: "stage-2",
@@ -374,7 +373,6 @@ export function calendarAlertsEvent(): MercureEvent {
           code: "calendar_sunday",
           type: "warning",
           message: "L'etape 2 tombe un dimanche",
-          date: "2026-07-19",
         },
       ],
     },

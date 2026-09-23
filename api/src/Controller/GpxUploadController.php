@@ -7,13 +7,13 @@ namespace App\Controller;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Service\GpxUploadServiceInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -32,6 +32,7 @@ final readonly class GpxUploadController
         private Security $security,
         #[Autowire(service: 'limiter.gpx_upload')]
         private RateLimiterFactory $gpxUploadLimiter,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -41,64 +42,44 @@ final readonly class GpxUploadController
         $file = $request->files->get('gpxFile');
 
         if (!$file instanceof UploadedFile) {
-            return new JsonResponse(
-                ['error' => 'Missing required file: gpxFile'],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'Missing required file: gpxFile');
         }
 
         if (!$file->isValid()) {
-            return new JsonResponse(
-                ['error' => 'File upload failed: '.$file->getErrorMessage()],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'File upload failed: '.$file->getErrorMessage());
         }
 
         if ($file->getSize() > self::MAX_FILE_SIZE) {
-            return new JsonResponse(
-                ['error' => 'File exceeds maximum size of 30 MB.'],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'File exceeds maximum size of 30 MB.');
         }
 
         $extension = strtolower($file->getClientOriginalExtension());
         if ('gpx' !== $extension) {
-            return new JsonResponse(
-                ['error' => 'Only .gpx files are accepted.'],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
         }
 
         $mimeType = $file->getMimeType();
         if (null !== $mimeType && !in_array($mimeType, ['application/gpx+xml', 'application/xml', 'text/xml', 'text/plain'], true)) {
-            return new JsonResponse(
-                ['error' => 'Only .gpx files are accepted.'],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
         }
 
         $content = file_get_contents($file->getPathname());
         if (false === $content || '' === $content) {
-            return new JsonResponse(
-                ['error' => 'Failed to read uploaded file.'],
-                Response::HTTP_BAD_REQUEST,
-            );
+            return $this->problem(Response::HTTP_BAD_REQUEST, 'Failed to read uploaded file.');
         }
 
         try {
             $points = $this->gpxUploadService->parseGpx($content);
-        } catch (\RuntimeException) {
-            return new JsonResponse(
-                ['error' => 'Invalid GPX file: could not parse XML content.'],
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-            );
+        } catch (\RuntimeException $runtimeException) {
+            // Swallowed without a trace until now: a malformed upload was indistinguishable
+            // from a parser regression in the logs, because there were no logs.
+            $this->logger->warning('GPX upload could not be parsed.', ['exception' => $runtimeException]);
+
+            return $this->problem(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid GPX file: could not parse XML content.');
         }
 
         if ([] === $points) {
-            return new JsonResponse(
-                ['error' => 'GPX file contains no track points.'],
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-            );
+            return $this->problem(Response::HTTP_UNPROCESSABLE_ENTITY, 'GPX file contains no track points.');
         }
 
         $title = $this->gpxUploadService->extractTitle($content);
@@ -114,7 +95,7 @@ final readonly class GpxUploadController
         // to exhaust storage/workers (SEC-006). Cheap early validation 4xx are not
         // throttled (and need no authenticated user).
         if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+            return $this->problem(Response::HTTP_TOO_MANY_REQUESTS, 'Too many GPX uploads. Try again later.');
         }
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $user->getLocale(), $user);
@@ -140,6 +121,29 @@ final readonly class GpxUploadController
         }
 
         return new JsonResponse($response, Response::HTTP_ACCEPTED);
+    }
+
+    /**
+     * The error shape every other operation already answers with.
+     *
+     * `rfc_7807_compliant_errors` is on globally, but API Platform's ErrorListener only
+     * covers its own operations: this is a plain Symfony route with no `_api_operation`,
+     * and a multipart POST without an `Accept` header negotiates `html`, so the listener
+     * bows out entirely. Hence the hand-built body — matching the eight keys of
+     * tests/Functional/error-schema.json exactly, which is `additionalProperties: false`.
+     */
+    private function problem(int $status, string $detail): JsonResponse
+    {
+        return new JsonResponse([
+            '@context' => '/contexts/Error',
+            '@id' => '/errors/'.$status,
+            '@type' => 'Error',
+            'type' => '/errors/'.$status,
+            'title' => 'An error occurred',
+            'status' => $status,
+            'detail' => $detail,
+            'description' => $detail,
+        ], $status, ['Content-Type' => 'application/problem+json; charset=utf-8']);
     }
 
     private function applyOptionalParameters(TripRequest $tripRequest, Request $request): void

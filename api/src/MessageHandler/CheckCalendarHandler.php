@@ -91,7 +91,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                     // Named and unnamed phrasings are the same rule, hence the same code.
                     $alerts[] = $this->buildAlert(
                         $stage,
-                        $stageDate,
                         AlertCode::CALENDAR_PUBLIC_HOLIDAY,
                         null !== $holidayName ? 'alert.calendar.nudge' : 'alert.calendar.unnamed_nudge',
                         null !== $holidayName ? ['%holiday%' => $holidayName] : [],
@@ -99,7 +98,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                 } elseif ('7' === $stageDate->format('N')) {
                     $alerts[] = $this->buildAlert(
                         $stage,
-                        $stageDate,
                         AlertCode::CALENDAR_SUNDAY,
                         'alert.calendar.sunday_nudge',
                         [],
@@ -121,16 +119,21 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     /**
      * @param array<string, int|string> $parameters
      *
-     * @return array{stageId: string, dayNumber: int, code: string, type: string, date: string, messageKey: string, parameters: array<string, int|string>, action: array{kind: string, labelKey: string, payload: array<string, mixed>}}
+     * No `date`: it was `startDate + dayNumber - 1`, a rendering of the trip's calendar
+     * rather than a fact about the alert. It was persisted and published but dropped on
+     * read — {@see \App\ApiResource\Model\Alert} has no such property — so it was the one
+     * field in the whole Mercure surface that no GET could return (ADR-065). Every client
+     * already has both operands.
+     *
+     * @return array{stageId: string, dayNumber: int, code: string, type: string, messageKey: string, parameters: array<string, int|string>, action: array{kind: string, labelKey: string, payload: array<string, mixed>}}
      */
-    private function buildAlert(Stage $stage, \DateTimeImmutable $stageDate, AlertCode $code, string $translationKey, array $parameters): array
+    private function buildAlert(Stage $stage, AlertCode $code, string $translationKey, array $parameters): array
     {
         return [
             'stageId' => $stage->id,
             'dayNumber' => $stage->dayNumber,
             'code' => $code->value,
             'type' => AlertType::NUDGE->value,
-            'date' => $stageDate->format('Y-m-d'),
             'messageKey' => $translationKey,
             'parameters' => $parameters,
             'action' => [

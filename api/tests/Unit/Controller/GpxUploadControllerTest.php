@@ -13,9 +13,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Psr\Log\NullLogger;
 
 final class GpxUploadControllerTest extends TestCase
 {
@@ -51,11 +51,19 @@ final class GpxUploadControllerTest extends TestCase
             $file->method('getMimeType')->willReturn('application/gpx+xml');
             $file->method('getPathname')->willReturn($tmp);
 
-            $controller = new GpxUploadController($gpxService, $security, $limiter);
+            $controller = new GpxUploadController($gpxService, $security, $limiter, new NullLogger());
             $request = new Request([], [], [], [], ['gpxFile' => $file]);
 
-            $this->expectException(TooManyRequestsHttpException::class);
-            $controller($request);
+            // Answered, not thrown: every other 429 in the API is problem+json, and an
+            // exception out of this plain Symfony route would not have been.
+            $response = $controller($request);
+
+            $body = json_decode((string) $response->getContent(), true);
+            \assert(\is_array($body));
+
+            self::assertSame(429, $response->getStatusCode());
+            self::assertStringStartsWith('application/problem+json', (string) $response->headers->get('Content-Type'));
+            self::assertSame(429, $body['status']);
         } finally {
             @unlink($tmp);
         }

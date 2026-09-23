@@ -19,6 +19,8 @@ use App\Weather\WeatherForecastSerializer;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -55,8 +57,33 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 5, 9, 2);
+    }
+
+    #[Test]
+    public function aHubOutageIsLoggedAndSwallowedInsteadOfFailingTheCaller(): void
+    {
+        $hub = $this->createMock(HubInterface::class);
+        $hub->expects(self::once())
+            ->method('publish')
+            ->willThrowException(new \RuntimeException('Failed to send an update.'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())
+            ->method('error')
+            ->with(
+                self::stringContains('Mercure publish failed'),
+                self::callback(static fn (array $context): bool => self::TRIP_ID === $context['tripId']
+                    && MercureEventType::TRIP_READY->value === $context['type']
+                    && 'Failed to send an update.' === $context['message']),
+            );
+
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), $logger);
+
+        // The handlers publish after markDone() and outside their try/catch: a throw here
+        // replayed the whole computation and poisoned the `failed` transport (ADR-065).
+        $publisher->publish(self::TRIP_ID, MercureEventType::TRIP_READY, ['stages' => []]);
     }
 
     #[Test]
@@ -77,7 +104,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishTripReady(self::TRIP_ID, [
             $this->createStage(1),
             $this->createStage(2),
@@ -108,7 +135,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishStageUpdated(self::TRIP_ID, $stage, 2);
     }
 
@@ -118,7 +145,7 @@ final class TripUpdatePublisherTest extends TestCase
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::exactly(3))->method('publish');
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishValidationError(self::TRIP_ID, 'MIN_STAGES', 'Too few stages.');
         $publisher->publishComputationError(self::TRIP_ID, 'weather', 'API down', retryable: true);
         $publisher->publishTripComplete(self::TRIP_ID, ['terrain' => 'done']);
@@ -169,7 +196,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider($expected), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider($expected), $this->createVersionSource(), new NullLogger());
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 1, 2, 0);
     }
 
@@ -187,7 +214,7 @@ final class TripUpdatePublisherTest extends TestCase
                 return 'id';
             });
 
-        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource());
+        $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 1, 2, 0);
     }
 

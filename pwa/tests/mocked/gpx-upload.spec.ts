@@ -4,6 +4,18 @@ import path from "node:path";
 
 const GPX_FIXTURE = path.resolve(__dirname, "../fixtures/test-route.gpx");
 
+/** The RFC 7807 body the upload endpoint answers with, like the rest of the API. */
+const problem = (status: number, detail: string) => ({
+  "@context": "/contexts/Error",
+  "@id": `/errors/${status}`,
+  "@type": "Error",
+  type: `/errors/${status}`,
+  title: "An error occurred",
+  status,
+  detail,
+  description: detail,
+});
+
 test.describe("GPX upload flow", () => {
   test.beforeEach(async ({ mockedPage }) => {
     // Mock the GPX upload endpoint
@@ -197,10 +209,8 @@ test.describe("GPX upload flow", () => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
         status: 400,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: "Only .gpx files are accepted.",
-        }),
+        contentType: "application/problem+json",
+        body: JSON.stringify(problem(400, "Only .gpx files are accepted.")),
       });
     });
 
@@ -222,10 +232,10 @@ test.describe("GPX upload flow", () => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
         status: 422,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: "GPX file contains no track points.",
-        }),
+        contentType: "application/problem+json",
+        body: JSON.stringify(
+          problem(422, "GPX file contains no track points."),
+        ),
       });
     });
 

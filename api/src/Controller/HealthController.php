@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Health\RedisHealthClientFactory;
+use App\Health\WorkerHeartbeat;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,6 +28,23 @@ final readonly class HealthController
 {
     private const float CHECK_TIMEOUT = 1.0;
 
+    /**
+     * Redis stream and consumer-group names behind the Messenger transports.
+     *
+     * Hardcoded rather than derived from the transports: reading a depth through
+     * `messenger.receiver_locator` would go through the transport's own Connection,
+     * which memoises its \Redis handle. Under FrankenPHP worker mode that handle
+     * outlives a Redis restart, ext-redis does not reconnect, and readiness would
+     * answer 503 forever — the very failure RedisHealthClientFactory exists to avoid.
+     * The DSNs in compose.yaml supply only the stream (`/messages`, `/failed`), so the
+     * group stays Symfony's default.
+     */
+    private const string ASYNC_STREAM = 'messages';
+
+    private const string FAILED_STREAM = 'failed';
+
+    private const string CONSUMER_GROUP = 'symfony';
+
     public function __construct(
         // Default PG-app connection (`public` schema): the `postgres` liveness check.
         private Connection $connection,
@@ -43,6 +61,7 @@ final readonly class HealthController
         #[Autowire(service: 'limiter.health_readiness')]
         private RateLimiterFactory $healthReadinessLimiter,
         private RedisHealthClientFactory $redisClientFactory,
+        private WorkerHeartbeat $workerHeartbeat,
     ) {
     }
 
@@ -81,8 +100,9 @@ final readonly class HealthController
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
         ];
 
-        // The two metadata DB round-trips run while the HTTP probes are in flight.
+        // The metadata DB round-trips and the Redis reads run while the HTTP probes are in flight.
         $deps['reference_data'] = $this->checkReferenceData();
+        $deps['messenger'] = $this->checkMessenger();
 
         foreach ($pending as $name => $pair) {
             $deps[$name] = $this->finishHttpCheck($pair);
@@ -93,7 +113,17 @@ final readonly class HealthController
         // the core trip flow which lives entirely in PG-app. An unreachable or
         // unprovisioned reference DB degrades features, it never takes readiness
         // down (ADR-040/060).
-        $required = ['postgres', 'redis', 'mercure', 'valhalla'];
+        //
+        // mercure is non-required for the same reason, since ADR-065: it is the
+        // invalidation channel, not a source of truth. Everything it carries is
+        // retrievable by GET, a publish failure no longer fails the work that produced
+        // it, and a client that misses an event resynchronises on its next read. An
+        // unreachable hub costs latency, not correctness.
+        //
+        // messenger is required, and it is the point of this list: the whole product
+        // answers 202 and delegates to a worker, so no live consumer means nothing the
+        // API accepts will ever complete (ADR-075).
+        $required = ['postgres', 'redis', 'valhalla', 'messenger'];
         $status = 'ok';
         foreach ($required as $dep) {
             if ('ok' !== ($deps[$dep]['status'] ?? 'down')) {
@@ -210,6 +240,81 @@ final readonly class HealthController
                 'error' => $this->sanitizeError($throwable),
             ];
         }
+    }
+
+    /**
+     * Reports the async tier: whether anything is consuming, and how much is waiting.
+     *
+     * The whole product answers 202 and delegates to a worker, so a dead consumer used
+     * to leave this probe green while every trip stayed `pending` until the tracker
+     * expired half an hour later. That is the verdict here — and the only one: the two
+     * depths are reported without a threshold. A depth threshold would be red whenever
+     * the system is merely busy, the same mistake ADR-041 R5 was withdrawn for (#877),
+     * and comparing the live count to WORKER_REPLICAS would be red through every
+     * rolling restart. An absence is unambiguous; a number is not.
+     *
+     * @return array{status: string, latency_ms: int, workers_alive: int, queue_depth: int|null, failed_depth: int|null, error?: string}
+     */
+    private function checkMessenger(): array
+    {
+        $start = hrtime(true);
+
+        try {
+            $alive = $this->workerHeartbeat->aliveCount();
+            $redis = $this->redisClientFactory->create();
+
+            return [
+                'status' => 0 === $alive ? 'down' : 'ok',
+                'latency_ms' => $this->elapsedMs($start),
+                'workers_alive' => $alive,
+                'queue_depth' => $this->streamBacklog($redis, self::ASYNC_STREAM),
+                // Nothing consumes `failed` (the worker only runs `messenger:consume async`),
+                // so this is a dead-letter counter, not a backlog.
+                'failed_depth' => $this->streamBacklog($redis, self::FAILED_STREAM),
+            ];
+        } catch (\Throwable $throwable) {
+            return [
+                'status' => 'down',
+                'latency_ms' => $this->elapsedMs($start),
+                'workers_alive' => 0,
+                'queue_depth' => null,
+                'failed_depth' => null,
+                'error' => $this->sanitizeError($throwable),
+            ];
+        }
+    }
+
+    /**
+     * Undelivered entries left for the consumer group, or null when the stream does not
+     * exist yet (nothing has ever been enqueued) or the server predates the `lag` field.
+     * In-flight, delivered-but-unacked entries are not counted.
+     */
+    private function streamBacklog(\Redis $redis, string $stream): ?int
+    {
+        try {
+            /** @var list<array<string, mixed>>|false $groups */
+            $groups = $redis->xInfo('GROUPS', $stream);
+        } catch (\Throwable) {
+            // XINFO raises on a stream that was never written to. An empty queue is not
+            // a failure, and it must not drag the worker verdict down with it.
+            return null;
+        }
+
+        if (!\is_array($groups)) {
+            return null;
+        }
+
+        foreach ($groups as $group) {
+            if (self::CONSUMER_GROUP !== ($group['name'] ?? null)) {
+                continue;
+            }
+
+            $lag = $group['lag'] ?? null;
+
+            return is_numeric($lag) ? (int) $lag : null;
+        }
+
+        return null;
     }
 
     /**

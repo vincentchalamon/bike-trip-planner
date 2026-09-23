@@ -82,32 +82,14 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                             ),
                         ]),
                     ),
-                    400 => new Response(
-                        description: 'Bad request (missing file, invalid extension, empty file)',
-                        content: new \ArrayObject([
-                            'application/json' => new MediaType(
-                                schema: new \ArrayObject([
-                                    'type' => 'object',
-                                    'properties' => [
-                                        'error' => ['type' => 'string'],
-                                    ],
-                                ]),
-                            ),
-                        ]),
-                    ),
-                    422 => new Response(
-                        description: 'Unprocessable entity (invalid GPX, no track points)',
-                        content: new \ArrayObject([
-                            'application/json' => new MediaType(
-                                schema: new \ArrayObject([
-                                    'type' => 'object',
-                                    'properties' => [
-                                        'error' => ['type' => 'string'],
-                                    ],
-                                ]),
-                            ),
-                        ]),
-                    ),
+                    400 => $this->problemResponse('Bad request (missing file, invalid extension, empty file)'),
+                    422 => $this->problemResponse('Unprocessable entity (invalid GPX, no track points)'),
+                    // Declared because the controller answers it (SEC-006, 10 uploads per
+                    // minute per user). 401 is the firewall's own shape and belongs to the
+                    // whole API, not here; 413 is never emitted — post_max_size (32M) sits
+                    // above upload_max_filesize (30M), so an oversized body surfaces as an
+                    // invalid file, i.e. a 400.
+                    429 => $this->problemResponse('Too many GPX uploads for this user'),
                 ],
                 summary: 'Upload a GPX file to create a trip',
                 description: 'Parses the GPX file synchronously, creates a trip, and dispatches async computations (stage generation, OSM scan).',
@@ -137,5 +119,35 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
         $openApi->getPaths()->addPath('/trips/gpx-upload', $pathItem);
 
         return $openApi;
+    }
+
+    /**
+     * The API-wide RFC 7807 body, spelled out because this endpoint is a plain controller
+     * and API Platform's Error resource never reaches it. Same eight keys as
+     * tests/Functional/error-schema.json, which is what the controller now answers.
+     */
+    private function problemResponse(string $description): Response
+    {
+        return new Response(
+            description: $description,
+            content: new \ArrayObject([
+                'application/problem+json' => new MediaType(
+                    schema: new \ArrayObject([
+                        'type' => 'object',
+                        'properties' => [
+                            '@context' => ['type' => 'string'],
+                            '@id' => ['type' => 'string'],
+                            '@type' => ['type' => 'string'],
+                            'type' => ['type' => 'string'],
+                            'title' => ['type' => 'string'],
+                            'status' => ['type' => 'integer'],
+                            'detail' => ['type' => 'string'],
+                            'description' => ['type' => 'string'],
+                        ],
+                        'required' => ['@context', '@id', '@type', 'type', 'title', 'status', 'detail', 'description'],
+                    ]),
+                ),
+            ]),
+        );
     }
 }

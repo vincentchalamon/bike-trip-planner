@@ -316,7 +316,13 @@ apiClient.use(preconditionMiddleware);
 apiClient.use(authMiddleware);
 
 export interface ApiError {
-  type: "validation" | "bad_request" | "not_found" | "stale" | "network";
+  type:
+    | "validation"
+    | "bad_request"
+    | "not_found"
+    | "stale"
+    | "rate_limited"
+    | "network";
   message: string;
   violations?: { propertyPath: string; message: string }[];
 }
@@ -354,6 +360,7 @@ const API_ERROR_FALLBACK_KEY: Record<ApiError["type"], string> = {
   bad_request: "errors.badRequest",
   not_found: "errors.notFound",
   stale: "errors.tripMovedOn",
+  rate_limited: "errors.rateLimited",
   network: "errors.unexpectedError",
 };
 
@@ -372,6 +379,30 @@ export function parseApiError(status: number, body: unknown): ApiError {
     return {
       type: "bad_request",
       message: detail ?? "",
+    };
+  }
+
+  // A 422 carrying no violations is still RFC 7807 and still explains itself in
+  // `detail` — the GPX upload answers exactly that (unparsable file, no track points).
+  if (status === 422 && hasDetail(body)) {
+    return {
+      type: "validation",
+      message: body.detail ?? "",
+      violations: [],
+    };
+  }
+
+  // Throttling has its own answer: trip creation, duplication, recompute and the GPX
+  // upload all sit behind a limiter (SEC-006), and every one of them used to surface as
+  // "an unexpected error occurred" — which tells the user to retry, the one thing that
+  // makes it worse. The server's `detail` is deliberately dropped: unlike a rendered
+  // alert (ADR-069) it is a hardcoded English sentence, and `localizedApiErrorMessage`
+  // prefers `message` over the translated fallback, so passing it through would show
+  // English in a French UI.
+  if (status === 429) {
+    return {
+      type: "rate_limited",
+      message: "",
     };
   }
 
@@ -558,10 +589,15 @@ export async function uploadGpxFile(
   });
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    return { data: null, error: body?.error ?? "Upload failed", response: res };
+    // The endpoint answers RFC 7807 like the rest of the API, so read it with the
+    // shared parser instead of the `{error}` shape it used to have on its own.
+    const body = (await res.json().catch(() => null)) as unknown;
+    const apiError = parseApiError(res.status, body);
+    return {
+      data: null,
+      error: apiError.message !== "" ? apiError.message : "Upload failed",
+      response: res,
+    };
   }
 
   const data = (await res.json()) as GpxUploadResponse;

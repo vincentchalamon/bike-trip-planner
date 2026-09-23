@@ -672,6 +672,7 @@
     "validationError": "Invalid data.",
     "badRequest": "Bad request.",
     "notFound": "Resource not found.",
+    "rateLimited": "You are going a little fast. Wait a minute before trying again.",
     "tripMovedOn": "This trip changed while you were editing it. It has been reloaded — reapply your change.",
     "failedUpdateDates": "Failed to update dates.",
     "failedDeleteStage": "Failed to delete stage.",
