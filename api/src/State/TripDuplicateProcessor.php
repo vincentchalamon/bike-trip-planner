@@ -42,6 +42,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private CacheItemPoolInterface $tripStateCache,
         #[Autowire(service: 'limiter.trip_duplicate')]
         private RateLimiterFactory $duplicateLimiter,
+        private Idempotency $idempotency,
     ) {
     }
 
@@ -55,6 +56,21 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         // Cap per user: duplication clones DB rows + Redis blobs (SEC-009).
         $user = $this->security->getUser();
         \assert($user instanceof User);
+
+        // Before the limiter and before the clone: a retried duplication must answer with the
+        // copy it already made, not make a second one (ADR-077).
+        $already = $this->idempotency->alreadyCreated($user, TripCreation::REQUIRES_IDEMPOTENCY_KEY);
+        if ($already instanceof Uuid) {
+            $existingId = $already->toRfc4122();
+            $existing = $this->tripStateManager->getRequest($existingId);
+
+            return new Trip(
+                id: $existingId,
+                computationStatus: $this->computationTracker->getStatuses($existingId) ?? [],
+                isLocked: null !== $existing && $this->tripLocker->isLocked($existing),
+            );
+        }
+
         if (!$this->duplicateLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
             throw new TooManyRequestsHttpException();
         }
@@ -125,6 +141,8 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $this->tripStateCache->save($item);
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
+
+        $this->idempotency->remember($user, TripCreation::REQUIRES_IDEMPOTENCY_KEY, Uuid::fromString($newTripIdString));
 
         return new Trip(
             id: $newTripIdString,

@@ -43,7 +43,7 @@ final class RequestIdPropagationTest extends ApiTestCase
             'headers' => array_merge(
                 [
                     'Content-Type' => 'application/ld+json',
-                    'X-Request-Id' => $expected,
+                    'Idempotency-Key' => 'idempotency-key-for-test-019',                    'X-Request-Id' => $expected,
                 ],
                 $this->authHeader($this->jwtToken),
             ),
@@ -64,7 +64,7 @@ final class RequestIdPropagationTest extends ApiTestCase
     {
         $response = self::createClient()->request('POST', '/trips', [
             'headers' => array_merge(
-                ['Content-Type' => 'application/ld+json'],
+                ['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-900'],
                 $this->authHeader($this->jwtToken),
             ),
             'json' => [
@@ -95,7 +95,7 @@ final class RequestIdPropagationTest extends ApiTestCase
             'headers' => array_merge(
                 [
                     'Content-Type' => 'application/ld+json',
-                    'X-Request-Id' => $expected,
+                    'Idempotency-Key' => 'idempotency-key-for-test-020',                    'X-Request-Id' => $expected,
                 ],
                 $this->authHeader($this->jwtToken),
             ),

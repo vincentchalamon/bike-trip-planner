@@ -15,6 +15,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\NearbyPoiSearchProcessor;
+use App\State\TripCreation;
 use App\State\PreconditionProcessor;
 use App\State\TripLockProcessor;
 use App\State\TripBatchRecomputeProcessor;
@@ -73,6 +74,9 @@ use App\State\TripUpdateProcessor;
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
+            // A creation has no version to pin, so a retry after a dropped response makes a
+            // second complete trip. The key is what makes asking twice safe (ADR-077).
+            extraProperties: [TripCreation::REQUIRES_IDEMPOTENCY_KEY => true],
         ),
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',
@@ -87,6 +91,7 @@ use App\State\TripUpdateProcessor;
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
+            extraProperties: [TripCreation::REQUIRES_IDEMPOTENCY_KEY => true],
         ),
         new Post(
             uriTemplate: '/trips/{id}/nearby-pois{._format}',

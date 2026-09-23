@@ -364,6 +364,18 @@ const API_ERROR_FALLBACK_KEY: Record<ApiError["type"], string> = {
   network: "errors.unexpectedError",
 };
 
+/**
+ * A fresh idempotency key: one opaque string per creation the user asked for.
+ *
+ * It identifies the *intent*, not the payload, so two deliberate imports of the same route both
+ * succeed. The rule that makes it worth anything is that a retry of the same intent sends the
+ * same key — minting one per HTTP attempt protects nothing, which is why callers that retry
+ * must hold on to theirs.
+ */
+export function newIdempotencyKey(): string {
+  return globalThis.crypto.randomUUID().replace(/-/g, "");
+}
+
 export function parseApiError(status: number, body: unknown): ApiError {
   if (status === 422 && hasViolations(body)) {
     const violations = body.violations ?? [];
@@ -784,9 +796,13 @@ export async function searchNearbyPois(
  */
 export async function duplicateTrip(
   tripId: string,
+  idempotencyKey: string = newIdempotencyKey(),
 ): Promise<{ id: string; computationStatus: Record<string, string> } | null> {
   const { data, error } = await apiClient.POST("/trips/{id}/duplicate", {
-    params: { path: { id: tripId } },
+    params: {
+      path: { id: tripId },
+      header: { "Idempotency-Key": idempotencyKey },
+    },
   });
   if (error || !data?.id) return null;
   return {

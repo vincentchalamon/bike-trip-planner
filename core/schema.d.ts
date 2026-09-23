@@ -4317,7 +4317,10 @@ export interface operations {
     api_trips_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description An opaque string identifying this creation, minted once per user intent and sent again unchanged on every retry of it. Replaying it returns the trip the first call created instead of making another. Minting a fresh one per HTTP attempt protects nothing. */
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4337,7 +4340,7 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Trip.jsonld"];
                 };
             };
-            /** @description Invalid input */
+            /** @description The "Idempotency-Key" header is missing or malformed. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4358,6 +4361,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description This "Idempotency-Key" was already used for a different request body. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error occurred */
             422: {
@@ -4770,7 +4780,10 @@ export interface operations {
     api_trips_idduplicate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description An opaque string identifying this creation, minted once per user intent and sent again unchanged on every retry of it. Replaying it returns the trip the first call created instead of making another. Minting a fresh one per HTTP attempt protects nothing. */
+                "Idempotency-Key": string;
+            };
             path: {
                 /** @description Trip identifier */
                 id: string;
@@ -4788,7 +4801,7 @@ export interface operations {
                     "application/ld+json": components["schemas"]["Trip.jsonld"];
                 };
             };
-            /** @description Invalid input */
+            /** @description The "Idempotency-Key" header is missing or malformed. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4812,6 +4825,13 @@ export interface operations {
             };
             /** @description Trip not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This "Idempotency-Key" was already used for a different request body. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
