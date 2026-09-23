@@ -7,6 +7,8 @@ namespace App\Tests\Functional;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
 use Symfony\Component\Uid\Uuid;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
@@ -235,6 +237,63 @@ final class TripListTest extends ApiTestCase
 
         $this->assertSame($ids, array_values($unique));
         $this->assertCount(3, $seen, 'A trip was served on both pages.');
+    }
+
+    /**
+     * The totals are read as an aggregate now, so assert the numbers, not the keys.
+     *
+     * `listTripItemContainsExpectedFields` only checks that `totalDistance` and `stageCount`
+     * are present, which the rewrite would have satisfied while answering anything. Two cases
+     * matter beyond the happy path: a rest day contributes neither distance nor count, and a
+     * trip with no stage at all must stay in the list with zeroes rather than drop out of a
+     * join.
+     */
+    #[Test]
+    public function totalsExcludeRestDaysAndAStagelessTripStaysInTheList(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID_1);
+        $this->seedTrip(self::TRIP_ID_2);
+
+        $response = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $members = array_column($response->toArray(false)['member'], null, 'id');
+
+        // A whole float comes back from JSON as an int, so compare as floats.
+        $this->assertArrayHasKey(self::TRIP_ID_1, $members);
+        $this->assertSame(2, $members[self::TRIP_ID_1]['stageCount'], 'The rest day was counted.');
+        $this->assertSame(120.0, (float) $members[self::TRIP_ID_1]['totalDistance'], 'The rest day was ridden.');
+
+        $this->assertArrayHasKey(self::TRIP_ID_2, $members, 'A trip with no stage fell out of the list.');
+        $this->assertSame(0, $members[self::TRIP_ID_2]['stageCount']);
+        $this->assertSame(0.0, (float) $members[self::TRIP_ID_2]['totalDistance']);
+    }
+
+    private function seedTripWithStages(string $tripId): void
+    {
+        $this->seedTrip($tripId);
+
+        $container = self::getContainer();
+        /** @var DoctrineTripRequestRepository $repo */
+        $repo = $container->get(DoctrineTripRequestRepository::class);
+
+        $stage = static fn (int $day, float $distance, bool $restDay): Stage => new Stage(
+            tripId: $tripId,
+            dayNumber: $day,
+            distance: $distance,
+            elevation: 100.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.5, 5.5),
+            isRestDay: $restDay,
+        );
+
+        $repo->storeStages($tripId, [
+            $stage(1, 50.0, false),
+            $stage(2, 999.0, true),
+            $stage(3, 70.0, false),
+        ]);
     }
 
     #[Test]
