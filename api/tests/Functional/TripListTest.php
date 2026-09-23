@@ -173,6 +173,33 @@ final class TripListTest extends ApiTestCase
         $this->assertNotContains(self::TRIP_ID_1, $ids);
     }
 
+    /**
+     * The page size a client asks for is capped at the number the contract already published.
+     *
+     * `paginationClientItemsPerPage` lets the caller size the page, and nothing used to bound
+     * it: the runtime Pagination service is built from an options array that carried no
+     * maximum, so `Pagination::getLimit()` skipped its clamp entirely while the exported
+     * OpenAPI advertised `maximum: 30`. The total is deliberately *not* clamped — a client
+     * still learns how many trips it has.
+     */
+    #[Test]
+    public function aPageSizeBeyondTheMaximumIsClamped(): void
+    {
+        for ($i = 1; $i <= 31; ++$i) {
+            $this->seedTrip(\sprintf('01936f6e-0000-7000-8000-0000000002%02d', $i));
+        }
+
+        $response = $this->client->request('GET', '/trips?itemsPerPage=100000', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $data = $response->toArray(false);
+        $this->assertCount(30, $data['member']);
+        $this->assertSame(31, $data['totalItems']);
+    }
+
     #[Test]
     public function listTripsFilterByEndDate(): void
     {
