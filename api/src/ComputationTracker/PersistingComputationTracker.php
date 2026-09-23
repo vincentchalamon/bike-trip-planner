@@ -22,9 +22,10 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
  * cache implementation free of a database dependency.
  *
  * It stores through {@see ComputationStatusStore} rather than the trip repository interface,
- * which is aliased to the transient implementation in the `test` environment — through that
- * one, nothing would ever reach Postgres and the durability this class exists for would go
- * untested.
+ * which models none of these four operations — the merge in particular is a server-side jsonb
+ * `||` that the repository contract does not express. (It was also written while the test
+ * environment aliased that interface to a transient implementation, which would have kept the
+ * durability this class exists for untested; that alias is gone, the narrow interface stays.)
  */
 #[AsDecorator(ComputationTracker::class)]
 final readonly class PersistingComputationTracker implements ComputationTrackerInterface

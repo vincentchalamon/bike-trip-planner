@@ -22,7 +22,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mapper\EventArrayMapper;
 use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
-use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\TripRequestRepositoryInterface;
 use App\Weather\WeatherForecastSerializer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -38,7 +38,7 @@ use Symfony\Component\Uid\Uuid;
 final readonly class TripDetailProvider implements ProviderInterface
 {
     public function __construct(
-        private DoctrineTripRequestRepository $tripStateManager,
+        private TripRequestRepositoryInterface $tripStateManager,
         private TripLocker $tripLocker,
         private ComputationTrackerInterface $computationTracker,
         private WeatherForecastSerializer $weatherSerializer,

@@ -98,7 +98,9 @@ final class TripUpdateProcessorTest extends TestCase
         );
 
         try {
-            $processor->process(new TripRequest(), new Patch(), ['id' => 'trip-1']);
+            // The locked trip is the before-image, not the incoming body: an edit that moves the
+            // start date into the future must not unlock the trip it is editing.
+            $processor->process(new TripRequest(), new Patch(), ['id' => 'trip-1'], ['previous_data' => $lockedRequest]);
             self::fail('Expected HttpException to be thrown.');
         } catch (HttpException $httpException) {
             self::assertSame(423, $httpException->getStatusCode());
@@ -119,10 +121,9 @@ final class TripUpdateProcessorTest extends TestCase
         $newRequest->sourceUrl = 'https://www.komoot.com/tour/123';
         $newRequest->enabledAccommodationTypes = $enabledTypes;
 
-        // First call: get old request for dependency resolution
-        // Second call (inside dispatchAccommodationsScan): get stored request for enabled types
-        $this->tripStateManager->method('getRequest')
-            ->willReturnOnConsecutiveCalls($oldRequest, $newRequest);
+        // The only read left is the one inside dispatchAccommodationsScan, which wants the
+        // stored (new) types. The old ones now arrive as the before-image, from the context.
+        $this->tripStateManager->method('getRequest')->willReturn($newRequest);
         $this->computationTracker->method('getStatuses')->willReturn([]);
 
 

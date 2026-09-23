@@ -57,19 +57,8 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('End date must be after start date.');
         }
 
-        // Retrieve existing request to check the persisted startDate (before applying the PATCH body)
-        $existingRequest = $this->tripStateManager->getRequest($id);
-        \assert($existingRequest instanceof TripRequest);
-        $this->tripLocker->assertNotLocked($existingRequest);
-
-        // Refresh locale on each PATCH: the account preference may have changed since
-        // the trip was created.
-        $user = $this->security->getUser();
-        \assert($user instanceof User);
-        $this->tripStateManager->storeLocale($id, $user->getLocale());
-
-        // The settings as they were before this request, and the only sound thing to compare
-        // $data against.
+        // The settings as they were before this request: what the lock must judge, and the only
+        // sound thing to compare $data against.
         //
         // Not a second getRequest(): under Doctrine that returns the managed entity, which is
         // the very object API Platform just deserialised the PATCH body into (ReadProvider
@@ -86,6 +75,19 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         $oldRequest = $context['previous_data'] ?? null;
         \assert($oldRequest instanceof TripRequest);
         \assert($oldRequest !== $data, 'previous_data must not be the object the deserializer populated.');
+
+        // The lock judges the trip as it stands, never as the body would leave it. Reading the
+        // repository here instead handed back the object the deserializer had just populated,
+        // which cut both ways: a started trip unlocked itself when the same request moved its
+        // start date into the future, and an ordinary trip refused its own edit when that date
+        // moved into the past.
+        $this->tripLocker->assertNotLocked($oldRequest);
+
+        // Refresh locale on each PATCH: the account preference may have changed since
+        // the trip was created.
+        $user = $this->security->getUser();
+        \assert($user instanceof User);
+        $this->tripStateManager->storeLocale($id, $user->getLocale());
 
         // The precondition also has to guard the write rather than follow it: checked after, a
         // stale If-Match would persist the settings and only then answer 412 — a refusal the

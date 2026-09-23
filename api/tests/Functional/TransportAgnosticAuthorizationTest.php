@@ -196,9 +196,7 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
-        // The interface, not the Doctrine class: that is the implementation the
-        // providers read through, and TripGpxProvider's getStages() misses anything
-        // written straight to Postgres.
+        // The interface: one implementation, and the one every provider reads through.
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
         $repo->initializeTrip(self::TRIP_ID, $request);

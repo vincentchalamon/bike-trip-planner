@@ -13,6 +13,7 @@ use App\Concurrency\IfMatch;
 use App\Entity\User;
 use App\Enum\SourceType;
 use App\Repository\TripRequestRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Uid\Uuid;
@@ -45,8 +46,6 @@ final class TripPreconditionTest extends ApiTestCase
     {
         $this->client = self::createClient();
         ['user' => $this->owner, 'token' => $this->ownerToken] = $this->createTestUserWithJwt('owner@example.com');
-        // Created here rather than mid-test: the seeded trip lives in the test repository's
-        // in-memory store, which a later kernel boot would drop.
         ['token' => $this->intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
     }
 
@@ -59,10 +58,10 @@ final class TripPreconditionTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         // A quoted integer, not `W/"…"`: If-Match mandates the strong comparison function,
-        // under which a weak validator never matches. The exact value is not asserted here —
-        // in the test environment /detail reads Postgres while the precondition compares the
-        // in-memory repository, two stores that only coincide in production.
-        self::assertMatchesRegularExpression('/^"\d+"$/', $response->getHeaders()['etag'][0] ?? '');
+        // under which a weak validator never matches. The exact value is asserted now that the
+        // suite reads the same store as production — it used to be left open because /detail
+        // read Postgres while the precondition compared a separate in-memory repository.
+        self::assertSame(\sprintf('"%d"', $this->currentVersion()), $response->getHeaders()['etag'][0] ?? '');
         // The version tracks the structure, not the bytes: an enrichment rewrites the body
         // without moving it, so nothing may treat this tag as a cache validator.
         self::assertStringContainsString('no-store', $response->getHeaders()['cache-control'][0] ?? '');
@@ -125,9 +124,7 @@ final class TripPreconditionTest extends ApiTestCase
         $url = $this->stageUrl(1);
 
         // Someone else's write lands in between — a worker regenerating the pacing moves the
-        // version with no HTTP response to tell this client about it. Driven through the
-        // repository rather than a second request: the in-memory store the test environment
-        // uses does not survive the kernel reboot between two client calls.
+        // version with no HTTP response to tell this client about it.
         $this->repository()->bumpVersion(self::TRIP_ID);
 
         $this->client->request('DELETE', $url, $this->asOwner(['If-Match' => \sprintf('"%d"', $stale)]));
@@ -145,7 +142,7 @@ final class TripPreconditionTest extends ApiTestCase
      * What this pins is the contract, not the ordering: the version is already stale when the
      * request arrives, so the refusal comes from the fail-fast check and the processor body
      * never runs. The ordering itself is pinned where it can be — in
-     * {@see \App\Tests\Unit\State\TripUpdateProcessorTest::resolvesTheChangeBeforeTheWriteAliasesTheOldRequest}.
+     * {@see \App\Tests\Unit\State\TripUpdateProcessorTest::resolvesTheChangeAgainstTheBeforeImageRatherThanTheRepository}.
      */
     #[Test]
     public function aStaleSettingsEditIsRefusedWithoutPersistingAnything(): void
@@ -161,6 +158,14 @@ final class TripPreconditionTest extends ApiTestCase
         ]) + ['json' => ['fatigueFactor' => 0.55]]);
 
         self::assertResponseStatusCodeSame(412);
+
+        // Read the row, not the identity map. The deserializer populated the managed entity
+        // before the precondition refused the write, so an unflushed 0.55 is sitting in memory;
+        // only a cleared unit of work can say whether it reached the database.
+        $entityManager = self::getContainer()->get('doctrine.orm.entity_manager');
+        \assert($entityManager instanceof EntityManagerInterface);
+        $entityManager->clear();
+
         self::assertSame($before, $this->repository()->getRequest(self::TRIP_ID)?->fatigueFactor);
     }
 
@@ -208,9 +213,7 @@ final class TripPreconditionTest extends ApiTestCase
         $this->seedTrip();
         $current = $this->currentVersion();
 
-        // Resolved once: the in-memory store of the test environment does not survive the
-        // kernel reboot between two client calls, and a stranger's answer must not depend on
-        // the identifier being live anyway.
+        // Resolved once: a stranger's answer must not depend on the identifier being live.
         $url = $this->stageUrl(1);
 
         foreach ([null, '*', \sprintf('"%d"', $current), \sprintf('"%d"', $current + 99)] as $header) {

@@ -43,14 +43,12 @@ trait JwtAuthTestTrait
     }
 
     /**
-     * Associates a seeded trip with the given user by writing to PostgreSQL.
+     * Gives a seeded trip an owner, so TripVoter grants access to it.
      *
-     * The trip exists in Redis (via RedisTripRequestRepository) but TripVoter
-     * checks PostgreSQL for ownership. This creates a minimal TripRequest row
-     * in PostgreSQL so the voter grants access.
-     *
-     * IMPORTANT: The caller must use the SAME kernel (no createClient() between
-     * seedTrip and the HTTP request) so the trip remains in the ArrayAdapter.
+     * Kept as its own step now that the repository writes to PostgreSQL too: seeding creates
+     * the row, this attaches the user. Call order matters — `initializeTrip()` on a row that
+     * already exists copies only the settings fields, so seed first and associate after, or
+     * the title and locale are lost.
      */
     private function associateTripWithUser(string $tripId, User $user): void
     {
