@@ -22,13 +22,21 @@ use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
  * what applies the rule and what {@see \App\Metadata\TripLockMetadataFactory} publishes, so
  * they cannot disagree — the same arrangement {@see PreconditionProcessor} uses for `If-Match`.
  *
- * Runs ahead of that precondition on purpose: telling a caller their version is stale, when the
- * trip will never accept an edit again whatever version they send, sends them round a reload
- * loop that cannot terminate.
+ * Runs ahead of that precondition on purpose: telling a caller their version is stale, or that
+ * they must make their request conditional, when the trip will never accept an edit again
+ * whatever version they send, sends them round a reload loop that cannot terminate.
+ *
+ * Which is what the **negative** priority buys, and it is the opposite of the obvious reading.
+ * `DecoratorServicePass` walks the decorators highest-priority first and the last one it
+ * processes takes over the decorated service's id — so the *lowest* priority ends up
+ * outermost and runs first. This carried `priority: 10` against
+ * {@see PreconditionProcessor}'s default 0 and therefore ran second, which no test caught
+ * because every case in `TripLockedTest` sent `If-Match: '*'` and sailed through the
+ * precondition.
  *
  * @implements ProcessorInterface<mixed, mixed>
  */
-#[AsDecorator(decorates: 'api_platform.state_processor.write', priority: 10)]
+#[AsDecorator(decorates: 'api_platform.state_processor.write', priority: -10)]
 final readonly class TripLockProcessor implements ProcessorInterface
 {
     /**

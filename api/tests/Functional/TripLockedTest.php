@@ -88,6 +88,32 @@ final class TripLockedTest extends ApiTestCase
     }
 
     /**
+     * The lock answers before the precondition, which is the whole reason it exists as a
+     * separate rule.
+     *
+     * Every other case here sends `If-Match: '*'`, which `IfMatch` treats as no constraint —
+     * so the precondition always passed and the ordering between the two decorators was never
+     * exercised. Without an `If-Match` at all the precondition answers 428 first, and a caller
+     * told "make your request conditional" about a trip that will never accept an edit again,
+     * whatever version they send, is sent round a reload loop that cannot terminate.
+     */
+    #[Test]
+    public function aStartedTripIsLockedBeforeItIsAskedForAVersion(): void
+    {
+        $this->seedStartedTrip();
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(
+                ['Content-Type' => 'application/merge-patch+json'],
+                $this->authHeader($this->jwtToken),
+            ),
+            'json' => ['fatigueFactor' => 0.75],
+        ]);
+
+        $this->assertResponseStatusCodeSame(423);
+    }
+
+    /**
      * A started trip cannot be edited back into the future. The lock reads the stored start
      * date, never the one the body proposes — otherwise every locked trip carried its own key.
      */
