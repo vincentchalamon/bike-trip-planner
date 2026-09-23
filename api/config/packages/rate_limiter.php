@@ -83,6 +83,25 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // The five anonymous /s/{shortCode}* operations, keyed on the caller's IP — there
+            // is no account to key on. /s/{shortCode} runs the heaviest read in the API and
+            // had no limiter of any kind; a share link is public by destination, so the cost
+            // of holding one is the cost of everyone the owner sent it to. Generous enough
+            // that a page with a map and a GPX download never trips it.
+            'shared_trip' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // GDPR portability is a once-in-a-while gesture, and the query behind it walks
+            // every trip the user owns with no upper bound. Per hour, not per minute.
+            'account_export' => [
+                'policy' => 'sliding_window',
+                'limit' => 3,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,

@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Stage;
-use App\Entity\TripShare;
-use App\Repository\TripShareRepositoryInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Downloads a shared stage as GPX or FIT via short code (anonymous access).
@@ -21,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripShareStageProvider implements ProviderInterface
 {
     public function __construct(
-        private TripShareRepositoryInterface $tripShareRepository,
+        private SharedTripResolver $resolver,
         /** @var ProviderInterface<Stage> */
         #[Autowire(service: StageProvider::class)]
         private ProviderInterface $stageProvider,
@@ -36,18 +32,7 @@ final readonly class TripShareStageProvider implements ProviderInterface
     {
         $shortCode = $uriVariables['shortCode'] ?? '';
 
-        $share = '' !== $shortCode ? $this->tripShareRepository->findByShortCode($shortCode) : null;
-
-        if (!$share instanceof TripShare) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
-
-        $trip = $share->getTrip();
-        if (!$trip instanceof TripRequest) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
-
-        $tripId = (string) $trip->id;
+        $tripId = $this->resolver->resolve($shortCode);
 
         $stage = $this->stageProvider->provide($operation, ['tripId' => $tripId, 'stageId' => $uriVariables['stageId'] ?? ''], $context);
         \assert($stage instanceof Stage);

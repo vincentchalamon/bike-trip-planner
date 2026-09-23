@@ -10,12 +10,16 @@ use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
+use App\State\SharedTripResolver;
 use App\State\TripShareShortCodeProvider;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -33,7 +37,7 @@ final class TripShareShortCodeProviderTest extends TestCase
     {
         $this->repository = $this->createMock(TripShareRepositoryInterface::class);
         $this->tripDetailProvider = $this->createMock(ProviderInterface::class);
-        $this->provider = new TripShareShortCodeProvider($this->repository, $this->tripDetailProvider);
+        $this->provider = new TripShareShortCodeProvider($this->resolver(), $this->tripDetailProvider);
     }
 
     #[Test]
@@ -100,5 +104,25 @@ final class TripShareShortCodeProviderTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
         $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP']);
+    }
+
+    /**
+     * A real resolver over the mocked repository, not a double of it.
+     *
+     * Resolving a short code moved into {@see SharedTripResolver}; these cases still assert
+     * what they always did — that a bad code is a 404 — and they now do it through the code
+     * that actually decides. With no request on the stack there is no client IP, so the rate
+     * limiter is never consulted.
+     */
+    private function resolver(): SharedTripResolver
+    {
+        return new SharedTripResolver(
+            $this->repository,
+            new RequestStack(),
+            new RateLimiterFactory(
+                ['id' => 'shared_trip', 'policy' => 'fixed_window', 'limit' => 60, 'interval' => '60 seconds'],
+                new InMemoryStorage(),
+            ),
+        );
     }
 }

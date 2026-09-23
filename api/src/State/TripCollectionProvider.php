@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\State;
 
 use App\Enum\ComputationStatus;
-use Doctrine\ORM\Tools\Pagination\Paginator;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
@@ -58,6 +57,11 @@ final readonly class TripCollectionProvider implements ProviderInterface
         $qb->select('t')
             ->from(TripRequest::class, 't')
             ->orderBy('t.createdAt', \SortDirection::Descending)
+            // createdAt alone is not a total order: two trips created in the same second sit
+            // in an order the database is free to change between queries, so a tie straddling
+            // a page boundary is served twice or not at all. The identifier is a UUID v7, so
+            // it breaks the tie in the same direction time runs.
+            ->addOrderBy('t.id', \SortDirection::Descending)
             ->andWhere('t.user = :user')
             ->setParameter('user', $user);
 
@@ -89,24 +93,18 @@ final readonly class TripCollectionProvider implements ProviderInterface
             }
         }
 
-        // Count total matching items at the SQL level (without LIMIT/OFFSET).
+        // Count total matching items at the SQL level (without LIMIT/OFFSET). No join is in
+        // play at this point, so one row per trip and no DISTINCT to pay for.
         $countQb = clone $qb;
-        $countQb->select('COUNT(DISTINCT t.id)')->resetDQLPart('orderBy');
+        $countQb->select('COUNT(t.id)')->resetDQLPart('orderBy');
 
         $totalItems = (int) $countQb->getQuery()->getSingleScalarResult();
 
-        // Fetch only the current page using SQL LIMIT/OFFSET, and JOIN FETCH
-        // stages to avoid N+1 queries when computing totals in toListItem().
-        // Use Doctrine Paginator with fetchJoinCollection=true so that
-        // setMaxResults limits *entities*, not SQL rows (fetch-join multiplies rows).
-        $qb->leftJoin('t.stages', 's')
-            ->addSelect('s')
-            ->setFirstResult(($page - 1) * $limit)
+        $qb->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        $paginator = new Paginator($qb->getQuery(), fetchJoinCollection: true);
         /** @var list<TripRequest> $entities */
-        $entities = iterator_to_array($paginator->getIterator());
+        $entities = $qb->getQuery()->getResult();
 
         $tripIds = array_map(static function (TripRequest $entity): string {
             \assert($entity->id instanceof Uuid);
@@ -115,32 +113,68 @@ final readonly class TripCollectionProvider implements ProviderInterface
         }, $entities);
 
         $statusesByTripId = $this->computationTracker->getStatusesBatch($tripIds);
+        $totalsByTripId = $this->stageTotals($entities);
 
-        $items = array_map(function (TripRequest $entity) use ($statusesByTripId): TripListItem {
+        $items = array_map(function (TripRequest $entity) use ($statusesByTripId, $totalsByTripId): TripListItem {
             \assert($entity->id instanceof Uuid);
+            $id = $entity->id->toRfc4122();
 
-            return $this->toListItem($entity, $statusesByTripId[$entity->id->toRfc4122()] ?? null);
+            return $this->toListItem($entity, $statusesByTripId[$id] ?? null, $totalsByTripId[$id] ?? [0.0, 0]);
         }, $entities);
 
         return new TripListPaginator($items, $page, $limit, $totalItems);
     }
 
     /**
-     * @param array<string, string>|null $computationStatuses
+     * Ridden distance and stage count per trip, read as an aggregate.
+     *
+     * The page used to be fetch-joined with its stages so these two numbers could be summed
+     * in PHP, which hydrated eight JSONB columns per stage — geometry included — to produce
+     * a float and an int. One grouped scalar query instead, on the same identifiers the
+     * status lookup above already batches.
+     *
+     * Rest days are excluded here rather than in a join condition, and the query is separate
+     * rather than a GROUP BY on the page: a left join carrying that predicate in its WHERE
+     * turns into an inner join, and a trip with no stages — the state every new trip is in —
+     * would drop out of the list entirely. Trips missing from this map fall back to zero.
+     *
+     * @param list<TripRequest> $entities
+     *
+     * @return array<string, array{float, int}>
      */
-    private function toListItem(TripRequest $entity, ?array $computationStatuses): TripListItem
+    private function stageTotals(array $entities): array
+    {
+        if ([] === $entities) {
+            return [];
+        }
+
+        /** @var list<array{tripId: string, distance: numeric-string|float|null, stages: int}> $rows */
+        $rows = $this->entityManager->createQuery(
+            'SELECT IDENTITY(s.trip) AS tripId, SUM(s.distance) AS distance, COUNT(s.id) AS stages
+             FROM App\Entity\Stage s
+             WHERE s.trip IN (:tripIds) AND s.isRestDay = false
+             GROUP BY s.trip',
+        )
+            ->setParameter('tripIds', array_column($entities, 'id'))
+            ->getResult();
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[Uuid::fromString($row['tripId'])->toRfc4122()] = [(float) $row['distance'], (int) $row['stages']];
+        }
+
+        return $totals;
+    }
+
+    /**
+     * @param array<string, string>|null $computationStatuses
+     * @param array{float, int}          $totals              ridden distance and stage count, rest days excluded
+     */
+    private function toListItem(TripRequest $entity, ?array $computationStatuses, array $totals): TripListItem
     {
         \assert($entity->id instanceof Uuid);
 
-        // Compute total distance and stage count from persistent stages
-        $totalDistance = 0.0;
-        $stageCount = 0;
-        foreach ($entity->stages as $stage) {
-            if (!$stage->isRestDay()) {
-                $totalDistance += $stage->getDistance();
-                ++$stageCount;
-            }
-        }
+        [$totalDistance, $stageCount] = $totals;
 
         return new TripListItem(
             id: $entity->id->toRfc4122(),

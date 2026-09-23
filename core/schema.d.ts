@@ -5058,7 +5058,10 @@ export interface operations {
     api_trips_idroute_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of a previously served route, quoted — for example `"7"`. Answered 304 when the geometry has not changed since, which it only does when the stages are regenerated. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description TripRoute identifier */
                 id: string;
@@ -5075,6 +5078,13 @@ export interface operations {
                 content: {
                     "application/ld+json": components["schemas"]["TripRoute.jsonld"];
                 };
+            };
+            /** @description The geometry has not changed since the ETag you sent. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Forbidden */
             403: {
@@ -5238,7 +5248,10 @@ export interface operations {
     api_s_shortCoderoute_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of a previously served route, quoted — for example `"7"`. Answered 304 when the geometry has not changed since, which it only does when the stages are regenerated. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description TripShare identifier */
                 shortCode: string;
@@ -5255,6 +5268,13 @@ export interface operations {
                 content: {
                     "application/ld+json": components["schemas"]["TripShare.TripRoute.jsonld"];
                 };
+            };
+            /** @description The geometry has not changed since the ETag you sent. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Forbidden */
             403: {

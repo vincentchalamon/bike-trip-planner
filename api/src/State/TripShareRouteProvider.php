@@ -6,12 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use App\ApiResource\TripRequest;
 use App\ApiResource\TripRoute;
-use App\Entity\TripShare;
-use App\Repository\TripShareRepositoryInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Resolves a short code to the shared trip's route geometry (anonymous). The
@@ -23,10 +19,12 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripShareRouteProvider implements ProviderInterface
 {
     public function __construct(
-        private TripShareRepositoryInterface $tripShareRepository,
-        /** @var ProviderInterface<TripRoute> */
-        #[Autowire(service: TripRouteProvider::class)]
-        private ProviderInterface $tripRouteProvider,
+        private SharedTripResolver $resolver,
+        // The class, not the interface: only this signature admits the bare 304 Response
+        // this provider has to pass through. Behind ProviderInterface the return narrows to
+        // TripRoute and the conditional answer dies with a TypeError, on the anonymous route
+        // alone — which is exactly the path no unit test covers.
+        private TripRouteProvider $tripRouteProvider,
     ) {
     }
 
@@ -34,23 +32,15 @@ final readonly class TripShareRouteProvider implements ProviderInterface
      * @param array{shortCode?: string} $uriVariables
      * @param array<string, mixed>      $context
      */
-    public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripRoute
+    public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripRoute|Response
     {
         $shortCode = $uriVariables['shortCode'] ?? '';
 
-        $share = '' !== $shortCode ? $this->tripShareRepository->findByShortCode($shortCode) : null;
-        if (!$share instanceof TripShare) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
+        // The resolver enforces revocation (deletedAt IS NULL) and the anonymous rate limit,
+        // and it must stay ahead of the conditional answer the delegate may give: confirming a
+        // cached copy of a revoked share is still current would un-revoke it.
+        $tripId = $this->resolver->resolve($shortCode);
 
-        $trip = $share->getTrip();
-        if (!$trip instanceof TripRequest) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
-
-        $route = $this->tripRouteProvider->provide($operation, ['id' => (string) $trip->id], $context);
-        \assert($route instanceof TripRoute);
-
-        return $route;
+        return $this->tripRouteProvider->provide($operation, ['id' => $tripId], $context);
     }
 }

@@ -85,6 +85,33 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
         self::assertSame('concurrent', $weather['icon'] ?? null);
     }
 
+    /**
+     * The single-stage read carries the hint too, and it is the one that most needs it.
+     *
+     * `GET /trips/{id}/stages/{stageId}/detail` exists to show what the workers have just
+     * finished, and the eight targeted enrichment writes are DQL UPDATEs that never touch the
+     * unit of work. Read this stage without HINT_REFRESH after the trip has been hydrated and
+     * the endpoint serves the caller their own stale copy. A label stands in for the
+     * enrichment here: unlike the one-key weather blob the other cases write, it survives the
+     * conversion to a DTO, which is what this read does and they do not.
+     */
+    #[Test]
+    public function readingOneStageObservesAConcurrentColumnWrite(): void
+    {
+        $tripId = $this->seedTrip();
+        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE stage SET start_label = :label WHERE trip_id = :trip AND day_number = 1',
+            ['label' => 'concurrent', 'trip' => $tripId],
+        );
+
+        $stage = $this->repository->getStage($tripId, $stageId);
+
+        self::assertNotNull($stage);
+        self::assertSame('concurrent', $stage->startLabel);
+    }
+
     #[Test]
     public function hintRefreshObservesAConcurrentInsert(): void
     {

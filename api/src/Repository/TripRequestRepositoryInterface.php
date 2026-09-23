@@ -94,6 +94,30 @@ interface TripRequestRepositoryInterface
     public function getStageGeometry(string $tripId, string $stageId): ?array;
 
     /**
+     * One stage in full, read as one row.
+     *
+     * {@see self::getStages()} answers this too, by hydrating and converting every stage of
+     * the trip so the caller can throw all but one away. Null when the trip or the stage does
+     * not exist — the two are not distinguished, which is what the 404 masking expects.
+     */
+    public function getStage(string $tripId, string $stageId): ?Stage;
+
+    /**
+     * Returns every stage's day number and geometry, in travel order.
+     *
+     * What the map needs and nothing else. Not {@see self::getStageGeometry()} widened: that
+     * one is planar and drops `ele`. Not {@see self::getStages()} narrowed either — that
+     * hydrates weather, alerts, events, the supply timeline and the accommodations of every
+     * stage for a response that keeps two fields.
+     *
+     * An unknown trip and a trip with no stage both answer `[]`; callers that need to tell
+     * them apart read {@see self::getVersion()}, which is null only for the former.
+     *
+     * @return list<array{dayNumber: int, geometry: list<array{lat: float, lon: float, ele: float}>}>
+     */
+    public function getRouteGeometry(string $tripId): array;
+
+    /**
      * Resolves a day number to the stage identifier, for the one caller that still
      * addresses a stage by day: the `stageDay` field of the in-ride nearby-POI search
      * request, which is part of the public request body.

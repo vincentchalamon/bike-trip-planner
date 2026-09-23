@@ -8,6 +8,8 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
+use ApiPlatform\OpenApi\Model\Parameter;
+use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
 use App\State\TripRouteProvider;
 
 /**
@@ -20,7 +22,21 @@ use App\State\TripRouteProvider;
     operations: [
         new Get(
             uriTemplate: '/trips/{id}/route',
-            openapi: new Operation(summary: 'All-stages decimated geometry for the map (loaded on demand).'),
+            openapi: new Operation(
+                responses: [
+                    304 => new OpenApiResponse(description: 'The geometry has not changed since the ETag you sent.'),
+                ],
+                summary: 'All-stages decimated geometry for the map (loaded on demand).',
+                parameters: [
+                    new Parameter(
+                        name: 'If-None-Match',
+                        in: 'header',
+                        description: 'The ETag of a previously served route, quoted — for example `"7"`. Answered 304 when the geometry has not changed since, which it only does when the stages are regenerated.',
+                        required: false,
+                        schema: ['type' => 'string', 'pattern' => '^(\*|"\d+")$'],
+                    ),
+                ],
+            ),
             security: "is_granted('TRIP_VIEW', id)",
             provider: TripRouteProvider::class,
         ),

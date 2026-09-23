@@ -23,6 +23,13 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'trip')]
+// The shape of the trip-list query: filter on the owner, order by creation descending
+// ({@see \App\State\TripCollectionProvider}). It subsumes the single-column index on user_id
+// that preceded it. Declared here and not only in the SQL baseline, so the entity says what
+// the code relies on — the correction ADR-077's unit already made for uniq_trip_share_active.
+// The descending order the migration declares cannot be expressed here; the attribute names
+// the columns, the migration is where the shape lives.
+#[ORM\Index(name: 'idx_trip_user_created_at', columns: ['user_id', 'created_at'])]
 #[ORM\HasLifecycleCallbacks]
 final class TripRequest
 {

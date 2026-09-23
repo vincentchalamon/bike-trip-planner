@@ -7,6 +7,8 @@ namespace App\Tests\Functional;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
 use Symfony\Component\Uid\Uuid;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
@@ -171,6 +173,127 @@ final class TripListTest extends ApiTestCase
         $ids = array_column($data['member'], 'id');
         $this->assertContains(self::TRIP_ID_2, $ids);
         $this->assertNotContains(self::TRIP_ID_1, $ids);
+    }
+
+    /**
+     * The page size a client asks for is capped at the number the contract already published.
+     *
+     * `paginationClientItemsPerPage` lets the caller size the page, and nothing used to bound
+     * it: the runtime Pagination service is built from an options array that carried no
+     * maximum, so `Pagination::getLimit()` skipped its clamp entirely while the exported
+     * OpenAPI advertised `maximum: 30`. The total is deliberately *not* clamped — a client
+     * still learns how many trips it has.
+     */
+    #[Test]
+    public function aPageSizeBeyondTheMaximumIsClamped(): void
+    {
+        for ($i = 1; $i <= 31; ++$i) {
+            $this->seedTrip(\sprintf('01936f6e-0000-7000-8000-0000000002%02d', $i));
+        }
+
+        $response = $this->client->request('GET', '/trips?itemsPerPage=100000', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $data = $response->toArray(false);
+        $this->assertCount(30, $data['member']);
+        $this->assertSame(31, $data['totalItems']);
+    }
+
+    /**
+     * Paging over trips that share a createdAt must still show each of them exactly once.
+     *
+     * `trip.created_at` is `timestamp(0)`, so any two trips created in the same second tie,
+     * and a tie straddling a page boundary is served twice or not at all unless the order is
+     * total. The identifier is a UUID v7, which breaks the tie in the same direction time runs.
+     *
+     * Honest about what this proves: on three rows Postgres happens to sort deterministically,
+     * so this does not go red against the untied query. It is a regression guard — it fails if
+     * the second sort key is dropped and the list starts paging on a partial order again.
+     */
+    #[Test]
+    public function pagingOverTripsCreatedInTheSameSecondShowsEachOnce(): void
+    {
+        $ids = [];
+        for ($i = 1; $i <= 3; ++$i) {
+            $ids[] = $id = \sprintf('01936f6e-0000-7000-8000-0000000003%02d', $i);
+            $this->seedTrip($id);
+        }
+
+        $seen = [];
+        foreach ([1, 2] as $page) {
+            $response = $this->client->request('GET', \sprintf('/trips?itemsPerPage=2&page=%d', $page), [
+                'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            ]);
+            $this->assertResponseIsSuccessful();
+            $seen = array_merge($seen, array_column($response->toArray(false)['member'], 'id'));
+        }
+
+        sort($ids);
+        $unique = array_unique($seen);
+        sort($unique);
+
+        $this->assertSame($ids, $unique);
+        $this->assertCount(3, $seen, 'A trip was served on both pages.');
+    }
+
+    /**
+     * The totals are read as an aggregate now, so assert the numbers, not the keys.
+     *
+     * `listTripItemContainsExpectedFields` only checks that `totalDistance` and `stageCount`
+     * are present, which the rewrite would have satisfied while answering anything. Two cases
+     * matter beyond the happy path: a rest day contributes neither distance nor count, and a
+     * trip with no stage at all must stay in the list with zeroes rather than drop out of a
+     * join.
+     */
+    #[Test]
+    public function totalsExcludeRestDaysAndAStagelessTripStaysInTheList(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID_1);
+        $this->seedTrip(self::TRIP_ID_2);
+
+        $response = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $members = array_column($response->toArray(false)['member'], null, 'id');
+
+        // A whole float comes back from JSON as an int, so compare as floats.
+        $this->assertArrayHasKey(self::TRIP_ID_1, $members);
+        $this->assertSame(2, $members[self::TRIP_ID_1]['stageCount'], 'The rest day was counted.');
+        $this->assertSame(120.0, (float) $members[self::TRIP_ID_1]['totalDistance'], 'The rest day was ridden.');
+
+        $this->assertArrayHasKey(self::TRIP_ID_2, $members, 'A trip with no stage fell out of the list.');
+        $this->assertSame(0, $members[self::TRIP_ID_2]['stageCount']);
+        $this->assertSame(0.0, (float) $members[self::TRIP_ID_2]['totalDistance']);
+    }
+
+    private function seedTripWithStages(string $tripId): void
+    {
+        $this->seedTrip($tripId);
+
+        $container = self::getContainer();
+        /** @var DoctrineTripRequestRepository $repo */
+        $repo = $container->get(DoctrineTripRequestRepository::class);
+
+        $stage = static fn (int $day, float $distance, bool $restDay): Stage => new Stage(
+            tripId: $tripId,
+            dayNumber: $day,
+            distance: $distance,
+            elevation: 100.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.5, 5.5),
+            isRestDay: $restDay,
+        );
+
+        $repo->storeStages($tripId, [
+            $stage(1, 50.0, false),
+            $stage(2, 999.0, true),
+            $stage(3, 70.0, false),
+        ]);
     }
 
     #[Test]

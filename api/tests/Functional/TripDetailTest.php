@@ -710,6 +710,27 @@ final class TripDetailTest extends ApiTestCase
         $this->assertEqualsWithDelta(45.0, $data['stages'][0]['geometry'][0]['lat'], 0.0001);
     }
 
+    /**
+     * A trip that exists but has no stage is an empty route, not a missing one.
+     *
+     * The 404 used to fall out of `getStages()` answering null; it is now read from the
+     * version column, which is null for the same single reason — no trip row. The two must
+     * not diverge: a stageless trip has a version and must answer 200 with an empty list.
+     */
+    #[Test]
+    public function routeOfATripWithNoStagesIsAnEmptyList(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame([], $response->toArray(false)['stages']);
+    }
+
     #[Test]
     public function stageDetailReturnsTheFullStageIncludingGeometry(): void
     {

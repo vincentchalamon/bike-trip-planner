@@ -512,6 +512,58 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
+    public function getStage(string $tripId, string $stageId): ?StageDto
+    {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
+            return null;
+        }
+
+        $entity = $this->getEntityManager()->createQuery(
+            'SELECT s FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.id = :stageId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('stageId', Uuid::fromString($stageId))
+            // Not optional. The eight targeted enrichment writes are DQL UPDATEs that bypass
+            // the unit of work, so a stage already in the identity map is served as the caller
+            // last saw it — on the endpoint whose entire job is to show the enrichment that
+            // just landed. Same reason {@see self::freshStagesById()} carries it.
+            ->setHint(Query::HINT_REFRESH, true)
+            ->getOneOrNullResult();
+
+        return $entity instanceof StageEntity ? $this->stageEntityToDto($entity) : null;
+    }
+
+    /**
+     * The trip's shape on a map: day number and geometry, in travel order, nothing else.
+     *
+     * Same idea as {@see self::getStageGeometry()} one stage wider, and deliberately not the
+     * same method — that one projects to 2D and drops `ele` for the planar detour maths, and
+     * the map needs the elevation. {@see self::getStages()} would answer this too, at the cost
+     * of hydrating weather, alerts, events, the supply timeline and every accommodation, plus
+     * one object per geometry point, for a response that keeps two fields.
+     *
+     * No HINT_REFRESH: unlike the enrichment columns, geometry and day number are only ever
+     * written by {@see self::storeStages()}, which flushes managed entities — and the array
+     * hydrator does not consult the identity map in the first place.
+     *
+     * @return list<array{dayNumber: int, geometry: list<array{lat: float, lon: float, ele: float}>}>
+     */
+    public function getRouteGeometry(string $tripId): array
+    {
+        if (!Uuid::isValid($tripId)) {
+            return [];
+        }
+
+        /** @var list<array{dayNumber: int, geometry: list<array{lat: float, lon: float, ele: float}>}> $rows */
+        $rows = $this->getEntityManager()->createQuery(
+            'SELECT s.dayNumber, s.geometry FROM App\Entity\Stage s WHERE s.trip = :tripId ORDER BY s.position ASC',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->getResult(AbstractQuery::HYDRATE_ARRAY);
+
+        return $rows;
+    }
+
     public function getVersion(string $tripId): ?int
     {
         return $this->findTripRequest($tripId)?->version;
