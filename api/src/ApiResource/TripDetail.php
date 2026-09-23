@@ -8,6 +8,8 @@ use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\Link;
+use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
@@ -32,6 +34,27 @@ use App\State\TripDetailProvider;
             // user could read another user's trip by UUID.
             security: "is_granted('TRIP_VIEW', id)",
             provider: TripDetailProvider::class,
+        ),
+    ],
+    mcp: [
+        'get_trip' => new McpTool(
+            name: 'get_trip',
+            description: 'Read one bikepacking trip: its pacing settings, dates and persisted stages (distance, elevation, labels, weather, terrain alerts, chosen accommodation).',
+            uriTemplate: '/trips/{id}/detail',
+            // Without an explicit declaration the tool's `id` argument never reaches the
+            // provider and the call dies with `Trip "" not found.` — a McpTool receives its
+            // uri variables, a McpResource does not (Mcp\Server\Handler, `if (!$isResource)`).
+            uriVariables: ['id' => new Link(fromClass: TripDetail::class)],
+            // Same expression as the HTTP operation above, and that is the point of ADR-063:
+            // authorization is a property of the domain, so it survives a change of transport.
+            // At listing time `id` is undefined, which raises a SyntaxError that
+            // ExpressionAccessChecker swallows on purpose — the tool stays listed and the
+            // expression is enforced on tools/call.
+            security: "is_granted('TRIP_VIEW', id)",
+            provider: TripDetailProvider::class,
+            // The scope this tool consumes. Read here rather than repeated inside the
+            // expression above, so there is one source of truth for what a token must carry.
+            extraProperties: ['mcp_scope' => 'trips:read'],
         ),
     ],
 )]

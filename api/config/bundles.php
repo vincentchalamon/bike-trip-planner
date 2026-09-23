@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
-use Symfony\Bundle\TwigBundle\TwigBundle;
-use Nelmio\CorsBundle\NelmioCorsBundle;
 use ApiPlatform\Symfony\Bundle\ApiPlatformBundle;
-use Symfony\Bundle\MonologBundle\MonologBundle;
-use Symfony\Bundle\WebProfilerBundle\WebProfilerBundle;
-use Symfony\Bundle\MercureBundle\MercureBundle;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
-use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Lexik\Bundle\JWTAuthenticationBundle\LexikJWTAuthenticationBundle;
-use Zenstruck\Foundry\ZenstruckFoundryBundle;
+use Nelmio\CorsBundle\NelmioCorsBundle;
 use Sentry\SentryBundle\SentryBundle;
+use Symfony\AI\McpBundle\McpBundle;
+use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\MercureBundle\MercureBundle;
+use Symfony\Bundle\MonologBundle\MonologBundle;
+use Symfony\Bundle\SecurityBundle\SecurityBundle;
+use Symfony\Bundle\TwigBundle\TwigBundle;
+use Symfony\Bundle\WebProfilerBundle\WebProfilerBundle;
+use Zenstruck\Foundry\ZenstruckFoundryBundle;
 
 return [
     FrameworkBundle::class => ['all' => true],
@@ -30,4 +31,5 @@ return [
     LexikJWTAuthenticationBundle::class => ['all' => true],
     ZenstruckFoundryBundle::class => ['dev' => true, 'test' => true],
     SentryBundle::class => ['prod' => true],
+    McpBundle::class => ['all' => true],
 ];
