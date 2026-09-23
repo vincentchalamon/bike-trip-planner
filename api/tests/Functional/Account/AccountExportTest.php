@@ -120,6 +120,62 @@ final class AccountExportTest extends ApiTestCase
         $this->assertStringContainsString('.json', $disposition);
     }
 
+    /**
+     * Stages are exported in riding order, whichever order the rows come back in.
+     *
+     * The trips used to be fetch-joined with their stages, so the collection carried the
+     * `#[ORM\OrderBy(['position' => 'ASC'])]` declared on the association. Reading the four
+     * exported columns as a scalar query does not inherit it, and the export would quietly
+     * follow whatever order the table happened to yield.
+     *
+     * Honest about what this proves: dropping the ORDER BY does not turn it red, because
+     * `idx_stage_trip_position` leads with `(trip_id, position)` and the planner walks it, so
+     * the rows arrive sorted by accident. That accident is the point — it holds only while
+     * the planner picks that index, and nothing says it must. This is a regression guard.
+     */
+    #[Test]
+    public function exportOrdersStagesByPosition(): void
+    {
+        $em = $this->getEntityManager();
+
+        $user = new User('ordered-export@example.com');
+        $em->persist($user);
+
+        $trip = new TripRequest(Uuid::v7());
+        $trip->user = $user;
+        $em->persist($trip);
+
+        // position runs opposite to insertion, so a query without an ORDER BY — which would
+        // follow the physical row order — cannot accidentally produce the expected answer.
+        foreach ([0 => 2, 1 => 1, 2 => 0] as $day => $position) {
+            $stage = new Stage($trip);
+            $stage->setPosition($position);
+            $stage->setDayNumber($day + 1);
+            $stage->setDistance(10.0);
+            $stage->setElevation(0.0);
+            $stage->setStartLat(48.0);
+            $stage->setStartLon(2.0);
+            $stage->setEndLat(48.1);
+            $stage->setEndLon(2.1);
+            $trip->addStage($stage);
+            $em->persist($stage);
+        }
+
+        $em->flush();
+
+        /** @var JWTTokenManagerInterface $jwtManager */
+        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
+
+        $response = self::createClient()->request('GET', '/users/me/export', [
+            'headers' => ['Authorization' => 'Bearer '.$jwtManager->create($user)],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $stages = $response->toArray()['trips'][0]['stages'];
+        $this->assertSame([3, 2, 1], array_column($stages, 'dayNumber'));
+    }
+
     #[Test]
     public function exportWithoutAuthenticationReturns401(): void
     {
