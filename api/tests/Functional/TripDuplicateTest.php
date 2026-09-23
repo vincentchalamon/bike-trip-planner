@@ -14,7 +14,6 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -74,9 +73,6 @@ final class TripDuplicateTest extends ApiTestCase
             $tracker->markDone($tripId, $computation);
         }
 
-        /** @var IdempotencyCheckerInterface $idempotencyChecker */
-        $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);
-        $idempotencyChecker->saveHash($tripId, $request);
     }
 
     #[Test]

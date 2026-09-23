@@ -11,12 +11,12 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
+use App\Message\AnalyzeTerrain;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripAnalysisDispatcher;
-use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
@@ -69,9 +69,6 @@ final class TripUpdateTest extends ApiTestCase
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::pipeline());
 
-        /** @var IdempotencyCheckerInterface $idempotencyChecker */
-        $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);
-        $idempotencyChecker->saveHash($tripId, $request);
         $this->associateTripWithUser($tripId, $this->testUser);
     }
 
@@ -393,6 +390,38 @@ final class TripUpdateTest extends ApiTestCase
 
         $this->assertCount(1, $sentMessages);
         $this->assertInstanceOf(FetchAndParseRoute::class, $sentMessages[0]->getMessage());
+    }
+
+    /**
+     * `departureHour` and `averageSpeed` drive the weather riding window
+     * ({@see \App\MessageHandler\FetchWeatherHandler}) and the sunset estimate, and the
+     * dependency resolver has always mapped them to TERRAIN and WEATHER. They were never
+     * recomputed all the same: the resolver sat behind a cached hash of eight fields that
+     * omitted both, so an edit to either was persisted and answered 202 in silence.
+     */
+    #[Test]
+    public function departureHourChangeTriggersTerrainAndWeather(): void
+    {
+        $this->seedTrip(self::TRIP_ID, startDate: new \DateTimeImmutable('+10 days'));
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
+            'json' => [
+                'departureHour' => 6,
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $messageClasses = array_map(
+            static fn (Envelope $envelope): string => $envelope->getMessage()::class,
+            $transport->getSent(),
+        );
+
+        $this->assertContains(AnalyzeTerrain::class, $messageClasses);
+        $this->assertContains(FetchWeather::class, $messageClasses);
     }
 
     #[Test]

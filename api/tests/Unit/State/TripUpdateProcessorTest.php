@@ -18,7 +18,6 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Concurrency\IfMatch;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\IdempotencyCheckerInterface;
 use App\State\TripLocker;
 use App\State\TripUpdateProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -41,8 +40,6 @@ final class TripUpdateProcessorTest extends TestCase
 
     private MockObject&ComputationTrackerInterface $computationTracker;
 
-    private MockObject&IdempotencyCheckerInterface $idempotencyChecker;
-
     private TripUpdateProcessor $processor;
 
     #[\Override]
@@ -51,7 +48,6 @@ final class TripUpdateProcessorTest extends TestCase
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->computationTracker = $this->createMock(ComputationTrackerInterface::class);
-        $this->idempotencyChecker = $this->createMock(IdempotencyCheckerInterface::class);
 
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn(new User('owner@example.com'));
@@ -65,7 +61,6 @@ final class TripUpdateProcessorTest extends TestCase
             $this->tripStateManager,
             $this->computationTracker,
             new ComputationDependencyResolver(),
-            $this->idempotencyChecker,
             $generationTracker,
             $security,
             new TripLocker(),
@@ -95,7 +90,6 @@ final class TripUpdateProcessorTest extends TestCase
             $tripStateManager,
             $this->createStub(ComputationTrackerInterface::class),
             new ComputationDependencyResolver(),
-            $this->createStub(IdempotencyCheckerInterface::class),
             $generationTracker,
             $security,
             new TripLocker(),
@@ -131,7 +125,6 @@ final class TripUpdateProcessorTest extends TestCase
             ->willReturnOnConsecutiveCalls($oldRequest, $newRequest);
         $this->computationTracker->method('getStatuses')->willReturn([]);
 
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
 
         $dispatchedMessages = [];
         $this->messageBus->method('dispatch')
@@ -177,7 +170,6 @@ final class TripUpdateProcessorTest extends TestCase
             $this->tripStateManager,
             $this->computationTracker,
             new ComputationDependencyResolver(),
-            $this->idempotencyChecker,
             $generationTracker,
             $security,
             new TripLocker(),
@@ -195,7 +187,6 @@ final class TripUpdateProcessorTest extends TestCase
 
         $this->tripStateManager->method('getRequest')->willReturn($old);
         $this->computationTracker->method('getStatuses')->willReturn([]);
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
         $this->messageBus->method('dispatch')
             ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
 
@@ -235,7 +226,6 @@ final class TripUpdateProcessorTest extends TestCase
         // populated, not the one the trip had a moment ago.
         $this->tripStateManager->method('getRequest')->willReturn($incoming);
         $this->computationTracker->method('getStatuses')->willReturn([]);
-        $this->idempotencyChecker->method('hasChanged')->willReturn(true);
 
         $dispatched = [];
         $this->messageBus->method('dispatch')
@@ -261,7 +251,6 @@ final class TripUpdateProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn($request);
         $this->computationTracker->method('getStatuses')->willReturn([]);
 
-        $this->idempotencyChecker->method('hasChanged')->willReturn(false);
 
         $this->messageBus->expects($this->never())->method('dispatch');
 

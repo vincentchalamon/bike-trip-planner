@@ -35,7 +35,6 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
         private ComputationDependencyResolver $dependencyResolver,
-        private IdempotencyCheckerInterface $idempotencyChecker,
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
@@ -91,8 +90,14 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // The precondition also has to guard the write rather than follow it: checked after, a
         // stale If-Match would persist the settings and only then answer 412 — a refusal the
         // caller is entitled to read as "nothing happened".
-        $hasChanged = $this->idempotencyChecker->hasChanged($id, $data);
-        $computationsToTrigger = $hasChanged ? $this->dependencyResolver->resolve($oldRequest, $data) : [];
+        //
+        // The resolver is the whole answer. It used to sit behind a cached hash of eight
+        // fields, which was strictly less precise than the resolver's own field-by-field
+        // comparison and wrong in both directions: it omitted `departureHour` and
+        // `averageSpeed`, so an edit to either was persisted and never recomputed, and its
+        // 30-minute TTL made an identical replay re-trigger the whole pipeline.
+        $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
+        $hasChanged = [] !== $computationsToTrigger;
 
         $generation = null;
         if ([] !== $computationsToTrigger) {
@@ -107,7 +112,8 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // Always persist — non-computation fields (e.g. title) may have changed
         $this->tripStateManager->storeRequest($id, $data);
 
-        // Check idempotency for computation-triggering fields only
+        // Nothing the resolver recognises changed — a title-only edit, or the same body sent
+        // twice. The settings are saved above either way; there is simply nothing to recompute.
         if (!$hasChanged) {
             $statuses = $this->computationTracker->getStatuses($id) ?? [];
 
@@ -117,8 +123,6 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
                 isLocked: $this->tripLocker->isLocked($data),
             );
         }
-
-        $this->idempotencyChecker->saveHash($id, $data);
 
         if (null !== $generation) {
             foreach ($computationsToTrigger as $computation) {
