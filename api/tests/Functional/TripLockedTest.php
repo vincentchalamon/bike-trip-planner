@@ -180,6 +180,7 @@ final class TripLockedTest extends ApiTestCase
         $request = new TripRequest(Uuid::fromString(self::TRIP_ID));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('today -1 day');
+
         $repository->initializeTrip(self::TRIP_ID, $request);
 
         $this->associateTripWithUser(self::TRIP_ID, $this->testUser);

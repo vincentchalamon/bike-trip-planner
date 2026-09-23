@@ -18,6 +18,14 @@ use Symfony\Component\Uid\Uuid;
  *
  * Kept in Postgres, not in the cache: the guarantee is only worth what proves it, and the cache
  * pools fall back to an array adapter under test, one per process.
+ *
+ * The scope is (user, operation, key). Not global, because the key belongs to the client that
+ * minted it and two clients picking the same string must not be handed each other's trip. Not
+ * per trip, because a creation has no trip yet — which is the whole reason this exists.
+ *
+ * `$requestDigest` fingerprints the body and does one thing: the same key arriving with a
+ * different body is a client contradicting itself, and is answered 409. It never identifies the
+ * request — `$key` does that, so two deliberate identical creations both succeed.
  */
 #[ORM\Entity(repositoryClass: IdempotencyKeyRepository::class)]
 #[ORM\Table(name: 'idempotency_key')]
@@ -29,44 +37,24 @@ class IdempotencyKey
     #[ORM\Column(type: 'uuid', unique: true)]
     public Uuid $id;
 
-    /**
-     * Scoped to the user and the operation, never global: the key belongs to the client that
-     * minted it, and two clients picking the same string must not collide. Scoping it to a trip
-     * is not available — `POST /trips` has no trip yet, which is the whole reason this exists.
-     */
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'user_id', nullable: false, onDelete: 'CASCADE')]
-    public User $user;
-
-    #[ORM\Column(name: 'operation', length: 128)]
-    public string $operation;
-
-    #[ORM\Column(name: 'idempotency_key', length: 255)]
-    public string $key;
-
-    /**
-     * Fingerprint of the request body, and the only thing it is for: the same key sent with a
-     * different body is a client contradicting itself, and is answered 409. It never identifies
-     * the request — the key does that, so two deliberate identical creations both succeed.
-     */
-    #[ORM\Column(name: 'request_digest', length: 32)]
-    public string $requestDigest;
-
-    /** The trip the first call created, from which the replayed answer is rebuilt. */
-    #[ORM\Column(name: 'resource_id', type: 'uuid')]
-    public Uuid $resourceId;
-
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     public \DateTimeImmutable $createdAt;
 
-    public function __construct(User $user, string $operation, string $key, string $requestDigest, Uuid $resourceId)
-    {
+    public function __construct(
+        #[ORM\ManyToOne(targetEntity: User::class)]
+        #[ORM\JoinColumn(name: 'user_id', nullable: false, onDelete: 'CASCADE')]
+        public User $user,
+        #[ORM\Column(name: 'operation', length: 128)]
+        public string $operation,
+        #[ORM\Column(name: 'idempotency_key', length: 255)]
+        public string $key,
+        #[ORM\Column(name: 'request_digest', length: 32)]
+        public string $requestDigest,
+        /** The trip the first call created, from which the replayed answer is rebuilt. */
+        #[ORM\Column(name: 'resource_id', type: 'uuid')]
+        public Uuid $resourceId,
+    ) {
         $this->id = Uuid::v7();
-        $this->user = $user;
-        $this->operation = $operation;
-        $this->key = $key;
-        $this->requestDigest = $requestDigest;
-        $this->resourceId = $resourceId;
         $this->createdAt = new \DateTimeImmutable();
     }
 }

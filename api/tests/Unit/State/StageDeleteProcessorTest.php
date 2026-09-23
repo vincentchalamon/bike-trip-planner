@@ -19,10 +19,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageDeleteProcessorTest extends TestCase
@@ -217,5 +215,4 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertInstanceOf(RecalculateStages::class, $recalculate);
         $this->assertSame([ComputationTrigger::DATES], $recalculate->triggers);
     }
-
 }

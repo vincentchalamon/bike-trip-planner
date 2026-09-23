@@ -116,7 +116,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         return new Trip(
             id: $tripId,
             computationStatus: $this->computationTracker->getStatuses($tripId) ?? [],
-            isLocked: null !== $request && $this->tripLocker->isLocked($request),
+            isLocked: $request instanceof TripRequest && $this->tripLocker->isLocked($request),
         );
     }
 

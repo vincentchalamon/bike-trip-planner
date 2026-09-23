@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use ApiPlatform\Metadata\HttpOperation;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use App\State\TripLockProcessor;
@@ -54,6 +55,10 @@ final class LockCoverageTest extends KernelTestCase
 
         foreach ($this->operations() as $name => $operation) {
             if (true !== ($operation->getExtraProperties()[TripLockProcessor::EXTRA_PROPERTY] ?? false)) {
+                continue;
+            }
+
+            if (!$operation instanceof HttpOperation) {
                 continue;
             }
 

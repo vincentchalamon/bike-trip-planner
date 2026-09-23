@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -116,5 +115,4 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
         $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'stageId' => Uuid::v7()->toRfc4122()]);
     }
-
 }

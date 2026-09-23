@@ -27,7 +27,6 @@ use PHPUnit\Framework\TestCase;
 use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -68,7 +67,6 @@ final class TripUpdateProcessorTest extends TestCase
             $this->inertSupersession(),
         );
     }
-
 
     #[Test]
     public function dispatchesAccommodationsScanWithEnabledTypesWhenTypesChange(): void

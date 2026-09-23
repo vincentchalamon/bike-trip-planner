@@ -20,7 +20,6 @@ use App\State\StageUpdateProcessor;
 use App\State\StageLocator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -394,7 +393,6 @@ final class StageUpdateProcessorTest extends TestCase
         // Fallback: stage 1 startPoint must equal stage 0 endPoint to stay contiguous
         self::assertSame($storedStages[0]->endPoint, $storedStages[1]->startPoint);
     }
-
 
     #[Test]
     public function editedStageStoresRequestedSplitDistance(): void

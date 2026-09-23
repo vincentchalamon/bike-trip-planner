@@ -20,7 +20,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
@@ -63,7 +62,6 @@ final class RestDayInsertProcessorTest extends TestCase
             new StageLocator(),
         );
     }
-
 
     #[Test]
     public function throwsNotFoundWhenIndexIsOutOfBounds(): void

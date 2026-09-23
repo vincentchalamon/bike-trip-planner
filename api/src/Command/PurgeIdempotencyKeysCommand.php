@@ -34,7 +34,7 @@ final class PurgeIdempotencyKeysCommand extends Command
         $cutoff = new \DateTimeImmutable(self::RETENTION);
         $deleted = $this->keys->purgeOlderThan($cutoff);
 
-        (new SymfonyStyle($input, $output))->success(\sprintf(
+        new SymfonyStyle($input, $output)->success(\sprintf(
             'Deleted %d idempotency key(s) recorded before %s.',
             $deleted,
             $cutoff->format(\DateTimeInterface::ATOM),

@@ -62,7 +62,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $already = $this->idempotency->alreadyCreated($user, TripCreation::REQUIRES_IDEMPOTENCY_KEY);
         if ($already instanceof Uuid) {
             $existingId = $already->toRfc4122();
-            $existing = $this->tripStateManager->getRequest($existingId);
+            $existing = $this->tripRepository->getRequest($existingId);
 
             return new Trip(
                 id: $existingId,

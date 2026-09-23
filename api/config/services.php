@@ -9,7 +9,6 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
-use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 

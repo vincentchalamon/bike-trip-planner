@@ -20,7 +20,6 @@ use App\State\StageLocator;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -200,5 +199,4 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $this->expectException(UnprocessableEntityHttpException::class);
         $this->processor($repo, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
     }
-
 }

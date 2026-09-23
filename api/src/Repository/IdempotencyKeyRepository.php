@@ -19,14 +19,6 @@ final class IdempotencyKeyRepository extends ServiceEntityRepository
         parent::__construct($registry, IdempotencyKey::class);
     }
 
-    public function find(mixed $id, mixed $lockMode = null, mixed $lockVersion = null): ?IdempotencyKey
-    {
-        /** @var IdempotencyKey|null $entity */
-        $entity = parent::find($id, $lockMode, $lockVersion);
-
-        return $entity;
-    }
-
     public function findRecorded(User $user, string $operation, string $key): ?IdempotencyKey
     {
         /** @var IdempotencyKey|null $recorded */
@@ -48,11 +40,13 @@ final class IdempotencyKeyRepository extends ServiceEntityRepository
      */
     public function purgeOlderThan(\DateTimeImmutable $cutoff): int
     {
-        return (int) $this->createQueryBuilder('k')
+        $deleted = $this->createQueryBuilder('k')
             ->delete()
             ->where('k.createdAt < :cutoff')
             ->setParameter('cutoff', $cutoff)
             ->getQuery()
             ->execute();
+
+        return \is_int($deleted) ? $deleted : 0;
     }
 }

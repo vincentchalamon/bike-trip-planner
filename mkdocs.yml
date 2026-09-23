@@ -155,6 +155,8 @@ nav:
       - adr/adr-073-supersession-settles-and-says-so.md
       - adr/adr-074-a-trip-has-an-address.md
       - adr/adr-075-readiness-covers-the-consumers.md
+      - adr/adr-076-the-state-before-is-the-record.md
+      - adr/adr-077-a-creation-carries-its-own-key.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:

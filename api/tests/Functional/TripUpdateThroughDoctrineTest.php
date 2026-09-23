@@ -108,6 +108,7 @@ final class TripUpdateThroughDoctrineTest extends ApiTestCase
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->fatigueFactor = 0.9;
         $request->elevationPenalty = 50.0;
+
         $repository->initializeTrip(self::TRIP_ID, $request);
 
         $this->associateTripWithUser(self::TRIP_ID, $this->testUser);

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
-use App\Entity\User;
 use App\Message\FetchAndParseRoute;
 use App\Repository\IdempotencyKeyRepository;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,15 +37,13 @@ final class TripCreationIdempotencyTest extends ApiTestCase
 
     private Client $client;
 
-    private User $testUser;
-
     private string $jwtToken;
 
     #[\Override]
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('idempotent@example.com');
+        ['token' => $this->jwtToken] = $this->createTestUserWithJwt('idempotent@example.com');
     }
 
     #[Test]
@@ -145,7 +143,7 @@ final class TripCreationIdempotencyTest extends ApiTestCase
         ));
     }
 
-    private function create(string $key, string $sourceUrl): \Symfony\Contracts\HttpClient\ResponseInterface
+    private function create(string $key, string $sourceUrl): ResponseInterface
     {
         return $this->client->request('POST', '/trips', [
             'headers' => array_merge(
