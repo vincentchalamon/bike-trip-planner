@@ -67,7 +67,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             return new Trip(
                 id: $existingId,
                 computationStatus: $this->computationTracker->getStatuses($existingId) ?? [],
-                isLocked: null !== $existing && $this->tripLocker->isLocked($existing),
+                isLocked: $existing instanceof TripRequest && $this->tripLocker->isLocked($existing),
             );
         }
 
