@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Metadata\HttpOperation;
 use App\Entity\IdempotencyKey;
 use App\Entity\User;
 use App\Repository\IdempotencyKeyRepository;
@@ -53,9 +54,9 @@ readonly class Idempotency
      * on a creation. Throws 409 when the same key arrives with a different body, which is a
      * client contradicting itself.
      */
-    public function alreadyCreated(User $user, string $operation): ?Uuid
+    public function alreadyCreated(User $user, HttpOperation $operation): ?Uuid
     {
-        $recorded = $this->keys->findRecorded($user, $operation, $this->key());
+        $recorded = $this->keys->findRecorded($user, $this->scope($operation), $this->key());
 
         if (!$recorded instanceof IdempotencyKey) {
             return null;
@@ -76,20 +77,35 @@ readonly class Idempotency
      * which trip won, and answers with that one. A pre-check alone leaves the window between
      * reading and writing wide open, which is the flaw in the share endpoint this is modelled on.
      */
-    public function remember(User $user, string $operation, Uuid $resourceId): Uuid
+    public function remember(User $user, HttpOperation $operation, Uuid $resourceId): Uuid
     {
         $key = $this->key();
+        $scope = $this->scope($operation);
 
         try {
-            $this->entityManager->persist(new IdempotencyKey($user, $operation, $key, $this->digest(), $resourceId));
+            $this->entityManager->persist(new IdempotencyKey($user, $scope, $key, $this->digest(), $resourceId));
             $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
-            $recorded = $this->keys->findRecorded($user, $operation, $key);
+            $recorded = $this->keys->findRecorded($user, $scope, $key);
 
             return $recorded instanceof IdempotencyKey ? $recorded->resourceId : $resourceId;
         }
 
         return $resourceId;
+    }
+
+    /**
+     * The namespace a key is unique within, alongside the user.
+     *
+     * The operation, not the processor and certainly not the flag that marks it: two endpoints
+     * sharing a namespace means a client reusing one key across both is answered 409 on a body
+     * that is simply a different request — or worse, handed the other endpoint's trip. Derived
+     * here rather than passed in, so the lookup and the write in one processor cannot disagree
+     * about it; a mismatch there would make every lookup miss its own row, silently.
+     */
+    private function scope(HttpOperation $operation): string
+    {
+        return $operation->getName() ?? $operation->getUriTemplate() ?? $operation::class;
     }
 
     private function key(): string

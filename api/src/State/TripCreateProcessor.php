@@ -56,7 +56,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         // Before the limiter and before any work: a retry of a creation that already succeeded
         // must cost nothing and answer with the trip it made, not with a second one (ADR-077).
-        $already = $this->idempotency->alreadyCreated($user, TripCreation::REQUIRES_IDEMPOTENCY_KEY);
+        $already = $this->idempotency->alreadyCreated($user, $operation);
         if ($already instanceof Uuid) {
             return $this->tripFor($already->toRfc4122());
         }
@@ -89,11 +89,20 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $this->generationTracker->initialize($tripId);
         $generation = 1;
 
-        // Recorded in the same unit of work as the trip, before the pipeline is dispatched: a
-        // crash between the two leaves a key pointing at a trip whose computations never
-        // started, which `/recompute` can settle. The reverse — a trip with no key — would let
-        // the retry make a second one.
-        $this->idempotency->remember($user, TripCreation::REQUIRES_IDEMPOTENCY_KEY, Uuid::fromString($tripId));
+        // Two flushes, not one: initializeTrip() commits the trip itself, and this commits the
+        // key. A process killed between them leaves a trip nothing remembers, so a retry makes a
+        // second one — the behaviour of every creation before this existed, not a regression, but
+        // not the guarantee either.
+        //
+        // One transaction around both would close that window and open a worse one: recovering
+        // from a concurrent insert means catching the unique violation, and a failed flush inside
+        // a wrapping transaction closes the entity manager and marks it rollback-only. Atomicity
+        // here costs the concurrency guarantee the unique index exists for.
+        //
+        // So the order is chosen to fail in the safe direction. Trip first means a crash costs a
+        // duplicate; key first would leave a key pointing at a trip that was never committed, and
+        // the retry would be handed an identifier for nothing at all.
+        $this->idempotency->remember($user, $operation, Uuid::fromString($tripId));
 
         $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
 

@@ -74,6 +74,15 @@ happened.
 Retention is 24 hours, purged by `app:idempotency:purge`. Past that window a repeat is no longer
 a retry, it is a new intent.
 
+**The trip and its key are committed by two flushes, not one, and that is a deliberate trade.**
+Wrapping both would close the window where a process dies between them — and open a worse one:
+recovering from a concurrent insert means catching the unique violation, and a failed flush
+inside a wrapping transaction closes the entity manager and marks it rollback-only. Atomicity
+there would cost the concurrency guarantee the index exists for. The order therefore fails in the
+safe direction: the trip commits first, so a crash costs a duplicate — the behaviour every
+creation had before this — where the reverse order would hand a retry an identifier for a trip
+that was never committed.
+
 ### Applied in the processors, not a decorator
 
 The lock and the precondition are write-chain decorators, and this was meant to be the third.

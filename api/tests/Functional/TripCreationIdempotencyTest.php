@@ -117,6 +117,35 @@ final class TripCreationIdempotencyTest extends ApiTestCase
         $this->assertNotSame($mine->toArray(false)['id'], $theirs->toArray(false)['id']);
     }
 
+    /**
+     * Two endpoints, one key, two trips.
+     *
+     * The store is keyed on (user, operation, key). Scoping both creations under one namespace —
+     * which the first draft did, by passing the metadata flag instead of the operation — makes a
+     * client that reuses a key across them collide: a false 409 when the bodies differ, and
+     * someone else's trip handed back when they do not. The coverage test cannot see it: it
+     * checks that flagged operations have a consulting processor, not that their scopes are
+     * disjoint.
+     */
+    #[Test]
+    public function theSameKeyOnAnotherCreatingEndpointDoesNotCollide(): void
+    {
+        $created = $this->create(self::KEY, self::SOURCE);
+        $this->assertResponseStatusCodeSame(202);
+        $sourceId = $created->toArray(false)['id'];
+
+        $duplicated = $this->client->request('POST', \sprintf('/trips/%s/duplicate', $sourceId), [
+            'headers' => array_merge(
+                ['Content-Type' => 'application/ld+json', 'Idempotency-Key' => self::KEY],
+                $this->authHeader($this->jwtToken),
+            ),
+            'json' => [],
+        ]);
+
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertNotSame($sourceId, $duplicated->toArray(false)['id']);
+    }
+
     #[Test]
     public function keysPastTheRetentionWindowArePurged(): void
     {
