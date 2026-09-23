@@ -31,3 +31,7 @@ phpstan.neon
 # (config uses ContainerConfigurator closures). Regenerated on every dev cache warmup,
 # never generated in prod, never loaded at runtime.
 /config/reference.php
+
+###> league/oauth2-server-bundle ###
+/config/jwt/*.pem
+###< league/oauth2-server-bundle ###

@@ -54,6 +54,13 @@
         <!-- ###+ symfony/ai-open-ai-platform ### -->
         <env name="OPENAI_API_KEY" value=""/>
         <!-- ###- symfony/ai-open-ai-platform ### -->
+
+        <!-- ###+ league/oauth2-server-bundle ### -->
+        <env name="OAUTH_PRIVATE_KEY" value="%kernel.project_dir%/config/jwt/private.pem"/>
+        <env name="OAUTH_PUBLIC_KEY" value="%kernel.project_dir%/config/jwt/public.pem"/>
+        <env name="OAUTH_PASSPHRASE" value="1ab6b735c6d8a5a642c8b8b16e18728b"/>
+        <env name="OAUTH_ENCRYPTION_KEY" value="28e271d3a53310d38d1baef26294cc5e"/>
+        <!-- ###- league/oauth2-server-bundle ### -->
     </php>
 
     <testsuites>
