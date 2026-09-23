@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\Get;
-use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRequest;
 use App\ApiResource\TripRoute;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
+use App\State\TripRouteProvider;
 use App\State\TripShareRouteProvider;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,8 +23,7 @@ final class TripShareRouteProviderTest extends TestCase
 {
     private MockObject&TripShareRepositoryInterface $repository;
 
-    /** @var MockObject&ProviderInterface<TripRoute> */
-    private MockObject $tripRouteProvider;
+    private MockObject&TripRouteProvider $tripRouteProvider;
 
     private TripShareRouteProvider $provider;
 
@@ -32,7 +31,7 @@ final class TripShareRouteProviderTest extends TestCase
     protected function setUp(): void
     {
         $this->repository = $this->createMock(TripShareRepositoryInterface::class);
-        $this->tripRouteProvider = $this->createMock(ProviderInterface::class);
+        $this->tripRouteProvider = $this->createMock(TripRouteProvider::class);
         $this->provider = new TripShareRouteProvider($this->repository, $this->tripRouteProvider);
     }
 

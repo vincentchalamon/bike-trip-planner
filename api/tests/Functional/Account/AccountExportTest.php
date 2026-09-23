@@ -143,6 +143,7 @@ final class AccountExportTest extends ApiTestCase
 
         $trip = new TripRequest(Uuid::v7());
         $trip->user = $user;
+
         $em->persist($trip);
 
         // position runs opposite to insertion, so a query without an ORDER BY — which would

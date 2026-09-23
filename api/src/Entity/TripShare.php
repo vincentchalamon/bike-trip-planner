@@ -11,6 +11,8 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use ApiPlatform\OpenApi\Model\Parameter;
+use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
 use App\ApiResource\TripDetail;
@@ -103,7 +105,21 @@ use Symfony\Component\Uid\Uuid;
             uriTemplate: '/s/{shortCode}/route',
             uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
             requirements: ['shortCode' => '[A-Za-z0-9_-]+'],
-            openapi: new Operation(summary: 'All-stages geometry for a shared trip (anonymous).'),
+            openapi: new Operation(
+                responses: [
+                    304 => new OpenApiResponse(description: 'The geometry has not changed since the ETag you sent.'),
+                ],
+                summary: 'All-stages geometry for a shared trip (anonymous).',
+                parameters: [
+                    new Parameter(
+                        name: 'If-None-Match',
+                        in: 'header',
+                        description: 'The ETag of a previously served route, quoted — for example `"7"`. Answered 304 when the geometry has not changed since, which it only does when the stages are regenerated.',
+                        required: false,
+                        schema: ['type' => 'string', 'pattern' => '^(\*|"\d+")$'],
+                    ),
+                ],
+            ),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: TripRoute::class,
             provider: TripShareRouteProvider::class,

@@ -235,7 +235,7 @@ final class TripListTest extends ApiTestCase
         $unique = array_unique($seen);
         sort($unique);
 
-        $this->assertSame($ids, array_values($unique));
+        $this->assertSame($ids, $unique);
         $this->assertCount(3, $seen, 'A trip was served on both pages.');
     }
 
