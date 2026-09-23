@@ -11,6 +11,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -175,6 +176,35 @@ final class AccountExportTest extends ApiTestCase
 
         $stages = $response->toArray()['trips'][0]['stages'];
         $this->assertSame([3, 2, 1], array_column($stages, 'dayNumber'));
+    }
+
+    /**
+     * Portability is a once-in-a-while gesture, and the query behind it walks every trip the
+     * user owns with no upper bound. Three an hour, keyed on the user — so exhausting it here
+     * costs this test's own account and nothing else.
+     */
+    #[Test]
+    public function exportIsThrottledPerUser(): void
+    {
+        $fixtures = $this->createUserWithTrip('throttled-export@example.com');
+        $client = self::createClient();
+        // The rate-limiter pool is an array adapter under test, so its state lives and dies
+        // with the kernel — and the browser reboots the kernel between requests unless told
+        // not to. Without this the budget resets on every call and the limiter looks inert.
+        $client->disableReboot();
+
+        /** @var RateLimiterFactory $limiter */
+        $limiter = self::getContainer()->get('limiter.account_export');
+        $userId = $fixtures['user']->getId()->toRfc4122();
+        for ($i = 0; $i < 3; ++$i) {
+            $this->assertTrue($limiter->create($userId)->consume()->isAccepted());
+        }
+
+        $client->request('GET', '/users/me/export', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
     }
 
     #[Test]

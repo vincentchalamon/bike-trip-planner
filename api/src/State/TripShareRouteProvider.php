@@ -6,12 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use App\ApiResource\TripRequest;
 use App\ApiResource\TripRoute;
-use App\Entity\TripShare;
-use App\Repository\TripShareRepositoryInterface;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Resolves a short code to the shared trip's route geometry (anonymous). The
@@ -23,7 +19,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripShareRouteProvider implements ProviderInterface
 {
     public function __construct(
-        private TripShareRepositoryInterface $tripShareRepository,
+        private SharedTripResolver $resolver,
         // The class, not the interface: only this signature admits the bare 304 Response
         // this provider has to pass through. Behind ProviderInterface the return narrows to
         // TripRoute and the conditional answer dies with a TypeError, on the anonymous route
@@ -40,19 +36,11 @@ final readonly class TripShareRouteProvider implements ProviderInterface
     {
         $shortCode = $uriVariables['shortCode'] ?? '';
 
-        // Revocation is enforced here — findByShortCode() filters on deletedAt IS NULL — and
-        // it must stay ahead of the conditional answer the delegate may give: confirming a
+        // The resolver enforces revocation (deletedAt IS NULL) and the anonymous rate limit,
+        // and it must stay ahead of the conditional answer the delegate may give: confirming a
         // cached copy of a revoked share is still current would un-revoke it.
-        $share = '' !== $shortCode ? $this->tripShareRepository->findByShortCode($shortCode) : null;
-        if (!$share instanceof TripShare) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
+        $tripId = $this->resolver->resolve($shortCode);
 
-        $trip = $share->getTrip();
-        if (!$trip instanceof TripRequest) {
-            throw new NotFoundHttpException('Shared trip not found.');
-        }
-
-        return $this->tripRouteProvider->provide($operation, ['id' => (string) $trip->id], $context);
+        return $this->tripRouteProvider->provide($operation, ['id' => $tripId], $context);
     }
 }
