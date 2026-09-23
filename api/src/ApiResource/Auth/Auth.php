@@ -86,10 +86,11 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Get(
             uriTemplate: '/auth/session',
-            // Per-user PII keyed on the refresh_token cookie: must never be
-            // shared-cached, and any cache must vary by Cookie (this endpoint is
-            // reachable on the public origin).
-            cacheHeaders: ['vary' => ['Cookie'], 'public' => false],
+            // Per-user PII keyed on the refresh_token cookie: must never be shared-cached.
+            // `private` is what enforces that, and it is the only half that works — a `vary`
+            // declared here never reached the response either (see the global config), so
+            // the `['Cookie']` this used to carry was doing nothing.
+            cacheHeaders: ['public' => false],
             output: AuthSession::class,
             provider: AuthSessionProvider::class,
         ),

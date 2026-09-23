@@ -48,6 +48,32 @@ final class TripRouteConditionalTest extends ApiTestCase
         ['user' => $this->owner, 'token' => $this->ownerToken] = $this->createTestUserWithJwt('route-owner@example.com');
     }
 
+    /**
+     * Authenticated responses are marked private, and what they vary on is `Accept`.
+     *
+     * Measured rather than configured: a probe value placed in `cache_headers.vary` never
+     * reaches the wire on any operation, because `RespondProcessor` sets `Vary: Accept` when
+     * it builds the response and that is what survives. `public => false` does work, and it
+     * is the half that matters — nothing carried a cache directive at all before it, on
+     * responses that do carry an ETag.
+     */
+    #[Test]
+    public function authenticatedResponsesAreMarkedPrivateAndVaryOnAccept(): void
+    {
+        $this->seedTrip();
+
+        $response = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->ownerToken)),
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $this->assertStringContainsString('Accept', $this->header($response, 'vary'));
+        $this->assertStringContainsString('private', $this->header($response, 'cache-control'));
+
+        $session = $this->client->request('GET', '/auth/session', ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertStringContainsString('private', $this->header($session, 'cache-control'));
+    }
+
     #[Test]
     public function aMatchingValidatorIsAnsweredNotModified(): void
     {
