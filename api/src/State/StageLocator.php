@@ -32,7 +32,20 @@ final class StageLocator
             }
         }
 
-        throw new NotFoundHttpException(\sprintf('Stage "%s" not found.', $stageId));
+        throw self::missing($stageId);
+    }
+
+    /**
+     * The one wording for "no such stage".
+     *
+     * A caller that reads a single stage directly rather than walking the list still has to
+     * answer with the same body: the 404 is what {@see \App\EventListener\HideForbiddenAsNotFoundListener}
+     * makes indistinguishable from a refusal (ADR-038), and two wordings would tell the two
+     * apart.
+     */
+    public static function missing(string $stageId): NotFoundHttpException
+    {
+        return new NotFoundHttpException(\sprintf('Stage "%s" not found.', $stageId));
     }
 
     /**

@@ -287,6 +287,11 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
         return $this->decorated->getRouteGeometry($tripId);
     }
 
+    public function getStage(string $tripId, string $stageId): ?Stage
+    {
+        return $this->decorated->getStage($tripId, $stageId);
+    }
+
     public function getStageIdByDayNumber(string $tripId, int $dayNumber): ?string
     {
         return $this->decorated->getStageIdByDayNumber($tripId, $dayNumber);

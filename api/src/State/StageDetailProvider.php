@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\Stage;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\StageResponse;
@@ -22,7 +23,6 @@ final readonly class StageDetailProvider implements ProviderInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private StageResponseMapper $mapper,
-        private StageLocator $stageLocator,
     ) {
     }
 
@@ -31,8 +31,14 @@ final readonly class StageDetailProvider implements ProviderInterface
         $tripId = \is_string($uriVariables['tripId'] ?? null) ? $uriVariables['tripId'] : '';
         $stageId = \is_string($uriVariables['stageId'] ?? null) ? $uriVariables['stageId'] : '';
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        // One row, not the whole collection. This used to read every stage of the trip —
+        // eight JSONB columns each, one object per geometry point — and then walk the list to
+        // keep one and discard the rest.
+        $stage = $this->tripStateManager->getStage($tripId, $stageId);
+        if (!$stage instanceof Stage) {
+            throw StageLocator::missing($stageId);
+        }
 
-        return $this->mapper->map($stages[$this->stageLocator->indexOf($stages, $stageId)]);
+        return $this->mapper->map($stage);
     }
 }

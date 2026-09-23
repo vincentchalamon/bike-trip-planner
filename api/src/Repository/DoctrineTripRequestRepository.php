@@ -512,6 +512,27 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
     }
 
+    public function getStage(string $tripId, string $stageId): ?StageDto
+    {
+        if (!Uuid::isValid($tripId) || !Uuid::isValid($stageId)) {
+            return null;
+        }
+
+        $entity = $this->getEntityManager()->createQuery(
+            'SELECT s FROM App\Entity\Stage s WHERE s.trip = :tripId AND s.id = :stageId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('stageId', Uuid::fromString($stageId))
+            // Not optional. The eight targeted enrichment writes are DQL UPDATEs that bypass
+            // the unit of work, so a stage already in the identity map is served as the caller
+            // last saw it — on the endpoint whose entire job is to show the enrichment that
+            // just landed. Same reason {@see self::freshStagesById()} carries it.
+            ->setHint(Query::HINT_REFRESH, true)
+            ->getOneOrNullResult();
+
+        return $entity instanceof StageEntity ? $this->stageEntityToDto($entity) : null;
+    }
+
     /**
      * The trip's shape on a map: day number and geometry, in travel order, nothing else.
      *

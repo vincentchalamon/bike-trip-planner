@@ -94,6 +94,15 @@ interface TripRequestRepositoryInterface
     public function getStageGeometry(string $tripId, string $stageId): ?array;
 
     /**
+     * One stage in full, read as one row.
+     *
+     * {@see self::getStages()} answers this too, by hydrating and converting every stage of
+     * the trip so the caller can throw all but one away. Null when the trip or the stage does
+     * not exist — the two are not distinguished, which is what the 404 masking expects.
+     */
+    public function getStage(string $tripId, string $stageId): ?Stage;
+
+    /**
      * Returns every stage's day number and geometry, in travel order.
      *
      * What the map needs and nothing else. Not {@see self::getStageGeometry()} widened: that
