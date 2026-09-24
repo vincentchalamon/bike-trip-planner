@@ -25,19 +25,19 @@ namespace App\State\Mcp;
  * long enough is a denial of service against the very budget the digest exists to respect.
  * None of that needs to know what the text means.
  *
- * **It is a label sanitiser, and it is applied only to labels.** That boundary is deliberate,
- * not an oversight, and the 200-character cap is why: a place name past that length is a
- * mistake or an attack, but an accommodation's Wikidata `description` or its opening hours
- * legitimately run longer, and cutting them would damage the data in the name of protecting
- * it. So the rich third-party structures a drill-down returns — {@see
- * \App\ApiResource\Model\Accommodation}, {@see \App\ApiResource\Model\Event}, and the alert
- * payloads their producers publish — pass through untouched.
+ * **It is a label sanitiser, and it is applied to labels.** That boundary is deliberate, and
+ * the 200-character cap is why: a place name past that length is a mistake or an attack, but
+ * an accommodation's Wikidata `description` or its opening hours legitimately run longer, and
+ * cutting them would damage the data in the name of protecting it. So a `name` is cleaned
+ * wherever one appears — the trip title, a stage's labels, an accommodation's, an event's —
+ * and the prose beside it is not.
  *
- * Which means per-field calls are the wrong long-term mechanism: every new field is a new
- * place to remember, and the coverage gap is invisible until someone reads for it. Unit 3C
- * owns the general answer, and it has to be one that applies to a whole payload — delimiting
- * third-party content as data at the point it is serialised — rather than one call site at a
- * time. Nothing here should grow into a half-version of that.
+ * Per-field calls remain the wrong long-term mechanism even so: every new field is a new
+ * place to remember, and the coverage gap is invisible until someone reads for it. The alert
+ * payloads, published by their producers in whatever shape they chose, are the standing
+ * example. Unit 3C owns the general answer, and it has to be one that applies to a whole
+ * payload — delimiting third-party content as data where it is serialised — rather than one
+ * call site at a time. Nothing here should grow into a half-version of that.
  */
 final readonly class ThirdPartyText
 {

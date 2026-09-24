@@ -28,12 +28,16 @@ use App\ApiResource\Model\WeatherForecast;
  * `trip` is dropped too: the caller passed `tripId` to get here, and the back-reference only
  * exists to build a JSON-LD IRI.
  *
- * `label` goes through {@see \App\State\Mcp\ThirdPartyText}; the accommodations, events and
- * alert payloads below do not, and that is deliberate. Those carry prose — a Wikidata
- * description, opening hours — that the label sanitiser's 200-character cap would truncate,
- * damaging the data in the name of protecting it. Marking whole payloads as third-party data
- * is unit 3C's problem and needs a mechanism that works at serialisation, not one call site
- * at a time.
+ * `label`, and the `name` of every accommodation and event, go through
+ * {@see \App\State\Mcp\ThirdPartyText}: they are the same kind of thing, a short OSM or
+ * DataTourisme label, and `get_trip`'s digest already cleans the equivalent field. The prose
+ * those records also carry — a Wikidata description, opening hours — deliberately does not:
+ * the 200-character cap is right for a name and would cut a sentence, damaging the data in
+ * the name of protecting it.
+ *
+ * The alert payloads below are untouched too. Marking a whole payload as third-party data is
+ * unit 3C's problem and needs a mechanism that works at serialisation rather than one call
+ * site at a time; nothing here should grow into a half-version of it.
  */
 final readonly class StageDetail
 {
