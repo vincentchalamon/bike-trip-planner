@@ -78,7 +78,7 @@ final class WriteChainGuardsTest extends KernelTestCase
      */
     private function inner(ProcessorInterface $processor): ?ProcessorInterface
     {
-        foreach ((new \ReflectionClass($processor))->getProperties() as $property) {
+        foreach (new \ReflectionClass($processor)->getProperties() as $property) {
             $value = $property->getValue($processor);
 
             if ($value instanceof ProcessorInterface && $value !== $processor) {

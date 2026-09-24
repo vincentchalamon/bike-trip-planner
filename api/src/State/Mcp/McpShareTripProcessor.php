@@ -40,7 +40,6 @@ final readonly class McpShareTripProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): ShareLink
     {
         $share = $this->shares->process($data, $operation, $uriVariables, $context);
-        \assert($share instanceof TripShare);
 
         return new ShareLink(
             url: rtrim($this->frontendUrl, '/').'/s/'.$share->getShortCode(),
