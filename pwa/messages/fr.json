@@ -1130,5 +1130,21 @@
         ]
       }
     }
+  },
+  "oauthConsent": {
+    "title": "Autoriser cette application",
+    "loading": "Chargement de la demande…",
+    "goneTitle": "Cette demande n'est plus valable",
+    "goneDescription": "Elle a expiré, a déjà reçu une réponse, ou ne vous appartient pas. Relancez l'autorisation depuis votre application.",
+    "scopesTitle": "Elle demande à pouvoir :",
+    "scope": {
+      "trips:read": "consulter vos voyages et leurs étapes",
+      "trips:write": "créer et modifier vos voyages"
+    },
+    "redirectLabel": "Elle sera renvoyée vers",
+    "redirectUnknown": "adresse non précisée",
+    "loopbackWarning": "Cette application s'exécute sur votre propre machine. Rien ne permet de vérifier qu'il s'agit bien de celle que vous croyez : n'autorisez que si vous venez de la lancer vous-même.",
+    "approve": "Autoriser",
+    "deny": "Refuser"
   }
 }

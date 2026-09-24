@@ -140,6 +140,15 @@ secrets:
     file: "${PREVIEW_JWT_PRIVATE_KEY_PATH:?PREVIEW_JWT_PRIVATE_KEY_PATH must be set for preview stacks}"
   jwt_public_key:
     file: "${PREVIEW_JWT_PUBLIC_KEY_PATH:?PREVIEW_JWT_PUBLIC_KEY_PATH must be set for preview stacks}"
+  # The same argument applies to the MCP authorization server's keypair (ADR-079), and
+  # more sharply: an access token it signs carries scopes and is accepted on /mcp by
+  # audience, so a preview signing with the prod key would hand PR code real agent
+  # access. A dedicated preview pair, distinct from prod AND from the preview JWT pair —
+  # the entrypoint refuses to boot if the last two match.
+  oauth_private_key:
+    file: "${PREVIEW_OAUTH_PRIVATE_KEY_PATH:?PREVIEW_OAUTH_PRIVATE_KEY_PATH must be set for preview stacks}"
+  oauth_public_key:
+    file: "${PREVIEW_OAUTH_PUBLIC_KEY_PATH:?PREVIEW_OAUTH_PUBLIC_KEY_PATH must be set for preview stacks}"
 
 networks:
   # Both created by Ansible ahead of any deploy (W5); shared with prod + every preview.

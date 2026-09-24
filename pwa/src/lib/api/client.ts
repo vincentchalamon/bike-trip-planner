@@ -1118,3 +1118,46 @@ export async function downloadSharedStageFile(
   const blob = await res.blob();
   triggerBlobDownload(blob, stageFileName(tripTitle, dayNumber, format));
 }
+
+/**
+ * The pending authorization a browser was sent to `/oauth/consent/{handle}` to decide
+ * (ADR-079).
+ *
+ * Everything the screen shows comes from here rather than from the URL the browser arrived
+ * on: the authorization server resolves the client's name, the scopes it actually validated
+ * and where the agent will be sent back to, so the page cannot display a permission the
+ * server did not grant or a name it did not fetch.
+ */
+export type PendingConsent = components["schemas"]["OAuthConsent.jsonld"];
+
+export async function fetchPendingConsent(
+  handle: string,
+): Promise<PendingConsent | null> {
+  const res = await apiFetch(
+    `${API_URL}/oauth/pending-authorizations/${encodeURIComponent(handle)}`,
+    { headers: { Accept: "application/ld+json" } },
+  );
+  if (!res.ok) return null;
+  return (await res.json().catch(() => null)) as PendingConsent | null;
+}
+
+/**
+ * Record the decision. The browser must not navigate back to the authorization endpoint
+ * before this succeeds: the return leg is a plain top-level GET, and what stops it being an
+ * approval anybody could trigger is that a decision has to be on file first — recorded with
+ * the Bearer this call carries, which no third-party page can produce.
+ */
+export async function decidePendingConsent(
+  handle: string,
+  decision: "approve" | "deny",
+): Promise<boolean> {
+  const res = await apiFetch(
+    `${API_URL}/oauth/pending-authorizations/${encodeURIComponent(handle)}/${decision}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/ld+json" },
+      body: "{}",
+    },
+  );
+  return res.ok;
+}

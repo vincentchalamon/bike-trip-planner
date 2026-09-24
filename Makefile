@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette ensure-oauth-recette oauth-keypair-test provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -28,6 +28,13 @@ ensure-jwt-recette:
 	@mkdir -p .docker/jwt-recette
 	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
 
+# A SEPARATE keypair for the MCP authorization server (ADR-079), never the one above:
+# the prod entrypoint refuses to boot when the two match, because sharing them would let
+# a PWA session token open /mcp.
+ensure-oauth-recette:
+	@mkdir -p .docker/oauth-recette
+	@(test -f .docker/oauth-recette/private.pem && test -f .docker/oauth-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/oauth-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/oauth-recette/private.pem -out .docker/oauth-recette/public.pem -passin pass:recette; }
+
 # Routing is opt-in since #881: `valhalla` only serves a graph built out of band
 # by `make routing-build`, so booting it on a machine without a graph would fail.
 # Add it once you have one with `make routing-up` (or COMPOSE_PROFILES=routing).
@@ -42,16 +49,20 @@ build: ## Build the Docker environment in production mode
 # refresh-token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
 # So `make start` supplies non-default local placeholders + the generated keypair to
 # boot, mirroring the CI env and the compose.recette.yaml overlay.
-start: ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
+start: ensure-jwt-recette ensure-oauth-recette ## Start the Docker environment (Detached) in production mode
 	@MERCURE_JWT_KEY=local-iso-prod-mercure-key-min-32-bytes \
 		REFRESH_TOKEN_ENC_KEY=local-iso-prod-refresh-enc-key \
 		APP_SECRET=local-iso-prod-app-secret \
 		JWT_PASSPHRASE=recette \
 		JWT_PRIVATE_KEY_PATH=.docker/jwt-recette/private.pem \
 		JWT_PUBLIC_KEY_PATH=.docker/jwt-recette/public.pem \
+		OAUTH_PASSPHRASE=recette \
+		OAUTH_ENCRYPTION_KEY=local-iso-prod-oauth-encryption-key \
+		OAUTH_PRIVATE_KEY_PATH=.docker/oauth-recette/private.pem \
+		OAUTH_PUBLIC_KEY_PATH=.docker/oauth-recette/public.pem \
 		docker compose -f compose.yaml up --wait
 
-start-recette: ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
+start-recette: ensure-jwt-recette ensure-oauth-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
 	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
@@ -191,6 +202,9 @@ visual-update: ## (Re)generate visual-regression baselines in the container (req
 
 jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)
 	@docker compose exec php sh -c 'openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test'
+
+oauth-keypair-test: ## (Re)generate the MCP authorization server keys for the test suite. A DIFFERENT keypair from jwt-keypair-test, on purpose (ADR-079).
+	@docker compose exec php sh -c 'mkdir -p config/oauth && openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test'
 
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api

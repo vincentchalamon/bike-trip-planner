@@ -102,6 +102,41 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '3600 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // Resolving a Client ID Metadata Document is an outbound request to a host the
+            // caller named (ADR-079). Two budgets, both needed and for different victims:
+            // per user, because each distinct client id is a row in `oauth2_client` and one
+            // account could otherwise fill the table; per host, because the server on the
+            // other end is a third party we are making requests to.
+            'oauth_client_metadata_user' => [
+                'policy' => 'sliding_window',
+                'limit' => 20,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            'oauth_client_metadata_host' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // The code exchange is anonymous by construction: it authenticates the client
+            // with a code and a PKCE verifier, so there is no account to key on. Generous,
+            // because a legitimate agent refreshes on its own schedule and several may share
+            // one address behind a NAT.
+            'oauth_token' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // The authorization endpoint is crossed twice per grant and a person is reading a
+            // screen in between, so this bounds a loop rather than ordinary use.
+            'oauth_authorize' => [
+                'policy' => 'sliding_window',
+                'limit' => 30,
+                'interval' => '300 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,

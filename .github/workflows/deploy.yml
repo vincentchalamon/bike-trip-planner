@@ -384,7 +384,10 @@ jobs:
           #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds, and the
           #   dedicated preview JWT keypair paths (PREVIEW_JWT_PRIVATE_KEY_PATH /
           #   PREVIEW_JWT_PUBLIC_KEY_PATH — distinct from prod, see deploy/preview
-          #   secrets override) — plus the shared read-only values
+          #   secrets override), a dedicated preview OAuth keypair
+          #   (PREVIEW_OAUTH_PRIVATE_KEY_PATH / PREVIEW_OAUTH_PUBLIC_KEY_PATH — distinct
+          #   from prod AND from the preview JWT pair, ADR-079) with its
+          #   OAUTH_PASSPHRASE and OAUTH_ENCRYPTION_KEY — plus the shared read-only values
           #   (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI, DOMAIN). Defaults to a single
           #   shared file at the previews root (outside
           #   any pr-<n> dir, so teardown's rm -rf never deletes it); until it exists

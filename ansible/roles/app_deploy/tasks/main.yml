@@ -20,6 +20,24 @@
     version: "{{ app_deploy_ref }}"
     force: true
 
+# The php entrypoint refuses to boot when these two pairs match, because that difference is
+# the only thing keeping a PWA session token off /mcp (ADR-079). Checking it here turns a
+# crash-looping container at cutover into a playbook that stops before writing anything —
+# and it is the one place that can see both values at once, since Vault holds them and the
+# VM only ever receives the files.
+- name: Refuse a Vault where the OAuth keypair is the JWT one
+  ansible.builtin.assert:
+    that:
+      - vault_oauth_private_key | trim != vault_jwt_private_key | trim
+      - vault_oauth_public_key | trim != vault_jwt_public_key | trim
+    fail_msg: >-
+      The OAuth authorization server must have its OWN keypair (ADR-079). Sharing Lexik's
+      would let a PWA session token open /mcp, and the php entrypoint refuses to boot on it.
+      Generate a second pair off-VM and put it in vault_oauth_private_key /
+      vault_oauth_public_key.
+    quiet: true
+  no_log: true
+
 - name: Write the JWT private key (from Vault)
   ansible.builtin.copy:
     content: "{{ vault_jwt_private_key }}"
@@ -33,6 +51,27 @@
   ansible.builtin.copy:
     content: "{{ vault_jwt_public_key }}"
     dest: "{{ jwt_dir }}/public.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+# A DIFFERENT keypair from the two above (ADR-079). Vault must hold a genuinely separate
+# pair: the php entrypoint compares the files and refuses to boot when they match, which
+# is the only thing keeping a PWA session token off /mcp.
+- name: Write the OAuth private key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_oauth_private_key }}"
+    dest: "{{ oauth_dir }}/private.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Write the OAuth public key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_oauth_public_key }}"
+    dest: "{{ oauth_dir }}/public.pem"
     owner: root
     group: "{{ deploy_user }}"
     mode: "0640"

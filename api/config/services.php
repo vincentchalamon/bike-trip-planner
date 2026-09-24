@@ -11,6 +11,7 @@ use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
@@ -42,11 +43,37 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     $services->alias(PushSenderInterface::class, FcmClient::class);
 
+    // The only HTTP client in this application whose HOST is chosen by a third party: an
+    // OAuth client names itself by the HTTPS URL its metadata document is served from
+    // (ADR-079). Every other outbound call goes through a scoped client locked to a base_uri,
+    // with only a numeric id interpolated into a fixed path — that pattern cannot be reused
+    // here, because the host IS the input.
+    //
+    // So it is unscoped, and everything else is closed instead: no redirect (a 3xx Location
+    // is not constrained by anything), a short inactivity timeout AND a hard total duration
+    // (a slow server must not be able to hold a worker), and one JSON document expected.
+    // The size ceiling is enforced on the stream by the resolver, not after reading.
+    $services->set('oauth_client_metadata.client', HttpClientInterface::class)
+        ->factory([service('http_client'), 'withOptions'])
+        ->args([[
+            'max_redirects' => 0,
+            'timeout' => 5,
+            'max_duration' => 10,
+            'headers' => ['Accept' => 'application/json'],
+        ]]);
+
     // SSRF defense-in-depth: wrap the third-party route fetchers so a redirect
     // (they allow max_redirects: 2) toward a private/loopback/link-local IP is
     // refused after DNS resolution — base_uri only locks the initial host, not a
     // 3xx Location. Applied to the clients that legitimately follow redirects.
-    foreach (['komoot.client', 'strava.client', 'ridewithgps.client'] as $scopedClientId) {
+    //
+    // `oauth_client_metadata.client` is in this list for a stronger reason than the other
+    // three: they are already host-locked and this is their second line of defence, while
+    // for the metadata client it is the ONLY thing standing between an attacker-supplied
+    // hostname and the internal network. The check runs on the IP actually connected to,
+    // so a name that resolves to a public address on the first lookup and a private one on
+    // the second does not get through.
+    foreach (['komoot.client', 'strava.client', 'ridewithgps.client', 'oauth_client_metadata.client'] as $scopedClientId) {
         $services->set($scopedClientId.'.no_private_network', NoPrivateNetworkHttpClient::class)
             ->decorate($scopedClientId)
             ->args([service('.inner')])

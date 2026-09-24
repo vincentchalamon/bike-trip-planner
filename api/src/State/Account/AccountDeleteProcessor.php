@@ -14,6 +14,7 @@ use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Bundle\OAuth2ServerBundle\Service\CredentialsRevokerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,7 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
  * email to break the PII link, purges every trip (and, via cascade, their
  * stages/preferences), and revokes all refresh tokens. The trips carry the
  * per-trip preferences (pacing, accommodation types…), so removing them also
- * erases those preferences.
+ * erases those preferences. Any OAuth grant the account gave an agent is revoked in the
+ * same transaction (ADR-079).
  *
  * @implements ProcessorInterface<Account, Response>
  */
@@ -37,6 +39,7 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
         private RefreshTokenRepository $refreshTokenRepository,
         private MagicLinkRepository $magicLinkRepository,
         private AccessRequestRepository $accessRequestRepository,
+        private CredentialsRevokerInterface $credentialsRevoker,
         private Security $security,
         private LoggerInterface $logger,
     ) {
@@ -76,6 +79,15 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
             // Purge early-access requests holding the email/IP PII (standalone
             // table, no user FK).
             $this->accessRequestRepository->removeAllForEmail($email);
+
+            // Revoke every OAuth grant: an agent authorised by this account stops being
+            // able to act for it (ADR-079).
+            //
+            // ⚠ BEFORE anonymize(), and nothing would tell you if it were after. The
+            // revoker filters on getUserIdentifier(), which is the email — the one thing
+            // anonymize() rewrites. Run afterwards, its four UPDATEs all succeed and all
+            // touch zero rows.
+            $this->credentialsRevoker->revokeCredentialsForUser($user);
 
             // Soft-delete + irreversible PII anonymisation.
             $user->anonymize();

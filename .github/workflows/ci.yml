@@ -148,6 +148,15 @@ jobs:
           mkdir -p config/jwt
           openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
           openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test
+      # A SECOND, DIFFERENT keypair for the MCP authorization server (ADR-079). The
+      # anti-passthrough test — a PWA session token must not open /mcp — only means
+      # anything if the two keys actually differ here.
+      - name: Generate OAuth keypair
+        working-directory: api
+        run: |
+          mkdir -p config/oauth
+          openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
+          openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test
       - name: Run PHPUnit with coverage
         working-directory: api
         env:
@@ -533,6 +542,18 @@ jobs:
       - name: Install dependencies
         working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      # PHPStan's `consoleApplicationLoader` boots the real kernel and registers every
+      # command, which instantiates the OAuth bundle's — and those construct a
+      # League\OAuth2\Server\CryptKey over the configured key path. With no file there, the
+      # constructor throws `Invalid key supplied` and PHPStan reports it as an internal
+      # error on whichever file it happened to be analysing, naming a command that has
+      # nothing to do with it. Throwaway keys, like the JWT pair the test jobs generate.
+      - name: Generate OAuth keypair
+        working-directory: api
+        run: |
+          mkdir -p config/oauth
+          openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096
+          openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem
       - name: WarmUp Cache
         env:
           APP_ENV: dev # required for parameters.symfony.containerXmlPath
@@ -663,6 +684,10 @@ jobs:
       # Non-default so the fail-closed boot guard passes (the prod image refuses
       # to boot on the committed dev APP_SECRET).
       APP_SECRET: "ci-test-app-secret"
+      # The MCP authorization server's own passphrase and at-rest encryption key. Empty
+      # in compose so the prod entrypoint fails closed (ADR-079); set here so it boots.
+      OAUTH_PASSPHRASE: "ci-test-passphrase"
+      OAUTH_ENCRYPTION_KEY: "ci-test-oauth-encryption-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -675,6 +700,14 @@ jobs:
           openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
+          # A SECOND, DIFFERENT keypair for the MCP authorization server. The prod image
+          # refuses to boot when it matches the one above (ADR-079), so this is not an
+          # optional nicety: without it the stack does not start.
+          mkdir -p api/config/oauth
+          openssl genpkey -algorithm RSA -out api/config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
+          openssl rsa -pubout -in api/config/oauth/private.pem -out api/config/oauth/public.pem -passin pass:ci-test-passphrase
+          echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
+          echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
         uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
@@ -753,6 +786,10 @@ jobs:
       # Non-default so the fail-closed boot guard passes (the prod image refuses
       # to boot on the committed dev APP_SECRET).
       APP_SECRET: "ci-test-app-secret"
+      # The MCP authorization server's own passphrase and at-rest encryption key. Empty
+      # in compose so the prod entrypoint fails closed (ADR-079); set here so it boots.
+      OAUTH_PASSPHRASE: "ci-test-passphrase"
+      OAUTH_ENCRYPTION_KEY: "ci-test-oauth-encryption-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -765,6 +802,14 @@ jobs:
           openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
+          # A SECOND, DIFFERENT keypair for the MCP authorization server. The prod image
+          # refuses to boot when it matches the one above (ADR-079), so this is not an
+          # optional nicety: without it the stack does not start.
+          mkdir -p api/config/oauth
+          openssl genpkey -algorithm RSA -out api/config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
+          openssl rsa -pubout -in api/config/oauth/private.pem -out api/config/oauth/public.pem -passin pass:ci-test-passphrase
+          echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
+          echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
         uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:

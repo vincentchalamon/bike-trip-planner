@@ -31,3 +31,8 @@ phpstan.neon
 # (config uses ContainerConfigurator closures). Regenerated on every dev cache warmup,
 # never generated in prod, never loaded at runtime.
 /config/reference.php
+
+# The OAuth authorization server signs with its OWN keypair, in its own directory. The Flex
+# recipe points it at config/jwt, i.e. at Lexik's keys — and sharing them would silently make
+# a PWA session token indistinguishable from an agent token on /mcp (ADR-079).
+/config/oauth/*.pem

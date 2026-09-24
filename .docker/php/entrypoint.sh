@@ -41,6 +41,45 @@ case "${REFRESH_TOKEN_ENC_KEY:-}" in
 		;;
 esac
 
+# Fail closed (ADR-079): the MCP authorization server must not share Lexik's keypair.
+# A PWA session JWT and an agent access token are told apart by the key that signed them
+# and by nothing else — same algorithm, same issuer, same shape. Point OAUTH_PUBLIC_KEY at
+# the file JWT_PUBLIC_KEY names and a 900-second session token starts verifying on /mcp,
+# silently, with every scope check satisfied by roles the session already carries.
+#
+# This is not a hypothetical slip: league/oauth2-server-bundle's own Flex recipe writes
+# exactly that, defaulting both OAUTH_* paths to config/jwt. Compare the bytes, not the
+# paths — two secrets can be mounted from one source file.
+#
+# The keys have to be READABLE before they can be compared, and an unreadable one is a
+# refusal rather than a skipped check: a bad secret mount or a wrong file mode would
+# otherwise turn a clear message here into an opaque 500 on the first /oauth/* request,
+# which is exactly the failure the rest of this script exists to avoid.
+if [ ! -r "${OAUTH_PRIVATE_KEY:-}" ] || [ ! -r "${OAUTH_PUBLIC_KEY:-}" ]; then
+	echo 'FATAL: OAUTH_PRIVATE_KEY and OAUTH_PUBLIC_KEY must name readable files; refusing to boot (ADR-079).' >&2
+	exit 1
+fi
+
+if cmp -s "$OAUTH_PUBLIC_KEY" "$JWT_PUBLIC_KEY"; then
+	echo 'FATAL: OAUTH_PUBLIC_KEY and JWT_PUBLIC_KEY are the same key; refusing to boot (ADR-079). Generate a separate keypair for the authorization server.' >&2
+	exit 1
+fi
+
+# Same reasoning on the signing side, and it also catches a half-applied rotation where
+# only one of the two files was replaced.
+if cmp -s "$OAUTH_PRIVATE_KEY" "$JWT_SECRET_KEY"; then
+	echo 'FATAL: OAUTH_PRIVATE_KEY and JWT_SECRET_KEY are the same key; refusing to boot (ADR-079).' >&2
+	exit 1
+fi
+
+# The authorization codes and refresh tokens league stores are encrypted with this key.
+# Empty in compose so an unset value fails here instead of reaching the config layer as a
+# validation error nobody reads.
+if [ -z "${OAUTH_ENCRYPTION_KEY:-}" ]; then
+	echo 'FATAL: OAUTH_ENCRYPTION_KEY is unset; refusing to boot (ADR-079). Set a strong OAUTH_ENCRYPTION_KEY.' >&2
+	exit 1
+fi
+
 # Fail closed: APP_SECRET signs CSRF tokens, signed URIs and remember-me cookies.
 # Unset, it falls back to the value committed in api/.env, which anyone with the
 # source can read — so every signature the app trusts would be forgeable.

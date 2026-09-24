@@ -2,7 +2,7 @@
 
 Single source of truth for every secret used by the production stack. Updated as part of any PR that introduces or removes a secret (see PR template checklist).
 
-Centralisation **documentaire** uniquement : aucun SaaS de gestion de secrets (Doppler, Bitwarden Secrets Manager…) n'est utilisé. Le runtime store est **Ansible Vault** (ADR-061) : les valeurs sont chiffrées dans `ansible/`, rendues sur la VM dans le `.env` prod (consommé par `docker compose -p prod`) et le PEM JWT sous `/etc/bike-trip-planner/jwt/`. Le bundle `.env` + PEM est sauvegardé chiffré (`age`) vers B2/OCI par le service de backup (Backup & DR — ADR-062 ; hors scope ici).
+Centralisation **documentaire** uniquement : aucun SaaS de gestion de secrets (Doppler, Bitwarden Secrets Manager…) n'est utilisé. Le runtime store est **Ansible Vault** (ADR-061) : les valeurs sont chiffrées dans `ansible/`, rendues sur la VM dans le `.env` prod (consommé par `docker compose -p prod`), le PEM JWT sous `/etc/bike-trip-planner/jwt/` et le PEM du serveur d'autorisation MCP sous `/etc/bike-trip-planner/oauth/` — **deux paires distinctes, jamais la même** : l'entrypoint compare les fichiers et refuse de démarrer s'ils coïncident (ADR-079). Le bundle `.env` + PEM est sauvegardé chiffré (`age`) vers B2/OCI par le service de backup (Backup & DR — ADR-062 ; hors scope ici).
 
 Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 
@@ -19,6 +19,10 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `JWT_PRIVATE_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/jwt/private.pem` (VM) | `php`, `worker` (LexikJWT) | Oui | On-compromise | ADR-023 |
 | `JWT_PUBLIC_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/jwt/public.pem` (VM) | `php`, `worker` (LexikJWT) | Oui | On-compromise (avec la clé privée) | ADR-023 |
 | `JWT_PASSPHRASE` | Passphrase | Ansible Vault → `.env` | `php`, `worker` | Oui | On-compromise (avec la clé privée) | ADR-023 |
+| `OAUTH_PRIVATE_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/oauth/private.pem` (VM) | `php`, `worker` (serveur d'autorisation MCP) | Oui | On-compromise | ADR-079 |
+| `OAUTH_PUBLIC_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/oauth/public.pem` (VM) | `php`, `worker` (serveur d'autorisation MCP) | Oui | On-compromise (avec la clé privée) | ADR-079 |
+| `OAUTH_PASSPHRASE` | Passphrase | Ansible Vault → `.env` | `php`, `worker` | Oui | On-compromise (avec la clé privée) | ADR-079 |
+| `OAUTH_ENCRYPTION_KEY` | Clé de chiffrement des codes d'autorisation et refresh tokens OAuth | Ansible Vault → `.env` | `php`, `worker` | Oui | On-compromise (invalide les octrois en cours) | ADR-079 |
 | `MERCURE_JWT_KEY` | Passphrase HS256 | Ansible Vault → `.env` | `php` (publisher + subscriber + Mercure hub) | Oui | On-compromise | `compose.yaml` |
 | `REFRESH_TOKEN_ENC_KEY` | Clé de chiffrement des refresh tokens (libsodium) | Ansible Vault → `.env` | `php`, `worker` | Oui | On-compromise (invalide les refresh tokens chiffrés → re-login) | ADR-023 / ADR-052 / SEC-003 |
 | `DATABASE_USERNAME` | Identifiant Postgres | Ansible Vault → `.env` | `php`, `worker`, `database` | Oui | Statique | ADR-022 |

@@ -1130,5 +1130,21 @@
         ]
       }
     }
+  },
+  "oauthConsent": {
+    "title": "Authorize this application",
+    "loading": "Loading the request…",
+    "goneTitle": "This request is no longer valid",
+    "goneDescription": "It expired, was already answered, or is not yours. Start the authorization again from your application.",
+    "scopesTitle": "It is asking to:",
+    "scope": {
+      "trips:read": "read your trips and their stages",
+      "trips:write": "create and edit your trips"
+    },
+    "redirectLabel": "It will be sent back to",
+    "redirectUnknown": "address not given",
+    "loopbackWarning": "This application runs on your own machine. Nothing can prove it is the one you think it is: only authorize it if you just started it yourself.",
+    "approve": "Authorize",
+    "deny": "Refuse"
   }
 }

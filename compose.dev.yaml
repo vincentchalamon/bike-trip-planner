@@ -45,6 +45,12 @@ services:
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       JWT_PASSPHRASE: ""
+      # Same arrangement for the MCP authorization server's own keypair, in its own
+      # directory (ADR-079) — docker-entrypoint generates it on first boot.
+      OAUTH_PRIVATE_KEY: /app/config/oauth/private.pem
+      OAUTH_PUBLIC_KEY: /app/config/oauth/public.pem
+      OAUTH_PASSPHRASE: ""
+      OAUTH_ENCRYPTION_KEY: dev-only-oauth-encryption-key
       FRONTEND_URL: "${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
     secrets: !reset null
     extra_hosts:
@@ -83,6 +89,10 @@ services:
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       JWT_PASSPHRASE: ""
+      OAUTH_PRIVATE_KEY: /app/config/oauth/private.pem
+      OAUTH_PUBLIC_KEY: /app/config/oauth/public.pem
+      OAUTH_PASSPHRASE: ""
+      OAUTH_ENCRYPTION_KEY: dev-only-oauth-encryption-key
       FRONTEND_URL: "${FRONTEND_URL:-https://${DOMAIN:-localhost}}"
     secrets: !reset null
     extra_hosts:

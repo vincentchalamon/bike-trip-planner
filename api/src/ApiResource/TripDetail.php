@@ -8,6 +8,8 @@ use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\Link;
+use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
@@ -32,6 +34,31 @@ use App\State\TripDetailProvider;
             // user could read another user's trip by UUID.
             security: "is_granted('TRIP_VIEW', id)",
             provider: TripDetailProvider::class,
+        ),
+    ],
+    mcp: [
+        'get_trip' => new McpTool(
+            name: 'get_trip',
+            description: 'Read one bikepacking trip: its pacing settings, dates and persisted stages (distance, elevation, labels, weather, terrain alerts, chosen accommodation).',
+            uriTemplate: '/trips/{id}/detail',
+            // Without an explicit declaration the tool's `id` argument never reaches the
+            // provider and the call dies with `Trip "" not found.` — a McpTool receives its
+            // uri variables, a McpResource does not (Mcp\Server\Handler, `if (!$isResource)`).
+            uriVariables: ['id' => new Link(fromClass: TripDetail::class)],
+            // Ownership only, and the same expression as the HTTP operation above — which is
+            // the point of ADR-063: authorization belongs to the domain, so it survives a
+            // change of transport. The scope is NOT repeated here; it is enforced before the
+            // MCP server ever runs (App\EventListener\McpInsufficientScopeListener), so a
+            // call without it touches no provider.
+            //
+            // At listing time `id` is undefined, which raises a SyntaxError that
+            // ExpressionAccessChecker swallows on purpose: the tool stays listed and the
+            // expression is enforced on tools/call.
+            security: "is_granted('TRIP_VIEW', id)",
+            provider: TripDetailProvider::class,
+            // The single source of truth for what a token must carry to call this tool.
+            // Read back by McpToolScopes; nobody keeps a second list beside it.
+            extraProperties: ['mcp_scope' => 'trips:read'],
         ),
     ],
 )]

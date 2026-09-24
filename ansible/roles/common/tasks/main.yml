@@ -51,6 +51,14 @@
     group: "{{ deploy_user }}"
     mode: "0750"
 
+- name: Create the OAuth keypair directory
+  ansible.builtin.file:
+    path: "{{ oauth_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
 # --- Anti-reclaim heartbeat (optional, plan W5.1) ----------------------------
 # Unit files are rendered unconditionally so the enable/start task below can
 # ALSO disable/stop the timer when enable_reclaim_heartbeat flips back to false

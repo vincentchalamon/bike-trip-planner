@@ -19,12 +19,24 @@ secrets:
     file: .docker/jwt-recette/private.pem
   jwt_public_key:
     file: .docker/jwt-recette/public.pem
+  # A SEPARATE keypair for the MCP authorization server, under .docker/oauth-recette/
+  # (ADR-079). `make start-recette` generates it. The prod entrypoint compares the two
+  # files and refuses to boot when they match, so pointing these at jwt-recette would
+  # not merely be sloppy — the stack would not start.
+  oauth_private_key:
+    file: .docker/oauth-recette/private.pem
+  oauth_public_key:
+    file: .docker/oauth-recette/public.pem
 
 # Shared env for php/worker — extension field + YAML merge key to avoid
 # duplicating the block across the services (review #612).
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
   JWT_PASSPHRASE: recette
+  OAUTH_PASSPHRASE: recette
+  # Non-empty so the fail-closed boot guard passes locally (encrypts the authorization
+  # codes and refresh tokens league stores).
+  OAUTH_ENCRYPTION_KEY: recette-oauth-encryption-key
   # Non-default Mercure key so the SEC-004 fail-closed boot guard passes locally.
   # Publisher/subscriber/secret must match for the embedded hub to verify the
   # app-issued subscriber tokens (HS256, which needs a >=256-bit / >=32-byte key).

@@ -30,6 +30,22 @@ vault_jwt_public_key: |
   -----END PUBLIC KEY-----
 vault_jwt_passphrase: "REPLACE_ME"
 
+# --- MCP authorization server (ADR-079) --------------------------------------
+# A SECOND, GENUINELY DIFFERENT keypair. Generated the same way as the one above,
+# and never a copy of it: the php entrypoint compares the two files and refuses to
+# boot when they match, because the only thing telling a PWA session token apart
+# from an agent access token is which key signed it.
+vault_oauth_private_key: |
+  -----BEGIN ENCRYPTED PRIVATE KEY-----
+  REPLACE_ME
+  -----END ENCRYPTED PRIVATE KEY-----
+vault_oauth_public_key: |
+  -----BEGIN PUBLIC KEY-----
+  REPLACE_ME
+  -----END PUBLIC KEY-----
+vault_oauth_passphrase: "REPLACE_ME"
+vault_oauth_encryption_key: "REPLACE_ME"           # OAUTH_ENCRYPTION_KEY (codes/refresh at rest)
+
 # --- Mercure / tokens / HMAC -------------------------------------------------
 vault_app_secret: "REPLACE_ME"                    # APP_SECRET (CSRF, signed URIs)
 vault_mercure_jwt_key: "REPLACE_ME"               # MERCURE_JWT_KEY (HS256)
