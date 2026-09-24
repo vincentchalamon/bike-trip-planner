@@ -27,6 +27,13 @@ use App\ApiResource\Model\WeatherForecast;
  *
  * `trip` is dropped too: the caller passed `tripId` to get here, and the back-reference only
  * exists to build a JSON-LD IRI.
+ *
+ * `label` goes through {@see \App\State\Mcp\ThirdPartyText}; the accommodations, events and
+ * alert payloads below do not, and that is deliberate. Those carry prose — a Wikidata
+ * description, opening hours — that the label sanitiser's 200-character cap would truncate,
+ * damaging the data in the name of protecting it. Marking whole payloads as third-party data
+ * is unit 3C's problem and needs a mechanism that works at serialisation, not one call site
+ * at a time.
  */
 final readonly class StageDetail
 {

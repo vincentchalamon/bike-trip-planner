@@ -24,6 +24,20 @@ namespace App\State\Mcp;
  * field and the start of another; control characters can do worse in a terminal; and a name
  * long enough is a denial of service against the very budget the digest exists to respect.
  * None of that needs to know what the text means.
+ *
+ * **It is a label sanitiser, and it is applied only to labels.** That boundary is deliberate,
+ * not an oversight, and the 200-character cap is why: a place name past that length is a
+ * mistake or an attack, but an accommodation's Wikidata `description` or its opening hours
+ * legitimately run longer, and cutting them would damage the data in the name of protecting
+ * it. So the rich third-party structures a drill-down returns — {@see
+ * \App\ApiResource\Model\Accommodation}, {@see \App\ApiResource\Model\Event}, and the alert
+ * payloads their producers publish — pass through untouched.
+ *
+ * Which means per-field calls are the wrong long-term mechanism: every new field is a new
+ * place to remember, and the coverage gap is invisible until someone reads for it. Unit 3C
+ * owns the general answer, and it has to be one that applies to a whole payload — delimiting
+ * third-party content as data at the point it is serialised — rather than one call site at a
+ * time. Nothing here should grow into a half-version of that.
  */
 final readonly class ThirdPartyText
 {
@@ -42,10 +56,19 @@ final readonly class ThirdPartyText
             return null;
         }
 
-        // Newlines, tabs and the C0/C1 ranges. A label is a single line by definition, so
-        // collapsing rather than stripping keeps "Saint-Jean\nde-Maurienne" readable instead
-        // of welding two words together.
-        $value = preg_replace('/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', ' ', $value) ?? $value;
+        // Two passes, because the two kinds of character mean opposite things — a unit test
+        // caught this: collapsing everything to a space turned "Gre\u{0007}noble" into
+        // "Gre noble", inventing a word break inside a name.
+        //
+        // Separators become one space: a label is a single line by definition, and welding
+        // "Saint-Jean\nde-Maurienne" into one word would be its own corruption.
+        $value = preg_replace('/[\r\n\t\p{Zl}\p{Zp}]+/u', ' ', $value) ?? $value;
+
+        // Everything else in the control and format categories is simply not there — a BEL, a
+        // zero-width space or a right-to-left override is not a word break, it is noise that
+        // happens to sit between two letters.
+        $value = preg_replace('/[\p{Cc}\p{Cf}]+/u', '', $value) ?? $value;
+
         $value = trim(preg_replace('/ {2,}/u', ' ', $value) ?? $value);
 
         if ('' === $value) {
