@@ -58,11 +58,14 @@ final class GeocodeTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(200);
 
+        // A Hydra collection since the search became an API Platform operation: the places
+        // are under `member`, and the operation is in the OpenAPI contract both clients
+        // derive their types from.
         $data = $response->toArray();
-        $this->assertArrayHasKey('results', $data);
-        $this->assertCount(2, $data['results']);
+        $this->assertArrayHasKey('member', $data);
+        $this->assertCount(2, $data['member']);
 
-        $first = $data['results'][0];
+        $first = $data['member'][0];
         $this->assertSame('Lyon', $first['name']);
         $this->assertSame('Lyon, Métropole de Lyon, Rhône, France', $first['displayName']);
         $this->assertEqualsWithDelta(45.7578, $first['lat'], 0.001);
@@ -79,8 +82,11 @@ final class GeocodeTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(400);
 
+        // RFC 7807 now, not the controller's hand-built `{"error": ...}` — which never
+        // validated tests/Functional/error-schema.json in the first place. Same correction
+        // lot F applied to the GPX upload controller.
         $data = $response->toArray(false);
-        $this->assertSame('Missing required parameter: q', $data['error']);
+        $this->assertSame('Missing required parameter: q', $data['detail']);
     }
 
     #[Test]
@@ -93,7 +99,7 @@ final class GeocodeTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(400);
 
         $data = $response->toArray(false);
-        $this->assertSame('Missing required parameter: q', $data['error']);
+        $this->assertSame('Missing required parameter: q', $data['detail']);
     }
 
     #[Test]
@@ -119,7 +125,7 @@ final class GeocodeTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(200);
 
         $data = $response->toArray();
-        $this->assertCount(1, $data['results']);
+        $this->assertCount(1, $data['member']);
     }
 
     #[Test]
@@ -221,7 +227,7 @@ final class GeocodeTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(502);
 
         $data = $response->toArray(false);
-        $this->assertSame('Geocoding service unavailable', $data['error']);
+        $this->assertSame('Geocoding service unavailable', $data['detail']);
     }
 
     /**

@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\NominatimThrottle;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -24,82 +22,8 @@ final readonly class GeocodeController
         private HttpClientInterface $nominatimClient,
         #[Autowire(service: 'cache.osm')]
         private CacheItemPoolInterface $osmCache,
-        private Security $security,
-        #[Autowire(service: 'limiter.geocode')]
-        private RateLimiterFactory $geocodeLimiter,
+        private NominatimThrottle $throttle,
     ) {
-    }
-
-    /**
-     * Throttles outbound calls to the public Nominatim instance (1 req/s policy,
-     * IP bans for bulk use) per user, protecting the shared app IP
-     * (geocode rate-limit — 2026-07 security audit).
-     */
-    private function throttleOutbound(): void
-    {
-        $key = $this->security->getUser()?->getUserIdentifier() ?? 'anonymous';
-        if (!$this->geocodeLimiter->create($key)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
-        }
-    }
-
-    #[Route('/geocode/search', methods: ['GET'])]
-    public function search(Request $request): JsonResponse
-    {
-        $query = $request->query->getString('q');
-
-        if ('' === $query) {
-            return new JsonResponse(['error' => 'Missing required parameter: q'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $limit = $request->query->getInt('limit', 5);
-        $limit = min(max($limit, 1), 10);
-
-        $cacheKey = \sprintf('geocode.search.%s.%d', md5($query), $limit);
-        $item = $this->osmCache->getItem($cacheKey);
-
-        if ($item->isHit()) {
-            /** @var list<array{name: string, lat: float, lon: float, displayName: string, type: string}> $cached */
-            $cached = $item->get();
-
-            return new JsonResponse(['results' => $cached]);
-        }
-
-        $this->throttleOutbound();
-
-        try {
-            $response = $this->nominatimClient->request('GET', '/search', [
-                'query' => [
-                    'q' => $query,
-                    'format' => 'jsonv2',
-                    'limit' => $limit,
-                    'addressdetails' => 1,
-                ],
-            ]);
-
-            /** @var list<array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string}> $data */
-            $data = $response->toArray();
-        } catch (\Throwable) {
-            return new JsonResponse(['error' => 'Geocoding service unavailable'], Response::HTTP_BAD_GATEWAY);
-        }
-
-        $results = array_map(
-            static fn (array $place): array => [
-                'name' => $place['name'] ?? '',
-                'lat' => (float) ($place['lat'] ?? 0),
-                'lon' => (float) ($place['lon'] ?? 0),
-                'displayName' => $place['display_name'] ?? '',
-                'type' => $place['addresstype'] ?? $place['type'] ?? 'place',
-            ],
-            $data,
-        );
-
-        $item->set($results);
-        $item->expiresAfter(self::CACHE_TTL);
-
-        $this->osmCache->save($item);
-
-        return new JsonResponse(['results' => $results]);
     }
 
     #[Route('/geocode/reverse', methods: ['GET'])]
@@ -125,7 +49,7 @@ final readonly class GeocodeController
             return new JsonResponse(['results' => $cached]);
         }
 
-        $this->throttleOutbound();
+        $this->throttle->throttle();
 
         try {
             $response = $this->nominatimClient->request('GET', '/reverse', [

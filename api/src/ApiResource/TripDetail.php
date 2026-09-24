@@ -15,6 +15,7 @@ use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\WeatherAvailability;
 use App\Enum\AlertGroup;
+use App\State\Mcp\TripDigestProvider;
 use App\State\TripDetailProvider;
 
 /**
@@ -39,7 +40,14 @@ use App\State\TripDetailProvider;
     mcp: [
         'get_trip' => new McpTool(
             name: 'get_trip',
-            description: 'Read one bikepacking trip: its pacing settings, dates and persisted stages (distance, elevation, labels, weather, terrain alerts, chosen accommodation).',
+            description: <<<'TEXT'
+                Read one bikepacking trip: its pacing settings, dates, and one summary line per
+                day (distance, elevation, place names, whether a rest day, the chosen
+                accommodation, and how many alerts it carries). Call `get_stage` for the full
+                contents of a day that looks like it needs attention. The `version` in the
+                answer is what any tool that edits this trip must be given back.
+                TEXT,
+            annotations: ['readOnlyHint' => true],
             uriTemplate: '/trips/{id}/detail',
             // Without an explicit declaration the tool's `id` argument never reaches the
             // provider and the call dies with `Trip "" not found.` — a McpTool receives its
@@ -55,7 +63,16 @@ use App\State\TripDetailProvider;
             // ExpressionAccessChecker swallows on purpose: the tool stays listed and the
             // expression is enforced on tools/call.
             security: "is_granted('TRIP_VIEW', id)",
-            provider: TripDetailProvider::class,
+            // A projection of what TripDetailProvider returns, not a second query: `TripDetail`
+            // is the REST contract and is shared with /s/{shortCode}, so it does not move.
+            // What it cannot carry is the version — `ApiProperty(readable: false)` on the
+            // entity, advertised on HTTP as the `ETag`, and a `tools/call` has no per-call
+            // response header. Without it in the body, no write tool could ever be called.
+            //
+            // Declared as the provider rather than through `output:`: the MCP handler defaults
+            // `serialize` to false, so the output-class transformation the serialize stage
+            // performs does not run here.
+            provider: TripDigestProvider::class,
             // The single source of truth for what a token must carry to call this tool.
             // Read back by McpToolScopes; nobody keeps a second list beside it.
             extraProperties: ['mcp_scope' => 'trips:read'],

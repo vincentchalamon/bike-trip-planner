@@ -1,6 +1,6 @@
 # ADR-064: MCP Server as a Third API Client
 
-- **Status:** Accepted (feasibility); implementation deferred
+- **Status:** Accepted (feasibility); **implemented** — see the amendment of 24/09/2026 at the end
 - **Date:** 2026-09-18
 - **Depends on:** ADR-001 (Global Architecture), ADR-023 (Authentication Strategy), ADR-038 (Hide Forbidden As Not Found), ADR-043 (Synchronous Structural Computation), ADR-057 (Progressive Trip Loading), ADR-063 (Transport-Agnostic Authorization)
 - **Relates to:** ADR-052 (Remove AI Support) — this is not a reversal, see below
@@ -113,6 +113,37 @@ The dividing line is **interaction versus information**, not web versus agent.
 | Push / device tokens | Device-scoped. |
 | `DELETE /users/me` | Irreversible anonymisation; never an agent tool. |
 | Mercure live streaming | `subscriptions/listen` would hold one long connection per agent, incompatible with the stateless model and FrankenPHP workers. Progress notifications cover the need. |
+
+## Amendment, 24/09/2026 — what shipping it changed
+
+Recorded rather than rewritten: this document is the decision as it was taken, and two of its
+measurements have since been overtaken by the code.
+
+**The implementation is no longer deferred.** Unit 3A (#1307) built the authorization server
+and mounted `/mcp` behind it; unit 3B put the read tools on it.
+
+**§4 named reproducing ADR-038's masking as a prerequisite of shipping write tools. It is
+done, and proved per tool rather than once.** `McpIndistinguishabilityTest` asserts for every
+tool taking an identifier that someone else's record and a record that does not exist answer
+identically, byte for byte, and that the owner still gets through — without which two answers
+failing for a trivial reason would compare equal and prove nothing. What makes it hold is the
+shape of the expression: naming the URI variable evaluates it at `pre_read`, before any
+provider can report absence. `McpToolContractTest` refuses a tool that authorizes through
+`object`, which is the form that reopens the oracle.
+
+**"The `@context` / `@type` envelope is unavoidable" was right for the wrong reason, and
+understated the cost.** `api_platform.mcp.format` is no longer inert: the upstream fix
+(api-platform/core #8542) ships in v5.0.0 and does reach every MCP operation's formats. The
+envelope survives anyway because `StructuredContentProcessor` normalizes with the format of
+the `POST /mcp` request, which is never the operation's.
+
+And it costs more than a couple of extra keys. Measured on this transport: **every array
+property is rendered as a Hydra `Collection` carrying its values only, so an associative array
+arrives with its keys stripped** — `{"route": "done", "weather": "running"}` leaves as
+`{"member": ["done", "running"]}`, and the reader is told two statuses with no idea what
+either describes. That is data loss. **Nothing in a tool's answer may be keyed by data.** The
+payload is also duplicated: `content[0].text` repeats `structuredContent` verbatim, so
+everything is paid for twice.
 
 ## Consequences
 

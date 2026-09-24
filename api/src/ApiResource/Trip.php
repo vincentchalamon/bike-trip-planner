@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
@@ -179,6 +180,34 @@ use App\State\TripUpdateProcessor;
             security: "is_granted('TRIP_DELETE', object)",
             provider: TripDoctrineProvider::class,
             processor: TripDeleteProcessor::class,
+        ),
+    ],
+    mcp: [
+        'list_trips' => new McpTool(
+            name: 'list_trips',
+            description: <<<'TEXT'
+                List the trips of the authenticated user, most recently created first.
+                Paginated: pass `page` to go further back. Optional `title`, `startDate` and
+                `endDate` narrow the list. Returns a summary per trip; call `get_trip` with an
+                id for its days, weather and alerts.
+                TEXT,
+            annotations: ['readOnlyHint' => true],
+            uriTemplate: '/trips',
+            // A tool inherits NOTHING from the operation it shadows — it is a separate
+            // operation that merely shares a provider. Without these three, `Pagination`
+            // reads the bundle's global defaults instead, `client_items_per_page` is false
+            // there, and an `itemsPerPage` argument is silently ignored: the caller gets
+            // twenty trips whatever it asks for, with nothing to indicate why. Only
+            // `pagination_maximum_items_per_page` (30) comes from `api_platform.php`, because
+            // it is declared under `defaults`.
+            paginationEnabled: true,
+            paginationItemsPerPage: 20,
+            paginationClientItemsPerPage: true,
+            // Ownership is the whole of it: the provider only ever selects the current user's
+            // trips, so there is no object to authorize against and no id to leak.
+            security: "is_granted('ROLE_USER')",
+            provider: TripCollectionProvider::class,
+            extraProperties: ['mcp_scope' => 'trips:read'],
         ),
     ],
 )]

@@ -46,14 +46,22 @@ Run each leg so you actually see its output. Piping through `| tail` hides an `n
 Every command below runs **from the worktree root** — the `docker run` resolves `$PWD/api` and `$PWD/docs`, so a stray `cd` into `api/` silently points the mounts at `api/api` and `api/docs`. The keypair step is wrapped in a subshell for that reason.
 
 ```bash
-# One-time, inside the worktree: a test keypair with the passphrase CI uses
-(cd api && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
-  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test)
+# One-time, inside the worktree: TWO keypairs, and they must differ.
+# Lexik signs the PWA session JWT; the OAuth authorization server signs the tokens that open
+# /mcp (ADR-079). The separation is cryptographic, so the anti-passthrough test — a session
+# token must not open /mcp — only means anything if these are genuinely two keys. The prod
+# entrypoint compares the bytes and refuses to boot if they coincide.
+(cd api && mkdir -p config/jwt config/oauth \
+  && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
+  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test \
+  && openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
+  && openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test)
 
-docker run --rm --network bike-trip-planner_default -e APP_ENV=test -e XDEBUG_MODE=off -e JWT_PASSPHRASE=test \
+docker run --rm --network bike-trip-planner_default -u 1000:1000 -e APP_ENV=test -e XDEBUG_MODE=off \
+  -e JWT_PASSPHRASE=test -e OAUTH_PASSPHRASE=test \
   -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8" \
   -e REDIS_URL="redis://redis:6379" -e LOCK_DSN="redis://redis:6379" -e FRONTEND_URL="https://localhost" \
-  -v "$PWD/api:/app" -v "$PWD/docs:/docs:ro" \
+  -v "$PWD/api:/app" -v "$PWD/api/var:/app/var" -v "$PWD/docs:/docs:ro" -v "$PWD/core:/core:ro" \
   -w /app --entrypoint vendor/bin/phpunit bike-trip-planner-php:dev --no-coverage tests/Unit tests/Integration
 ```
 
