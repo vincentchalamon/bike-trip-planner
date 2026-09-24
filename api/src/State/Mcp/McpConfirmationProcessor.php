@@ -9,7 +9,6 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Mcp\ConfirmationChallenge;
 use App\Entity\User;
 use League\Bundle\OAuth2ServerBundle\Security\Authentication\Token\OAuth2Token;
-use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
@@ -21,10 +20,11 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
  * nothing: it returns an impact summary and a token. Called again with that token and the same
  * arguments, it goes through.
  *
- * ⚠ The priority is positive, which makes this the INNERMOST decorator and therefore the LAST
- * to run. `DecoratorServicePass` iterates from the highest priority down and the one handled
- * last keeps the alias, so a low priority runs first — counter-intuitive, and this repository
- * has already got it wrong once (lot D put the lock behind the precondition; lot E fixed it).
+ * ⚠ The priority — declared in `config/services.php`, alongside the two other write guards — is
+ * positive, which makes this the INNERMOST decorator and therefore the LAST to run.
+ * `DecoratorServicePass` iterates from the highest priority down and the one handled last keeps
+ * the alias, so a low priority runs first: counter-intuitive, and this repository has already
+ * got it wrong once (lot D put the lock behind the precondition; lot E fixed it).
  * `TripLockProcessor` sits at -10 and `PreconditionProcessor` at 0, so both have had their say
  * before a token is ever minted. Reversed, an agent would be sent off to confirm a call that a
  * started trip or a stale version was going to refuse anyway — and would come back with a
@@ -38,7 +38,6 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
  *
  * @implements ProcessorInterface<mixed, mixed>
  */
-#[AsDecorator(decorates: 'api_platform.state_processor.write', priority: 10)]
 final readonly class McpConfirmationProcessor implements ProcessorInterface
 {
     /**

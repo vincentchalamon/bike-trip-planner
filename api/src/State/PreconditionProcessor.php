@@ -9,7 +9,6 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Concurrency\IfMatch;
 use App\Concurrency\VersionPrecondition;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
 /**
  * Requires an `If-Match` precondition on every operation that edits a trip's structure.
@@ -29,9 +28,11 @@ use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
  *  - in the repository, the authoritative comparison, performed under the write lock. That
  *    is the one that actually prevents a lost update; this one only refuses early.
  *
+ * Wired in `config/services.php` rather than by an attribute here: it decorates the HTTP write
+ * chain and the MCP one, which api-platform/mcp builds separately.
+ *
  * @implements ProcessorInterface<mixed, mixed>
  */
-#[AsDecorator(decorates: 'api_platform.state_processor.write')]
 final readonly class PreconditionProcessor implements ProcessorInterface
 {
     /**

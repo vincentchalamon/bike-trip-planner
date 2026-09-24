@@ -9,6 +9,9 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
+use App\State\Mcp\McpConfirmationProcessor;
+use App\State\PreconditionProcessor;
+use App\State\TripLockProcessor;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -78,6 +81,43 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ->decorate($scopedClientId)
             ->args([service('.inner')])
             ->autowire(false)
+            ->autoconfigure(false);
+    }
+
+    // The guards that stand between a caller and a write, declared against BOTH write chains.
+    //
+    // Measured, not deduced: api-platform/mcp builds a WriteProcessor of its own
+    // (Resources/config/mcp/state.php) rather than reusing `api_platform.state_processor.write`,
+    // so a decorator declared with #[AsDecorator('api_platform.state_processor.write')] guards
+    // HTTP alone. The symptom was silent and expensive — `unshare_trip` revoked a share link on
+    // the call that was only supposed to describe what revoking would do, because the
+    // confirmation decorator was not in that chain at all. The lock and the precondition were
+    // equally absent, which means a started trip and a stale version were being accepted too.
+    //
+    // The priorities are the same on both, and they are the counter-intuitive way round:
+    // DecoratorServicePass hands the alias to the one it processes LAST, so the LOWEST priority
+    // ends up outermost and runs FIRST. Hence lock (-10) before precondition (0) before
+    // confirmation (10) — a token is only ever minted for a call that would have gone through.
+    $writeGuards = [
+        TripLockProcessor::class => -10,
+        PreconditionProcessor::class => 0,
+        McpConfirmationProcessor::class => 10,
+    ];
+
+    foreach ($writeGuards as $guard => $priority) {
+        // The class id keeps the HTTP chain, replacing the definition `load()` discovered.
+        $services->set($guard)
+            ->decorate('api_platform.state_processor.write', null, $priority)
+            ->args([service($guard.'.inner')])
+            ->autowire()
+            ->autoconfigure(false);
+
+        // A second instance for MCP: one definition cannot decorate two services.
+        $id = 'app.mcp_write_guard.'.$guard;
+        $services->set($id, $guard)
+            ->decorate('api_platform.mcp.state_processor.write', null, $priority)
+            ->args([service($id.'.inner')])
+            ->autowire()
             ->autoconfigure(false);
     }
 
