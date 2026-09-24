@@ -43,7 +43,7 @@ final class ConsentFlowTest extends ApiTestCase
     private const string COOKIE = 'consent-flow-cookie';
 
     // S256 of 'a-verifier-of-at-least-43-characters-for-pkce-ok'.
-    private const string CODE_CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
+    private const string CODE_CHALLENGE = 'lsmMqplmuEP5Qsegofd3pZlGReS7RX_Y4y8NFq6kGhQ';
 
     private User $user;
 
