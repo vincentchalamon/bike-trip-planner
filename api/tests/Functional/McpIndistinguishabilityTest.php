@@ -138,6 +138,32 @@ final class McpIndistinguishabilityTest extends ApiTestCase
     }
 
     /**
+     * The exclusion table keeps `GET /trips/{id}/route` out of the tool surface because a
+     * polyline is an artefact of a map: the gesture has no textual equivalent, and a long day's
+     * trail is a context bomb that answers no question a model can act on. `get_stage` is the
+     * drill-down, so letting the same points back in through it would be the same cost by
+     * another door — which is exactly what `StageResponse` would have done, since it carries
+     * `geometry` for the frontend.
+     *
+     * Absent rather than empty: a `geometry: []` would claim the day has no route.
+     */
+    #[Test]
+    public function theDrillDownDoesNotServeTheCoordinateTrail(): void
+    {
+        $this->seedTrip();
+
+        $answer = $this->call(
+            'get_stage',
+            ['tripId' => self::TRIP_ID, 'stageId' => self::STAGE_ID],
+            $this->issueAccessTokenFor($this->owner),
+        );
+
+        self::assertStringNotContainsString('geometry', $answer);
+        // And the day itself did come back, or the assertion above holds for the wrong reason.
+        self::assertStringContainsString('dayNumber', $answer);
+    }
+
+    /**
      * @param array<string, string> $arguments
      */
     private function call(string $tool, array $arguments, string $bearer): string

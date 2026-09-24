@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\NominatimThrottle;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -24,23 +22,8 @@ final readonly class GeocodeController
         private HttpClientInterface $nominatimClient,
         #[Autowire(service: 'cache.osm')]
         private CacheItemPoolInterface $osmCache,
-        private Security $security,
-        #[Autowire(service: 'limiter.geocode')]
-        private RateLimiterFactory $geocodeLimiter,
+        private NominatimThrottle $throttle,
     ) {
-    }
-
-    /**
-     * Throttles outbound calls to the public Nominatim instance (1 req/s policy,
-     * IP bans for bulk use) per user, protecting the shared app IP
-     * (geocode rate-limit — 2026-07 security audit).
-     */
-    private function throttleOutbound(): void
-    {
-        $key = $this->security->getUser()?->getUserIdentifier() ?? 'anonymous';
-        if (!$this->geocodeLimiter->create($key)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
-        }
     }
 
     #[Route('/geocode/reverse', methods: ['GET'])]
@@ -66,7 +49,7 @@ final readonly class GeocodeController
             return new JsonResponse(['results' => $cached]);
         }
 
-        $this->throttleOutbound();
+        $this->throttle->throttle();
 
         try {
             $response = $this->nominatimClient->request('GET', '/reverse', [

@@ -7,15 +7,13 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GeocodeResult;
+use App\Service\NominatimThrottle;
 use App\State\Mcp\McpArguments;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -37,9 +35,7 @@ final readonly class GeocodeSearchProvider implements ProviderInterface
         private HttpClientInterface $nominatim,
         #[Autowire(service: 'cache.osm')]
         private CacheItemPoolInterface $cache,
-        private Security $security,
-        #[Autowire(service: 'limiter.geocode')]
-        private RateLimiterFactory $limiter,
+        private NominatimThrottle $throttle,
     ) {
     }
 
@@ -74,7 +70,7 @@ final readonly class GeocodeSearchProvider implements ProviderInterface
 
         // After the cache on purpose: a repeated search costs the third party nothing, so it
         // should not cost the caller a token either.
-        $this->throttleOutbound();
+        $this->throttle->throttle();
 
         $results = $this->fetch($query, $limit);
 
@@ -84,24 +80,6 @@ final readonly class GeocodeSearchProvider implements ProviderInterface
         $this->cache->save($item);
 
         return $results;
-    }
-
-    /**
-     * Throttles outbound calls to the public Nominatim instance per user (2026-07 security
-     * audit): its usage policy caps bulk use and bans IPs, and the whole deployment shares one.
-     *
-     * Per user, which bounds the aggregate only in proportion to how many users there are. An
-     * agent loop is machine-paced where a person typing is not, so this is the limiter that
-     * matters most here and the one an MCP call goes through — the tool reuses this provider
-     * rather than getting a second, parallel limit that would protect nothing extra.
-     */
-    private function throttleOutbound(): void
-    {
-        $key = $this->security->getUser()?->getUserIdentifier() ?? 'anonymous';
-
-        if (!$this->limiter->create($key)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
-        }
     }
 
     /**

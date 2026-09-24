@@ -6,6 +6,7 @@ namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\GetCollection;
 use App\Entity\User;
+use App\Service\NominatimThrottle;
 use App\State\GeocodeSearchProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -53,8 +54,7 @@ final class GeocodeSearchProviderTest extends TestCase
         $provider = new GeocodeSearchProvider(
             $this->createStub(HttpClientInterface::class),
             $cache,
-            $security,
-            $limiter,
+            new NominatimThrottle($security, $limiter),
         );
 
         $this->expectException(TooManyRequestsHttpException::class);
@@ -71,10 +71,12 @@ final class GeocodeSearchProviderTest extends TestCase
         $provider = new GeocodeSearchProvider(
             $this->createStub(HttpClientInterface::class),
             $this->createStub(CacheItemPoolInterface::class),
-            $this->createStub(Security::class),
-            new RateLimiterFactory(
-                ['id' => 'geocode', 'policy' => 'sliding_window', 'limit' => 1, 'interval' => '60 seconds'],
-                new InMemoryStorage(),
+            new NominatimThrottle(
+                $this->createStub(Security::class),
+                new RateLimiterFactory(
+                    ['id' => 'geocode', 'policy' => 'sliding_window', 'limit' => 1, 'interval' => '60 seconds'],
+                    new InMemoryStorage(),
+                ),
             ),
         );
 
