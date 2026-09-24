@@ -54,6 +54,16 @@
         <!-- ###+ symfony/ai-open-ai-platform ### -->
         <env name="OPENAI_API_KEY" value=""/>
         <!-- ###- symfony/ai-open-ai-platform ### -->
+
+        <!-- The authorization server's own keypair, in its own directory. The Flex recipe
+             points these at config/jwt, i.e. at Lexik's keys; sharing them would make a PWA
+             session token verify on /mcp and an agent token verify on the REST API. The
+             separation is the anti-passthrough property (ADR-079), so it is asserted at boot
+             and exercised by a test — not left to whoever copies these lines next. -->
+        <env name="OAUTH_PRIVATE_KEY" value="%kernel.project_dir%/config/oauth/private.pem"/>
+        <env name="OAUTH_PUBLIC_KEY" value="%kernel.project_dir%/config/oauth/public.pem"/>
+        <env name="OAUTH_PASSPHRASE" value="test"/>
+        <env name="OAUTH_ENCRYPTION_KEY" value="7085db3dc54b2106eaef26865fcfd516"/>
     </php>
 
     <testsuites>

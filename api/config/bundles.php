@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ApiPlatform\Symfony\Bundle\ApiPlatformBundle;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
+use League\Bundle\OAuth2ServerBundle\LeagueOAuth2ServerBundle;
 use Lexik\Bundle\JWTAuthenticationBundle\LexikJWTAuthenticationBundle;
 use Nelmio\CorsBundle\NelmioCorsBundle;
 use Sentry\SentryBundle\SentryBundle;
@@ -32,4 +33,5 @@ return [
     ZenstruckFoundryBundle::class => ['dev' => true, 'test' => true],
     SentryBundle::class => ['prod' => true],
     McpBundle::class => ['all' => true],
+    LeagueOAuth2ServerBundle::class => ['all' => true],
 ];

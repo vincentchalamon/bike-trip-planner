@@ -17,6 +17,7 @@
         "doctrine/doctrine-migrations-bundle": "^4.0.1",
         "doctrine/orm": "^3.7.1",
         "lcobucci/jwt": "^5.6",
+        "league/oauth2-server-bundle": "^1.2",
         "lexik/jwt-authentication-bundle": "^3.2",
         "martin-georgiev/postgresql-for-doctrine": "^4.8.0",
         "mjaschen/phpgeo": "^6.0.4",
