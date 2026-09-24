@@ -12,6 +12,7 @@ use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
+use App\State\Mcp\McpArguments;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Uid\Uuid;
@@ -43,9 +44,13 @@ final readonly class TripCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripListPaginator
     {
-        $rawFilters = $context['filters'] ?? [];
-        /** @var array<string, mixed> $filters */
-        $filters = is_array($rawFilters) ? $rawFilters : [];
+        // On HTTP these are the query parameters; on an MCP call they are the tool's
+        // arguments, which reach neither the query string nor `$context['filters']` on their
+        // own. Feeding them back into the context is what lets `Pagination` see `page` and
+        // `itemsPerPage` too — including the maximum `api_platform.php` publishes, which a
+        // hand-rolled limit here would be free to drift away from.
+        $filters = McpArguments::filters($context);
+        $context['filters'] = $filters;
 
         [$page, , $limit] = $this->pagination->getPagination($operation, $context);
 
