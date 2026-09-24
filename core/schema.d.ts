@@ -332,7 +332,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/oauth/consents/{handle}": {
+    "/oauth/pending-authorizations/{handle}": {
         parameters: {
             query?: never;
             header?: never;
@@ -343,7 +343,7 @@ export interface paths {
          * Read the pending authorization a browser was sent here to decide.
          * @description Read the pending authorization a browser was sent here to decide.
          */
-        get: operations["api_oauthconsents_handle_get"];
+        get: operations["api_oauthpending-authorizations_handle_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -352,7 +352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/oauth/consents/{handle}/approve": {
+    "/oauth/pending-authorizations/{handle}/approve": {
         parameters: {
             query?: never;
             header?: never;
@@ -365,14 +365,14 @@ export interface paths {
          * Grant the pending authorization, then follow continueUrl.
          * @description Grant the pending authorization, then follow continueUrl.
          */
-        post: operations["api_oauthconsents_handleapprove_post"];
+        post: operations["api_oauthpending-authorizations_handleapprove_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/oauth/consents/{handle}/deny": {
+    "/oauth/pending-authorizations/{handle}/deny": {
         parameters: {
             query?: never;
             header?: never;
@@ -385,7 +385,7 @@ export interface paths {
          * Refuse the pending authorization, then follow continueUrl.
          * @description Refuse the pending authorization, then follow continueUrl.
          */
-        post: operations["api_oauthconsents_handledeny_post"];
+        post: operations["api_oauthpending-authorizations_handledeny_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3565,7 +3565,7 @@ export interface operations {
             };
         };
     };
-    api_oauthconsents_handle_get: {
+    "api_oauthpending-authorizations_handle_get": {
         parameters: {
             query?: never;
             header?: never;
@@ -3599,7 +3599,7 @@ export interface operations {
             };
         };
     };
-    api_oauthconsents_handleapprove_post: {
+    "api_oauthpending-authorizations_handleapprove_post": {
         parameters: {
             query?: never;
             header?: never;
@@ -3642,7 +3642,7 @@ export interface operations {
             };
         };
     };
-    api_oauthconsents_handledeny_post: {
+    "api_oauthpending-authorizations_handledeny_post": {
         parameters: {
             query?: never;
             header?: never;
