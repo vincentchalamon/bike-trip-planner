@@ -42,6 +42,17 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		php bin/console lexik:jwt:generate-keypair --skip-if-exists >&2
 	fi
 
+	# And a SEPARATE one for the MCP authorization server (ADR-079). league ships no
+	# generate-keypair command, and without these files every /oauth/* request 500s on a
+	# missing key file — handled at boot, next to the JWT pair, rather than discovered in
+	# the middle of an authorization flow. Unencrypted, like the dev JWT pair
+	# (compose.dev.yaml sets both passphrases empty); prod gets its keys from Vault.
+	if [ ! -f config/oauth/private.pem ]; then
+		mkdir -p config/oauth
+		openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 >&2
+		openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem >&2
+	fi
+
 	setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var
 	setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var
 

@@ -22,6 +22,7 @@ compose.override.yml
 .docker/osm/data/*
 !.docker/osm/data/.gitkeep
 .docker/jwt-recette/
+.docker/oauth-recette/
 
 coverage/
 .lighthouseci/

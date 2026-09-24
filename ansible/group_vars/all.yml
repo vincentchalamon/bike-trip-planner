@@ -15,6 +15,9 @@ deploy_ssh_public_keys: []
 # --- Paths -------------------------------------------------------------------
 etc_dir: "/etc/bike-trip-planner"
 jwt_dir: "/etc/bike-trip-planner/jwt"
+# The MCP authorization server's keypair lives apart from the session one (ADR-079): the
+# php entrypoint refuses to boot when the two files match.
+oauth_dir: "/etc/bike-trip-planner/oauth"
 app_dir: "/opt/bike-trip-planner"
 traefik_dir: "/opt/traefik"
 cloudflared_dir: "/etc/cloudflared"

@@ -38,6 +38,27 @@
     mode: "0640"
   no_log: true
 
+# A DIFFERENT keypair from the two above (ADR-079). Vault must hold a genuinely separate
+# pair: the php entrypoint compares the files and refuses to boot when they match, which
+# is the only thing keeping a PWA session token off /mcp.
+- name: Write the OAuth private key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_oauth_private_key }}"
+    dest: "{{ oauth_dir }}/private.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Write the OAuth public key (from Vault)
+  ansible.builtin.copy:
+    content: "{{ vault_oauth_public_key }}"
+    dest: "{{ oauth_dir }}/public.pem"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+
 # Rendered OUTSIDE app_dir on purpose. The repo now versions a `.env` holding the
 # dev defaults, and deploy-prod runs `git checkout --force <tag>` in app_dir — a
 # prod env file living there would be overwritten by every deploy, booting the
