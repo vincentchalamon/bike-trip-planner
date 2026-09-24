@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Entity\OAuthClient;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 /*
@@ -69,6 +70,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
         'client' => [
             'allow_plaintext_secrets' => false,
+            // A Client ID Metadata Document names its client by an HTTPS URL, which does not
+            // fit the bundle's VARCHAR(32) identifier. See App\Entity\OAuthClient.
+            'classname' => OAuthClient::class,
         ],
     ]);
 };
