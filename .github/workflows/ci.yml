@@ -542,6 +542,18 @@ jobs:
       - name: Install dependencies
         working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      # PHPStan's `consoleApplicationLoader` boots the real kernel and registers every
+      # command, which instantiates the OAuth bundle's — and those construct a
+      # League\OAuth2\Server\CryptKey over the configured key path. With no file there, the
+      # constructor throws `Invalid key supplied` and PHPStan reports it as an internal
+      # error on whichever file it happened to be analysing, naming a command that has
+      # nothing to do with it. Throwaway keys, like the JWT pair the test jobs generate.
+      - name: Generate OAuth keypair
+        working-directory: api
+        run: |
+          mkdir -p config/oauth
+          openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096
+          openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem
       - name: WarmUp Cache
         env:
           APP_ENV: dev # required for parameters.symfony.containerXmlPath
