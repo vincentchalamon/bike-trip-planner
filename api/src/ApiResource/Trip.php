@@ -10,11 +10,17 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use App\ApiResource\Mcp\AnalyzeTripInput;
+use App\ApiResource\Mcp\DeleteTripInput;
 use App\State\AnalyzeTripProcessor;
+use App\State\Mcp\McpAnalyzeTripProcessor;
+use App\State\Mcp\McpConfirmationProcessor;
+use App\State\Mcp\McpDeleteTripProcessor;
 use App\State\NearbyPoiSearchProcessor;
 use App\State\TripCreation;
 use App\State\PreconditionProcessor;
@@ -208,6 +214,61 @@ use App\State\TripUpdateProcessor;
             security: "is_granted('ROLE_USER')",
             provider: TripCollectionProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],
+        ),
+        'analyze_trip' => new McpTool(
+            name: 'analyze_trip',
+            description: <<<'TEXT'
+                Recompute everything known about each day of a trip: points of interest,
+                accommodation options, weather, terrain, resupply, events and the alerts drawn
+                from them. Returns immediately -- the work runs in the background, so call
+                `get_trip` again shortly to see it arrive. Use this after changing the days of
+                a trip, or when its information looks stale.
+                TEXT,
+            // No hint at all, and that is the honest answer. `idempotentHint` would be a lie:
+            // the operation answers 409 when an analysis is already under way, so calling it
+            // twice is not the same as calling it once. A false hint is worse than none —
+            // it is the one thing a client acts on without checking.
+            uriTemplate: '/trips/{id}/analyze',
+            uriVariables: ['id' => new Link(fromClass: Trip::class)],
+            security: "is_granted('TRIP_EDIT', id)",
+            input: AnalyzeTripInput::class,
+            validate: true,
+            provider: TripRequestProvider::class,
+            processor: McpAnalyzeTripProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                // Replacing every stage's contents under someone who has already left is not
+                // an edit, it is a surprise. Same flag as the HTTP operation, and it now
+                // actually runs here (see config/services.php).
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
+        'delete_trip' => new McpTool(
+            name: 'delete_trip',
+            description: <<<'TEXT'
+                Delete a trip for good, with its days and any public link to it. Called without
+                `confirmationToken`, this changes nothing: it answers with what would be lost
+                and a token. Report that to the user and call again with the token only if they
+                confirm.
+                TEXT,
+            annotations: ['destructiveHint' => true],
+            uriTemplate: '/trips/{id}',
+            uriVariables: ['id' => new Link(fromClass: Trip::class)],
+            // `is_granted('TRIP_DELETE', id)`, where the HTTP operation beside it says
+            // `object`. The object form only resolves once the provider has run, and the
+            // provider reports a missing trip by throwing — so an unknown id would answer
+            // "not found" while someone else's answers "denied", and the two become
+            // distinguishable. On HTTP ADR-038's listener masks that; on this transport the
+            // SDK catches the exception itself and `kernel.exception` never runs.
+            security: "is_granted('TRIP_DELETE', id)",
+            input: DeleteTripInput::class,
+            validate: true,
+            provider: TripDoctrineProvider::class,
+            processor: McpDeleteTripProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpConfirmationProcessor::EXTRA_PROPERTY => 'Delete this trip permanently, along with every day computed for it and any public link pointing at it. Nothing about it can be recovered afterwards.',
+            ],
         ),
     ],
 )]
