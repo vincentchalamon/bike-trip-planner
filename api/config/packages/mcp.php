@@ -10,11 +10,20 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
  * Written as PHP because the repository has no YAML under config/; the Flex recipe for
  * symfony/mcp-bundle writes none of this anyway, see config/routes/mcp.php.
  *
- * `api_platform.mcp.format` is deliberately absent. It is inert in api-platform/mcp v5.0.0
- * — StructuredContentProcessor.php:66 reads the request format and falls back to 'jsonld'
- * without ever consulting the operation's output formats. The upstream fix (api-platform/core
- * #8542) is merged but not released, so tool output carries the JSON-LD envelope and nothing
- * here pretends otherwise.
+ * `api_platform.mcp.format` is deliberately absent, and the reason has been re-measured since
+ * ADR-064 was written. The upstream fix (api-platform/core #8542) IS in the v5.0.0 the lock
+ * installs, and the parameter is no longer inert: FormatsResourceMetadataCollectionFactory
+ * applies it to every MCP operation's input and output formats. It still does not change what
+ * a tool answers with, because StructuredContentProcessor.php:66 normalizes with
+ * `$request->getRequestFormat('') ?: 'jsonld'` — the format of the POST /mcp request, which is
+ * never the operation's. Setting it would also mean registering a second format in
+ * api_platform.formats, i.e. offering it on every REST endpoint too.
+ *
+ * So tool output carries the JSON-LD envelope, and the consequence is sharper than an extra
+ * `@context`: every array property is rendered as a Hydra Collection carrying its VALUES only,
+ * so an associative array arrives with its keys stripped. Measured, not deduced —
+ * `{"route": "done"}` leaves as `{"member": ["done"]}`. Nothing in a tool's answer may be
+ * keyed by data; see App\ApiResource\Mcp\CategoryStatus.
  */
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('mcp', [
