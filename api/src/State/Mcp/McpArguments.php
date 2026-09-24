@@ -118,19 +118,24 @@ final readonly class McpArguments
     }
 
     /**
-     * The same arguments in an order that does not depend on how they were serialised.
+     * The body in an order that does not depend on how it was serialised.
      *
-     * Both the idempotency digest and the confirmation token bind to a hash of the
-     * arguments, and nothing obliges an agent to re-emit its JSON keys in the order it used
-     * the first time. Without this, a perfectly legitimate retry hashes differently: the
-     * creation answers 409 "already used for a different request body", and a valid
-     * confirmation token is refused. Recursive, because a nested object has the same problem.
+     * Both the idempotency digest and the confirmation token bind to a hash of what the call
+     * asks for, and nothing obliges an agent to re-emit its JSON keys in the order it used the
+     * first time. Without this, a perfectly legitimate retry hashes differently: the creation
+     * answers 409 "already used for a different request body", and a valid confirmation token
+     * is refused. Recursive, because a nested object has the same problem.
+     *
+     * The body, not every argument: a confirmation token binds to the arguments and is itself
+     * one, so hashing the lot would guarantee a mismatch — the call that mints the token has
+     * none, the call that spends it does. The same goes for an explicit idempotency key, which
+     * would otherwise take part in the digest meant to tell whether it was reused honestly.
      *
      * @return array<string, mixed>
      */
     public function canonical(): array
     {
-        return self::sortRecursively($this->arguments);
+        return self::sortRecursively($this->body());
     }
 
     /**
