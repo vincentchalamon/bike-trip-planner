@@ -41,6 +41,26 @@ final readonly class McpArguments
     }
 
     /**
+     * Whether this context describes a `tools/call` rather than an HTTP request.
+     *
+     * `ApiPlatform\Mcp\Server\Handler` sets `mcp_data` for a tool call and only for a tool
+     * call — to the arguments, even when there are none — so the key's presence tells the
+     * transports apart where their contents cannot: a tool called with no arguments and an
+     * HTTP request look alike once `from()` has normalised both to an empty set.
+     *
+     * The distinction matters wherever the two transports carry the same information by
+     * different means: `$context['request']` is populated on MCP too (it is the `POST /mcp`
+     * that carried the envelope), so a guard reading a header would read the envelope's,
+     * which describes the batch rather than any one call in it.
+     *
+     * @param array<string, mixed> $context
+     */
+    public static function isToolCall(array $context): bool
+    {
+        return \array_key_exists('mcp_data', $context);
+    }
+
+    /**
      * Reads the arguments out of an operation context, whatever transport produced it.
      *
      * An HTTP call has no `mcp_data` and yields an empty set, which is what every caller
