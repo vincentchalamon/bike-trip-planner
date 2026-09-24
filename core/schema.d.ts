@@ -332,6 +332,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/consents/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the pending authorization a browser was sent here to decide.
+         * @description Read the pending authorization a browser was sent here to decide.
+         */
+        get: operations["api_oauthconsents_handle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/consents/{handle}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant the pending authorization, then follow continueUrl.
+         * @description Grant the pending authorization, then follow continueUrl.
+         */
+        post: operations["api_oauthconsents_handleapprove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/consents/{handle}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refuse the pending authorization, then follow continueUrl.
+         * @description Refuse the pending authorization, then follow continueUrl.
+         */
+        post: operations["api_oauthconsents_handledeny_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -1365,6 +1425,30 @@ export interface components {
             /** @enum {string|null} */
             category?: "weatherSafety" | "analysisDone" | "zoneOpening" | null;
             enabled: boolean | null;
+        };
+        /**
+         * @description What the consent screen is allowed to say, and where the answer goes.
+         *
+         *     A pending authorization, read back by the PWA page the browser was sent to. Everything
+         *     here is resolved server-side: the page never reads the authorization request's query
+         *     string, so it cannot display a scope the server did not actually resolve, nor a client
+         *     name the server did not actually fetch.
+         */
+        "OAuthConsent.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            handle?: string;
+            /** @description The client's self-declared name. Third-party text: display it, never interpolate it into a sentence. */
+            clientName?: string;
+            /**
+             * @description What the agent is asking for, as the authorization server
+             *     resolved it — not as the request asked
+             */
+            scopes?: string[];
+            /** @description Host of the address the agent will be sent back to. The specification requires showing it. */
+            redirectHost?: string | null;
+            /** @description True when the client only ever returns to a loopback address, which nothing can prove belongs to it. */
+            redirectsToLoopback?: boolean;
+            /** @description Where to send the browser once decided. Relative to this origin. */
+            continueUrl?: string;
         };
         "PoiSuggestionDto.jsonld": {
             /** @description Display name of the POI. */
@@ -3459,6 +3543,126 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_oauthconsents_handle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuthConsent identifier */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuthConsent resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["OAuthConsent.jsonld"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_oauthconsents_handleapprove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuthConsent identifier */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuthConsent resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_oauthconsents_handledeny_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuthConsent identifier */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuthConsent resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

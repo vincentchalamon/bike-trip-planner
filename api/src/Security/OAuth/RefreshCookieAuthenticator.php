@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security\OAuth;
 
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use App\Entity\RefreshToken;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
@@ -83,12 +84,12 @@ final class RefreshCookieAuthenticator extends AbstractAuthenticator implements 
      * point of view of someone standing in front of a browser: send them to the login page
      * rather than to an error body they cannot act on.
      */
-    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
+    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): RedirectResponse
     {
         return $this->entryPoint->start($request, $exception);
     }
 
-    public function start(Request $request, ?AuthenticationException $authException = null): Response
+    public function start(Request $request, ?AuthenticationException $authException = null): RedirectResponse
     {
         return $this->entryPoint->start($request, $authException);
     }

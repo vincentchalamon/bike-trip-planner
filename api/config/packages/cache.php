@@ -34,6 +34,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 86400, // 24 hours
                 ],
+                // A consent decision, between the moment the browser is sent to the
+                // consent screen and the moment it comes back (ADR-079). Transient by
+                // nature and single-use; long enough for someone to read the screen.
+                'cache.oauth_consent' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 600, // 10 minutes
+                ],
             ],
         ],
     ]);
@@ -56,6 +63,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'cache.routing' => [
                         'adapter' => 'cache.adapter.array',
                     ],
+                    // cache.oauth_consent stays on Redis under test, deliberately. The
+                    // consent is written by one request and read by the next, and the test
+                    // environment resets every service implementing ResetInterface after
+                    // each request — an array adapter forgets it in between, whatever the
+                    // client does about rebooting. Pools namespace themselves per container
+                    // build, so these keys do not collide with the dev stack's.
                 ],
             ],
         ]);

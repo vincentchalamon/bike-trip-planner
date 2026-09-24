@@ -58,12 +58,17 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
         'scopes' => [
             'available' => ['trips:read', 'trips:write'],
-            // `default` is isRequired()->cannotBeEmpty(): there is no way to say "no scope
-            // unless one is asked for". A client that omits `scope` therefore always gets
-            // something, and the least of the two is the read one. The consent screen shows
-            // the scopes league resolved, not the ones the request asked for, precisely so
-            // this default is never granted silently.
-            'default' => ['trips:read'],
+            // NOT a per-request default. `AddClientDefaultScopesListener` stamps this list
+            // onto a CLIENT that declares no scopes of its own, at save time — and a client
+            // registered through a Client ID Metadata Document declares none. Restricting it
+            // to the read scope here would quietly make every such client read-only, whatever
+            // the user consented to.
+            //
+            // What stops this list from being granted to a request that asked for nothing is
+            // not the value: `default` is isRequired()->cannotBeEmpty(), there is no empty to
+            // choose. It is App\EventListener\OAuthConsentListener, which refuses an
+            // authorization request that names no scope.
+            'default' => ['trips:read', 'trips:write'],
         ],
         'persistence' => [
             'doctrine' => null,

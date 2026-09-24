@@ -133,6 +133,12 @@
     route {
         # Matches requests for HTML documents, for static files and for Next.js files,
         # except for known API paths and paths with extensions handled by API Platform.
+        # /oauth/authorize is excluded because it is the one BACKEND endpoint a browser
+        # navigates to directly (ADR-079): it sends `Accept: text/html` like any page and
+        # would otherwise be proxied to Next.js, which has no such route. The consent SCREEN
+        # it redirects to (/oauth/consent/<handle>) is a PWA page and stays on this side; the
+        # API resource behind that screen is /oauth/pending-authorizations/*, named so the
+        # two can never be told apart by a single letter.
         # /api/auth/* are the Next.js BFF auth route handlers (ADR-053), hit by JSON fetch
         # (Accept: */*) so they miss the text/html branch and must be forced to the PWA.
         # Scoped to /api/auth/* on purpose: the backend serves /api/health and /api/healthz
@@ -141,6 +147,8 @@
                 header({'Accept': '*text/html*'})
                 && !path(
                     '/docs*', '/graphql*', '/bundles*', '/contexts*', '/_profiler*', '/_wdt*',
+                    '/oauth/authorize', '/oauth/token', '/.well-known/oauth-protected-resource*',
+                    '/.well-known/oauth-authorization-server',
                     '*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
                 )
             )
