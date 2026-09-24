@@ -120,11 +120,21 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'cache_pool' => 'cache.rate_limiter',
             ],
             // The code exchange is anonymous by construction: it authenticates the client
-            // with a code and a PKCE verifier, so there is no account to key on.
+            // with a code and a PKCE verifier, so there is no account to key on. Generous,
+            // because a legitimate agent refreshes on its own schedule and several may share
+            // one address behind a NAT.
             'oauth_token' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,
                 'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // The authorization endpoint is crossed twice per grant and a person is reading a
+            // screen in between, so this bounds a loop rather than ordinary use.
+            'oauth_authorize' => [
+                'policy' => 'sliding_window',
+                'limit' => 30,
+                'interval' => '300 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
             'health_liveness' => [
