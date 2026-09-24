@@ -102,6 +102,31 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '3600 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // Resolving a Client ID Metadata Document is an outbound request to a host the
+            // caller named (ADR-079). Two budgets, both needed and for different victims:
+            // per user, because each distinct client id is a row in `oauth2_client` and one
+            // account could otherwise fill the table; per host, because the server on the
+            // other end is a third party we are making requests to.
+            'oauth_client_metadata_user' => [
+                'policy' => 'sliding_window',
+                'limit' => 20,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            'oauth_client_metadata_host' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // The code exchange is anonymous by construction: it authenticates the client
+            // with a code and a PKCE verifier, so there is no account to key on.
+            'oauth_token' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,

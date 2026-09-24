@@ -41,6 +41,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 600, // 10 minutes
                 ],
+                // Client ID Metadata Documents. Caching them is not an optimisation: it is
+                // what stops an authorization loop from hammering a third party's server,
+                // and what keeps a slow one out of the request path. The lifetime comes
+                // from the document's own Cache-Control, clamped by the resolver — this is
+                // only the floor for a document that says nothing.
+                'cache.oauth_client_metadata' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 900, // 15 minutes
+                ],
             ],
         ],
     ]);

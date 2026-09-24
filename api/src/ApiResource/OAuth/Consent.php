@@ -32,23 +32,23 @@ use App\State\OAuth\ConsentProvider;
             uriTemplate: '/oauth/pending-authorizations/{handle}/approve',
             status: 204,
             openapi: new Operation(summary: 'Grant the pending authorization, then follow continueUrl.'),
-            // The decision itself, rather than a path suffix the processor would have to
-            // parse back out of the operation.
-            extraProperties: ['consent_granted' => true],
             input: false,
             output: false,
             read: false,
             processor: ConsentDecisionProcessor::class,
+            // The decision itself, rather than a path suffix the processor would have to
+            // parse back out of the operation.
+            extraProperties: ['consent_granted' => true],
         ),
         new Post(
             uriTemplate: '/oauth/pending-authorizations/{handle}/deny',
             status: 204,
             openapi: new Operation(summary: 'Refuse the pending authorization, then follow continueUrl.'),
-            extraProperties: ['consent_granted' => false],
             input: false,
             output: false,
             read: false,
             processor: ConsentDecisionProcessor::class,
+            extraProperties: ['consent_granted' => false],
         ),
     ],
 )]
