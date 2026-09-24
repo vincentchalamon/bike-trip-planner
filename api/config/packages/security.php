@@ -62,6 +62,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             // not the user — there is no session or bearer to present. access_control is
             // global, so without this line the catch-all below would 401 every exchange.
             ['path' => '^/oauth/token$', 'roles' => 'PUBLIC_ACCESS'],
+            // Discovery is what a client reads BEFORE it has any credential: the address of
+            // the authorization server, and whether PKCE is supported at all. Closed, the
+            // flow cannot start.
+            ['path' => '^/\.well-known/oauth-(authorization-server|protected-resource)', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],
     ]);

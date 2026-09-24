@@ -55,6 +55,11 @@
         <env name="OPENAI_API_KEY" value=""/>
         <!-- ###- symfony/ai-open-ai-platform ### -->
 
+        <!-- The OAuth issuer is derived from this, and an issuer is https everywhere it
+             matters. api/.env leaves it on http for a dev machine; pinning it here keeps the
+             discovery documents under test in the shape a client will actually validate. -->
+        <env name="DEFAULT_URI" value="https://localhost"/>
+
         <!-- The authorization server's own keypair, in its own directory. The Flex recipe
              points these at config/jwt, i.e. at Lexik's keys; sharing them would make a PWA
              session token verify on /mcp and an agent token verify on the REST API. The

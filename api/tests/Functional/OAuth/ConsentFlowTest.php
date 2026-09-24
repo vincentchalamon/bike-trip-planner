@@ -92,6 +92,8 @@ final class ConsentFlowTest extends ApiTestCase
         $response = $this->authorize();
 
         self::assertResponseStatusCodeSame(302);
+        // No `iss`, and the exact shape says why: this redirect goes to our own consent
+        // screen, not back to the client, so it is not an authorization response.
         self::assertMatchesRegularExpression(
             '#^https://localhost/oauth/consent/[0-9a-f]{64}$#',
             $this->location($response),
@@ -153,6 +155,9 @@ final class ConsentFlowTest extends ApiTestCase
         self::assertStringStartsWith(self::REDIRECT_URI.'?', $location);
         self::assertStringContainsString('code=', $location);
         self::assertStringContainsString('state=opaque-state', $location);
+        // RFC 9207: a client talking to more than one authorization server cannot otherwise
+        // tell which one answered, which is what a mix-up attack exploits. league emits none.
+        self::assertStringContainsString('iss=https%3A%2F%2Flocalhost', $location);
     }
 
     #[Test]
@@ -164,7 +169,10 @@ final class ConsentFlowTest extends ApiTestCase
         $response = $this->authorize();
 
         self::assertResponseStatusCodeSame(302);
-        self::assertStringContainsString('error=access_denied', $this->location($response));
+        $location = $this->location($response);
+        self::assertStringContainsString('error=access_denied', $location);
+        // Error responses carry it too: a client must be able to tell who refused.
+        self::assertStringContainsString('iss=https%3A%2F%2Flocalhost', $location);
     }
 
     /**
