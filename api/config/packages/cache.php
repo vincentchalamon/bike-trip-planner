@@ -46,6 +46,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // and what keeps a slow one out of the request path. The lifetime comes
                 // from the document's own Cache-Control, clamped by the resolver — this is
                 // only the floor for a document that says nothing.
+                // A destructive tool call that was answered with an impact summary instead of
+                // being carried out, waiting to be called again with the token it handed back
+                // (ADR-080). Five minutes is a round trip through a model, not a human
+                // deliberation: the token says the arguments have not moved, nothing more.
+                'cache.mcp_confirmation' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 300, // 5 minutes
+                ],
                 'cache.oauth_client_metadata' => [
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 900, // 15 minutes
@@ -72,6 +80,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'cache.routing' => [
                         'adapter' => 'cache.adapter.array',
                     ],
+                    // cache.mcp_confirmation stays on Redis under test for the same reason as
+                    // cache.oauth_consent below: the token is written by one tool call and
+                    // spent by the next, and an array adapter forgets it in between.
+                    //
                     // cache.oauth_consent stays on Redis under test, deliberately. The
                     // consent is written by one request and read by the next, and the test
                     // environment resets every service implementing ResetInterface after
