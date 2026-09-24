@@ -9,6 +9,7 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GeocodeResult;
 use App\Service\NominatimThrottle;
 use App\State\Mcp\McpArguments;
+use App\State\Mcp\ThirdPartyText;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -102,12 +103,18 @@ final readonly class GeocodeSearchProvider implements ProviderInterface
             throw new HttpException(Response::HTTP_BAD_GATEWAY, 'Geocoding service unavailable');
         }
 
+        // Cleaned here, at the boundary where OpenStreetMap's text enters this application,
+        // rather than at a projection further down. `search_places` is the one tool marked
+        // `openWorldHint`, so this is the one place the answer is built out of a third party's
+        // strings and the only sensible home for the hygiene every other third-party label in
+        // the unit gets. `name` and `displayName` are both labels — a full address runs long
+        // but stays well inside the cap, which is what the cap is for.
         return array_map(
             static fn (array $place): GeocodeResult => new GeocodeResult(
-                name: $place['name'] ?? '',
+                name: ThirdPartyText::clean($place['name'] ?? null) ?? '',
                 lat: (float) ($place['lat'] ?? 0),
                 lon: (float) ($place['lon'] ?? 0),
-                displayName: $place['display_name'] ?? '',
+                displayName: ThirdPartyText::clean($place['display_name'] ?? null) ?? '',
                 type: $place['addresstype'] ?? $place['type'] ?? 'place',
             ),
             $data,
