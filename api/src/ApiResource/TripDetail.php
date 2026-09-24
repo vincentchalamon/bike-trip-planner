@@ -45,15 +45,19 @@ use App\State\TripDetailProvider;
             // provider and the call dies with `Trip "" not found.` — a McpTool receives its
             // uri variables, a McpResource does not (Mcp\Server\Handler, `if (!$isResource)`).
             uriVariables: ['id' => new Link(fromClass: TripDetail::class)],
-            // Same expression as the HTTP operation above, and that is the point of ADR-063:
-            // authorization is a property of the domain, so it survives a change of transport.
+            // Ownership only, and the same expression as the HTTP operation above — which is
+            // the point of ADR-063: authorization belongs to the domain, so it survives a
+            // change of transport. The scope is NOT repeated here; it is enforced before the
+            // MCP server ever runs (App\EventListener\McpInsufficientScopeListener), so a
+            // call without it touches no provider.
+            //
             // At listing time `id` is undefined, which raises a SyntaxError that
-            // ExpressionAccessChecker swallows on purpose — the tool stays listed and the
+            // ExpressionAccessChecker swallows on purpose: the tool stays listed and the
             // expression is enforced on tools/call.
             security: "is_granted('TRIP_VIEW', id)",
             provider: TripDetailProvider::class,
-            // The scope this tool consumes. Read here rather than repeated inside the
-            // expression above, so there is one source of truth for what a token must carry.
+            // The single source of truth for what a token must carry to call this tool.
+            // Read back by McpToolScopes; nobody keeps a second list beside it.
             extraProperties: ['mcp_scope' => 'trips:read'],
         ),
     ],

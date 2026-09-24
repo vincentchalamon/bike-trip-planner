@@ -62,7 +62,7 @@ final class McpToolCallTest extends ApiTestCase
     {
         $response = $this->call($this->rpc('tools/list'), 'tools/list');
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertSame(401, $response->getStatusCode());
 
         $challenge = (string) ($response->getHeaders(false)['www-authenticate'][0] ?? '');
         // The one parameter the whole flow hangs off: it names the document that names the
@@ -85,9 +85,9 @@ final class McpToolCallTest extends ApiTestCase
     #[Test]
     public function aPwaSessionTokenOpensNothingHere(): void
     {
-        $this->call($this->rpc('tools/list'), 'tools/list', $this->ownerSessionJwt);
+        $response = $this->call($this->rpc('tools/list'), 'tools/list', $this->ownerSessionJwt);
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertSame(401, $response->getStatusCode());
     }
 
     #[Test]
@@ -103,7 +103,10 @@ final class McpToolCallTest extends ApiTestCase
             'get_trip',
         );
 
-        self::assertResponseIsSuccessful();
+        // On the response object, not assertResponseStatusCodeSame(): issuing the token
+        // creates a second client, and the assertion helpers look at the last one CREATED
+        // rather than the last one used — which made this assert the token exchange.
+        self::assertSame(200, $response->getStatusCode());
 
         $payload = $response->toArray(false);
         self::assertArrayNotHasKey('error', $payload);
@@ -114,6 +117,79 @@ final class McpToolCallTest extends ApiTestCase
         self::assertStringContainsString(self::TRIP_ID, $body);
         // Pins the positive side, so the denial below cannot pass vacuously.
         self::assertStringContainsString(self::TRIP_TITLE, $body);
+    }
+
+    /**
+     * A missing permission is said out loud, with the scope that is missing: a client that
+     * is only told "no" can never ask for the right thing. The MCP specification requires
+     * 403 here, which is precisely what ADR-038 turns into a 404 everywhere else.
+     *
+     * No write tool is needed to prove it — a token carrying only the write scope calling a
+     * read tool is the same situation from the other side.
+     */
+    #[Test]
+    public function aTokenWithoutTheScopeIsToldWhichOneIsMissing(): void
+    {
+        $this->seedTrip();
+        $accessToken = $this->issueAccessTokenFor($this->owner, ['trips:write']);
+
+        $response = $this->call(
+            $this->rpc('tools/call', ['name' => 'get_trip', 'arguments' => ['id' => self::TRIP_ID]]),
+            'tools/call',
+            $accessToken,
+            'get_trip',
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('insufficient_scope', $response->toArray(false)['error'] ?? null);
+
+        $challenge = (string) ($response->getHeaders(false)['www-authenticate'][0] ?? '');
+        self::assertStringContainsString('error="insufficient_scope"', $challenge);
+        self::assertStringContainsString('scope="trips:read"', $challenge);
+        self::assertStringContainsString('resource_metadata=', $challenge);
+    }
+
+    /**
+     * The prerequisite the programme names as non-negotiable: on the MCP path, someone
+     * else's trip and a trip that does not exist must be INDISTINGUISHABLE. Otherwise the
+     * endpoint answers "this id exists, it is just not yours" — the UUID oracle ADR-038 was
+     * written to close, reopened by a change of transport.
+     *
+     * Worth being precise about WHY it holds, because it is not ADR-038's listener doing the
+     * work: the MCP SDK catches the AccessDeniedException itself and answers a JSON-RPC
+     * error, so `kernel.exception` never sees it. Both cases come out identical because
+     * TripVoter refuses an unknown trip exactly as it refuses someone else's — the refusal
+     * happens before anything can report that the trip is missing. The assertions below pin
+     * both halves: the two answers are the same, and neither names the id or the title.
+     */
+    #[Test]
+    public function anotherUsersTripIsIndistinguishableFromNoTripAtAll(): void
+    {
+        $this->seedTrip();
+        $intruder = $this->createTestUserWithJwt('intruder@example.com')['user'];
+        $accessToken = $this->issueAccessTokenFor($intruder);
+
+        $denied = $this->body($this->call(
+            $this->rpc('tools/call', ['name' => 'get_trip', 'arguments' => ['id' => self::TRIP_ID]]),
+            'tools/call',
+            $accessToken,
+            'get_trip',
+        ));
+
+        $unknown = $this->body($this->call(
+            $this->rpc('tools/call', ['name' => 'get_trip', 'arguments' => ['id' => '01936f6e-0000-7000-8000-0000000009ff']]),
+            'tools/call',
+            $accessToken,
+            'get_trip',
+        ));
+
+        self::assertSame($denied, $unknown);
+        // Nothing in the answer distinguishes a trip that exists from one that does not.
+        self::assertStringNotContainsString(self::TRIP_ID, $denied);
+        self::assertStringNotContainsString(self::TRIP_TITLE, $denied);
+        // And an ownership refusal is not reported as a missing permission either, or the
+        // client would go and ask for a scope that would change nothing.
+        self::assertStringNotContainsString('insufficient_scope', $denied);
     }
 
     #[Test]
@@ -134,6 +210,15 @@ final class McpToolCallTest extends ApiTestCase
             self::TRIP_TITLE,
             json_encode($response->toArray(false), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
         );
+    }
+
+    /**
+     * The whole answer, so two refusals can be compared as the caller sees them rather than
+     * on a field somebody chose to look at.
+     */
+    private function body(ResponseInterface $response): string
+    {
+        return json_encode($response->toArray(false), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
     }
 
     /**
