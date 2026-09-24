@@ -9,8 +9,10 @@ use Lcobucci\JWT\Token\Parser;
 use Lcobucci\JWT\Token\RegisteredClaims;
 use Lcobucci\JWT\Token\UnsupportedHeaderFound;
 use Lcobucci\JWT\UnencryptedToken;
-use League\OAuth2\Server\AuthorizationValidators\AuthorizationValidatorInterface;
+use League\OAuth2\Server\AuthorizationValidators\BearerTokenValidator;
+use League\OAuth2\Server\CryptKeyInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
+use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
@@ -27,20 +29,36 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
  * claim is therefore not a second security decision — nothing is re-decided, and a claim
  * that cannot be read can only cause a refusal.
  *
- * Today there is exactly one resource and one issuer, so this is belt to the braces of a
- * dedicated signing key. It stops being redundant the moment a second protected resource
- * exists, which is the point at which forgetting it would be expensive.
+ * ⚠ It EXTENDS `BearerTokenValidator` for one reason, and it is not reuse: `ResourceServer`
+ * hands the public key over only to a validator that passes `instanceof BearerTokenValidator`
+ * (ResourceServer.php:41-43). A decorator that merely implemented the interface would leave
+ * the inner validator with no key at all, and every call would die on an uninitialised
+ * property rather than fail closed. Nothing inherited is used: the parent constructor runs
+ * to satisfy PHP, `setPublicKey()` is forwarded, and `validateAuthorization()` is replaced.
+ *
+ * Today this is belt to the braces of a dedicated signing key. It stops being redundant the
+ * moment a second protected resource exists, which is the point at which forgetting it would
+ * be expensive.
  */
 #[AsDecorator(decorates: 'league.oauth2_server.bearer_token_validator')]
-final readonly class AudienceCheckingValidator implements AuthorizationValidatorInterface
+final class AudienceCheckingValidator extends BearerTokenValidator
 {
     public function __construct(
         #[AutowireDecorated]
-        private AuthorizationValidatorInterface $inner,
-        private McpResource $resource,
+        private readonly BearerTokenValidator $inner,
+        private readonly McpResource $resource,
+        AccessTokenRepositoryInterface $accessTokenRepository,
     ) {
+        parent::__construct($accessTokenRepository);
     }
 
+    #[\Override]
+    public function setPublicKey(CryptKeyInterface $key): void
+    {
+        $this->inner->setPublicKey($key);
+    }
+
+    #[\Override]
     public function validateAuthorization(ServerRequestInterface $request): ServerRequestInterface
     {
         $validated = $this->inner->validateAuthorization($request);

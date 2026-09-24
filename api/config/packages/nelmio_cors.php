@@ -31,6 +31,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'If-Match',
             ],
             'expose_headers' => [
+                // How an MCP client discovers the authorization server, and how it learns
+                // which scope it is missing (ADR-079). Unexposed, a browser-based client
+                // reads a 401 or a 403 with no way forward.
+                'WWW-Authenticate',
                 'Link',
                 'X-Request-Id',
                 // The trip version a client pins back with If-Match (ADR-067). A header the
