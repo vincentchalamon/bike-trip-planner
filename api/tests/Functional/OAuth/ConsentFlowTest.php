@@ -16,6 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -39,6 +40,11 @@ final class ConsentFlowTest extends ApiTestCase
     private const string CLIENT_ID = 'https://agent.example.com/oauth/client.json';
 
     private const string REDIRECT_URI = 'http://127.0.0.1:33418/callback';
+
+    // A SECOND address the client legitimately registered. Needed to prove the handle binds
+    // the redirect_uri: swapping to an unregistered one would be refused by league first, so
+    // the test would pass without the binding existing at all.
+    private const string OTHER_REDIRECT_URI = 'https://agent.example.com/callback';
 
     private const string COOKIE = 'consent-flow-cookie';
 
@@ -74,7 +80,7 @@ final class ConsentFlowTest extends ApiTestCase
         $this->jwt = self::getContainer()->get('lexik_jwt_authentication.jwt_manager')->create($this->user);
 
         $oauthClient = new OAuthClient('Example Agent', self::CLIENT_ID, null);
-        $oauthClient->setRedirectUris(new RedirectUri(self::REDIRECT_URI));
+        $oauthClient->setRedirectUris(new RedirectUri(self::REDIRECT_URI), new RedirectUri(self::OTHER_REDIRECT_URI));
         $oauthClient->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));
         self::getContainer()->get(ClientManagerInterface::class)->save($oauthClient);
 
@@ -194,29 +200,50 @@ final class ConsentFlowTest extends ApiTestCase
 
     /**
      * The handle is derived from the request, so a decision taken for one set of arguments
-     * cannot complete another.
+     * cannot complete another. Each field of that derivation gets its own case, because a
+     * refactor that drops one would leave the others passing.
+     *
+     * `redirect_uri` is the sharp one: swapping it after consent is the classic
+     * code-exfiltration move, and league would not catch a swap between two addresses the
+     * client legitimately registered. `code_challenge` is what binds PKCE to this attempt.
+     *
+     * @return iterable<string, array{array<string, string>}>
+     */
+    public static function tamperedSecondLegs(): iterable
+    {
+        yield 'a wider scope' => [['scope' => 'trips:read trips:write']];
+        yield 'another registered redirect_uri' => [['redirect_uri' => self::OTHER_REDIRECT_URI]];
+        // S256 of a different verifier.
+        yield 'another code challenge' => [['code_challenge' => 'ZmFrZS1jaGFsbGVuZ2UtZm9yLWEtZGlmZmVyZW50LXZlcmlmaWU']];
+    }
+
+    /**
+     * @param array<string, string> $changed
      */
     #[Test]
-    public function aDecisionDoesNotTravelToADifferentRequest(): void
+    #[DataProvider('tamperedSecondLegs')]
+    public function aDecisionDoesNotTravelToADifferentRequest(array $changed): void
     {
         $handle = $this->handleFrom($this->authorize());
         $this->decide($handle, 'approve');
 
-        // Same client, same user, one more scope.
-        $wider = $this->authorize(scope: 'trips:read trips:write');
+        $second = $this->authorize(...$changed);
 
         self::assertResponseStatusCodeSame(302);
-        self::assertStringStartsWith('https://localhost/oauth/consent/', $this->location($wider));
+        self::assertStringStartsWith('https://localhost/oauth/consent/', $this->location($second));
     }
 
-    private function authorize(?string $scope = 'trips:read'): ResponseInterface
-    {
+    private function authorize(
+        ?string $scope = 'trips:read',
+        string $redirect_uri = self::REDIRECT_URI,
+        string $code_challenge = self::CODE_CHALLENGE,
+    ): ResponseInterface {
         $query = array_filter([
             'response_type' => 'code',
             'client_id' => self::CLIENT_ID,
-            'redirect_uri' => self::REDIRECT_URI,
+            'redirect_uri' => $redirect_uri,
             'state' => 'opaque-state',
-            'code_challenge' => self::CODE_CHALLENGE,
+            'code_challenge' => $code_challenge,
             'code_challenge_method' => 'S256',
             'scope' => $scope,
         ]);

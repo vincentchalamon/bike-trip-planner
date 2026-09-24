@@ -145,6 +145,35 @@ final class TokenIssuanceTest extends ApiTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
+    /**
+     * RFC 8707 makes `resource` a client obligation, not a server one. A client that omits
+     * it is still served — this server has nowhere else a token could be for — and the token
+     * it gets is bound to the resource all the same. Every other test here sends the
+     * parameter, so without this case the accepting branch is only read, never run.
+     */
+    #[Test]
+    public function aFlowThatNeverMentionsTheResourceStillWorks(): void
+    {
+        $handle = $this->handleFrom($this->authorize(withResource: false));
+
+        $this->browser->request('POST', '/oauth/pending-authorizations/'.$handle.'/approve', [
+            'headers' => ['Authorization' => 'Bearer '.$this->jwt, 'Content-Type' => 'application/ld+json'],
+            'json' => new \stdClass(),
+        ]);
+
+        $query = parse_url($this->location($this->authorize(withResource: false)), \PHP_URL_QUERY);
+        self::assertIsString($query);
+        parse_str($query, $parameters);
+        self::assertIsString($parameters['code'] ?? null);
+
+        $token = $this->exchange($parameters['code'], withResource: false)->toArray(false);
+
+        self::assertArrayHasKey('access_token', $token);
+        // Bound to the resource anyway: the parameter says where the client INTENDS to use
+        // the token, and this server has one answer to that question either way.
+        self::assertContains('https://localhost/mcp', (array) $this->claimsOf($token['access_token'])->get('aud'));
+    }
+
     private function approvedCode(): string
     {
         $handle = $this->handleFrom($this->authorize());
@@ -164,34 +193,34 @@ final class TokenIssuanceTest extends ApiTestCase
         return $parameters['code'];
     }
 
-    private function authorize(): ResponseInterface
+    private function authorize(bool $withResource = true): ResponseInterface
     {
-        return $this->browser->request('GET', '/oauth/authorize?'.http_build_query([
+        return $this->browser->request('GET', '/oauth/authorize?'.http_build_query(array_filter([
             'response_type' => 'code',
             'client_id' => self::CLIENT_ID,
             'redirect_uri' => self::REDIRECT_URI,
             'code_challenge' => self::CHALLENGE,
             'code_challenge_method' => 'S256',
             'scope' => 'trips:read',
-            'resource' => 'https://localhost/mcp',
-        ]));
+            'resource' => $withResource ? 'https://localhost/mcp' : null,
+        ])));
     }
 
-    private function exchange(string $code, string $verifier = self::VERIFIER): ResponseInterface
+    private function exchange(string $code, string $verifier = self::VERIFIER, bool $withResource = true): ResponseInterface
     {
         // Form parameters, not a raw body: league reads `getParsedBody()`, which the PSR-7
         // bridge fills from the request's POST bag — a body string alone never reaches it,
         // and the endpoint answers `unsupported_grant_type` as if no grant had been named.
         return $this->browser->request('POST', '/oauth/token', [
             'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'extra' => ['parameters' => [
+            'extra' => ['parameters' => array_filter([
                 'grant_type' => 'authorization_code',
                 'client_id' => self::CLIENT_ID,
                 'redirect_uri' => self::REDIRECT_URI,
                 'code_verifier' => $verifier,
                 'code' => $code,
-                'resource' => 'https://localhost/mcp',
-            ]],
+                'resource' => $withResource ? 'https://localhost/mcp' : null,
+            ])],
         ]);
     }
 

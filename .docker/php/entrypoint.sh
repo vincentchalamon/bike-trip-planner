@@ -50,16 +50,24 @@ esac
 # This is not a hypothetical slip: league/oauth2-server-bundle's own Flex recipe writes
 # exactly that, defaulting both OAUTH_* paths to config/jwt. Compare the bytes, not the
 # paths — two secrets can be mounted from one source file.
-if [ -r "${OAUTH_PUBLIC_KEY:-}" ] && [ -r "${JWT_PUBLIC_KEY:-}" ] \
-	&& cmp -s "$OAUTH_PUBLIC_KEY" "$JWT_PUBLIC_KEY"; then
+#
+# The keys have to be READABLE before they can be compared, and an unreadable one is a
+# refusal rather than a skipped check: a bad secret mount or a wrong file mode would
+# otherwise turn a clear message here into an opaque 500 on the first /oauth/* request,
+# which is exactly the failure the rest of this script exists to avoid.
+if [ ! -r "${OAUTH_PRIVATE_KEY:-}" ] || [ ! -r "${OAUTH_PUBLIC_KEY:-}" ]; then
+	echo 'FATAL: OAUTH_PRIVATE_KEY and OAUTH_PUBLIC_KEY must name readable files; refusing to boot (ADR-079).' >&2
+	exit 1
+fi
+
+if cmp -s "$OAUTH_PUBLIC_KEY" "$JWT_PUBLIC_KEY"; then
 	echo 'FATAL: OAUTH_PUBLIC_KEY and JWT_PUBLIC_KEY are the same key; refusing to boot (ADR-079). Generate a separate keypair for the authorization server.' >&2
 	exit 1
 fi
 
 # Same reasoning on the signing side, and it also catches a half-applied rotation where
 # only one of the two files was replaced.
-if [ -r "${OAUTH_PRIVATE_KEY:-}" ] && [ -r "${JWT_SECRET_KEY:-}" ] \
-	&& cmp -s "$OAUTH_PRIVATE_KEY" "$JWT_SECRET_KEY"; then
+if cmp -s "$OAUTH_PRIVATE_KEY" "$JWT_SECRET_KEY"; then
 	echo 'FATAL: OAUTH_PRIVATE_KEY and JWT_SECRET_KEY are the same key; refusing to boot (ADR-079).' >&2
 	exit 1
 fi

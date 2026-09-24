@@ -51,6 +51,10 @@ final readonly class ConsentStore
     ): string {
         sort($scopes);
 
+        // Every field here is load-bearing, and each has its own case in ConsentFlowTest.
+        // Dropping `redirectUri` is the expensive one: a consent given for one registered
+        // address would then complete for another the same client registered, and the code
+        // would be delivered there.
         return hash_hmac('sha256', implode("\0", [
             $userId,
             $clientId,
