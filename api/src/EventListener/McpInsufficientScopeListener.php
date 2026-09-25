@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Security\OAuth\McpResource;
+use App\Security\OAuth\McpScopeGuard;
 use App\Security\OAuth\McpToolScopes;
+use Mcp\Schema\Wire\McpHeader;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -34,6 +36,14 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * the scope is not repeated in them, and {@see McpToolScopes} is the single source of truth.
  * A tool whose scope is not declared would be callable by any token, which is why the
  * coverage test exists.
+ *
+ * ⚠ This is NOT the enforcement, and must not become it again. It reads a header, and a
+ * header is not what the SDK dispatches on: it unwraps an encoded `Mcp-Name` before checking
+ * it, and it serves a handshake era that checks no mirror header at all and accepts batches.
+ * Measured — a read-only token reached `delete_trip` all three ways. The authority is
+ * {@see McpScopeGuard}, which judges each parsed message. What stays here is the one thing only
+ * `kernel.request` can do: answer the well-formed call with a real 403 and the
+ * `WWW-Authenticate` challenge a client acts on.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 7)]
 final readonly class McpInsufficientScopeListener
@@ -53,10 +63,11 @@ final readonly class McpInsufficientScopeListener
             return;
         }
 
-        // The addressed element's name, which the 2026-07-28 revision mirrors into a header.
-        // Reading it rather than the JSON-RPC body is safe: the SDK refuses a call whose
-        // header and body disagree (-32020) before any tool runs.
-        $scope = $this->toolScopes->requiredBy((string) $request->headers->get('Mcp-Name', ''));
+        // The addressed element's name, which the 2026-07-28 revision mirrors into a header —
+        // decoded the way the SDK decodes it before comparing it with the body, so a name a
+        // client had to wrap still gets the proper answer. A header that is absent, or that
+        // does not decode, falls through: McpScopeGuard judges what the SDK actually parsed.
+        $scope = $this->toolScopes->requiredBy(McpHeader::decode((string) $request->headers->get('Mcp-Name', '')) ?? '');
 
         if (null === $scope || $this->security->isGranted(McpToolScopes::role($scope))) {
             return;
