@@ -117,6 +117,13 @@ SDK and returned as a JSON-RPC error, never reaching the kernel's exception path
 first also means a call with the wrong scope runs no provider — which is what will matter when
 tools start writing.
 
+*Amended in unit 3C.* Deciding before the server meant deciding on the `Mcp-Name` header, and
+that turned out not to be enforcement: the SDK unwraps an encoded name before checking it,
+and serves a handshake era that checks no mirror header and accepts batches. A read-only
+token reached `delete_trip` all three ways. The authority is now a decorator of the MCP
+handler, which judges each message the SDK has parsed; the listener keeps the one thing only
+`kernel.request` can do — answer the well-formed call with 403 and `WWW-Authenticate`.
+
 Each tool declares the scope it consumes, once, on itself. The map is read back from the
 metadata and a CI guard refuses a tool that declares none.
 

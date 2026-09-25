@@ -9,6 +9,7 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
+use App\Security\OAuth\McpScopeGuard;
 use App\State\Mcp\McpConfirmationProcessor;
 use App\State\Mcp\McpDeserializeProvider;
 use App\State\PreconditionProcessor;
@@ -144,6 +145,21 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpDeserializeProvider::class)
         ->decorate('api_platform.state_provider.main', null, 250)
         ->args([service(McpDeserializeProvider::class.'.inner')])
+        ->autowire()
+        ->autoconfigure(false);
+
+    // The scope is decided on each message the SDK has parsed, not on the `Mcp-Name` header: the
+    // SDK unwraps an encoded header before checking it, and serves a handshake era that checks
+    // none and accepts batches (see McpScopeGuard). One handler invocation per message is the
+    // only place all three are the same thing.
+    //
+    // Decoration moves the `mcp.request_handler` tag onto the decorator — it is a role tag, and
+    // DecoratorServicePass hands those over — so the SDK collects the guard, not the handler it
+    // wraps. `autoconfigure(false)` because the bundle autoconfigures every
+    // RequestHandlerInterface with that same tag, and `load()` has already discovered the class.
+    $services->set(McpScopeGuard::class)
+        ->decorate('api_platform.mcp.handler')
+        ->args([service(McpScopeGuard::class.'.inner')])
         ->autowire()
         ->autoconfigure(false);
 
