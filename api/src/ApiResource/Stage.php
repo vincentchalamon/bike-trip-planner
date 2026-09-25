@@ -16,6 +16,7 @@ use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Response;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Mcp\AddWaypointInput;
 use App\ApiResource\Mcp\EditStagesInput;
 use App\ApiResource\Model\Coordinate;
 use App\Enum\AlertGroup;
@@ -28,6 +29,7 @@ use App\State\RestDayInsertProcessor;
 use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
+use App\State\Mcp\McpAddWaypointProcessor;
 use App\State\Mcp\McpDeserializeProvider;
 use App\State\Mcp\McpEditStagesProcessor;
 use App\State\Mcp\StageDetailProjectionProvider;
@@ -244,6 +246,38 @@ use Symfony\Component\Uid\Uuid;
                 // of the five branches' requirements applies — that is, the strictest. It costs
                 // nothing: all five demanded both already.
                 PreconditionProcessor::EXTRA_PROPERTY => true,
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
+        'add_waypoint' => new McpTool(
+            name: 'add_waypoint',
+            description: <<<'TEXT'
+                Reroute one day of a trip so it passes through a given place -- a viewpoint, a
+                village, a point of interest `get_stage` lists for that day. The new route is
+                computed in the background; the day's distance and climbing change once it comes
+                back. This does not move the trip version, so an edit you were about to make with
+                the version you hold stays valid.
+                TEXT,
+            // No hints. `idempotentHint` would read as "retry freely", and every call dispatches
+            // another routing request: the second one is not free, even where the result is the
+            // same. A hint is the one thing a client acts on without checking.
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/poi-waypoint',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
+            ],
+            security: "is_granted('TRIP_EDIT', tripId)",
+            input: AddWaypointInput::class,
+            validate: true,
+            // The same provider as the HTTP twin, so a day that does not exist is reported as
+            // missing before any message is dispatched.
+            provider: StageProvider::class,
+            processor: McpAddWaypointProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => StagePoiWaypointRequest::class,
+                // The lock applies even though the precondition does not: rerouting a day is
+                // rewriting the trip's content, and the two flags answer different questions.
                 TripLockProcessor::EXTRA_PROPERTY => true,
             ],
         ),
