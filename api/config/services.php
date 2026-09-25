@@ -9,6 +9,7 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
+use App\Security\OAuth\McpCallBudget;
 use App\Security\OAuth\McpScopeGuard;
 use App\Serializer\Mcp\McpTextFloor;
 use App\State\Mcp\McpConfirmationProcessor;
@@ -161,6 +162,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpScopeGuard::class)
         ->decorate('api_platform.mcp.handler')
         ->args([service(McpScopeGuard::class.'.inner')])
+        ->autowire()
+        ->autoconfigure(false);
+
+    // Counted per parsed message, like the scope. Priority 10 places it INSIDE the scope guard
+    // (the lowest priority is the outermost): a call refused for its scope spends no budget.
+    $services->set(McpCallBudget::class)
+        ->decorate('api_platform.mcp.handler', null, 10)
+        ->args([service(McpCallBudget::class.'.inner')])
         ->autowire()
         ->autoconfigure(false);
 

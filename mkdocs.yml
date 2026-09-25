@@ -160,6 +160,7 @@ nav:
       - adr/adr-078-what-an-etag-promises.md
       - adr/adr-079-authorizing-an-agent-without-giving-it-a-session.md
       - adr/adr-080-thirteen-tools-and-everything-that-is-not-one.md
+      - adr/adr-081-what-an-agent-can-make-the-server-believe-say-and-do.md
   - Spikes:
       - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
   - Runbooks:
