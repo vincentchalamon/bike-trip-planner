@@ -10,6 +10,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
 use App\Security\OAuth\McpScopeGuard;
+use App\Serializer\Mcp\McpTextFloor;
 use App\State\Mcp\McpConfirmationProcessor;
 use App\State\Mcp\McpDeserializeProvider;
 use App\State\PreconditionProcessor;
@@ -161,6 +162,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->decorate('api_platform.mcp.handler')
         ->args([service(McpScopeGuard::class.'.inner')])
         ->autowire()
+        ->autoconfigure(false);
+
+    // The serializer MCP tool answers go through, handed to StructuredContentProcessor alone by
+    // App\DependencyInjection\McpTextFloorPass. `autoconfigure(false)` is load-bearing: the
+    // class implements NormalizerInterface and EncoderInterface, so autoconfiguration would tag
+    // it into the application's serializer chain — the one REST uses, and the one it wraps.
+    $services->set(McpTextFloor::class)
+        ->args([service('api_platform.serializer')])
+        ->autowire(false)
         ->autoconfigure(false);
 
     // Two implementations exist since the persisting decorator (ADR-071), so the interface

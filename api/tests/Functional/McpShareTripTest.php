@@ -70,6 +70,32 @@ final class McpShareTripTest extends ApiTestCase
     }
 
     /** Asked twice means asked twice: the first call is a question, not a quiet rehearsal. */
+    /**
+     * The property unit 3C states rather than discovers, written as a test so it cannot be
+     * forgotten: a `trips:write` token is a key to EVERY trip of its user, for every write, and
+     * sharing — the one write that puts a trip in front of the world — takes one call and no
+     * confirmation.
+     *
+     * The token was obtained while working on one trip; the other trip was never mentioned to
+     * the agent. It shares it anyway. This passes on purpose: there is no per-trip consent and
+     * none is planned (ADR-079), and sharing is not confirmed because it destroys nothing. What
+     * bounds an agent obeying text planted in a POI name is the scope granted at consent — a
+     * client given `trips:read` alone cannot do this — not the filtering of that text.
+     */
+    #[Test]
+    public function aWriteTokenSharesAnyTripOfItsUserInOneCall(): void
+    {
+        $other = '01936f6e-0000-7000-8000-0000000009b2';
+        $this->seedTrip($other);
+
+        $this->structured($this->tool('share_trip', ['tripId' => self::TRIP_ID]));
+        $link = $this->structured($this->tool('share_trip', ['tripId' => $other]));
+
+        self::assertIsString($link['shortCode'] ?? null);
+        self::assertArrayNotHasKey('confirmationToken', $link);
+        self::assertSame(200, $this->anonymous('/s/'.$link['shortCode'])->getStatusCode());
+    }
+
     #[Test]
     public function revokingAsksFirstAndChangesNothing(): void
     {
@@ -189,16 +215,16 @@ final class McpShareTripTest extends ApiTestCase
         return $this->client->request('GET', $path, ['headers' => ['Accept' => 'application/ld+json']]);
     }
 
-    private function seedTrip(): void
+    private function seedTrip(string $tripId = self::TRIP_ID): void
     {
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
-        $repo->initializeTrip(self::TRIP_ID, $request);
-        $repo->storeTitle(self::TRIP_ID, 'Traversée du Vercors');
-        $repo->storeStatus(self::TRIP_ID, 'ready');
-        $this->associateTripWithUser(self::TRIP_ID, $this->owner);
+        $repo->initializeTrip($tripId, $request);
+        $repo->storeTitle($tripId, 'Traversée du Vercors');
+        $repo->storeStatus($tripId, 'ready');
+        $this->associateTripWithUser($tripId, $this->owner);
     }
 }

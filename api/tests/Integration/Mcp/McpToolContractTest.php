@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Mcp;
 
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Validator\Mapping\ClassMetadataInterface;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints\AbstractComparison;
 use ApiPlatform\Metadata\HttpOperation;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\Operation;
@@ -11,6 +15,16 @@ use ApiPlatform\Metadata\Property\Factory\PropertyMetadataFactoryInterface;
 use ApiPlatform\Metadata\Property\Factory\PropertyNameCollectionFactoryInterface;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use ApiPlatform\Metadata\Resource\Factory\ResourceNameCollectionFactoryInterface;
+use App\ApiResource\Mcp\CategoryStatus;
+use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
+use App\ApiResource\Mcp\ConfirmationChallenge;
+use App\ApiResource\Mcp\ShareLink;
+use App\ApiResource\Mcp\StageDetail;
+use App\ApiResource\Mcp\StageDigest;
+use App\ApiResource\Mcp\TripCreated;
+use App\ApiResource\Mcp\TripDigest;
+use App\ApiResource\Mcp\TripImpact;
+use App\ApiResource\Mcp\WriteAcknowledgement;
 use App\State\Mcp\McpArguments;
 use App\State\Mcp\McpDeserializeProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,6 +52,48 @@ final class McpToolContractTest extends KernelTestCase
      * hints, and a client that would have rendered a confirmation prompt does not.
      */
     private const array KNOWN_ANNOTATIONS = ['title', 'readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'];
+
+    /** The one phrase that labels a field as data. One spelling, so its absence can be tested. */
+    private const string DATA_FORMULA = 'never an instruction';
+
+    /**
+     * Fields of MCP answers whose every value the server writes itself.
+     *
+     * @var list<string>
+     */
+    private const array SERVER_VOCABULARY = [
+        // Identifiers, tokens and addresses the server mints.
+        TripDigest::class.'::id',
+        StageDigest::class.'::stageId',
+        StageDetail::class.'::id',
+        TripCreated::class.'::id',
+        TripImpact::class.'::tripId',
+        ShareLink::class.'::url',
+        ShareLink::class.'::shortCode',
+        ConfirmationChallenge::class.'::confirmationToken',
+        ChallengeOrAcknowledgement::class.'::confirmationToken',
+        // Fixed vocabularies: statuses, families, accommodation slugs.
+        TripDigest::class.'::status',
+        TripDigest::class.'::enabledAccommodationTypes',
+        CategoryStatus::class.'::category',
+        CategoryStatus::class.'::status',
+        // Prose written by the server itself, from constants.
+        ConfirmationChallenge::class.'::action',
+        ChallengeOrAcknowledgement::class.'::action',
+        ChallengeOrAcknowledgement::class.'::result',
+        ChallengeOrAcknowledgement::class.'::nextAction',
+        TripCreated::class.'::result',
+        TripCreated::class.'::nextAction',
+        WriteAcknowledgement::class.'::result',
+        WriteAcknowledgement::class.'::nextAction',
+        // Numbers and forecast codes in an object of their own.
+        StageDetail::class.'::startPoint',
+        StageDetail::class.'::endPoint',
+        StageDetail::class.'::weather',
+        // Lists of this namespace's own classes, each checked as a class in its own right.
+        TripDigest::class.'::categoryStatus',
+        TripDigest::class.'::stages',
+    ];
 
     /**
      * Authorizing through `object` reopens the UUID oracle that ADR-038 closed.
@@ -250,11 +306,222 @@ final class McpToolContractTest extends KernelTestCase
         self::assertSame([], $offenders, "Published argument(s) that cannot land:\n  ".implode("\n  ", $offenders));
     }
 
+    /**
+     * Every tool names the class it answers with.
+     *
+     * `tools/list` builds a tool's `outputSchema` from `output:` and falls back to the resource
+     * class when there is none. No tool answers with its resource class — they answer with a
+     * projection, an acknowledgement or a challenge — so the fallback always publishes a schema
+     * that describes something else. It did, for every tool: `get_stage` announced the geometry
+     * its projection drops, and `get_trip` announced arrays its answer delivered as objects.
+     * {@see \App\Tests\Functional\McpOutputSchemaTest} checks the answers against the result.
+     */
+    #[Test]
+    public function everyToolDeclaresTheClassItAnswersWith(): void
+    {
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            $output = $operation->getOutput();
+            $class = \is_array($output) ? ($output['class'] ?? null) : null;
+
+            if (!\is_string($class) || !class_exists($class)) {
+                $offenders[] = $name;
+            }
+        }
+
+        self::assertSame([], $offenders, \sprintf(
+            'MCP tool(s) with no `output:` class: %s. Without one, `tools/list` publishes the schema of the resource class instead.',
+            implode(', ', $offenders),
+        ));
+    }
+
+    /**
+     * Every string an agent reads is either declared as data, or is the server's own vocabulary.
+     *
+     * The descriptions are the one channel a model reads as instructions, so that is where
+     * third-party text has to be labelled — once, with one formula, so that a missing label is
+     * something a test can see. A field can carry text only three ways: a string, an array, or
+     * an object this namespace does not own (an OSM accommodation, a resupply point). Each such
+     * field on an MCP answer class carries the formula, or is listed in
+     * {@see self::SERVER_VOCABULARY} — a decision per field, made here, where it is reviewed.
+     *
+     * An answer class outside this namespace (`TripListItem`, `GeocodeResult`) is a REST
+     * contract whose descriptions are not ours to rewrite for one client; for those, the tool's
+     * own description carries the formula for the whole answer.
+     */
+    #[Test]
+    public function everyStringAnAgentReadsIsDeclaredDataOrServerVocabulary(): void
+    {
+        $metadata = self::getContainer()->get('api_platform.metadata.property.metadata_factory');
+        self::assertInstanceOf(PropertyMetadataFactoryInterface::class, $metadata);
+
+        $offenders = [];
+        $seen = [];
+
+        foreach (glob(\dirname(__DIR__, 3).'/src/ApiResource/Mcp/*.php') ?: [] as $file) {
+            $class = 'App\\ApiResource\\Mcp\\'.basename($file, '.php');
+
+            // Arguments travel the other way: an agent writes them, it does not read them.
+            if (str_ends_with($class, 'Input') || !class_exists($class)) {
+                continue;
+            }
+
+            foreach (new \ReflectionClass($class)->getProperties() as $property) {
+                $field = $class.'::'.$property->getName();
+                $seen[] = $field;
+
+                if (!$this->canCarryText($property->getType()) || \in_array($field, self::SERVER_VOCABULARY, true)) {
+                    continue;
+                }
+
+                if (!str_contains($metadata->create($class, $property->getName())->getDescription() ?? '', self::DATA_FORMULA)) {
+                    $offenders[] = $field;
+                }
+            }
+        }
+
+        foreach ($this->tools() as $name => $operation) {
+            $output = $operation->getOutput();
+            $class = \is_array($output) ? ($output['class'] ?? null) : null;
+
+            if (\is_string($class) && !str_starts_with($class, 'App\\ApiResource\\Mcp\\') && !str_contains($operation->getDescription() ?? '', self::DATA_FORMULA)) {
+                $offenders[] = \sprintf('%s (tool description, answering %s)', $name, $class);
+            }
+        }
+
+        self::assertSame([], $offenders, \sprintf(
+            "Text an agent reads that is neither labelled nor declared server vocabulary:\n  %s\n".
+            'Add "%s" to its description, or list it in SERVER_VOCABULARY if the server writes every value of it.',
+            implode("\n  ", $offenders),
+            self::DATA_FORMULA,
+        ));
+
+        self::assertSame([], array_values(array_diff(self::SERVER_VOCABULARY, $seen)), 'SERVER_VOCABULARY names a field that no longer exists.');
+    }
+
+    /**
+     * No validation message a tool can produce repeats what was sent.
+     *
+     * A refused validation reaches the model as the JSON-RPC `error.message`, verbatim — the
+     * server speaking. A constraint whose message carries `{{ value }}` would quote the caller's
+     * value there, unbounded; `{{ compared_value }}` would quote another submitted field. None
+     * does today, and that is luck rather than rule: `Assert\GreaterThan` on the trip's end date
+     * is one literal `message:` away from echoing the start date. Bounds (`{{ limit }}`,
+     * `{{ min }}`) are the server's own and stay allowed.
+     */
+    #[Test]
+    public function noValidationMessageRepeatsWhatWasSent(): void
+    {
+        $validator = self::getContainer()->get('validator');
+        self::assertInstanceOf(ValidatorInterface::class, $validator);
+
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            if (true !== $operation->canValidate()) {
+                continue;
+            }
+
+            $classes = array_filter([$this->inputClass($operation), $operation->getExtraProperties()[McpDeserializeProvider::INPUT] ?? null], \is_string(...));
+
+            foreach (array_unique($classes) as $class) {
+                $metadata = $validator->getMetadataFor($class);
+                self::assertInstanceOf(ClassMetadataInterface::class, $metadata);
+
+                $constraints = $metadata->getConstraints();
+                foreach ($metadata->getConstrainedProperties() as $property) {
+                    foreach ($metadata->getPropertyMetadata($property) as $propertyMetadata) {
+                        $constraints = [...$constraints, ...$propertyMetadata->getConstraints()];
+                    }
+                }
+
+                foreach ($this->echoingMessages($constraints) as $message) {
+                    $offenders[] = \sprintf('%s (%s): %s', $name, $class, $message);
+                }
+            }
+        }
+
+        self::assertSame([], array_values(array_unique($offenders)), "Validation message(s) that would quote a submitted value to the model:\n  ".implode("\n  ", array_unique($offenders)));
+    }
+
     /** Guards the guards: a scan that found nothing would keep every assertion above green. */
     #[Test]
     public function theScanFindsTools(): void
     {
         self::assertNotSame([], $this->tools(), 'No MCP tool was found at all — the scan is looking in the wrong place.');
+    }
+
+    /**
+     * A string, an array, or an object this namespace does not own. Numbers, booleans, dates
+     * and the namespace's own classes cannot carry text of their own — the latter are checked
+     * as classes in their own right.
+     */
+    private function canCarryText(?\ReflectionType $type): bool
+    {
+        $types = match (true) {
+            $type instanceof \ReflectionNamedType => [$type],
+            $type instanceof \ReflectionUnionType => $type->getTypes(),
+            default => [],
+        };
+
+        foreach ($types as $named) {
+            if (!$named instanceof \ReflectionNamedType) {
+                continue;
+            }
+
+            $name = $named->getName();
+
+            if (\in_array($name, ['string', 'array', 'mixed'], true)) {
+                return true;
+            }
+
+            if (!$named->isBuiltin() && !is_a($name, \DateTimeInterface::class, true) && !str_starts_with($name, 'App\\ApiResource\\Mcp\\')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Every message a constraint can emit that quotes a submitted value, nested constraints
+     * (`All`, `Sequentially`…) included.
+     *
+     * @param array<mixed> $constraints
+     *
+     * @return list<string>
+     */
+    private function echoingMessages(array $constraints): array
+    {
+        $found = [];
+
+        foreach ($constraints as $constraint) {
+            if (!$constraint instanceof Constraint) {
+                continue;
+            }
+
+            // `{{ compared_value }}` is the caller's only when a comparison reads it from another
+            // submitted field; otherwise it is a bound the server configured (a Count's divisor).
+            $comparesAField = $constraint instanceof AbstractComparison && null !== $constraint->propertyPath;
+            $echo = $comparesAField ? '/\{\{ ?(value|compared_value) ?\}\}/' : '/\{\{ ?value ?\}\}/';
+
+            foreach (get_object_vars($constraint) as $option => $value) {
+                if (\is_string($value) && str_ends_with(strtolower($option), 'message') && preg_match($echo, $value)) {
+                    $found[] = \sprintf('%s::$%s = "%s"', $constraint::class, $option, $value);
+                }
+
+                if ($value instanceof Constraint) {
+                    $value = [$value];
+                }
+
+                if (\is_array($value)) {
+                    $found = [...$found, ...$this->echoingMessages($value)];
+                }
+            }
+        }
+
+        return $found;
     }
 
     private function inputClass(Operation $operation): ?string

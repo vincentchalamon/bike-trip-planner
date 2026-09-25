@@ -42,6 +42,8 @@ use App\State\StageProvider;
 use App\State\StageSelectAccommodationProcessor;
 use App\State\StageUpdateProcessor;
 use Symfony\Component\Uid\Uuid;
+use App\ApiResource\Mcp\StageDetail;
+use App\ApiResource\Mcp\WriteAcknowledgement;
 
 #[ApiResource(
     shortName: 'Stage',
@@ -231,6 +233,7 @@ use Symfony\Component\Uid\Uuid;
             // it as "not found" in the one wording StageLocator owns.
             security: "is_granted('TRIP_EDIT', tripId)",
             input: EditStagesInput::class,
+            output: WriteAcknowledgement::class,
             // Nothing to load: which record matters depends on the action, and each of the five
             // processors reads what it needs from the repository inside its own locked section.
             read: false,
@@ -270,6 +273,7 @@ use Symfony\Component\Uid\Uuid;
             ],
             security: "is_granted('TRIP_EDIT', tripId)",
             input: AddWaypointInput::class,
+            output: WriteAcknowledgement::class,
             validate: true,
             // The same provider as the HTTP twin, so a day that does not exist is reported as
             // missing before any message is dispatched.
@@ -298,6 +302,7 @@ use Symfony\Component\Uid\Uuid;
             ],
             security: "is_granted('TRIP_EDIT', tripId)",
             input: ChooseAccommodationInput::class,
+            output: WriteAcknowledgement::class,
             validate: true,
             provider: StageProvider::class,
             processor: McpChooseAccommodationProcessor::class,
@@ -332,6 +337,7 @@ use Symfony\Component\Uid\Uuid;
             // `pre_read`, so a stage id belonging to someone else's trip is refused exactly as
             // an unknown one is — the provider never runs to report which it was.
             security: "is_granted('TRIP_VIEW', tripId)",
+            output: StageDetail::class,
             // Everything StageResponse carries except `geometry`. Serving the coordinate trail
             // would contradict this unit's own exclusion table, which keeps GET /route out of
             // the tool surface because a polyline is an artefact of a map — letting the same

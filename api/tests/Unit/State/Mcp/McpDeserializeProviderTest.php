@@ -101,7 +101,7 @@ final class McpDeserializeProviderTest extends TestCase
         $provider = $this->provider(null, ['sourceUrl']);
 
         $this->expectException(UnprocessableEntityHttpException::class);
-        $this->expectExceptionMessageMatches('/Unknown argument\(s\): dailyBudget/');
+        $this->expectExceptionMessageMatches('/Unknown argument\(s\): "dailyBudget"/');
 
         $provider->provide($this->tool(), ['id' => 'trip-1'], ['mcp_data' => [
             'sourceUrl' => 'https://www.komoot.com/tour/1',

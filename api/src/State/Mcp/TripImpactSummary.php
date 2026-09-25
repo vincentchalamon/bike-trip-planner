@@ -32,10 +32,9 @@ final readonly class TripImpactSummary
 
         return new TripImpact(
             tripId: $tripId,
-            // The title comes from Komoot, Strava or the user. It is quoted back into an
-            // answer a model will read, so it goes through the same sanitiser as every other
-            // third-party label (ADR-080 defers the injection posture to 3C; this is only
-            // about control characters and length).
+            // The title comes from Komoot, Strava or the user. The serialisation floor strips
+            // its control characters like every other string; this call adds what only a
+            // field-aware caller can decide — that it is a label, so it is capped.
             title: ThirdPartyText::clean($request?->title),
             stageCount: \count($this->trips->getStages($tripId) ?? []),
             startDate: $request?->startDate,

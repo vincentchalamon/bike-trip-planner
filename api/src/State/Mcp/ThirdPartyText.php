@@ -14,10 +14,10 @@ namespace App\State\Mcp;
  *
  * **This is not a prompt-injection defence, and must not be described as one.** It does not
  * look for instructions, because a blocklist of phrases gives false confidence and fails on
- * the first paraphrase. The full posture — delimiting third-party content as data, auditing
- * what the tool descriptions and error messages interpolate, and a test that puts a directive
- * string in a POI name and asserts it comes out inert — is unit 3C, and nothing here
- * anticipates it.
+ * the first paraphrase. Unit 3C kept that line rather than crossing it: what bounds a
+ * successful injection is the token's scope and the ownership check on every tool, and what
+ * the server owes a model is that third-party text never reaches the channels it reads as
+ * instructions — tool descriptions and error messages (ADR-081).
  *
  * What it does is narrower and actually holds: it stops a value from changing the *shape* of
  * the answer around it. A name carrying newlines can forge what looks like the end of one
@@ -32,12 +32,12 @@ namespace App\State\Mcp;
  * wherever one appears — the trip title, a stage's labels, an accommodation's, an event's —
  * and the prose beside it is not.
  *
- * Per-field calls remain the wrong long-term mechanism even so: every new field is a new
- * place to remember, and the coverage gap is invisible until someone reads for it. The alert
- * payloads, published by their producers in whatever shape they chose, are the standing
- * example. Unit 3C owns the general answer, and it has to be one that applies to a whole
- * payload — delimiting third-party content as data where it is serialised — rather than one
- * call site at a time. Nothing here should grow into a half-version of that.
+ * Coverage is not this class's job any more. Per-field calls are a list, and a list is what
+ * gets forgotten — the alert payloads, published by their producers in whatever shape they
+ * chose, went uncleaned for exactly that reason. {@see \App\Serializer\Mcp\McpTextFloor}
+ * applies {@see self::hygiene()} to every string of every MCP answer where it is serialised.
+ * What remains here is what the floor cannot know: that a field is a label, so a cap applies,
+ * and that a label left with nothing in it is absent rather than blank.
  */
 final readonly class ThirdPartyText
 {
@@ -56,19 +56,9 @@ final readonly class ThirdPartyText
             return null;
         }
 
-        // Two passes, because the two kinds of character mean opposite things — a unit test
-        // caught this: collapsing everything to a space turned "Gre\u{0007}noble" into
-        // "Gre noble", inventing a word break inside a name.
-        //
-        // Separators become one space: a label is a single line by definition, and welding
-        // "Saint-Jean\nde-Maurienne" into one word would be its own corruption.
-        $value = preg_replace('/[\r\n\t\p{Zl}\p{Zp}]+/u', ' ', $value) ?? $value;
-
-        // Everything else in the control and format categories is simply not there — a BEL, a
-        // zero-width space or a right-to-left override is not a word break, it is noise that
-        // happens to sit between two letters.
-        $value = preg_replace('/[\p{Cc}\p{Cf}]+/u', '', $value) ?? $value;
-
+        // A label is one tidy line: runs of spaces squeezed, nothing at either end. Two steps,
+        // so a failed squeeze falls back to the cleaned value rather than to the raw one.
+        $value = self::hygiene($value);
         $value = trim(preg_replace('/ {2,}/u', ' ', $value) ?? $value);
 
         if ('' === $value) {
@@ -78,5 +68,31 @@ final readonly class ThirdPartyText
         return mb_strlen($value) > self::MAX_LENGTH
             ? rtrim(mb_substr($value, 0, self::MAX_LENGTH)).'…'
             : $value;
+    }
+
+    /**
+     * The structural half alone, and nothing cosmetic: no cap, no trimming, no squeezing, and a
+     * string stays a string even when nothing is left.
+     *
+     * What {@see \App\Serializer\Mcp\McpTextFloor} applies to every string an MCP tool emits.
+     * It cannot tell a name from a description or an identifier, so it may only remove what
+     * changes the shape of an answer — never tidy what does not. A string with no control
+     * character and no line break comes out byte for byte.
+     */
+    public static function hygiene(string $value): string
+    {
+        // Two passes, because the two kinds of character mean opposite things — a unit test
+        // caught this: collapsing everything to a space turned "Gre\u{0007}noble" into
+        // "Gre noble", inventing a word break inside a name.
+        //
+        // Separators become one space: a line break is what lets a value forge the end of one
+        // field and the start of another, and welding "Saint-Jean\nde-Maurienne" into one word
+        // would be its own corruption.
+        $value = preg_replace('/[\r\n\t\p{Zl}\p{Zp}]+/u', ' ', $value) ?? $value;
+
+        // Everything else in the control and format categories is simply not there — a BEL, a
+        // zero-width space or a right-to-left override is not a word break, it is noise that
+        // happens to sit between two letters.
+        return preg_replace('/[\p{Cc}\p{Cf}]+/u', '', $value) ?? $value;
     }
 }
