@@ -18,12 +18,14 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\ApiResource\Mcp\AnalyzeTripInput;
 use App\ApiResource\Mcp\CreateTripInput;
 use App\ApiResource\Mcp\DeleteTripInput;
+use App\ApiResource\Mcp\UpdateTripSettingsInput;
 use App\State\AnalyzeTripProcessor;
 use App\State\Mcp\McpAnalyzeTripProcessor;
 use App\State\Mcp\McpConfirmationProcessor;
 use App\State\Mcp\McpCreateTripProcessor;
 use App\State\Mcp\McpDeleteTripProcessor;
 use App\State\Mcp\McpDeserializeProvider;
+use App\State\Mcp\McpUpdateTripSettingsProcessor;
 use App\State\NearbyPoiSearchProcessor;
 use App\State\TripCreation;
 use App\State\PreconditionProcessor;
@@ -254,6 +256,39 @@ use App\State\TripUpdateProcessor;
                 // directions — the same literal for two trips refuses every creation after the
                 // first, a fresh one per attempt protects nothing (ADR-077).
                 TripCreation::REQUIRES_IDEMPOTENCY_KEY => true,
+            ],
+        ),
+        'update_trip_settings' => new McpTool(
+            name: 'update_trip_settings',
+            description: <<<'TEXT'
+                Change how a trip is planned: how far per day, how much each day shortens, the
+                dates, the kinds of place to sleep in. Send only what changes; anything left out
+                keeps its value. Requires `version`, from `get_trip` or from the previous edit.
+
+                This usually recuts the whole trip: a new daily distance means new days, which
+                DISCARDS any manual split and every accommodation already chosen. Called without
+                `confirmationToken`, it changes nothing and answers with what is at stake plus a
+                token; report that to the user and call again with the token only if they agree.
+                TEXT,
+            // A PATCH that is destructive in effect, which is what the annotation describes. It
+            // is not the verb that matters to a client deciding whether to prompt.
+            annotations: ['destructiveHint' => true],
+            uriTemplate: '/trips/{id}',
+            uriVariables: ['id' => new Link(fromClass: Trip::class)],
+            security: "is_granted('TRIP_EDIT', id)",
+            input: UpdateTripSettingsInput::class,
+            validate: true,
+            // The record is the trip itself, loaded by the provider below and merged into a copy
+            // of it by McpDeserializeProvider — the only tool of the five that edits a row rather
+            // than filling a fresh request object.
+            provider: TripRequestProvider::class,
+            processor: McpUpdateTripSettingsProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => TripRequest::class,
+                PreconditionProcessor::EXTRA_PROPERTY => true,
+                TripLockProcessor::EXTRA_PROPERTY => true,
+                McpConfirmationProcessor::EXTRA_PROPERTY => 'Replan this trip with new settings. Changing the pacing recuts every day, which discards the manual day split and every accommodation already chosen for it.',
             ],
         ),
         'analyze_trip' => new McpTool(
