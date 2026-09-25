@@ -80,6 +80,7 @@ use App\State\GeocodeSearchProvider;
             // record. The firewall having already established who is calling is the whole of
             // the authorization, and saying so at the domain level is the point of ADR-063.
             security: "is_granted('ROLE_USER')",
+            output: GeocodeResult::class,
             provider: GeocodeSearchProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],
         ),

@@ -24,7 +24,7 @@ final readonly class CategoryStatus
         public string $category,
         #[ApiProperty(
             description: '`running`, `done`, `failed`, or `superseded` when the trip moved on before these computations settled — nothing failed and nothing is still running.',
-            openapiContext: ['type' => 'string', 'enum' => ['running', 'done', 'failed', 'superseded']],
+            schema: ['type' => 'string', 'enum' => ['running', 'done', 'failed', 'superseded']],
         )]
         public string $status,
     ) {

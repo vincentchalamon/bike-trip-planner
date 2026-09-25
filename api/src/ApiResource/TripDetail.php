@@ -15,6 +15,7 @@ use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\WeatherAvailability;
 use App\Enum\AlertGroup;
+use App\ApiResource\Mcp\TripDigest;
 use App\State\Mcp\TripDigestProvider;
 use App\State\TripDetailProvider;
 
@@ -63,6 +64,7 @@ use App\State\TripDetailProvider;
             // ExpressionAccessChecker swallows on purpose: the tool stays listed and the
             // expression is enforced on tools/call.
             security: "is_granted('TRIP_VIEW', id)",
+            output: TripDigest::class,
             // A projection of what TripDetailProvider returns, not a second query: `TripDetail`
             // is the REST contract and is shared with /s/{shortCode}, so it does not move.
             // What it cannot carry is the version — `ApiProperty(readable: false)` on the

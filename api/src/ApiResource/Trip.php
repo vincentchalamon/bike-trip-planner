@@ -39,6 +39,9 @@ use App\State\TripDuplicateProcessor;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
+use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
+use App\ApiResource\Mcp\TripCreated;
+use App\ApiResource\Mcp\WriteAcknowledgement;
 
 #[ApiResource(
     shortName: 'Trip',
@@ -217,6 +220,7 @@ use App\State\TripUpdateProcessor;
             // Ownership is the whole of it: the provider only ever selects the current user's
             // trips, so there is no object to authorize against and no id to leak.
             security: "is_granted('ROLE_USER')",
+            output: TripListItem::class,
             provider: TripCollectionProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],
         ),
@@ -241,6 +245,7 @@ use App\State\TripUpdateProcessor;
             // to fetch, failing three messages later where nobody is listening.
             validationContext: ['groups' => ['trip_request:create']],
             input: CreateTripInput::class,
+            output: TripCreated::class,
             // There is nothing to read. ReadProvider returns null without calling any provider
             // when this is false, which is exactly right for a creation, and the `pre_read`
             // access checker still runs because it decorates ReadProvider from outside.
@@ -277,6 +282,7 @@ use App\State\TripUpdateProcessor;
             uriVariables: ['id' => new Link(fromClass: Trip::class)],
             security: "is_granted('TRIP_EDIT', id)",
             input: UpdateTripSettingsInput::class,
+            output: ChallengeOrAcknowledgement::class,
             validate: true,
             // The record is the trip itself, loaded by the provider below and merged into a copy
             // of it by McpDeserializeProvider — the only tool of the five that edits a row rather
@@ -308,6 +314,7 @@ use App\State\TripUpdateProcessor;
             uriVariables: ['id' => new Link(fromClass: Trip::class)],
             security: "is_granted('TRIP_EDIT', id)",
             input: AnalyzeTripInput::class,
+            output: WriteAcknowledgement::class,
             validate: true,
             provider: TripRequestProvider::class,
             processor: McpAnalyzeTripProcessor::class,
@@ -338,6 +345,7 @@ use App\State\TripUpdateProcessor;
             // SDK catches the exception itself and `kernel.exception` never runs.
             security: "is_granted('TRIP_DELETE', id)",
             input: DeleteTripInput::class,
+            output: ChallengeOrAcknowledgement::class,
             validate: true,
             provider: TripDoctrineProvider::class,
             processor: McpDeleteTripProcessor::class,

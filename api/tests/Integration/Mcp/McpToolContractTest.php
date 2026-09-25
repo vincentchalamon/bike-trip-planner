@@ -250,6 +250,36 @@ final class McpToolContractTest extends KernelTestCase
         self::assertSame([], $offenders, "Published argument(s) that cannot land:\n  ".implode("\n  ", $offenders));
     }
 
+    /**
+     * Every tool names the class it answers with.
+     *
+     * `tools/list` builds a tool's `outputSchema` from `output:` and falls back to the resource
+     * class when there is none. No tool answers with its resource class — they answer with a
+     * projection, an acknowledgement or a challenge — so the fallback always publishes a schema
+     * that describes something else. It did, for every tool: `get_stage` announced the geometry
+     * its projection drops, and `get_trip` announced arrays its answer delivered as objects.
+     * {@see \App\Tests\Functional\McpOutputSchemaTest} checks the answers against the result.
+     */
+    #[Test]
+    public function everyToolDeclaresTheClassItAnswersWith(): void
+    {
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            $output = $operation->getOutput();
+            $class = \is_array($output) ? ($output['class'] ?? null) : null;
+
+            if (!\is_string($class) || !class_exists($class)) {
+                $offenders[] = $name;
+            }
+        }
+
+        self::assertSame([], $offenders, \sprintf(
+            'MCP tool(s) with no `output:` class: %s. Without one, `tools/list` publishes the schema of the resource class instead.',
+            implode(', ', $offenders),
+        ));
+    }
+
     /** Guards the guards: a scan that found nothing would keep every assertion above green. */
     #[Test]
     public function theScanFindsTools(): void

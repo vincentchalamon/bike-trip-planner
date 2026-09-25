@@ -53,7 +53,7 @@ final readonly class TripDigest
         public ?\DateTimeImmutable $endDate,
         #[ApiProperty(
             description: '"draft" until the route has been split into days, then "ready".',
-            openapiContext: ['type' => 'string', 'enum' => ['draft', 'ready']],
+            schema: ['type' => 'string', 'enum' => ['draft', 'ready']],
         )]
         public string $status,
         /**

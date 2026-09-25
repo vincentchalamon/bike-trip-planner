@@ -104,10 +104,9 @@ final class McpGetTripTest extends ApiTestCase
         $this->seedTrip();
         $this->seedComputationStatuses();
 
-        $categoryStatus = $this->getTrip()['categoryStatus'] ?? null;
-        self::assertIsArray($categoryStatus);
-        $members = $categoryStatus['member'] ?? null;
+        $members = $this->getTrip()['categoryStatus'] ?? null;
         self::assertIsArray($members);
+        self::assertTrue(array_is_list($members), 'A list, as the published schema says — not a Hydra envelope.');
         self::assertNotSame([], $members, 'Nothing to prove against — seed a status first.');
 
         foreach ($members as $entry) {
@@ -179,10 +178,11 @@ final class McpGetTripTest extends ApiTestCase
     }
 
     /**
-     * Every array property arrives wrapped in a Hydra `Collection` — the JSON-LD envelope
-     * ADR-064 recorded as unavoidable, and which `api_platform.mcp.format` still does not lift
-     * in v5.0.0: StructuredContentProcessor reads the format of the POST /mcp request, never
-     * the operation's output formats.
+     * An array property arrives as a plain list. It used to arrive wrapped in a Hydra
+     * `Collection` — an object — while the published `outputSchema` said `array`, so a client
+     * validating the answer against the schema would have refused it. Declaring the tool's
+     * `output:` class is what aligns the two: the schema is built from the class the answer is
+     * actually made of, and the arrays in it are normalised as the lists they are.
      *
      * @param array<array-key, mixed> $digest
      *
@@ -192,9 +192,9 @@ final class McpGetTripTest extends ApiTestCase
     {
         $stages = $digest['stages'] ?? null;
         self::assertIsArray($stages);
-        self::assertIsArray($stages['member'] ?? null);
+        self::assertTrue(array_is_list($stages));
 
-        $first = $stages['member'][0] ?? null;
+        $first = $stages[0] ?? null;
         self::assertIsArray($first);
 
         return $first;

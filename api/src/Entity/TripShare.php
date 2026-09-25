@@ -35,6 +35,8 @@ use App\State\TripShareShortCodeProvider;
 use App\State\TripShareStageProvider;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
+use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
+use App\ApiResource\Mcp\ShareLink;
 
 #[ORM\Entity(repositoryClass: TripShareRepository::class)]
 #[ORM\Table(name: 'trip_share')]
@@ -167,6 +169,7 @@ use Symfony\Component\Uid\Uuid;
             // and nothing masks it here).
             security: "is_granted('TRIP_EDIT', tripId)",
             input: ShareTripInput::class,
+            output: ShareLink::class,
             // The MCP handler defaults `validate` to false, which would skip every constraint
             // on the input. Nothing on a share carries one today; the declaration is what the
             // CI guard checks, and what keeps that true when one is added.
@@ -187,6 +190,7 @@ use Symfony\Component\Uid\Uuid;
             uriVariables: ['tripId' => new Link(toProperty: 'trip', fromClass: TripRequest::class)],
             security: "is_granted('TRIP_EDIT', tripId)",
             input: UnshareTripInput::class,
+            output: ChallengeOrAcknowledgement::class,
             validate: true,
             provider: TripShareProvider::class,
             processor: McpUnshareTripProcessor::class,
