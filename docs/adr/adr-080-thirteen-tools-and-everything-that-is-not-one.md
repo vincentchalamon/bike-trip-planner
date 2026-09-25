@@ -231,7 +231,10 @@ table.
   `get_trip` and `get_stage` is marked as data at the single mapping point; systematic
   delimiting, an audit of error messages and an injection test are 3C. No third-party content is
   ever interpolated into a tool description or an error message: those are instructions, not
-  data.
+  data. *Amended by [ADR-081](adr-081-what-an-agent-can-make-the-server-believe-say-and-do.md):*
+  there were four mapping points, not one, and several fields went through none of them; and a
+  caller's value was quoted back unbounded in error messages, which in an agent loop is
+  third-party text by round trip. Both are corrected there.
 - **FrankenPHP worker mode is still not exercised under load.**
 - **A `tools/call` cannot ask the human anything.** The SDK implements elicitation in full
   (`ResultType::InputRequired`), and `api-platform/mcp` exposes none of it — reachable only
