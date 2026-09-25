@@ -41,6 +41,26 @@ final readonly class McpArguments
     }
 
     /**
+     * Whether this context describes a `tools/call` rather than an HTTP request.
+     *
+     * `ApiPlatform\Mcp\Server\Handler` sets `mcp_data` for a tool call and only for a tool
+     * call — to the arguments, even when there are none — so the key's presence tells the
+     * transports apart where their contents cannot: a tool called with no arguments and an
+     * HTTP request look alike once `from()` has normalised both to an empty set.
+     *
+     * The distinction matters wherever the two transports carry the same information by
+     * different means: `$context['request']` is populated on MCP too (it is the `POST /mcp`
+     * that carried the envelope), so a guard reading a header would read the envelope's,
+     * which describes the batch rather than any one call in it.
+     *
+     * @param array<string, mixed> $context
+     */
+    public static function isToolCall(array $context): bool
+    {
+        return \array_key_exists('mcp_data', $context);
+    }
+
+    /**
      * Reads the arguments out of an operation context, whatever transport produced it.
      *
      * An HTTP call has no `mcp_data` and yields an empty set, which is what every caller
@@ -98,19 +118,24 @@ final readonly class McpArguments
     }
 
     /**
-     * The same arguments in an order that does not depend on how they were serialised.
+     * The body in an order that does not depend on how it was serialised.
      *
-     * Both the idempotency digest and the confirmation token bind to a hash of the
-     * arguments, and nothing obliges an agent to re-emit its JSON keys in the order it used
-     * the first time. Without this, a perfectly legitimate retry hashes differently: the
-     * creation answers 409 "already used for a different request body", and a valid
-     * confirmation token is refused. Recursive, because a nested object has the same problem.
+     * Both the idempotency digest and the confirmation token bind to a hash of what the call
+     * asks for, and nothing obliges an agent to re-emit its JSON keys in the order it used the
+     * first time. Without this, a perfectly legitimate retry hashes differently: the creation
+     * answers 409 "already used for a different request body", and a valid confirmation token
+     * is refused. Recursive, because a nested object has the same problem.
+     *
+     * The body, not every argument: a confirmation token binds to the arguments and is itself
+     * one, so hashing the lot would guarantee a mismatch — the call that mints the token has
+     * none, the call that spends it does. The same goes for an explicit idempotency key, which
+     * would otherwise take part in the digest meant to tell whether it was reused honestly.
      *
      * @return array<string, mixed>
      */
     public function canonical(): array
     {
-        return self::sortRecursively($this->arguments);
+        return self::sortRecursively($this->body());
     }
 
     /**

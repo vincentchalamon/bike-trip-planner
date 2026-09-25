@@ -104,6 +104,14 @@ final class IdempotencyCoverageTest extends KernelTestCase
                 foreach ($resource->getOperations() ?? [] as $name => $operation) {
                     yield $name => $operation;
                 }
+
+                // Tools live in their own bucket, which `getOperations()` does not return —
+                // and they are the transport where the flag matters most, since the key is
+                // derived there and a creation tool that skipped the check would make a trip
+                // per retry with nothing in the document to say it should not have.
+                foreach ($resource->getMcp() ?? [] as $key => $operation) {
+                    yield (\is_string($key) && '' !== $key ? $key : ($operation->getName() ?? '(unnamed tool)')) => $operation;
+                }
             }
         }
     }

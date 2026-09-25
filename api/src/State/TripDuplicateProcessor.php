@@ -59,7 +59,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
 
         // Before the limiter and before the clone: a retried duplication must answer with the
         // copy it already made, not make a second one (ADR-077).
-        $already = $this->idempotency->alreadyCreated($user, $operation);
+        $already = $this->idempotency->alreadyCreated($user, $operation, $context);
         if ($already instanceof Uuid) {
             return $this->tripFor($already->toRfc4122());
         }
@@ -135,7 +135,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 
-        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($newTripIdString));
+        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($newTripIdString), $context);
 
         // Lost the insert race: a concurrent call carrying this key recorded its copy first, and
         // the client has to be answered with that one. The copy committed at line 115 stays behind

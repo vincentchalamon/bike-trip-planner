@@ -19,6 +19,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * developer to set it. This scans the processors for the two calls that move the version —
  * `mutateStages()` and `increment()` — and checks the correspondence both ways, so neither
  * an unguarded new write nor a flag left on an operation that no longer writes can pass.
+ *
+ * MCP tools are scanned alongside the HTTP operations. The guard is the operation's flag in
+ * both cases; only how the caller states the version differs ({@see \App\Concurrency\IfMatch}).
  */
 final class PreconditionCoverageTest extends KernelTestCase
 {
@@ -117,6 +120,14 @@ final class PreconditionCoverageTest extends KernelTestCase
             foreach ($factory->create($resourceClass) as $resource) {
                 foreach ($resource->getOperations() ?? [] as $name => $operation) {
                     yield $name => $operation;
+                }
+
+                // MCP tools live in a bucket of their own: `getOperations()` does not return
+                // them. Stopping there would leave unscanned the one transport where the
+                // precondition is easiest to forget — nothing about declaring a tool suggests
+                // that a header ever stood between it and a lost update.
+                foreach ($resource->getMcp() ?? [] as $key => $operation) {
+                    yield (\is_string($key) && '' !== $key ? $key : ($operation->getName() ?? '(unnamed tool)')) => $operation;
                 }
             }
         }

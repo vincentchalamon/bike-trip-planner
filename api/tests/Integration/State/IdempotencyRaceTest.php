@@ -37,8 +37,8 @@ final class IdempotencyRaceTest extends KernelTestCase
         $winner = Uuid::v7();
         $loser = Uuid::v7();
 
-        self::assertTrue($winner->equals($idempotency->remember($user, $operation, $winner)));
-        self::assertTrue($winner->equals($idempotency->remember($user, $operation, $loser)));
+        self::assertTrue($winner->equals($idempotency->remember($user, $operation, $winner, [])));
+        self::assertTrue($winner->equals($idempotency->remember($user, $operation, $loser, [])));
     }
 
     /**
@@ -52,8 +52,8 @@ final class IdempotencyRaceTest extends KernelTestCase
         [$idempotency, $user, $em] = $this->boot();
         $operation = new Post(uriTemplate: '/trips');
 
-        $idempotency->remember($user, $operation, Uuid::v7());
-        $idempotency->remember($user, $operation, Uuid::v7());
+        $idempotency->remember($user, $operation, Uuid::v7(), []);
+        $idempotency->remember($user, $operation, Uuid::v7(), []);
 
         $em->clear();
 

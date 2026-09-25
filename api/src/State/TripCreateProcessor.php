@@ -56,7 +56,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         // Before the limiter and before any work: a retry of a creation that already succeeded
         // must cost nothing and answer with the trip it made, not with a second one (ADR-077).
-        $already = $this->idempotency->alreadyCreated($user, $operation);
+        $already = $this->idempotency->alreadyCreated($user, $operation, $context);
         if ($already instanceof Uuid) {
             return $this->tripFor($already->toRfc4122());
         }
@@ -102,7 +102,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         // So the order is chosen to fail in the safe direction. Trip first means a crash costs a
         // duplicate; key first would leave a key pointing at a trip that was never committed, and
         // the retry would be handed an identifier for nothing at all.
-        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($tripId));
+        $winner = $this->idempotency->remember($user, $operation, Uuid::fromString($tripId), $context);
 
         // Lost the insert race: a concurrent call carrying this key recorded its own trip first,
         // and the client has to be answered with that one — two requests under one key must never

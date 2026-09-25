@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
 /**
  * Refuses, with 423, the writes that would rewrite a trip already under way.
@@ -34,9 +33,13 @@ use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
  * because every case in `TripLockedTest` sent `If-Match: '*'` and sailed through the
  * precondition.
  *
+ * Wired in `config/services.php` rather than by an attribute here, because it decorates TWO
+ * chains: MCP builds a write processor of its own, so an attribute naming one service id would
+ * leave every tool call unguarded — which is exactly what it did until a share link was revoked
+ * by a call that only meant to ask.
+ *
  * @implements ProcessorInterface<mixed, mixed>
  */
-#[AsDecorator(decorates: 'api_platform.state_processor.write', priority: -10)]
 final readonly class TripLockProcessor implements ProcessorInterface
 {
     /**
