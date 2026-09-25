@@ -160,6 +160,21 @@ final class McpConfirmationProcessorTest extends TestCase
         ]));
     }
 
+    /**
+     * A model echoing the token back is free to mangle it, and the mangled string would have
+     * become a cache key. The answer stays the documented one — 400 with a message telling the
+     * agent to ask again — instead of whatever the cache backend throws.
+     */
+    #[Test]
+    public function aMangledTokenIsRefusedLikeAnyOther(): void
+    {
+        $this->expectException(BadRequestHttpException::class);
+
+        $this->processor()->process(null, $this->tool(), ['id' => self::TRIP], $this->call([
+            'confirmationToken' => '"{the token}"',
+        ]));
+    }
+
     /** A tool that does not declare the property is none of this decorator's business. */
     #[Test]
     public function anUndeclaredToolGoesStraightThrough(): void

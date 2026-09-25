@@ -20,13 +20,35 @@ use Symfony\Component\Lock\LockFactory;
  */
 final class ConfirmationStoreTest extends KernelTestCase
 {
+    /**
+     * A token comes back through a model, and a model is free to truncate it, quote it or
+     * paraphrase it. The string is on its way to a cache key and a lock name, and Symfony's
+     * PSR-6 adapters throw on a key holding one of `{}()/\@:` — which would turn the documented
+     * "not valid for this call" into a 500, a worse answer given louder.
+     */
+    #[Test]
+    public function whatCannotBeATokenNeverReachesTheBackend(): void
+    {
+        $store = $this->store();
+
+        foreach (['', 'not-a-token', '{evil}', 'a/b\\c@d:e', str_repeat('f', 5000), ' 0123456789abcdef0123456789abcdef ', '0123456789ABCDEF0123456789ABCDEF'] as $notAToken) {
+            self::assertFalse($store->consume($notAToken, 'a-binding'), \sprintf('"%s" was looked up as a token.', substr($notAToken, 0, 40)));
+        }
+    }
+
+    /** The check above is only worth anything while it still describes what `issue()` mints. */
+    #[Test]
+    public function whatIsMintedIsWhatIsAccepted(): void
+    {
+        $store = $this->store();
+
+        self::assertTrue($store->consume($store->issue('a-binding'), 'a-binding'));
+    }
+
     #[Test]
     public function aTokenBeingSpentElsewhereIsRefusedHere(): void
     {
-        self::bootKernel();
-
-        $store = self::getContainer()->get(ConfirmationStore::class);
-        \assert($store instanceof ConfirmationStore);
+        $store = $this->store();
         $locks = self::getContainer()->get('lock.factory');
         \assert($locks instanceof LockFactory);
 
@@ -46,5 +68,15 @@ final class ConfirmationStoreTest extends KernelTestCase
         // spend it, so losing the race must not cost the winner its token.
         self::assertTrue($store->consume($token, 'a-binding'));
         self::assertFalse($store->consume($token, 'a-binding'));
+    }
+
+    private function store(): ConfirmationStore
+    {
+        self::bootKernel();
+
+        $store = self::getContainer()->get(ConfirmationStore::class);
+        \assert($store instanceof ConfirmationStore);
+
+        return $store;
     }
 }

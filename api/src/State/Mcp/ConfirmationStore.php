@@ -28,6 +28,21 @@ final readonly class ConfirmationStore
 {
     private const string PREFIX = 'mcp_confirmation.';
 
+    /** Bytes of randomness behind a token. 128 bits: a token is the only factor. */
+    private const int TOKEN_BYTES = 16;
+
+    /**
+     * Exactly what {@see issue()} mints, and the only shape {@see consume()} will look up.
+     *
+     * Checked rather than assumed, because the token comes back through a model and nothing
+     * obliges a model to echo it unchanged — it can truncate it, quote it, or paraphrase it.
+     * The string becomes a cache key and a lock name, and Symfony's PSR-6 adapters throw on a
+     * key holding a reserved character (`{}()/\@:`): that turns the documented "this token is
+     * not valid for this call" into a 500, which is both a worse answer and a louder one.
+     * `Idempotency` checks its own client-supplied key the same way and for the same reason.
+     */
+    private const string TOKEN_PATTERN = '/^[0-9a-f]{32}$/';
+
     /** Long enough for two cache round trips, short enough that a crash frees the token fast. */
     private const int LOCK_TTL = 5;
 
@@ -41,7 +56,7 @@ final readonly class ConfirmationStore
     /** Mints a token for one call and one call only. */
     public function issue(string $binding): string
     {
-        $token = bin2hex(random_bytes(16));
+        $token = bin2hex(random_bytes(self::TOKEN_BYTES));
 
         $item = $this->pool->getItem(self::PREFIX.$token);
         $item->set($binding);
@@ -73,6 +88,13 @@ final readonly class ConfirmationStore
      */
     public function consume(string $token, string $binding): bool
     {
+        // Before anything is built out of it: what does not have the shape of a token cannot
+        // be one, and a string of any length and any characters is on its way to a cache key
+        // and a lock name.
+        if (1 !== preg_match(self::TOKEN_PATTERN, $token)) {
+            return false;
+        }
+
         $key = self::PREFIX.$token;
         $lock = $this->locks->createLock($key, self::LOCK_TTL);
 
