@@ -14,6 +14,7 @@ use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
+use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
@@ -68,10 +69,19 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new EventArrayMapper());
     }
 
+    /**
+     * A creation carries settings and an owner, and decides nothing else.
+     *
+     * It used to persist the caller's object outright, which is how a request body reached
+     * `status`, `version`, `createdAt`, `outOfZone`, `sourceType` and `computationStatus` —
+     * `#[ApiProperty(writable: false)]` never stood in the way, because the serializer only
+     * consults it for a class that is an `#[ApiResource]`.
+     */
     #[Test]
     public function initializeTripAndGetRequestRoundtrip(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
+        $owner = new User('owner@test.com');
 
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
@@ -84,21 +94,41 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $request->maxDistancePerDay = 60.0;
         $request->averageSpeed = 18.0;
         $request->enabledAccommodationTypes = ['camp_site', 'hotel'];
+        $request->user = $owner;
 
-        // initializeTrip persists the TripRequest directly (with id set)
+        // Everything a deserialized body could have set, and none of which is the caller's to
+        // decide.
+        $request->status = 'ready';
+        $request->version = 4242;
+        $request->outOfZone = true;
+        $request->sourceType = 'forged';
+        $request->computationStatus = ['route' => 'done'];
+
+        $persisted = null;
         $this->entityManager->expects(self::once())
             ->method('persist')
-            ->with($request);
+            ->willReturnCallback(static function (object $trip) use (&$persisted): void {
+                $persisted = $trip;
+            });
         $this->entityManager->expects(self::once())
             ->method('flush');
 
         $this->repository->initializeTrip($tripId, $request);
 
-        // Verify id was set
-        self::assertNotNull($request->id);
-        self::assertSame($tripId, $request->id->toRfc4122());
+        self::assertInstanceOf(TripRequest::class, $persisted);
+        self::assertNotSame($request, $persisted, 'The caller object is persisted as-is, so every public property of it reaches the row.');
+        self::assertSame($tripId, $persisted->id?->toRfc4122());
+        self::assertSame($owner, $persisted->user);
 
-        // Now test getRequest by having find() return the same persisted request
+        self::assertSame('draft', $persisted->status);
+        self::assertSame(1, $persisted->version);
+        self::assertFalse($persisted->outOfZone);
+        self::assertNull($persisted->sourceType);
+        self::assertSame([], $persisted->computationStatus);
+        self::assertGreaterThan(new \DateTimeImmutable('-1 hour'), $persisted->createdAt);
+
+        // Now test getRequest by having find() return the row that was persisted
+        $request = $persisted;
         $em2 = $this->createMock(EntityManagerInterface::class);
         $em2->method('find')
             ->willReturn($request);

@@ -50,14 +50,43 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         parent::__construct($registry, TripRequest::class);
     }
 
+    /**
+     * Creates the trip, or applies the settings to the one already there.
+     *
+     * Both branches go through {@see self::copyModifiableFields()}, and that is the whole point.
+     * This used to persist the caller's object outright, which made every public property of
+     * {@see TripRequest} settable from a request body — `status`, `version`, `createdAt`,
+     * `computationStatus`, `outOfZone`, `sourceType` included. `#[ApiProperty(writable: false)]`
+     * did not stand in the way and never could: the serializer only consults `isWritable()` for
+     * a class that is an `#[ApiResource]` ({@see \ApiPlatform\Serializer\AbstractItemNormalizer::getAllowedAttributes()}
+     * hands anything else to Symfony's own filter, which sorts by serialization group and finds
+     * none declared here). The attribute describes the published schema; this list is what
+     * guards the row, and there is deliberately only one of it.
+     *
+     * What that cost: a `status` of `ready` made a trip announce itself structurally computed
+     * before any pacing ran (ADR-043), a chosen `version` seeded the optimistic-concurrency
+     * counter, and a chosen `createdAt` decided where the trip sorted in the owner's list.
+     *
+     * Only `POST /trips` was exposed, because it is the only creation whose DTO comes out of a
+     * deserializer. {@see \App\Controller\GpxUploadController} builds its own `TripRequest` and
+     * copies a bounded list of form fields into it, so it never had the hole — but it calls this
+     * same method, which is why it is covered by a test too.
+     *
+     * The owner rides along because both callers set it from the authenticated token just before
+     * calling, never from the body. `locale` and `sourceType` are not copied and are not lost:
+     * `storeLocale()` and `storeSourceType()` own them, and both creation paths call them.
+     */
     public function initializeTrip(string $tripId, TripRequest $request): void
     {
         $existing = $this->findTripRequest($tripId);
         if ($existing instanceof TripRequest) {
             $this->copyModifiableFields($existing, $request);
         } else {
-            $request->id = Uuid::fromString($tripId);
-            $this->getEntityManager()->persist($request);
+            $trip = new TripRequest(Uuid::fromString($tripId));
+            $this->copyModifiableFields($trip, $request);
+            $trip->user = $request->user;
+
+            $this->getEntityManager()->persist($trip);
         }
 
         $this->getEntityManager()->flush();
