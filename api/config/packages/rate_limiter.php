@@ -137,6 +137,35 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '300 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // The two MCP budgets, counted per call by App\Security\OAuth\McpCallBudget and keyed
+            // on the user and the OAuth client. Sized for the loop the design prescribes: one
+            // ordinary task is a write, ten to fifteen `get_trip` polls while the days are
+            // computed, then a `get_stage` per day — twenty to thirty reads in one minute. Kept
+            // above `geocode` (30/min), which already bounds `search_places` on its own.
+            'mcp_tool_call' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // On top, for the calls that write. Above `trip_create` (10/min), which keeps bounding
+            // creation — and the third-party fetches behind it — by itself.
+            'mcp_mutation' => [
+                'policy' => 'sliding_window',
+                'limit' => 20,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // A per-address ceiling on /mcp, consumed before the firewall so that callers with no
+            // valid token are bounded too (App\EventListener\McpEnvelopeThrottleListener). Per
+            // HTTP request and generous: several agents may share an address behind a NAT, and
+            // the fine-grained budget is the per-call one.
+            'mcp_envelope' => [
+                'policy' => 'sliding_window',
+                'limit' => 300,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,
