@@ -6,6 +6,7 @@ namespace App\State\Mcp;
 
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Lock\LockFactory;
 
 /**
  * The tokens a destructive tool hands out, and takes back exactly once.
@@ -27,9 +28,13 @@ final readonly class ConfirmationStore
 {
     private const string PREFIX = 'mcp_confirmation.';
 
+    /** Long enough for two cache round trips, short enough that a crash frees the token fast. */
+    private const int LOCK_TTL = 5;
+
     public function __construct(
         #[Autowire(service: 'cache.mcp_confirmation')]
         private CacheItemPoolInterface $pool,
+        private LockFactory $locks,
     ) {
     }
 
@@ -53,14 +58,35 @@ final readonly class ConfirmationStore
      * that changed its mind between the two — in which case the impact summary it was shown no
      * longer describes what it is asking for, and it must be shown a new one — or someone
      * trying tokens, which should cost one attempt each.
+     *
+     * The read and the delete are one critical section, because separately they are not one
+     * act: two calls arriving with the same token — a client retrying while its first attempt
+     * is still in flight — could both read the binding before either deletion landed, both be
+     * told it matched, and both delete the trip. "Never true twice" is the whole contract, and
+     * a sequential test cannot see that window. Same shape as the pre-check ADR-077 had to put
+     * behind a unique index, and the same tool the repository already uses for it.
+     *
+     * The lock is NOT blocking. If another call is consuming this very token right now, that
+     * one is spending it; waiting would only let this one through a moment later, which is
+     * precisely the duplicate being prevented. The loser is refused and the token stays put
+     * for the winner to spend.
      */
     public function consume(string $token, string $binding): bool
     {
         $key = self::PREFIX.$token;
-        $stored = $this->pool->getItem($key)->get();
+        $lock = $this->locks->createLock($key, self::LOCK_TTL);
 
-        $this->pool->deleteItem($key);
+        if (!$lock->acquire()) {
+            return false;
+        }
 
-        return \is_string($stored) && hash_equals($stored, $binding);
+        try {
+            $stored = $this->pool->getItem($key)->get();
+            $this->pool->deleteItem($key);
+
+            return \is_string($stored) && hash_equals($stored, $binding);
+        } finally {
+            $lock->release();
+        }
     }
 }

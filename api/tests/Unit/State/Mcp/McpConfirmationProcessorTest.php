@@ -18,6 +18,8 @@ use App\State\Mcp\TripImpactSummary;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
@@ -195,7 +197,7 @@ final class McpConfirmationProcessorTest extends TestCase
 
         return new McpConfirmationProcessor(
             $this->decorated(),
-            new ConfirmationStore(new ArrayAdapter()),
+            new ConfirmationStore(new ArrayAdapter(), new LockFactory(new InMemoryStore())),
             new TripImpactSummary($trips, $shares),
             $storage,
         );
