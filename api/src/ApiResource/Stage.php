@@ -17,6 +17,7 @@ use ApiPlatform\OpenApi\Model\Response;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Mcp\AddWaypointInput;
+use App\ApiResource\Mcp\ChooseAccommodationInput;
 use App\ApiResource\Mcp\EditStagesInput;
 use App\ApiResource\Model\Coordinate;
 use App\Enum\AlertGroup;
@@ -30,6 +31,7 @@ use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
 use App\State\Mcp\McpAddWaypointProcessor;
+use App\State\Mcp\McpChooseAccommodationProcessor;
 use App\State\Mcp\McpDeserializeProvider;
 use App\State\Mcp\McpEditStagesProcessor;
 use App\State\Mcp\StageDetailProjectionProvider;
@@ -278,6 +280,31 @@ use Symfony\Component\Uid\Uuid;
                 McpDeserializeProvider::INPUT => StagePoiWaypointRequest::class,
                 // The lock applies even though the precondition does not: rerouting a day is
                 // rewriting the trip's content, and the two flags answer different questions.
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
+        'choose_accommodation' => new McpTool(
+            name: 'choose_accommodation',
+            description: <<<'TEXT'
+                Choose where to sleep at the end of one day, from the places `get_stage` lists
+                for it. Give the coordinates of the chosen place; leave them out to un-choose.
+                The day then ends at that place and the next day starts from it, so distances on
+                both days change. Requires `version`.
+                TEXT,
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodation',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
+            ],
+            security: "is_granted('TRIP_EDIT', tripId)",
+            input: ChooseAccommodationInput::class,
+            validate: true,
+            provider: StageProvider::class,
+            processor: McpChooseAccommodationProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => StageSelectAccommodationRequest::class,
+                PreconditionProcessor::EXTRA_PROPERTY => true,
                 TripLockProcessor::EXTRA_PROPERTY => true,
             ],
         ),
