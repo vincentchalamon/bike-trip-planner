@@ -159,7 +159,11 @@ everything is paid for twice.
 - **The 2026-07-28 envelope mirrors protocol version, method and element name into
   headers** (`MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`); each omission is a
   `-32020` HeaderMismatch. This lets an edge route or cache a call without parsing the
-  body.
+  body. *Amended in unit 3C: true of the modern leg only.* The SDK also serves the
+  handshake era, which validates no mirror header and accepts batches, and on the modern
+  leg it unwraps a `=?base64?…?=` name before comparing it — so these headers are routing
+  hints, never an input a guard may decide on. The scope is judged per parsed message by
+  `App\Security\OAuth\McpScopeGuard`.
 - **The Flex recipe creates no routing import.** Without a hand-written
   `config/routes/mcp.php` importing the bundle's `mcp` loader, the HTTP transport is
   configured and **no `/mcp` route exists** — silently.

@@ -241,8 +241,9 @@ final class McpToolCallTest extends ApiTestCase
     /**
      * The 2026-07-28 revision mirrors the protocol version, the method and the addressed
      * element name into headers, on top of the JSON-RPC body — so an edge route or a cache
-     * can act on a call without parsing it. Omitting any of them is answered with -32020
-     * (HeaderMismatch), one at a time.
+     * can act on a call without parsing it. On this, the modern leg, omitting any of them is
+     * answered with -32020 (HeaderMismatch). That is a property of the leg, not a guarantee
+     * about the endpoint: the handshake era checks none of them — see McpScopeEnforcementTest.
      *
      * @param array<string, mixed> $params
      *

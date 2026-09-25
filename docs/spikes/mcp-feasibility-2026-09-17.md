@@ -325,6 +325,12 @@ base. C'est la réponse à la question (d), laissée ouverte en première passe.
 JSON-RPC ne suffit pas — la révision 2026-07-28 duplique version, méthode et nom d'élément
 en en-têtes, ce qui permet de router ou cacher un appel en périphérie sans parser le corps.
 
+> **Complété par l'unité 3C (25/09/2026)** : vrai de la voie moderne seulement, celle qu'un
+> appel choisit en portant la revendication `_meta`. Le SDK sert aussi l'ère « handshake »,
+> qui ne valide aucun en-tête miroir et accepte les lots, et il déballe un `Mcp-Name` encodé
+> en base64 avant de le comparer. Ces en-têtes ne sont donc pas une entrée sur laquelle une
+> garde peut décider : un jeton `trips:read` a atteint `delete_trip` par les deux chemins.
+
 ### 🔴 FAILLE : ADR-038 ne tient pas sur le chemin MCP
 
 Le plan affirmait qu'un refus d'ownership ressortirait en « not found », préservant
