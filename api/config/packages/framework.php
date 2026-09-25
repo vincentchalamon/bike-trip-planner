@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\RouteFetcher\RouteSourceBaseUri;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -36,7 +37,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             // that never legitimately redirect use max_redirects: 0.
             'scoped_clients' => [
                 'komoot.client' => [
-                    'base_uri' => 'https://www.komoot.com',
+                    'base_uri' => RouteSourceBaseUri::KOMOOT,
                     'max_redirects' => 2,
                     'timeout' => 10,
                     // On-demand route fetch (Tier 3): retry transient failures
@@ -51,7 +52,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                 ],
                 'strava.client' => [
-                    'base_uri' => 'https://www.strava.com',
+                    'base_uri' => RouteSourceBaseUri::STRAVA,
                     'max_redirects' => 2,
                     'timeout' => 10,
                     'retry_failed' => [
@@ -63,7 +64,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                 ],
                 'ridewithgps.client' => [
-                    'base_uri' => 'https://ridewithgps.com',
+                    'base_uri' => RouteSourceBaseUri::RIDEWITHGPS,
                     'max_redirects' => 2,
                     'timeout' => 10,
                     'retry_failed' => [
