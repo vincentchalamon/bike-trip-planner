@@ -16,6 +16,9 @@ use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Response;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Mcp\AddWaypointInput;
+use App\ApiResource\Mcp\ChooseAccommodationInput;
+use App\ApiResource\Mcp\EditStagesInput;
 use App\ApiResource\Model\Coordinate;
 use App\Enum\AlertGroup;
 use App\ApiResource\Model\Event;
@@ -27,6 +30,10 @@ use App\State\RestDayInsertProcessor;
 use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
+use App\State\Mcp\McpAddWaypointProcessor;
+use App\State\Mcp\McpChooseAccommodationProcessor;
+use App\State\Mcp\McpDeserializeProvider;
+use App\State\Mcp\McpEditStagesProcessor;
 use App\State\Mcp\StageDetailProjectionProvider;
 use App\State\StageDetailProvider;
 use App\State\StageMoveProcessor;
@@ -200,6 +207,107 @@ use Symfony\Component\Uid\Uuid;
         ),
     ],
     mcp: [
+        'edit_stages' => new McpTool(
+            name: 'edit_stages',
+            description: <<<'TEXT'
+                Restructure the days of a trip: insert a day, change one, move one, remove one,
+                or insert a rest day. Pick what to do with `action`, which says what each branch
+                needs. Requires `version`, from `get_trip` or from the previous edit; every edit
+                answers with the new version, so a run of edits needs no read in between.
+
+                Editing a day recalculates its route and shifts what follows: removing a day
+                merges it with its neighbour, inserting one renumbers the rest and moves their
+                dates. To change how the whole trip is cut instead, use `update_trip_settings`.
+                TEXT,
+            annotations: ['destructiveHint' => true],
+            uriTemplate: '/trips/{tripId}/stages',
+            // Only the trip. The day is addressed by `stageId`, which four of the five actions
+            // need and `add` legitimately has none of — declaring it a URI variable would make
+            // it look required and leave it empty on the one branch that is right to omit it.
+            uriVariables: ['tripId' => new Link(fromClass: Stage::class)],
+            // Evaluated at `pre_read` against the trip, exactly as the five HTTP operations do:
+            // all five already carry this same expression, so there is nothing to reconcile. A
+            // stageId belonging to someone else's trip is refused by the lookup, which reports
+            // it as "not found" in the one wording StageLocator owns.
+            security: "is_granted('TRIP_EDIT', tripId)",
+            input: EditStagesInput::class,
+            // Nothing to load: which record matters depends on the action, and each of the five
+            // processors reads what it needs from the repository inside its own locked section.
+            read: false,
+            validate: true,
+            processor: McpEditStagesProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => StageRequest::class,
+                // `action` picks the branch and `stageId` addresses it. Neither is a field of a
+                // stage, and naming them here is what keeps the contract guard meaningful —
+                // inferring them from "not a property of the record" would exempt exactly the
+                // mistake it exists to catch.
+                McpDeserializeProvider::CONTROL => ['action', 'stageId'],
+                // Declared once on the tool, which sits inside both write guards, so the union
+                // of the five branches' requirements applies — that is, the strictest. It costs
+                // nothing: all five demanded both already.
+                PreconditionProcessor::EXTRA_PROPERTY => true,
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
+        'add_waypoint' => new McpTool(
+            name: 'add_waypoint',
+            description: <<<'TEXT'
+                Reroute one day of a trip so it passes through a given place -- a viewpoint, a
+                village, a point of interest `get_stage` lists for that day. The new route is
+                computed in the background; the day's distance and climbing change once it comes
+                back. This does not move the trip version, so an edit you were about to make with
+                the version you hold stays valid.
+                TEXT,
+            // No hints. `idempotentHint` would read as "retry freely", and every call dispatches
+            // another routing request: the second one is not free, even where the result is the
+            // same. A hint is the one thing a client acts on without checking.
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/poi-waypoint',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
+            ],
+            security: "is_granted('TRIP_EDIT', tripId)",
+            input: AddWaypointInput::class,
+            validate: true,
+            // The same provider as the HTTP twin, so a day that does not exist is reported as
+            // missing before any message is dispatched.
+            provider: StageProvider::class,
+            processor: McpAddWaypointProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => StagePoiWaypointRequest::class,
+                // The lock applies even though the precondition does not: rerouting a day is
+                // rewriting the trip's content, and the two flags answer different questions.
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
+        'choose_accommodation' => new McpTool(
+            name: 'choose_accommodation',
+            description: <<<'TEXT'
+                Choose where to sleep at the end of one day, from the places `get_stage` lists
+                for it. Give the coordinates of the chosen place; leave them out to un-choose.
+                The day then ends at that place and the next day starts from it, so distances on
+                both days change. Requires `version`.
+                TEXT,
+            uriTemplate: '/trips/{tripId}/stages/{stageId}/accommodation',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'stageId' => new Link(fromClass: Stage::class),
+            ],
+            security: "is_granted('TRIP_EDIT', tripId)",
+            input: ChooseAccommodationInput::class,
+            validate: true,
+            provider: StageProvider::class,
+            processor: McpChooseAccommodationProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => StageSelectAccommodationRequest::class,
+                PreconditionProcessor::EXTRA_PROPERTY => true,
+                TripLockProcessor::EXTRA_PROPERTY => true,
+            ],
+        ),
         'get_stage' => new McpTool(
             name: 'get_stage',
             description: <<<'TEXT'

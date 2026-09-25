@@ -23,6 +23,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class IdempotencyCoverageTest extends KernelTestCase
 {
+    use ScansStateProcessors;
+
     #[Test]
     public function everyOperationDemandingTheHeaderHasAProcessorThatConsultsIt(): void
     {
@@ -71,18 +73,7 @@ final class IdempotencyCoverageTest extends KernelTestCase
      */
     private function processorsConsultingIdempotency(): array
     {
-        $found = [];
-
-        foreach (glob(__DIR__.'/../../../src/State/*Processor.php') ?: [] as $file) {
-            $source = file_get_contents($file);
-            if (false !== $source && str_contains($source, '$this->idempotency->alreadyCreated(')) {
-                $found[] = 'App\\State\\'.basename($file, '.php');
-            }
-        }
-
-        sort($found);
-
-        return $found;
+        return $this->processorsContaining(['$this->idempotency->alreadyCreated(']);
     }
 
     /**

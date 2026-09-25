@@ -16,11 +16,16 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\ApiResource\Mcp\AnalyzeTripInput;
+use App\ApiResource\Mcp\CreateTripInput;
 use App\ApiResource\Mcp\DeleteTripInput;
+use App\ApiResource\Mcp\UpdateTripSettingsInput;
 use App\State\AnalyzeTripProcessor;
 use App\State\Mcp\McpAnalyzeTripProcessor;
 use App\State\Mcp\McpConfirmationProcessor;
+use App\State\Mcp\McpCreateTripProcessor;
 use App\State\Mcp\McpDeleteTripProcessor;
+use App\State\Mcp\McpDeserializeProvider;
+use App\State\Mcp\McpUpdateTripSettingsProcessor;
 use App\State\NearbyPoiSearchProcessor;
 use App\State\TripCreation;
 use App\State\PreconditionProcessor;
@@ -214,6 +219,77 @@ use App\State\TripUpdateProcessor;
             security: "is_granted('ROLE_USER')",
             provider: TripCollectionProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],
+        ),
+        'create_trip' => new McpTool(
+            name: 'create_trip',
+            description: <<<'TEXT'
+                Plan a new trip from a public route URL: Komoot tour or collection, Strava route,
+                or RideWithGPS route. The route is fetched and cut into days according to the
+                pacing settings you pass. Returns straight away with an id -- nothing is computed
+                yet -- so call `get_trip` with it shortly afterwards to see the days appear.
+                A trip cannot be created from a file: this transport carries no attachments.
+                TEXT,
+            // No hints, and that is the honest answer. `idempotentHint` would be true only
+            // inside the five-minute window over which an identical call counts as a retry;
+            // after it, calling twice makes two trips. A client acts on a hint without checking.
+            uriTemplate: '/trips',
+            // Ownership is the whole of it: the trip does not exist yet, so there is nothing to
+            // authorize against beyond being a user at all.
+            security: "is_granted('ROLE_USER')",
+            // The HTTP twin's context, because it is the same record being checked: without the
+            // group, `sourceUrl` is not required and a trip leaves for the workers with no route
+            // to fetch, failing three messages later where nobody is listening.
+            validationContext: ['groups' => ['trip_request:create']],
+            input: CreateTripInput::class,
+            // There is nothing to read. ReadProvider returns null without calling any provider
+            // when this is false, which is exactly right for a creation, and the `pre_read`
+            // access checker still runs because it decorates ReadProvider from outside.
+            read: false,
+            validate: true,
+            processor: McpCreateTripProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                // The arguments describe a TripRequest; CreateTripInput only publishes them.
+                McpDeserializeProvider::INPUT => TripRequest::class,
+                // The key is optional here and derived server-side, which is the inverse of the
+                // HTTP rule and deliberate: asking a model to mint a nonce fails in both
+                // directions — the same literal for two trips refuses every creation after the
+                // first, a fresh one per attempt protects nothing (ADR-077).
+                TripCreation::REQUIRES_IDEMPOTENCY_KEY => true,
+            ],
+        ),
+        'update_trip_settings' => new McpTool(
+            name: 'update_trip_settings',
+            description: <<<'TEXT'
+                Change how a trip is planned: how far per day, how much each day shortens, the
+                dates, the kinds of place to sleep in. Send only what changes; anything left out
+                keeps its value. Requires `version`, from `get_trip` or from the previous edit.
+
+                This usually recuts the whole trip: a new daily distance means new days, which
+                DISCARDS any manual split and every accommodation already chosen. Called without
+                `confirmationToken`, it changes nothing and answers with what is at stake plus a
+                token; report that to the user and call again with the token only if they agree.
+                TEXT,
+            // A PATCH that is destructive in effect, which is what the annotation describes. It
+            // is not the verb that matters to a client deciding whether to prompt.
+            annotations: ['destructiveHint' => true],
+            uriTemplate: '/trips/{id}',
+            uriVariables: ['id' => new Link(fromClass: Trip::class)],
+            security: "is_granted('TRIP_EDIT', id)",
+            input: UpdateTripSettingsInput::class,
+            validate: true,
+            // The record is the trip itself, loaded by the provider below and merged into a copy
+            // of it by McpDeserializeProvider — the only tool of the five that edits a row rather
+            // than filling a fresh request object.
+            provider: TripRequestProvider::class,
+            processor: McpUpdateTripSettingsProcessor::class,
+            extraProperties: [
+                'mcp_scope' => 'trips:write',
+                McpDeserializeProvider::INPUT => TripRequest::class,
+                PreconditionProcessor::EXTRA_PROPERTY => true,
+                TripLockProcessor::EXTRA_PROPERTY => true,
+                McpConfirmationProcessor::EXTRA_PROPERTY => 'Replan this trip with new settings. Changing the pacing recuts every day, which discards the manual day split and every accommodation already chosen for it.',
+            ],
         ),
         'analyze_trip' => new McpTool(
             name: 'analyze_trip',

@@ -10,6 +10,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
 use App\State\Mcp\McpConfirmationProcessor;
+use App\State\Mcp\McpDeserializeProvider;
 use App\State\PreconditionProcessor;
 use App\State\TripLockProcessor;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -120,6 +121,31 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ->autowire()
             ->autoconfigure(false);
     }
+
+    // What DeserializeProvider is to an HTTP body, this is to `tools/call` arguments — and the
+    // priority is the design, not a detail.
+    //
+    // 250 lands it between ValidateProvider (200) and DeserializeProvider (300) in the main
+    // provider chain, where the lowest priority is the outermost and therefore runs first:
+    // content negotiation (100), parameter (180), parameter validator (191), validate (200),
+    // THIS, deserialize (300), read (500). Both neighbours are load-bearing. Inside validation,
+    // because the constraints have to judge the merged record — checked against the stored one
+    // they pass while the new values go in unexamined. Outside ReadProvider, because it
+    // publishes `previous_data` as a clone of whatever it just read: merge any deeper and the
+    // record "before" the edit becomes a copy of the record after it, which silently defeats
+    // both guards that read it (TripLockProcessor would judge a trip by the values the caller
+    // just sent, TripUpdateProcessor would find nothing changed and recompute nothing).
+    //
+    // The main chain and not `api_platform.mcp.state_provider`: that id is an alias to this very
+    // chain, so decorating it wraps the whole thing from the outside — after validation, which
+    // is the one place this must not be. It is a no-op on HTTP, where the transport has a body
+    // and DeserializeProvider already does this job. Declared here rather than by an attribute
+    // because `load()` discovers the class and cannot autowire $decorated on its own.
+    $services->set(McpDeserializeProvider::class)
+        ->decorate('api_platform.state_provider.main', null, 250)
+        ->args([service(McpDeserializeProvider::class.'.inner')])
+        ->autowire()
+        ->autoconfigure(false);
 
     // Two implementations exist since the persisting decorator (ADR-071), so the interface
     // no longer resolves on its own. It points at the decorated service id, which is the

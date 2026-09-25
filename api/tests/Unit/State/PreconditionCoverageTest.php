@@ -25,6 +25,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class PreconditionCoverageTest extends KernelTestCase
 {
+    use ScansStateProcessors;
+
     /**
      * Operations whose processor moves the version. Derived from the source, not maintained
      * by hand.
@@ -84,22 +86,7 @@ final class PreconditionCoverageTest extends KernelTestCase
      */
     private function versionMovingProcessors(): array
     {
-        $found = [];
-
-        foreach (glob(__DIR__.'/../../../src/State/*Processor.php') ?: [] as $file) {
-            $source = file_get_contents($file);
-            if (false === $source) {
-                continue;
-            }
-
-            if (str_contains($source, '->mutateStages(') || str_contains($source, '->increment(')) {
-                $found[] = 'App\\State\\'.basename($file, '.php');
-            }
-        }
-
-        sort($found);
-
-        return $found;
+        return $this->processorsContaining(['->mutateStages(', '->increment(']);
     }
 
     /**

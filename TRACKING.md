@@ -1090,7 +1090,7 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
   - [ ] Smoke-test post-deploy échoue si `/api/health` deps latency dépasse les seuils
   - [ ] Session S20 FE physique : checklist `docs/perf/mobile-device-test.md` complétée, baselines enregistrées
   - [ ] Caddy : Brotli actif, cache headers immutable sur statics, HTTP/3 activé
-  - [ ] Postgres `pg_stat_statements` actif, slow query log opérationnel
+  - [ ] Postgres `pg_stat_statements` actif, slow query log opérationnel — **code livré par [#1303](https://github.com/vincentchalamon/bike-trip-planner/pull/1303)** (#510 : extension `pg_stat_statements`, Redis SLOWLOG, profondeur des files Messenger). La case reste décochée parce qu'elle décrit une recette sur environnement déployé, et rien ne l'est ; elle se coche au cutover, pas avant
   - [ ] Chaos tests : Valhalla/Mercure/Redis/Postgres down → app dégrade proprement (pas de 500, message user clair)
   - [ ] OOM test : time-to-recovery VM mesuré, runbook `oracle-vm-reclaimed.md` updaté
   - [ ] `scripts/perf-diff.sh <a> <b>` produit un Markdown lisible de comparaison de releases
