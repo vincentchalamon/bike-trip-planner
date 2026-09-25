@@ -66,6 +66,43 @@ final class McpUntrustedTextTest extends ApiTestCase
     }
 
     /**
+     * The test the unit's brief asks for: a directive planted in every kind of third-party field
+     * — a trip title, a stage label, a reverse-geocoded place name, an accommodation's name and
+     * description, an alert — comes out inert wherever a model can read it.
+     *
+     * And the channel that IS instructions does not move: `tools/list` — every tool
+     * description, every property description, the schemas — is byte-identical before and after
+     * the hostile trip exists. It is built from constants and never from data.
+     */
+    #[Test]
+    public function aDirectivePlantedInEveryThirdPartyFieldStaysData(): void
+    {
+        $toolsBefore = $this->toolsList();
+        $stageId = $this->seedTrip();
+        self::assertSame($toolsBefore, $this->toolsList(), 'tools/list changed once a trip existed: data reached the instruction channel.');
+
+        $trip = $this->structured('get_trip', ['id' => self::TRIP_ID]);
+        self::assertIsString($trip['title'] ?? null);
+        $this->assertInertData($trip['title']);
+        self::assertIsArray($stages = $trip['stages'] ?? null);
+        self::assertIsArray($day = $stages[0] ?? null);
+        self::assertIsString($day['startLabel'] ?? null);
+        $this->assertInertData($day['startLabel']);
+
+        $stage = $this->structured('get_stage', ['tripId' => self::TRIP_ID, 'stageId' => $stageId]);
+        self::assertIsString($stage['label'] ?? null);
+        $this->assertInertData($stage['label']);
+        self::assertIsArray($accommodations = $stage['accommodations'] ?? null);
+        self::assertIsArray($accommodation = $accommodations[0] ?? null);
+        self::assertIsString($accommodation['name'] ?? null);
+        $this->assertInertData($accommodation['name']);
+        self::assertIsArray($alerts = $stage['alerts'] ?? null);
+        self::assertIsArray($alert = $alerts[0] ?? null);
+        self::assertIsString($alert['message'] ?? null);
+        $this->assertInertData($alert['message']);
+    }
+
+    /**
      * The fields no mapping point ever reached: an alert as its producer published it — the
      * third-party name twice, raw in `parameters` and interpolated into the rendered `message` —
      * and an accommodation's Wikidata description.
@@ -140,6 +177,30 @@ final class McpUntrustedTextTest extends ApiTestCase
         self::assertStringContainsString(self::DIRECTIVE, $value, 'The floor must not rewrite what it does not understand.');
     }
 
+    private function toolsList(): string
+    {
+        $this->token ??= $this->issueAccessTokenFor($this->owner);
+
+        return $this->client->request('POST', '/mcp', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'MCP-Protocol-Version' => self::PROTOCOL_VERSION,
+                'Mcp-Method' => 'tools/list',
+                'Authorization' => 'Bearer '.$this->token,
+            ],
+            'json' => [
+                'jsonrpc' => '2.0',
+                'id' => 1,
+                'method' => 'tools/list',
+                'params' => ['_meta' => [
+                    'io.modelcontextprotocol/protocolVersion' => self::PROTOCOL_VERSION,
+                    'io.modelcontextprotocol/clientCapabilities' => new \stdClass(),
+                ]],
+            ],
+        ])->getContent(false);
+    }
+
     /**
      * @param array<string, mixed> $arguments
      *
@@ -201,7 +262,10 @@ final class McpUntrustedTextTest extends ApiTestCase
         $repo->initializeTrip(self::TRIP_ID, $request);
         $repo->storeTitle(self::TRIP_ID, $planted);
         $repo->storeStatus(self::TRIP_ID, 'ready');
-        $this->associateTripWithUser(self::TRIP_ID, $this->owner);
+        // Re-read: issuing a token clears the entity manager, and a test may do that first.
+        $owner = self::getContainer()->get('doctrine.orm.entity_manager')->find(User::class, $this->owner->getId());
+        self::assertInstanceOf(User::class, $owner);
+        $this->associateTripWithUser(self::TRIP_ID, $owner);
 
         $repo->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
@@ -211,10 +275,13 @@ final class McpUntrustedTextTest extends ApiTestCase
             startPoint: new Coordinate(45.0, 6.0, 1000.0),
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
+            label: $planted,
         )]);
 
         $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
         self::assertIsString($stageId);
+
+        $repo->updateStageLabels(self::TRIP_ID, $stageId, $planted, 'Villard-de-Lans');
 
         $repo->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
             'code' => 'cultural_poi_suggestion',
@@ -226,7 +293,7 @@ final class McpUntrustedTextTest extends ApiTestCase
         ]]);
 
         $repo->updateStageAccommodations(self::TRIP_ID, $stageId, [new Accommodation(
-            name: 'Gîte du col',
+            name: $planted,
             type: 'guest_house',
             lat: 45.49,
             lon: 6.49,
