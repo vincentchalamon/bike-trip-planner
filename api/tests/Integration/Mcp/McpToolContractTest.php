@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Mcp;
 
+use ApiPlatform\Metadata\HttpOperation;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\Operation;
+use ApiPlatform\Metadata\Property\Factory\PropertyMetadataFactoryInterface;
+use ApiPlatform\Metadata\Property\Factory\PropertyNameCollectionFactoryInterface;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use ApiPlatform\Metadata\Resource\Factory\ResourceNameCollectionFactoryInterface;
+use App\State\Mcp\McpArguments;
+use App\State\Mcp\McpDeserializeProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -156,11 +161,124 @@ final class McpToolContractTest extends KernelTestCase
         ));
     }
 
+    /**
+     * A tool that carries a body says which record it fills, and publishes a schema for it.
+     *
+     * `mcp_input` names the class the arguments are denormalized into; `input` names the class
+     * whose properties become the published `inputSchema`. They are different jobs and usually
+     * different classes — the schema also carries the addressing and control arguments, which
+     * are not fields of the record. Without the first, {@see McpDeserializeProvider} has nothing
+     * to build; without the second, it has no list of accepted argument names.
+     */
+    #[Test]
+    public function everyToolWithABodyNamesBothItsSchemaAndItsRecord(): void
+    {
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            $target = $operation->getExtraProperties()[McpDeserializeProvider::INPUT] ?? null;
+
+            if (null === $target) {
+                continue;
+            }
+
+            if (!\is_string($target) || !class_exists($target)) {
+                $offenders[] = \sprintf('%s: `mcp_input` is not a class', $name);
+                continue;
+            }
+
+            if (null === $this->inputClass($operation)) {
+                $offenders[] = \sprintf('%s: declares `mcp_input` but no input class', $name);
+            }
+        }
+
+        self::assertSame([], $offenders, implode("\n  ", $offenders));
+    }
+
+    /**
+     * What the schema publishes is exactly what can be written.
+     *
+     * A published property that the record does not accept is the worst kind of wrong, because
+     * nothing reports it: the model reads the schema, sends the argument, the call succeeds, and
+     * the value is nowhere. The model has no reason not to send it again — so it does, forever.
+     *
+     * Three kinds of published property are exempt, and all three are declared rather than
+     * guessed: {@see McpArguments::CONTROL} steers the call, the operation's URI variables
+     * address it, and `mcp_control` names whatever else the tool's own processor reads (the
+     * branch discriminator of `edit_stages`). Guessing the third from "not a property of the
+     * record" would exempt precisely the mistake this test exists to catch.
+     */
+    #[Test]
+    public function everyPublishedArgumentCanBeWrittenToTheRecord(): void
+    {
+        $names = self::getContainer()->get('api_platform.metadata.property.name_collection_factory');
+        self::assertInstanceOf(PropertyNameCollectionFactoryInterface::class, $names);
+        $metadata = self::getContainer()->get('api_platform.metadata.property.metadata_factory');
+        self::assertInstanceOf(PropertyMetadataFactoryInterface::class, $metadata);
+
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            $target = $operation->getExtraProperties()[McpDeserializeProvider::INPUT] ?? null;
+            $input = $this->inputClass($operation);
+
+            if (!\is_string($target) || !$operation instanceof HttpOperation || null === $input) {
+                continue;
+            }
+
+            $declared = $this->stringList($operation->getExtraProperties()[McpDeserializeProvider::CONTROL] ?? []);
+            $steering = array_merge(McpArguments::CONTROL, array_keys($operation->getUriVariables() ?? []), $declared);
+            $published = $this->stringList(iterator_to_array($names->create($input)));
+            $writable = $this->stringList(iterator_to_array($names->create($target)));
+
+            foreach (array_diff($declared, $published) as $stray) {
+                $offenders[] = \sprintf('%s: `mcp_control` names "%s", which the input schema does not publish', $name, $stray);
+            }
+
+            foreach (array_diff($published, $steering) as $property) {
+                if (!\in_array($property, $writable, true)) {
+                    $offenders[] = \sprintf('%s: publishes "%s", absent from %s', $name, $property, $target);
+                    continue;
+                }
+
+                if (false === $metadata->create($target, $property)->isWritable()) {
+                    $offenders[] = \sprintf('%s: publishes "%s", which %s refuses to write', $name, $property, $target);
+                }
+            }
+        }
+
+        self::assertSame([], $offenders, "Published argument(s) that cannot land:\n  ".implode("\n  ", $offenders));
+    }
+
     /** Guards the guards: a scan that found nothing would keep every assertion above green. */
     #[Test]
     public function theScanFindsTools(): void
     {
         self::assertNotSame([], $this->tools(), 'No MCP tool was found at all — the scan is looking in the wrong place.');
+    }
+
+    private function inputClass(Operation $operation): ?string
+    {
+        $input = $operation->getInput();
+        $class = \is_array($input) ? ($input['class'] ?? null) : null;
+
+        return \is_string($class) ? $class : null;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     *
+     * @return list<string>
+     */
+    private function stringList(array $values): array
+    {
+        $strings = [];
+        foreach ($values as $value) {
+            self::assertIsString($value);
+            $strings[] = $value;
+        }
+
+        return $strings;
     }
 
     /**
