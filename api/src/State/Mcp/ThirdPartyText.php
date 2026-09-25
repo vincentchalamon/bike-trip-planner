@@ -56,8 +56,10 @@ final readonly class ThirdPartyText
             return null;
         }
 
-        // A label is one tidy line: runs of spaces squeezed, nothing at either end.
-        $value = trim(preg_replace('/ {2,}/u', ' ', self::hygiene($value)) ?? $value);
+        // A label is one tidy line: runs of spaces squeezed, nothing at either end. Two steps,
+        // so a failed squeeze falls back to the cleaned value rather than to the raw one.
+        $value = self::hygiene($value);
+        $value = trim(preg_replace('/ {2,}/u', ' ', $value) ?? $value);
 
         if ('' === $value) {
             return null;
