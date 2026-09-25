@@ -34,7 +34,7 @@ final readonly class TripDoctrineProvider implements ProviderInterface
         $trip = $this->repository->getRequest($id);
 
         if (!$trip instanceof TripRequest) {
-            throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $id));
+            throw new NotFoundHttpException('Trip not found.');
         }
 
         return $trip;

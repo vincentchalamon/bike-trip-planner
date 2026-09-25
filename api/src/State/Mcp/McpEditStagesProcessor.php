@@ -87,7 +87,7 @@ final readonly class McpEditStagesProcessor implements ProcessorInterface
         // model told "this action needs a stageId" would send one and be refused again, having
         // learnt nothing. It has to hear that the action itself does not exist.
         if (!\in_array($action, self::ACTIONS, true)) {
-            throw new UnprocessableEntityHttpException(\sprintf('Unknown "action": %s. Expected one of: %s.', \is_string($action) && '' !== $action ? \sprintf('"%s"', $action) : 'none given', implode(', ', self::ACTIONS)));
+            throw new UnprocessableEntityHttpException(\sprintf('Unknown "action": %s. Expected one of: %s.', \is_string($action) && '' !== $action ? CallerText::quote($action) : 'none given', implode(', ', self::ACTIONS)));
         }
 
         $addressed = ['tripId' => $tripId, 'stageId' => $this->stageId($arguments, $action)];
@@ -128,7 +128,7 @@ final readonly class McpEditStagesProcessor implements ProcessorInterface
         }
 
         if (!\is_string($stageId) || '' === $stageId) {
-            throw new UnprocessableEntityHttpException(\sprintf('The "%s" action needs a "stageId": the identifier of the day to act on, as published by `get_trip`.', \is_string($action) ? $action : ''));
+            throw new UnprocessableEntityHttpException(\sprintf('The %s action needs a "stageId": the identifier of the day to act on, as published by `get_trip`.', CallerText::quote(\is_string($action) ? $action : '')));
         }
 
         return $stageId;

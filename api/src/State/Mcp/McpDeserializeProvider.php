@@ -141,7 +141,7 @@ final readonly class McpDeserializeProvider implements ProviderInterface
 
         $unknown = array_diff(array_keys($arguments), $published, $steering);
         if ([] !== $unknown) {
-            throw new UnprocessableEntityHttpException(\sprintf('Unknown argument(s): %s. This tool accepts: %s.', implode(', ', $unknown), implode(', ', array_unique(array_merge($published, $steering)))));
+            throw new UnprocessableEntityHttpException(\sprintf('Unknown argument(s): %s. This tool accepts: %s.', implode(', ', array_map(static fn (int|string $name): string => CallerText::quote((string) $name), $unknown)), implode(', ', array_unique(array_merge($published, $steering)))));
         }
 
         return array_diff_key($arguments, array_flip($steering));

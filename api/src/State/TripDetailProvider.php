@@ -59,7 +59,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         $request = $this->tripStateManager->getRequest($id);
 
         if (!$request instanceof TripRequest) {
-            throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $id));
+            throw new NotFoundHttpException('Trip not found.');
         }
 
         \assert($request->id instanceof Uuid);
