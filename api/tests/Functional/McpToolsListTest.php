@@ -44,27 +44,47 @@ final class McpToolsListTest extends ApiTestCase
         ['user' => $this->user] = $this->createTestUserWithJwt('agent@example.com');
     }
 
+    /** @var list<string> */
+    private const array READS = ['list_trips', 'get_trip', 'get_stage', 'search_places'];
+
+    /** @var list<string> */
+    private const array WRITES = [
+        'create_trip', 'update_trip_settings', 'edit_stages', 'add_waypoint', 'choose_accommodation',
+        'analyze_trip', 'share_trip', 'unshare_trip', 'delete_trip',
+    ];
+
     #[Test]
     public function aReadOnlyTokenIsShownNoToolThatWrites(): void
     {
         $names = $this->toolNames(['trips:read']);
 
-        self::assertContains('get_trip', $names);
-        self::assertContains('list_trips', $names);
+        foreach (self::READS as $read) {
+            self::assertContains($read, $names);
+        }
 
-        foreach (['share_trip', 'unshare_trip', 'delete_trip', 'analyze_trip'] as $writes) {
+        foreach (self::WRITES as $writes) {
             self::assertNotContains($writes, $names, \sprintf('`%s` is offered to a token that cannot call it.', $writes));
         }
     }
 
+    /**
+     * The whole surface, named.
+     *
+     * Asserted as an exact set rather than a series of `assertContains`: a tool that quietly
+     * stops being listed is invisible from the inside — the server answers calls to it perfectly
+     * well, and no agent ever finds it. The count is the unit's own claim, thirteen tools over
+     * fifty routed operations, and it should not drift without someone deciding that it should.
+     */
     #[Test]
-    public function aWritingTokenIsShownTheToolsItCanCall(): void
+    public function aWritingTokenIsShownTheWholeSurface(): void
     {
         $names = $this->toolNames(['trips:read', 'trips:write']);
+        sort($names);
 
-        foreach (['get_trip', 'list_trips', 'share_trip', 'unshare_trip', 'delete_trip', 'analyze_trip'] as $tool) {
-            self::assertContains($tool, $names);
-        }
+        $expected = array_merge(self::READS, self::WRITES);
+        sort($expected);
+
+        self::assertSame($expected, $names);
     }
 
     /**
