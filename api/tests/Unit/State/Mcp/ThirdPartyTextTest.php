@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
  *
  * What it must hold: a value this project did not write cannot change the shape of the answer
  * around it, and cannot spend the budget the digest exists to keep. What it explicitly does
- * NOT hold is anything about meaning — see the class docblock, and unit 3C.
+ * NOT hold is anything about meaning — see the class docblock.
  */
 final class ThirdPartyTextTest extends TestCase
 {
@@ -100,9 +100,26 @@ final class ThirdPartyTextTest extends TestCase
     }
 
     /**
+     * The structural half, which the MCP serialisation floor applies to every string: it
+     * removes what changes the shape of an answer and tidies nothing, because it cannot tell a
+     * name from an identifier.
+     */
+    #[Test]
+    public function hygieneRemovesStructureAndTouchesNothingElse(): void
+    {
+        self::assertSame('a b', ThirdPartyText::hygiene("a\r\n\tb"));
+        self::assertSame('Grenoble', ThirdPartyText::hygiene("Gre\u{0007}no\u{200B}ble"));
+
+        $clean = '  two  spaces, kept  '.str_repeat('x', 500);
+        self::assertSame($clean, ThirdPartyText::hygiene($clean));
+        self::assertSame('', ThirdPartyText::hygiene(''));
+    }
+
+    /**
      * It does not read what it cleans, and must not start to. A blocklist of phrases gives
-     * false confidence and fails on the first paraphrase; the posture that does look at
-     * meaning is unit 3C.
+     * false confidence and fails on the first paraphrase — and no later unit reverses that:
+     * what bounds a successful injection is the token's scope and the ownership check on every
+     * tool, not the filtering of text.
      */
     #[Test]
     public function itDoesNotTryToUnderstandWhatItCleans(): void

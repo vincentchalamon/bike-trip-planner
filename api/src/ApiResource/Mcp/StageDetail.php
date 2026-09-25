@@ -35,9 +35,11 @@ use App\ApiResource\Model\WeatherForecast;
  * the 200-character cap is right for a name and would cut a sentence, damaging the data in
  * the name of protecting it.
  *
- * The alert payloads below are untouched too. Marking a whole payload as third-party data is
- * unit 3C's problem and needs a mechanism that works at serialisation rather than one call
- * site at a time; nothing here should grow into a half-version of it.
+ * The alert payloads below are passed through as their producers published them. Their
+ * strings — a POI name inside `parameters`, and again inside the rendered `message` — are
+ * treated where every MCP answer is serialised, by {@see \App\Serializer\Mcp\McpTextFloor},
+ * rather than here: nobody maps a producer's payload, so only a pass over the whole answer
+ * covers it.
  */
 final readonly class StageDetail
 {
