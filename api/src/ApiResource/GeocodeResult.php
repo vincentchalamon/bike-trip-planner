@@ -12,6 +12,7 @@ use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Parameter;
 use App\State\GeocodeSearchProvider;
+use App\ApiResource\Mcp\SearchPlacesInput;
 
 /**
  * A place, as Nominatim names it.
@@ -80,6 +81,7 @@ use App\State\GeocodeSearchProvider;
             // record. The firewall having already established who is calling is the whole of
             // the authorization, and saying so at the domain level is the point of ADR-063.
             security: "is_granted('ROLE_USER')",
+            input: SearchPlacesInput::class,
             output: GeocodeResult::class,
             provider: GeocodeSearchProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],

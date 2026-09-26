@@ -44,6 +44,7 @@ use App\State\StageUpdateProcessor;
 use Symfony\Component\Uid\Uuid;
 use App\ApiResource\Mcp\StageDetail;
 use App\ApiResource\Mcp\WriteAcknowledgement;
+use App\ApiResource\Mcp\GetStageInput;
 
 #[ApiResource(
     shortName: 'Stage',
@@ -337,6 +338,7 @@ use App\ApiResource\Mcp\WriteAcknowledgement;
             // `pre_read`, so a stage id belonging to someone else's trip is refused exactly as
             // an unknown one is — the provider never runs to report which it was.
             security: "is_granted('TRIP_VIEW', tripId)",
+            input: GetStageInput::class,
             output: StageDetail::class,
             // Everything StageResponse carries except `geometry`. Serving the coordinate trail
             // would contradict this unit's own exclusion table, which keeps GET /route out of

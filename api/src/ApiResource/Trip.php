@@ -42,6 +42,7 @@ use App\State\TripUpdateProcessor;
 use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
 use App\ApiResource\Mcp\TripCreated;
 use App\ApiResource\Mcp\WriteAcknowledgement;
+use App\ApiResource\Mcp\ListTripsInput;
 
 #[ApiResource(
     shortName: 'Trip',
@@ -221,6 +222,7 @@ use App\ApiResource\Mcp\WriteAcknowledgement;
             // Ownership is the whole of it: the provider only ever selects the current user's
             // trips, so there is no object to authorize against and no id to leak.
             security: "is_granted('ROLE_USER')",
+            input: ListTripsInput::class,
             output: TripListItem::class,
             provider: TripCollectionProvider::class,
             extraProperties: ['mcp_scope' => 'trips:read'],

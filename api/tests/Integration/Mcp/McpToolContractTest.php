@@ -445,6 +445,56 @@ final class McpToolContractTest extends KernelTestCase
         self::assertSame([], array_values(array_unique($offenders)), "Validation message(s) that would quote a submitted value to the model:\n  ".implode("\n  ", array_unique($offenders)));
     }
 
+    /**
+     * Every tool publishes the arguments it is addressed by, and marks them required.
+     *
+     * `tools/list` builds a tool's `inputSchema` from `input:` and falls back to the resource
+     * class, exactly as it does for the output. The four read tools declared none, so they
+     * published the fields of the RESOURCE as arguments: `get_stage` offered `geometry` and
+     * `alerts` to fill in and never mentioned `stageId`, the one argument it cannot work without;
+     * `search_places` never mentioned `q`. And no tool marked anything required, because a
+     * non-nullable constructor parameter does not make a property required in the schema —
+     * `#[ApiProperty(required: true)]` does. Found by the manual Inspector pass.
+     *
+     * The URI variables are the one part of a tool's arguments this test can know without a
+     * second list: they are what the Handler copies out by name, so a tool that does not publish
+     * one cannot be called correctly by a model reading the schema.
+     */
+    #[Test]
+    public function everyToolPublishesTheArgumentsItIsAddressedByAsRequired(): void
+    {
+        $metadata = self::getContainer()->get('api_platform.metadata.property.metadata_factory');
+        self::assertInstanceOf(PropertyMetadataFactoryInterface::class, $metadata);
+        $names = self::getContainer()->get('api_platform.metadata.property.name_collection_factory');
+        self::assertInstanceOf(PropertyNameCollectionFactoryInterface::class, $names);
+
+        $offenders = [];
+
+        foreach ($this->tools() as $name => $operation) {
+            $input = $this->inputClass($operation);
+
+            if (null === $input || $input === $operation->getClass()) {
+                $offenders[] = \sprintf('%s: no `input:` class of its own — the resource\'s fields would be published as arguments', $name);
+                continue;
+            }
+
+            $published = $this->stringList(iterator_to_array($names->create($input)));
+
+            foreach (array_keys($operation instanceof HttpOperation ? ($operation->getUriVariables() ?? []) : []) as $variable) {
+                if (!\in_array($variable, $published, true)) {
+                    $offenders[] = \sprintf('%s: does not publish `%s`, which it is addressed by', $name, $variable);
+                    continue;
+                }
+
+                if (true !== $metadata->create($input, $variable)->isRequired()) {
+                    $offenders[] = \sprintf('%s: publishes `%s` without marking it required', $name, $variable);
+                }
+            }
+        }
+
+        self::assertSame([], $offenders, "Tool argument(s) a model cannot see as needed:\n  ".implode("\n  ", $offenders));
+    }
+
     /** Guards the guards: a scan that found nothing would keep every assertion above green. */
     #[Test]
     public function theScanFindsTools(): void

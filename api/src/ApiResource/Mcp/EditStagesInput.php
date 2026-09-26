@@ -28,7 +28,7 @@ use App\ApiResource\StageRequest;
 final readonly class EditStagesInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip whose days are being restructured.')]
+        #[ApiProperty(description: 'Identifier of the trip whose days are being restructured.', required: true)]
         public string $tripId,
         #[ApiProperty(description: <<<'TEXT'
             What to do. One of:
@@ -37,9 +37,9 @@ final readonly class EditStagesInput
             - `move`: reorder. Needs `stageId` and `toIndex` (0-based).
             - `delete`: remove a day and merge it with the one beside it. Needs `stageId`.
             - `rest_day`: insert a rest day AFTER a day. Needs `stageId`. The following day starts where it did; every date shifts by one.
-            TEXT)]
+            TEXT, required: true)]
         public string $action,
-        #[ApiProperty(description: 'The trip version this edit is conditional on, from `get_trip` or from the previous edit. The edit is refused if the trip moved on since. Every edit answers with the new version, so a sequence of edits needs no read in between.')]
+        #[ApiProperty(description: 'The trip version this edit is conditional on, from `get_trip` or from the previous edit. The edit is refused if the trip moved on since. Every edit answers with the new version, so a sequence of edits needs no read in between.', required: true)]
         public int $version,
         #[ApiProperty(description: 'Which day to act on, as published by `get_trip`. Required by every action except `add`. Stage identifiers survive edits but not a full replan.')]
         public ?string $stageId = null,

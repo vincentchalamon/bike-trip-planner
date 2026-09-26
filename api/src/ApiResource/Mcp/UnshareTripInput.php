@@ -13,7 +13,7 @@ use ApiPlatform\Metadata\ApiProperty;
 final readonly class UnshareTripInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip whose public link should be revoked.')]
+        #[ApiProperty(description: 'Identifier of the trip whose public link should be revoked.', required: true)]
         public string $tripId,
         #[ApiProperty(description: 'Leave this out on the first call: the tool answers with what revoking would affect, and a token. Call it again with that token to carry it out.')]
         public ?string $confirmationToken = null,
