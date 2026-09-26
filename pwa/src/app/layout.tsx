@@ -5,7 +5,8 @@ import { unstable_rethrow } from "next/navigation";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
-import { IntlProvider } from "@/components/intl-provider";
+import { NextIntlClientProvider } from "next-intl";
+import { IntlErrorGuard } from "@/components/intl-error-guard";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -89,20 +90,23 @@ export default async function RootLayout({
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased overflow-x-hidden">
-        <IntlProvider locale={locale} messages={messages}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AuthGuard>
-              <TooltipProvider>{children}</TooltipProvider>
-              <OnboardingTour />
-            </AuthGuard>
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
-        </IntlProvider>
+        {/* Both, and in this order: see `IntlErrorGuard` for why (#1318). */}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <IntlErrorGuard locale={locale} messages={messages}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthGuard>
+                <TooltipProvider>{children}</TooltipProvider>
+                <OnboardingTour />
+              </AuthGuard>
+              <Toaster richColors position="top-right" />
+            </ThemeProvider>
+          </IntlErrorGuard>
+        </NextIntlClientProvider>
         <PlausibleScript />
       </body>
     </html>
