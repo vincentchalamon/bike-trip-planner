@@ -36,6 +36,17 @@ use ApiPlatform\Metadata\Operation;
  * plain DTO — gives an empty object. One shape for both tools is worth more than reusing a
  * builder for half of them.
  *
+ * The item schema is embedded whole, one level down, and that is only safe because the factory
+ * decorated here is {@see \ApiPlatform\Mcp\JsonSchema\SchemaFactory}, whose entire job is to
+ * flatten — "no $ref, no allOf, no definitions". Measured across the thirteen tools, nested
+ * ones included: not one carries a reference, and `getArrayCopy()` returns the same document
+ * with or without definitions. Were it otherwise, a `#/definitions/...` pointer would travel
+ * down into `member.items` and resolve against nothing — the very shape of refusal this class
+ * exists to end. No hoisting is written for a case the layer below rules out; what stands
+ * instead is
+ * {@see \App\Tests\Functional\McpOutputSchemaTest::noPublishedSchemaLeavesAReferenceToResolve},
+ * so the day that layer changes, it is a red test rather than a client's refusal.
+ *
  * A tool opts in by declaring `mcp_collection` in its extra properties. Declared rather than
  * guessed: whether a provider answers one record or a page of them is not visible in the
  * metadata. What keeps the declaration honest is

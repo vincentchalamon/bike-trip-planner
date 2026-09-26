@@ -93,6 +93,44 @@ final class McpOutputSchemaTest extends ApiTestCase
     }
 
     /**
+     * Every published schema stands on its own: no `$ref`, and so nothing to resolve.
+     *
+     * `ApiPlatform\Mcp\JsonSchema\SchemaFactory` exists to flatten — "no $ref, no allOf, no
+     * definitions" — and inlines every reference, a circular one included. Two things depend
+     * on that and would break silently without it. A client resolving `#/definitions/Foo`
+     * against a document that has no `definitions` refuses the answer, which is how
+     * `search_places` failed before this change; and
+     * {@see \App\JsonSchema\Mcp\McpCollectionSchema} embeds an item schema one level down,
+     * under `member.items`, where a document-root pointer would stop resolving.
+     *
+     * So this is not hygiene: it is the invariant that makes embedding safe, asserted where
+     * it would be noticed rather than assumed in a comment. If a future version of the
+     * component stops flattening, this fails and says what to do about it.
+     */
+    #[Test]
+    public function noPublishedSchemaLeavesAReferenceToResolve(): void
+    {
+        $offenders = [];
+
+        foreach ($this->publishedSchemas() as $tool => $schema) {
+            $document = json_encode($schema, \JSON_THROW_ON_ERROR);
+
+            foreach (['$ref', 'definitions', 'components', '$schema'] as $key) {
+                if (str_contains($document, sprintf('"%s"', $key))) {
+                    $offenders[] = sprintf('%s carries `%s`', $tool, $key);
+                }
+            }
+        }
+
+        self::assertSame([], $offenders, sprintf(
+            "Published schema(s) that no longer stand alone:\n  %s\n".
+            'An embedded item schema (McpCollectionSchema) then hides its own definitions under '.
+            '`member.items`, where a `#/definitions/...` pointer resolves to nothing.',
+            implode("\n  ", $offenders),
+        ));
+    }
+
+    /**
      * The two tools that answer a page rather than a record publish an envelope.
      *
      * Kept separate from the loop above because a schema can describe an answer and still be
