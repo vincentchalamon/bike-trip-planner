@@ -19,14 +19,26 @@ services:
     read_only: false
     environment:
       APP_ENV: dev
-      # Mercure playground + permissive CORS for local development. `demo` was
-      # renamed `playground` in Mercure 1.0 (and `ui` to `debugger`), and an
-      # unknown directive is now a fatal config error rather than a silent no-op:
-      # leaving `demo` here stops the hub from booting. Never enable `playground`
-      # outside dev — it mints an all-access token and forces anonymous access.
+      # Mercure debugger + permissive CORS for local development. Mercure 1.0 renamed
+      # `ui` to `debugger` and `demo` to `playground`, and an unknown directive here is
+      # now a fatal config error rather than a silent no-op.
+      #
+      # `debugger` and NOT `playground`: measured, the playground installs a redirect from
+      # `/` to its own interface, and it wins over the `@pwa` route below — so the PWA home
+      # page was unreachable on https://localhost while every other route worked, which
+      # reads as a routing bug in the Caddyfile and is not one. The debugger serves the same
+      # dev need (watch the SSE stream at /.well-known/mercure/debug/) and leaves `/` alone.
+      #
+      # The hub's own source (dunglas/mercure v1.0.0, the pin this image compiles) separates
+      # the two precisely: the debugger is "prod-safe", the playground is "insecure … dev
+      # only" because it "mints an all-access token prefilled in the UI" — and it implies the
+      # debugger, which is why the debug UI was reachable under either. So the token is the
+      # playground's alone, and keeping it out costs nothing here. Anonymous subscribers are
+      # a third thing again: `anonymous` in the Caddyfile, unconditional, neither directive's
+      # doing.
       MERCURE_EXTRA_DIRECTIVES: |-
         cors_origins *
-        playground
+        debugger
       MAILER_DSN: smtp://mailcatcher:1025
       # Early-access email verification (ADR-029). Prod stays fail-closed on an
       # empty secret; dev needs a non-empty value or AccessRequestHmacService
