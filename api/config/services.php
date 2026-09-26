@@ -9,6 +9,7 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
+use App\RouteFetcher\RouteSourceBaseUri;
 use App\Security\OAuth\McpCallBudget;
 use App\Security\OAuth\McpScopeGuard;
 use App\Serializer\Mcp\McpTextFloor;
@@ -20,6 +21,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\inline_service;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -80,13 +82,30 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     // hostname and the internal network. The check runs on the IP actually connected to,
     // so a name that resolves to a public address on the first lookup and a private one on
     // the second does not get through.
-    foreach (['komoot.client', 'strava.client', 'ridewithgps.client', 'oauth_client_metadata.client'] as $scopedClientId) {
-        $services->set($scopedClientId.'.no_private_network', NoPrivateNetworkHttpClient::class)
+    //
+    // ⚠ The wrapper resolves a URL against its OWN options before delegating, and the fetchers
+    // call their client with a relative path (`/tour/{id}`). Wrapped bare, as it was from #1229,
+    // it had no base_uri, so every route fetch died with "scheme is missing" before reaching the
+    // network — Komoot, Strava and RideWithGPS alike, invisible to a suite whose fetcher tests
+    // double the client. So each route client's guard is given the same base URI as its scope
+    // (RouteSourceBaseUri, read by framework.php too): it resolves the path, checks the IP it
+    // connects to, and hands an absolute URL the scoped client still recognises as its own.
+    // tests/Integration/HttpClient/RouteSourceClientTest goes through the real service graph.
+    foreach (RouteSourceBaseUri::BY_CLIENT as $scopedClientId => $baseUri) {
+        $services->set($scopedClientId.'.no_private_network', HttpClientInterface::class)
             ->decorate($scopedClientId)
-            ->args([service('.inner')])
+            ->factory([inline_service(NoPrivateNetworkHttpClient::class)->args([service($scopedClientId.'.no_private_network.inner')]), 'withOptions'])
+            ->args([['base_uri' => $baseUri]])
             ->autowire(false)
             ->autoconfigure(false);
     }
+
+    // The metadata client is unscoped and always called with an absolute URL: no base URI.
+    $services->set('oauth_client_metadata.client.no_private_network', NoPrivateNetworkHttpClient::class)
+        ->decorate('oauth_client_metadata.client')
+        ->args([service('.inner')])
+        ->autowire(false)
+        ->autoconfigure(false);
 
     // The guards that stand between a caller and a write, declared against BOTH write chains.
     //
