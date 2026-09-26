@@ -10,6 +10,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
+use App\Enum\AlertGroup;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
@@ -192,6 +193,22 @@ final class McpOutputSchemaTest extends ApiTestCase
 
         $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
         self::assertIsString($stageId);
+
+        // A real alert payload, not an empty list. The first version of this test validated
+        // get_stage against a stage with no alert, so a schema that declared every alert value a
+        // string passed here — and a validating client (the MCP Inspector) refused every real
+        // answer: producers publish numbers (`lat`, `lon`) and objects (`parameters`, `action`).
+        $repo->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
+            'code' => 'cultural_poi_suggestion',
+            'type' => 'nudge',
+            'messageKey' => 'alert.cultural_poi.suggestion',
+            'parameters' => ['%name%' => 'Musée du vélo', '%type%' => 'museum', '%distance%' => 120],
+            'parameterFormats' => ['%distance%' => 'distance'],
+            'lat' => 45.1,
+            'lon' => 6.1,
+            'poiName' => 'Musée du vélo',
+            'action' => ['kind' => 'navigate', 'labelKey' => 'alert.ferry.action', 'payload' => ['lat' => 45.1, 'lon' => 6.1]],
+        ]]);
 
         return $stageId;
     }
