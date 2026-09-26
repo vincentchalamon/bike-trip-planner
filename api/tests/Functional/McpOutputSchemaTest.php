@@ -15,6 +15,8 @@ use App\Repository\DoctrineTripRequestRepository;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -79,10 +81,82 @@ final class McpOutputSchemaTest extends ApiTestCase
         $answers['delete_trip (challenge)'] = $challenge;
         $answers['delete_trip (confirmed)'] = $this->structured('delete_trip', ['id' => self::TRIP_ID, 'confirmationToken' => $challenge['confirmationToken']]);
 
+        // Last, because it needs a kernel of its own: the container refuses to replace a service
+        // it has already built, and every call above has built the HTTP client this one mocks.
+        $answers['search_places'] = $this->searchPlaces();
+
         foreach ($answers as $label => $answer) {
             $tool = explode(' ', $label)[0];
             self::assertArrayHasKey($tool, $schemas, $tool.' publishes no output schema at all.');
             self::assertThat($answer, new MatchesJsonSchema($schemas[$tool]), $label.' does not match the schema its tool publishes.');
+        }
+    }
+
+    /**
+     * Every published schema stands on its own: no `$ref`, and so nothing to resolve.
+     *
+     * `ApiPlatform\Mcp\JsonSchema\SchemaFactory` exists to flatten — "no $ref, no allOf, no
+     * definitions" — and inlines every reference, a circular one included. Two things depend
+     * on that and would break silently without it. A client resolving `#/definitions/Foo`
+     * against a document that has no `definitions` refuses the answer, which is how
+     * `search_places` failed before this change; and
+     * {@see \App\JsonSchema\Mcp\McpCollectionSchema} embeds an item schema one level down,
+     * under `member.items`, where a document-root pointer would stop resolving.
+     *
+     * So this is not hygiene: it is the invariant that makes embedding safe, asserted where
+     * it would be noticed rather than assumed in a comment. If a future version of the
+     * component stops flattening, this fails and says what to do about it.
+     */
+    #[Test]
+    public function noPublishedSchemaLeavesAReferenceToResolve(): void
+    {
+        $offenders = [];
+
+        foreach ($this->publishedSchemas() as $tool => $schema) {
+            $document = json_encode($schema, \JSON_THROW_ON_ERROR);
+
+            foreach (['$ref', 'definitions', 'components', '$schema'] as $key) {
+                if (str_contains($document, sprintf('"%s"', $key))) {
+                    $offenders[] = sprintf('%s carries `%s`', $tool, $key);
+                }
+            }
+        }
+
+        self::assertSame([], $offenders, sprintf(
+            "Published schema(s) that no longer stand alone:\n  %s\n".
+            'An embedded item schema (McpCollectionSchema) then hides its own definitions under '.
+            '`member.items`, where a `#/definitions/...` pointer resolves to nothing.',
+            implode("\n  ", $offenders),
+        ));
+    }
+
+    /**
+     * The two tools that answer a page rather than a record publish an envelope.
+     *
+     * Kept separate from the loop above because a schema can describe an answer and still be
+     * the wrong schema: `list_trips` published the shape of a single `TripListItem`, which
+     * matched its collection answer for the only reason that it required nothing and forbade
+     * nothing. What is asserted here is the shape itself — `member` carrying the records, and
+     * `required` naming it, so a client has something to check.
+     */
+    #[Test]
+    public function aToolThatAnswersAListPublishesAnEnvelope(): void
+    {
+        $schemas = $this->publishedSchemas();
+
+        foreach (['list_trips', 'search_places'] as $tool) {
+            self::assertArrayHasKey($tool, $schemas, $tool.' publishes no output schema at all.');
+
+            $properties = $schemas[$tool]['properties'] ?? [];
+            self::assertIsArray($properties);
+            self::assertArrayHasKey('member', $properties, $tool.' publishes no `member`: it announces one record as the whole answer.');
+            self::assertArrayHasKey('totalItems', $properties, $tool.' publishes no `totalItems`.');
+            self::assertSame(['member'], $schemas[$tool]['required'] ?? null, $tool.' does not require `member`, so its schema forbids nothing.');
+
+            // And the records are described, rather than the envelope being an empty promise.
+            $items = $properties['member']['items'] ?? [];
+            self::assertIsArray($items);
+            self::assertNotSame([], $items['properties'] ?? [], $tool.' describes no property of the records it returns.');
         }
     }
 
@@ -99,6 +173,31 @@ final class McpOutputSchemaTest extends ApiTestCase
         foreach (['geometry', 'alertsByGroup', 'supplyTimeline', 'tripId'] as $dropped) {
             self::assertArrayNotHasKey($dropped, $properties, 'get_stage announces `'.$dropped.'`, which it never answers with.');
         }
+    }
+
+    /**
+     * `search_places`, with Nominatim mocked — the answer has to be this project's, not a live
+     * one, and the mock only installs on a kernel whose HTTP client has not been built yet.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function searchPlaces(): array
+    {
+        $this->token ??= $this->issueAccessTokenFor($this->owner, ['trips:read', 'trips:write']);
+
+        self::ensureKernelShutdown();
+        $this->client = self::createClient();
+        self::getContainer()->set('nominatim.client', new MockHttpClient(
+            static fn (): MockResponse => new MockResponse(json_encode([[
+                'name' => 'Grenoble',
+                'display_name' => 'Grenoble, Isère, France',
+                'lat' => '45.1885',
+                'lon' => '5.7245',
+                'addresstype' => 'city',
+            ]], \JSON_THROW_ON_ERROR), ['response_headers' => ['content-type' => 'application/json']]),
+        ));
+
+        return $this->structured('search_places', ['q' => 'Grenoble']);
     }
 
     /**

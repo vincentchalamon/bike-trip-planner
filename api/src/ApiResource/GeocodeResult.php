@@ -12,6 +12,7 @@ use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Parameter;
 use App\State\GeocodeSearchProvider;
+use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\ApiResource\Mcp\SearchPlacesInput;
 
 /**
@@ -84,7 +85,10 @@ use App\ApiResource\Mcp\SearchPlacesInput;
             input: SearchPlacesInput::class,
             output: GeocodeResult::class,
             provider: GeocodeSearchProvider::class,
-            extraProperties: ['mcp_scope' => 'trips:read'],
+            // `mcp_collection`: the answer is a list of places. Without it the tool published
+            // the schema of ONE place, `@id` typed as a string, and a validating client refused
+            // every answer — the collection's `@id` is null on this transport.
+            extraProperties: ['mcp_scope' => 'trips:read', McpCollectionSchema::EXTRA_PROPERTY => true],
         ),
     ],
 )]
