@@ -17,24 +17,18 @@ import { logger } from "@/lib/logger";
  * It has to be a client component, because `onError` is a function and a Server
  * Component cannot pass one as a prop.
  *
- * ⚠ It is NOT the provider the tree reads from, and that is the fix for #1318.
- * The root layout renders `NextIntlClientProvider` itself, straight from the
- * package, and this one nests inside it with the same locale and messages. When
- * this component WAS the only provider, the first render of a route after
- * `next dev` compiled it on demand found no context at all — the provider was
- * reached through an app chunk that was not ready yet, while the consumers
- * resolved next-intl's own. Every page answered its first request with `Failed
- * to call useTranslations because the context from NextIntlClientProvider was
- * not found`, and the public pages turned that into a 500 (the authenticated
- * ones absorbed it and answered 200, which is why it read as a route-group
- * problem and is not one).
+ * ⚠ It is NOT the provider the tree reads from first, and that is deliberate.
+ * The root layout renders `NextIntlClientProvider` straight from the package,
+ * and this one nests inside it with the same locale and messages. Reached only
+ * through an app chunk, a provider is not there yet on the first render of a
+ * route `next dev` compiles on demand: consumers resolve next-intl's own module,
+ * find no context, and every page failed its first request (#1318). Rendering
+ * the package's provider outermost means a consumer always finds one.
  *
- * With the package's provider outermost, a consumer always finds a context: the
- * canonical one in that first render, this one from then on. Measured on a cold
- * dev server, first request per route: `/`, `/privacy`, `/faq` and `/trips/new`
- * go from "500, or 200 with the context error logged" to 200 with nothing
- * logged — and a deliberately missing key still surfaces as an error page rather
- * than silent text, so the guard below is still doing its job.
+ * So: do not "simplify" this by making it the only provider again, and do not
+ * drop it either — `onError` is what turns a missing key into a signal instead
+ * of silent text, and `i18n:check` cannot see that (it compares catalogues to
+ * each other, never code to catalogue).
  */
 function handleIntlError(error: IntlError): void {
   if (process.env.NODE_ENV === "development") {

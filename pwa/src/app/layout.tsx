@@ -90,13 +90,7 @@ export default async function RootLayout({
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased overflow-x-hidden">
-        {/*
-          The provider comes from the package itself, and `IntlErrorGuard` nests
-          inside it rather than replacing it (#1318): reached only through an app
-          chunk, the context was missing on the first render of every route
-          `next dev` compiled on demand. The guard adds `onError`, which a Server
-          Component cannot pass here because it is a function.
-        */}
+        {/* Both, and in this order: see `IntlErrorGuard` for why (#1318). */}
         <NextIntlClientProvider locale={locale} messages={messages}>
           <IntlErrorGuard locale={locale} messages={messages}>
             <ThemeProvider
