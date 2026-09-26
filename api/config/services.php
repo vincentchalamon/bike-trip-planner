@@ -12,6 +12,7 @@ use App\Push\PushSenderInterface;
 use App\RouteFetcher\RouteSourceBaseUri;
 use App\Security\OAuth\McpCallBudget;
 use App\Security\OAuth\McpScopeGuard;
+use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\Serializer\Mcp\McpTextFloor;
 use App\State\Mcp\McpConfirmationProcessor;
 use App\State\Mcp\McpDeserializeProvider;
@@ -190,6 +191,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->decorate('api_platform.mcp.handler', null, 10)
         ->args([service(McpCallBudget::class.'.inner')])
         ->autowire()
+        ->autoconfigure(false);
+
+    // The envelope a tool that answers a list publishes, around the item schema the factory
+    // below it builds. Decorating the MCP factory rather than the shared one: it is the service
+    // the tool registry reads, so nothing outside `tools/list` sees this.
+    $services->set(McpCollectionSchema::class)
+        ->decorate('api_platform.mcp.json_schema.schema_factory')
+        ->args([service(McpCollectionSchema::class.'.inner')])
+        ->autowire(false)
         ->autoconfigure(false);
 
     // The serializer MCP tool answers go through, handed to StructuredContentProcessor alone by

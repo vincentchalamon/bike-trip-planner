@@ -39,6 +39,7 @@ use App\State\TripDuplicateProcessor;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
+use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
 use App\ApiResource\Mcp\TripCreated;
 use App\ApiResource\Mcp\WriteAcknowledgement;
@@ -225,7 +226,10 @@ use App\ApiResource\Mcp\ListTripsInput;
             input: ListTripsInput::class,
             output: TripListItem::class,
             provider: TripCollectionProvider::class,
-            extraProperties: ['mcp_scope' => 'trips:read'],
+            // `mcp_collection`: the answer is a page of trips, not one trip, and the schema
+            // factory would otherwise publish the shape of a single `TripListItem` as the shape
+            // of the whole answer — see App\JsonSchema\Mcp\McpCollectionSchema.
+            extraProperties: ['mcp_scope' => 'trips:read', McpCollectionSchema::EXTRA_PROPERTY => true],
         ),
         'create_trip' => new McpTool(
             name: 'create_trip',
