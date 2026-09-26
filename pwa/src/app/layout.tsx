@@ -5,7 +5,8 @@ import { unstable_rethrow } from "next/navigation";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
-import { IntlProvider } from "@/components/intl-provider";
+import { NextIntlClientProvider } from "next-intl";
+import { IntlErrorGuard } from "@/components/intl-error-guard";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -89,20 +90,29 @@ export default async function RootLayout({
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased overflow-x-hidden">
-        <IntlProvider locale={locale} messages={messages}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AuthGuard>
-              <TooltipProvider>{children}</TooltipProvider>
-              <OnboardingTour />
-            </AuthGuard>
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
-        </IntlProvider>
+        {/*
+          The provider comes from the package itself, and `IntlErrorGuard` nests
+          inside it rather than replacing it (#1318): reached only through an app
+          chunk, the context was missing on the first render of every route
+          `next dev` compiled on demand. The guard adds `onError`, which a Server
+          Component cannot pass here because it is a function.
+        */}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <IntlErrorGuard locale={locale} messages={messages}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthGuard>
+                <TooltipProvider>{children}</TooltipProvider>
+                <OnboardingTour />
+              </AuthGuard>
+              <Toaster richColors position="top-right" />
+            </ThemeProvider>
+          </IntlErrorGuard>
+        </NextIntlClientProvider>
         <PlausibleScript />
       </body>
     </html>
