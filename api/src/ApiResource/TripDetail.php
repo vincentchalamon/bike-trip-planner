@@ -18,6 +18,7 @@ use App\Enum\AlertGroup;
 use App\ApiResource\Mcp\TripDigest;
 use App\State\Mcp\TripDigestProvider;
 use App\State\TripDetailProvider;
+use App\ApiResource\Mcp\GetTripInput;
 
 /**
  * Read-only trip detail resource for loading a persisted trip on the frontend.
@@ -64,6 +65,7 @@ use App\State\TripDetailProvider;
             // ExpressionAccessChecker swallows on purpose: the tool stays listed and the
             // expression is enforced on tools/call.
             security: "is_granted('TRIP_VIEW', id)",
+            input: GetTripInput::class,
             output: TripDigest::class,
             // A projection of what TripDetailProvider returns, not a second query: `TripDetail`
             // is the REST contract and is shared with /s/{shortCode}, so it does not move.

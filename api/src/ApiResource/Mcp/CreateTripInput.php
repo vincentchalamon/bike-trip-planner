@@ -26,7 +26,7 @@ final readonly class CreateTripInput
      * @param list<string> $enabledAccommodationTypes
      */
     public function __construct(
-        #[ApiProperty(description: 'Public URL of the route to plan from. Komoot tour or collection, Strava route, or RideWithGPS route; https only. This is the only way to create a trip: a file cannot be sent through this transport.')]
+        #[ApiProperty(description: 'Public URL of the route to plan from. Komoot tour or collection, Strava route, or RideWithGPS route; https only. This is the only way to create a trip: a file cannot be sent through this transport.', required: true)]
         public string $sourceUrl,
         #[ApiProperty(description: 'Name for the trip. Optional: when the source has a title of its own, it is used.')]
         public ?string $title = null,

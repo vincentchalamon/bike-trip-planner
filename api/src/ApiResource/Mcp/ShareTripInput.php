@@ -21,7 +21,7 @@ use ApiPlatform\Metadata\ApiProperty;
 final readonly class ShareTripInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip to publish, as returned by `list_trips` or `get_trip`.')]
+        #[ApiProperty(description: 'Identifier of the trip to publish, as returned by `list_trips` or `get_trip`.', required: true)]
         public string $tripId,
     ) {
     }

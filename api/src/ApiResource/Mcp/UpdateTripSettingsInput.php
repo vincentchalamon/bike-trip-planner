@@ -26,9 +26,9 @@ final readonly class UpdateTripSettingsInput
      * @param list<string> $enabledAccommodationTypes
      */
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip to change.')]
+        #[ApiProperty(description: 'Identifier of the trip to change.', required: true)]
         public string $id,
-        #[ApiProperty(description: 'The trip version this edit is conditional on, as returned by `get_trip` or by the previous edit. The edit is refused if the trip moved on since — read it again and reapply. Required: there is no way to say "whatever the current state is".')]
+        #[ApiProperty(description: 'The trip version this edit is conditional on, as returned by `get_trip` or by the previous edit. The edit is refused if the trip moved on since — read it again and reapply. Required: there is no way to say "whatever the current state is".', required: true)]
         public int $version,
         #[ApiProperty(description: 'Leave this out on the first call. The answer will describe what the change costs and hand back a token; call again with that token, and the same arguments, to apply it.')]
         public ?string $confirmationToken = null,

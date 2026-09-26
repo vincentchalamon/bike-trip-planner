@@ -21,13 +21,13 @@ use App\ApiResource\StagePoiWaypointRequest;
 final readonly class AddWaypointInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip.')]
+        #[ApiProperty(description: 'Identifier of the trip.', required: true)]
         public string $tripId,
-        #[ApiProperty(description: 'Identifier of the day to reroute, as published by `get_trip`.')]
+        #[ApiProperty(description: 'Identifier of the day to reroute, as published by `get_trip`.', required: true)]
         public string $stageId,
-        #[ApiProperty(description: 'Latitude of the place to route through, from the points of interest `get_stage` publishes for that day.')]
+        #[ApiProperty(description: 'Latitude of the place to route through, from the points of interest `get_stage` publishes for that day.', required: true)]
         public float $waypointLat,
-        #[ApiProperty(description: 'Longitude of the place to route through.')]
+        #[ApiProperty(description: 'Longitude of the place to route through.', required: true)]
         public float $waypointLon,
     ) {
     }

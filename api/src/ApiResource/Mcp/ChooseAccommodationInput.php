@@ -22,11 +22,11 @@ use App\ApiResource\StageSelectAccommodationRequest;
 final readonly class ChooseAccommodationInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip.')]
+        #[ApiProperty(description: 'Identifier of the trip.', required: true)]
         public string $tripId,
-        #[ApiProperty(description: 'Identifier of the day to sleep on, as published by `get_trip`.')]
+        #[ApiProperty(description: 'Identifier of the day to sleep on, as published by `get_trip`.', required: true)]
         public string $stageId,
-        #[ApiProperty(description: 'The trip version this edit is conditional on, from `get_trip` or from the previous edit. Choosing a place moves the end of the day, so the trip moves with it.')]
+        #[ApiProperty(description: 'The trip version this edit is conditional on, from `get_trip` or from the previous edit. Choosing a place moves the end of the day, so the trip moves with it.', required: true)]
         public int $version,
         #[ApiProperty(description: 'Latitude of the chosen place, copied from the `accommodations` list `get_stage` publishes for that day. Leave both coordinates out to un-choose whatever is currently selected.')]
         public ?float $selectedAccommodationLat = null,

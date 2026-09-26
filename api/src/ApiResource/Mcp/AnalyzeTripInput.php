@@ -13,7 +13,7 @@ use ApiPlatform\Metadata\ApiProperty;
 final readonly class AnalyzeTripInput
 {
     public function __construct(
-        #[ApiProperty(description: 'Identifier of the trip to enrich.')]
+        #[ApiProperty(description: 'Identifier of the trip to enrich.', required: true)]
         public string $id,
     ) {
     }

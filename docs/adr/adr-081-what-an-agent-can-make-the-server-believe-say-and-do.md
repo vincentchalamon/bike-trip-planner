@@ -106,7 +106,7 @@ So:
   Before, it held by luck: one literal `message:` on `TripRequest`'s `GreaterThan` stood
   between the model and the caller's start date.
 
-### 5. What `tools/list` promises about an answer is what the answer is
+### 5. What `tools/list` promises about a call is what the call is — in both directions
 
 Every tool published the schema of its resource class, because none declared `output:`. None
 answers with that class. `get_stage` announced `geometry`, the very field its projection drops,
@@ -116,6 +116,23 @@ come out as the lists the schema says. The three tools that confirm before actin
 two shapes and publish their union (`ChallengeOrAcknowledgement`), each field saying which call
 carries it. MCP DTOs declare enums through `schema:`: `openapiContext` is not read by the JSON
 Schema factory.
+
+**This section was written about the answer alone, and the same fault was sitting on the
+other side of the call.** The four read tools declared no `input:` either, so `tools/list`
+published the fields of the *resource* as the arguments a model may pass: `get_stage` offered
+`geometry` and `alerts` to fill in and never mentioned `stageId`, without which it cannot run;
+`search_places` never mentioned `q`, which its own description asks for. And no tool marked any
+argument required, because a non-nullable constructor parameter is not a required property —
+`#[ApiProperty(required: true)]` is, and only outside a partial update. A tool therefore
+declares **both** ends of its call, and a guard now checks that each publishes the URI variables
+it is addressed by and marks them required.
+
+Two mechanisms are worth writing down, because both are invisible until a client refuses.
+`schema:` **replaces** an inferred property schema rather than completing it, so a hand-written
+one is total. And `api-platform/mcp` already rewrites an array `type` into `anyOf` for clients
+that read `type` as a single string — but only through `properties`, `items`, `oneOf` and
+`anyOf`, **never under `additionalProperties`**. Every array type a real client refused was
+under one: the jsonb maps `get_stage` wrongly published, and the inferred schema of its alerts.
 
 ### 6. The real bound on an injection is the scope, and inside `trips:write` there is none
 
@@ -164,10 +181,18 @@ to be discovered:
 - **The two refusals that are JSON-RPC errors rather than HTTP statuses** (scope refused on the
   handshake era, budget spent) are an interoperability claim that only a real client can
   confirm. The Inspector and real-agent pass that every unit of this programme deferred had not
-  been run when this was written.
-- **Alert payloads are not key-pinned.** The label on `StageDetail::alerts` covers every key
-  beneath it, and the floor cleans every string. Pinning the key set would either drop a
-  producer's new field silently or become a second list beside the producers.
+  been run when this was written. **It has been run since**, against the server this ADR
+  describes: the connection, the thirteen tools and a full create-read-edit-share-delete
+  journey held, and it found six defects nothing in the suite had — one of them outside MCP
+  entirely, route fetching broken for a month behind a mocked client.
+- **Alert payloads are not key-pinned**, and their schema says only that they are objects. The
+  label on `StageDetail::alerts` covers every key beneath it, and the floor cleans every string.
+  Pinning the key set would either drop a producer's new field silently or become a second list
+  beside the producers. What the Inspector showed is that the *inferred* schema was worse than
+  none: from `list<array<string, mixed>>` the factory promised that every value was a string or
+  null, so a validating client refused every stage carrying an alert — producers publish
+  numbers and objects. A promise that narrow is a promise that breaks; "a list of objects" is
+  the one this field can keep.
 - **No static scan checks every `throw` for unbounded interpolation.** The only PHP parser
   available is a transitive dev dependency, and a regex over PHP would pass for the wrong
   reasons. The two live sites are pinned by tests; the rule is §4.
