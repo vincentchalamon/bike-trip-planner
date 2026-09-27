@@ -34,9 +34,38 @@ trait IssuesOAuthTokensTrait
     private const string OAUTH_CHALLENGE = 'lsmMqplmuEP5Qsegofd3pZlGReS7RX_Y4y8NFq6kGhQ';
 
     /**
+     * The whole token response, for the tests that need more than the bearer.
+     *
+     * Added beside `issueAccessTokenFor()` rather than widening its return type: a dozen MCP
+     * tests call that one for a string, and a test helper is not the place to make them all
+     * change shape at once.
+     *
+     * @param list<string> $scopes
+     *
+     * @return array<string, mixed>
+     */
+    private function issueTokensFor(User $user, array $scopes = ['trips:read']): array
+    {
+        return $this->issueTokenResponse($user, $scopes);
+    }
+
+    /**
      * @param list<string> $scopes
      */
     private function issueAccessTokenFor(User $user, array $scopes = ['trips:read']): string
+    {
+        $accessToken = $this->issueTokenResponse($user, $scopes)['access_token'];
+        self::assertIsString($accessToken);
+
+        return $accessToken;
+    }
+
+    /**
+     * @param list<string> $scopes
+     *
+     * @return array<string, mixed>
+     */
+    private function issueTokenResponse(User $user, array $scopes): array
     {
         $cookie = bin2hex(random_bytes(16));
 
@@ -87,7 +116,7 @@ trait IssuesOAuthTokensTrait
 
         self::assertArrayHasKey('access_token', $token, 'The flow did not issue a token.');
 
-        return (string) $token['access_token'];
+        return $token;
     }
 
     /**

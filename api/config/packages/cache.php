@@ -54,6 +54,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 300, // 5 minutes
                 ],
+                // How recently an agent's last call was already written down (#1308). The
+                // account screen shows "last used" in hours, so a call landing inside this
+                // window adds nothing — and the alternative to a cache key is a SELECT per
+                // message, which a handshake-era batch would multiply by a hundred.
+                'cache.oauth_grant_usage' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 300, // 5 minutes
+                ],
                 'cache.oauth_client_metadata' => [
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 900, // 15 minutes
@@ -83,6 +91,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     // cache.mcp_confirmation stays on Redis under test for the same reason as
                     // cache.oauth_consent below: the token is written by one tool call and
                     // spent by the next, and an array adapter forgets it in between.
+                    //
+                    // cache.oauth_grant_usage stays on Redis for the third variant of that
+                    // reason: it is a throttle read by the call after the one that wrote it,
+                    // so on an array adapter every call would look like the first and the test
+                    // that pins "does not write twice in the window" would pass while proving
+                    // nothing.
                     //
                     // cache.oauth_consent stays on Redis under test, deliberately. The
                     // consent is written by one request and read by the next, and the test
