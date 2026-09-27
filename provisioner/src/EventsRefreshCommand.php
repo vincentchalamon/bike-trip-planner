@@ -102,6 +102,10 @@ final class EventsRefreshCommand extends Command
 
         try {
             $zones = $this->openZones($io);
+            if (null === $zones) {
+                return Command::FAILURE;
+            }
+
             $zoneOption = $input->getOption('zone');
             if (\is_string($zoneOption) && '' !== $zoneOption) {
                 if (!\in_array($zoneOption, $zones, true)) {
@@ -264,14 +268,15 @@ final class EventsRefreshCommand extends Command
      * same source of truth `provision` writes to (`osm.zones`), so opening and refreshing
      * agree on what is open.
      *
-     * @return list<string>
+     * @return list<string>|null null when the registry could not be read, which must not
+     *                           pass for "no zone is open"
      */
-    private function openZones(SymfonyStyle $io): array
+    private function openZones(SymfonyStyle $io): ?array
     {
         if (!is_dir($this->workDir) && !mkdir($this->workDir, 0o755, true) && !is_dir($this->workDir)) {
             $this->fail($io, \sprintf('Cannot create work directory "%s"', $this->workDir));
 
-            return [];
+            return null;
         }
 
         $path = $this->workDir.'/open-zones.tsv';
@@ -286,18 +291,20 @@ final class EventsRefreshCommand extends Command
         } catch (ProcessExceptionInterface $processException) {
             $this->fail($io, \sprintf('Could not read the open zones: %s', $processException->getMessage()));
 
-            return [];
+            return null;
         }
 
         if (!$process->isSuccessful() || !is_file($path)) {
             $this->fail($io, \sprintf('Could not read the open zones: %s', $process->getErrorOutput()));
 
-            return [];
+            return null;
         }
 
         $contents = file_get_contents($path);
         if (false === $contents) {
-            return [];
+            $this->fail($io, \sprintf('Could not read the open zones from "%s"', $path));
+
+            return null;
         }
 
         $zones = [];
