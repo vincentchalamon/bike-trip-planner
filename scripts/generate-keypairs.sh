@@ -77,9 +77,17 @@ generate_pair() {
 	mkdir -p "$dir"
 
 	if [ -n "$passphrase" ]; then
-		openssl genpkey -algorithm RSA -out "$dir/private.pem" -pkeyopt "rsa_keygen_bits:$BITS" \
-			-aes256 -pass "pass:$passphrase"
-		openssl rsa -pubout -in "$dir/private.pem" -out "$dir/public.pem" -passin "pass:$passphrase"
+		# `-pass stdin`, not `-pass pass:…`: the latter puts the plaintext on the command
+		# line, where `ps` and /proc/<pid>/cmdline expose it to every user on the host for
+		# as long as openssl runs. Harmless for the throwaway values the Makefile and CI
+		# pass, but the Vault recipe now points operators here with a REAL production
+		# passphrase — which is what makes this worth doing rather than noting.
+		# Each invocation gets its own pipe; `-in` feeds the second one, so stdin is free.
+		printf '%s\n' "$passphrase" |
+			openssl genpkey -algorithm RSA -out "$dir/private.pem" -pkeyopt "rsa_keygen_bits:$BITS" \
+				-aes256 -pass stdin
+		printf '%s\n' "$passphrase" |
+			openssl rsa -pubout -in "$dir/private.pem" -out "$dir/public.pem" -passin stdin
 	else
 		openssl genpkey -algorithm RSA -out "$dir/private.pem" -pkeyopt "rsa_keygen_bits:$BITS"
 		openssl rsa -pubout -in "$dir/private.pem" -out "$dir/public.pem"
