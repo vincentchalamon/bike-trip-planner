@@ -48,16 +48,20 @@ export function subscribeToTrip(
     if (event.type !== 'message' || event.data === null) {
       return;
     }
+    let envelope: MercureEnvelope;
     try {
-      const envelope = JSON.parse(event.data) as MercureEnvelope;
-      // Record the version the envelope carries before reducing: a regeneration performed
-      // by a worker moves it with no HTTP response to carry a fresh ETag, and the next edit
-      // pins whatever is recorded here.
-      if (envelope.version !== undefined) setTripVersion(tripId, envelope.version);
-      onEvent(envelope);
+      envelope = JSON.parse(event.data) as MercureEnvelope;
     } catch {
-      // Ignore keep-alive frames and malformed payloads.
+      // Ignore keep-alive frames and malformed payloads. Only the parse is guarded: an
+      // exception from the reducer or the store below is a bug and must surface.
+      return;
     }
+    if (envelope === null || typeof envelope !== 'object') return;
+    // Record the version the envelope carries before reducing: a regeneration performed
+    // by a worker moves it with no HTTP response to carry a fresh ETag, and the next edit
+    // pins whatever is recorded here.
+    if (envelope.version !== undefined) setTripVersion(tripId, envelope.version);
+    onEvent(envelope);
   });
 
   return {
