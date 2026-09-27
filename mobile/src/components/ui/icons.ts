@@ -30,6 +30,7 @@ export { default as MapPin } from 'lucide-react-native/icons/map-pin';
 export { default as Menu } from 'lucide-react-native/icons/menu';
 export { default as Mountain } from 'lucide-react-native/icons/mountain';
 export { default as Pencil } from 'lucide-react-native/icons/pencil';
+export { default as Plug } from 'lucide-react-native/icons/plug';
 export { default as Plus } from 'lucide-react-native/icons/plus';
 export { default as RefreshCw } from 'lucide-react-native/icons/refresh-cw';
 export { default as Route } from 'lucide-react-native/icons/route';

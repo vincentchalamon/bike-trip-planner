@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
 import { DataSection } from "@/components/account/data-section";
+import { AuthorizedApplicationsSection } from "@/components/account/authorized-applications-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
 
 /**
@@ -18,9 +19,11 @@ import { DangerZoneSection } from "@/components/account/danger-zone-section";
  * red logout), the content cards, and the shared {@link LandingFooter}. The
  * rail stacks above the content under the `md` breakpoint.
  *
- * Content sections: account (email + magic-link change), data export (GDPR) and
- * danger zone (account deletion). Language and theme live in the header (recette
- * #649), so the former "Préférences" block was dropped. Logout lives in the rail.
+ * Content sections: account (email + magic-link change), authorized applications
+ * (#1308 — the agents that can act for this account, and the way to take that
+ * back), data export (GDPR) and danger zone (account deletion). Language and
+ * theme live in the header (recette #649), so the former "Préférences" block was
+ * dropped. Logout lives in the rail.
  */
 export default function AccountSettingsPage() {
   const t = useTranslations("accountSettings");
@@ -41,6 +44,7 @@ export default function AccountSettingsPage() {
         <AccountRail />
         <div className="flex flex-col gap-6 min-w-0">
           <AccountSection />
+          <AuthorizedApplicationsSection />
           <DataSection />
           <DangerZoneSection />
         </div>

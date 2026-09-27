@@ -130,6 +130,30 @@ export const en: typeof fr = {
     faqTitle: 'FAQ',
     legalTitle: 'Legal notice',
     privacyTitle: 'Privacy',
+    applications: {
+      title: 'Authorized applications',
+      description:
+        'These applications can act on your trips on your behalf. Revoke any you do not recognize.',
+      loading: 'Loading…',
+      loadFailed: 'Could not load your authorized applications.',
+      emptyTitle: 'No application',
+      emptyBody: 'No application has access to your account.',
+      authorizedOn: 'Authorized on {{date}}',
+      lastUsedOn: 'used on {{date}}',
+      neverUsed: 'never used',
+      revoke: 'Revoke',
+      revokeFailed: 'Could not revoke this access. Try again.',
+      cancel: 'Cancel',
+      confirmTitle: 'Revoke this access?',
+      confirmBody:
+        'This application will no longer be able to read or modify your trips. You can authorize it again from the application itself.',
+      footer:
+        'An application drops off this list by itself once its access expires, with nothing to revoke.',
+      scope: {
+        'trips:read': 'Read your trips and their stages',
+        'trips:write': 'Create and modify your trips',
+      },
+    },
     emailChange: {
       description:
         'Enter your new email address. A confirmation link will be sent to it; the change only takes effect once you open that link.',

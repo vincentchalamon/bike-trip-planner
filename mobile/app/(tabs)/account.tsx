@@ -13,6 +13,7 @@ import {
   Lock,
   Mail,
   Palette,
+  Plug,
   Trash2,
 } from '../../src/components/ui/icons';
 import { LocaleSwitcher } from '../../src/i18n/LocaleSwitcher';
@@ -162,6 +163,14 @@ export default function Account() {
           left={<Mail color={theme.colors.mutedIcon} size={20} />}
           right={<RowRight />}
           onPress={() => router.push('/account/email')}
+        />
+        {/* An access subject, not a data one: it lives beside the email rather than
+            under "Données & confidentialité" (#1308). */}
+        <ListRow
+          title={t('account.applications.title')}
+          left={<Plug color={theme.colors.mutedIcon} size={20} />}
+          right={<RowRight />}
+          onPress={() => router.push('/account/applications')}
         />
       </Card>
 

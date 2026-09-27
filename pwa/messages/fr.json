@@ -906,6 +906,21 @@
         "successReLogin": "Ton adresse e-mail a été mise à jour. Reconnecte-toi pour continuer."
       }
     },
+    "applications": {
+      "title": "Applications autorisées",
+      "description": "Les applications et agents qui peuvent agir sur tes voyages en ton nom.",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger tes applications autorisées.",
+      "empty": "Aucune application n'a accès à ton compte.",
+      "authorizedOn": "Autorisée le {date}",
+      "lastUsedOn": "utilisée le {date}",
+      "neverUsed": "jamais utilisée",
+      "revoke": "Révoquer",
+      "revoked": "Accès révoqué.",
+      "revokeFailed": "Impossible de révoquer cet accès.",
+      "dialogTitle": "Révoquer cet accès ?",
+      "dialogDescription": "Cette application ne pourra plus lire ni modifier tes voyages. Tu pourras l'autoriser à nouveau depuis l'application elle-même."
+    },
     "data": {
       "title": "Mes données",
       "description": "Télécharge une archive de tes données personnelles (RGPD).",

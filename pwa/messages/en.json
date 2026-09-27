@@ -906,6 +906,21 @@
         "successReLogin": "Your email address has been updated. Please log in again to continue."
       }
     },
+    "applications": {
+      "title": "Authorized applications",
+      "description": "The applications and agents that can act on your trips on your behalf.",
+      "loading": "Loading…",
+      "loadFailed": "Could not load your authorized applications.",
+      "empty": "No application has access to your account.",
+      "authorizedOn": "Authorized on {date}",
+      "lastUsedOn": "used on {date}",
+      "neverUsed": "never used",
+      "revoke": "Revoke",
+      "revoked": "Access revoked.",
+      "revokeFailed": "Could not revoke this access.",
+      "dialogTitle": "Revoke this access?",
+      "dialogDescription": "This application will no longer be able to read or modify your trips. You can authorize it again from the application itself."
+    },
     "data": {
       "title": "My data",
       "description": "Download an archive of your personal data (GDPR).",

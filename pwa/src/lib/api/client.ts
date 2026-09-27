@@ -912,6 +912,46 @@ export async function deleteAccount(): Promise<boolean> {
 }
 
 /**
+ * The applications this account can still be acted for by, and the way to take that back
+ * (#1308).
+ *
+ * An entry is listed only while a live token still backs it, so the list is "what can act
+ * right now" rather than "what was ever authorized" — the dates come from a durable row, the
+ * ability to act from the tokens.
+ *
+ * `name` is text the application published about itself: render it, never build a sentence
+ * around it. `host` is the part of its identity it could not choose, which is why both travel
+ * together.
+ */
+export type AuthorizedApplication =
+  components["schemas"]["AuthorizedApplication.jsonld"];
+
+export async function fetchAuthorizedApplications(): Promise<
+  AuthorizedApplication[] | null
+> {
+  const { data, error } = await apiClient.GET(
+    "/users/me/authorized-applications",
+  );
+  if (error) return null;
+  return data?.member ?? [];
+}
+
+/**
+ * Revoke one authorization. The identifier is the grant's, never the application's URL.
+ *
+ * @returns true on 204. A 404 is a false: the row is someone else's, or already revoked.
+ */
+export async function revokeAuthorizedApplication(
+  id: string,
+): Promise<boolean> {
+  const { response } = await apiClient.DELETE(
+    "/users/me/authorized-applications/{id}",
+    { params: { path: { id } } },
+  );
+  return response.ok;
+}
+
+/**
  * Persist the interface language as the account's locale (`PATCH /users/me`).
  *
  * The server renders alerts and queries third parties in the account's locale,
