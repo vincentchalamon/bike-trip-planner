@@ -99,3 +99,18 @@ describe("useTripPlanner — a stale refusal asks for a resync (ADR-067)", () =>
     expect(useUiStore.getState().resyncToken).toBe(before);
   });
 });
+
+describe("useTripPlanner — a refused title is rolled back", () => {
+  it("restores the previous title and asks for a resync on a 412", async () => {
+    holder.status = 412;
+    const before = useUiStore.getState().resyncToken;
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handleTitleChange("Renamed");
+    });
+
+    expect(useTripStore.getState().trip?.title).toBe("Trip");
+    expect(useUiStore.getState().resyncToken).toBe(before + 1);
+  });
+});
