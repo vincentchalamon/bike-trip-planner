@@ -34,7 +34,6 @@ use App\State\TripBatchRecomputeProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
-use App\State\TripDoctrineProvider;
 use App\State\TripDuplicateProcessor;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
@@ -194,7 +193,7 @@ use App\ApiResource\Mcp\ListTripsInput;
             uriTemplate: '/trips/{id}',
             openapi: new Operation(summary: 'Delete a trip and all its stages.'),
             security: "is_granted('TRIP_DELETE', object)",
-            provider: TripDoctrineProvider::class,
+            provider: TripRequestProvider::class,
             processor: TripDeleteProcessor::class,
         ),
     ],
@@ -354,7 +353,7 @@ use App\ApiResource\Mcp\ListTripsInput;
             input: DeleteTripInput::class,
             output: ChallengeOrAcknowledgement::class,
             validate: true,
-            provider: TripDoctrineProvider::class,
+            provider: TripRequestProvider::class,
             processor: McpDeleteTripProcessor::class,
             extraProperties: [
                 'mcp_scope' => 'trips:write',

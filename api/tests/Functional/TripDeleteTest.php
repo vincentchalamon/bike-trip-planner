@@ -102,4 +102,44 @@ final class TripDeleteTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(404);
     }
+
+    /**
+     * The provider runs before the voter, so a missing trip is reported by the provider and a
+     * foreign one by the masked denial (ADR-038). Two different bodies would tell them apart.
+     */
+    #[Test]
+    public function missingAndForeignTripsAnswerTheSame404(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $response = $this->client->request('DELETE', '/trips/00000000-0000-0000-0000-000000000000', [
+            'headers' => $this->authHeader($otherToken),
+        ]);
+        $this->assertResponseStatusCodeSame(404);
+        $missing = $this->withoutTrace($response->toArray(false));
+
+        $response = $this->client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID), [
+            'headers' => $this->authHeader($otherToken),
+        ]);
+        $this->assertResponseStatusCodeSame(404);
+        $foreign = $this->withoutTrace($response->toArray(false));
+
+        $this->assertSame('Trip not found or has expired.', $missing['detail'] ?? null);
+        $this->assertSame($missing, $foreign);
+    }
+
+    /**
+     * The error body without the debug-only trace, which differs by construction.
+     *
+     * @param array<string, mixed> $body
+     *
+     * @return array<string, mixed>
+     */
+    private function withoutTrace(array $body): array
+    {
+        unset($body['trace']);
+
+        return $body;
+    }
 }
