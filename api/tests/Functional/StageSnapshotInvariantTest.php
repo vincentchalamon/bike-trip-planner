@@ -77,6 +77,7 @@ final class StageSnapshotInvariantTest extends ApiTestCase
             estimatedPriceMin: 12.0,
             estimatedPriceMax: 18.0,
             isExactPrice: false,
+            address: '12 route du Col, 38000 Grenoble',
         );
 
         $stage = new StageDto(
@@ -124,6 +125,11 @@ final class StageSnapshotInvariantTest extends ApiTestCase
         // selectedAccommodation snapshot rendered from JSONB.
         $this->assertNotNull($stagePayload['selectedAccommodation']);
         $this->assertSame('Camping Les Pins', $stagePayload['selectedAccommodation']['name']);
+
+        // Same keys as the live SSE payload (StagePayloadMapper): a reload, and the anonymous
+        // share page that never receives SSE, must not lose what the stream carried.
+        $this->assertSame('12 route du Col, 38000 Grenoble', $stagePayload['accommodations'][0]['address'] ?? null);
+        $this->assertSame('12 route du Col, 38000 Grenoble', $stagePayload['selectedAccommodation']['address'] ?? null);
 
         // pois/resupply snapshot rendered from JSONB.
         $this->assertSame('Boulangerie du Col', $stagePayload['resupply']['foodAtArrival'][0]['name']);

@@ -348,6 +348,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'wikipediaUrl' => $acc->wikipediaUrl,
             'openingHours' => $acc->openingHours,
             'phone' => $acc->phone,
+            'address' => $acc->address,
             'osmType' => $acc->osmType,
             'osmId' => $acc->osmId,
         ];
