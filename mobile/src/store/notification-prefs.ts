@@ -14,19 +14,6 @@ export const NOTIFICATION_CATEGORIES = [
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
-// Delivery channel per category: `push` is server-driven (registered by #1125),
-// `local` is scheduled on-device (by #1121). This store only records the user's
-// on/off choice; consumers read the channel to decide how to honour it.
-export type NotificationChannel = 'push' | 'local';
-
-export const NOTIFICATION_CHANNELS: Record<NotificationCategory, NotificationChannel> = {
-  weatherSafety: 'push',
-  analysisDone: 'push',
-  offlineNotReady: 'local',
-  tripNoDate: 'local',
-  zoneOpening: 'push',
-};
-
 // Default on/off per category. Everything is on except `zoneOpening`, which is
 // opt-in (a broadcast announcement, off by default).
 export const NOTIFICATION_DEFAULTS: Record<NotificationCategory, boolean> = {

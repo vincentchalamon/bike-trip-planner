@@ -122,7 +122,6 @@ export const fr = {
     legal: 'Mentions légales',
     privacy: 'Confidentialité',
     logout: 'Se déconnecter',
-    comingSoon: 'À venir',
     emailTitle: 'Modifier mon adresse e-mail',
     notificationsTitle: 'Notifications',
     exportTitle: 'Exporter mes données',

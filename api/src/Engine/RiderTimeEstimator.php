@@ -47,6 +47,9 @@ final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
         return $departureHour + $ratio * ($ridingDuration + $breakDuration);
     }
 
+    /**
+     * Estimates the total riding duration (decimal hours) for a stage.
+     */
     public function estimateRidingDuration(
         float $distanceKm,
         float $averageSpeedKmh = 15.0,

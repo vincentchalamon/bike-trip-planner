@@ -8,16 +8,6 @@ export function isValidUrl(value: string): boolean {
   }
 }
 
-/** Validate URL with https protocol only */
-export function isValidHttpsUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 /** A scheme prefix (`mailto:`, `javascript:`, `https://`…). Dots are excluded
  * on purpose so `www.hotel.fr:8080` is read as a host, not as a scheme. */
 const SCHEME_PREFIX = /^[a-z][a-z0-9+-]*:/i;

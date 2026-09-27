@@ -47,18 +47,4 @@ final class StageLocator
     {
         return new NotFoundHttpException(\sprintf('Stage "%s" not found.', $stageId));
     }
-
-    /**
-     * @param list<Stage> $stages
-     */
-    public function find(array $stages, string $stageId): ?Stage
-    {
-        foreach ($stages as $stage) {
-            if ($stage->id === $stageId) {
-                return $stage;
-            }
-        }
-
-        return null;
-    }
 }

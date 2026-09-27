@@ -29,17 +29,4 @@ interface RiderTimeEstimatorInterface
         float $averageSpeedKmh = 15.0,
         float $elevationGainM = 0.0,
     ): float;
-
-    /**
-     * Estimates the total riding duration (decimal hours) for a stage.
-     *
-     * @param float $distanceKm      Total stage distance (km)
-     * @param float $averageSpeedKmh Base cycling speed in km/h (default 15)
-     * @param float $elevationGainM  Total elevation gain for the stage in metres (default 0)
-     */
-    public function estimateRidingDuration(
-        float $distanceKm,
-        float $averageSpeedKmh = 15.0,
-        float $elevationGainM = 0.0,
-    ): float;
 }

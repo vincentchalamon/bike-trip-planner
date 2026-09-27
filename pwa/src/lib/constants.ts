@@ -1,20 +1,12 @@
 // Stage difficulty thresholds + classification now live framework-free in
 // @btp/core (ADR-055), shared with mobile. Re-exported here so existing
-// `@/lib/constants` imports keep working unchanged. Only the Tailwind badge
-// colours and the env-derived URLs stay web-specific.
+// `@/lib/constants` imports keep working unchanged. Only the env-derived URLs
+// stay web-specific.
 export {
   DIFFICULTY_THRESHOLDS,
   getDifficulty,
   type Difficulty,
 } from "@btp/core";
-
-/** CSS classes for difficulty badges */
-export const DIFFICULTY_COLORS = {
-  easy: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  medium:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-  hard: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-} as const;
 
 /** Backend API base URL */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";

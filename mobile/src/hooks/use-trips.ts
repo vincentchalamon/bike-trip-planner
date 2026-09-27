@@ -22,7 +22,7 @@ export interface TripsPageResult {
 }
 
 // Extracted so the load/error branch is unit-testable without a React renderer
-// (mirrors runLoadTripDetail, #1031). Never throws: a backend failure resolves to
+// (#1031). Never throws: a backend failure resolves to
 // an empty page + an error message the caller surfaces.
 export async function runLoadTrips(
   page: number,

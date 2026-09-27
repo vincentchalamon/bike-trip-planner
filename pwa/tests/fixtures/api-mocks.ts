@@ -354,31 +354,6 @@ export async function mockAllApis(
     });
   });
 
-  // GET /geocode/search — place search.
-  //
-  // A Hydra collection: the search became an API Platform operation, so `searchPlaces()`
-  // reads `member`. The fixture used to fulfil with a bare array, which matched neither this
-  // shape nor the `{ results: [...] }` the controller answered before it — so the parse path
-  // resolved to undefined here and no spec noticed. `/geocode/reverse` above is still the
-  // controller and still answers `{ results: [...] }`; the two are deliberately different.
-  await page.route("**/geocode/search*", (route) => {
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        member: [
-          {
-            name: "Aubenas",
-            displayName: "Aubenas, Ardeche",
-            lat: 44.62,
-            lon: 4.39,
-            type: "city",
-          },
-        ],
-      }),
-    });
-  });
-
   // GET /trips/{id}/stages/{index}/export.gpx — serve mock GPX
   await page.route("**/trips/*/stages/*/export.gpx", (route) =>
     route.fulfill({

@@ -9,18 +9,6 @@ export interface GeocodeResult {
   type: string;
 }
 
-export async function searchPlaces(query: string): Promise<GeocodeResult[]> {
-  const res = await apiFetch(
-    `${API_URL}/geocode/search?q=${encodeURIComponent(query)}&limit=5`,
-  );
-  if (!res.ok) return [];
-  // `/geocode/search` is an API Platform collection now, not a hand-built controller
-  // response: the payload is a Hydra collection, so the places are under `member`.
-  // `/geocode/reverse` below is still the controller, and still answers `{ results }`.
-  const data = (await res.json()) as { member: GeocodeResult[] };
-  return data.member;
-}
-
 export async function reverseGeocode(
   lat: number,
   lon: number,

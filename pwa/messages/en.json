@@ -92,20 +92,8 @@
     "noAlerts": "No alerts for this stage"
   },
   "stageLocations": {
-    "searchDeparture": "Search departure...",
-    "searchDepartureLabel": "Search stage departure",
     "departure": "Stage {n} departure",
-    "searchArrival": "Search arrival...",
-    "searchArrivalLabel": "Search stage arrival",
-    "arrival": "Stage {n} arrival",
-    "noResults": "No results found"
-  },
-  "timeline": {
-    "loadingStages": "Loading stages",
-    "tripStages": "Trip stages",
-    "cumulativeDistance": "{km} km total",
-    "sidebarLabel": "Stage summary",
-    "noStageSelected": "Select a stage"
+    "arrival": "Stage {n} arrival"
   },
   "calendar": {
     "previousMonth": "Previous month",

@@ -31,42 +31,6 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
     {
     }
 
-    public function findCountryAt(float $lat, float $lon, string $locale): ?string
-    {
-        $country = $this->referenceConnection->fetchOne(
-            <<<'SQL'
-                SELECT COALESCE(tags->>('name:' || :locale), tags->>'name:en', name)
-                FROM osm.admin_boundaries
-                WHERE admin_level = 2
-                  AND ST_Covers(geom, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
-                ORDER BY osm_id
-                LIMIT 1
-                SQL,
-            [
-                'locale' => $locale,
-                'lon' => $lon,
-                'lat' => $lat,
-            ],
-        );
-
-        if (\is_string($country) && '' !== $country) {
-            return $country;
-        }
-
-        // No country polygon covers the point: on a clipped regional extract the
-        // country relation is incomplete and never imported (see the provisioner's
-        // measurements), so fall back to the ISO code carried by the sub-national
-        // boundaries and localise it through ICU rather than reporting nothing.
-        $code = $this->findCountryCodeAt($lat, $lon);
-        if (null === $code) {
-            return null;
-        }
-
-        $name = \Locale::getDisplayRegion('-'.$code, $locale);
-
-        return \is_string($name) && '' !== $name ? $name : null;
-    }
-
     public function findCountryCodeAt(float $lat, float $lon): ?string
     {
         // Coarsest boundary first: the country's own ISO 3166-1, then the ISO

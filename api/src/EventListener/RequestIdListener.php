@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -78,14 +77,5 @@ final class RequestIdListener
     private function isSafe(string $value): bool
     {
         return 1 === preg_match('/^[A-Za-z0-9_-]{8,128}$/', $value);
-    }
-
-    /**
-     * Helper for callers that only have a {@see Response} reference (e.g. test
-     * doubles) and need to assert the listener wired the response header.
-     */
-    public static function fromResponse(Response $response): ?string
-    {
-        return $response->headers->get(self::HEADER);
     }
 }

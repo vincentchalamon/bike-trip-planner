@@ -88,11 +88,6 @@ class MagicLink
         return $this;
     }
 
-    public function isValid(): bool
-    {
-        return !$this->consumedAt instanceof \DateTimeImmutable && $this->expiresAt > new \DateTimeImmutable();
-    }
-
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
