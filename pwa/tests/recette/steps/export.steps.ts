@@ -1,10 +1,6 @@
 import { expect } from "@playwright/test";
-import { Given, When, Then } from "../support/fixtures";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-} from "../../fixtures/mock-data";
-import { injectSseSequence } from "../../fixtures/sse-helpers";
+import { When, Then } from "../support/fixtures";
+
 import {
   getTrackedStageExportRequests,
   getTrackedStageFitRequests,
@@ -15,29 +11,10 @@ import {
   trackStageGpxDownload,
 } from "../support/export-download-tracker";
 import { getCurrentRecettePage } from "../support/current-recette-page";
-import { expandLinkCard } from "../../fixtures/base.fixture";
 
 // ---------------------------------------------------------------------------
 // Export GPX and FIT — FR + EN
 // ---------------------------------------------------------------------------
-
-async function submitDefaultTripUrl(): Promise<void> {
-  const page = getCurrentRecettePage();
-  const input = page.getByTestId("magic-link-input");
-  if (!(await input.isVisible().catch(() => false))) {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await expandLinkCard(page);
-  }
-  await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-  await input.press("Enter");
-  await page.waitForURL(/\/trips\//, { timeout: 5000 });
-  // Synchronous flow: land on the loader; the trip view follows once stages
-  // arrive via SSE (callers inject them next).
-  await expect(
-    page.getByTestId("trip-loader").or(page.getByTestId("trip-title")),
-  ).toBeVisible({ timeout: 5000 });
-}
 
 // --- When steps FR ---
 

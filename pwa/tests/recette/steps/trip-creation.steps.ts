@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { Given, When, Then } from "../support/fixtures";
+import { Then } from "../support/fixtures";
 
 // ---------------------------------------------------------------------------
 // Trip creation — FR + EN

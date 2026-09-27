@@ -3,11 +3,7 @@ import {
   expect,
   scrollLocatorIntoCenter,
 } from "../fixtures/base.fixture";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  tripCompleteEvent,
-} from "../fixtures/mock-data";
+import { routeParsedEvent, tripCompleteEvent } from "../fixtures/mock-data";
 
 test.describe("Stage management", () => {
   test("deletes a stage and renumbers remaining", async ({

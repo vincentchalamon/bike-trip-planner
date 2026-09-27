@@ -5,11 +5,9 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   accommodationsFoundEvent,
-  weatherFetchedEvent,
   tripCompleteEvent,
-  fullTripEventSequence,
 } from "../../fixtures/mock-data";
-import { mockAllApis } from "../../fixtures/api-mocks";
+
 import { trackAccommodationScanRequest } from "../support/accommodation-scan-tracker";
 import { trackTripGpxDownload } from "../support/export-download-tracker";
 

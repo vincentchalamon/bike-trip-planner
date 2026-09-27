@@ -1,10 +1,6 @@
 import { expect } from "@playwright/test";
-import { Given, When, Then } from "../support/fixtures";
-import {
-  weatherFetchedEvent,
-  stagesComputedEvent,
-  routeParsedEvent,
-} from "../../fixtures/mock-data";
+import { When, Then } from "../support/fixtures";
+import { weatherFetchedEvent } from "../../fixtures/mock-data";
 import { patchWeather } from "../support/patch-stage";
 
 // ---------------------------------------------------------------------------

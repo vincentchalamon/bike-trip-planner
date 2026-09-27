@@ -1,11 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  tripCompleteEvent,
-  stageUpdatedEvent,
-  accommodationsFoundEvent,
-} from "../fixtures/mock-data";
+import { stageUpdatedEvent } from "../fixtures/mock-data";
 
 /**
  * Issue #327 — Batch mode: ModificationQueue (accumulation + single recompute).

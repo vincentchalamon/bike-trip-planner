@@ -170,7 +170,6 @@ export function StageCard({
             full 3-bar gauge (recette #649). */}
         <StageStatsRow
           stage={stage}
-          stageIndex={stageIndex}
           stageId={stage.id}
           isFirst={isFirst}
           isLast={isLast}

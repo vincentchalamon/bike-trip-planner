@@ -14,7 +14,9 @@ interface GpxDropZoneProps {
 export function GpxDropZone({ onDrop, disabled, children }: GpxDropZoneProps) {
   const t = useTranslations("gpxUpload");
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  // Only the setter is bound: the count is read inside the updater, never rendered.
+  // It exists so a dragenter over a CHILD element does not cancel the highlight.
+  const [, setDragCounter] = useState(0);
 
   const handleDragEnter = useCallback(
     (e: DragEvent) => {

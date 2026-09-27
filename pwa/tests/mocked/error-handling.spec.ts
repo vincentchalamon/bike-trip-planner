@@ -1,8 +1,5 @@
 import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  tripCompleteEvent,
   validationErrorEvent,
   computationErrorEvent,
 } from "../fixtures/mock-data";

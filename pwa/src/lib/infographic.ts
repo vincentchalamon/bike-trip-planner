@@ -392,14 +392,14 @@ async function drawRouteMap(
   };
 
   // Scale so the padded bounding box (in absolute pixels) fits exactly in the
-  // map area. This ensures the route is centred with minimal whitespace,
-  // regardless of how many OSM tiles the bounding box spans.
+  // map area, with minimal whitespace, regardless of how many OSM tiles the
+  // bounding box spans. Centred VERTICALLY only — `offX` below left-aligns on
+  // purpose, which is why no scaled width is computed here.
   const [bboxMinPxX, bboxMinPxY] = toAbsPx(minLon, maxLat); // top-left
   const [bboxMaxPxX, bboxMaxPxY] = toAbsPx(maxLon, minLat); // bottom-right
   const bboxPxW = bboxMaxPxX - bboxMinPxX;
   const bboxPxH = bboxMaxPxY - bboxMinPxY;
   const scale = Math.min(w / bboxPxW, h / bboxPxH);
-  const scaledBboxW = bboxPxW * scale;
   const scaledBboxH = bboxPxH * scale;
   const offX = x; // left-align the route; the column width already matches it
   const offY = y + (h - scaledBboxH) / 2;

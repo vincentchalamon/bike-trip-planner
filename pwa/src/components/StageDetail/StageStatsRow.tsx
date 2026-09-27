@@ -79,7 +79,6 @@ function StatCell({
 
 interface StageStatsRowProps {
   stage: StageData;
-  stageIndex: number;
   stageId: string;
   isFirst: boolean;
   isLast: boolean;
@@ -111,7 +110,6 @@ interface StageStatsRowProps {
  */
 export function StageStatsRow({
   stage,
-  stageIndex,
   stageId,
   isFirst,
   isLast,
