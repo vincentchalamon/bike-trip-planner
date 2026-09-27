@@ -71,7 +71,10 @@ enum ComputationName: string
     public function triggers(): array
     {
         return match ($this) {
-            self::POIS, self::ACCOMMODATIONS, self::TERRAIN, self::EVENTS, self::WEATHER => [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
+            // Each reads a passage time: the resupply closed-at-passage verdict and the lunch
+            // anchor, the sunset estimate, the weather riding window.
+            self::POIS, self::TERRAIN, self::WEATHER => [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES, ComputationTrigger::SCHEDULE],
+            self::ACCOMMODATIONS, self::EVENTS => [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
             self::BIKE_SHOPS, self::WATER_POINTS, self::HEALTH_SERVICES, self::RAILWAY_STATIONS,
             self::CULTURAL_POIS, self::BORDER_CROSSING, self::FERRIES => [ComputationTrigger::GEOMETRY],
             self::CALENDAR => [ComputationTrigger::DATES],

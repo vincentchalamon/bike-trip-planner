@@ -164,3 +164,18 @@ structural edit renumbers `dayNumber = $i + 1` over the ordered list
 (`StageMoveProcessor:81`, `RestDayInsertProcessor:86`, `StageCreateProcessor:126`,
 `StageDeleteProcessor:80`), so the two always agree. Deduplicating it is worth doing and
 changes no behaviour, which is exactly why it does not belong in a change about freshness.
+
+## Amendment (2026-09-27): a third trigger, `SCHEDULE`
+
+The two triggers left one field-to-computation list hand-written: `departureHour` and
+`averageSpeed` in `ComputationTracker\ComputationDependencyResolver`, which named `TERRAIN`
+and `WEATHER`. `ScanPoisHandler` reads both too, for the resupply closed-at-passage verdict
+and the lunch anchor, so a `PATCH` on either left those alerts on the old passage time: the
+same drift, in the one list this ADR had not replaced.
+
+`ComputationTrigger::SCHEDULE` is when the rider is where along a stage. `POIS`, `TERRAIN`
+and `WEATHER` declare it, and both fields resolve through `dependingOn()` as `startDate`
+does. It is a trigger rather than a field for the reason the first two are: another edit
+that moves the passage time should not have to know which computations care. It stays out
+of `TripAnalysisDispatcher::dispatch()`, whose `GEOMETRY` + `DATES` already cover every
+enrichment.

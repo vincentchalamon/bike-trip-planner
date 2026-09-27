@@ -24,8 +24,10 @@ final class ComputationDependencyResolver
         // the old weekday, the seasonal one the old month, and the sunset alert the old date.
         'startDate' => [],
         'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
-        'departureHour' => [ComputationName::TERRAIN, ComputationName::WEATHER], // sunset estimate + weather riding window
-        'averageSpeed' => [ComputationName::TERRAIN, ComputationName::WEATHER],  // sunset estimate + weather riding window
+        // Blank for the same reason: whatever reads a passage time, resolved from
+        // ComputationTrigger::SCHEDULE. The hand-written list had forgotten POIS.
+        'departureHour' => [],
+        'averageSpeed' => [],
         'enabledAccommodationTypes' => [ComputationName::ACCOMMODATIONS], // re-scan with new types
     ];
 
@@ -44,9 +46,11 @@ final class ComputationDependencyResolver
                 continue;
             }
 
-            if ('startDate' === $parameter) {
-                $deps = ComputationName::dependingOn(ComputationTrigger::DATES);
-            }
+            $deps = match ($parameter) {
+                'startDate' => ComputationName::dependingOn(ComputationTrigger::DATES),
+                'departureHour', 'averageSpeed' => ComputationName::dependingOn(ComputationTrigger::SCHEDULE),
+                default => $deps,
+            };
 
             foreach ($deps as $dep) {
                 $computations[$dep->value] = $dep;
