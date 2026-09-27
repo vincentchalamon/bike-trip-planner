@@ -75,6 +75,18 @@ final class OpenAgendaMapperTest extends TestCase
     }
 
     #[Test]
+    public function normalisesTheCanonicalUrlLikeEveryOtherImportedLink(): void
+    {
+        // The rider opens this link from the app: a non-http(s) scheme must never be stored.
+        self::assertNull($this->mapper->map($this->record(['canonicalurl' => 'javascript:alert(1)'])));
+        self::assertNull($this->mapper->map($this->record(['canonicalurl' => 'voir le site'])));
+
+        $row = $this->mapper->map($this->record(['canonicalurl' => 'openagenda.com/events/e-42']));
+        self::assertNotNull($row);
+        self::assertSame('https://openagenda.com/events/e-42', $row['url']);
+    }
+
+    #[Test]
     public function dropsARecordWithoutAUsableDateRange(): void
     {
         $noStart = $this->record();
