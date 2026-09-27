@@ -2,7 +2,6 @@ import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import {
   stagesComputedEvent,
-  routeParsedEvent,
   weatherFetchedEvent,
   terrainAlertsEvent,
   culturalPoiAlertsEvent,
@@ -22,7 +21,7 @@ When(
   "une étape dépasse la distance maximale configurée",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    patchStage(event.data.stages, 0, (current) => ({
+    patchStage(event.data.stages, 0, () => ({
       distance: 150,
     }));
     await injectEvent(event);
@@ -31,7 +30,7 @@ When(
 
 When("une étape a un dénivelé supérieur à 2000m", async ({ injectEvent }) => {
   const event = stagesComputedEvent();
-  patchStage(event.data.stages, 0, (current) => ({
+  patchStage(event.data.stages, 0, () => ({
     elevation: 2500,
   }));
   await injectEvent(event);
@@ -117,7 +116,7 @@ When(
   "l'étape a une distance de {int} km et un dénivelé de {int} m",
   async ({ injectEvent }, distance: number, elevation: number) => {
     const event = stagesComputedEvent();
-    patchStage(event.data.stages, 0, (current) => ({
+    patchStage(event.data.stages, 0, () => ({
       distance,
       elevation,
     }));
@@ -131,7 +130,7 @@ When(
   "a stage exceeds the configured maximum distance",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    patchStage(event.data.stages, 0, (current) => ({
+    patchStage(event.data.stages, 0, () => ({
       distance: 150,
     }));
     await injectEvent(event);
@@ -142,7 +141,7 @@ When(
   "a stage has more than {int}m elevation gain",
   async ({ injectEvent }, _elevationThreshold: number) => {
     const event = stagesComputedEvent();
-    patchStage(event.data.stages, 0, (current) => ({
+    patchStage(event.data.stages, 0, () => ({
       elevation: 2500,
     }));
     await injectEvent(event);
@@ -223,7 +222,7 @@ When(
   "the stage has a distance of {int} km and elevation of {int} m",
   async ({ injectEvent }, distance: number, elevation: number) => {
     const event = stagesComputedEvent();
-    patchStage(event.data.stages, 0, (current) => ({
+    patchStage(event.data.stages, 0, () => ({
       distance,
       elevation,
     }));

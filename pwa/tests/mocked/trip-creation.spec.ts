@@ -3,8 +3,6 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   weatherFetchedEvent,
-  fullTripEventSequence,
-  tripCompleteEvent,
 } from "../fixtures/mock-data";
 
 test.describe("Trip creation flow", () => {

@@ -111,7 +111,7 @@ export const test = base.extend<
     );
   },
 
-  submitUrl: async ({ mockedPage, injectEvent }, use) => {
+  submitUrl: async ({ mockedPage }, use) => {
     await use(async (url?: string) => {
       const input = mockedPage.getByTestId("magic-link-input");
       // If the input is not visible (e.g. after clearTrip returned us to the

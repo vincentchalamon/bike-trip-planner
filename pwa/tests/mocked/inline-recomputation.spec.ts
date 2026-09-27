@@ -60,7 +60,6 @@ test.describe("Inline recomputation — skeleton", () => {
 
   test("shimmer skeleton replaces stage card while stage_updated is pending", async ({
     submitUrl,
-    injectEvent,
     injectSequence,
     mockedPage,
   }) => {
@@ -135,7 +134,6 @@ test.describe("Inline recomputation — skeleton", () => {
 
   test("skeleton preserves approximate card dimensions (no layout shift)", async ({
     submitUrl,
-    injectEvent,
     injectSequence,
     mockedPage,
   }) => {
@@ -180,7 +178,6 @@ test.describe("Inline recomputation — skeleton", () => {
 test.describe("Inline recomputation — progress bar", () => {
   test("progress bar appears when a recomputation starts", async ({
     submitUrl,
-    injectEvent,
     injectSequence,
     mockedPage,
   }) => {

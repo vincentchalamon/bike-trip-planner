@@ -1,6 +1,5 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
-import { getTripId } from "../../fixtures/api-mocks";
 
 // ---------------------------------------------------------------------------
 // Dates and calendar — FR + EN
