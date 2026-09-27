@@ -57,21 +57,23 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        // BR-06: Skip if trip is 5 days or fewer.
-        //
-        // "Does not apply" has to clear, not just skip (ADR-068): a long trip shortened to
-        // five days re-dispatches this check, and a short-circuit that only marked the
-        // computation done would leave the previous alerts standing for good — this branch
-        // keeps firing on every later edit, so nothing would ever come back to remove them.
-        if (\count($stages) <= self::MINIMUM_DAYS_FOR_CHECK) {
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, []);
-            $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, ['alerts' => []]);
-            $this->computationTracker->markDone($tripId, ComputationName::BIKE_SHOPS);
-
-            return;
-        }
-
         $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages): void {
+            // BR-06: Skip if trip is 5 days or fewer.
+            //
+            // "Does not apply" has to clear, not just skip (ADR-068): a long trip shortened to
+            // five days re-dispatches this check, and a short-circuit that only marked the
+            // computation done would leave the previous alerts standing for good — this branch
+            // keeps firing on every later edit, so nothing would ever come back to remove them.
+            //
+            // Inside the tracking, not before it: settling this computation is what may
+            // complete the trip, and only executeWithTracking() evaluates the completion gate.
+            if (\count($stages) <= self::MINIMUM_DAYS_FOR_CHECK) {
+                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, []);
+                $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, ['alerts' => []]);
+
+                return;
+            }
+
             // Read bike shops from the local-first index along the route corridor (ADR-040).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
