@@ -11,6 +11,7 @@ use App\Push\FcmClient;
 use App\Push\PushSenderInterface;
 use App\RouteFetcher\RouteSourceBaseUri;
 use App\Security\OAuth\McpCallBudget;
+use App\Security\OAuth\McpGrantUsage;
 use App\Security\OAuth\McpScopeGuard;
 use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\Serializer\Mcp\McpTextFloor;
@@ -190,6 +191,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpCallBudget::class)
         ->decorate('api_platform.mcp.handler', null, 10)
         ->args([service(McpCallBudget::class.'.inner')])
+        ->autowire()
+        ->autoconfigure(false);
+
+    // Priority 20: inside the budget, so a call only counts as "use" once it was allowed and
+    // paid for. It writes after the inner handler and swallows its own failures — a timestamp
+    // for an account screen must never be able to cost a tool call (#1308).
+    $services->set(McpGrantUsage::class)
+        ->decorate('api_platform.mcp.handler', null, 20)
+        ->args([service(McpGrantUsage::class.'.inner')])
         ->autowire()
         ->autoconfigure(false);
 

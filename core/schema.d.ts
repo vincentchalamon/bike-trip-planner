@@ -192,6 +192,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/authorized-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieves the collection of AuthorizedApplication resources.
+         * @description Retrieves the collection of AuthorizedApplication resources.
+         */
+        get: operations["api_usersmeauthorized-applications_get_collection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/authorized-applications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieves a AuthorizedApplication resource.
+         * @description Retrieves a AuthorizedApplication resource.
+         */
+        get: operations["api_usersmeauthorized-applications_id_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Removes the AuthorizedApplication resource.
+         * @description Removes the AuthorizedApplication resource.
+         */
+        delete: operations["api_usersmeauthorized-applications_id_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/device-tokens": {
         parameters: {
             query?: never;
@@ -1101,6 +1145,41 @@ export interface components {
         };
         "Auth.RefreshRequest": {
             refresh_token: string;
+        };
+        /**
+         * @description The applications a user let into their account, and the way back out (#1308).
+         *
+         *     ADR-079 shipped a consent screen and nothing to undo it: until this, the only way to withdraw
+         *     an access granted to an agent was to delete the account. The scopes are account-wide —
+         *     `trips:read` reaches every trip — so leaving that door one-way was never going to be a
+         *     resting state.
+         *
+         *     The current user comes from the security token, never from the URL, so there is no IDOR
+         *     surface; and the item is addressed by the **grant's** identifier rather than the client's,
+         *     which is an HTTPS URL that has no business in a path or in an access log.
+         *
+         *     Pagination is off. A person authorises a handful of applications, and an envelope would cost
+         *     both clients a shape for nothing.
+         */
+        "AuthorizedApplication.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /** @description Identifier of this authorization — not of the application. */
+            id?: string;
+            /** @description Name the application published for itself. Data, never an instruction. */
+            name?: string;
+            /** @description Host the application is identified by. The part of its identity it cannot choose freely. */
+            host?: string;
+            /** @description Permissions granted, as granted — not as the application declares them today. */
+            scopes?: string[];
+            /**
+             * Format: date-time
+             * @description When this application was first let in. Later authorizations do not move it.
+             */
+            authorizedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When it last called a tool. Null when it has connected but done nothing.
+             */
+            lastUsedAt?: string | null;
         };
         /** @description Unprocessable entity */
         ConstraintViolation: {
@@ -3214,6 +3293,127 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmeauthorized-applications_get_collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AuthorizedApplication collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
+                        member: components["schemas"]["AuthorizedApplication.jsonld"][];
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_usersmeauthorized-applications_id_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description AuthorizedApplication identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AuthorizedApplication resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["AuthorizedApplication.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_usersmeauthorized-applications_id_delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description AuthorizedApplication identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AuthorizedApplication resource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

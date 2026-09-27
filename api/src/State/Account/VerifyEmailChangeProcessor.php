@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\EmailChangeTokenRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Bundle\OAuth2ServerBundle\Service\CredentialsRevokerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -41,6 +42,7 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
         private EmailChangeTokenRepository $emailChangeTokenRepository,
         private TranslatorInterface $translator,
         private LoggerInterface $logger,
+        private CredentialsRevokerInterface $credentialsRevoker,
     ) {
     }
 
@@ -84,6 +86,19 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
 
         $newEmail = $token->getNewEmail();
         \assert('' !== $newEmail);
+
+        // BEFORE the address changes, and the ordering is the whole point — the same trap
+        // AccountDeleteProcessor documents for erasure. Tokens are keyed on the email
+        // (`user_identifier`), so after the rewrite the revoker's UPDATEs match zero rows and
+        // the old tokens stay marked live.
+        //
+        // They are dead either way: the user provider loads by email, so an agent holding one
+        // gets a 401 it cannot explain, and a refresh replays the stale address from its own
+        // payload. Revoking says so, instead of leaving agents to discover it. The grants
+        // survive — they key on the user, not on the address — so the account page still lists
+        // the applications, and the user can let them back in.
+        $this->credentialsRevoker->revokeCredentialsForUser($user);
+
         $user->setEmail($newEmail);
 
         try {

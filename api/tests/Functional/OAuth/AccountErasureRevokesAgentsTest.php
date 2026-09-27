@@ -46,6 +46,20 @@ final class AccountErasureRevokesAgentsTest extends ApiTestCase
         // Counted on the row rather than on the call succeeding: the ordering bug this
         // guards against is one where the call succeeds and changes nothing.
         self::assertSame(1, $this->revokedTokenCount());
+
+        // And the record of who had been let in goes with it (#1308). Deleted, not marked:
+        // the tombstone a revocation from the account page leaves exists to survive a refresh
+        // in flight, and an erased account has none — what would survive instead is a list of
+        // the third parties an anonymised account once trusted.
+        self::assertSame(0, $this->grantCount());
+    }
+
+    private function grantCount(): int
+    {
+        $count = $this->connection()->fetchOne('SELECT COUNT(*) FROM oauth_grant');
+        self::assertIsNumeric($count);
+
+        return (int) $count;
     }
 
     private function tokenCount(): int

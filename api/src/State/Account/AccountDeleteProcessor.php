@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\AccessRequestRepository;
 use App\Repository\MagicLinkRepository;
+use App\Repository\OAuthGrantRepository;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,6 +43,7 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
         private CredentialsRevokerInterface $credentialsRevoker,
         private Security $security,
         private LoggerInterface $logger,
+        private OAuthGrantRepository $oauthGrants,
     ) {
     }
 
@@ -88,6 +90,17 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
             // anonymize() rewrites. Run afterwards, its four UPDATEs all succeed and all
             // touch zero rows.
             $this->credentialsRevoker->revokeCredentialsForUser($user);
+
+            // And the rows that remembered who was let in, when. Deleted rather than marked
+            // revoked, unlike a revocation from the account page: the tombstone there guards
+            // against a refresh in flight recreating the row, and an erased account has no
+            // refresh left to guard against. What would remain is a record tying an anonymised
+            // account to the third parties it once trusted.
+            //
+            // ⚠ Unlike the revocation above, this one does NOT depend on the ordering: grants
+            // key on the user, not on the email anonymize() rewrites. Moving it after would be
+            // harmless — moving the line above would not.
+            $this->oauthGrants->removeAllForUser($user);
 
             // Soft-delete + irreversible PII anonymisation.
             $user->anonymize();
