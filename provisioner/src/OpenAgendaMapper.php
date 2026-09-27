@@ -214,9 +214,7 @@ final class OpenAgendaMapper
     /** Date part (YYYY-MM-DD) of an ISO date or datetime ("2026-07-01T18:00:00+02:00" → "2026-07-01"). */
     private function date(mixed $value): ?string
     {
-        $string = $this->firstString($value);
-
-        return null !== $string && 1 === preg_match('/^(\d{4}-\d{2}-\d{2})/', $string, $matches) ? $matches[1] : null;
+        return EventDate::normalize($this->firstString($value));
     }
 
     private function normalize(string $value): string

@@ -87,6 +87,13 @@ final class OpenAgendaMapperTest extends TestCase
     }
 
     #[Test]
+    public function dropsARecordWhoseDateIsNotOnTheCalendar(): void
+    {
+        // Shaped like a date, refused by the `date` column: it would abort the whole \copy.
+        self::assertNull($this->mapper->map($this->record(['lastdate_end' => '2026-02-30T23:00:00+01:00'])));
+    }
+
+    #[Test]
     public function dropsARecordWithoutCoordinates(): void
     {
         $noGeo = $this->record();
