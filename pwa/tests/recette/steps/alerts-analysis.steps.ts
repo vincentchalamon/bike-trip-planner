@@ -11,6 +11,7 @@ import {
   fullTripEventSequence,
 } from "../../fixtures/mock-data";
 import type { MercureEvent } from "@btp/core/mercure";
+import { patchStage, patchWeather } from "../support/patch-stage";
 
 // ---------------------------------------------------------------------------
 // Alerts and analysis — FR + EN
@@ -22,26 +23,18 @@ When(
   "une étape dépasse la distance maximale configurée",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
+    patchStage(event.data.stages, 0, (current) => ({
       distance: 150,
-    };
+    }));
     await injectEvent(event);
   },
 );
 
 When("une étape a un dénivelé supérieur à 2000m", async ({ injectEvent }) => {
   const event = stagesComputedEvent();
-  const data = event.data as {
-    stages: Array<Record<string, unknown>>;
-  };
-  data.stages[0] = {
-    ...data.stages[0],
+  patchStage(event.data.stages, 0, (current) => ({
     elevation: 2500,
-  };
+  }));
   await injectEvent(event);
 });
 
@@ -49,22 +42,18 @@ When(
   "les données météo indiquent de la pluie sur l'étape {int}",
   async ({ injectEvent }, stage: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "09d",
-        description: "Heavy rain",
-        tempMin: 10,
-        tempMax: 18,
-        windSpeed: 20,
-        windDirection: "NO",
-        precipitationProbability: 95,
-        humidity: 90,
-        comfortIndex: 20,
-        relativeWindDirection: "crosswind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "09d",
+      description: "Heavy rain",
+      tempMin: 10,
+      tempMax: 18,
+      windSpeed: 20,
+      windDirection: "NO",
+      precipitationProbability: 95,
+      humidity: 90,
+      comfortIndex: 20,
+      relativeWindDirection: "crosswind",
+    });
     await injectEvent(event);
   },
 );
@@ -87,11 +76,8 @@ When(
   "les dernières étapes cumulent trop de dénivelé",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[1] = { ...data.stages[1], elevation: 1800 };
-    data.stages[2] = { ...data.stages[2], elevation: 2200 };
+    patchStage(event.data.stages, 1, () => ({ elevation: 1800 }));
+    patchStage(event.data.stages, 2, () => ({ elevation: 2200 }));
     await injectEvent(event);
   },
 );
@@ -110,22 +96,18 @@ When(
       terrainAlertsEvent(),
       (() => {
         const event = weatherFetchedEvent();
-        const data = event.data as { stages: Array<Record<string, unknown>> };
-        data.stages[0] = {
-          ...data.stages[0],
-          weather: {
-            icon: "09d",
-            description: "Heavy rain",
-            tempMin: 8,
-            tempMax: 14,
-            windSpeed: 25,
-            windDirection: "NO",
-            precipitationProbability: 90,
-            humidity: 95,
-            comfortIndex: 15,
-            relativeWindDirection: "headwind",
-          },
-        };
+        patchWeather(event.data.stages, 0, {
+          icon: "09d",
+          description: "Heavy rain",
+          tempMin: 8,
+          tempMax: 14,
+          windSpeed: 25,
+          windDirection: "NO",
+          precipitationProbability: 90,
+          humidity: 95,
+          comfortIndex: 15,
+          relativeWindDirection: "headwind",
+        });
         return event;
       })(),
     ]);
@@ -136,14 +118,10 @@ When(
   "l'étape a une distance de {int} km et un dénivelé de {int} m",
   async ({ injectEvent }, distance: number, elevation: number) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
+    patchStage(event.data.stages, 0, (current) => ({
       distance,
       elevation,
-    };
+    }));
     await injectEvent(event);
   },
 );
@@ -154,13 +132,9 @@ When(
   "a stage exceeds the configured maximum distance",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
+    patchStage(event.data.stages, 0, (current) => ({
       distance: 150,
-    };
+    }));
     await injectEvent(event);
   },
 );
@@ -169,13 +143,9 @@ When(
   "a stage has more than {int}m elevation gain",
   async ({ injectEvent }, _elevationThreshold: number) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
+    patchStage(event.data.stages, 0, (current) => ({
       elevation: 2500,
-    };
+    }));
     await injectEvent(event);
   },
 );
@@ -184,22 +154,18 @@ When(
   "weather data indicates rain on stage {int}",
   async ({ injectEvent }, stage: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "09d",
-        description: "Heavy rain",
-        tempMin: 10,
-        tempMax: 18,
-        windSpeed: 20,
-        windDirection: "NO",
-        precipitationProbability: 95,
-        humidity: 90,
-        comfortIndex: 20,
-        relativeWindDirection: "crosswind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "09d",
+      description: "Heavy rain",
+      tempMin: 10,
+      tempMax: 18,
+      windSpeed: 20,
+      windDirection: "NO",
+      precipitationProbability: 95,
+      humidity: 90,
+      comfortIndex: 20,
+      relativeWindDirection: "crosswind",
+    });
     await injectEvent(event);
   },
 );
@@ -222,11 +188,8 @@ When(
   "the last stages accumulate too much elevation gain",
   async ({ injectEvent }) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[1] = { ...data.stages[1], elevation: 1800 };
-    data.stages[2] = { ...data.stages[2], elevation: 2200 };
+    patchStage(event.data.stages, 1, () => ({ elevation: 1800 }));
+    patchStage(event.data.stages, 2, () => ({ elevation: 2200 }));
     await injectEvent(event);
   },
 );
@@ -240,22 +203,18 @@ When("multiple alerts exist on the same stage", async ({ injectSequence }) => {
     terrainAlertsEvent(),
     (() => {
       const event = weatherFetchedEvent();
-      const data = event.data as { stages: Array<Record<string, unknown>> };
-      data.stages[0] = {
-        ...data.stages[0],
-        weather: {
-          icon: "09d",
-          description: "Heavy rain",
-          tempMin: 8,
-          tempMax: 14,
-          windSpeed: 25,
-          windDirection: "NO",
-          precipitationProbability: 90,
-          humidity: 95,
-          comfortIndex: 15,
-          relativeWindDirection: "headwind",
-        },
-      };
+      patchWeather(event.data.stages, 0, {
+        icon: "09d",
+        description: "Heavy rain",
+        tempMin: 8,
+        tempMax: 14,
+        windSpeed: 25,
+        windDirection: "NO",
+        precipitationProbability: 90,
+        humidity: 95,
+        comfortIndex: 15,
+        relativeWindDirection: "headwind",
+      });
       return event;
     })(),
   ]);
@@ -265,14 +224,10 @@ When(
   "the stage has a distance of {int} km and elevation of {int} m",
   async ({ injectEvent }, distance: number, elevation: number) => {
     const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
+    patchStage(event.data.stages, 0, (current) => ({
       distance,
       elevation,
-    };
+    }));
     await injectEvent(event);
   },
 );

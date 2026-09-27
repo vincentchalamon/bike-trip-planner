@@ -6,6 +6,40 @@ import { getTripId } from "../../fixtures/api-mocks";
 // Dates and calendar — FR + EN
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve a month name against one of the tables above, or fail loudly.
+ *
+ * The four call sites used `MONTHS[name] ?? 0`, which turns an unknown month into **January**
+ * (#1291). A typo in a `.feature` line therefore selected a date nobody asked for, and the
+ * scenario went on to assert against it — green, and wrong. Same for the day and year, which
+ * were `parseInt(parts[0], 10)` on a possibly-absent element and produced `NaN`.
+ */
+function monthIndex(months: Record<string, number>, name: string): number {
+  const index = months[name];
+
+  if (index === undefined) {
+    throw new Error(
+      `Unknown month "${name}" — the feature file and the table disagree.`,
+    );
+  }
+
+  return index;
+}
+
+/** The three parts of a date, as the feature files write them, or a named failure. */
+function dateParts(
+  date: string,
+  parts: (string | undefined)[],
+): [string, string, string] {
+  const [a, b, c] = parts;
+
+  if (a === undefined || b === undefined || c === undefined) {
+    throw new Error(`Cannot parse date: ${date}`);
+  }
+
+  return [a, b, c];
+}
+
 // Month name mappings for FR calendar navigation
 const FR_MONTHS: Record<string, number> = {
   janvier: 0,
@@ -178,8 +212,12 @@ When(
   "je sélectionne le {int} {word} {int} comme date de départ",
   async ({ mockedPage }, day: number, month: string, year: number) => {
     await openDatePicker(mockedPage);
-    const monthIndex = FR_MONTHS[month.toLowerCase()] ?? 0;
-    await selectCalendarDate(mockedPage, monthIndex, year, day);
+    await selectCalendarDate(
+      mockedPage,
+      monthIndex(FR_MONTHS, month.toLowerCase()),
+      year,
+      day,
+    );
   },
 );
 
@@ -188,10 +226,10 @@ When(
   async ({ mockedPage }, date: string) => {
     await openDatePicker(mockedPage);
     // Parse date like "15 juin 2026"
-    const parts = date.split(" ");
-    const day = parseInt(parts[0], 10);
-    const month = FR_MONTHS[parts[1]?.toLowerCase()] ?? 0;
-    const year = parseInt(parts[2], 10);
+    const [rawDay, rawMonth, rawYear] = dateParts(date, date.split(" "));
+    const day = parseInt(rawDay, 10);
+    const month = monthIndex(FR_MONTHS, rawMonth.toLowerCase());
+    const year = parseInt(rawYear, 10);
     await selectCalendarDate(mockedPage, month, year, day);
   },
 );
@@ -200,8 +238,12 @@ When(
   "je définis le {int} {word} {int} comme date de départ",
   async ({ mockedPage }, day: number, month: string, year: number) => {
     await openDatePicker(mockedPage);
-    const monthIndex = FR_MONTHS[month.toLowerCase()] ?? 0;
-    await selectCalendarDate(mockedPage, monthIndex, year, day);
+    await selectCalendarDate(
+      mockedPage,
+      monthIndex(FR_MONTHS, month.toLowerCase()),
+      year,
+      day,
+    );
   },
 );
 
@@ -209,10 +251,10 @@ When(
   "je définis le {string} comme date de départ",
   async ({ mockedPage }, date: string) => {
     await openDatePicker(mockedPage);
-    const parts = date.split(" ");
-    const day = parseInt(parts[0], 10);
-    const month = FR_MONTHS[parts[1]?.toLowerCase()] ?? 0;
-    const year = parseInt(parts[2], 10);
+    const [rawDay, rawMonth, rawYear] = dateParts(date, date.split(" "));
+    const day = parseInt(rawDay, 10);
+    const month = monthIndex(FR_MONTHS, rawMonth.toLowerCase());
+    const year = parseInt(rawYear, 10);
     await selectCalendarDate(mockedPage, month, year, day);
   },
 );
@@ -295,10 +337,11 @@ When(
     // Parse date like "June 15, 2026"
     const parts = date.match(/(\w+)\s+(\d+),\s*(\d+)/);
     if (!parts) throw new Error(`Cannot parse date: ${date}`);
-    const monthIndex = EN_MONTHS[parts[1]] ?? 0;
-    const day = parseInt(parts[2], 10);
-    const year = parseInt(parts[3], 10);
-    await selectCalendarDate(mockedPage, monthIndex, year, day);
+    const [rawMonth, rawDay, rawYear] = dateParts(date, parts.slice(1));
+    const month = monthIndex(EN_MONTHS, rawMonth);
+    const day = parseInt(rawDay, 10);
+    const year = parseInt(rawYear, 10);
+    await selectCalendarDate(mockedPage, month, year, day);
   },
 );
 
@@ -308,10 +351,11 @@ When(
     await openDatePicker(mockedPage);
     const parts = date.match(/(\w+)\s+(\d+),\s*(\d+)/);
     if (!parts) throw new Error(`Cannot parse date: ${date}`);
-    const monthIndex = EN_MONTHS[parts[1]] ?? 0;
-    const day = parseInt(parts[2], 10);
-    const year = parseInt(parts[3], 10);
-    await selectCalendarDate(mockedPage, monthIndex, year, day);
+    const [rawMonth, rawDay, rawYear] = dateParts(date, parts.slice(1));
+    const month = monthIndex(EN_MONTHS, rawMonth);
+    const day = parseInt(rawDay, 10);
+    const year = parseInt(rawYear, 10);
+    await selectCalendarDate(mockedPage, month, year, day);
   },
 );
 
