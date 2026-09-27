@@ -7,6 +7,7 @@ import {
   supplyTimelineEvent,
 } from "../../fixtures/mock-data";
 import { getTripId } from "../../fixtures/api-mocks";
+import type { StagePayload } from "@btp/core/mercure";
 
 // Maps the localized supply-marker icon word to the emoji rendered by the
 // SupplyTimeline component (water 💧, food 🍴, mixed 🏘️).
@@ -23,42 +24,60 @@ const SUPPLY_ICON: Record<string, string> = {
 // Stage management — FR + EN
 // ---------------------------------------------------------------------------
 
+/**
+ * The fixture's stages with a rest day inserted after `stage` (1-indexed), renumbered.
+ *
+ * Shared by the FR and EN steps, which held byte-identical copies. Both read
+ * `stagesComputedEvent().data.stages` through `as Array<Record<string, unknown>>` — a cast that
+ * hid two things once this folder was type-checked (#1291): the out-of-range access on
+ * `baseStages[stage - 1]`, and a rest day with **no `stageId`**, which `StagePayload` requires.
+ * The fixture was shipping a stage the shared contract says cannot exist.
+ */
+function withRestDayAfter(stage: number): StagePayload[] {
+  const baseStages = stagesComputedEvent().data.stages;
+  const previous = baseStages[stage - 1];
+
+  if (previous === undefined) {
+    throw new Error(
+      `withRestDayAfter: no stage ${stage} in the fixture (it has ${baseStages.length}).`,
+    );
+  }
+
+  return [
+    ...baseStages.slice(0, stage).map((s, i) => ({
+      ...s,
+      dayNumber: i + 1,
+      isRestDay: false,
+    })),
+    {
+      stageId: `stage-rest-${stage + 1}`,
+      dayNumber: stage + 1,
+      distance: 0,
+      elevation: 0,
+      elevationLoss: 0,
+      startPoint: previous.endPoint,
+      endPoint: previous.endPoint,
+      geometry: [],
+      label: null,
+      isRestDay: true,
+    },
+    ...baseStages.slice(stage).map((s, i) => ({
+      ...s,
+      dayNumber: stage + 2 + i,
+      isRestDay: false,
+    })),
+  ];
+}
+
 // --- Given steps FR ---
 
 Given(
   "un jour de repos existe après l'étape {int}",
   async ({ submitUrl, injectSequence }, stage: number) => {
     await submitUrl();
-    const baseStages = stagesComputedEvent().data.stages as Array<
-      Record<string, unknown>
-    >;
-    // Insert a rest day after the given stage (0-indexed: stage 1 => after index 0)
-    const stagesWithRestDay = [
-      ...baseStages.slice(0, stage).map((s, i) => ({
-        ...s,
-        dayNumber: i + 1,
-        isRestDay: false,
-      })),
-      {
-        dayNumber: stage + 1,
-        distance: 0,
-        elevation: 0,
-        elevationLoss: 0,
-        startPoint: baseStages[stage - 1].endPoint,
-        endPoint: baseStages[stage - 1].endPoint,
-        geometry: [],
-        label: null,
-        isRestDay: true,
-      },
-      ...baseStages.slice(stage).map((s, i) => ({
-        ...s,
-        dayNumber: stage + 2 + i,
-        isRestDay: false,
-      })),
-    ];
     await injectSequence([
       routeParsedEvent(),
-      { type: "stages_computed", data: { stages: stagesWithRestDay } },
+      { type: "stages_computed", data: { stages: withRestDayAfter(stage) } },
       tripCompleteEvent(),
     ]);
   },
@@ -70,35 +89,9 @@ Given(
   "a rest day exists after stage {int}",
   async ({ submitUrl, injectSequence }, stage: number) => {
     await submitUrl();
-    const baseStages = stagesComputedEvent().data.stages as Array<
-      Record<string, unknown>
-    >;
-    const stagesWithRestDay = [
-      ...baseStages.slice(0, stage).map((s, i) => ({
-        ...s,
-        dayNumber: i + 1,
-        isRestDay: false,
-      })),
-      {
-        dayNumber: stage + 1,
-        distance: 0,
-        elevation: 0,
-        elevationLoss: 0,
-        startPoint: baseStages[stage - 1].endPoint,
-        endPoint: baseStages[stage - 1].endPoint,
-        geometry: [],
-        label: null,
-        isRestDay: true,
-      },
-      ...baseStages.slice(stage).map((s, i) => ({
-        ...s,
-        dayNumber: stage + 2 + i,
-        isRestDay: false,
-      })),
-    ];
     await injectSequence([
       routeParsedEvent(),
-      { type: "stages_computed", data: { stages: stagesWithRestDay } },
+      { type: "stages_computed", data: { stages: withRestDayAfter(stage) } },
       tripCompleteEvent(),
     ]);
   },

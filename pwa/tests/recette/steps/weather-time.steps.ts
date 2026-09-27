@@ -5,7 +5,7 @@ import {
   stagesComputedEvent,
   routeParsedEvent,
 } from "../../fixtures/mock-data";
-import type { MercureEvent } from "@btp/core/mercure";
+import { patchWeather } from "../support/patch-stage";
 
 // ---------------------------------------------------------------------------
 // Weather and travel time — FR + EN
@@ -42,22 +42,18 @@ When(
   "la météo de l'étape {int} prévoit des températures sous {int}°C",
   async ({ injectEvent }, stage: number, temp: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "13d",
-        description: "Cold snap",
-        tempMin: temp - 5,
-        tempMax: temp - 1,
-        windSpeed: 10,
-        windDirection: "N",
-        precipitationProbability: 5,
-        humidity: 70,
-        comfortIndex: 30,
-        relativeWindDirection: "headwind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "13d",
+      description: "Cold snap",
+      tempMin: temp - 5,
+      tempMax: temp - 1,
+      windSpeed: 10,
+      windDirection: "N",
+      precipitationProbability: 5,
+      humidity: 70,
+      comfortIndex: 30,
+      relativeWindDirection: "headwind",
+    });
     await injectEvent(event);
   },
 );
@@ -66,22 +62,18 @@ When(
   "la météo de l'étape {int} prévoit plus de {int}mm de pluie",
   async ({ injectEvent }, stage: number, _mm: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "09d",
-        description: "Heavy rain",
-        tempMin: 10,
-        tempMax: 18,
-        windSpeed: 20,
-        windDirection: "NO",
-        precipitationProbability: 95,
-        humidity: 90,
-        comfortIndex: 20,
-        relativeWindDirection: "crosswind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "09d",
+      description: "Heavy rain",
+      tempMin: 10,
+      tempMax: 18,
+      windSpeed: 20,
+      windDirection: "NO",
+      precipitationProbability: 95,
+      humidity: 90,
+      comfortIndex: 20,
+      relativeWindDirection: "crosswind",
+    });
     await injectEvent(event);
   },
 );
@@ -146,22 +138,18 @@ When(
   "stage {int} weather forecasts temperatures below {int}°C",
   async ({ injectEvent }, stage: number, temp: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "13d",
-        description: "Cold snap",
-        tempMin: temp - 5,
-        tempMax: temp - 1,
-        windSpeed: 10,
-        windDirection: "N",
-        precipitationProbability: 5,
-        humidity: 70,
-        comfortIndex: 30,
-        relativeWindDirection: "headwind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "13d",
+      description: "Cold snap",
+      tempMin: temp - 5,
+      tempMax: temp - 1,
+      windSpeed: 10,
+      windDirection: "N",
+      precipitationProbability: 5,
+      humidity: 70,
+      comfortIndex: 30,
+      relativeWindDirection: "headwind",
+    });
     await injectEvent(event);
   },
 );
@@ -170,22 +158,18 @@ When(
   "stage {int} weather forecasts more than {int}mm of rain",
   async ({ injectEvent }, stage: number, _mm: number) => {
     const event = weatherFetchedEvent();
-    const data = event.data as { stages: Array<Record<string, unknown>> };
-    data.stages[stage - 1] = {
-      ...data.stages[stage - 1],
-      weather: {
-        icon: "09d",
-        description: "Heavy rain",
-        tempMin: 10,
-        tempMax: 18,
-        windSpeed: 20,
-        windDirection: "NO",
-        precipitationProbability: 95,
-        humidity: 90,
-        comfortIndex: 20,
-        relativeWindDirection: "crosswind",
-      },
-    };
+    patchWeather(event.data.stages, stage - 1, {
+      icon: "09d",
+      description: "Heavy rain",
+      tempMin: 10,
+      tempMax: 18,
+      windSpeed: 20,
+      windDirection: "NO",
+      precipitationProbability: 95,
+      humidity: 90,
+      comfortIndex: 20,
+      relativeWindDirection: "crosswind",
+    });
     await injectEvent(event);
   },
 );
@@ -313,15 +297,21 @@ Then(
     for (let i = 1; i <= 3; i++) {
       const card = mockedPage.getByTestId(`stage-card-${i}`);
       const text = await card.textContent();
-      const match = text?.match(/([\d.]+)\s*km/);
-      if (match) {
-        distances.push(parseFloat(match[1]));
+      // Destructured, not `match[1]`: a successful match does not tell TypeScript the
+      // capture group participated, and `parseFloat(undefined)` is a silent NaN.
+      const [, distance] = text?.match(/([\d.]+)\s*km/) ?? [];
+      if (distance !== undefined) {
+        distances.push(parseFloat(distance));
       }
     }
     expect(distances.length).toBeGreaterThanOrEqual(2);
-    for (let i = 1; i < distances.length; i++) {
-      expect(distances[i]).toBeLessThanOrEqual(distances[i - 1]);
-    }
+    // `reduce` without a seed hands both values as `number`, where `distances[i]` and
+    // `distances[i - 1]` are each `number | undefined` — and says what is asserted:
+    // every distance is at most the one before it.
+    distances.reduce((previous, current) => {
+      expect(current).toBeLessThanOrEqual(previous);
+      return current;
+    });
   },
 );
 
@@ -411,15 +401,21 @@ Then(
     for (let i = 1; i <= 3; i++) {
       const card = mockedPage.getByTestId(`stage-card-${i}`);
       const text = await card.textContent();
-      const match = text?.match(/([\d.]+)\s*km/);
-      if (match) {
-        distances.push(parseFloat(match[1]));
+      // Destructured, not `match[1]`: a successful match does not tell TypeScript the
+      // capture group participated, and `parseFloat(undefined)` is a silent NaN.
+      const [, distance] = text?.match(/([\d.]+)\s*km/) ?? [];
+      if (distance !== undefined) {
+        distances.push(parseFloat(distance));
       }
     }
     expect(distances.length).toBeGreaterThanOrEqual(2);
-    for (let i = 1; i < distances.length; i++) {
-      expect(distances[i]).toBeLessThanOrEqual(distances[i - 1]);
-    }
+    // `reduce` without a seed hands both values as `number`, where `distances[i]` and
+    // `distances[i - 1]` are each `number | undefined` — and says what is asserted:
+    // every distance is at most the one before it.
+    distances.reduce((previous, current) => {
+      expect(current).toBeLessThanOrEqual(previous);
+      return current;
+    });
   },
 );
 

@@ -1,6 +1,18 @@
 import type { MercureEvent } from "@btp/core/mercure";
 
-export function routeParsedEvent(): MercureEvent {
+/**
+ * The single variant a factory builds, rather than the whole `MercureEvent` union.
+ *
+ * Declaring the union was what made every consumer cast: `event.data` came back as the union
+ * of all 25 payload shapes, so reading `data.stages` needed an `as` that TypeScript could only
+ * reject or be lied to about (#1291). A factory knows which event it writes; saying so removes
+ * the cast instead of silencing it.
+ */
+type EventOf<K extends MercureEvent["type"]> = Extract<
+  MercureEvent,
+  { type: K }
+>;
+export function routeParsedEvent(): EventOf<"route_parsed"> {
   return {
     type: "route_parsed",
     data: {
@@ -13,7 +25,7 @@ export function routeParsedEvent(): MercureEvent {
   };
 }
 
-export function stagesComputedEvent(): MercureEvent {
+export function stagesComputedEvent(): EventOf<"stages_computed"> {
   return {
     type: "stages_computed",
     data: {
@@ -63,7 +75,7 @@ export function stagesComputedEvent(): MercureEvent {
  * map tests assert the profile is *absent* — so geometry-dependent scenarios
  * (golden-path B/C "carte & profil") inject this variant explicitly instead.
  */
-export function stagesComputedEventWithGeometry(): MercureEvent {
+export function stagesComputedEventWithGeometry(): EventOf<"stages_computed"> {
   const geometryFor = (
     a: { lat: number; lon: number; ele: number },
     mid: { lat: number; lon: number; ele: number },
@@ -146,7 +158,7 @@ function advancedWeather(baseTemp: number) {
   };
 }
 
-export function weatherFetchedEvent(): MercureEvent {
+export function weatherFetchedEvent(): EventOf<"weather_fetched"> {
   return {
     type: "weather_fetched",
     data: {
@@ -207,7 +219,7 @@ export function weatherFetchedEvent(): MercureEvent {
 export function accommodationsFoundEvent(
   stageId: string,
   searchRadiusKm = 5,
-): MercureEvent {
+): EventOf<"accommodations_found"> {
   return {
     type: "accommodations_found",
     data: {
@@ -265,7 +277,7 @@ export function accommodationsFoundEvent(
 export function emptyAccommodationsFoundEvent(
   stageId: string,
   searchRadiusKm = 5,
-): MercureEvent {
+): EventOf<"accommodations_found"> {
   return {
     type: "accommodations_found",
     data: {
@@ -276,7 +288,7 @@ export function emptyAccommodationsFoundEvent(
   };
 }
 
-export function terrainAlertsEvent(): MercureEvent {
+export function terrainAlertsEvent(): EventOf<"terrain_alerts"> {
   return {
     type: "terrain_alerts",
     data: {
@@ -319,7 +331,7 @@ export function terrainAlertsEvent(): MercureEvent {
  * `auto_fix` action of the elevation rule is dropped server-side, so its alert
  * arrives without any action at all.
  */
-export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
+export function terrainAlertsWithServerFilteredActionsEvent(): EventOf<"terrain_alerts"> {
   return {
     type: "terrain_alerts",
     data: {
@@ -355,7 +367,7 @@ export function terrainAlertsWithServerFilteredActionsEvent(): MercureEvent {
  * a `dayNumber`, and an `AlertType` value carried in `type` rather than the
  * literal `"nudge"` the frontend used to hardcode.
  */
-export function calendarAlertsEvent(): MercureEvent {
+export function calendarAlertsEvent(): EventOf<"calendar_alerts"> {
   return {
     type: "calendar_alerts",
     data: {
@@ -384,7 +396,7 @@ export function calendarAlertsEvent(): MercureEvent {
  * concerned road stretch (`segments`), highlighted on the internal map — the
  * post-#982 contract that replaces the old OSM external link.
  */
-export function terrainAlertWithSegmentsEvent(): MercureEvent {
+export function terrainAlertWithSegmentsEvent(): EventOf<"terrain_alerts"> {
   return {
     type: "terrain_alerts",
     data: {
@@ -418,7 +430,7 @@ export function terrainAlertWithSegmentsEvent(): MercureEvent {
   };
 }
 
-export function alertsWithActionsEvent(): MercureEvent {
+export function alertsWithActionsEvent(): EventOf<"terrain_alerts"> {
   return {
     type: "terrain_alerts",
     data: {
@@ -478,7 +490,7 @@ export function alertsWithActionsEvent(): MercureEvent {
   };
 }
 
-export function culturalPoiAlertsEvent(): MercureEvent {
+export function culturalPoiAlertsEvent(): EventOf<"cultural_poi_alerts"> {
   return {
     type: "cultural_poi_alerts",
     data: {
@@ -505,7 +517,7 @@ export function culturalPoiAlertsEvent(): MercureEvent {
 
 export function routeSegmentRecalculatedEvent(
   stageId = "stage-1",
-): MercureEvent {
+): EventOf<"route_segment_recalculated"> {
   return {
     type: "route_segment_recalculated",
     data: {
@@ -523,7 +535,7 @@ export function routeSegmentRecalculatedEvent(
   };
 }
 
-export function tripCompleteEvent(): MercureEvent {
+export function tripCompleteEvent(): EventOf<"trip_complete"> {
   return {
     type: "trip_complete",
     data: {
@@ -538,7 +550,9 @@ export function tripCompleteEvent(): MercureEvent {
   };
 }
 
-export function supplyTimelineEvent(stageId: string): MercureEvent {
+export function supplyTimelineEvent(
+  stageId: string,
+): EventOf<"supply_timeline"> {
   return {
     type: "supply_timeline",
     data: {
@@ -610,7 +624,9 @@ export function supplyTimelineEvent(stageId: string): MercureEvent {
   };
 }
 
-export function supplyTimelineClusterEvent(stageId = "stage-1"): MercureEvent {
+export function supplyTimelineClusterEvent(
+  stageId = "stage-1",
+): EventOf<"supply_timeline"> {
   return {
     type: "supply_timeline",
     data: {
@@ -652,7 +668,7 @@ export function supplyTimelineClusterEvent(stageId = "stage-1"): MercureEvent {
   };
 }
 
-export function validationErrorEvent(): MercureEvent {
+export function validationErrorEvent(): EventOf<"validation_error"> {
   return {
     type: "validation_error",
     data: {
@@ -665,7 +681,7 @@ export function validationErrorEvent(): MercureEvent {
 export function computationErrorEvent(
   retryable = false,
   computation = "weather",
-): MercureEvent {
+): EventOf<"computation_error"> {
   return {
     type: "computation_error",
     data: {
@@ -699,14 +715,14 @@ export function computationStepCompletedEvent(
     | "context",
   completed: number,
   total: number,
-): MercureEvent {
+): EventOf<"computation_step_completed"> {
   return {
     type: "computation_step_completed",
     data: { step, category, completed, total },
   };
 }
 
-export function tripReadyEvent(): MercureEvent {
+export function tripReadyEvent(): EventOf<"trip_ready"> {
   return {
     type: "trip_ready",
     data: {
@@ -787,7 +803,7 @@ export function tripReadyEvent(): MercureEvent {
   };
 }
 
-export function stageUpdatedEvent(dayNumber: number): MercureEvent {
+export function stageUpdatedEvent(dayNumber: number): EventOf<"stage_updated"> {
   return {
     type: "stage_updated",
     data: {
@@ -825,7 +841,7 @@ export function stageUpdatedEvent(dayNumber: number): MercureEvent {
 
 export function stageUpdatedEventWithSelectedAccommodation(
   dayNumber: number,
-): MercureEvent {
+): EventOf<"stage_updated"> {
   const hotelDuPont = {
     name: "Hotel du Pont",
     type: "hotel",
@@ -882,7 +898,7 @@ export function stageUpdatedEventWithSelectedAccommodation(
  */
 export function stageUpdatedEventWithManualAccommodation(
   dayNumber: number,
-): MercureEvent {
+): EventOf<"stage_updated"> {
   const manual = {
     name: "HomeExchange Grenoble",
     type: "other",
