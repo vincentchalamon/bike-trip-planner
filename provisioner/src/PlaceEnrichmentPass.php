@@ -445,7 +445,7 @@ final readonly class PlaceEnrichmentPass
      */
     private function decodeMatch(string $json): ?array
     {
-        $decoded = json_decode(str_replace(['\\t', '\\n', '\\r', '\\\\'], ["\t", "\n", "\r", '\\'], $json), true);
+        $decoded = json_decode($this->copyDecoded($json), true);
         if (!\is_array($decoded) || !isset($decoded['n']) || !is_numeric($decoded['n']) || 0 === (int) $decoded['n']) {
             return null;
         }
@@ -466,8 +466,7 @@ final readonly class PlaceEnrichmentPass
      */
     private function decodeTags(string $json): array
     {
-        // COPY escapes tabs and newlines inside the jsonb text; undo that before decoding.
-        $decoded = json_decode(str_replace(['\\t', '\\n', '\\r', '\\\\'], ["\t", "\n", "\r", '\\'], $json), true);
+        $decoded = json_decode($this->copyDecoded($json), true);
         if (!\is_array($decoded)) {
             return [];
         }
@@ -500,6 +499,16 @@ final readonly class PlaceEnrichmentPass
             array_map(static fn (string $line): string => rtrim($line, "\r\n"), explode("\n", $contents)),
             static fn (string $line): bool => '' !== trim($line),
         ));
+    }
+
+    /**
+     * Undoes COPY text escaping in one pass. Sequential replacements would re-read their own
+     * output: the `\\n` COPY writes for a JSON `\n` escape would become a backslash and a real
+     * line feed, i.e. invalid JSON.
+     */
+    private function copyDecoded(string $value): string
+    {
+        return strtr($value, ['\\\\' => '\\', '\\t' => "\t", '\\n' => "\n", '\\r' => "\r"]);
     }
 
     private function copyValue(string $value): string
