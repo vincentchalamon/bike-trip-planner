@@ -221,4 +221,35 @@ describe("trip version precondition (ADR-067)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(getTripVersion(TRIP_ID)).toBe(12);
   });
+
+  // Same contract on the raw apiFetch path the `/detail` hydration uses: the ETag of the
+  // retried response must be recorded, or the next edit pins a stale version and gets a 412.
+  it("captures the ETag of an apiFetch response retried after a 401 refresh", async () => {
+    let calls = 0;
+    const fetchMock = vi.fn(async () => {
+      calls += 1;
+
+      return calls === 1
+        ? new Response("{}", { status: 401 })
+        : new Response("{}", { status: 200, headers: { ETag: '"21"' } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { useAuthStore } = await import("@/store/auth-store");
+    useAuthStore.setState({
+      accessToken: "stale-token",
+      ensureResolved: vi.fn(async () => {}),
+      silentRefresh: vi.fn(async () => {
+        useAuthStore.setState({ accessToken: "fresh-token" });
+        return true;
+      }),
+    } as never);
+
+    const { apiFetch, getTripVersion } = await import("./client");
+    await apiFetch(`https://localhost/trips/${TRIP_ID}/detail`);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getTripVersion(TRIP_ID)).toBe(21);
+  });
 });

@@ -174,6 +174,7 @@ export async function apiFetch(
         },
       });
       rememberRequestId(retry);
+      rememberTripVersion(input, retry);
       return retry;
     }
     // Refresh failed — redirect to login
