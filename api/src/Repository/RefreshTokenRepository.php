@@ -15,6 +15,15 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RefreshTokenRepository extends ServiceEntityRepository
 {
+    /**
+     * How long a person stays signed in on a device without touching the magic-link flow again.
+     *
+     * ⚠ Unrelated to `league_oauth2_server.refresh_token_ttl` (`P1M`), and their near-equality
+     * is a coincidence, not a coupling (#1309). That one answers a different question — how
+     * long an agent may come back without a fresh consent (ADR-079/ADR-082) — so moving this
+     * number is a product decision about sessions, and moving that one is a security decision
+     * about delegated access. Neither should drag the other along.
+     */
     private const int TTL_DAYS = 30;
 
     public function __construct(

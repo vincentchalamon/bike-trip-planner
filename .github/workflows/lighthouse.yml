@@ -26,16 +26,15 @@ jobs:
         uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-      - name: Generate JWT keys
+      # Two keypairs, and they must differ or the prod image refuses to boot (ADR-079).
+      # One script knows both (#1309); the paths stay exported here, as Actions plumbing.
+      - name: Generate keypairs
         run: |
-          mkdir -p api/config/jwt
-          openssl genpkey -algorithm RSA -out api/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
+          ./scripts/generate-keypairs.sh \
+            --jwt api/config/jwt --oauth api/config/oauth \
+            --passphrase ci-test-passphrase --force
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
-          mkdir -p api/config/oauth
-          openssl genpkey -algorithm RSA -out api/config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/oauth/private.pem -out api/config/oauth/public.pem -passin pass:ci-test-passphrase
           echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
           echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images

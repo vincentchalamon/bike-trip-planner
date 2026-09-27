@@ -51,6 +51,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'auth_code_ttl' => 'PT2M',
             // An agent is episodic: it disappears between conversations and comes back. A
             // month is how long "comes back" is worth supporting without a new consent.
+            //
+            // ⚠ Unrelated to RefreshTokenRepository::TTL_DAYS (30), which bounds a PERSON's
+            // session on a device. The two numbers nearly coincide by accident (#1309); they
+            // answer different questions and must be free to move apart.
             'refresh_token_ttl' => 'P1M',
         ],
         'resource_server' => [
