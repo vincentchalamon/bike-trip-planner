@@ -2,7 +2,7 @@ import { API_BASE_URL, LD_JSON } from '../api/config';
 import { unregisterDeviceToken } from '../notifications/push';
 import { notifySessionInvalidated } from './session';
 import { clearTokens, getRefresh, setTokens } from './tokens';
-import { clearAllTripCache } from '../store/trip-cache';
+import { clearLocalAccountData } from '../store/local-account-data';
 
 // verify / refresh use plain fetch rather than the typed client: both return the
 // token pair ({ token, refresh_token }) in the body, and refresh posts the refresh
@@ -45,20 +45,32 @@ export function refreshTokens(): Promise<boolean> {
   return inflight;
 }
 
+// Statuses by which the server rejects the refresh token itself. Anything else
+// (5xx during a deploy, 429, a proxy error page) says nothing about the session,
+// and wiping on it would destroy the offline roadbook of a rider mid-trip.
+const REJECTED_REFRESH_STATUSES = new Set([400, 401, 422]);
+
 async function doRefresh(): Promise<boolean> {
   const refresh = getRefresh();
   if (refresh) {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: ldJsonHeaders,
-      body: JSON.stringify({ refresh_token: refresh }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: ldJsonHeaders,
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+    } catch {
+      return false;
+    }
     if (res.ok) {
       const data = (await res.json().catch(() => ({}))) as TokenPair;
       if (data.token) {
         await setTokens(data.token, data.refresh_token ?? refresh);
         return true;
       }
+    } else if (!REJECTED_REFRESH_STATUSES.has(res.status)) {
+      return false;
     }
   }
   // Definitive failure (no refresh token, rejected, or malformed body): unregister
@@ -68,9 +80,7 @@ async function doRefresh(): Promise<boolean> {
   // DELETE would 401, leaving the token alive server-side (#1125).
   await unregisterDeviceToken().catch(() => undefined);
   await clearTokens();
-  // Purge the offline trip cache too, so an invalidated session leaves no
-  // roadbook / manual accommodation on the device (#1174).
-  await clearAllTripCache();
+  await clearLocalAccountData();
   notifySessionInvalidated();
   return false;
 }
