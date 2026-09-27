@@ -2,7 +2,7 @@ import { forwardRef, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 import type { StageData } from '@btp/core';
-import { buildProfilePoints } from '@btp/core/elevation';
+import { buildProfilePoints, minMax } from '@btp/core/elevation';
 import {
   computeEstimatedBudget,
   computeOverallDifficulty,
@@ -42,23 +42,6 @@ const mercY = (lat: number) => {
   const rad = (lat * Math.PI) / 180;
   return (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2;
 };
-
-/**
- * Min/max of a numeric array via a single reduce. NOT `Math.min(...arr)`: a
- * multi-day trip flattens several thousand decimated points into one array, and
- * spreading that many arguments overflows Hermes' stricter argument limit
- * (RangeError: Maximum call stack size exceeded). Mirrors the web infographic's
- * loop-based bounds. Callers guarantee a non-empty array.
- */
-export function minMax(values: number[]): { min: number; max: number } {
-  return values.reduce(
-    (acc, v) => ({
-      min: v < acc.min ? v : acc.min,
-      max: v > acc.max ? v : acc.max,
-    }),
-    { min: values[0]!, max: values[0]! },
-  );
-}
 
 interface RoutePolyline {
   points: string;

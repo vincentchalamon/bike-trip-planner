@@ -66,6 +66,15 @@ describe('computeProfileSummary', () => {
     expect(summary!.distanceKm).toBeGreaterThan(0);
   });
 
+  it('frames a whole-trip profile too long to spread into Math.max', () => {
+    const geometry = Array.from({ length: 200_000 }, (_, i) => ({
+      lat: 45 + i * 1e-6,
+      lon: 4,
+      ele: i === 150_000 ? 3000 : 100,
+    }));
+    expect(computeProfileSummary([stage({ geometry })])!.maxEle).toBe(3000);
+  });
+
   it('excludes rest days from the summed gain', () => {
     const summary = computeProfileSummary([
       routed,
