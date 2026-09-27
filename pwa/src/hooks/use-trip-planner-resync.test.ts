@@ -87,6 +87,19 @@ describe("useTripPlanner — a stale refusal asks for a resync (ADR-067)", () =>
     expect(useUiStore.getState().resyncToken).toBe(before + 1);
   });
 
+  it("bumps the resync token on a refused rest-day insertion", async () => {
+    holder.status = 412;
+    const before = useUiStore.getState().resyncToken;
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handleInsertRestDay(0);
+    });
+
+    expect(useUiStore.getState().resyncToken).toBe(before + 1);
+    expect(useTripStore.getState().stages).toHaveLength(3);
+  });
+
   it("leaves it alone on a refusal that is not about staleness", async () => {
     holder.status = 422;
     const before = useUiStore.getState().resyncToken;

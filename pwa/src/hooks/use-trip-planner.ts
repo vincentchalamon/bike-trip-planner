@@ -393,7 +393,7 @@ export function useTripPlanner() {
     actions.insertRestDay(afterIndex);
 
     try {
-      const { response } = await apiClient.POST(
+      const { error, response } = await apiClient.POST(
         "/trips/{tripId}/stages/{stageId}/rest-day",
         {
           params: {
@@ -404,7 +404,7 @@ export function useTripPlanner() {
         },
       );
       if (!response.ok) {
-        toast.error(t("errors.failedInsertRestDay"));
+        reportApiError(response.status, error);
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
