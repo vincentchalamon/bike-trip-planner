@@ -40,9 +40,11 @@ export function dedupeAlerts(alerts: AlertData[]): AlertData[] {
 /**
  * Session-dismissal key: the stable `code` scoped to the stage it was dismissed
  * on. The web keeps dismissal in per-stage component state; the mobile store is
- * global, so the stage identity (the day number) must be part of the key — else
- * dismissing an alert on one day hides the same `code` on every other day
- * (#1038 review). Dedup stays intra-stage on `alertDedupKey`; only the
+ * global, so the stage identity must be part of the key — else dismissing an
+ * alert on one day hides the same `code` on every other day (#1038 review).
+ * Callers pass the stable stage id (ADR-066), never the day number, which
+ * shifts on a delete / insert / move and would hand the dismissal to whichever
+ * stage takes that day. Dedup stays intra-stage on `alertDedupKey`; only the
  * dismissal is scoped per stage.
  */
 export function alertDismissKey(

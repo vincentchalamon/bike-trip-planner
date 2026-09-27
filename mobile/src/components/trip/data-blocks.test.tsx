@@ -821,4 +821,17 @@ describe('StageDataBlocks disabled gating (#1166)', () => {
     useOfflineStore.setState({ apiReachable: false });
     expect(disabledOf()).toBe(true);
   });
+
+  // A dismissal belongs to the stage, not to its position: after a delete / insert /
+  // move, another stage takes day 2 and must not inherit what was dismissed there.
+  it('scopes alert dismissal to the stable stage id, not the day number (ADR-066)', () => {
+    const a = alert({ code: 'kept', message: 'Toujours visible' });
+    useDismissedAlerts.getState().dismiss(alertDismissKey('stage-deleted', a));
+    const renumbered = { ...stageData(), id: 'stage-moved-up', dayNumber: 2, alerts: [a] };
+
+    const tree = render(<StageDataBlocks stage={renumbered} stageIndex={1} />);
+
+    expect(tree.root.findByType(AlertsBlock).props.stageKey).toBe('stage-moved-up');
+    expect(texts(tree)).toContain('Toujours visible');
+  });
 });
