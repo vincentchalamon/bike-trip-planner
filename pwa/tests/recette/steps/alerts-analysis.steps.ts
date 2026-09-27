@@ -10,7 +10,6 @@ import {
   tripCompleteEvent,
   fullTripEventSequence,
 } from "../../fixtures/mock-data";
-import type { MercureEvent } from "@btp/core/mercure";
 import { patchStage, patchWeather } from "../support/patch-stage";
 
 // ---------------------------------------------------------------------------

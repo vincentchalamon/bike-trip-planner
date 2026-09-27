@@ -5,7 +5,6 @@ import {
   stagesComputedEvent,
   routeParsedEvent,
 } from "../../fixtures/mock-data";
-import type { MercureEvent } from "@btp/core/mercure";
 import { patchWeather } from "../support/patch-stage";
 
 // ---------------------------------------------------------------------------
