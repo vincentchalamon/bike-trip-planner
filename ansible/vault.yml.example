@@ -16,10 +16,11 @@
 # -----------------------------------------------------------------------------
 
 # --- JWT (LexikJWT, ADR-023) -------------------------------------------------
-# Generate off-VM:
-#   openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:4096 -aes256
-#   openssl rsa -pubout -in private.pem -out public.pem
-# Paste the full PEM blocks (keep the BEGIN/END lines) as block scalars.
+# Generate BOTH pairs off-VM, in one command, with the script the Makefile and CI use
+# (#1309) — so nobody generates one pair twice by hand and gets a VM that refuses to boot:
+#   scripts/generate-keypairs.sh --jwt ./jwt --oauth ./oauth --passphrase <your passphrase>
+# Paste the full PEM blocks (keep the BEGIN/END lines) as block scalars, then destroy the
+# local files.
 vault_jwt_private_key: |
   -----BEGIN ENCRYPTED PRIVATE KEY-----
   REPLACE_ME
@@ -31,10 +32,11 @@ vault_jwt_public_key: |
 vault_jwt_passphrase: "REPLACE_ME"
 
 # --- MCP authorization server (ADR-079) --------------------------------------
-# A SECOND, GENUINELY DIFFERENT keypair. Generated the same way as the one above,
-# and never a copy of it: the php entrypoint compares the two files and refuses to
-# boot when they match, because the only thing telling a PWA session token apart
-# from an agent access token is which key signed it.
+# The second pair the command above wrote, GENUINELY DIFFERENT from the first and never
+# a copy of it: the php entrypoint compares the two files and refuses to boot when they
+# match, because the only thing telling a PWA session token apart from an agent access
+# token is which key signed it. The assert in ansible/roles/app_deploy/tasks/main.yml
+# checks the same thing before the deploy gets that far.
 vault_oauth_private_key: |
   -----BEGIN ENCRYPTED PRIVATE KEY-----
   REPLACE_ME

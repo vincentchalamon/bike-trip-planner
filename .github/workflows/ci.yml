@@ -142,21 +142,12 @@ jobs:
       - name: Install dependencies
         working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
-      - name: Generate JWT keypair
+      # Two keypairs, and they must DIFFER (ADR-079): the anti-passthrough tests — a PWA
+      # session token must not open /mcp, an agent token must not open the REST API — only
+      # mean anything if they do. One script knows both (#1309).
+      - name: Generate keypairs
         working-directory: api
-        run: |
-          mkdir -p config/jwt
-          openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
-          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test
-      # A SECOND, DIFFERENT keypair for the MCP authorization server (ADR-079). The
-      # anti-passthrough test — a PWA session token must not open /mcp — only means
-      # anything if the two keys actually differ here.
-      - name: Generate OAuth keypair
-        working-directory: api
-        run: |
-          mkdir -p config/oauth
-          openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
-          openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test
+        run: ../scripts/generate-keypairs.sh --jwt config/jwt --oauth config/oauth --passphrase test --force
       - name: Run PHPUnit with coverage
         working-directory: api
         env:
@@ -550,10 +541,7 @@ jobs:
       # nothing to do with it. Throwaway keys, like the JWT pair the test jobs generate.
       - name: Generate OAuth keypair
         working-directory: api
-        run: |
-          mkdir -p config/oauth
-          openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096
-          openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem
+        run: ../scripts/generate-keypairs.sh --oauth config/oauth --force
       - name: WarmUp Cache
         env:
           APP_ENV: dev # required for parameters.symfony.containerXmlPath
@@ -693,19 +681,16 @@ jobs:
         uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-      - name: Generate JWT keys
+      # Two keypairs, and the prod image refuses to boot when they match (ADR-079) — so
+      # this is not an optional nicety: without both, the stack does not start. The paths
+      # are exported here rather than by the script, which stays usable outside Actions.
+      - name: Generate keypairs
         run: |
-          mkdir -p api/config/jwt
-          openssl genpkey -algorithm RSA -out api/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
+          ./scripts/generate-keypairs.sh \
+            --jwt api/config/jwt --oauth api/config/oauth \
+            --passphrase ci-test-passphrase --force
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
-          # A SECOND, DIFFERENT keypair for the MCP authorization server. The prod image
-          # refuses to boot when it matches the one above (ADR-079), so this is not an
-          # optional nicety: without it the stack does not start.
-          mkdir -p api/config/oauth
-          openssl genpkey -algorithm RSA -out api/config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/oauth/private.pem -out api/config/oauth/public.pem -passin pass:ci-test-passphrase
           echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
           echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
@@ -795,19 +780,16 @@ jobs:
         uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-      - name: Generate JWT keys
+      # Two keypairs, and the prod image refuses to boot when they match (ADR-079) — so
+      # this is not an optional nicety: without both, the stack does not start. The paths
+      # are exported here rather than by the script, which stays usable outside Actions.
+      - name: Generate keypairs
         run: |
-          mkdir -p api/config/jwt
-          openssl genpkey -algorithm RSA -out api/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
+          ./scripts/generate-keypairs.sh \
+            --jwt api/config/jwt --oauth api/config/oauth \
+            --passphrase ci-test-passphrase --force
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
-          # A SECOND, DIFFERENT keypair for the MCP authorization server. The prod image
-          # refuses to boot when it matches the one above (ADR-079), so this is not an
-          # optional nicety: without it the stack does not start.
-          mkdir -p api/config/oauth
-          openssl genpkey -algorithm RSA -out api/config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
-          openssl rsa -pubout -in api/config/oauth/private.pem -out api/config/oauth/public.pem -passin pass:ci-test-passphrase
           echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
           echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images

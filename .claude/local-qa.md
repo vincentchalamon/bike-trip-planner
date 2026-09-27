@@ -48,14 +48,12 @@ Every command below runs **from the worktree root** — the `docker run` resolve
 ```bash
 # One-time, inside the worktree: TWO keypairs, and they must differ.
 # Lexik signs the PWA session JWT; the OAuth authorization server signs the tokens that open
-# /mcp (ADR-079). The separation is cryptographic, so the anti-passthrough test — a session
-# token must not open /mcp — only means anything if these are genuinely two keys. The prod
-# entrypoint compares the bytes and refuses to boot if they coincide.
-(cd api && mkdir -p config/jwt config/oauth \
-  && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
-  && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test \
-  && openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test \
-  && openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test)
+# /mcp (ADR-079). The separation is cryptographic, so the anti-passthrough tests — a session
+# token must not open /mcp, an agent token must not open the REST API — only mean anything if
+# these are genuinely two keys. The prod entrypoint compares the bytes and refuses to boot if
+# they coincide. One script writes both, here and in CI (#1309), so the two cannot drift apart.
+./scripts/generate-keypairs.sh --jwt api/config/jwt --oauth api/config/oauth --passphrase test --force
+# (or `make keypairs-test`, which is this exact line)
 
 docker run --rm --network bike-trip-planner_default -u 1000:1000 -e APP_ENV=test -e XDEBUG_MODE=off \
   -e JWT_PASSPHRASE=test -e OAUTH_PASSPHRASE=test \

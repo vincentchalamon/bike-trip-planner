@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-jwt-recette ensure-oauth-recette oauth-keypair-test provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-keypairs-recette keypairs-test provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -24,16 +24,11 @@ install: ## Install dependencies
 	@docker compose run --rm --no-deps pwa npm install
 
 ## --- 🐳 Docker Infrastructure ---
-ensure-jwt-recette:
-	@mkdir -p .docker/jwt-recette
-	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
-
-# A SEPARATE keypair for the MCP authorization server (ADR-079), never the one above:
-# the prod entrypoint refuses to boot when the two match, because sharing them would let
-# a PWA session token open /mcp.
-ensure-oauth-recette:
-	@mkdir -p .docker/oauth-recette
-	@(test -f .docker/oauth-recette/private.pem && test -f .docker/oauth-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/oauth-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/oauth-recette/private.pem -out .docker/oauth-recette/public.pem -passin pass:recette; }
+# Two keypairs, and they must differ: the prod entrypoint refuses to boot when they match,
+# because sharing them would let a PWA session token open /mcp (ADR-079). One script knows
+# both, here and in CI (#1309).
+ensure-keypairs-recette:
+	@./scripts/generate-keypairs.sh --jwt .docker/jwt-recette --oauth .docker/oauth-recette --passphrase recette
 
 # Routing is opt-in since #881: `valhalla` only serves a graph built out of band
 # by `make routing-build`, so booting it on a machine without a graph would fail.
@@ -49,7 +44,7 @@ build: ## Build the Docker environment in production mode
 # refresh-token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
 # So `make start` supplies non-default local placeholders + the generated keypair to
 # boot, mirroring the CI env and the compose.recette.yaml overlay.
-start: ensure-jwt-recette ensure-oauth-recette ## Start the Docker environment (Detached) in production mode
+start: ensure-keypairs-recette ## Start the Docker environment (Detached) in production mode
 	@MERCURE_JWT_KEY=local-iso-prod-mercure-key-min-32-bytes \
 		REFRESH_TOKEN_ENC_KEY=local-iso-prod-refresh-enc-key \
 		APP_SECRET=local-iso-prod-app-secret \
@@ -62,7 +57,7 @@ start: ensure-jwt-recette ensure-oauth-recette ## Start the Docker environment (
 		OAUTH_PUBLIC_KEY_PATH=.docker/oauth-recette/public.pem \
 		docker compose -f compose.yaml up --wait
 
-start-recette: ensure-jwt-recette ensure-oauth-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
+start-recette: ensure-keypairs-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
 	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
@@ -200,11 +195,12 @@ visual-update: ## (Re)generate visual-regression baselines in the container (req
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm ci; cd pwa && npx playwright test --config playwright.visual.config.ts --update-snapshots'
 
-jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)
-	@docker compose exec php sh -c 'openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test'
-
-oauth-keypair-test: ## (Re)generate the MCP authorization server keys for the test suite. A DIFFERENT keypair from jwt-keypair-test, on purpose (ADR-079).
-	@docker compose exec php sh -c 'mkdir -p config/oauth && openssl genpkey -algorithm RSA -out config/oauth/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/oauth/private.pem -out config/oauth/public.pem -passin pass:test'
+# Both pairs at once, matching the test passphrase (run before coverage/test-php locally).
+# On the HOST rather than through `docker compose exec`: the php container mounts ./api, not
+# the repository root, so the script is not visible from inside it — and it runs as root, so
+# a key written here by uid 1000 is readable there.
+keypairs-test: ## (Re)generate the JWT and MCP authorization-server keys for the test suite. Two DIFFERENT pairs, on purpose (ADR-079).
+	@./scripts/generate-keypairs.sh --jwt api/config/jwt --oauth api/config/oauth --passphrase test --force
 
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api
@@ -236,7 +232,7 @@ provision-override: ## Import operator corrections for a zone (e.g. make provisi
 	@test -n "$(ARGS)" || { echo "Usage: make provision-override <zone> [file] (defaults to /data/zones/<zone>/override.tsv)"; exit 1; }
 	@docker compose --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/provision-override $(ARGS)
 
-provision-recette: ensure-jwt-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
+provision-recette: ensure-keypairs-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
 	@test -n "$(ARGS)" || { echo "Usage: make provision-recette <zone> (e.g. make provision-recette nord-pas-de-calais)"; exit 1; }
 	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner $(ARGS)
 
