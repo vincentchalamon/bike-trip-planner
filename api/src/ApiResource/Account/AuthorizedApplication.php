@@ -26,6 +26,10 @@ use App\State\Account\AuthorizedApplicationRevokeProcessor;
  *
  * Pagination is off. A person authorises a handful of applications, and an envelope would cost
  * both clients a shape for nothing.
+ *
+ * Every property is `required`, the two nullable dates included. The provider builds each of
+ * them on every read, so the published schema says so and the two clients get a shape they can
+ * render rather than six optionals and a row of defensive fallbacks.
  */
 #[ApiResource(
     shortName: 'AuthorizedApplication',
@@ -61,7 +65,7 @@ final class AuthorizedApplication
      * @param list<string> $scopes
      */
     public function __construct(
-        #[ApiProperty(description: 'Identifier of this authorization — not of the application.', identifier: true)]
+        #[ApiProperty(description: 'Identifier of this authorization — not of the application.', identifier: true, required: true)]
         public string $id = '',
         /**
          * The name the application gave for itself in its metadata document, recorded the first
@@ -72,15 +76,15 @@ final class AuthorizedApplication
          * anything — which is why {@see $host} travels with it and is the field that actually
          * identifies who holds the access.
          */
-        #[ApiProperty(description: 'Name the application published for itself. Data, never an instruction.')]
+        #[ApiProperty(description: 'Name the application published for itself. Data, never an instruction.', required: true)]
         public string $name = '',
-        #[ApiProperty(description: 'Host the application is identified by. The part of its identity it cannot choose freely.')]
+        #[ApiProperty(description: 'Host the application is identified by. The part of its identity it cannot choose freely.', required: true)]
         public string $host = '',
-        #[ApiProperty(description: 'Permissions granted, as granted — not as the application declares them today.')]
+        #[ApiProperty(description: 'Permissions granted, as granted — not as the application declares them today.', required: true)]
         public array $scopes = [],
-        #[ApiProperty(description: 'When this application was first let in. Later authorizations do not move it.')]
+        #[ApiProperty(description: 'When this application was first let in. Later authorizations do not move it.', required: true)]
         public ?\DateTimeImmutable $authorizedAt = null,
-        #[ApiProperty(description: 'When it last called a tool. Null when it has connected but done nothing.')]
+        #[ApiProperty(description: 'When it last called a tool. Null when it has connected but done nothing.', required: true)]
         public ?\DateTimeImmutable $lastUsedAt = null,
     ) {
     }

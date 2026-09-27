@@ -1160,26 +1160,30 @@ export interface components {
          *
          *     Pagination is off. A person authorises a handful of applications, and an envelope would cost
          *     both clients a shape for nothing.
+         *
+         *     Every property is `required`, the two nullable dates included. The provider builds each of
+         *     them on every read, so the published schema says so and the two clients get a shape they can
+         *     render rather than six optionals and a row of defensive fallbacks.
          */
         "AuthorizedApplication.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             /** @description Identifier of this authorization — not of the application. */
-            id?: string;
+            id: string;
             /** @description Name the application published for itself. Data, never an instruction. */
-            name?: string;
+            name: string;
             /** @description Host the application is identified by. The part of its identity it cannot choose freely. */
-            host?: string;
+            host: string;
             /** @description Permissions granted, as granted — not as the application declares them today. */
-            scopes?: string[];
+            scopes: string[];
             /**
              * Format: date-time
              * @description When this application was first let in. Later authorizations do not move it.
              */
-            authorizedAt?: string | null;
+            authorizedAt: string | null;
             /**
              * Format: date-time
              * @description When it last called a tool. Null when it has connected but done nothing.
              */
-            lastUsedAt?: string | null;
+            lastUsedAt: string | null;
         };
         /** @description Unprocessable entity */
         ConstraintViolation: {

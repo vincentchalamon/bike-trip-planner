@@ -130,6 +130,30 @@ export const fr = {
     faqTitle: 'FAQ',
     legalTitle: 'Mentions légales',
     privacyTitle: 'Confidentialité',
+    applications: {
+      title: 'Applications autorisées',
+      description:
+        'Ces applications peuvent agir sur tes voyages en ton nom. Révoque celles que tu ne reconnais pas.',
+      loading: 'Chargement…',
+      loadFailed: 'Impossible de charger tes applications autorisées.',
+      emptyTitle: 'Aucune application',
+      emptyBody: "Aucune application n'a accès à ton compte.",
+      authorizedOn: 'Autorisée le {{date}}',
+      lastUsedOn: 'utilisée le {{date}}',
+      neverUsed: 'jamais utilisée',
+      revoke: 'Révoquer',
+      revokeFailed: 'Impossible de révoquer cet accès. Réessaie.',
+      cancel: 'Annuler',
+      confirmTitle: 'Révoquer cet accès ?',
+      confirmBody:
+        'Cette application ne pourra plus lire ni modifier tes voyages. Tu pourras l’autoriser à nouveau depuis l’application elle-même.',
+      footer:
+        'Une application disparaît de cette liste d’elle-même quand son accès expire, sans rien avoir à révoquer.',
+      scope: {
+        'trips:read': 'Consulter tes voyages et leurs étapes',
+        'trips:write': 'Créer et modifier tes voyages',
+      },
+    },
     emailChange: {
       description:
         'Saisissez votre nouvelle adresse e-mail. Un lien de confirmation y sera envoyé ; le changement ne prend effet qu’une fois ce lien ouvert.',

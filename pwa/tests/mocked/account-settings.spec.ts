@@ -18,7 +18,28 @@ async function mockAuthenticated(page: import("@playwright/test").Page) {
     });
   });
   await page.route("**/.well-known/mercure*", (route) => route.abort());
+  // The applications section fetches on mount. Answering it here keeps the other
+  // tests' `networkidle` deterministic; the tests that care override this route.
+  await page.route("**/users/me/authorized-applications", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({ member: [] }),
+    });
+  });
 }
+
+const AUTHORIZED_APPLICATION = {
+  "@id":
+    "/users/me/authorized-applications/0199a0d0-0000-7000-8000-000000000001",
+  id: "0199a0d0-0000-7000-8000-000000000001",
+  name: "Example Agent",
+  host: "agent.example.com",
+  scopes: ["trips:read"],
+  authorizedAt: "2026-09-20T10:00:00+00:00",
+  lastUsedAt: null,
+};
 
 test.describe("Account settings", () => {
   test("renders all sections for an authenticated user", async ({ page }) => {
@@ -29,6 +50,9 @@ test.describe("Account settings", () => {
 
     await expect(page.getByTestId("account-settings-page")).toBeVisible();
     await expect(page.getByTestId("account-section")).toBeVisible();
+    await expect(
+      page.getByTestId("authorized-applications-section"),
+    ).toBeVisible();
     await expect(page.getByTestId("data-section")).toBeVisible();
     await expect(page.getByTestId("danger-zone-section")).toBeVisible();
     await expect(page.getByTestId("logout-section")).toBeVisible();
@@ -226,6 +250,93 @@ test.describe("Account settings", () => {
     await expect.poll(() => exportCalled).toBe(true);
     // The button must re-enable after the failure so the user can retry.
     await expect(button).toBeEnabled();
+  });
+
+  test("lists an authorized application with its host, and revokes it", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+
+    let revoked = false;
+    await page.route(
+      "**/users/me/authorized-applications",
+      (route, request) => {
+        if (request.method() !== "GET") return route.fallback();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/ld+json",
+          body: JSON.stringify({
+            member: revoked ? [] : [AUTHORIZED_APPLICATION],
+          }),
+        });
+      },
+    );
+    await page.route(
+      "**/users/me/authorized-applications/*",
+      (route, request) => {
+        if (request.method() !== "DELETE") return route.fallback();
+        revoked = true;
+        return route.fulfill({ status: 204, body: "" });
+      },
+    );
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("authorized-application-name")).toHaveText(
+      "Example Agent",
+    );
+    // The host travels with the name: it is the part of the identity the
+    // application could not choose for itself.
+    await expect(page.getByTestId("authorized-application-host")).toHaveText(
+      "agent.example.com",
+    );
+
+    await page.getByTestId("revoke-application-button").click();
+    const dialog = page.getByTestId("revoke-application-dialog");
+    await expect(dialog).toBeVisible();
+
+    // No keyword to type: revoking is reversible, unlike deleting the account.
+    const confirm = page.getByTestId("revoke-application-dialog-confirm");
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+
+    await expect.poll(() => revoked).toBe(true);
+    await expect(page.getByTestId("authorized-application")).toHaveCount(0);
+  });
+
+  test("keeps the application listed when the revocation fails", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+
+    await page.route(
+      "**/users/me/authorized-applications",
+      (route, request) => {
+        if (request.method() !== "GET") return route.fallback();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/ld+json",
+          body: JSON.stringify({ member: [AUTHORIZED_APPLICATION] }),
+        });
+      },
+    );
+    await page.route(
+      "**/users/me/authorized-applications/*",
+      (route, request) => {
+        if (request.method() !== "DELETE") return route.fallback();
+        return route.fulfill({ status: 500, body: "" });
+      },
+    );
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("revoke-application-button").click();
+    await page.getByTestId("revoke-application-dialog-confirm").click();
+
+    // A failed revocation must not make the access look withdrawn.
+    await expect(page.getByTestId("authorized-application")).toHaveCount(1);
   });
 
   test("logout button logs out and redirects home", async ({ page }) => {
