@@ -108,6 +108,26 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
+    public function readinessDoesNotLeakItsStatementTimeoutOntoTheConnections(): void
+    {
+        // FrankenPHP worker mode keeps the connections across requests: a 1s ceiling left
+        // behind by the probe would cap every later application query on that worker.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $this->client->request('GET', '/api/health');
+        $this->assertResponseStatusCodeSame(200);
+
+        foreach (['doctrine.dbal.default_connection', 'doctrine.dbal.reference_connection'] as $id) {
+            $connection = self::getContainer()->get($id);
+            \assert($connection instanceof Connection);
+            $this->assertSame('0', $connection->fetchOne('SHOW statement_timeout'), $id);
+        }
+    }
+
+    #[Test]
     public function readinessNeverProbesTheAiTier(): void
     {
         // AI is an optional per-user cloud provider (ADR-042), not a server
