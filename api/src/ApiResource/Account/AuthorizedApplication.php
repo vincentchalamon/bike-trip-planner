@@ -65,7 +65,7 @@ final class AuthorizedApplication
      * @param list<string> $scopes
      */
     public function __construct(
-        #[ApiProperty(description: 'Identifier of this authorization — not of the application.', identifier: true, required: true)]
+        #[ApiProperty(description: 'Identifier of this authorization — not of the application.', required: true, identifier: true)]
         public string $id = '',
         /**
          * The name the application gave for itself in its metadata document, recorded the first
