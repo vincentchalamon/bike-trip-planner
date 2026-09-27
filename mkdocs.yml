@@ -64,127 +64,131 @@ validation:
 
 nav:
   - Home: index.md
-  - Features: features.md
-  - Getting Started: getting-started.md
-  - Architecture: architecture.md
+  - Tutorials:
+      - Plan your first trip: plan-your-first-trip.md
+      - Run the project locally: getting-started.md
+  - How-to guides:
+      - Connect an AI agent (MCP): connect-an-ai-agent.md
+      - Contribute: contributing.md
+      - Deploy: deployment.md
+      - Runbooks:
+          - runbooks/README.md
+          - runbooks/severity-levels.md
+          - runbooks/incident-template.md
+          - runbooks/incident-alerting.md
+          - runbooks/worker-stuck.md
+          - runbooks/mercure-disconnected.md
+          - runbooks/redis-out-of-memory.md
+          - runbooks/database-disk-full.md
+          - runbooks/uptime-monitoring.md
+          - runbooks/base-image-cve-maintenance.md
+          - runbooks/oracle-vm-reclaimed.md
+          - runbooks/secrets-inventory.md
+          - runbooks/secrets-rotation.md
+          - runbooks/release-checklist.md
+          - runbooks/release-rollback.md
+          - runbooks/valhalla-routing-graph.md
+          - runbooks/valhalla-unavailable.md
+          - runbooks/zone-opening.md
+          - runbooks/zone-opening-corrections.md
+          - runbooks/events-refresh.md
+          - runbooks/mobile-dev-build-install.md
+          - runbooks/mobile-release-build.md
+          - runbooks/mobile-push-notifications.md
   - Reference:
+      - Features: features.md
       - Supported route sources: route-sources.md
-      - Accommodation tags: accommodations.md
+      - Accommodation types: accommodations.md
       - Alert engine: alert-engine.md
       - External data sources: external-data-sources.md
-      - Mobile Mercure auth (SSE): mobile-mercure-auth.md
+      - MCP tools: mcp-tools.md
+      - Mercure auth for non-browser clients: mobile-mercure-auth.md
+      - Claude Code tooling: claude-code-tooling.md
+      - Legal & licensing: legal-and-licensing.md
+  - Explanation:
+      - Architecture: architecture.md
       - DataTourisme flux audit: datatourisme-flux-audit.md
-  - Guides:
-      - Contributing: contributing.md
-      - Deployment: deployment.md
-      - Claude Code Tooling: claude-code-tooling.md
-      - Legal & Licensing: legal-and-licensing.md
-  - Architecture Decision Records:
-      - adr/adr-001-global-architecture-and-separation-of-concerns.md
-      - adr/adr-002-interface-contract-and-strict-typing.md
-      - adr/adr-003-local-first-data-persistence-versioning-and-migrations.md
-      - adr/adr-004-spatial-engineering-gpx-parsing-and-data-decimation.md
-      - adr/adr-005-orchestration-optimization-and-caching-of-external-apis.md
-      - adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
-      - adr/adr-007-frontend-local-state-management-and-reactivity.md
-      - adr/adr-008-high-fidelity-pdf-readbook-generation-strategy.md
-      - adr/adr-009-quality-assurance-and-automated-testing-strategy.md
-      - adr/adr-010-developer-experience-task-automation-and-local-infrastructure.md
-      - adr/adr-011-security-input-validation-and-ssrf-prevention-for-gpx-url-ingestion.md
-      - adr/adr-012-rule-based-nudge-and-contextual-alert-engine.md
-      - adr/adr-013-accomodation-discovery-and-heuristic-pricing-strategy.md
-      - adr/adr-014-alert-extensibility.md
-      - adr/adr-015-dynamic-engine-management-design-pattern.md
-      - adr/adr-016-performance-optimization-strategy.md
-      - adr/adr-017-valhalla-routing-engine-and-self-hosted-overpass-integration.md
-      - adr/adr-018-garmin-export-and-device-sync-strategy.md
-      - adr/adr-019-deployment-infrastructure-strategy.md
-      - adr/adr-020-dynamic-overpass-region-provisioning.md
-      - adr/adr-021-enriched-gpx-export-with-waypoints.md
-      - adr/adr-022-persistent-storage-strategy.md
-      - adr/adr-023-authentication-strategy.md
-      - adr/adr-024-mobile-strategy-capacitor.md
-      - adr/adr-025-removal-of-self-hosted-overpass.md
-      - adr/adr-026-multi-source-data-integration.md
-      - adr/adr-027-gate-mechanism-two-phase-pipeline.md
-      - adr/adr-028-ollama-llama-integration.md
-      - adr/adr-029-early-access-system.md
-      - adr/adr-030-symfony-ai-adoption.md
-      - adr/adr-031-error-tracking-strategy.md
-      - adr/adr-032-migrations-and-rollback-strategy.md
-      - adr/adr-033-osm-data-refresh-strategy.md
-      - adr/adr-034-usage-analytics-plausible.md
-      - adr/adr-035-rgpd-account-erasure.md
-      - adr/adr-036-manual-osm-data-refresh.md
-      - adr/adr-037-docker-dev-prod-convergence.md
-      - adr/adr-038-hide-forbidden-as-not-found.md
-      - adr/adr-039-beta-right-sizing-free-tier.md
-      - adr/adr-040-local-first-reference-data-postgis.md
-      - adr/adr-041-provisioner-resilience.md
-      - adr/adr-042-optional-multi-provider-ai-byo-token.md
-      - adr/adr-043-synchronous-structural-computation-async-enrichments.md
-      - adr/adr-044-removal-of-data-gouv-markets-source.md
-      - adr/adr-045-conversational-ai-trip-brief-chat.md
-      - adr/adr-046-temporary-ai-feature-flag.md
-      - adr/adr-047-server-side-web-auth-resolution.md
-      - adr/adr-048-in-ride-assistance-without-ai.md
-      - adr/adr-049-zone-opening-and-import-time-completeness.md
-      - adr/adr-050-terrain-attribution-to-the-ridden-route.md
-      - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
-      - adr/adr-052-remove-ai-support.md
-      - adr/adr-053-mobile-strategy-native-app.md
-      - adr/adr-054-mobile-design-system.md
-      - adr/adr-055-mobile-state-architecture.md
-      - adr/adr-056-mercure-header-auth-non-browser.md
-      - adr/adr-057-progressive-trip-loading.md
-      - adr/adr-058-push-fcm.md
-      - adr/adr-059-mobile-offline-auto-sync.md
-      - adr/adr-060-pg-split-app-reference.md
-      - adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md
-      - adr/adr-062-backup-and-disaster-recovery.md
-      - adr/adr-063-transport-agnostic-authorization.md
-      - adr/adr-064-mcp-server-as-third-api-client.md
-      - adr/adr-065-mercure-is-an-invalidation-channel.md
-      - adr/adr-066-stable-stage-identity.md
-      - adr/adr-067-optimistic-concurrency-on-trip-edits.md
-      - adr/adr-068-enrichment-durability-by-group.md
-      - adr/adr-069-alerts-rendered-at-read.md
-      - adr/adr-070-freshness-is-dispatch-completeness.md
-      - adr/adr-071-dependency-version-policy-and-ceilings.md
-      - adr/adr-072-computation-state-is-contract.md
-      - adr/adr-073-supersession-settles-and-says-so.md
-      - adr/adr-074-a-trip-has-an-address.md
-      - adr/adr-075-readiness-covers-the-consumers.md
-      - adr/adr-076-the-state-before-is-the-record.md
-      - adr/adr-077-a-creation-carries-its-own-key.md
-      - adr/adr-078-what-an-etag-promises.md
-      - adr/adr-079-authorizing-an-agent-without-giving-it-a-session.md
-      - adr/adr-080-thirteen-tools-and-everything-that-is-not-one.md
-      - adr/adr-081-what-an-agent-can-make-the-server-believe-say-and-do.md
-      - adr/adr-082-the-table-carries-the-dates-the-tokens-carry-the-truth.md
-  - Spikes:
-      - MCP feasibility (17/09/2026): spikes/mcp-feasibility-2026-09-17.md
-  - Runbooks:
-      - runbooks/README.md
-      - runbooks/severity-levels.md
-      - runbooks/incident-template.md
-      - runbooks/incident-alerting.md
-      - runbooks/worker-stuck.md
-      - runbooks/mercure-disconnected.md
-      - runbooks/redis-out-of-memory.md
-      - runbooks/database-disk-full.md
-      - runbooks/uptime-monitoring.md
-      - runbooks/base-image-cve-maintenance.md
-      - runbooks/oracle-vm-reclaimed.md
-      - runbooks/secrets-inventory.md
-      - runbooks/secrets-rotation.md
-      - runbooks/release-checklist.md
-      - runbooks/release-rollback.md
-      - runbooks/valhalla-routing-graph.md
-      - runbooks/valhalla-overpass-rebuild.md
-      - runbooks/zone-opening.md
-      - runbooks/zone-opening-corrections.md
-      - runbooks/events-refresh.md
-      - runbooks/mobile-dev-build-install.md
-      - runbooks/mobile-release-build.md
-      - runbooks/mobile-push-notifications.md
+      - "Spike: MCP feasibility (2026-09-17)": spikes/mcp-feasibility-2026-09-17.md
+      - Architecture Decision Records:
+          - adr/adr-001-global-architecture-and-separation-of-concerns.md
+          - adr/adr-002-interface-contract-and-strict-typing.md
+          - adr/adr-003-local-first-data-persistence-versioning-and-migrations.md
+          - adr/adr-004-spatial-engineering-gpx-parsing-and-data-decimation.md
+          - adr/adr-005-orchestration-optimization-and-caching-of-external-apis.md
+          - adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
+          - adr/adr-007-frontend-local-state-management-and-reactivity.md
+          - adr/adr-008-high-fidelity-pdf-readbook-generation-strategy.md
+          - adr/adr-009-quality-assurance-and-automated-testing-strategy.md
+          - adr/adr-010-developer-experience-task-automation-and-local-infrastructure.md
+          - adr/adr-011-security-input-validation-and-ssrf-prevention-for-gpx-url-ingestion.md
+          - adr/adr-012-rule-based-nudge-and-contextual-alert-engine.md
+          - adr/adr-013-accomodation-discovery-and-heuristic-pricing-strategy.md
+          - adr/adr-014-alert-extensibility.md
+          - adr/adr-015-dynamic-engine-management-design-pattern.md
+          - adr/adr-016-performance-optimization-strategy.md
+          - adr/adr-017-valhalla-routing-engine-and-self-hosted-overpass-integration.md
+          - adr/adr-018-garmin-export-and-device-sync-strategy.md
+          - adr/adr-019-deployment-infrastructure-strategy.md
+          - adr/adr-020-dynamic-overpass-region-provisioning.md
+          - adr/adr-021-enriched-gpx-export-with-waypoints.md
+          - adr/adr-022-persistent-storage-strategy.md
+          - adr/adr-023-authentication-strategy.md
+          - adr/adr-024-mobile-strategy-capacitor.md
+          - adr/adr-025-removal-of-self-hosted-overpass.md
+          - adr/adr-026-multi-source-data-integration.md
+          - adr/adr-027-gate-mechanism-two-phase-pipeline.md
+          - adr/adr-028-ollama-llama-integration.md
+          - adr/adr-029-early-access-system.md
+          - adr/adr-030-symfony-ai-adoption.md
+          - adr/adr-031-error-tracking-strategy.md
+          - adr/adr-032-migrations-and-rollback-strategy.md
+          - adr/adr-033-osm-data-refresh-strategy.md
+          - adr/adr-034-usage-analytics-plausible.md
+          - adr/adr-035-rgpd-account-erasure.md
+          - adr/adr-036-manual-osm-data-refresh.md
+          - adr/adr-037-docker-dev-prod-convergence.md
+          - adr/adr-038-hide-forbidden-as-not-found.md
+          - adr/adr-039-beta-right-sizing-free-tier.md
+          - adr/adr-040-local-first-reference-data-postgis.md
+          - adr/adr-041-provisioner-resilience.md
+          - adr/adr-042-optional-multi-provider-ai-byo-token.md
+          - adr/adr-043-synchronous-structural-computation-async-enrichments.md
+          - adr/adr-044-removal-of-data-gouv-markets-source.md
+          - adr/adr-045-conversational-ai-trip-brief-chat.md
+          - adr/adr-046-temporary-ai-feature-flag.md
+          - adr/adr-047-server-side-web-auth-resolution.md
+          - adr/adr-048-in-ride-assistance-without-ai.md
+          - adr/adr-049-zone-opening-and-import-time-completeness.md
+          - adr/adr-050-terrain-attribution-to-the-ridden-route.md
+          - adr/adr-051-multi-source-events-openagenda-temporal-lifecycle.md
+          - adr/adr-052-remove-ai-support.md
+          - adr/adr-053-mobile-strategy-native-app.md
+          - adr/adr-054-mobile-design-system.md
+          - adr/adr-055-mobile-state-architecture.md
+          - adr/adr-056-mercure-header-auth-non-browser.md
+          - adr/adr-057-progressive-trip-loading.md
+          - adr/adr-058-push-fcm.md
+          - adr/adr-059-mobile-offline-auto-sync.md
+          - adr/adr-060-pg-split-app-reference.md
+          - adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md
+          - adr/adr-062-backup-and-disaster-recovery.md
+          - adr/adr-063-transport-agnostic-authorization.md
+          - adr/adr-064-mcp-server-as-third-api-client.md
+          - adr/adr-065-mercure-is-an-invalidation-channel.md
+          - adr/adr-066-stable-stage-identity.md
+          - adr/adr-067-optimistic-concurrency-on-trip-edits.md
+          - adr/adr-068-enrichment-durability-by-group.md
+          - adr/adr-069-alerts-rendered-at-read.md
+          - adr/adr-070-freshness-is-dispatch-completeness.md
+          - adr/adr-071-dependency-version-policy-and-ceilings.md
+          - adr/adr-072-computation-state-is-contract.md
+          - adr/adr-073-supersession-settles-and-says-so.md
+          - adr/adr-074-a-trip-has-an-address.md
+          - adr/adr-075-readiness-covers-the-consumers.md
+          - adr/adr-076-the-state-before-is-the-record.md
+          - adr/adr-077-a-creation-carries-its-own-key.md
+          - adr/adr-078-what-an-etag-promises.md
+          - adr/adr-079-authorizing-an-agent-without-giving-it-a-session.md
+          - adr/adr-080-thirteen-tools-and-everything-that-is-not-one.md
+          - adr/adr-081-what-an-agent-can-make-the-server-believe-say-and-do.md
+          - adr/adr-082-the-table-carries-the-dates-the-tokens-carry-the-truth.md

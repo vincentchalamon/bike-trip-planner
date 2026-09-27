@@ -1,15 +1,17 @@
 # Worker Stuck
 
-Messenger workers process trip computations asynchronously over Redis (transports `async` and `failed`; the underlying Redis streams are named `messages` and `failed`). A stuck worker blocks Mercure SSE updates and freezes the PWA on "Computing…".
+Messenger workers process trip computations asynchronously over Redis (transports `async` and `failed`; the underlying Redis streams are named `messages` and `failed`). They run as the `worker` service, `WORKER_REPLICAS` replicas (2 by default, 1 in previews and CI). A stuck worker blocks Mercure SSE updates and freezes the PWA on "Computing…".
 
-## Symptômes
+In production, run the commands below with the `dc` alias from [README.md](README.md#conventions) instead of `docker compose`.
+
+## Symptoms
 
 - `/api/health` answers 503 with `deps.messenger.status = "down"` and `workers_alive = 0` (ADR-075)
 - PWA stays on a `pending` computation status (no Mercure event for > 2 min)
 - `failed` transport depth growing
-- `worker` container logs show repeated `Retrying message` or `Worker reached message limit`
+- `worker` container logs show repeated retries or errors from the same handler
 
-## Diagnostic
+## Diagnosis
 
 Start with the readiness probe — it is what now sees the async tier:
 
@@ -25,16 +27,14 @@ red whenever the system is merely busy.
 Then inspect Messenger state from the PHP container:
 
 ```bash
-make php-shell
-bin/console messenger:stats
-bin/console messenger:failed:show
+docker compose exec php bin/console messenger:stats
+docker compose exec php bin/console messenger:failed:show
 ```
 
-Identify how many worker processes are actually alive:
+Identify how many worker replicas are actually running:
 
 ```bash
 docker compose ps worker
-docker compose exec worker ps -eo pid,cmd | grep messenger:consume
 ```
 
 Inspect Redis directly to confirm queue depth. The transport uses **streams**, so `LLEN`
@@ -53,7 +53,7 @@ Pull the latest 200 stderr lines:
 docker compose logs --tail=200 worker
 ```
 
-## Procédure
+## Procedure
 
 1. **Retry transient failures** — if the `failed` transport contains messages that should succeed (external API blip). Nothing consumes `failed` on its own, so it only ever drains here:
 
@@ -82,7 +82,7 @@ docker compose logs --tail=200 worker
 
     This stops workers, runs `app:messenger:clear --all`, and purges the `cache.trip_state` pool.
 
-## Post-action
+## Verification and follow-up
 
 - Verify `bin/console messenger:stats` reports a draining `async` queue and an empty `failed` transport.
 - `curl -s .../api/health | jq .deps.messenger` — `workers_alive` back above zero, `failed_depth` at zero.

@@ -1,73 +1,81 @@
 # Mercure Disconnected
 
-Mercure (embedded in the `php` FrankenPHP container) pushes computation status updates over SSE. A disconnected hub leaves the PWA stuck on `pending` even though workers complete the computation.
+Mercure is embedded in the `php` FrankenPHP container (Caddy + Mercure + PHP, ADR-037) and runs
+protocol 1.0. It pushes computation status updates over SSE. Mercure is the invalidation
+channel, not the source of truth (ADR-065): a client that misses events resynchronises on its
+next read, so a disconnected hub costs latency, not data.
 
-## Symptômes
+In production, run the commands below with the `dc` alias from
+[README.md](README.md#conventions) instead of `docker compose`.
 
-- PWA toast "Reconnecting to live updates…" repeats in a loop
-- Browser console: `EventSource` errors on `/.well-known/mercure`
-- Backend logs: `Mercure publish failed: 401 Unauthorized` or `connection refused`
-- `/api/health` reports `mercure: 503`
+## Symptoms
 
-## Diagnostic
+- The trip page never receives live updates; stages only appear after a reload.
+- Browser devtools: `EventSource` errors on `/.well-known/mercure`, or 401/403 responses.
+- Backend logs: `Mercure publish failed for trip ...`.
+- `/api/health` reports `deps.mercure.status = "down"`. Mercure is not a required dependency,
+  so the overall status stays `ok`.
+
+## Diagnosis
 
 ```bash
 docker compose ps php
 docker compose logs --tail=200 php | grep -i mercure
 ```
 
-Probe the hub directly (publisher token required; healthz endpoint preferred when exposed):
+Probe the hub from inside the container. Without a subscription and a token the hub answers
+with a 4xx; any HTTP status means it is up, a connection error means it is not:
 
 ```bash
 docker compose exec php curl -sS -o /dev/null -w '%{http_code}\n' http://php/.well-known/mercure
 ```
 
-Validate the JWT keys configured on the PHP side (`MERCURE_JWT_SECRET`, publisher key):
+Check the Mercure configuration the container resolved. `MERCURE_JWT_KEY` feeds
+`MERCURE_JWT_SECRET` (Symfony side) and `MERCURE_PUBLISHER_JWT_KEY` /
+`MERCURE_SUBSCRIBER_JWT_KEY` (hub side), so they must all be identical. Compare hashes, not
+values; the three lines must match:
 
 ```bash
-docker compose exec php env | grep -i mercure
+docker compose exec php sh -c 'for v in "$MERCURE_JWT_SECRET" "$MERCURE_PUBLISHER_JWT_KEY" "$MERCURE_SUBSCRIBER_JWT_KEY"; do printf %s "$v" | sha256sum; done'
+docker compose exec php sh -c 'echo "$MERCURE_URL $MERCURE_PUBLIC_URL $MERCURE_ISSUER"'
 ```
 
-From a browser devtools console on the PWA host, confirm the subscriber JWT is fresh:
+Updates are private. The PWA gets its subscriber cookie from `GET /trips/{id}/detail` and
+subscribes with `?match=/trips/{id}` (protocol 1.0 replaced `?topic=` with `?match=`). To test
+from the browser devtools console on the PWA host, after opening the trip once:
 
 ```javascript
-new EventSource('/.well-known/mercure?topic=' + encodeURIComponent('https://example.com/trip/test'))
+new EventSource('/.well-known/mercure?match=' + encodeURIComponent('/trips/<trip-id>'), { withCredentials: true })
   .onmessage = (e) => console.log(e)
 ```
 
-## Procédure
+## Procedure
 
-1. **Restart the hub** — Mercure is embedded in the `php` edge, so restart `php` (idempotent):
+1. **Restart the hub.** Mercure is embedded in `php`, so restart `php`:
 
     ```bash
     docker compose restart php
     ```
 
-2. **If the JWT secret rotated**, regenerate it across services. The publisher key lives in the PHP container, the subscriber key in the PWA build. Both must share `MERCURE_JWT_SECRET`:
+2. **If the key was changed or is wrong**, fix `vault_mercure_jwt_key` in Ansible Vault (at
+   least 32 bytes, `openssl rand -hex 32`), re-render and reload the stack (see
+   [secrets-rotation.md](secrets-rotation.md#common-steps)). The `php` entrypoint refuses to
+   boot on an empty, default or too-short key (SEC-004), so a running container always has a
+   syntactically valid one; a mismatch can only come from a hand-edited environment.
 
-    ```bash
-    docker compose -p prod exec php php -r 'echo bin2hex(random_bytes(32))."\n";'
-    ```
+3. **Reset the client side.** The Mercure client (`pwa/src/lib/mercure/client.ts`, used by
+   `pwa/src/hooks/use-mercure.ts`) re-fetches the trip detail to renew its subscriber cookie
+   and reconnects with backoff. After a hub restart, a page reload re-subscribes immediately.
 
-    Update the prod `.env` (Ansible Vault) for `php` and `pwa`, then redeploy. Mismatched keys produce silent 401s with no obvious symptom beyond reconnect loops.
+## Verification and follow-up
 
-3. **Reset reconnect state on the PWA** — the Mercure client (`pwa/src/lib/mercure/client.ts`) backs off exponentially. After a hub restart, ask users to refresh; the `use-mercure` hook will re-subscribe automatically.
-
-4. **Check the edge** — the Caddy reverse-proxy and the Mercure hub both run inside the `php` (FrankenPHP) container. If routing looks wrong:
-
-    ```bash
-    docker compose logs --tail=100 php | grep -i mercure
-    docker compose restart php
-    ```
-
-## Post-action
-
-- `/api/health` reports `mercure: ok`.
-- Open the PWA, start a trip computation, observe the SSE event arriving (no toast).
-- If JWT keys were rotated, store the rotation date in the incident issue and schedule the next rotation (90 d).
-- If Caddy was the culprit, capture the misrouting line from the logs into the incident.
+- `/api/health` reports `deps.mercure.status = "ok"`.
+- Open the PWA, start a trip computation, and watch the SSE events arrive without a reload.
+- If the key was rotated, record the date in the incident issue.
 
 ## References
 
-- ADR-001 — Global architecture (Mercure as SSE transport)
-- ADR-019 — Deployment infrastructure (Caddy reverse proxy)
+- ADR-001 - Global architecture (Mercure as SSE transport)
+- ADR-037 - Dev/prod Docker convergence (FrankenPHP with embedded Caddy + Mercure)
+- ADR-065 - Mercure as invalidation channel, not source of truth
+- `api/config/packages/mercure.php`, `api/src/Mercure/TripUpdatePublisher.php`

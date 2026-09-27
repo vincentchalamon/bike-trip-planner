@@ -6,8 +6,8 @@
 > stay in the repository for reversibility but no container runs on the VM. The
 > single off-host probe on `/api/healthz` is enough to detect a host-level
 > outage and raise an incident. Re-enable Uptime Kuma later by deploying the stack and restoring the
-> "Self-hosted" layer below. See [ADR-031](../adr/adr-031-error-tracking-strategy.md)
-> for the parallel Sentry-SaaS beta posture.
+> "Self-hosted" layer below. See [ADR-039](../adr/adr-039-beta-right-sizing-free-tier.md)
+> for this posture and the parallel Sentry-SaaS one.
 
 Target (post-beta) two-layer uptime monitoring for Bike Trip Planner production:
 
@@ -58,17 +58,18 @@ and trigger the incident workflow.
 - **URL to Notify**:
   `https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches`
 - **POST Value (JSON Format)**: enable
-- **POST Value**:
+- **POST Value** (the fields `incident-create.yml` parses, see
+  [incident-alerting.md](incident-alerting.md#uptimerobot)):
 
   ```json
   {
     "event_type": "uptime_alert",
     "client_payload": {
-      "source": "uptimerobot",
-      "monitor": "biketrip-healthz",
+      "monitor_name": "*monitorFriendlyName*",
+      "monitor_url": "*monitorURL*",
       "status": "*alertTypeFriendlyName*",
-      "url": "*monitorURL*",
-      "details": "*alertDetails*"
+      "message": "*alertDetails*",
+      "responseTime": *responseTime*
     }
   }
   ```
@@ -87,8 +88,8 @@ and trigger the incident workflow.
   > **Free tier workaround**: UptimeRobot free does not allow custom headers.
   > Route the webhook through a tiny relay (Cloudflare Worker or a
   > GitHub-hosted `workflow_dispatch` proxy) that adds the `Authorization`
-  > header server-side. Document the relay URL in Ansible Vault (prod `.env`).
-  > Until the relay exists, the UptimeRobot alert still fires by email; the
+  > header server-side. No such relay exists in this repository: until one
+  > does, the UptimeRobot alert fires by email only, and the
   > `repository_dispatch` automation is best-effort on free tier.
 
 - **Enable notifications for**: `Down` and `Up`.
@@ -104,36 +105,36 @@ curl -fsS -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches \
-  -d '{"event_type":"uptime_alert","client_payload":{"source":"uptimerobot","monitor":"biketrip-healthz","status":"down"}}'
+  -d '{"event_type":"uptime_alert","client_payload":{"monitor_name":"biketrip-healthz","monitor_url":"https://www.bike-trip-planner.com/api/healthz","status":"down"}}'
 ```
 
-GitHub answers `204 No Content` on success. The future incident workflow
-(#P1.3) listens on `repository_dispatch` events of type `uptime_alert`.
+GitHub answers `204 No Content` on success, and `incident-create.yml` opens (or
+comments on) a P1 issue within about 30 seconds.
 
 ## Severity & escalation
 
-| Monitor                                  | Source        | Severity | First responder         |
-| ---------------------------------------- | ------------- | -------- | ----------------------- |
-| `/api/healthz` (60 s)                    | Uptime Kuma   | P1       | On-call engineer        |
-| `/api/healthz` (5 min, external)         | UptimeRobot   | P1       | On-call engineer        |
-| `/api/health` (5 min)                    | Uptime Kuma   | P2       | On-call engineer        |
-| Keyword `/`                              | Uptime Kuma   | P1       | On-call engineer        |
-| DNS `A` record                           | Uptime Kuma   | P2       | Infra owner             |
-| Mercure hub                              | Uptime Kuma   | P2       | Backend owner           |
+| Monitor                                  | Source        | Severity | Deployed in beta |
+| ---------------------------------------- | ------------- | -------- | ---------------- |
+| `/api/healthz` (5 min, external)         | UptimeRobot   | P1       | Yes              |
+| Post-deploy smoke test (`deploy.yml`)    | GitHub Actions | P2      | Yes              |
+| `/api/healthz` (60 s)                    | Uptime Kuma   | P1       | No               |
+| `/api/health` (5 min)                    | Uptime Kuma   | P2       | No               |
+| Keyword `/` (monitor named `homepage`)   | Uptime Kuma   | P1       | No               |
 
-UptimeRobot is intentionally redundant with Uptime Kuma #1. The duplicate alarm
-is the trade-off: if both fire, the issue is real; if only UptimeRobot fires,
-the VM (or Uptime Kuma) is the problem.
+Severities are computed by `incident-create.yml` (see
+[severity-levels.md](severity-levels.md#mapping)). Post-beta, UptimeRobot stays
+redundant with the Uptime Kuma `/api/healthz` monitor: if both fire, the issue
+is real; if only UptimeRobot fires, the VM (or Uptime Kuma) is the problem.
 
 ## Token rotation
 
 `INCIDENT_DISPATCH_TOKEN` is a fine-grained GitHub PAT with
-**Contents: Read & write** on `vincentchalamon/bike-trip-planner` only.
+**Contents: Read and write** on `vincentchalamon/bike-trip-planner` only.
 
-- Lifetime: 90 days (GitHub maximum for fine-grained PATs without SSO).
-- Storage: Ansible Vault → prod `.env` (for Uptime Kuma) + UptimeRobot alert contact
-  (or relay env var).
-- Rotation runbook: generate a new PAT, update both stores, send a test
-  dispatch, then revoke the old PAT.
+- Lifetime: 90 days.
+- Storage: GitHub Actions secret + the UptimeRobot alert contact. It is not an
+  app runtime secret and is not in Ansible Vault.
+- Rotation: see
+  [incident-alerting.md](incident-alerting.md) ("Rotating `INCIDENT_DISPATCH_TOKEN`").
 
 Never commit the token to the repository.

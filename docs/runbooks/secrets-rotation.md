@@ -1,118 +1,183 @@
 # Secrets Rotation
 
-Politique de rotation des secrets de production. Volontairement courte : à l'échelle du projet (un environnement, un opérateur, ~15 secrets), la rotation calendaire systématique coûte plus qu'elle ne rapporte. Le mode par défaut est **on-compromise**, sauf cas listés ci-dessous.
+Rotation policy for production secrets. Deliberately short: at this project's scale (one
+environment, one operator, about twenty secrets), systematic calendar rotation costs more than
+it returns. The default is **on-compromise**, except for the cases listed below.
 
-L'inventaire complet des secrets est dans [secrets-inventory.md](secrets-inventory.md).
+The full inventory, with the Vault key of each secret, is in
+[secrets-inventory.md](secrets-inventory.md).
 
-## Symptômes (déclencheurs de rotation)
+## When to use
 
-- Suspicion de fuite (commit accidentel, log exposé, screenshot partagé, poste compromis)
-- Alerte GitHub Secret Scanning (notification automatique GitHub ou `gh api repos/vincentchalamon/bike-trip-planner/secret-scanning/alerts`)
-- Incident `severity:high` impliquant le service ou l'opérateur détenant la clé
-- Échéance calendaire (cf. matrice ci-dessous)
+- Suspected leak (accidental commit, exposed log, shared screenshot, compromised workstation).
+- GitHub Secret Scanning alert (GitHub notification, or
+  `gh api repos/vincentchalamon/bike-trip-planner/secret-scanning/alerts`).
+- A `severity-p1` incident involving the service or the operator holding the key.
+- A calendar deadline (see the matrix below).
 
-## Matrice de rotation
+## Rotation matrix
 
-| Secret | Cadence par défaut | Justification |
+| Secret | Default cadence | Rationale |
 |---|---|---|
-| `JWT_*` (PEM + passphrase) | On-compromise | Auth passwordless, surface limitée. Rotation invalide toutes les sessions (15 min access / 7 j refresh — acceptable). |
-| `MERCURE_JWT_KEY` | On-compromise | Reconnexion SSE forcée des clients. |
-| `AGE_RECIPIENT` (et clé privée associée) | On-compromise | Re-chiffrer la rétention GFS est coûteux. Clé privée hors-ligne dans Bitwarden, exposition quasi nulle. |
-| `B2_APPLICATION_KEY` | **Annuelle** + on-compromise | Standard cloud. Coût rotation faible. |
-| `OCI_*` (Object Storage) | **Annuelle** + on-compromise | Idem. |
-| `DATABASE_PASSWORD` | **Bi-annuelle** + on-compromise | Compromise rare en pratique (réseau Docker isolé), mais hygiène utile. |
-| `MAILER_DSN` (Brevo) | On-compromise | Pas de risque structurel à scheduler. |
-| `DATATOURISME_API_KEY` | On-compromise | Idem. |
-| `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | On-compromise | Projet GlitchTip recréable. |
-| `SSH_HOST` / `SSH_USER` / `SSH_KEY` / `SSH_KNOWN_HOSTS` / `PROD_HEALTH_URL` | On-compromise (clé) / on-changement d'hôte | Clé SSH de déploiement + hôte VM ; exposition uniquement au job GHA `deploy.yml`. Paire régénérée et `authorized_keys` re-provisionnée par Ansible. |
-| `INCIDENT_DISPATCH_TOKEN` | **90 jours** | Déjà appliqué (fine-grained PAT, contraintes GitHub). |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Géré par Anthropic | Hors scope. |
+| JWT keypair + `JWT_PASSPHRASE` | On-compromise | Invalidates the live access tokens (15 min); clients get a new one through their refresh token. |
+| OAuth keypair + `OAUTH_PASSPHRASE` | On-compromise | Invalidates the live agent access tokens; MCP clients refresh. |
+| `OAUTH_ENCRYPTION_KEY` | On-compromise | Invalidates pending authorization codes and agent refresh tokens. |
+| `APP_SECRET` | On-compromise | Invalidates CSRF tokens and signed URIs in flight. |
+| `MERCURE_JWT_KEY` | On-compromise | Forces SSE clients to reconnect. |
+| `REFRESH_TOKEN_ENC_KEY` | On-compromise | Stored refresh tokens become unreadable; users log in again. |
+| `ACCESS_REQUEST_HMAC_SECRET` | On-compromise | Pending activation links stop verifying. |
+| `AGE_RECIPIENT` (and its private key) | On-compromise | Re-encrypting the GFS retention is expensive. The private key is offline in Bitwarden, exposure is close to zero. |
+| `B2_APPLICATION_KEY` | **Yearly** + on-compromise | Cloud standard, cheap to rotate. |
+| OCI Object Storage keys | **Yearly** + on-compromise | Same. |
+| `DATABASE_PASSWORD` | **Twice a year** + on-compromise | Compromise is rare in practice (isolated Docker network), but it is useful hygiene. |
+| `REFERENCE_DATABASE_URL` / PG-reference superuser | On-compromise | Reachable only on the `btp-shared` Docker network. |
+| `MAILER_DSN` (Brevo) | On-compromise | No structural reason to schedule it. |
+| `FCM_SERVICE_ACCOUNT_JSON` | On-compromise | Same. |
+| `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | On-compromise | The error-tracking project can be recreated. |
+| Cloudflare Tunnel credentials | On-compromise | Recreate the tunnel credentials, update Vault, re-run the playbook. |
+| `SSH_KEY` / `SSH_KNOWN_HOSTS` | On-compromise (key) / on VM host-key change | Deploy SSH key, only exposed to the `deploy.yml` jobs. New pair, public key into `deploy_ssh_public_keys`, re-run the playbook. |
+| `INCIDENT_DISPATCH_TOKEN` | **90 days** | Fine-grained PAT, see [incident-alerting.md](incident-alerting.md) ("Rotating `INCIDENT_DISPATCH_TOKEN`"). |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Managed by Anthropic | Out of scope. |
 
-## Procédure générique (on-compromise)
+## Common steps
 
-Pour tout secret sauf cas spécifiques (cf. section suivante) :
+Three steps recur in every procedure below.
 
-1. **Révoquer immédiatement** côté provider (Backblaze, Brevo, Anthropic, GitHub PAT…). Couper l'accès en premier, regénérer ensuite.
-2. **Générer une nouvelle valeur** côté provider, scope minimal (ex. B2 : limiter au bucket `btp-backups`).
-3. **Mettre à jour** la localisation source listée dans [secrets-inventory.md](secrets-inventory.md) :
-    - Runtime secret → **Ansible Vault** (`ansible-vault edit …`), puis re-render du `.env` prod sur la VM par un run du playbook
-    - GitHub secret → `gh secret set <NAME>` ou UI repo settings
-4. **Redéployer** si runtime secret : tag `vX.Y.Z+1-rotation` (le job `deploy-prod` SSH roule la stack avec le nouveau `.env`).
-5. **Vérifier** : `curl https://<host>/api/healthz` + `curl https://<host>/api/health` verts ; pour CI secret, déclencher le workflow concerné.
-6. **Tracer** dans un commentaire de l'issue d'incident liée (`incident-template.md`) : qui, quand, quel secret, raison.
+**Update Vault** (from the `ansible/` directory on the operator workstation):
 
-## Procédures spécifiques
+```bash
+ansible-vault edit vault.yml
+```
+
+**Re-render the VM files** from Vault. The playbook is idempotent; it rewrites `app.env`, the
+PEM files, the backup config and the tunnel credentials:
+
+```bash
+ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
+```
+
+**Reload the app stack** on the VM (see [README.md](README.md#conventions) for the `dc` alias).
+Changed env values recreate the affected containers; a changed PEM file does not, so force it:
+
+```bash
+cd /opt/bike-trip-planner
+dc up -d                             # env-file change
+dc up -d --force-recreate php worker # PEM change
+```
+
+Re-running the GHA `deploy-prod` job for the live tag, or `./deploy-prod.sh <live-tag>` on
+the VM, has the same effect as `dc up -d`. Do not push a new tag just to reload secrets:
+`deploy-prod` only accepts plain `vX.Y.Z` tags.
+
+## Generic procedure (on-compromise)
+
+For any secret without a specific procedure below:
+
+1. **Revoke immediately** at the provider (Backblaze, Brevo, Firebase, Anthropic, GitHub
+   PAT...). Cut access first, regenerate second.
+2. **Generate a new value** with minimal scope (for example, restrict a B2 key to the
+   `btp-backups` bucket). For a locally generated secret (`APP_SECRET`, `MERCURE_JWT_KEY`,
+   `REFRESH_TOKEN_ENC_KEY`, `ACCESS_REQUEST_HMAC_SECRET`, `OAUTH_ENCRYPTION_KEY`), use
+   `openssl rand -hex 32`.
+3. **Update the source** listed in [secrets-inventory.md](secrets-inventory.md):
+    - runtime secret: update Vault, re-render, reload the stack (see Common steps);
+    - GitHub secret: `gh secret set <NAME>` or the repository settings UI.
+4. **Verify**: `curl https://www.<domain>/api/healthz` returns 200 and
+   `curl https://www.<domain>/api/health | jq .status` returns `"ok"`. For a CI secret, run
+   the workflow that uses it.
+5. **Record** in a comment on the linked incident issue (see
+   [incident-template.md](incident-template.md)): who, when, which secret, why.
+
+## Specific procedures
+
+### JWT and OAuth keypairs
+
+The two pairs rotate independently, but each one must stay different from the other: the
+playbook and the `php` entrypoint both refuse identical pairs (ADR-079). Rotating a pair
+invalidates the access tokens it signed; refresh tokens are opaque database rows, not signed
+by these keys, so clients recover by refreshing. To force every user to log in again, also
+rotate `REFRESH_TOKEN_ENC_KEY` (generic procedure); for agents, revoke their grants or rotate
+`OAUTH_ENCRYPTION_KEY`.
+
+1. On a trusted workstation, generate the new pair with the repository script (it encrypts
+   the private key with `-aes256` and reads the passphrase from stdin, not the command line).
+   Pass only the pair you are rotating:
+
+    ```bash
+    scripts/generate-keypairs.sh --jwt ./jwt --passphrase '<new passphrase>'
+    # or
+    scripts/generate-keypairs.sh --oauth ./oauth --passphrase '<new passphrase>'
+    ```
+
+2. Update Vault: paste the PEM blocks into `vault_jwt_private_key` / `vault_jwt_public_key`
+   and the passphrase into `vault_jwt_passphrase` (or the `vault_oauth_*` equivalents). Then
+   delete the local files.
+3. Re-render and reload with `--force-recreate php worker` (see Common steps).
+4. Verify: `/api/health` is `ok`, and a full magic-link login works (`POST /auth/request-link`
+   answers 202, the emailed link logs you in).
 
 ### `age` recipient
 
-La rotation **ne re-chiffre pas** l'historique des backups : trop coûteux, et l'ancienne clé privée reste valide pour décrypter les anciens dumps tant qu'on la conserve.
+Rotation **does not re-encrypt** the existing backups: too expensive, and the old private key
+still decrypts old dumps as long as it is kept.
 
-1. Sur un poste de confiance, hors-ligne si possible :
+1. On a trusted workstation, offline if possible:
 
     ```bash
     age-keygen -o age-key-$(date +%Y%m%d).txt
     ```
 
-2. Dans **Bitwarden vault** : **renommer l'item courant** `bike-trip-planner / age private key` en `bike-trip-planner / age private key legacy YYYYMMDD` (date de la dernière utilisation comme clé courante). **Créer un nouvel item** `bike-trip-planner / age private key` (nom canonique conservé) contenant la nouvelle clé privée. Le bootstrap DR cherche toujours le nom canonique ; les items `legacy *` ne servent qu'à restaurer les dumps antérieurs et doivent être conservés indéfiniment.
-3. Mettre à jour `AGE_RECIPIENT` dans **Ansible Vault** (`.env` du service `backup`) avec la nouvelle clé publique, puis re-render sur la VM.
-4. Mettre à jour le repo si la clé publique y est référencée (`compose.yaml` par défaut env, ADR-062).
-5. Forcer un backup : `make backup-now`. Confirmer via `rclone ls b2:btp-backups | tail -1` que le dernier dump est bien plus récent que la rotation.
-6. **Ne pas supprimer** les anciens dumps avant leur expiration GFS naturelle.
-
-### LexikJWT (`JWT_*`)
-
-Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérification de signature échoue).
-
-1. Sur la VM, dans le container `php` éphémère :
-
-    ```bash
-    docker compose -p prod exec php bin/console lexik:jwt:generate-keypair --overwrite
-    ```
-
-    Cela écrit les PEM dans `/app/config/jwt/` (espace de travail du container). Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** ; extraire les fichiers générés :
-
-    ```bash
-    docker cp php:/app/config/jwt/private.pem /etc/bike-trip-planner/jwt/private.pem
-    docker cp php:/app/config/jwt/public.pem  /etc/bike-trip-planner/jwt/public.pem
-    chmod 600 /etc/bike-trip-planner/jwt/private.pem
-    ```
-
-2. Mettre à jour `JWT_PASSPHRASE` dans **Ansible Vault** (utiliser la passphrase saisie lors de la regen), puis re-render du `.env` prod.
-3. Redéployer la stack (`docker compose -p prod … up -d`) pour que `php` et `worker` rechargent les secrets.
-4. Communiquer aux testeurs : "reconnexion magic link nécessaire".
-5. Vérifier : `curl -X POST /api/auth/magic-link` → 202, login flow complet OK.
+2. In **Bitwarden vault**, **rename the current item** `bike-trip-planner / age private key`
+   to `bike-trip-planner / age private key legacy YYYYMMDD` (the date it stopped being the
+   current key). **Create a new item** `bike-trip-planner / age private key` (the canonical
+   name is kept) holding the new private key. A restore always looks up the canonical name;
+   the `legacy *` items are only used to restore older dumps and must be kept indefinitely.
+3. Set `vault_age_recipient` to the new public key and re-run the playbook (it rewrites
+   `/etc/bike-trip-planner/backup/backup.env`).
+4. Force a backup: `make backup-now BACKUP_SSH=deploy@<vm>`. Check with
+   `rclone ls b2:btp-backups/daily | tail -1` that the latest dump is newer than the rotation.
+5. **Do not delete** old dumps before their natural GFS expiry.
 
 ### B2 application key
 
-1. Backblaze B2 console → Application Keys → **Add a New Application Key**, scope `btp-backups` only, capabilities `listFiles`, `readFiles`, `writeFiles`, `deleteFiles`.
-2. Récupérer `keyID` + `applicationKey` (affiché une seule fois).
-3. Mettre à jour `B2_ACCOUNT_ID` (= keyID) et `B2_APPLICATION_KEY` dans **Ansible Vault** (`.env` du service `backup`), puis re-render sur la VM.
-4. Restart `backup` service : `docker compose -p prod restart backup`.
-5. Valider : `make backup-now` → succès, `rclone ls b2:btp-backups` liste le nouveau dump.
-6. **Supprimer l'ancienne clé** dans la console Backblaze (rétention pendant 7 j non requise, vu que la nouvelle a fonctionné).
+1. Backblaze B2 console -> Application Keys -> **Add a New Application Key**, scoped to
+   `btp-backups` only, with `listFiles`, `readFiles`, `writeFiles`, `deleteFiles`.
+2. Copy `keyID` and `applicationKey` (shown only once).
+3. Set `vault_b2_account_id` (= keyID) and `vault_b2_application_key`, then re-run the
+   playbook (it rewrites `/etc/bike-trip-planner/backup/rclone.conf`). The backup is a
+   systemd one-shot (`btp-backup.timer`), so there is nothing to restart.
+4. Validate: `make backup-now BACKUP_SSH=deploy@<vm>` succeeds and
+   `rclone ls b2:btp-backups/daily` lists the new dump.
+5. **Delete the old key** in the Backblaze console once the new one has worked.
 
-### Database password
+### Database password (PG-app)
 
-Downtime ~30 s acceptable. Faire en heure creuse.
+About 30 s of downtime. Do it off-peak.
 
-1. Sur la VM :
+1. On the VM, change the password inside the running database:
 
     ```bash
-    docker compose -p prod exec database psql -U "$DATABASE_USERNAME" -d "$DATABASE_NAME" -c \
-      "ALTER USER \"$DATABASE_USERNAME\" WITH PASSWORD '<NEW_PASSWORD>';"
+    cd /opt/bike-trip-planner
+    dc exec database sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '"'"'<NEW_PASSWORD>'"'"';"'
     ```
 
-2. Mettre à jour `DATABASE_PASSWORD` dans **Ansible Vault**, puis re-render du `.env` prod.
-3. Redéployer (`docker compose -p prod … up -d`) — `php`, `worker`, `backup` reprennent la nouvelle valeur via le DSN.
-4. Vérifier : `curl /api/health` → `deps.postgres.status: "healthy"`.
+2. Set `vault_database_password`, re-render, then `dc up -d`: `php` and `worker` pick up the
+   new `DATABASE_URL`. The backup runs `pg_dump` inside the database container and is not
+   affected.
+3. Verify: `curl https://www.<domain>/api/health | jq .deps.postgres` reports
+   `"status": "ok"`.
 
-## Post-action
+## Verification and follow-up
 
-- Mettre à jour la colonne "Rotation" de [secrets-inventory.md](secrets-inventory.md) si la cadence change ou si un secret est ajouté/retiré.
-- Si la rotation faisait suite à un incident : compléter le post-mortem (`incident-template.md`) en référençant cette procédure.
-- Pour les rotations calendaires : créer une note de rappel (calendrier perso ou issue GitHub `chore(security): rotate B2 key — due YYYY-MM`) lors de la rotation précédente.
+- Update the "Rotation" column of [secrets-inventory.md](secrets-inventory.md) if a cadence
+  changes or a secret is added or removed.
+- If the rotation followed an incident, complete the post-mortem
+  ([incident-template.md](incident-template.md)) and reference this procedure.
+- For calendar rotations, create a reminder when rotating (personal calendar, or a GitHub
+  issue such as `chore(security): rotate B2 key - due YYYY-MM`).
 
-## Hors scope
+## Out of scope
 
-- Rotation programmatique (cron, scheduler) — non justifié à cette échelle.
-- Migration vers un secret manager (Bitwarden Secrets Manager, Doppler, Vault, Infisical) — décision documentée dans [secrets-inventory.md](secrets-inventory.md). À reconsidérer si > 3 environnements ou > 1 opérateur.
+- Programmatic rotation (cron, scheduler): not justified at this scale.
+- Moving to a secrets manager (Bitwarden Secrets Manager, Doppler, HashiCorp Vault,
+  Infisical): reconsider beyond three environments or more than one operator.

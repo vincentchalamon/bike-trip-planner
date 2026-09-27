@@ -1,125 +1,84 @@
 # Contributing
 
-This guide covers everything you need to contribute to Bike Trip Planner: setting up your development environment, configuring AI-assisted tooling, and following the project's quality standards.
+Task-oriented recipes for changing Bike Trip Planner. If you have never run the project, follow
+[Getting Started](getting-started.md) first. For the reasoning behind the design, read
+[Architecture](architecture.md) and the ADRs it links to.
 
----
+## Choose the right local stack
 
-## Local development environment
+| Command              | Stack                                                                 | Use it to                                   |
+|----------------------|-----------------------------------------------------------------------|---------------------------------------------|
+| `make start-dev`     | `compose.yaml` + `compose.dev.yaml`: sources mounted, hot reload, Mailcatcher, Xdebug available | develop                                     |
+| `make start`         | `compose.yaml` only, with generated local secrets: the production image and its fail-closed checks | reproduce a production-only behaviour       |
+| `make start-recette` | `compose.yaml` + `compose.recette.yaml`: iso-prod plus Mailcatcher    | run the manual recette or `make test-recette` |
+| `make routing-up`    | adds the Valhalla service, once a graph exists (`make routing-build <country>`) | work on stage rerouting                     |
 
-Follow [Getting Started](getting-started.md) to install and run the application. For development purposes, use:
+`make stop` stops the containers, `make clean` also deletes the volumes. `make help` lists every
+target.
 
-```bash
-make start-dev
-```
+## Make a change
 
-This boots multiple services in development mode:
+1. Create a branch from `main`.
+2. Commit with [Conventional Commits](https://www.conventionalcommits.org/):
+   `<type>(<optional scope>): <description>`, imperative and lowercase, for example
+   `fix(pacing): keep the last stage above the minimum distance`.
+3. Before opening a pull request, run the quality checks and the tests below.
 
-| Service       | URL                                         | Description                          |
-|---------------|---------------------------------------------|--------------------------------------|
-| `php`         | `https://localhost/docs`                    | API Platform backend (FrankenPHP: Caddy reverse-proxy + Mercure hub; demo UI at `/.well-known/mercure/ui/`) |
-| `pwa`         | `https://localhost`                         | Next.js frontend                     |
-| `worker`      | Internal only                               | Async messages worker (×5)           |
-| `redis`       | Internal only                               | Cache and Messenger transport        |
-| `database`    | Internal only                               | PostgreSQL 18 persistent storage     |
-| `valhalla`    | Internal only                               | Valhalla routing engine              |
-| `mailcatcher` | `http://localhost:1080`                     | Email catcher (development only)     |
+## Run the quality checks
 
-> **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.
+| Stack      | Tool         | Standard                    | Command             |
+|------------|--------------|-----------------------------|---------------------|
+| PHP        | PHPStan      | level 9                     | `make phpstan`      |
+| PHP        | PHP-CS-Fixer | PSR-12 + Symfony rules      | `make php-cs-fixer` (fixes in place) |
+| PHP        | Rector       | automated refactoring       | `make rector` (fixes in place) |
+| TypeScript | tsc          | strict mode                 | `make tsc`          |
+| TypeScript | ESLint       | Next.js rules               | `make eslint`       |
+| TypeScript | Prettier     | project config              | `make prettier` (check only) |
+| TypeScript | i18n check   | every key in every locale   | `make i18n-check`   |
+| Docs       | markdownlint | `.markdownlint.yaml`        | `make markdownlint` |
+| Docs       | link check   | internal links and anchors  | `make link-check`   |
 
-Once it is running, you have a fully functional development environment — both the PHP backend and the Next.js frontend support hot-reload out of the box.
+The PHP targets run on both `api/` and `provisioner/`. `make qa` chains all of the above except
+the link check. On a laptop, `make qa` can be killed for lack of memory during Rector or PHPStan
+(the `php` service is capped at 768 MB); run the legs one by one if that happens. CI runs every
+check on each pull request and is the gate that counts.
 
-### Useful development commands
+## Run the tests
 
-```bash
-make php-shell    # Enter the PHP container
-make pwa-shell    # Enter the Node container
-make qa           # Run the full QA pipeline
-make test         # Run QA + PHPUnit + Playwright
-make screenshots  # Regenerate README + landing screenshots (after UI changes)
-```
+| Suite                              | Command                                          | Needs            |
+|------------------------------------|--------------------------------------------------|------------------|
+| PHPUnit, `api/` and `provisioner/` | `make test-php`                                  | dev stack        |
+| One PHPUnit test                   | `docker compose exec php vendor/bin/phpunit --filter=MyTest` | dev stack |
+| Vitest (web unit tests)            | `make test-pwa`                                  | dev stack        |
+| Playwright E2E                     | `make test-e2e`                                  | a stack on `https://localhost` |
+| One Playwright spec                | `make test-e2e -- tests/mocked/my-feature.spec.ts` | a stack on `https://localhost` |
+| BDD recette scenarios (Gherkin)    | `make test-recette`                              | recette stack    |
+| OpenAPI lint                       | `make openapi-lint`                              | dev stack        |
+| Security advisories                | `make security-check`                            | dev stack        |
+| Mobile type check and Jest         | `npm run typecheck --workspace mobile` then `npm test --workspace mobile` | `npm install` at the repo root |
 
-See `make help` for the full list of available targets.
+`make test` runs `qa`, PHPUnit, Playwright, the OpenAPI lint and the security check in sequence.
 
----
+## Write a mocked end-to-end test
 
-## Development workflow
+Playwright tests live in `pwa/tests/`. `mocked/` holds the deterministic suite, which runs without
+a real backend computation; `integration/` holds a smoke test against the real backend.
 
-### 1. Work on a feature branch
+A mocked test extends the fixture in `pwa/tests/fixtures/base.fixture.ts`:
 
-```bash
-git checkout -b feat/my-feature
-```
-
-### 2. Make changes, then verify
-
-```bash
-make qa           # Must pass before every commit
-```
-
-### 3. Run targeted tests
-
-```bash
-# PHP unit tests only
-make test-php -- --filter=MyTestClass
-
-# A specific Playwright test
-make test-e2e -- tests/my-feature.spec.ts
-```
-
-#### E2E testing architecture
-
-Playwright tests are split into two categories under `pwa/tests/`:
-
-| Directory       | Purpose                                    | Backend required? |
-|-----------------|--------------------------------------------|-------------------|
-| `mocked/`       | Deterministic tests with mocked API + SSE  | No                |
-| `integration/`  | Smoke test against the real backend        | Yes               |
-
-**Mocked tests** are the primary E2E strategy. They intercept all HTTP calls and inject Mercure events programmatically, making them fast, deterministic, and CI-friendly.
-
-##### Fixtures (`pwa/tests/fixtures/`)
-
-All mocked tests extend a custom Playwright fixture defined in `base.fixture.ts` that provides:
-
-| Fixture          | Description                                                              |
+| Fixture          | What it gives you                                                        |
 |------------------|--------------------------------------------------------------------------|
-| `mockedPage`     | A `Page` with all API routes pre-mocked and navigated to `/`            |
-| `injectEvent`    | Injects a single Mercure SSE event into the page                         |
-| `injectSequence` | Injects an ordered sequence of events with configurable delay            |
-| `submitUrl`      | Fills the URL input and submits, waiting for the trip skeleton to appear |
-| `createFullTrip` | Shortcut: submits a URL then injects the full event sequence             |
+| `mockedPage`     | a page with every API route mocked (`api-mocks.ts`), opened on `/`       |
+| `injectEvent`    | injects one Mercure event into the page                                  |
+| `injectSequence` | injects an ordered list of events with a delay between them              |
+| `submitUrl`      | fills the route URL input, submits and waits for the trip skeleton       |
+| `createFullTrip` | `submitUrl`, then the whole event sequence of a computation              |
+| `mockOptions`    | per-test switches in `api-mocks.ts`, for example `{ deleteStageFail: true }` |
 
-##### API mocking with `page.route()`
-
-`api-mocks.ts` registers Playwright route handlers for every backend endpoint (POST/PATCH/DELETE trips, stages, geocoding, accommodations, etc.). Each handler returns a static JSON response, and options allow simulating errors:
-
-```typescript
-// Example: create a test with a failing stage deletion
-test.use({ mockOptions: { deleteStageFail: true } });
-```
-
-The real Mercure SSE endpoint (`/.well-known/mercure`) is **aborted** via `page.route()` to prevent the frontend from opening a real EventSource connection.
-
-##### SSE injection via `CustomEvent`
-
-Since the real SSE connection is aborted, events are injected from test code through the browser's `CustomEvent` API:
-
-```typescript
-// sse-helpers.ts — injects a typed MercureEvent into the page
-await page.evaluate((evt) => {
-  window.dispatchEvent(
-    new CustomEvent("__test_mercure_event", { detail: evt }),
-  );
-}, event);
-```
-
-The `MercureClient` class in `src/lib/mercure/client.ts` listens for these custom events in addition to real SSE messages, enabling seamless test injection without any production code changes.
-
-##### Mock data (`mock-data.ts`)
-
-Provides factory functions for every Mercure event type (`routeParsedEvent()`, `stagesComputedEvent()`, `weatherFetchedEvent()`, etc.), assembled into a `fullTripEventSequence()` that simulates a complete trip computation lifecycle.
-
-##### Writing a new mocked E2E test
+The real hub (`/.well-known/mercure`) is aborted. Events are injected with a
+`CustomEvent('__test_mercure_event')`, which `pwa/src/lib/mercure/client.ts` listens to alongside
+real SSE messages. Event factories (`routeParsedEvent()`, `stagesComputedEvent()`,
+`fullTripEventSequence()`, ...) are in `pwa/tests/fixtures/mock-data.ts`.
 
 ```typescript
 import { test, expect } from "../fixtures/base.fixture";
@@ -129,192 +88,81 @@ test("my feature works", async ({ mockedPage, submitUrl, injectEvent }) => {
   await submitUrl();
   await injectEvent(routeParsedEvent());
   await injectEvent(stagesComputedEvent());
-  // Assert on the rendered page
   await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible();
 });
 ```
 
-### 4. After changing backend DTOs, regenerate types
+Add a matching mock in `api-mocks.ts` when your feature calls a new endpoint.
+
+## Change the API contract
+
+The PHP resources are the single source of truth for the schema
+([ADR-002](adr/adr-002-interface-contract-and-strict-typing.md)).
+
+1. Change the DTO or resource in `api/src/ApiResource/`.
+2. With the dev stack running, run `make typegen`. It exports the OpenAPI document to
+   `pwa/openapi.json` and regenerates `core/schema.d.ts`, shared by the web and mobile apps.
+3. Fix the TypeScript errors that follow: they are the point.
+4. Commit the regenerated `core/schema.d.ts`. The CI job `openapi-typegen-drift` fails if it does
+   not match the backend.
+
+Backend conventions: custom State Providers and Processors rather than Doctrine auto-CRUD,
+`Request`/`Response` suffixes on DTOs, and HTTP clients scoped to a fixed base URI (no free-form
+URL fetching, [ADR-011](adr/adr-011-security-input-validation-and-ssrf-prevention-for-gpx-url-ingestion.md)).
+Frontend conventions: API calls through the typed `openapi-fetch` client, trip state in the Zustand
+stores, shared schema, Mercure types and reconciliation logic in `@btp/core` rather than copied per
+platform.
+
+## Add or change an alert rule
+
+1. Implement `App\Analyzer\StageAnalyzerInterface`. The interface carries the
+   `app.stage_analyzer` tag, so no registration is needed; `getPriority()` orders execution.
+   Checks that need their own async step live in `api/src/MessageHandler/` instead.
+2. Add a case to `App\Enum\AlertCode` for each rule variant.
+3. Add exactly one row per code to the table in [alert-engine.md](alert-engine.md).
+
+`AlertDocumentationTest` scans `api/src` and fails in both directions: a code without a row, or a
+row without a code. Rewording a message never changes its code, because clients key dismissal on
+it.
+
+## Regenerate the documentation screenshots
+
+After a visible UI change, with the dev stack running:
 
 ```bash
-make start-dev                  # Backend must be running
-make typegen
-```
-
-TypeScript compilation will fail until types are regenerated — this is intentional. The type contract (see [ADR-002](adr/adr-002-interface-contract-and-strict-typing.md)) enforces frontend/backend consistency at compile time.
-
-### 5. Regenerating documentation screenshots
-
-The README and landing-page screenshots are produced by a committed Playwright capture script (`pwa/tests/screenshots/capture.spec.ts`) that drives the mocked harness — no real backend needed. It is excluded from the normal E2E run; regenerate on demand after a UI change:
-
-```bash
-make start-dev      # the script captures against https://localhost
 make screenshots
 ```
 
-Outputs land in `docs/assets/screenshots/` (README) and `pwa/public/images/` (landing carousel). Review the generated images by eye before committing.
+The script (`pwa/tests/screenshots/capture.spec.ts`) drives the mocked harness and writes to
+`docs/assets/screenshots/` and `pwa/public/images/`. Review the images before committing them.
 
----
+## Record an architecture decision
 
-## Code quality standards
+Read the related ADRs in `docs/adr/` before proposing a structural change. If none covers it, add
+the next numbered `adr-NNN-<slug>.md` with its context, the options considered and the rationale,
+and add it to the `nav` of `mkdocs.yml` (the docs build is strict).
 
-### PHP
+## Open a pull request
 
-| Tool         | Standard                 | Command             |
-|--------------|--------------------------|---------------------|
-| PHPStan      | Level 9 (strict)         | `make phpstan`      |
-| PHP-CS-Fixer | PSR-12 + Symfony rules   | `make php-cs-fixer` |
-| Rector       | Automated refactoring    | `make rector`       |
-| PHPUnit      | Unit + integration tests | `make test-php`     |
+1. Quality checks and tests pass, and new behaviour has tests.
+2. A contract change includes the regenerated `core/schema.d.ts`.
+3. The description says what changed and why, links the ADR when the architecture moves, and
+   closes the issue with an English keyword (`Closes #123`).
 
-**Key conventions:**
+Every pull request gets an automated review from `claude-code-review.yml`, and same-repository
+pull requests get a preview deployment (see [Deployment](deployment.md)). For AI-assisted
+development, see [Claude Code tooling](claude-code-tooling.md).
 
-- State Providers and Processors, never controllers with repositories (stateless backend)
-- DTOs use `Request`/`Response` suffixes (`TripRequest`, `TripResponse`)
-- New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed. When you add, change, or remove a rule, also add its case to `App\Enum\AlertCode` **and** its row to the [alert-engine table](alert-engine.md), one row per code — `AlertDocumentationTest` scans `api/src` for emitted codes and fails in both directions (a code without a row, a row without a code)
-- HTTP clients must be scoped to a base URI — never allow free-form URL fetching (SSRF prevention)
+## Repository layout
 
-### TypeScript / Frontend
-
-| Tool       | Standard        | Command                      |
-|------------|-----------------|------------------------------|
-| TypeScript | Strict mode     | `make tsc`                   |
-| ESLint     | Next.js ruleset | `make eslint`                |
-| Prettier   | Project config  | `make prettier -- --write .` |
-| Playwright | E2E tests       | `make test-e2e`              |
-
-**Key conventions:**
-
-- All API calls go through the `openapi-fetch` client — never use `fetch` directly
-- State lives in Zustand stores (in-memory, Immer middleware); never in component state for trip data
-- Computation results arrive via Mercure SSE events and are dispatched through `CustomEvent('__test_mercure_event')` in tests
-- Zod schemas in `src/lib/validation/` must stay manually aligned with PHP DTOs
-
-### Architecture decisions
-
-Before proposing a significant architectural change, read the relevant ADR in `docs/adr/`. If no ADR covers your change, write one. ADRs document the context, alternatives considered, and rationale — not just the decision.
-
----
-
-## Claude Code setup (AI-assisted development)
-
-The project is configured for [Claude Code](https://claude.ai/code). The setup below gives Claude accurate, project-specific context and automates repetitive tasks.
-
-### Hooks (auto-configured)
-
-The `.claude/settings.json` file configures three hooks that run automatically:
-
-| Hook                 | Trigger                              | Effect                                                            |
-|----------------------|--------------------------------------|-------------------------------------------------------------------|
-| `PostToolUse` (PHP CS Fixer) | Any `.php` file written/edited       | Runs `php-cs-fixer` on the file                                   |
-| `PostToolUse` (Rector)       | Any `.php` file written/edited       | Runs `rector` on the file                                         |
-| `PostToolUse` (Prettier)     | Any `.ts`/`.tsx` file written/edited | Runs `prettier` on the file                                       |
-| `PreToolUse` (guard)         | Any write/edit                       | Blocks edits to `.env`, `schema.d.ts`, `vendor/`, `node_modules/` |
-
-These hooks are project-scoped and apply to all contributors who use Claude Code on this project.
-
-### Skills (slash commands)
-
-Four custom skills are available in Claude Code:
-
-| Command                              | Description                                                                  |
-|--------------------------------------|------------------------------------------------------------------------------|
-| `/pick <issue-number> [base-branch]` | Implements a GitHub issue end-to-end (branch, code, test, PR, CI monitoring) |
-| `/sprint <sprint-number>`            | Implements all sprint issues in parallel via worktree agents                 |
-| `/check [qa\|test\|all]`             | Quality goal-loop: runs QA/tests and fixes until green, with real output     |
-| `/close [sprint-number]`             | Closes a sprint: cleans worktrees/branches, updates main, retrospective      |
-
-### GitHub automation
-
-Claude is also available directly from GitHub, without needing a local Claude Code session:
-
-| Trigger                                   | Where           | What happens                                                                              |
-|-------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| `@claude pick [base-branch]`              | Issue comment    | Claude implements the issue end-to-end: creates branch, codes, opens PR, monitors CI     |
-| `@claude <instruction>`                   | Issue/PR comment | Claude follows the free-form instruction                                                 |
-| Automatic (on PR open/sync)               | Pull requests    | Claude performs an automated code review (`claude-code-review.yml`)                       |
-
-The workflows are defined in `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml`.
-
-### Recommended additional tools
-
-See [docs/claude-code-tooling.md](claude-code-tooling.md) for the full guide, including:
-
-- **GitHub MCP Server** — manage PRs and issues from within Claude Code
-- **Context7** — query up-to-date Symfony, Next.js, and API Platform documentation (already installed)
-- **Playwright MCP** — browser automation for UI validation and E2E debugging (already installed)
-
----
-
-## Project structure reference
-
-<!-- markdownlint-disable MD040 -->
-```
-bike-trip-planner/
-├── api/                          # PHP backend
-│   ├── src/
-│   │   ├── ApiResource/          # API Platform DTOs (single source of truth)
-│   │   ├── State/                # State Providers & Processors
-│   │   ├── Engine/               # Computation engines (distance, elevation, pacing)
-│   │   ├── Analyzer/             # Alert engine (Chain of Responsibility)
-│   │   ├── Scanner/              # OSM scanner (accommodations, POIs)
-│   │   ├── Weather/              # Open-Meteo weather provider
-│   │   ├── Serializer/           # GPX/FIT encoders + WaypointMapper
-│   │   ├── RouteFetcher/         # Route fetchers (Komoot, Strava, RWGPS)
-│   │   ├── MessageHandler/       # Async message handlers
-│   │   ├── Mercure/              # Mercure event publishing
-│   │   ├── Geo/                  # Geospatial utilities
-│   │   ├── Routing/              # Valhalla routing
-│   │   ├── Osm/                  # OSM reference data queries (PostGIS)
-│   │   ├── Pricing/              # Accommodation heuristic pricing
-│   │   ├── Enum/                 # Enumerations
-│   │   ├── Controller/           # Special controllers (file exports)
-│   │   ├── Service/              # Business services
-│   │   ├── Repository/           # Redis repositories
-│   │   ├── ComputationTracker/   # Computation progress tracking
-│   │   └── Command/              # CLI commands
-│   └── templates/                # Twig templates
-├── pwa/                          # Next.js frontend
-│   ├── src/
-│   │   ├── app/                  # Next.js App Router pages
-│   │   ├── store/                # Zustand stores (in-memory, Immer)
-│   │   ├── lib/
-│   │   │   ├── api/              # Generated types (schema.d.ts) + openapi-fetch client
-│   │   │   ├── validation/       # Zod schemas
-│   │   │   └── mercure/          # Mercure SSE client
-│   │   ├── components/           # React components
-│   │   │   ├── Map/              # Interactive map + elevation profile
-│   │   │   ├── ViewModeToggle/   # Timeline/map/split toggle
-│   │   │   ├── SupplyTimeline/   # Supply timeline visualization
-│   │   │   └── ui/               # shadcn/ui components
-│   │   └── hooks/                # Custom React hooks
-│   ├── messages/                 # i18n files (en.json, fr.json)
-│   └── tests/                    # Playwright E2E tests
-│       ├── fixtures/             # Test fixtures, API mocks, SSE helpers
-│       ├── mocked/               # Deterministic tests (mocked API + SSE)
-│       └── integration/          # Smoke test against real backend
-├── docs/
-│   ├── adr/                      # Architecture Decision Records
-│   ├── getting-started.md        # Getting started guide
-│   ├── contributing.md           # This file
-│   └── claude-code-tooling.md    # Claude Code tooling
-├── .github/
-│   └── workflows/
-│       ├── claude.yml              # @claude pick + free-form on issues/PRs
-│       └── claude-code-review.yml  # Automated PR code review
-├── .claude/
-│   ├── settings.json             # Hooks (auto-formatting, file protection)
-│   └── skills/                   # Custom slash commands (pick, sprint, check, close)
-```
-
----
-
-## Submitting changes
-
-1. Ensure `make qa` passes locally
-2. Write or update tests for any changed behavior
-3. If you changed backend DTOs, include the regenerated `pwa/src/lib/api/schema.d.ts`
-4. Open a pull request with a clear description of what changed and why
-5. Reference any relevant ADR if the change affects architecture
-
-For significant changes, open an issue first to discuss the approach before investing in implementation.
+| Path           | Content                                                                 |
+|----------------|-------------------------------------------------------------------------|
+| `api/`         | Symfony + API Platform backend, workers, MCP server                     |
+| `provisioner/` | CLI that imports OpenStreetMap, DataTourisme and OpenAgenda data into PostGIS |
+| `pwa/`         | Next.js web app and its Playwright suites                               |
+| `mobile/`      | Expo / React Native app                                                  |
+| `core/`        | `@btp/core`: generated schema, Mercure types, shared reducers           |
+| `.docker/`     | Dockerfiles, Caddyfile, auxiliary stacks                                |
+| `deploy/`      | Compose overlays for production, previews and the shared Valhalla       |
+| `ansible/`     | Provisioning of the production VM                                       |
+| `docs/`        | This documentation, ADRs and runbooks                                   |

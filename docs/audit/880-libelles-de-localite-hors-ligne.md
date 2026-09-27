@@ -1,26 +1,26 @@
-# Audit — libellés de localité hors ligne
+# Audit — offline locality labels
 
-Mesures demandées par [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880)
-(sprint 48). Elles arbitrent deux choix : la source des libellés de localité (nœuds `place=*`
-au plus proche **contre** polygones administratifs), et la correction du défaut de couverture
-soupçonné dans l'issue.
+Measurements requested by [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880)
+(sprint 48). They arbitrate two choices: the source of locality labels (nearest `place=*`
+nodes **versus** administrative polygons), and the fix for the coverage defect
+suspected in the issue.
 
-**Réponse courte.** Le défaut est confirmé : `osm.admin_boundaries` est **vide** sur le jeu
-local et `osm.coverage` ne contient qu'une ligne à géométrie `NULL`. L'option `place=*` est
-écartée par la mesure : elle ne désigne la bonne commune que dans **72,1 %** des cas contre
-**99,5 %** pour les polygones communaux, pour un écart de coût qui reste dans le bruit d'un
-import de plusieurs minutes (+7,0 Mo de PBF filtré, +54 s d'`osm2pgsql`).
+**Short answer.** The defect is confirmed: `osm.admin_boundaries` is **empty** on the local
+dataset and `osm.coverage` contains a single row with a `NULL` geometry. The `place=*` option is
+ruled out by the measurement: it names the right municipality in only **72.1%** of cases versus
+**99.5%** for municipal polygons, for a cost difference that stays within the noise of a
+multi-minute import (+7.0 MB of filtered PBF, +54 s of `osm2pgsql`).
 
-## Jeu de données mesuré
+## Measured dataset
 
 | | |
 |---|---|
-| Régions provisionnées | `nord-pas-de-calais` + `rhone-alpes` |
-| PBF fusionné (`default.osm.pbf`) | 767 068 802 octets |
-| Import de référence | `osm.metadata.refreshed_at` = `2026-08-04 13:09:44+00` |
-| Points de contrôle qualité | 3 000 lignes de `osm.accommodations` (échantillon `TABLESAMPLE SYSTEM (20)`) |
+| Provisioned regions | `nord-pas-de-calais` + `rhone-alpes` |
+| Merged PBF (`default.osm.pbf`) | 767,068,802 bytes |
+| Reference import | `osm.metadata.refreshed_at` = `2026-08-04 13:09:44+00` |
+| Quality check points | 3,000 rows of `osm.accommodations` (`TABLESAMPLE SYSTEM (20)` sample) |
 
-## 1. Le défaut de couverture est confirmé
+## 1. The coverage defect is confirmed
 
 ```text
 $ psql -c "SELECT admin_level, count(*) FROM osm.admin_boundaries GROUP BY 1 ORDER BY 1;"
@@ -39,78 +39,78 @@ $ psql -c "SELECT ST_IsEmpty(geom) AS empty, geom IS NULL AS isnull FROM osm.cov
        | t
 ```
 
-Cause : les extraits régionaux Geofabrik sont **découpés**. La relation frontière du pays a
-donc des ways manquants, `as_multipolygon()` renvoie `nil` et la ligne est ignorée. Le
-`ST_Union(geom) WHERE admin_level = 2` de `PostgisImporter::buildDerived()` s'exécute alors
-sur zéro ligne et produit une ligne à géométrie `NULL`.
+Cause: Geofabrik regional extracts are **clipped**. The country's boundary relation
+therefore has missing ways, `as_multipolygon()` returns `nil` and the row is skipped. The
+`ST_Union(geom) WHERE admin_level = 2` in `PostgisImporter::buildDerived()` then runs
+on zero rows and produces a row with a `NULL` geometry.
 
-Conséquences observées dans le code de lecture :
+Consequences observed in the read code:
 
-- `App\Osm\CoverageRepository` teste `geom IS NOT NULL AND NOT ST_Covers(...)`, donc aucun
-  voyage n'est signalé hors zone — le contrôle est **désactivé**, pas faux-positif. L'issue
-  supposait l'inverse.
-- `AdminBoundaryRepository::findCountryAt()` ne résout **aucun** pays, donc
-  `CheckBorderCrossingHandler` n'émet jamais rien.
+- `App\Osm\CoverageRepository` tests `geom IS NOT NULL AND NOT ST_Covers(...)`, so no
+  trip is ever flagged as out of zone — the check is **disabled**, not a false positive. The issue
+  assumed the opposite.
+- `AdminBoundaryRepository::findCountryAt()` resolves **no** country, so
+  `CheckBorderCrossingHandler` never emits anything.
 
-Taux de reconstruction par niveau, mesuré en comparant le nombre de relations présentes dans
-le PBF au nombre de polygones effectivement importés :
+Reconstruction rate per level, measured by comparing the number of relations present in
+the PBF with the number of polygons actually imported:
 
-| `admin_level` | relations dans le PBF | polygones importés | commentaire |
+| `admin_level` | relations in the PBF | polygons imported | comment |
 |---|---|---|---|
-| 2 (pays) | 12 | 0 | jamais complet sur un extrait régional |
-| 4 (région) | 23 | 0 | idem |
-| 6 (département) | 64 | 11 | exactement les départements entièrement contenus |
-| 8 (commune) | 4 795 | 4 308 | 89,8 % ; les manquants sont sur la frange de l'extrait |
+| 2 (country) | 12 | 0 | never complete on a regional extract |
+| 4 (region) | 23 | 0 | same |
+| 6 (département) | 64 | 11 | exactly the départements fully contained |
+| 8 (municipality) | 4,795 | 4,308 | 89.8%; the missing ones are on the edge of the extract |
 
-D'où les deux corrections : importer les niveaux 2, 4, 6 et 8, et construire `osm.coverage`
-par l'union de **tous** les niveaux importés. Les niveaux s'emboîtant, un département présent
-rebouche les trous laissés par ses communes de frange.
+Hence the two fixes: import levels 2, 4, 6 and 8, and build `osm.coverage`
+as the union of **all** imported levels. Since the levels nest, a département that is present
+fills the holes left by its edge municipalities.
 
-## 2. Coût : nœuds `place=*` contre polygones administratifs
+## 2. Cost: `place=*` nodes versus administrative polygons
 
-Coût marginal sur le PBF fusionné (`osmium tags-filter`) :
+Marginal cost on the merged PBF (`osmium tags-filter`):
 
-| Filtre ajouté | Taille produite | Objets |
+| Filter added | Output size | Objects |
 |---|---|---|
-| `n/place=city,town,village,hamlet` | 621 750 o | 26 169 nœuds |
-| `r/admin_level=2,4,6,8` | 9 297 249 o | 5 077 relations, 18 578 ways, 1 270 394 nœuds |
+| `n/place=city,town,village,hamlet` | 621,750 B | 26,169 nodes |
+| `r/admin_level=2,4,6,8` | 9,297,249 B | 5,077 relations, 18,578 ways, 1,270,394 nodes |
 
-Chaîne complète, exécutée deux fois sur le même PBF source (osmium + `osm2pgsql --create
---slim --drop`, cache 800 Mo, PostgreSQL 18 / PostGIS 3.6 limité à 1 Go) :
+Full chain, run twice on the same source PBF (osmium + `osm2pgsql --create
+--slim --drop`, 800 MB cache, PostgreSQL 18 / PostGIS 3.6 limited to 1 GB):
 
-| | référence (`r/admin_level=2`) | retenu (`r/admin_level=2,4,6,8`) | écart |
+| | baseline (`r/admin_level=2`) | chosen (`r/admin_level=2,4,6,8`) | difference |
 |---|---|---|---|
 | `osmium tags-filter` | 11 s | 12 s | +1 s |
-| PBF filtré | 184 564 517 o | 191 586 757 o | +7 022 240 o (+3,8 %) |
-| `osm2pgsql` | 106 s | 160 s | +54 s (+51 %) |
-| Lignes dans `admin_boundaries` | 0 | 4 319 | +4 319 |
-| Union de couverture | 0 s (géométrie `NULL`) | 11 s | +11 s |
-| Couverture obtenue | néant | 92 887 points, 57 991 km² | — |
+| Filtered PBF | 184,564,517 B | 191,586,757 B | +7,022,240 B (+3.8%) |
+| `osm2pgsql` | 106 s | 160 s | +54 s (+51%) |
+| Rows in `admin_boundaries` | 0 | 4,319 | +4,319 |
+| Coverage union | 0 s (`NULL` geometry) | 11 s | +11 s |
+| Resulting coverage | none | 92,887 points, 57,991 km² | — |
 
-Le surcoût réel est donc de **+3,8 % de PBF filtré** et **+65 s** sur un import qui en prenait
-106 : significatif en relatif sur l'étape `osm2pgsql`, négligeable devant le cycle complet de
-provisionnement (téléchargement des extraits inclus, ~10 min). Ce n'est pas « trivial », mais
-c'est acquis pour un défaut de couverture réparé.
+The real overhead is therefore **+3.8% of filtered PBF** and **+65 s** on an import that took
+106: significant in relative terms on the `osm2pgsql` step, negligible compared with the full
+provisioning cycle (extract downloads included, ~10 min). It is not "trivial", but
+it is a price worth paying for a repaired coverage defect.
 
-## 3. Qualité : la recherche du plus proche se trompe une fois sur quatre
+## 3. Quality: the nearest-node lookup is wrong one time in four
 
-Protocole : pour chacun des 3 000 points réels, comparer le nom de la commune **contenante**
-(`ST_Covers` sur le polygone `admin_level = 8`) au nom du nœud `place=*` le **plus proche**
-(`ORDER BY geom <-> point`), avec et sans les hameaux.
+Protocol: for each of the 3,000 real points, compare the name of the **containing** municipality
+(`ST_Covers` on the `admin_level = 8` polygon) with the name of the **nearest** `place=*` node
+(`ORDER BY geom <-> point`), with and without hamlets.
 
-| Mesure | Valeur |
+| Measure | Value |
 |---|---|
-| Points avec une commune contenante | 2 985 / 3 000 (**99,5 %**) |
-| Plus proche `city,town,village` = commune contenante | 2 152 / 2 985 (**72,1 %**) |
-| Plus proche `city,town,village,hamlet` = commune contenante | 1 309 / 2 985 (**43,9 %**) |
-| Distance au plus proche `city,town,village` | médiane 1 025 m, p90 2 792 m, max 10 284 m |
-| Distance au plus proche en incluant les hameaux | médiane 539 m, p90 1 709 m |
+| Points with a containing municipality | 2,985 / 3,000 (**99.5%**) |
+| Nearest `city,town,village` = containing municipality | 2,152 / 2,985 (**72.1%**) |
+| Nearest `city,town,village,hamlet` = containing municipality | 1,309 / 2,985 (**43.9%**) |
+| Distance to the nearest `city,town,village` | median 1,025 m, p90 2,792 m, max 10,284 m |
+| Distance to the nearest, hamlets included | median 539 m, p90 1,709 m |
 
-Les 28 % d'écarts ne sont pas des équivalents acceptables, ce sont les erreurs qu'un
-utilisateur repère immédiatement :
+The 28% of mismatches are not acceptable equivalents; they are the errors a
+user spots immediately:
 
 ```text
-      commune contenante   |  place=* le plus proche  | distance
+ containing municipality   |   nearest place=*        | distance
 ---------------------------+--------------------------+----------
  Saint-Étienne             | Saint-Priest-en-Jarez    |   861 m
  Bourg-Saint-Maurice       | Arc 1600                 |  1007 m
@@ -120,28 +120,28 @@ utilisateur repère immédiatement :
  Corenc                    | La Tronche               |   775 m
 ```
 
-Inclure les hameaux dégrade encore : le point le plus proche devient un lieu-dit que personne
-ne reconnaît (43,9 % d'accord seulement).
+Including hamlets makes it worse: the nearest point becomes a locality name nobody
+recognizes (only 43.9% agreement).
 
-**Décision.** Polygones communaux. Le libellé est exact par construction (appartenance, pas
-proximité), disponible pour 99,5 % des points, et la table `osm.admin_boundaries` existe déjà —
-aucune migration, aucune table supplémentaire. La table `place=*` n'est **pas** importée : elle
-n'apporterait qu'un repli pour les 0,5 % de points en frange d'extrait, au prix d'une seconde
-source de vérité pour le même libellé.
+**Decision.** Municipal polygons. The label is correct by construction (containment, not
+proximity), available for 99.5% of points, and the `osm.admin_boundaries` table already exists —
+no migration, no extra table. The `place=*` table is **not** imported: it
+would only provide a fallback for the 0.5% of points on the edge of an extract, at the cost of a second
+source of truth for the same label.
 
-## 4. Résolution de localité, sans réseau
+## 4. Locality resolution, without network
 
-`AdminBoundaryRepository::findLocalityAt()` prend le polygone **le plus fin** couvrant le point
-(`admin_level >= 7`, `ORDER BY admin_level DESC`), avec la chaîne de repli de nom habituelle
-`name:<locale>` → `name:en` → `name`. Hors zone provisionnée, il renvoie `null` et l'étape
-continue d'afficher ses coordonnées.
+`AdminBoundaryRepository::findLocalityAt()` takes the **finest** polygon covering the point
+(`admin_level >= 7`, `ORDER BY admin_level DESC`), with the usual name fallback chain
+`name:<locale>` → `name:en` → `name`. Outside the provisioned zone, it returns `null` and the stage
+keeps displaying its coordinates.
 
-`ResolveStageLabelsHandler` consomme cette méthode : plus d'appel Nominatim, donc plus de
-dépendance externe sur le chemin de calcul ni de plafond à 1 requête/seconde. `App\Geo\ReverseGeocoder`
-n'avait plus d'autre appelant et a été supprimé ; le client Nominatim reste utilisé par
-`App\Geo\Geocoder` et `App\Controller\GeocodeController` pour la recherche interactive.
+`ResolveStageLabelsHandler` consumes this method: no more Nominatim calls, hence no more
+external dependency on the computation path and no 1 request/second cap. `App\Geo\ReverseGeocoder`
+had no other caller left and was removed; the Nominatim client is still used by
+`App\Geo\Geocoder` and `App\Controller\GeocodeController` for interactive search.
 
-En prime, `findCountryAt()` / `findCountryCodeAt()` se rabattent sur l'`ISO3166-2` d'un
-département ou d'une région couvrante (`FR-59` → `FR`, localisé via ICU) quand aucun polygone
-de niveau 2 n'a pu être construit. La détection de franchissement de frontière et le
-calendrier multi-pays cessent donc d'être muets sur un extrait régional.
+As a bonus, `findCountryAt()` / `findCountryCodeAt()` fall back on the `ISO3166-2` of a
+covering département or region (`FR-59` → `FR`, localized via ICU) when no level-2
+polygon could be built. Border-crossing detection and the
+multi-country calendar therefore stop being silent on a regional extract.

@@ -1,99 +1,99 @@
-# Audit — hébergements OSM sans nom, par catégorie
+# Audit — unnamed OSM accommodations, by category
 
-Spike de mesure demandé par [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878)
-(sprint 47). Il arbitre le gate de complétude et le résolveur de nom du sprint 49
+Measurement spike requested by [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878)
+(sprint 47). It arbitrates the completeness gate and the name resolver of sprint 49
 ([#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884)).
 
-**Question posée.** La décision « nom résolu ou entrée exclue » repose sur une prémisse non
-mesurée : on ignore combien d'hébergements OSM sont sans nom, dans quelles catégories, et
-combien seraient rattrapés par la chaîne de repli envisagée (`name:fr`, `official_name`,
+**Question asked.** The "name resolved or entry excluded" decision rests on an unmeasured
+premise: we do not know how many OSM accommodations have no name, in which categories, and
+how many would be recovered by the fallback chain under consideration (`name:fr`, `official_name`,
 `alt_name`, `operator`, `brand`).
 
-**Réponse courte.** La chaîne de repli ne rattrape rien (4,3 % des entrées sans nom) et, sur
-`shelter`, produit majoritairement des libellés nuisibles (« JCDecaux »). `wilderness_hut`
-n'est pas concerné : 6,3 % sans nom, comme les catégories commerciales. Le problème est
-entièrement concentré sur `shelter`, où le nom est un **mauvais discriminant** : l'exclure
-supprime 63 % des abris réellement utiles au bikepacker tout en conservant 2 516 abribus
-nommés. Recommandation : contrainte de complétude sur toutes les catégories **sauf
-`shelter`**, et filtrage des abris sur `shelter_type` plutôt que sur le nom.
+**Short answer.** The fallback chain recovers almost nothing (4.3% of unnamed entries) and, on
+`shelter`, mostly produces harmful labels ("JCDecaux"). `wilderness_hut`
+is not affected: 6.3% unnamed, like the commercial categories. The problem is
+entirely concentrated on `shelter`, where the name is a **poor discriminator**: excluding it
+removes 63% of the shelters actually useful to a bikepacker while keeping 2,516 named
+bus shelters. Recommendation: a completeness constraint on every category **except
+`shelter`**, and filtering shelters on `shelter_type` rather than on the name.
 
-## Jeu de données mesuré
+## Measured dataset
 
 | | |
 |---|---|
-| Régions provisionnées | `nord-pas-de-calais` + `rhone-alpes` |
+| Provisioned regions | `nord-pas-de-calais` + `rhone-alpes` |
 | Import | 2026-08-04 (`osm.metadata.refreshed_at` = `2026-08-04 13:09:44+00`) |
-| `osm.accommodations` | 16 886 lignes |
-| `tourism.accommodations` | 125 966 lignes (import DataTourisme du 22/07, non retouché) |
+| `osm.accommodations` | 16,886 rows |
+| `tourism.accommodations` | 125,966 rows (DataTourisme import of 22/07, untouched) |
 
-Rhône-Alpes a été ajouté à la sélection pour cette mesure : Nord-Pas-de-Calais seul ne
-contient **aucun** `wilderness_hut` et un seul `alpine_hut`, soit précisément les catégories
-sur lesquelles porte la question.
+Rhône-Alpes was added to the selection for this measurement: Nord-Pas-de-Calais alone
+contains **no** `wilderness_hut` and a single `alpine_hut`, precisely the categories
+the question is about.
 
-Deux réserves à retenir avant de généraliser :
+Two caveats to keep in mind before generalizing:
 
-- **Deux régions, pas la France.** Les proportions sont mesurées sur 16 886 lignes. Les
-  ordres de grandeur sont nets (63 % contre 6 %), mais un chiffre exact France entière
-  demanderait un provisionnement complet.
-- **Image du provisioner du 22/06.** Elle mappe encore `tourism=apartment` sur la catégorie
-  `apartment` ; le code courant le mappe sur `rental` ([#906](https://github.com/vincentchalamon/bike-trip-planner/pull/906)).
-  Lire `apartment` comme `rental` dans les tableaux : la correspondance est 1 pour 1. Le diff
-  entre le `tier1.lua` de l'image et celui de `main` se limite à ce renommage et à
-  l'élargissement du tag `website` ; ni la sélection des lignes ni les colonnes `name` /
-  `tags` ne changent, donc la mesure reste fidèle.
+- **Two regions, not France.** The proportions are measured on 16,886 rows. The
+  orders of magnitude are clear (63% versus 6%), but an exact figure for the whole of France
+  would require a full provisioning.
+- **Provisioner image of 22/06.** It still maps `tourism=apartment` to the
+  `apartment` category; the current code maps it to `rental` ([#906](https://github.com/vincentchalamon/bike-trip-planner/pull/906)).
+  Read `apartment` as `rental` in the tables: the correspondence is one to one. The diff
+  between the image's `tier1.lua` and the one on `main` is limited to this rename and to
+  widening the `website` tag; neither the row selection nor the `name` /
+  `tags` columns change, so the measurement remains faithful.
 
-L'étape DataTourisme a été désactivée pendant ce provisionnement (`DATATOURISME_FLUX_ID` et
-`DATATOURISME_APP_KEY` vidées) pour ne pas retoucher les 125 966 lignes déjà en place. Au
-passage, la prémisse citée par l'issue est confirmée sur le jeu courant : **0 nom vide sur
-125 966 lignes** DataTourisme. Le problème est bien exclusivement OSM.
+The DataTourisme step was disabled during this provisioning (`DATATOURISME_FLUX_ID` and
+`DATATOURISME_APP_KEY` emptied) so as not to touch the 125,966 rows already in place. Along
+the way, the premise cited by the issue is confirmed on the current dataset: **0 empty names out of
+125,966** DataTourisme rows. The problem is indeed exclusively OSM.
 
-## 1. Volume et proportion, par catégorie
+## 1. Volume and proportion, by category
 
-Requête de l'issue, exécutée telle quelle :
+The issue's query, run as-is:
 
-| category | total | sans_nom | % sans nom | rattrapables |
+| category | total | unnamed | % unnamed | recoverable |
 |---|---:|---:|---:|---:|
-| `shelter` | 8 062 | 5 123 | 63,5 % | 210 |
-| `hotel` | 2 706 | 70 | 2,6 % | 0 |
-| `chalet` | 1 423 | 253 | 17,8 % | 26 |
-| `camp_site` | 1 405 | 64 | 4,6 % | 2 |
-| `guest_house` | 1 386 | 90 | 6,5 % | 3 |
-| `apartment` (→ `rental`) | 1 069 | 114 | 10,7 % | 7 |
-| `wilderness_hut` | 316 | 20 | 6,3 % | 0 |
-| `alpine_hut` | 290 | 8 | 2,8 % | 0 |
-| `hostel` | 218 | 10 | 4,6 % | 0 |
-| `motel` | 11 | 2 | 18,2 % | 0 |
-| **Total** | **16 886** | **5 754** | **34,1 %** | **248** |
+| `shelter` | 8,062 | 5,123 | 63.5% | 210 |
+| `hotel` | 2,706 | 70 | 2.6% | 0 |
+| `chalet` | 1,423 | 253 | 17.8% | 26 |
+| `camp_site` | 1,405 | 64 | 4.6% | 2 |
+| `guest_house` | 1,386 | 90 | 6.5% | 3 |
+| `apartment` (→ `rental`) | 1,069 | 114 | 10.7% | 7 |
+| `wilderness_hut` | 316 | 20 | 6.3% | 0 |
+| `alpine_hut` | 290 | 8 | 2.8% | 0 |
+| `hostel` | 218 | 10 | 4.6% | 0 |
+| `motel` | 11 | 2 | 18.2% | 0 |
+| **Total** | **16,886** | **5,754** | **34.1%** | **248** |
 
-Hors `shelter` : 8 824 lignes, 631 sans nom (**7,2 %**), 38 rattrapables.
+Excluding `shelter`: 8,824 rows, 631 unnamed (**7.2%**), 38 recoverable.
 
-Le tiers d'entrées sans nom est donc un artefact d'agrégation : **89 % des entrées sans nom
-sont des `shelter`**. Les catégories réservables se situent entre 2,6 % et 17,8 %.
+The one-third of unnamed entries is therefore an aggregation artifact: **89% of unnamed entries
+are `shelter`**. The bookable categories range between 2.6% and 17.8%.
 
-Répartition par région, pour les catégories sensibles :
+Breakdown by region, for the sensitive categories:
 
-| région | category | total | sans_nom |
+| region | category | total | unnamed |
 |---|---|---:|---:|
-| nord-pas-de-calais | `shelter` | 896 | 862 (96,2 %) |
+| nord-pas-de-calais | `shelter` | 896 | 862 (96.2%) |
 | nord-pas-de-calais | `chalet` | 194 | 103 |
 | nord-pas-de-calais | `camp_site` | 326 | 10 |
 | nord-pas-de-calais | `alpine_hut` | 1 | 1 |
-| rhone-alpes | `shelter` | 7 166 | 4 261 (59,5 %) |
-| rhone-alpes | `chalet` | 1 229 | 150 |
-| rhone-alpes | `camp_site` | 1 079 | 54 |
+| rhone-alpes | `shelter` | 7,166 | 4,261 (59.5%) |
+| rhone-alpes | `chalet` | 1,229 | 150 |
+| rhone-alpes | `camp_site` | 1,079 | 54 |
 | rhone-alpes | `wilderness_hut` | 316 | 20 |
 | rhone-alpes | `alpine_hut` | 289 | 7 |
 
-Les 96 % d'abris sans nom en Nord-Pas-de-Calais annoncent la suite : dans une région sans
-relief, `amenity=shelter` désigne presque exclusivement du mobilier urbain.
+The 96% of unnamed shelters in Nord-Pas-de-Calais foreshadow what follows: in a region without
+relief, `amenity=shelter` almost exclusively denotes street furniture.
 
-## 2. Ce que la chaîne de repli rattraperait réellement
+## 2. What the fallback chain would actually recover
 
-Clés disponibles sur les 5 754 entrées sans nom :
+Keys available on the 5,754 unnamed entries:
 
-| category | sans_nom | `name:fr` | `official_name` | `alt_name` | `operator` | `brand` |
+| category | unnamed | `name:fr` | `official_name` | `alt_name` | `operator` | `brand` |
 |---|---:|---:|---:|---:|---:|---:|
-| `shelter` | 5 123 | 0 | 0 | 11 | 199 | 0 |
+| `shelter` | 5,123 | 0 | 0 | 11 | 199 | 0 |
 | `chalet` | 253 | 0 | 0 | 0 | 25 | 1 |
 | `apartment` (→ `rental`) | 114 | 0 | 0 | 0 | 7 | 0 |
 | `guest_house` | 90 | 0 | 0 | 0 | 3 | 0 |
@@ -104,174 +104,175 @@ Clés disponibles sur les 5 754 entrées sans nom :
 | `alpine_hut` | 8 | 0 | 0 | 0 | 0 | 0 |
 | `motel` | 2 | 0 | 0 | 0 | 0 | 0 |
 
-Trois des cinq clés de la chaîne sont vides ou anecdotiques : `name:fr` **0 occurrence**,
-`official_name` **0**, `alt_name` **11** — et ces 11 portent tous la même valeur,
-« Salle hors-sac », qui est une catégorie, pas un nom. `brand` compte **1** occurrence
-(« Gîtes de France »). Tout le rattrapage repose donc sur `operator` : 236 lignes, soit
-**4,1 % des entrées sans nom**.
+Three of the chain's five keys are empty or anecdotal: `name:fr` **0 occurrences**,
+`official_name` **0**, `alt_name` **11** — and those 11 all carry the same value,
+"Salle hors-sac" (a day-use room for hikers), which is a category, not a name. `brand` has **1** occurrence
+("Gîtes de France"). All the recovery therefore rests on `operator`: 236 rows, i.e.
+**4.1% of unnamed entries**.
 
-### Utilité réelle des valeurs d'`operator`
+### Actual usefulness of the `operator` values
 
-Échantillon des valeurs les plus fréquentes sur les entrées sans nom (40 valeurs les plus
-fréquentes, quantités à droite) :
+Sample of the most frequent values on unnamed entries (the 40 most
+frequent values, counts on the right):
 
-| category | operator | n | libellé utile ? |
+| category | operator | n | useful label? |
 |---|---|---:|---|
-| `shelter` | JCDecaux | 87 | non — afficheur publicitaire, l'abri est un abribus |
-| `shelter` | STAS | 33 | non — réseau de bus de Saint-Étienne |
-| `shelter` | Transdev | 31 | non — transporteur |
-| `shelter` | Transdev Saint-Étienne | 12 | non — transporteur |
-| `shelter` | S.N.C.F. / SNCF | 13 | non — transporteur |
-| `shelter` | Keolis / TCL / Sytral / TAC / Stas | 8 | non — transporteurs |
-| `shelter` | Région Auvergne-Rhône-Alpes | 3 | marginal — désigne le propriétaire, pas le lieu |
-| `shelter` | Commune de Jongieux, commune de Maisoncelle | 2 | oui — « Abri communal, Jongieux » est actionnable |
-| `shelter` | Département de l'Isère, CD62, Grenoble Alpes Métropole | 3 | marginal — même remarque |
-| `shelter` | Privé | 1 | non — ce n'est pas un nom |
-| `shelter` | Sogedo, Ondea, Arc Vezerontin, Institution Sainte-Marie | 5 | non — sans rapport avec un hébergement |
-| `chalet` | Huttopia | 10 | oui — enseigne identifiable |
-| `chalet` | Camping la Digue | 6 | oui — désigne le lieu |
-| `chalet` | Claire et Gilles Belanger, Martine et Gaby Jay | 4 | oui — usage courant pour un gîte |
-| `chalet` | Commune de Sonthonnax-la-Montagne | 1 | oui |
-| `chalet` | OVO Network, Immo Select, À Petits Pas, Wam Park | 4 | oui — enseignes |
-| `apartment` (→ `rental`) | Pierre et Vacances, Goélia, Dormio Resort, Gite de France | 6 | oui — enseignes |
-| `guest_house` | CléVacances, Gite les chamois, Paclaz | 3 | oui |
-| `camp_site` | Camping du Lac du Sautet | 2 | oui |
+| `shelter` | JCDecaux | 87 | no — billboard company, the shelter is a bus shelter |
+| `shelter` | STAS | 33 | no — Saint-Étienne bus network |
+| `shelter` | Transdev | 31 | no — transport operator |
+| `shelter` | Transdev Saint-Étienne | 12 | no — transport operator |
+| `shelter` | S.N.C.F. / SNCF | 13 | no — transport operator |
+| `shelter` | Keolis / TCL / Sytral / TAC / Stas | 8 | no — transport operators |
+| `shelter` | Région Auvergne-Rhône-Alpes | 3 | marginal — names the owner, not the place |
+| `shelter` | Commune de Jongieux, commune de Maisoncelle | 2 | yes — "Abri communal, Jongieux" is actionable |
+| `shelter` | Département de l'Isère, CD62, Grenoble Alpes Métropole | 3 | marginal — same remark |
+| `shelter` | Privé | 1 | no — "private" is not a name |
+| `shelter` | Sogedo, Ondea, Arc Vezerontin, Institution Sainte-Marie | 5 | no — unrelated to accommodation |
+| `chalet` | Huttopia | 10 | yes — identifiable brand |
+| `chalet` | Camping la Digue | 6 | yes — names the place |
+| `chalet` | Claire et Gilles Belanger, Martine et Gaby Jay | 4 | yes — common practice for a gîte |
+| `chalet` | Commune de Sonthonnax-la-Montagne | 1 | yes |
+| `chalet` | OVO Network, Immo Select, À Petits Pas, Wam Park | 4 | yes — brands |
+| `apartment` (→ `rental`) | Pierre et Vacances, Goélia, Dormio Resort, Gite de France | 6 | yes — brands |
+| `guest_house` | CléVacances, Gite les chamois, Paclaz | 3 | yes |
+| `camp_site` | Camping du Lac du Sautet | 2 | yes |
 
-Le verdict se lit par catégorie, pas globalement :
+The verdict reads by category, not globally:
 
-- **Sur `shelter`, `operator` est nuisible.** **184 des 199 valeurs** sont des transporteurs
-  ou des afficheurs. Proposer « JCDecaux » comme hébergement à un bikepacker est pire que ne
-  rien proposer : c'est un abribus présenté comme un abri de bivouac. Les 15 valeurs
-  restantes sont énumérables : « Région Auvergne-Rhône-Alpes » (3), « Institution
-  Sainte-Marie » (2), puis une occurrence chacune de « Arc Vezerontin », « CD62 »,
-  « Commune de Jongieux », « Département de l'Isère », « Grenoble Alpes Métropole »,
-  « Ondea », « Privé », « Sogedo », « commune de Maisoncelle », « École primaire privée
-  Saint-Joseph ». **Deux** produisent un libellé exploitable (les deux communes) ; cinq
-  désignent une collectivité propriétaire et non le lieu ; le reste (régie des eaux, école,
-  « Privé ») n'a aucun rapport avec un abri.
+- **On `shelter`, `operator` is harmful.** **184 of the 199 values** are transport operators
+  or billboard companies. Offering "JCDecaux" as accommodation to a bikepacker is worse than
+  offering nothing: it is a bus shelter presented as a bivouac shelter. The remaining 15
+  values can be enumerated: "Région Auvergne-Rhône-Alpes" (3), "Institution
+  Sainte-Marie" (2), then one occurrence each of "Arc Vezerontin", "CD62",
+  "Commune de Jongieux", "Département de l'Isère", "Grenoble Alpes Métropole",
+  "Ondea", "Privé", "Sogedo", "commune de Maisoncelle", "École primaire privée
+  Saint-Joseph". **Two** produce a usable label (the two municipalities); five
+  name an owning public authority rather than the place; the rest (water utility, school,
+  "Privé") has nothing to do with a shelter.
 
-  > Le premier comptage donnait 175 : le motif utilisé
-  > (`~* 'jcdecaux|transdev|keolis|sncf|stas|tcl|sytral|tac|cars|bus|mobilit'`) rate la
-  > graphie pointée `S.N.C.F.`, présente 9 fois. Un motif insensible à la ponctuation
-  > (`regexp_replace(operator, '[^a-zA-Z]', '', 'g')`) donne 184, ce qui recoupe exactement
-  > l'échantillon ci-dessus. Le sens de la conclusion ne change pas, il se renforce.
-- **Hors `shelter`, `operator` est utile mais négligeable en volume.** Les 38 valeurs
-  concernées sont presque toutes de vrais libellés (enseignes, campings, noms de
-  propriétaires). Mais 38 lignes sur 8 824, cela ne justifie pas une chaîne de repli en
-  cinq clés dont trois sont vides.
+    > The first count gave 175: the pattern used
+    > (`~* 'jcdecaux|transdev|keolis|sncf|stas|tcl|sytral|tac|cars|bus|mobilit'`) misses the
+    > dotted spelling `S.N.C.F.`, present 9 times. A punctuation-insensitive pattern
+    > (`regexp_replace(operator, '[^a-zA-Z]', '', 'g')`) gives 184, which matches the
+    > sample above exactly. The direction of the conclusion does not change; it is reinforced.
 
-## 3. `shelter` : le nom est un mauvais discriminant
+- **Outside `shelter`, `operator` is useful but negligible in volume.** The 38 values
+  concerned are almost all real labels (brands, campsites, owners'
+  names). But 38 rows out of 8,824 do not justify a five-key fallback chain
+  three of whose keys are empty.
 
-C'est le résultat décisif. `amenity=shelter` mélange des objets sans rapport entre eux. En
-classant les 8 062 abris par `shelter_type` :
+## 3. `shelter`: the name is a poor discriminator
 
-| classe | `shelter_type` | nommés | sans nom |
+This is the decisive result. `amenity=shelter` mixes unrelated objects. Classifying
+the 8,062 shelters by `shelter_type`:
+
+| class | `shelter_type` | named | unnamed |
 |---|---|---:|---:|
-| **bruit** | `public_transport`, `carport`, `gazebo`, `sun_shelter`, `umbrella`, `pergola`, `shopping_cart`, `changing_rooms`, `animal_shelter`, `fuel_station`, `market`, `wildlife_hide`, … | 2 523 | 3 606 |
-| **pertinent** | `weather_shelter`, `lean_to`, `picnic_shelter`, `basic_hut`, `field_shelter`, `rock_shelter`, `roof`, `basic` | 250 | 429 |
-| **indéterminé** | tag absent | 166 | 1 088 |
+| **noise** | `public_transport`, `carport`, `gazebo`, `sun_shelter`, `umbrella`, `pergola`, `shopping_cart`, `changing_rooms`, `animal_shelter`, `fuel_station`, `market`, `wildlife_hide`, … | 2,523 | 3,606 |
+| **relevant** | `weather_shelter`, `lean_to`, `picnic_shelter`, `basic_hut`, `field_shelter`, `rock_shelter`, `roof`, `basic` | 250 | 429 |
+| **undetermined** | tag absent | 166 | 1,088 |
 
-À lui seul, `shelter_type=public_transport` compte 6 010 lignes, soit 75 % de la catégorie.
+On its own, `shelter_type=public_transport` accounts for 6,010 rows, i.e. 75% of the category.
 
-Un gate sur le nom trie donc exactement à l'envers de l'intention :
+A gate on the name therefore sorts exactly the opposite way from the intent:
 
-- il **supprime 63 %** des abris pertinents (429 sur 679) ;
-- il **conserve 2 516 abribus** nommés (`shelter_type=public_transport` portant un nom
-  d'arrêt), qui continuent de polluer la couche.
+- it **removes 63%** of the relevant shelters (429 out of 679);
+- it **keeps 2,516 named bus shelters** (`shelter_type=public_transport` carrying a stop
+  name), which continue to pollute the layer.
 
-Les 1 088 abris sans nom et sans `shelter_type` ne sont pas un gisement caché : 630 portent
-un tag `building` ou une `source` cadastrale (`cadastre-dgi-fr`), c'est-à-dire des emprises
-de bâti importées en masse et taguées `amenity=shelter` sans autre information. Seulement 7
-portent un indice de transport public, 69 un `bench`. Sur les 1 517 abris du résidu
-pertinent + indéterminé, 24 seulement portent une `description` et 24 un attribut de bivouac
-(`fireplace`, `mattress`, `capacity`), 14 un `access` fermé.
+The 1,088 shelters with neither a name nor a `shelter_type` are not a hidden reserve: 630 carry
+a `building` tag or a cadastral `source` (`cadastre-dgi-fr`), i.e. building footprints
+imported in bulk and tagged `amenity=shelter` with no other information. Only 7
+carry a public-transport hint, 69 a `bench`. Of the 1,517 shelters in the
+relevant + undetermined residue, only 24 carry a `description` and 24 a bivouac attribute
+(`fireplace`, `mattress`, `capacity`), 14 a closed `access`.
 
-## 4. `wilderness_hut` : hypothèse non confirmée
+## 4. `wilderness_hut`: hypothesis not confirmed
 
-L'issue soupçonnait une concentration sur `shelter` **et** `wilderness_hut`. La mesure ne
-confirme que la première :
+The issue suspected a concentration on `shelter` **and** `wilderness_hut`. The measurement
+only confirms the first:
 
-- `wilderness_hut` : 20 sans nom sur 316, soit **6,3 %** — même ordre que `guest_house`
-  (6,5 %) ou `camp_site` (4,6 %) ;
-- `alpine_hut` : 8 sur 290, **2,8 %**.
+- `wilderness_hut`: 20 unnamed out of 316, i.e. **6.3%** — the same order as `guest_house`
+  (6.5%) or `camp_site` (4.6%);
+- `alpine_hut`: 8 out of 290, **2.8%**.
 
-Le détail des 20 `wilderness_hut` sans nom confirme qu'il n'y a rien à sauver en volume :
-5 portent `access=private`, 8 se réduisent à `tourism=wilderness_hut` seul ou accompagné
-d'une emprise cadastrale, aucun n'a d'`operator`, de `brand`, de `name:fr` ni
-d'`official_name`. Deux seulement mériteraient d'être conservés pour leur `description`
-(« Des bat-flancs pour 4 personnes… », « Salle hors sac »).
+The detail of the 20 unnamed `wilderness_hut` confirms there is nothing to save in volume:
+5 carry `access=private`, 8 boil down to `tourism=wilderness_hut` alone or with
+a cadastral footprint, none has an `operator`, `brand`, `name:fr` or
+`official_name`. Only two would deserve to be kept for their `description`
+("Des bat-flancs pour 4 personnes…", "Salle hors sac").
 
-Une exemption pour `wilderness_hut` coûterait donc la peine d'une exception dans le schéma
-pour au mieux 15 lignes utiles sur 316.
+An exemption for `wilderness_hut` would therefore cost an exception in the schema
+for at best 15 useful rows out of 316.
 
-## 5. Ce que le code fait déjà
+## 5. What the code already does
 
-Deux comportements existants encadrent la décision :
+Two existing behaviors frame the decision:
 
-- `api/src/AccommodationSource/OsmAccommodationSource.php:39-45` **écarte déjà** toute
-  entrée sans nom, au moment de la lecture. La couche des abris non nommés est donc **déjà
-  vide en production** : le gate du sprint 49 ne ferait que déplacer à l'import une
-  exclusion qui a lieu à la lecture. Le coût mesuré ici est un coût déjà payé, pas un coût à
-  venir.
-- `api/src/InRide/InRideAssistant.php:147-163` tient la position inverse pour l'in-ride :
-  restauration et mécanique sans nom sont écartées, **eau et abris sont conservés** avec un
-  libellé générique (« Point d'eau », « Abri »), au motif que les coordonnées suffisent à
-  agir. Les deux chemins divergent aujourd'hui sur la même donnée.
+- `api/src/AccommodationSource/OsmAccommodationSource.php:39-45` **already drops** every
+  unnamed entry, at read time. The layer of unnamed shelters is therefore **already
+  empty in production**: the sprint 49 gate would merely move to import time an
+  exclusion that happens at read time. The cost measured here is a cost already paid, not a cost
+  to come.
+- `api/src/InRide/InRideAssistant.php:147-163` takes the opposite position for in-ride:
+  unnamed food and bike-repair places are dropped, **water and shelters are kept** with a
+  generic label ("Point d'eau", "Abri"), on the grounds that the coordinates are enough to
+  act on. The two paths currently diverge on the same data.
 
-## Recommandation
+## Recommendation
 
-**1. Contrainte de complétude sur `name`, pour toutes les catégories d'hébergement sauf
-`shelter`.** Coût mesuré : 631 lignes sur 8 824 (7,2 %), dont une part sont des emprises
-cadastrales sans information. `wilderness_hut` et `alpine_hut` entrent dans la contrainte
-sans exemption : 6,3 % et 2,8 %, aucun rattrapage possible, 5 des 20 huttes concernées étant
-de surcroît `access=private`.
+**1. Completeness constraint on `name`, for every accommodation category except
+`shelter`.** Measured cost: 631 rows out of 8,824 (7.2%), part of which are cadastral
+footprints with no information. `wilderness_hut` and `alpine_hut` fall under the constraint
+without exemption: 6.3% and 2.8%, no recovery possible, and 5 of the 20 huts concerned are
+`access=private` on top of that.
 
-**2. Exemption de `shelter` seul, avec libellé générique côté lecture.** Sur cette catégorie
-le nom ne discrimine pas la qualité : la contrainte supprimerait 1 517 abris (dont 429
-explicitement pertinents) et laisserait 2 516 abribus nommés. La bonne clé de tri est
-`shelter_type`, pas `name`. En conséquence :
+**2. Exempt `shelter` alone, with a generic label on the read side.** On this category
+the name does not discriminate quality: the constraint would remove 1,517 shelters (429 of them
+explicitly relevant) and leave 2,516 named bus shelters. The right sort key is
+`shelter_type`, not `name`. Consequently:
 
-- filtrer les abris à l'import sur une liste blanche de `shelter_type`
+- filter shelters at import against an allowlist of `shelter_type`
   (`weather_shelter`, `lean_to`, `picnic_shelter`, `basic_hut`, `field_shelter`,
-  `rock_shelter`, `roof`, `basic`, plus tag absent) et écarter le bruit urbain
-  (`public_transport` en tête) : 6 129 lignes de bruit en moins, dont 2 523 actuellement
-  servies parce qu'elles ont un nom ;
-- servir les abris sans nom avec le libellé générique « Abri », comme le fait déjà
-  `InRideAssistant`, au lieu de les écarter dans `OsmAccommodationSource`.
+  `rock_shelter`, `roof`, `basic`, plus tag absent) and drop the urban noise
+  (`public_transport` first): 6,129 fewer noise rows, 2,523 of which are currently
+  served because they have a name;
+- serve unnamed shelters with the generic label "Abri", as
+  `InRideAssistant` already does, instead of dropping them in `OsmAccommodationSource`.
 
-**3. Abandonner la chaîne de repli à cinq clés.** Mesure : 248 rattrapages sur 5 754 entrées
-sans nom (4,3 %), dont 184 sont des noms de transporteurs sur des abribus. `name:fr` et
-`official_name` n'ont **aucune** occurrence, `alt_name` 11 (toutes « Salle hors-sac »),
-`brand` 1. Si un repli est conservé, le réduire à `operator` puis `brand` **hors `shelter`**,
-pour un gain de 38 lignes : à décider au regard du coût du résolveur, pas de son rendement
-supposé.
+**3. Abandon the five-key fallback chain.** Measurement: 248 recoveries out of 5,754 unnamed
+entries (4.3%), 184 of which are transport operator names on bus shelters. `name:fr` and
+`official_name` have **no** occurrence, `alt_name` 11 (all "Salle hors-sac"),
+`brand` 1. If a fallback is kept, reduce it to `operator` then `brand` **outside `shelter`**,
+for a gain of 38 rows: to be decided in light of the resolver's cost, not its
+supposed yield.
 
-**4. Ne pas rouvrir l'option « catégorie *spots* séparée ».** Elle n'est justifiée ni pour
-`wilderness_hut` (6,3 % sans nom, aucun résidu significatif), ni pour `shelter`, dont le
-résidu se traite par l'exemption ci-dessus. Créer une catégorie hors
-`TripRequest::ALL_ACCOMMODATION_TYPES` imposerait un nouveau vocabulaire au filtre front et
-aux DTO pour un gain nul par rapport à une exemption d'une seule catégorie.
+**4. Do not reopen the "separate *spots* category" option.** It is justified neither for
+`wilderness_hut` (6.3% unnamed, no significant residue), nor for `shelter`, whose
+residue is handled by the exemption above. Creating a category outside
+`TripRequest::ALL_ACCOMMODATION_TYPES` would impose a new vocabulary on the front-end filter and
+the DTOs for zero gain compared with exempting a single category.
 
-## Reproduire la mesure
+## Reproducing the measurement
 
 ```bash
-# Sélection des régions, puis provisionnement (l'étape DataTourisme est neutralisée)
+# Region selection, then provisioning (the DataTourisme step is neutralized)
 printf '{"slugs":["nord-pas-de-calais","rhone-alpes"]}' > .docker/osm/data/regions.json
 docker compose --profile provisioning run --rm -T \
   -e DATATOURISME_FLUX_ID= -e DATATOURISME_APP_KEY= provisioner --no-interaction
 
-# Décompte par catégorie
+# Count by category
 docker compose exec -T database psql -U app -d bike_trip_planner -c "
 SELECT category, count(*) AS total,
-       count(*) FILTER (WHERE name IS NULL OR btrim(name) = '') AS sans_nom,
+       count(*) FILTER (WHERE name IS NULL OR btrim(name) = '') AS unnamed,
        count(*) FILTER (WHERE (name IS NULL OR btrim(name) = '')
                           AND (tags ? 'operator' OR tags ? 'brand' OR tags ? 'official_name'
-                            OR tags ? 'alt_name' OR tags ? 'name:fr')) AS rattrapables
+                            OR tags ? 'alt_name' OR tags ? 'name:fr')) AS recoverable
 FROM osm.accommodations GROUP BY 1 ORDER BY 2 DESC;"
 
-# Classement des abris par shelter_type
+# Shelters classified by shelter_type
 docker compose exec -T database psql -U app -d bike_trip_planner -c "
 SELECT coalesce(tags->>'shelter_type', '(absent)') AS shelter_type, count(*) AS total,
-       count(*) FILTER (WHERE name IS NULL OR btrim(name) = '') AS sans_nom
+       count(*) FILTER (WHERE name IS NULL OR btrim(name) = '') AS unnamed
 FROM osm.accommodations WHERE category = 'shelter' GROUP BY 1 ORDER BY 2 DESC;"
 ```

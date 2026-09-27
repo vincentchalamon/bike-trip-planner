@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-03-22
 - **Depends on:** ADR-001 (Global Architecture), ADR-003 (Local-First Data Persistence)
-- **Enables:** #56 (Persistance BDD), #76 (Auth), #50 (Liste des trips), #45 (Duplication), #52 (Verrouillage)
+- **Enables:** #56 (DB persistence), #76 (Auth), #50 (Trip list), #45 (Duplication), #52 (Locking)
 
 ## Context and Problem Statement
 

@@ -1,6 +1,6 @@
 # ADR-023: Authentication Strategy — Passwordless Magic Link with JWT
 
-- **Status:** Accepted
+- **Status:** Accepted - partially superseded by [ADR-079](adr-079-authorizing-an-agent-without-giving-it-a-session.md) (agent clients are authorized through OAuth 2.1, not the magic link)
 - **Date:** 2026-03-25
 - **Depends on:** ADR-022 (Persistent Storage Strategy)
 - **Enables:** #76 (Auth implementation), #80 (Shared read-only trips)

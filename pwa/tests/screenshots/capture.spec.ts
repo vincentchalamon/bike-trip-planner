@@ -11,6 +11,9 @@
  * Outputs:
  *   docs/assets/screenshots/desktop-split-view.png  — README, desktop split view
  *   docs/assets/screenshots/mobile-timeline.png     — README, mobile timeline
+ *   docs/assets/screenshots/new-trip.png            — tutorial, trip creation
+ *   docs/assets/screenshots/settings-panel.png      — tutorial, settings drawer
+ *   docs/assets/screenshots/share-modal.png         — tutorial, share dialog
  *   pwa/public/images/screenshot-map.jpg            — landing carousel (16:9)
  *   pwa/public/images/screenshot-stage.jpg          — landing carousel (16:9)
  *
@@ -39,6 +42,12 @@ const JPEG_QUALITY = 82;
 /** Let map tiles and lazily-rendered panels settle before capturing. */
 async function settle(page: Page, ms = 1500): Promise<void> {
   await page.waitForLoadState("networkidle");
+  // `make start-dev` serves a dev build: hide the Next.js dev-tools badge, and
+  // the transient toasts that would cover the header.
+  await page.addStyleTag({
+    content:
+      "nextjs-portal, [data-sonner-toaster] { display: none !important; }",
+  });
   await page.waitForTimeout(ms);
 }
 
@@ -47,23 +56,97 @@ test.beforeAll(() => {
   fs.mkdirSync(LANDING_DIR, { recursive: true });
 });
 
-test.describe("desktop", () => {
-  test.use({ viewport: { ...DESKTOP } });
+// The documentation is English-only, while the landing carousel keeps the
+// app's default locale (French): only the docs captures switch the next-intl
+// locale cookie.
+const ENGLISH = {
+  locale: "en-GB",
+  storageState: {
+    cookies: [
+      {
+        name: "locale",
+        value: "en",
+        domain: "localhost",
+        path: "/",
+        expires: -1,
+        httpOnly: false,
+        secure: false,
+        sameSite: "Lax" as const,
+      },
+    ],
+    origins: [],
+  },
+};
 
-  test("README split view + landing map slide", async ({
-    createFullTrip,
-    mockedPage,
-  }) => {
+async function showSplitView(page: Page): Promise<void> {
+  const toggle = page.getByTestId("view-mode-toggle");
+  await toggle.getByTestId("view-mode-split").click();
+  await page.getByTestId("split-view-container").waitFor();
+  // Toggling to split re-mounts the map; give the CARTO tiles time to paint.
+  await settle(page, 5000);
+}
+
+test.describe("docs desktop", () => {
+  test.use({ viewport: { ...DESKTOP }, ...ENGLISH });
+
+  test("split view", async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
-    const toggle = mockedPage.getByTestId("view-mode-toggle");
-    await toggle.getByTestId("view-mode-split").click();
-    await mockedPage.getByTestId("split-view-container").waitFor();
-    // Toggling to split re-mounts the map; give the CARTO tiles time to paint.
-    await settle(mockedPage, 5000);
-
+    await showSplitView(mockedPage);
     await mockedPage.screenshot({
       path: path.join(README_DIR, "desktop-split-view.png"),
     });
+  });
+
+  test("new trip", async ({ mockedPage }) => {
+    await mockedPage
+      .getByTestId("magic-link-input")
+      .fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await settle(mockedPage);
+    await mockedPage.screenshot({
+      path: path.join(README_DIR, "new-trip.png"),
+      fullPage: true,
+    });
+  });
+
+  test("settings panel", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    await mockedPage.getByRole("button", { name: "Open settings" }).click();
+    await mockedPage.getByRole("dialog").getByText("Rider profile").waitFor();
+    await settle(mockedPage);
+    await mockedPage.screenshot({
+      path: path.join(README_DIR, "settings-panel.png"),
+    });
+  });
+
+  test("share dialog", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    await mockedPage.getByTestId("share-button").click();
+    await mockedPage.getByTestId("share-infographic-canvas").waitFor();
+    await settle(mockedPage);
+    await mockedPage.screenshot({
+      path: path.join(README_DIR, "share-modal.png"),
+    });
+  });
+});
+
+test.describe("docs mobile", () => {
+  test.use({ viewport: { ...MOBILE }, ...ENGLISH });
+
+  test("timeline", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip(); // defaults to timeline-only below the 1024px breakpoint
+    await settle(mockedPage);
+    await mockedPage.screenshot({
+      path: path.join(README_DIR, "mobile-timeline.png"),
+    });
+  });
+});
+
+test.describe("landing", () => {
+  test.use({ viewport: { ...DESKTOP } });
+
+  test("map slide", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    await showSplitView(mockedPage);
     await mockedPage.screenshot({
       path: path.join(LANDING_DIR, "screenshot-map.jpg"),
       type: "jpeg",
@@ -72,7 +155,7 @@ test.describe("desktop", () => {
     });
   });
 
-  test("landing stage-detail slide", async ({ createFullTrip, mockedPage }) => {
+  test("stage-detail slide", async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
     await mockedPage.getByTestId("stage-card-1").scrollIntoViewIfNeeded();
     await settle(mockedPage);
@@ -81,18 +164,6 @@ test.describe("desktop", () => {
       type: "jpeg",
       quality: JPEG_QUALITY,
       clip: { ...CLIP_16_9 },
-    });
-  });
-});
-
-test.describe("mobile", () => {
-  test.use({ viewport: { ...MOBILE } });
-
-  test("README mobile timeline", async ({ createFullTrip, mockedPage }) => {
-    await createFullTrip(); // defaults to timeline-only below the 1024px breakpoint
-    await settle(mockedPage);
-    await mockedPage.screenshot({
-      path: path.join(README_DIR, "mobile-timeline.png"),
     });
   });
 });

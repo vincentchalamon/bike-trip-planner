@@ -8,10 +8,12 @@ direct GPX upload. Anything else is rejected before any fetch.
 | **Komoot** | `komoot.com/[xx-xx/]tour/123` and `komoot.com/[xx-xx/]collection/123` |
 | **Strava** | `strava.com/routes/123` |
 | **RideWithGPS** | `ridewithgps.com/routes/123` |
-| **GPX upload** | Direct file upload (up to 30 MB) |
+| **GPX upload** | Direct upload of a `.gpx` file (up to 30 MB); only `.gpx` files are accepted |
 
 The optional `xx-xx/` segment is a locale prefix (e.g. `en-gb/`, `fr-fr/`); `123` is the numeric
-tour, collection, or route id.
+tour, collection, or route id. URLs must use `https://` and the exact host shown
+(`www.komoot.com`, `www.strava.com`, `ridewithgps.com`). The route must be publicly
+accessible on the platform.
 
 !!! note "Why URLs are validated up front"
     Each URL is matched against a strict per-platform pattern and fetched through an HTTP client

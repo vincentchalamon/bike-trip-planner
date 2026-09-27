@@ -2,7 +2,7 @@
 
 > **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
 
-- **Status:** Accepted
+- **Status:** Withdrawn by [ADR-052](adr-052-remove-ai-support.md) (AI support removed)
 - **Date:** 2026-06-24
 - **Depends on:** ADR-042 (Optional Multi-Provider AI, BYO Token), ADR-045 (Conversational AI Trip-Brief Chat)
 - **Supersedes (in part):** ADR-042 — only its "AI features are always present in the build / no environment flag" stance. The per-user BYO-token activation model is unchanged.

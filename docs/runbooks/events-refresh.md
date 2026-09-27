@@ -6,8 +6,8 @@ an event that ended last week is dead weight. So events get a temporal lifecycle
 band by the `events-refresh` command — distinct from `provision <zone>`, which opens a
 *place* dataset and never expires a row.
 
-This runbook covers running the refresh by hand, and the production systemd timer that
-runs it weekly. Opening a zone is a separate procedure ([zone-opening.md](zone-opening.md)).
+This runbook covers running the refresh by hand, and the state of the production systemd
+timer meant to run it weekly. Opening a zone is a separate procedure ([zone-opening.md](zone-opening.md)).
 
 ## What it does
 
@@ -37,7 +37,7 @@ make events-refresh -- --zone=bretagne
 make events-refresh -- --dry-run
 ```
 
-Directly, without the Makefile (the form the scheduled task uses):
+Directly, without the Makefile:
 
 ```bash
 docker compose --profile provisioning run --rm \
@@ -52,27 +52,32 @@ continue-on-error). The exit code is non-zero if any zone or source failed.
 The command takes the same provisioning lock as `provision`, so a refresh and a zone
 opening never run concurrently.
 
-## Production: the weekly systemd timer (Ansible-provisioned)
+## Production: the Ansible systemd timer
 
-The refresh runs on the prod VM as a **systemd timer** provisioned by Ansible (ADR-061) —
-there is no in-repo scheduler. The service unit runs the provisioner image with the
-`events-refresh` entrypoint against the prod stack:
+Ansible installs a `btp-events-refresh.service` + `btp-events-refresh.timer` pair on the VM
+(`ansible/roles/app_deploy/templates/events-refresh.*.j2`). There is no in-repo scheduler.
 
-| Field | Value |
+| Setting (`ansible/group_vars/all.yml`) | Default |
 |---|---|
-| Command | `docker compose -p prod --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/events-refresh` |
-| Schedule (`OnCalendar`) | `Sun *-*-* 03:00:00 UTC` — **weekly, Sunday 03:00 UTC** (default; tune the cadence in the Ansible timer var) |
+| `enable_events_refresh_timer` | `false` (timer installed but stopped) |
+| `events_refresh_calendar` | `Mon *-*-* 04:00:00`, VM local time (`Europe/Paris`) |
+| `events_refresh_zone` | `""` (all open zones) |
 
-The provisioner container inherits the same environment as the `provisioner` service in
-`compose.yaml` (the `PG*` connection and the `DATATOURISME_*` / `OPENAGENDA_*` feed
-credentials, rendered by Ansible from Vault), so there is nothing else to wire. The
-frequency is a single `OnCalendar` field: raise it if events churn faster than weekly,
-lower it to reduce feed bandwidth. Inspect a run with `journalctl -u btp-events-refresh`.
+Inspect runs with `journalctl -u btp-events-refresh`.
 
-Verify a run:
+> **Do not enable the timer yet.** As rendered today the unit cannot work:
+>
+> - its `ExecStart` runs `provisioner events-refresh <zone>` through the default entrypoint,
+>   which executes `bin/provision` (zone opening), not `bin/events-refresh`; the working form
+>   is the one `make events-refresh` uses (`--entrypoint php provisioner -d memory_limit=512M
+>   bin/events-refresh`, with `--zone=<slug>` for one zone);
+> - it passes no `--env-file /etc/bike-trip-planner/app.env`;
+> - the provisioner has no route to the shared `pg-reference` and no feed credentials in
+>   production (see the production status in [zone-opening.md](zone-opening.md#procedure)).
+
+Verify a run (against the reference database):
 
 ```bash
-# Recently-refreshed events carry a fresh last_seen_at; none should remain past.
 psql -c "SELECT count(*) FILTER (WHERE end_date < current_date) AS past,
                 max(last_seen_at) AS last_refresh
          FROM tourism.events;"
@@ -86,3 +91,4 @@ psql -c "SELECT count(*) FILTER (WHERE end_date < current_date) AS past,
 - [ADR-036](../adr/adr-036-manual-osm-data-refresh.md) — why `osm-cron` was removed, and why an events refresh does not bring it back.
 - [zone-opening.md](zone-opening.md) — opening a reference zone (the place dataset), which also refreshes that zone's events inline.
 - [deployment.md](../deployment.md) — where the scheduled task sits among the other deployment concerns.
+- `ansible/roles/app_deploy/templates/events-refresh.service.j2` / `.timer.j2` — the timer units.

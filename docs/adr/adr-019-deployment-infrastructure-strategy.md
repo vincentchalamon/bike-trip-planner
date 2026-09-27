@@ -1,6 +1,6 @@
 # ADR-019: Deployment Infrastructure Strategy
 
-- **Status:** Proposed
+- **Status:** Partially superseded - the Oracle Cloud target stands; the Coolify control plane is replaced by [ADR-061](adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md) and the Ollama service is gone ([ADR-052](adr-052-remove-ai-support.md)); budget amended by [ADR-039](adr-039-beta-right-sizing-free-tier.md)
 - **Date:** 2026-03-04
 - **Depends on:** ADR-016 (performance optimization), ADR-017 (Valhalla + Overpass), ADR-018 (Garmin export)
 - **Amended by:** [ADR-039](adr-039-beta-right-sizing-free-tier.md) (beta right-sizing + corrected budget); [ADR-061](adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md) (Coolify removed — control plane = Ansible + GitHub Actions SSH + Traefik + Cloudflare Tunnel)
@@ -9,230 +9,230 @@
 
 ## Context and Problem Statement
 
-Le projet est aujourd'hui exclusivement développé en local via Docker Compose. Plusieurs fonctionnalités planifiées nécessitent un déploiement en production :
+The project is currently developed exclusively locally via Docker Compose. Several planned features require a production deployment:
 
-- **OAuth 2.0 PKCE (ADR-018 Phase 2)** : callback URL publique HTTPS obligatoire pour l'intégration Garmin Connect
-- **Persistance BDD** : stockage pérenne des tokens OAuth et potentiellement des trips
-- **Accessibilité externe** : permettre l'utilisation du planificateur depuis n'importe quel appareil
-- **Partage d'itinéraire** : permettre à un utilisateur de partager son trip via un lien (lecture seule) avec d'autres personnes (co-riders, proches)
-- **Authentification** : l'exposition publique de l'application impose une couche d'authentification pour protéger l'accès aux données utilisateur, prévenir les abus (compute, stockage) et isoler les trips entre utilisateurs
-- **Application mobile** : une URL publique ouvre la possibilité d'une PWA ou d'une application mobile native consommant l'API existante
+- **OAuth 2.0 PKCE (ADR-018 Phase 2)**: a public HTTPS callback URL is mandatory for the Garmin Connect integration
+- **DB persistence**: durable storage of OAuth tokens and potentially of trips
+- **External accessibility**: allow the planner to be used from any device
+- **Itinerary sharing**: allow a user to share their trip via a (read-only) link with other people (co-riders, relatives)
+- **Authentication**: exposing the application publicly requires an authentication layer to protect access to user data, prevent abuse (compute, storage) and isolate trips between users
+- **Mobile application**: a public URL opens the possibility of a PWA or a native mobile application consuming the existing API
 
-### Infrastructure requise (stack complet)
+### Required infrastructure (full stack)
 
-| Service | Rôle | RAM estimée |
+| Service | Role | Estimated RAM |
 |---------|------|-------------|
 | Caddy | Reverse proxy, TLS | ~50 MB |
-| PHP (API Platform) | Backend stateless | ~500 MB |
-| Next.js | Frontend SSR | ~600 MB |
+| PHP (API Platform) | Stateless backend | ~500 MB |
+| Next.js | SSR frontend | ~600 MB |
 | Redis | Cache + message queue | ~100 MB |
-| Mercure | SSE (temps réel) | ~50 MB |
-| Workers (×5) | Traitement async | ~1.5 GB |
-| PostgreSQL | Persistance (planifié) | ~200 MB |
+| Mercure | SSE (real time) | ~50 MB |
+| Workers (×5) | Async processing | ~1.5 GB |
+| PostgreSQL | Persistence (planned) | ~200 MB |
 | Valhalla (ADR-017) | Routing engine | ~1-2 GB |
-| ~~Overpass (ADR-017)~~ | ~~POI discovery~~ — retiré (ADR-025), API publique | ~~2-3 GB~~ |
-| **Ollama (ADR-028)** | **Inférence LLaMA 8B + 3B** | **~6-8 GB** |
-| **Total** | | voir budget corrigé (ADR-039) |
+| ~~Overpass (ADR-017)~~ | ~~POI discovery~~ — removed (ADR-025), public API | ~~2-3 GB~~ |
+| **Ollama (ADR-028)** | **LLaMA 8B + 3B inference** | **~6-8 GB** |
+| **Total** | | see corrected budget (ADR-039) |
 
-Stockage disque : ~6 GB (PBF Geofabrik France + tiles Valhalla) + ~10 GB (modèles Ollama llama3.1:8b + llama3.2:3b). Le budget RAM/CPU/disque corrigé est dans [ADR-039](adr-039-beta-right-sizing-free-tier.md) ; cette table conserve l'estimation initiale (avant retrait d'Overpass) pour mémoire.
+Disk storage: ~6 GB (Geofabrik France PBF + Valhalla tiles) + ~10 GB (Ollama models llama3.1:8b + llama3.2:3b). The corrected RAM/CPU/disk budget is in [ADR-039](adr-039-beta-right-sizing-free-tier.md); this table keeps the initial estimate (before Overpass was removed) for the record.
 
-### Contraintes
+### Constraints
 
-- **Budget** : gratuit ou quasi-gratuit (projet personnel)
-- **Nom de domaine** : sous-domaine fourni par le fournisseur acceptable (ex : `*.fly.dev`)
-- **HTTPS** : obligatoire (OAuth callback, sécurité, authentification)
-- **Localisation** : France ou Europe privilégiée (latence, RGPD)
-- **Architecture** : Docker Compose existant, idéalement réutilisable tel quel
-- **Authentification** : obligatoire dès la mise en production (cf. section dédiée ci-dessous)
+- **Budget**: free or nearly free (personal project)
+- **Domain name**: a subdomain provided by the host is acceptable (e.g. `*.fly.dev`)
+- **HTTPS**: mandatory (OAuth callback, security, authentication)
+- **Location**: France or Europe preferred (latency, GDPR)
+- **Architecture**: existing Docker Compose, ideally reusable as-is
+- **Authentication**: mandatory from the moment the app goes to production (see the dedicated section below)
 
-### Authentification obligatoire
+### Mandatory authentication
 
-Le déploiement en production transforme le projet d'un outil local mono-utilisateur en une application exposée sur Internet. Sans authentification, l'application est ouverte à tous sans aucune contrainte, ce qui expose à :
+Deploying to production turns the project from a single-user local tool into an application exposed on the Internet. Without authentication, the application is open to everyone without any constraint, which exposes it to:
 
-- **Abus de ressources computationnelles** : n'importe qui peut lancer des calculs coûteux (Valhalla routing, Overpass queries, weather APIs, workers async) → épuisement CPU/RAM sur une infrastructure à ressources limitées
-- **Explosion du stockage** : création illimitée de trips en BDD → saturation du disque PostgreSQL
-- **Attaques** : brute-force sur les endpoints de calcul, scraping, DDoS applicatif via des requêtes légitimes mais massives
-- **Absence d'isolation des données** : pas de séparation entre utilisateurs, pas de notion de propriété sur un trip
+- **Abuse of computational resources**: anyone can launch expensive computations (Valhalla routing, Overpass queries, weather APIs, async workers) → CPU/RAM exhaustion on resource-limited infrastructure
+- **Storage explosion**: unlimited creation of trips in the DB → PostgreSQL disk saturation
+- **Attacks**: brute force on the computation endpoints, scraping, application-level DDoS through legitimate but massive requests
+- **No data isolation**: no separation between users, no notion of ownership of a trip
 
-L'authentification est un **prérequis de sécurité obligatoire avant toute mise en production**, indépendamment de toute autre fonctionnalité. Elle est également nécessaire pour :
+Authentication is a **mandatory security prerequisite before any production release**, independently of any other feature. It is also required for:
 
-- Le stockage des tokens OAuth Garmin (ADR-018 Phase 2), par nature liés à un utilisateur
-- La persistance des trips en BDD, qui nécessite une relation `user → trip`
-- Le rate limiting par utilisateur (et non uniquement par IP)
+- Storing Garmin OAuth tokens (ADR-018 Phase 2), which are by nature tied to a user
+- Persisting trips in the DB, which requires a `user → trip` relation
+- Per-user rate limiting (and not only per IP)
 
-Les détails d'implémentation (stratégie d'authentification, provider, sessions) feront l'objet d'un ADR dédié.
+The implementation details (authentication strategy, provider, sessions) will be covered by a dedicated ADR.
 
-### Partage d'itinéraire
+### Itinerary sharing
 
-Fonctionnalité distincte rendue possible par le déploiement public. Une fois l'authentification et la persistance BDD en place, le partage devient possible via un lien de type `/<trip-id>/share?token=<random>` (lecture seule, sans authentification requise pour le destinataire). Cela permet de partager un roadbook avec des co-riders ou des proches sans leur imposer de créer un compte. Les détails d'implémentation (token signé, expiration, permissions) feront l'objet d'un ADR dédié.
+A distinct feature made possible by the public deployment. Once authentication and DB persistence are in place, sharing becomes possible via a link such as `/<trip-id>/share?token=<random>` (read-only, no authentication required for the recipient). This makes it possible to share a roadbook with co-riders or relatives without forcing them to create an account. The implementation details (signed token, expiry, permissions) will be covered by a dedicated ADR.
 
-### Application mobile
+### Mobile application
 
-Le déploiement public rend l'API backend accessible depuis n'importe quel client, ouvrant la voie à une application mobile. Deux approches possibles :
+The public deployment makes the backend API reachable from any client, paving the way for a mobile application. Two possible approaches:
 
-- **PWA (Progressive Web App)** : Next.js supporte nativement le mode PWA (Service Worker, manifest, installation sur l'écran d'accueil). Effort minimal — le frontend existant devient installable sur mobile tel quel. Fonctionne hors-ligne pour la consultation des roadbooks déjà chargés.
-- **Application native** (React Native, Flutter) : consomme directement l'API Platform (OpenAPI) et les événements Mercure SSE. Effort significatif mais permet l'accès aux fonctionnalités natives du téléphone (GPS temps réel, notifications push, mode hors-ligne avancé).
+- **PWA (Progressive Web App)**: Next.js natively supports PWA mode (Service Worker, manifest, installation on the home screen). Minimal effort — the existing frontend becomes installable on mobile as-is. Works offline for viewing roadbooks already loaded.
+- **Native application** (React Native, Flutter): consumes API Platform (OpenAPI) and Mercure SSE events directly. Significant effort but gives access to the phone's native features (real-time GPS, push notifications, advanced offline mode).
 
-L'architecture découplée (API stateless + frontend séparé) facilite l'ajout d'un client mobile sans modification du backend. Les détails feront l'objet d'un ADR dédié le cas échéant.
+The decoupled architecture (stateless API + separate frontend) makes it easy to add a mobile client without changing the backend. The details will be covered by a dedicated ADR if needed.
 
 ## Considered Options
 
-### Option A : Oracle Cloud Always Free + Coolify + FreeDNS
+### Option A: Oracle Cloud Always Free + Coolify + FreeDNS
 
-VM ARM Ampere A1 sur le free tier permanent d'Oracle Cloud Infrastructure, avec Coolify (PaaS open-source auto-hébergé) pour la gestion des conteneurs, et FreeDNS pour le nom de domaine gratuit.
+An ARM Ampere A1 VM on Oracle Cloud Infrastructure's permanent free tier, with Coolify (a self-hosted open-source PaaS) for container management, and FreeDNS for the free domain name.
 
-#### Oracle Cloud Always Free — Ressources détaillées
+#### Oracle Cloud Always Free — Detailed resources
 
-Le free tier OCI est permanent (pas un essai limité dans le temps). Les ressources "Always Free" restent disponibles indéfiniment après expiration des crédits d'essai ($300/30 jours).
+The OCI free tier is permanent (not a time-limited trial). The "Always Free" resources remain available indefinitely after the trial credits ($300/30 days) expire.
 
-| Ressource | Limite Always Free |
+| Resource | Always Free limit |
 |-----------|-------------------|
-| **Compute ARM (Ampere A1)** | 4 OCPUs + 24 GB RAM (`VM.Standard.A1.Flex`). Répartissable librement (1×4/24 ou 2×2/12, etc.) |
-| **Compute AMD (Micro)** | 2 VMs `VM.Standard.E2.1.Micro` (1/8 OCPU, 1 GB RAM chacune) |
-| **Block volume** | 200 GB combinés (boot + data) |
+| **Compute ARM (Ampere A1)** | 4 OCPUs + 24 GB RAM (`VM.Standard.A1.Flex`). Freely divisible (1×4/24 or 2×2/12, etc.) |
+| **Compute AMD (Micro)** | 2 `VM.Standard.E2.1.Micro` VMs (1/8 OCPU, 1 GB RAM each) |
+| **Block volume** | 200 GB combined (boot + data) |
 | **Object Storage** | 20 GB |
-| **Bande passante sortante** | 10 TB/mois |
-| **IP publique réservée** | 1 (permanente) |
+| **Outbound bandwidth** | 10 TB/month |
+| **Reserved public IP** | 1 (permanent) |
 | **Load Balancer** | 1 flexible (10 Mbps) |
 | **Backups** | 5 snapshots (boot + block) |
 
-Pour notre projet : **1 seule VM ARM de 4 OCPUs / 24 GB RAM** avec un boot volume de 150 GB (OS + Docker + Valhalla tiles + Overpass DB + PostgreSQL + marge).
+For our project: **a single ARM VM with 4 OCPUs / 24 GB RAM** and a 150 GB boot volume (OS + Docker + Valhalla tiles + Overpass DB + PostgreSQL + margin).
 
-**Régions Europe** : Amsterdam, Frankfurt, Madrid, Milan, Marseille, Paris, Stockholm, Zurich.
+**Europe regions**: Amsterdam, Frankfurt, Madrid, Milan, Marseille, Paris, Stockholm, Zurich.
 
-**Reclaim policy** : Oracle peut réclamer les instances inactives si, sur 7 jours, les 3 critères sont réunis simultanément : CPU < 20% (p95), réseau < 20%, mémoire < 20%. Avec 5 workers async + Valhalla + Overpass en mémoire, ce seuil ne devrait pas être atteint.
+**Reclaim policy**: Oracle may reclaim idle instances if, over 7 days, all 3 criteria are met simultaneously: CPU < 20% (p95), network < 20%, memory < 20%. With 5 async workers + Valhalla + Overpass in memory, this threshold should not be reached.
 
-**"Out of capacity"** : les instances ARM sont très demandées dans les régions populaires (Frankfurt, Amsterdam). Des [scripts de retry automatique](https://github.com/hitrov/oci-arm-host-capacity) réessaient jusqu'à libération de capacité. Privilégier les régions moins saturées (Marseille, Madrid, Milan).
+**"Out of capacity"**: ARM instances are in high demand in popular regions (Frankfurt, Amsterdam). [Automatic retry scripts](https://github.com/hitrov/oci-arm-host-capacity) keep retrying until capacity frees up. Prefer less saturated regions (Marseille, Madrid, Milan).
 
-#### Coolify — PaaS auto-hébergé
+#### Coolify — Self-hosted PaaS
 
-[Coolify](https://coolify.io/) est un PaaS open-source (alternative gratuite à Heroku/Vercel) qui s'installe sur n'importe quel serveur via SSH et fournit une UI web pour gérer les déploiements.
+[Coolify](https://coolify.io/) is an open-source PaaS (a free alternative to Heroku/Vercel) that installs on any server over SSH and provides a web UI to manage deployments.
 
-| Capacité | Détail |
+| Capability | Detail |
 |----------|--------|
-| Déploiement Docker Compose | Le `compose.yaml` existant est la source de vérité. Coolify le déploie tel quel avec volumes persistants |
-| Reverse proxy | Traefik configuré automatiquement (routing, load balancing) |
-| HTTPS automatique | Certificats Let's Encrypt générés et renouvelés sans intervention. Support wildcard via DNS challenge |
-| Git integration | Webhook GitHub/GitLab → chaque push déclenche build + deploy |
-| Monitoring | Terminal web, logs temps réel, alertes (Discord, Telegram, email) |
-| Rollback | Retour à une version précédente en 1 clic |
-| Zero vendor lock-in | Conteneurs et configs restent sur le serveur si on quitte Coolify |
+| Docker Compose deployment | The existing `compose.yaml` is the source of truth. Coolify deploys it as-is with persistent volumes |
+| Reverse proxy | Traefik configured automatically (routing, load balancing) |
+| Automatic HTTPS | Let's Encrypt certificates generated and renewed without intervention. Wildcard support via DNS challenge |
+| Git integration | GitHub/GitLab webhook → every push triggers build + deploy |
+| Monitoring | Web terminal, real-time logs, alerts (Discord, Telegram, email) |
+| Rollback | Back to a previous version in 1 click |
+| Zero vendor lock-in | Containers and configs stay on the server if we leave Coolify |
 
-Overhead : ~500 MB de RAM (Traefik + API + dashboard), négligeable sur 24 GB.
+Overhead: ~500 MB of RAM (Traefik + API + dashboard), negligible on 24 GB.
 
-#### FreeDNS — Nom de domaine gratuit
+#### FreeDNS — Free domain name
 
-[FreeDNS](https://freedns.afraid.org) (freedns.afraid.org) est un service DNS gratuit fournissant des sous-domaines sur des domaines publics partagés. Pas besoin d'acheter un nom de domaine.
+[FreeDNS](https://freedns.afraid.org) (freedns.afraid.org) is a free DNS service providing subdomains on shared public domains. No need to buy a domain name.
 
-| Capacité | Détail |
+| Capability | Detail |
 |----------|--------|
-| Sous-domaine gratuit | Choix parmi des milliers de domaines partagés (ex : `biketrip.mooo.com`, `biketrip.us.to`) |
-| Configuration | Enregistrement A pointant vers l'IP publique Oracle Cloud |
-| Dynamic DNS | Mise à jour automatique de l'IP via cron job (`curl`) |
-| Compatible Let's Encrypt | Les sous-domaines FreeDNS sont validés sans problème pour les certificats SSL |
-| Compatible OAuth callback | URL HTTPS publique stable, utilisable pour le callback Garmin Connect |
+| Free subdomain | Choice among thousands of shared domains (e.g. `biketrip.mooo.com`, `biketrip.us.to`) |
+| Configuration | A record pointing to the Oracle Cloud public IP |
+| Dynamic DNS | Automatic IP update via a cron job (`curl`) |
+| Let's Encrypt compatible | FreeDNS subdomains validate without problems for SSL certificates |
+| OAuth callback compatible | Stable public HTTPS URL, usable for the Garmin Connect callback |
 
-**Limites** : domaines partagés parfois fantaisistes ; pas de contrôle sur le domaine parent. Alternative : un domaine `.fr` coûte ~6€/an (OVH, Gandi) avec contrôle total.
+**Limits**: shared domains are sometimes whimsical; no control over the parent domain. Alternative: a `.fr` domain costs ~6€/year (OVH, Gandi) with full control.
 
-#### Synthèse Option A
+#### Option A summary
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Ressources | 4 OCPUs ARM, **24 GB RAM**, 200 GB stockage — gratuit à vie |
-| Régions Europe | Amsterdam, Frankfurt, Madrid, Milan, Marseille, Paris, Stockholm, Zurich |
-| Sous-domaine | FreeDNS gratuit (ex : `biketrip.mooo.com`) ou domaine propre (~6€/an) |
-| Stack complet | **Oui** — seule option capable de faire tourner Valhalla + Overpass + tout le stack |
-| HTTPS | Let's Encrypt automatique via Coolify/Traefik |
-| Déploiement | Coolify (UI web, Git webhooks, rollback) |
-| Coût total | **0€** (ou ~6€/an avec domaine propre) |
-| Limites | Architecture ARM (`linux/arm64`). Disponibilité variable selon la région. Reclaim policy sur instances inactives |
+| Resources | 4 ARM OCPUs, **24 GB RAM**, 200 GB storage — free for life |
+| Europe regions | Amsterdam, Frankfurt, Madrid, Milan, Marseille, Paris, Stockholm, Zurich |
+| Subdomain | Free FreeDNS (e.g. `biketrip.mooo.com`) or own domain (~6€/year) |
+| Full stack | **Yes** — the only option able to run Valhalla + Overpass + the whole stack |
+| HTTPS | Automatic Let's Encrypt via Coolify/Traefik |
+| Deployment | Coolify (web UI, Git webhooks, rollback) |
+| Total cost | **0€** (or ~6€/year with an own domain) |
+| Limits | ARM architecture (`linux/arm64`). Availability varies by region. Reclaim policy on idle instances |
 
-### Option B : Fly.io (pay-as-you-go)
+### Option B: Fly.io (pay-as-you-go)
 
-VMs Firecracker avec crédit mensuel (~$5), déploiement via CLI `flyctl`.
+Firecracker VMs with a monthly credit (~$5), deployed via the `flyctl` CLI.
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Ressources | ~$5/mois de crédit, VMs de 256 MB à 2 GB RAM |
-| Régions Europe | Amsterdam, Paris, Stockholm, London, Frankfurt, Warsaw |
-| Sous-domaine | `<app>.fly.dev` |
-| Stack complet | **Non** — RAM insuffisante pour Valhalla + Overpass |
-| Stack de base | Oui (PHP + Next.js + Redis + Mercure + workers) dans la limite du crédit |
-| PostgreSQL | Fly Postgres inclus (gratuit jusqu'à 1 GB) |
-| Limites | Carte bancaire requise. Plus de free plan officiel depuis octobre 2024. Le crédit de $5 ne couvre pas le stack complet |
+| Resources | ~$5/month of credit, VMs from 256 MB to 2 GB RAM |
+| Europe regions | Amsterdam, Paris, Stockholm, London, Frankfurt, Warsaw |
+| Subdomain | `<app>.fly.dev` |
+| Full stack | **No** — not enough RAM for Valhalla + Overpass |
+| Base stack | Yes (PHP + Next.js + Redis + Mercure + workers) within the credit limit |
+| PostgreSQL | Fly Postgres included (free up to 1 GB) |
+| Limits | Credit card required. No official free plan since October 2024. The $5 credit does not cover the full stack |
 
-### Option C : Render (free tier)
+### Option C: Render (free tier)
 
-PaaS managé avec instances gratuites qui spin-down après inactivité.
+Managed PaaS with free instances that spin down after inactivity.
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Ressources | 750h/mois d'instances Starter (512 MB RAM), 100 GB bandwidth |
-| Régions Europe | Frankfurt (payant uniquement) — free tier restreint aux US (Oregon) |
-| Sous-domaine | `<app>.onrender.com` |
-| Stack complet | **Non** |
-| Stack de base | **Non** — spin-down après 15 min d'inactivité (cold start 10-30s), incompatible avec Mercure SSE et workers permanents |
-| PostgreSQL | 1 GB gratuit, supprimé après 90 jours |
-| Redis | 25 MB éphémère |
-| Limites | 512 MB/service max. Free tier uniquement en US. Spin-down tue les connexions SSE |
+| Resources | 750h/month of Starter instances (512 MB RAM), 100 GB bandwidth |
+| Europe regions | Frankfurt (paid only) — free tier restricted to the US (Oregon) |
+| Subdomain | `<app>.onrender.com` |
+| Full stack | **No** |
+| Base stack | **No** — spin-down after 15 min of inactivity (10-30s cold start), incompatible with Mercure SSE and permanent workers |
+| PostgreSQL | 1 GB free, deleted after 90 days |
+| Redis | 25 MB ephemeral |
+| Limits | 512 MB/service max. Free tier in the US only. Spin-down kills SSE connections |
 
-### Option D : Koyeb (free tier)
+### Option D: Koyeb (free tier)
 
-PaaS avec data center à Paris, free tier permanent mais très limité.
+PaaS with a data center in Paris, permanent but very limited free tier.
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Ressources | 1 service, 512 MB RAM, 0.1 vCPU |
-| Régions Europe | **Paris**, Frankfurt |
-| Sous-domaine | `<app>.koyeb.app` |
-| Stack complet | **Non** |
-| Stack de base | **Non** — 1 seul service autorisé sur le free tier, ne peut héberger qu'un seul conteneur |
-| PostgreSQL | 1 base gratuite incluse |
-| Limites | Trop contraint pour un projet multi-services. Utile uniquement pour un microservice isolé |
+| Resources | 1 service, 512 MB RAM, 0.1 vCPU |
+| Europe regions | **Paris**, Frankfurt |
+| Subdomain | `<app>.koyeb.app` |
+| Full stack | **No** |
+| Base stack | **No** — only 1 service allowed on the free tier, can host only one container |
+| PostgreSQL | 1 free database included |
+| Limits | Too constrained for a multi-service project. Only useful for an isolated microservice |
 
-### Option E : Railway ($5/mois)
+### Option E: Railway ($5/month)
 
-PaaS managé avec intégration native PostgreSQL/Redis. Pas de free tier permanent (trial 30 jours avec $5 de crédit).
+Managed PaaS with native PostgreSQL/Redis integration. No permanent free tier (30-day trial with $5 of credit).
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Ressources | Hobby plan $5/mois avec $5 de crédit inclus, 8 GB RAM max |
-| Régions Europe | Europe-West |
-| Sous-domaine | `<app>.up.railway.app` |
-| Stack complet | **Partiel** — 8 GB RAM et 5 services max insuffisants pour Valhalla + Overpass |
-| Stack de base | **Oui** — PHP + Next.js + Redis + PostgreSQL + Mercure + workers (si regroupés) |
-| Limites | Pas gratuit ($5/mois). Limite de 5 services par projet, le stack complet en requiert 8+ |
+| Resources | Hobby plan $5/month with $5 of credit included, 8 GB RAM max |
+| Europe regions | Europe-West |
+| Subdomain | `<app>.up.railway.app` |
+| Full stack | **Partial** — 8 GB RAM and 5 services max are not enough for Valhalla + Overpass |
+| Base stack | **Yes** — PHP + Next.js + Redis + PostgreSQL + Mercure + workers (if grouped) |
+| Limits | Not free ($5/month). Limit of 5 services per project, the full stack needs 8+ |
 
-### Option rejetée : Strava comme passerelle de déploiement vers Garmin
+### Rejected option: Strava as a deployment gateway to Garmin
 
-Non pertinent pour l'infrastructure, mais documenté ici par complétude : l'API Strava v3 est read-only pour les routes (aucun endpoint `POST /routes`). L'envoi d'itinéraires planifiés via Strava est techniquement impossible. Cf. ADR-018.
+Not relevant to infrastructure, but documented here for completeness: the Strava v3 API is read-only for routes (no `POST /routes` endpoint). Sending planned itineraries via Strava is technically impossible. See ADR-018.
 
 ## Decision Outcome
 
-**Retenu : Option A (Oracle Cloud Always Free + Coolify + FreeDNS) comme cible de production.**
+**Chosen: Option A (Oracle Cloud Always Free + Coolify + FreeDNS) as the production target.**
 
-C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB RAM, 200 GB stockage) pour le stack complet incluant Valhalla et Overpass.
+It is the only free infrastructure offering enough resources (24 GB RAM, 200 GB storage) for the full stack including Valhalla and Overpass.
 
-**Option de repli : Option B (Fly.io) pour un déploiement intermédiaire** sans Valhalla/Overpass, avec l'API Overpass publique en fallback (latence plus élevée, cf. ADR-017).
+**Fallback option: Option B (Fly.io) for an intermediate deployment** without Valhalla/Overpass, with the public Overpass API as a fallback (higher latency, see ADR-017).
 
-### Architecture d'infrastructure cible
+### Target infrastructure architecture
 
 ```text
                         ┌─────────────────────────────────────┐
-                        │           FreeDNS / Domaine          │
+                        │           FreeDNS / Domain           │
                         │     biketrip.mooo.com (A record)     │
                         └──────────────┬──────────────────────┘
                                        │
                         ┌──────────────▼──────────────────────┐
                         │    Oracle Cloud Always Free (ARM)    │
                         │  4 OCPUs · 24 GB RAM · 200 GB disk   │
-                        │  IP publique réservée · 10 TB/mois   │
-                        │  Région : Marseille / Paris / Madrid  │
+                        │  Reserved public IP · 10 TB/month    │
+                        │  Region: Marseille / Paris / Madrid   │
                         └──────────────┬──────────────────────┘
                                        │
                         ┌──────────────▼──────────────────────┐
-                        │        Coolify (PaaS auto-hébergé)   │
-                        │  UI web · Git webhooks · Rollback    │
+                        │        Coolify (self-hosted PaaS)    │
+                        │  Web UI · Git webhooks · Rollback    │
                         │  ~500 MB RAM                         │
                         └──────────────┬──────────────────────┘
                                        │
@@ -252,21 +252,21 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
                     │              │              │
               ┌─────▼────┐  ┌─────▼────┐  ┌──────▼─────┐
               │  Redis   │  │PostgreSQL│  │  Workers   │
-              │ (cache + │  │  (BDD)   │  │   (×5)     │
+              │ (cache + │  │  (DB)    │  │   (×5)     │
               │  queue)  │  │  ~200 MB │  │  ~1.5 GB   │
               │  ~100 MB │  └──────────┘  └──────┬─────┘
               └──────────┘                       │
                                    ┌─────────────┼─────────────┐
                                    │             │             │
                             ┌──────▼───┐  ┌──────▼───┐  ┌─────▼──────┐
-                            │ Valhalla │  │ Overpass │  │  APIs ext.  │
+                            │ Valhalla │  │ Overpass │  │  Ext. APIs  │
                             │ (routing)│  │  (POI)   │  │ OpenMeteo   │
                             │  ~1.5 GB │  │  ~2.5 GB │  │ Komoot etc. │
                             │ Port 8002│  │ Port 8003│  └────────────┘
                             └──────────┘  └──────────┘
 
                         ┌─────────────────────────────────────┐
-                        │  Estimation RAM (CORRIGÉE — ADR-039) │
+                        │  RAM estimate (CORRECTED — ADR-039)  │
                         │  Full self-hosted, both models hot   │
                         │                                       │
                         │  OS + Docker daemon       ~800 MB    │
@@ -283,43 +283,43 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
                         │  Uptime Kuma              ~150 MB    │
                         │  ─────────────────────────────────   │
                         │  Total full self-hosted ~17-18 GB    │
-                        │  Disponible              24.0 GB     │
-                        │  Marge réelle            ~6-7 GB     │
-                        │  Facteur limitant = CPU (4 cœurs)    │
+                        │  Available               24.0 GB     │
+                        │  Actual margin           ~6-7 GB     │
+                        │  Limiting factor = CPU (4 cores)     │
                         └─────────────────────────────────────┘
 ```
 
-Overpass local est retiré (ADR-025) : POI via l'API publique. La marge "~9.5 GB" du premier brouillon était fausse (cf. note de correction en tête). Le profil réellement déployé en beta (<10 users, modèle 3B unique à la demande, workers `async`/`llm` séparés, observabilité SaaS, analytics différée) tient autour de ~9-9.5 GB et est détaillé dans [ADR-039](adr-039-beta-right-sizing-free-tier.md).
+Local Overpass is removed (ADR-025): POIs come from the public API. The "~9.5 GB" margin of the first draft was wrong (see the correction note at the top). The profile actually deployed in beta (<10 users, single 3B model on demand, separate `async`/`llm` workers, SaaS observability, deferred analytics) fits in about ~9-9.5 GB and is detailed in [ADR-039](adr-039-beta-right-sizing-free-tier.md).
 
-### Stratégie de déploiement progressive
+### Progressive deployment strategy
 
-1. **Phase immédiate** : continuer en développement local (Docker Compose)
-2. **Phase pré-production** : implémenter l'authentification (prérequis obligatoire avant toute exposition publique) et la persistance BDD (PostgreSQL + Doctrine)
-3. **Phase intermédiaire** : déployer le stack de base sur Fly.io ou Railway pour valider le flow OAuth Garmin (ADR-018 Phase 2) et le partage d'itinéraire
-4. **Phase cible** : migrer vers Oracle Cloud + Coolify pour le stack complet avec Valhalla + Overpass
+1. **Immediate phase**: continue in local development (Docker Compose)
+2. **Pre-production phase**: implement authentication (mandatory prerequisite before any public exposure) and DB persistence (PostgreSQL + Doctrine)
+3. **Intermediate phase**: deploy the base stack on Fly.io or Railway to validate the Garmin OAuth flow (ADR-018 Phase 2) and itinerary sharing
+4. **Target phase**: migrate to Oracle Cloud + Coolify for the full stack with Valhalla + Overpass
 
 ## Consequences
 
 ### Positive
 
-- **Coût zéro** : le free tier Oracle Cloud est permanent et suffisant pour un projet personnel
-- **Stack complet** : 24 GB RAM permet de faire tourner tous les services, y compris les plus gourmands (Valhalla, Overpass)
-- **Souveraineté** : auto-hébergé, données sous contrôle
-- **Partage d'itinéraire** : l'exposition publique permet le partage de roadbooks via un simple lien (lecture seule)
-- **Application mobile** : l'architecture découplée (API stateless + frontend séparé) permet d'ajouter un client mobile (PWA ou natif) sans modification du backend
+- **Zero cost**: the Oracle Cloud free tier is permanent and sufficient for a personal project
+- **Full stack**: 24 GB RAM makes it possible to run every service, including the most resource-hungry ones (Valhalla, Overpass)
+- **Sovereignty**: self-hosted, data under control
+- **Itinerary sharing**: public exposure enables sharing roadbooks via a simple (read-only) link
+- **Mobile application**: the decoupled architecture (stateless API + separate frontend) makes it possible to add a mobile client (PWA or native) without changing the backend
 
 ### Negative
 
-- **Architecture ARM** : certaines images Docker (notamment Valhalla, Overpass) peuvent nécessiter un rebuild pour `linux/arm64`. Les images officielles supportent généralement ARM, mais c'est un risque de compatibilité
-- **Maintenance opérationnelle** : pas de PaaS managé — mises à jour, backups, monitoring sont à charge
-- **Fiabilité Oracle** : Oracle peut réclamer les instances inactives. Le free tier peut évoluer sans préavis
-- **Pas de sous-domaine natif** : nécessite un domaine externe (achat ou FreeDNS)
-- **Authentification obligatoire** : le déploiement public impose d'implémenter une couche d'authentification complète (inscription, connexion, sessions, isolation des données) avant la mise en ligne — effort significatif non encore planifié
-- **Ollama = dépendance dure** : l'inférence LLaMA est non-skippable (cf. ADR-028 et issue #375 arbitrage v2 « IA toujours active »). Ollama doit être opérationnel avant que l'application soit considérée disponible. En beta, seul `llama3.2:3b` est chargé à la demande (ADR-039) ; le profil full self-hosted avec les deux modèles résidents (`llama3.1:8b`, `llama3.2:3b`) tient en RAM (~6-7 GB de marge sur 24 GB) mais sature les 4 cœurs CPU — c'est le facteur limitant réel, pas la RAM. Le healthcheck Coolify doit inclure un ping Ollama (`GET /api/health`) en plus des healthchecks applicatifs existants.
+- **ARM architecture**: some Docker images (notably Valhalla, Overpass) may need a rebuild for `linux/arm64`. Official images generally support ARM, but it is a compatibility risk
+- **Operational maintenance**: no managed PaaS — updates, backups and monitoring are on us
+- **Oracle reliability**: Oracle may reclaim idle instances. The free tier may change without notice
+- **No native subdomain**: requires an external domain (purchase or FreeDNS)
+- **Mandatory authentication**: the public deployment requires implementing a complete authentication layer (sign-up, login, sessions, data isolation) before going live — a significant effort not yet planned
+- **Ollama = hard dependency**: LLaMA inference cannot be skipped (see ADR-028 and issue #375, v2 arbitration "AI always on"). Ollama must be operational before the application is considered available. In beta, only `llama3.2:3b` is loaded on demand (ADR-039); the full self-hosted profile with both models resident (`llama3.1:8b`, `llama3.2:3b`) fits in RAM (~6-7 GB of margin on 24 GB) but saturates the 4 CPU cores — that is the real limiting factor, not RAM. The Coolify healthcheck must include an Ollama ping (`GET /api/health`) in addition to the existing application healthchecks.
 
 ### Neutral
 
-- Coolify simplifie l'opérationnel (UI web, déploiement Git, SSL automatique) mais ajoute une couche logicielle à maintenir
+- Coolify simplifies operations (web UI, Git deployment, automatic SSL) but adds a software layer to maintain
 
 ## Sources
 
@@ -331,8 +331,8 @@ Overpass local est retiré (ADR-025) : POI via l'API publique. La marge "~9.5 GB
 - [Render Free Tier](https://render.com/docs/free)
 - [Koyeb Pricing](https://www.koyeb.com/pricing)
 - [Railway Pricing](https://docs.railway.com/pricing/plans)
-- [Strava API v3 Reference](https://developers.strava.com/docs/reference/) — pas d'endpoint de création de route
+- [Strava API v3 Reference](https://developers.strava.com/docs/reference/) — no route creation endpoint
 - [FreeDNS — afraid.org](https://freedns.afraid.org)
 - [Coolify Docker Compose Deployment](https://coolify.io/docs/knowledge-base/docker/compose)
 - [Coolify Traefik SSL / Let's Encrypt](https://coolify.io/docs/knowledge-base/proxy/traefik/overview)
-- [Script de retry OCI ARM "Out of Capacity"](https://github.com/hitrov/oci-arm-host-capacity)
+- [OCI ARM "Out of Capacity" retry script](https://github.com/hitrov/oci-arm-host-capacity)

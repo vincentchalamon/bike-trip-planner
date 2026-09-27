@@ -19,7 +19,7 @@ Opening a zone cannot degrade routing, and a failed graph build cannot block an 
 The one link between them is an invariant, checked in one direction only: **the routing
 perimeter must encompass the zone**.
 
-## Symptômes
+## Symptoms
 
 Reasons to run this:
 
@@ -28,7 +28,7 @@ Reasons to run this:
 - An opened zone needs refreshing to pick up what OSM has gained since.
 - You are setting up a development machine and need something in the index to work against.
 
-## Diagnostic
+## Diagnosis
 
 What is open, and whether the routing graph covers it:
 
@@ -50,7 +50,20 @@ curl -s https://<host>/api/health | jq '.deps.reference_data.zones'
   (`make routing-build <country>`); nothing derives one perimeter from the other, so this is
   checked, never maintained.
 
-## Procédure — production
+## Procedure
+
+`make provision` runs the `provisioner` service of the compose stack you are on: locally, your
+dev stack; with `make provision-recette <zone>`, the local iso-prod recette stack. The
+local-development specifics are in the next section.
+
+> **Production status.** Opening a zone on the prod VM is not wired yet. The `provisioner`
+> service writes to the database named by its `PG*` variables, which default to the per-stack
+> PG-app (`database`); nothing in `deploy/prod/compose.yaml` or
+> `ansible/roles/app_deploy/templates/env.j2` retargets it at the shared `pg-reference`, the
+> service is not attached to the `btp-shared` network, the DataTourisme / OpenAgenda
+> credentials are not in Vault, and the read-only `reference_ro` role that
+> `REFERENCE_DATABASE_URL` expects is created by nothing in the repository. Until that lands,
+> the steps below apply to local and recette stacks only.
 
 ### 1. Make sure the routing graph covers the zone
 
@@ -160,13 +173,13 @@ Cheap, and worth understanding why:
 - **Events are the exception to all of the above.** They are perishable, not append-only, so
   they are **upsert-and-purged** (`ON CONFLICT (id) DO UPDATE`, then `DELETE … WHERE end_date <
   today`), not anti-joined. An event whose dates moved is updated in place; a passed event is
-  dropped. Opening a zone refreshes its events this way, and the standalone weekly job does the
-  same for every open zone (ADR-051 §4 — see [events-refresh.md](events-refresh.md)).
+  dropped. Opening a zone refreshes its events this way, and the standalone `events-refresh`
+  command does the same for every open zone (ADR-051 §4, see [events-refresh.md](events-refresh.md)).
 
 ### 6. Idempotence, as it actually is
 
 The idempotence is that of the **PostGIS insertion step**, not of the whole run. Re-running
-`make provision <zone>` inserts 0 rows on the second pass only if all three hold:
+`make provision <zone>` inserts 0 rows on the second pass only if all of these hold:
 
 - the Geofabrik extract is still in the local cache (`.docker/osm/data/regions/`), otherwise
   it is re-downloaded — hundreds of MB;
@@ -175,10 +188,10 @@ The idempotence is that of the **PostGIS insertion step**, not of the whole run.
 - the DataTourisme flux is unchanged — and it is a **national ZIP re-downloaded in full on
   every run**, so this one is never free;
 - likewise the OpenAgenda export is a **national JSONL re-downloaded in full on every run**,
-  and events are perishable, so a re-open is how upcoming events reach the index. In
-  production you do not re-open a zone just to refresh its events: the weekly `events-refresh`
-  job (ADR-051 §4, [events-refresh.md](events-refresh.md)) does that for every open zone
-  without touching the append-only place tables.
+  and events are perishable, so a re-open is how upcoming events reach the index. You do not
+  need to re-open a zone just to refresh its events: `make events-refresh` (ADR-051 §4,
+  [events-refresh.md](events-refresh.md)) does that for every open zone without touching the
+  append-only place tables.
 
 Do not describe a re-opening as a no-op. It re-downloads, re-filters and re-imports into
 staging; what it does not do is write to the live tables.
@@ -197,7 +210,7 @@ Say these out loud rather than discovering them:
   overwritten, never rewritten": a clipped extract cannot distinguish "deleted upstream" from
   "outside this extract", so nothing tries.
 
-## Procédure — local development
+## Procedure - local development
 
 ### 1. Do not open `france`
 
@@ -225,7 +238,7 @@ make provision corse -- --allow-unrouted-zone
 
 The `--` separator is required: a bare `make provision corse --allow-unrouted-zone` lets
 `make` claim the flag as one of its own options and fails with
-`l'option « --allow-unrouted-zone » n'a pas été reconnue`. With `--`, `make` stops parsing
+`unrecognized option '--allow-unrouted-zone'`. With `--`, `make` stops parsing
 options and the target forwards the flag to the container. Calling the container directly
 (`docker compose --profile provisioning run --rm provisioner corse --allow-unrouted-zone`)
 works too.
@@ -243,15 +256,16 @@ database no other stack reads, and the `pwa_node_modules` volume is empty there 
 
 Open zones from the main checkout. If you need a worktree's provisioner *code* against the
 main stack's database, run the container by hand against that network rather than through the
-worktree's compose project — the same pattern the PHPUnit recipes in
-[CLAUDE.md](../../CLAUDE.md) use.
+worktree's compose project, the same pattern the PHPUnit recipes in
+`.claude/local-qa.md` use.
 
 ### 4. Start over
 
 Nothing here is precious except your `override.tsv` files:
 
 ```bash
-# Drop the reference schemas; the next opening recreates them from the migrations.
+# Forget the open zones and drop the provisioner caches; the next opening recreates the
+# `provisioner` schema (the entrypoint applies reference_schema.sql, and migrate does in dev).
 docker compose exec database psql -U app -d bike_trip_planner \
   -c 'TRUNCATE osm.zones, osm.routing_perimeter; DROP SCHEMA IF EXISTS provisioner CASCADE;'
 docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
@@ -265,7 +279,7 @@ caches, so the next opening re-queries Wikidata for every Q-ID and re-runs the r
 every anonymous row. Keeping the extracts saves the download; keeping the caches saves the
 network.
 
-## Post-action
+## Verification and follow-up
 
 - `curl -s <host>/api/health | jq '.deps.reference_data.zones'` — the zone appears in `open`
   with `routable: true`, and `routing_containment.status` is `ok`.

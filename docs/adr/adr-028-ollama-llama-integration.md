@@ -2,7 +2,7 @@
 
 > **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
 
-- **Status:** Accepted
+- **Status:** Withdrawn by [ADR-052](adr-052-remove-ai-support.md) (AI support removed)
 - **Date:** 2026-05-06
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-014 (Alert extensibility), ADR-027 (Gate mechanism and two-phase pipeline)
 - **Extends:** ADR-012 (adds an LLM-driven narrative layer on top of the rule-based alert engine)
