@@ -69,11 +69,9 @@ final class LockingTripStageStore implements TripStageStoreInterface
     }
 
     /** @param list<Stage> $stages */
-    public function storeStages(string $tripId, array $stages): void
+    public function storeStages(string $tripId, array $stages): ?int
     {
-        $this->withStagesLock($tripId, function () use ($tripId, $stages): void {
-            $this->decorated->storeStages($tripId, $stages);
-        });
+        return $this->withStagesLock($tripId, fn (): ?int => $this->decorated->storeStages($tripId, $stages));
     }
 
     public function updateStageWeather(string $tripId, string $stageId, ?WeatherForecast $weather): void

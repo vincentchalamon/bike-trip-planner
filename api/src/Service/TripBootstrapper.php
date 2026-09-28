@@ -115,7 +115,11 @@ final readonly class TripBootstrapper
      * why; at or above it the trip is structurally `ready` (ADR-043) — independently of the
      * enrichments, so a trip without dates still gets there.
      *
-     * @return list<array<string, mixed>> the published stages, in the event's shape
+     * Hands back, with the published stages, the generation the write produced: writing the
+     * collection bumps the trip version, so whatever the caller dispatches next must carry
+     * this one — not the generation it started from, which is now stale (ADR-073).
+     *
+     * @return array{stages: list<array<string, mixed>>, generation: int|null} the stages in the event's shape; a null generation means the trip is gone
      */
     public function storeStages(string $tripId, TripRequest $request): array
     {
@@ -125,7 +129,7 @@ final readonly class TripBootstrapper
             $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
         }
 
-        $this->stageStore->storeStages($tripId, $stages);
+        $generation = $this->stageStore->storeStages($tripId, $stages);
 
         if (\count($stages) >= TripStatus::MIN_STAGES) {
             $this->trips->storeStatus($tripId, TripStatus::READY->value);
@@ -134,6 +138,6 @@ final readonly class TripBootstrapper
         $serialized = $this->structuralComputation->serializeStagesForEvent($stages);
         $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, ['stages' => $serialized]);
 
-        return $serialized;
+        return ['stages' => $serialized, 'generation' => $generation];
     }
 }

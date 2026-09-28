@@ -49,14 +49,16 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
      *
      * @param list<StageDto> $stages
      */
-    public function storeStages(string $tripId, array $stages): void
+    public function storeStages(string $tripId, array $stages): ?int
     {
         $trip = $this->findTripRequest($tripId);
         if (!$trip instanceof TripRequest) {
-            return;
+            return null;
         }
 
         $this->writeStages($trip, $stages, null);
+
+        return $this->getVersion($tripId);
     }
 
     /**

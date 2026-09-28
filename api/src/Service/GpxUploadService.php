@@ -9,7 +9,6 @@ use App\Enum\ComputationStatus;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Enum\TripStatus;
@@ -33,7 +32,6 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         private TripBootstrapper $bootstrapper,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
-        private TripGenerationTrackerInterface $generationTracker,
         private ProgressPublisher $progress,
         private TripLocker $tripLocker,
         private TripAnalysisDispatcher $analysisDispatcher,
@@ -86,17 +84,19 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         // progress step for the route: the response already says it is done.
         $request = $this->tripStateManager->getRequest($tripId) ?? $tripRequest;
         $this->computationTracker->markRunning($tripId, ComputationName::STAGES);
-        $stages = $this->bootstrapper->storeStages($tripId, $request);
+        ['stages' => $stages, 'generation' => $generation] = $this->bootstrapper->storeStages($tripId, $request);
         $this->computationTracker->markDone($tripId, ComputationName::STAGES);
         $this->progress->publish($tripId, ComputationName::STAGES);
 
         // Hand off the network/LLM enrichments to the workers (unchanged async fan-out).
         //
-        // Stamped with the trip's current generation. Without it every message of a
-        // GPX-imported trip carried `generation: null`, which the staleness guard reads as
-        // "never stale" — so half the product's trips had no guard at all, and an edit made
-        // during their analysis landed on top of workers still writing (ADR-073).
-        $this->analysisDispatcher->dispatch($tripId, $request, $this->generationTracker->current($tripId));
+        // Stamped with the generation the stage write produced, read inside that write rather
+        // than after it, where a concurrent edit's version could be read instead. Without a
+        // generation every message of a GPX-imported trip carried `generation: null`, which the
+        // staleness guard reads as "never stale" — so half the product's trips had no guard at
+        // all, and an edit made during their analysis landed on top of workers still writing
+        // (ADR-073).
+        $this->analysisDispatcher->dispatch($tripId, $request, $generation);
 
         return [
             'tripId' => $tripId,

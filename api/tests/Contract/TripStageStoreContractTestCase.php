@@ -198,6 +198,12 @@ abstract class TripStageStoreContractTestCase extends KernelTestCase
     }
 
     #[Test]
+    public function storingTheStagesOfAnUnknownTripYieldsNoVersion(): void
+    {
+        self::assertNull($this->store->storeStages(Uuid::v7()->toRfc4122(), []));
+    }
+
+    #[Test]
     public function mutatingAnUnknownTripYieldsNull(): void
     {
         self::assertNull($this->store->mutateStages(
@@ -267,9 +273,10 @@ abstract class TripStageStoreContractTestCase extends KernelTestCase
         $afterSeed = $this->store->getVersion($tripId);
         self::assertNotNull($afterSeed);
 
-        $this->store->storeStages($tripId, $stages);
+        $written = $this->store->storeStages($tripId, $stages);
         $afterWrite = $this->store->getVersion($tripId);
         self::assertSame($afterSeed + 1, $afterWrite);
+        self::assertSame($afterWrite, $written, 'The write hands back the version it produced.');
 
         $this->store->updateStageLabels($tripId, $stages[0]->id, 'Lyon', null);
         self::assertSame($afterWrite, $this->store->getVersion($tripId));

@@ -17,6 +17,7 @@ use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
+use App\Message\BelongsToATripGeneration;
 use App\Mercure\MercureEventType;
 use App\Mercure\ProgressPublisher;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -76,6 +77,8 @@ final class GpxUploadServiceTest extends TestCase
         $lastWrite = array_search('publishComputationStepCompleted:stages:3/14/1', $this->log, true);
         $firstDispatch = array_key_first(array_filter($this->log, static fn (string $entry): bool => str_starts_with($entry, 'dispatch:')));
         self::assertGreaterThan($lastWrite, $firstDispatch, 'The enrichments are dispatched after the structural events.');
+        self::assertNotEmpty($this->dispatchedGenerations);
+        self::assertSame([2], array_values(array_unique($this->dispatchedGenerations)), 'The enrichments carry the generation the stage write produced.');
 
         self::assertSame([
             'totalDistance' => 123.5,
@@ -126,6 +129,9 @@ final class GpxUploadServiceTest extends TestCase
     /** @var list<string> */
     private array $tripIdsSeen = [];
 
+    /** @var list<int|null> */
+    private array $dispatchedGenerations = [];
+
     /**
      * @return list<string>
      */
@@ -169,8 +175,10 @@ final class GpxUploadServiceTest extends TestCase
         $points->method('getDecimatedPoints')->willReturn([['lat' => 45.0, 'lon' => 5.0, 'ele' => 100.0], ['lat' => 45.1, 'lon' => 5.1, 'ele' => 200.0]]);
 
         $stageStore = $this->createStub(TripStageStoreInterface::class);
-        $stageStore->method('storeStages')->willReturnCallback(static function (string $tripId, array $stored) use (&$log): void {
+        $stageStore->method('storeStages')->willReturnCallback(static function (string $tripId, array $stored) use (&$log): int {
             $log[] = 'storeStages:'.\count($stored);
+
+            return 2;
         });
 
         $tracker = $this->createStub(ComputationTrackerInterface::class);
@@ -196,8 +204,12 @@ final class GpxUploadServiceTest extends TestCase
         });
 
         $bus = $this->createStub(MessageBusInterface::class);
-        $bus->method('dispatch')->willReturnCallback(static function (object $message) use (&$log): Envelope {
+        $dispatchedGenerations = &$this->dispatchedGenerations;
+        $bus->method('dispatch')->willReturnCallback(static function (object $message) use (&$log, &$dispatchedGenerations): Envelope {
             $log[] = 'dispatch:'.$message::class;
+            if ($message instanceof BelongsToATripGeneration) {
+                $dispatchedGenerations[] = $message->generation;
+            }
 
             return new Envelope($message);
         });
@@ -220,7 +232,6 @@ final class GpxUploadServiceTest extends TestCase
             new TripBootstrapper($repository, $tracker, $generations, $points, $simplifier, $distance, $elevation, $publisher, $stageStore, $structural),
             $repository,
             $tracker,
-            $generations,
             new ProgressPublisher($tracker, $publisher),
             new TripLocker(),
             new TripAnalysisDispatcher($bus, new EnrichmentMessageFactory()),

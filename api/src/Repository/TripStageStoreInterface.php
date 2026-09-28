@@ -23,8 +23,20 @@ use App\Enum\AlertGroup;
  */
 interface TripStageStoreInterface
 {
-    /** @param list<Stage> $stages */
-    public function storeStages(string $tripId, array $stages): void;
+    /**
+     * Writes the whole stage collection, which bumps the structural version.
+     *
+     * Hands back the version this write produced, read while the write is still serialised,
+     * for the same reason {@see self::mutateStages()} does ({@see StageWriteResult}): a caller
+     * that dispatches work after the write must stamp it with this generation. Stamped with
+     * the one it started from, the work is one below the version it just wrote and the
+     * staleness guard drops all of it (ADR-073).
+     *
+     * @param list<Stage> $stages
+     *
+     * @return int|null the new version, or null when the trip is unknown
+     */
+    public function storeStages(string $tripId, array $stages): ?int;
 
     /** @return list<Stage>|null */
     public function getStages(string $tripId): ?array;

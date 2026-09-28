@@ -48,7 +48,7 @@ final class TripEnrichmentGenerationTest extends ApiTestCase
         self::getContainer()->set('strava.client', new MockHttpClient(static fn (): MockResponse => new MockResponse((string) file_get_contents(__DIR__.'/../fixtures/multi-stage-route.gpx'))));
         ['token' => $token] = $this->createTestUserWithJwt(\sprintf('enrichment-generation-%s@test.com', bin2hex(random_bytes(6))));
 
-        $response = $client->request('POST', '/trips', [
+        $client->request('POST', '/trips', [
             'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'enrichment-generation-'.bin2hex(random_bytes(6))], $this->authHeader($token)),
             'json' => ['sourceUrl' => \sprintf('https://www.strava.com/routes/%d', random_int(1_000_000, 9_999_999))],
         ]);
@@ -129,7 +129,7 @@ final class TripEnrichmentGenerationTest extends ApiTestCase
         $middleware = self::getContainer()->get(StaleMessageMiddleware::class);
         self::assertInstanceOf(StaleMessageMiddleware::class, $middleware);
 
-        $reached = new class implements MiddlewareInterface {
+        $reached = new class () implements MiddlewareInterface {
             /** @var list<string> */
             public array $messages = [];
 

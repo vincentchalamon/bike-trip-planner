@@ -48,9 +48,12 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         }
 
         $this->executeWithTracking($tripId, ComputationName::STAGES, function () use ($tripId, $request, $generation): void {
-            $this->bootstrapper->storeStages($tripId, $request);
+            // The stage write bumped the version, so the enrichments carry the generation it
+            // produced. The message's own is one below it now, and the staleness guard would
+            // drop every enrichment stamped with it (ADR-073).
+            $written = $this->bootstrapper->storeStages($tripId, $request)['generation'];
 
-            $this->analysisDispatcher->dispatch($tripId, $request, $generation);
+            $this->analysisDispatcher->dispatch($tripId, $request, $written ?? $generation);
         });
     }
 }
