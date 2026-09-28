@@ -42,7 +42,7 @@ jest.mock('./trips', () => ({ setTripVersion: jest.fn() }));
 jest.mock('./client', () => ({ api: { GET: jest.fn() } }));
 jest.mock('./config', () => ({ API_BASE_URL: 'https://localhost' }));
 
-import { renewDelayMs, subscribeToTrip } from './mercure';
+import { decodeBase64Url, renewDelayMs, subscribeToTrip } from './mercure';
 import { setTripVersion } from './trips';
 import { api } from './client';
 
@@ -145,6 +145,25 @@ describe('renewDelayMs', () => {
 
   it('never returns a delay short enough to loop', () => {
     expect(renewDelayMs(jwt({ iat: 1000, exp: 1010 }))).toBe(30_000);
+  });
+
+  // Jest runs on Node, which has `atob`; the device engine may not.
+  it('does not depend on a global atob', () => {
+    const original = globalThis.atob;
+    // @ts-expect-error simulating an engine without atob
+    delete globalThis.atob;
+    try {
+      expect(renewDelayMs(jwt({ iat: 1000, exp: 1000 + 3600 }))).toBe(3540_000);
+    } finally {
+      globalThis.atob = original;
+    }
+  });
+
+  it('decodes base64url with and without padding', () => {
+    expect(decodeBase64Url('eyJhIjoiPz8_In0')).toBe('{"a":"???"}');
+    expect(decodeBase64Url('YQ==')).toBe('a');
+    expect(decodeBase64Url('YWI')).toBe('ab');
+    expect(() => decodeBase64Url('a%b')).toThrow();
   });
 
   it('returns null when the token says nothing about its expiry', () => {

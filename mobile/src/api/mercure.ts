@@ -52,8 +52,7 @@ export function renewDelayMs(token: string): number | null {
   if (!payload) return null;
   let claims: { exp?: unknown; iat?: unknown };
   try {
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    claims = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
+    claims = JSON.parse(decodeBase64Url(payload));
   } catch {
     return null;
   }
@@ -63,6 +62,31 @@ export function renewDelayMs(token: string): number | null {
   const issuedAt = typeof claims.iat === 'number' ? claims.iat : Date.now() / 1000;
   const ttl = claims.exp - issuedAt - RENEW_MARGIN_SECONDS;
   return Math.max(ttl * 1000, MIN_RENEW_DELAY_MS);
+}
+
+const BASE64URL_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+// Decoded by hand rather than with the global `atob`: nothing guarantees it on
+// every JS engine the app runs on, and a missing one would be swallowed by the
+// caller's catch, silently disabling renewal on device while Jest (Node) passes.
+// The claims are ASCII, so bytes map to characters one to one.
+export function decodeBase64Url(segment: string): string {
+  let output = '';
+  let buffer = 0;
+  let bits = 0;
+  for (const char of segment) {
+    if (char === '=') break;
+    const value = BASE64URL_ALPHABET.indexOf(char);
+    if (value === -1) throw new SyntaxError('Invalid base64url');
+    buffer = ((buffer << 6) | value) & 0xffff;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      output += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+  return output;
 }
 
 // Subscribe to a trip's SSE topic with header auth, forwarding each parsed
