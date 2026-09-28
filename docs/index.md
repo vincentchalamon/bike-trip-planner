@@ -71,4 +71,5 @@ See [Architecture](architecture.md) for the full picture and the reasoning behin
 | Explanation | [Architecture](architecture.md) | System overview and the reasoning behind it |
 | | [Architecture Decision Records](adr/adr-001-global-architecture-and-separation-of-concerns.md) | Every major technical choice, with context and alternatives |
 | | [MCP feasibility spike](spikes/mcp-feasibility-2026-09-17.md) | Time-boxed investigation behind the MCP server |
+| | [OAuth2 server feasibility spike](spikes/oauth2-server-feasibility-2026-09-23.md) | Time-boxed investigation behind the MCP authorization server |
 | | [DataTourisme flux audit](datatourisme-flux-audit.md) | What the DataTourisme feed actually carries |
