@@ -26,18 +26,18 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private RoutingProviderInterface $routingProvider,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(RecalculateRouteSegment $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;

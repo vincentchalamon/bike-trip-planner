@@ -4,25 +4,18 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
-use App\Repository\TripRequestRepositoryInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
@@ -45,22 +38,10 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
     /** Wind gusts at or above this (km/h) flag a strong-gust stage. */
     private const float WIND_GUSTS_STRONG_KMH = 50.0;
 
-    public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
-    ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
-    }
-
     public function __invoke(AnalyzeWind $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -200,7 +181,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::WIND, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::WIND, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

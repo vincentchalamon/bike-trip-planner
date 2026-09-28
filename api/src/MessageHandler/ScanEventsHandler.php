@@ -37,20 +37,20 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private EventSourceRegistry $eventSources,
         private EventArrayMapper $eventMapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanEvents $message): void
     {
         $tripId = $message->tripId;
 
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
@@ -58,7 +58,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $request = $this->tripStateManager->getRequest($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
         $startDate = $request?->startDate;
 
         if (!$startDate instanceof \DateTimeImmutable) {
@@ -82,7 +82,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 // Written and published unconditionally, the empty list included (ADR-068).
                 // Events were the last enrichment delivered over SSE and persisted nowhere,
                 // so the anonymous share page and a reload lost them entirely.
-                $this->tripStateManager->updateStageEvents($tripId, $stage->id, $events);
+                $this->tripRequestRepository->updateStageEvents($tripId, $stage->id, $events);
                 $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
                     'stageId' => $stage->id,
                     'events' => array_map($this->eventMapper->toArray(...), $events),

@@ -19,6 +19,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckHealthServices;
 use App\Osm\HealthServiceRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -46,19 +47,20 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private HealthServiceRepositoryInterface $healthServiceRepository,
         private GeoDistanceInterface $haversine,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckHealthServices $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -66,7 +68,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
 
         $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages): void {
             // Read health services from the local-first index along the route corridor (ADR-040).
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $decimatedData = $this->points->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
                 : array_merge(...array_map(
@@ -115,7 +117,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::HEALTH_SERVICE, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::HEALTH_SERVICE, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::HEALTH_SERVICE_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

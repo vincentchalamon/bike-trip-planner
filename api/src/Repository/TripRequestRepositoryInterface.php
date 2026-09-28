@@ -23,7 +23,11 @@ use App\Enum\AlertGroup;
  */
 interface TripRequestRepositoryInterface
 {
-    public function initializeTrip(string $tripId, TripRequest $request): void;
+    /**
+     * $locale is written in the same flush as the trip. It is not read from $request: the
+     * client never chooses it, the caller passes the authenticated account's.
+     */
+    public function initializeTrip(string $tripId, TripRequest $request, ?string $locale = null): void;
 
     public function getRequest(string $tripId): ?TripRequest;
 
@@ -32,18 +36,6 @@ interface TripRequestRepositoryInterface
     public function getTitle(string $tripId): ?string;
 
     public function storeTitle(string $tripId, ?string $title): void;
-
-    /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
-    public function storeRawPoints(string $tripId, array $rawPoints): void;
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getRawPoints(string $tripId): ?array;
-
-    /** @param list<array{lat: float, lon: float, ele: float}> $decimatedPoints */
-    public function storeDecimatedPoints(string $tripId, array $decimatedPoints): void;
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getDecimatedPoints(string $tripId): ?array;
 
     /** @param list<Stage> $stages */
     public function storeStages(string $tripId, array $stages): void;
@@ -232,16 +224,6 @@ interface TripRequestRepositoryInterface
      * Persists a single stage's reverse-geocoded endpoint labels atomically (see {@see self::updateStageWeather()}).
      */
     public function updateStageLabels(string $tripId, string $stageId, ?string $startLabel, ?string $endLabel): void;
-
-    /**
-     * Stores multi-track data for Komoot Collection source type.
-     *
-     * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData
-     */
-    public function storeTracksData(string $tripId, array $tracksData): void;
-
-    /** @return list<list<array{lat: float, lon: float, ele: float}>>|null */
-    public function getTracksData(string $tripId): ?array;
 
     public function storeSourceType(string $tripId, string $sourceType): void;
 

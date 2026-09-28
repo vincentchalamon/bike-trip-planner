@@ -19,6 +19,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
 use App\Osm\BikeShopRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -39,19 +40,20 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private BikeShopRepositoryInterface $bikeShopRepository,
         private GeoDistanceInterface $haversine,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckBikeShops $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -68,14 +70,14 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             // Inside the tracking, not before it: settling this computation is what may
             // complete the trip, and only executeWithTracking() evaluates the completion gate.
             if (\count($stages) <= self::MINIMUM_DAYS_FOR_CHECK) {
-                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, []);
+                $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, []);
                 $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, ['alerts' => []]);
 
                 return;
             }
 
             // Read bike shops from the local-first index along the route corridor (ADR-040).
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $decimatedData = $this->points->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
                 : array_merge(...array_map(
@@ -131,7 +133,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, $this->groupByStage($stagesWithoutBikeShop));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BIKE_SHOP, $this->groupByStage($stagesWithoutBikeShop));
 
             $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $stagesWithoutBikeShop),

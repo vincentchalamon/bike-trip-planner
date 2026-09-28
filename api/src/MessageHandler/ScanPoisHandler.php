@@ -29,6 +29,7 @@ use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -54,7 +55,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private PoiSourceRegistry $poiSourceRegistry,
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
@@ -66,20 +68,20 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanPois $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $request = $this->tripStateManager->getRequest($tripId);
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $request = $this->tripRequestRepository->getRequest($tripId);
         $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
         // Needed to evaluate weekday-dependent opening_hours rules ("Mo-Sa 08:00-19:00").
@@ -87,7 +89,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed, $startDate): void {
             // Decode the route corridor from the decimated points (fallback: stage geometry).
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $decimatedData = $this->points->getDecimatedPoints($tripId);
             $allPoints = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
                 : array_merge(...array_map(
@@ -200,11 +202,11 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // Same array to both consumers (ADR-068), the empty one included: a rerun that
                 // finds nothing has to clear the previous alerts on a live client too, or the
                 // database and the open page disagree until a reload.
-                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
+                $this->tripRequestRepository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
                     'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
-                    'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripStateManager->getLocale($tripId) ?? 'en'),
+                    'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? 'en'),
                 ]);
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);
@@ -212,7 +214,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // Published and persisted unconditionally, empty list included: the timeline is
                 // recomputed wholesale, so an empty result has to clear a previous one on both
                 // sides rather than leave it standing.
-                $this->tripStateManager->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
+                $this->tripRequestRepository->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
                 $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
                     'stageId' => $stage->id,
                     'markers' => $clusteredMarkers,
@@ -223,7 +225,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             // (recette #649). The lunch/resupply alerts added above are delivered live
             // via Mercure (above); AnalyzeTerrain owns the persisted alerts column.
             foreach ($stages as $stage) {
-                $this->tripStateManager->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
+                $this->tripRequestRepository->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
             }
         });
     }

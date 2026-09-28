@@ -69,9 +69,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         // Associate trip with current user before persisting
         $data->user = $user;
 
-        $this->tripStateManager->initializeTrip($tripId, $data);
-
-        $this->tripStateManager->storeLocale($tripId, $user->getLocale());
+        $this->tripStateManager->initializeTrip($tripId, $data, $user->getLocale());
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);

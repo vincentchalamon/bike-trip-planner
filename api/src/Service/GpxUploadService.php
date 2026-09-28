@@ -21,6 +21,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Entity\User;
 use App\RouteParser\GpxRouteParserInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -40,6 +41,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
     public function __construct(
         private GpxRouteParserInterface $gpxParser,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TransientTripPointsStoreInterface $points,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
@@ -96,8 +98,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         // right after a successful upload (recette #649).
         $tripRequest->user = $user;
 
-        $this->tripStateManager->initializeTrip($tripId, $tripRequest);
-        $this->tripStateManager->storeLocale($tripId, $locale);
+        $this->tripStateManager->initializeTrip($tripId, $tripRequest, $locale);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
@@ -143,7 +144,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
      */
     private function storeRouteData(string $tripId, array $points, ?string $title): void
     {
-        $this->tripStateManager->storeRawPoints($tripId, array_map(
+        $this->points->storeRawPoints($tripId, array_map(
             static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
             $points,
         ));
@@ -152,7 +153,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         $this->tripStateManager->storeTitle($tripId, $title);
 
         $decimated = $this->routeSimplifier->simplify($points);
-        $this->tripStateManager->storeDecimatedPoints($tripId, array_map(
+        $this->points->storeDecimatedPoints($tripId, array_map(
             static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
             $decimated,
         ));

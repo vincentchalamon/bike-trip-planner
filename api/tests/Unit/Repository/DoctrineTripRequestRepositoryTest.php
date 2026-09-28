@@ -28,8 +28,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[CoversClass(DoctrineTripRequestRepository::class)]
@@ -38,7 +36,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 {
     private EntityManagerInterface&MockObject $entityManager;
 
-    private CacheItemPoolInterface&MockObject $cache;
 
     private CycleRouteRepositoryInterface&MockObject $cycleRouteRepository;
 
@@ -56,7 +53,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $classMetadata = new ClassMetadata(TripRequest::class);
         $this->entityManager->method('getClassMetadata')->willReturn($classMetadata);
 
-        $this->cache = $this->createMock(CacheItemPoolInterface::class);
 
         // The PostGIS metrics are computed at storeStages() time (#775); stub them
         // with neutral defaults so the persistence round-trips stay deterministic.
@@ -68,7 +64,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
     }
 
     /**
@@ -140,7 +136,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
 
-        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
@@ -562,84 +558,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
-    public function rawPointsUsesCache(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
-        $rawPoints = [
-            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
-            ['lat' => 47.9983, 'lon' => 3.5736, 'ele' => 180.0],
-        ];
-
-        $cacheItem = $this->createMock(CacheItemInterface::class);
-        $cacheItem->expects(self::once())
-            ->method('set')
-            ->with($rawPoints);
-        $cacheItem->expects(self::once())
-            ->method('expiresAfter')
-            ->with(1800);
-
-        $this->cache->expects(self::once())
-            ->method('getItem')
-            ->with($cacheKey)
-            ->willReturn($cacheItem);
-        $this->cache->expects(self::once())
-            ->method('save')
-            ->with($cacheItem);
-
-        $this->entityManager->expects(self::never())
-            ->method('find');
-        $this->entityManager->expects(self::never())
-            ->method('persist');
-        $this->entityManager->expects(self::never())
-            ->method('flush');
-
-        $this->repository->storeRawPoints($tripId, $rawPoints);
-    }
-
-    #[Test]
-    public function getRawPointsReturnsCachedData(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
-        $rawPoints = [
-            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
-        ];
-
-        $cacheItem = $this->createStub(CacheItemInterface::class);
-        $cacheItem->method('isHit')->willReturn(true);
-        $cacheItem->method('get')->willReturn($rawPoints);
-
-        $this->cache->expects(self::once())
-            ->method('getItem')
-            ->with($cacheKey)
-            ->willReturn($cacheItem);
-
-        $result = $this->repository->getRawPoints($tripId);
-
-        self::assertSame($rawPoints, $result);
-    }
-
-    #[Test]
-    public function getRawPointsReturnsNullOnCacheMiss(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
-
-        $cacheItem = $this->createMock(CacheItemInterface::class);
-        $cacheItem->method('isHit')->willReturn(false);
-
-        $this->cache->expects(self::once())
-            ->method('getItem')
-            ->with($cacheKey)
-            ->willReturn($cacheItem);
-
-        $result = $this->repository->getRawPoints($tripId);
-
-        self::assertNull($result);
-    }
-
-    #[Test]
     public function storeTitleUpdatesEntity(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
@@ -723,6 +641,25 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->storeSourceType($tripId, 'komoot');
         self::assertSame('komoot', $trip->sourceType);
+    }
+
+    /**
+     * The creation paths used to follow initializeTrip() with storeLocale(): two flushes for
+     * one row.
+     */
+    #[Test]
+    public function initializeTripWritesTheLocaleInTheSameFlush(): void
+    {
+        $persisted = null;
+        $this->entityManager->method('persist')->willReturnCallback(static function (object $trip) use (&$persisted): void {
+            $persisted = $trip;
+        });
+        $this->entityManager->expects(self::once())->method('flush');
+
+        $this->repository->initializeTrip(Uuid::v7()->toRfc4122(), new TripRequest(), 'fr');
+
+        self::assertInstanceOf(TripRequest::class, $persisted);
+        self::assertSame('fr', $persisted->locale);
     }
 
     #[Test]
@@ -909,6 +846,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($em);
 
-        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
+        return new DoctrineTripRequestRepository($registry, $cycleRoute, $coverage, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
     }
 }

@@ -26,6 +26,7 @@ use App\Weather\WeatherForecastSerializer;
 use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
 use App\Osm\WaysRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -76,6 +77,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         WaysRepositoryInterface $waysRepository,
         GeometryDistributorInterface $distributor,
+        ?TransientTripPointsStoreInterface $points = null,
     ): AnalyzeTerrainHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -88,6 +90,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $analyzerRegistry,
             $waysRepository,
             $distributor,
@@ -125,13 +128,14 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
             ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
         ]);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $waysRepository = $this->waysRepository([
             ['lat' => 48.1, 'lon' => 2.1, 'surface' => 'asphalt', 'highway' => 'primary', 'cycleway' => '', 'cycleway:right' => '', 'cycleway:left' => '', 'cycleway:both' => '', 'bicycle' => '', 'maxspeed' => '', 'length' => 1000.0],
@@ -160,6 +164,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $this->createStub(TripUpdatePublisherInterface::class),
             $waysRepository,
             $distributor,
+            points: $points,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
@@ -180,12 +185,13 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+        ]);
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('fr');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-        ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -221,6 +227,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $publisher,
             $this->waysRepository([]),
             $distributor,
+            points: $points,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
@@ -234,12 +241,13 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+        ]);
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('fr');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-        ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -289,6 +297,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $publisher,
             $this->waysRepository([]),
             $distributor,
+            points: $points,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
@@ -321,10 +330,11 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         // No decimated points → the corridor route is built from the stage geometry.
         $waysRepository = $this->createStub(WaysRepositoryInterface::class);
@@ -353,6 +363,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $this->createStub(TripUpdatePublisherInterface::class),
             $waysRepository,
             $distributor,
+            points: $points,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));

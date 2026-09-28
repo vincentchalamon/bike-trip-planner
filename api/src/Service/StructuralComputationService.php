@@ -12,6 +12,7 @@ use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\SourceType;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 
 /**
@@ -28,6 +29,7 @@ final readonly class StructuralComputationService
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TransientTripPointsStoreInterface $points,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
@@ -96,7 +98,7 @@ final readonly class StructuralComputationService
     /** @return list<Stage> */
     private function generateCollectionStages(string $tripId): array
     {
-        $tracksData = $this->tripStateManager->getTracksData($tripId);
+        $tracksData = $this->points->getTracksData($tripId);
 
         if (null === $tracksData) {
             return [];
@@ -139,7 +141,7 @@ final readonly class StructuralComputationService
      */
     private function generatePacingStages(string $tripId, TripRequest $request): array
     {
-        $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+        $decimatedData = $this->points->getDecimatedPoints($tripId);
 
         if (null === $decimatedData) {
             return [];
@@ -150,7 +152,7 @@ final readonly class StructuralComputationService
             $decimatedData,
         );
 
-        $allPointsData = $this->tripStateManager->getRawPoints($tripId);
+        $allPointsData = $this->points->getRawPoints($tripId);
         $allPoints = null !== $allPointsData
             ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $allPointsData)
             : $decimatedPoints;

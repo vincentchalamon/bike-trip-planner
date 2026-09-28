@@ -27,13 +27,13 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
         private TripAnalysisDispatcher $analysisDispatcher,
         private ComputationSupersession $supersession,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(RecalculateStages $message): void
@@ -41,7 +41,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $generation = $message->generation;
 
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -87,7 +87,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // (ADR-070).
         $dispatched = [];
         if ([] !== $affected && [] !== $message->triggers) {
-            $request = $this->tripStateManager->getRequest($tripId);
+            $request = $this->tripRequestRepository->getRequest($tripId);
             \assert($request instanceof TripRequest);
 
             $dispatched = $this->analysisDispatcher->dispatchFor(

@@ -21,6 +21,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckWaterPoints;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -39,27 +40,28 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckWaterPoints $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
         }
 
         $this->executeWithTracking($tripId, ComputationName::WATER_POINTS, function () use ($tripId, $stages): void {
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $decimatedData = $this->points->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
                 : array_merge(...array_map(
@@ -113,7 +115,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::WATER_POINT, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::WATER_POINT, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::WATER_POINT_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

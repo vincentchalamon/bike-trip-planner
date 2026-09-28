@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripDuplicateProcessor;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,6 +42,7 @@ final class TripDuplicateProcessorTest extends TestCase
 
         $processor = new TripDuplicateProcessor(
             $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createStub(TransientTripPointsStoreInterface::class),
             $this->createStub(EntityManagerInterface::class),
             $this->createStub(ComputationTrackerInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),

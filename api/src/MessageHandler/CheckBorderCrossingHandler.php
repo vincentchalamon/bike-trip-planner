@@ -40,18 +40,18 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckBorderCrossing $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -64,7 +64,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             if (\count($checkPoints) < 2) {
                 // Nothing found is a result, not an absence of one: the group is cleared so a
                 // previous run's alerts do not survive as stale.
-                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, []);
+                $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, []);
                 $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                     'alerts' => [],
                 ]);
@@ -127,7 +127,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

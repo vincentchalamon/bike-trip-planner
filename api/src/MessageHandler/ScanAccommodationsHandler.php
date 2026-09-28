@@ -49,7 +49,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private AccommodationSourceRegistry $registry,
         private GeoDistanceInterface $haversine,
         private GeometryDistributorInterface $distributor,
@@ -59,14 +59,14 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanAccommodations $message): void
     {
         $tripId = $message->tripId;
         $radiusMeters = $message->radiusMeters;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -88,7 +88,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             }
         }
 
-        $request = $this->tripStateManager->getRequest($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
         $enabledAccommodationTypes = $message->enabledAccommodationTypes;
         $isExpandScan = $message->isExpandScan;
 
@@ -200,12 +200,12 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 // Same array to both consumers (ADR-068), the empty one included: a rerun that
                 // finds nothing has to clear the previous alerts on a live client too, or the
                 // database and the open page disagree until a reload.
-                $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
+                $this->tripRequestRepository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::ACCOMMODATIONS, $alertsToPublish);
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, [
                     'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
-                    'alerts' => $this->alertRenderer->render($alertsToPublish, $stage->dayNumber, $this->tripStateManager->getLocale($tripId) ?? 'en'),
+                    'alerts' => $this->alertRenderer->render($alertsToPublish, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? 'en'),
                 ]);
             }
 
@@ -213,7 +213,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // processed stage(s) (single-stage expand or all) — recette #649. The
             // seasonal alert is delivered live via Mercure (above), not persisted here.
             foreach ($stagesToProcess as $stage) {
-                $this->tripStateManager->updateStageAccommodations($tripId, $stage->id, array_values($stage->accommodations));
+                $this->tripRequestRepository->updateStageAccommodations($tripId, $stage->id, array_values($stage->accommodations));
             }
         });
     }

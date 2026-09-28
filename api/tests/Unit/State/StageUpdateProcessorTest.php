@@ -15,6 +15,7 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Mapper\StageResponseMapper;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
 use App\State\StageLocator;
@@ -107,9 +108,10 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
@@ -130,6 +132,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
+            $points,
             $messageBus,
             $distanceCalculator,
             $elevationCalculator,
@@ -201,10 +204,11 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        // Expired: the fallback must rebuild from the stage geometry.
+        $points->method('getDecimatedPoints')->willReturn(null);
         $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
-        // Expired: the fallback must rebuild from the stage geometry.
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
@@ -218,6 +222,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
+            $points,
             $messageBus,
             $distanceCalculator,
             $elevationCalculator,
@@ -281,9 +286,10 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
@@ -304,6 +310,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
+            $points,
             $messageBus,
             $distanceCalculator,
             $elevationCalculator,
@@ -353,9 +360,10 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
@@ -376,6 +384,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
+            $points,
             $messageBus,
             $distanceCalculator,
             $elevationCalculator,
@@ -426,9 +435,10 @@ final class StageUpdateProcessorTest extends TestCase
 
         $storedStages = null;
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $this->stubMutateStages($tripStateManager);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
         $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
@@ -442,6 +452,7 @@ final class StageUpdateProcessorTest extends TestCase
 
         $processor = new StageUpdateProcessor(
             $tripStateManager,
+            $points,
             $messageBus,
             $distanceCalculator,
             $elevationCalculator,

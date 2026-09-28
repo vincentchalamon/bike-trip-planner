@@ -14,6 +14,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
 use App\Entity\User;
 use App\Enum\ComputationName;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -31,6 +32,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripRepository,
+        private TransientTripPointsStoreInterface $points,
         private EntityManagerInterface $entityManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
@@ -201,19 +203,19 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         // (getRequest) can find it and do not return 404.
         $this->tripRepository->storeRequest($newTripId, $duplicate);
 
-        $rawPoints = $this->tripRepository->getRawPoints($sourceId);
+        $rawPoints = $this->points->getRawPoints($sourceId);
         if (null !== $rawPoints) {
-            $this->tripRepository->storeRawPoints($newTripId, $rawPoints);
+            $this->points->storeRawPoints($newTripId, $rawPoints);
         }
 
-        $decimatedPoints = $this->tripRepository->getDecimatedPoints($sourceId);
+        $decimatedPoints = $this->points->getDecimatedPoints($sourceId);
         if (null !== $decimatedPoints) {
-            $this->tripRepository->storeDecimatedPoints($newTripId, $decimatedPoints);
+            $this->points->storeDecimatedPoints($newTripId, $decimatedPoints);
         }
 
-        $tracksData = $this->tripRepository->getTracksData($sourceId);
+        $tracksData = $this->points->getTracksData($sourceId);
         if (null !== $tracksData) {
-            $this->tripRepository->storeTracksData($newTripId, $tracksData);
+            $this->points->storeTracksData($newTripId, $tracksData);
         }
 
         $title = $this->tripRepository->getTitle($sourceId);

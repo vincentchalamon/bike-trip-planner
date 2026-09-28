@@ -12,6 +12,7 @@ use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\SourceType;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\StructuralComputationService;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,12 +31,13 @@ final class StructuralComputationServiceTest extends TestCase
         $request->elevationPenalty = 40.0;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
         ]);
-        $tripStateManager->method('getRawPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
 
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('calculateTotalDistance')->willReturn(142.0);
@@ -62,6 +64,7 @@ final class StructuralComputationServiceTest extends TestCase
 
         $service = new StructuralComputationService(
             $tripStateManager,
+            $points,
             $distanceCalculator,
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
@@ -81,15 +84,16 @@ final class StructuralComputationServiceTest extends TestCase
         $request->endDate = new \DateTimeImmutable('2026-07-03'); // 3 days inclusive
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
+            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
+        ]);
+        $points->method('getRawPoints')->willReturn([
+            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
+            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
+        ]);
         $tripStateManager->method('getSourceType')->willReturn(SourceType::GPX_UPLOAD->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
-            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
-        ]);
-        $tripStateManager->method('getRawPoints')->willReturn([
-            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
-            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
-        ]);
 
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('calculateTotalDistance')->willReturn(200.0);
@@ -113,6 +117,7 @@ final class StructuralComputationServiceTest extends TestCase
 
         $service = new StructuralComputationService(
             $tripStateManager,
+            $points,
             $distanceCalculator,
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
@@ -128,8 +133,8 @@ final class StructuralComputationServiceTest extends TestCase
         $request = new TripRequest();
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_COLLECTION->value);
-        $tripStateManager->method('getTracksData')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getTracksData')->willReturn([
             // Track 1
             [
                 ['lat' => 48.0, 'lon' => 2.0, 'ele' => 10.0],
@@ -141,6 +146,7 @@ final class StructuralComputationServiceTest extends TestCase
                 ['lat' => 49.5, 'lon' => 3.5, 'ele' => 40.0],
             ],
         ]);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_COLLECTION->value);
 
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('calculateTotalDistance')->willReturn(60.0);
@@ -158,6 +164,7 @@ final class StructuralComputationServiceTest extends TestCase
 
         $service = new StructuralComputationService(
             $tripStateManager,
+            $points,
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
@@ -185,14 +192,15 @@ final class StructuralComputationServiceTest extends TestCase
         $request = new TripRequest();
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_COLLECTION->value);
-        $tripStateManager->method('getTracksData')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getTracksData')->willReturn([
             [],
             [
                 ['lat' => 49.0, 'lon' => 3.0, 'ele' => 30.0],
                 ['lat' => 49.5, 'lon' => 3.5, 'ele' => 40.0],
             ],
         ]);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_COLLECTION->value);
 
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('calculateTotalDistance')->willReturn(30.0);
@@ -202,6 +210,7 @@ final class StructuralComputationServiceTest extends TestCase
 
         $service = new StructuralComputationService(
             $tripStateManager,
+            $points,
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
@@ -219,11 +228,13 @@ final class StructuralComputationServiceTest extends TestCase
     public function returnsEmptyWhenNoDecimatedPoints(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         $service = new StructuralComputationService(
             $tripStateManager,
+            $points,
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
@@ -238,6 +249,7 @@ final class StructuralComputationServiceTest extends TestCase
     {
         $service = new StructuralComputationService(
             $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createStub(TransientTripPointsStoreInterface::class),
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),

@@ -20,6 +20,7 @@ use App\Engine\RouteSimplifierInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -30,6 +31,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TransientTripPointsStoreInterface $points,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
@@ -164,7 +166,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
      */
     private function applyDistanceChange(string $tripId, array &$stages, int $index, float $requestedKm): void
     {
-        $rawPoints = $this->tripStateManager->getDecimatedPoints($tripId);
+        $rawPoints = $this->points->getDecimatedPoints($tripId);
         if (null === $rawPoints || [] === $rawPoints) {
             // The transient Redis copy has expired (TTL): rebuild the route from the
             // persisted per-stage geometry (ADR-057) so a distance edit on an older
