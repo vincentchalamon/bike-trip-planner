@@ -9,16 +9,22 @@
 
 # The checkout exists so `docker compose` bind mounts (Caddyfile, conf.d,
 # overlays, deploy/valhalla/compose.yaml) resolve. The actual prod stack
-# `up -d` is done by GHA deploy-prod at cutover (plan W4 / PR-C) via the
-# rendered deploy-prod.sh hook below — Ansible does NOT bring the app stack up.
-- name: Clone / checkout the application repository
+# `up -d` is done by GHA deploy-prod via the rendered deploy-prod.sh hook
+# below - Ansible does NOT bring the app stack up.
+#
+# `update: false`: Ansible clones once and never moves the checkout again. The
+# deploy owns the revision (it checks out the release tag), and btp-compose
+# derives the image tags from that checkout; resetting it to a branch here would
+# leave the compose files out of step with the images in service and make every
+# btp-compose call refuse to run until the next deploy.
+- name: Clone the application repository (first run only)
   become: true
   become_user: "{{ deploy_user }}"
   ansible.builtin.git:
     repo: "{{ app_repo_url }}"
     dest: "{{ app_dir }}"
     version: "{{ app_deploy_ref }}"
-    force: true
+    update: false
 
 # The php entrypoint refuses to boot when these two pairs match, because that difference is
 # the only thing keeping a PWA session token off /mcp (ADR-079). Checking it here turns a
@@ -90,6 +96,14 @@
     group: "{{ deploy_user }}"
     mode: "0640"
   no_log: true
+
+- name: Install the prod compose wrapper (btp-compose)
+  ansible.builtin.template:
+    src: btp-compose.j2
+    dest: /usr/local/bin/btp-compose
+    owner: root
+    group: root
+    mode: "0755"
 
 - name: Render the prod deploy hook
   ansible.builtin.template:

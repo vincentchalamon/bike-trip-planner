@@ -118,13 +118,17 @@ The following are **intentionally not covered** this sprint:
 - **Google Play / Store distribution** — no Play account, no App Bundle upload, no
   managed Play signing. The `production` profile in `eas.json` (`app-bundle`) exists
   for that future path but is not exercised here.
-- **App Links / `assetlinks.json` verification** — the PWA already serves
+- **App Links for a release-keystore build** - the PWA serves
   `/.well-known/assetlinks.json` (`pwa/src/app/.well-known/assetlinks.json/route.ts`) from
   the `ANDROID_APP_PACKAGE` and `ANDROID_SHA256_CERT_FINGERPRINTS` variables of the `pwa`
-  service, and answers `[]` while they are empty. They are not set in the prod env file
-  (`env.j2`), so `autoVerify` https links do not open the app yet. Until they are, use the
-  custom scheme (`biketripplanner://...`) for deep-link testing (see `mobile/README.md`,
-  "assetlinks" section).
+  service. The prod env file (`env.j2`) sets them from `android_app_package` /
+  `android_sha256_cert_fingerprints` in `ansible/group_vars/all.yml`, which default to the
+  **debug** keystore fingerprint, so the CI APK verifies its `autoVerify` https links. An
+  APK signed with a real release keystore does not, until its fingerprint
+  (`keytool -list -v -keystore release.keystore | grep SHA256`) replaces or is appended
+  (comma-separated) to `android_sha256_cert_fingerprints`, the playbook is re-run and
+  `btp-compose up -d` recreates `pwa` on the VM. No image rebuild is needed: the route is
+  `force-dynamic` and reads the variables at runtime.
 
 ## Appendix - raw Gradle path (optional)
 

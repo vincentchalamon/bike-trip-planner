@@ -200,9 +200,7 @@ docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla 
 Lille -> Cassel (Hauts-de-France, ~40 km) must route on the France graph:
 
 ```bash
-cd /opt/bike-trip-planner
-docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml \
-  exec php curl -sS -X POST http://valhalla:8002/route \
+btp-compose exec php curl -sS -X POST http://valhalla:8002/route \
   -H 'Content-Type: application/json' \
   -d '{"locations":[{"lat":50.6292,"lon":3.0573},{"lat":50.8000,"lon":2.4869}],"costing":"bicycle"}' \
   | jq '.trip.summary'

@@ -203,11 +203,6 @@ jobs:
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       # Repo checkout path on the VM (Ansible-provisioned). Defaults if unset.
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
-      # Prod env file, rendered by Ansible OUTSIDE the checkout: `git checkout
-      # --force` below would otherwise overwrite it with the repo's versioned
-      # `.env` (dev defaults only). Passing it explicitly also stops compose
-      # auto-loading that `.env`.
-      ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
       TAG: ${{ github.ref_name }}
     steps:
       - name: Deploy over SSH
@@ -222,7 +217,6 @@ jobs:
             exit 0
           fi
           repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
-          env_file="${ENV_FILE:-/etc/bike-trip-planner/app.env}"
           # TAG is github.ref_name (the pushed tag). It is expanded on the runner
           # and re-parsed by the remote bash, so reject anything that isn't a plain
           # vMAJOR.MINOR.PATCH tag before it is ever interpolated — git tag names
@@ -244,16 +238,18 @@ jobs:
             ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
           fi
           # Check out the tag on the VM and roll the stack, pulling the images
-          # this run just pushed by tag (--pull always). $repo_dir/$env_file/$TAG
-          # expand on the runner; the remote shell receives a fully-resolved script.
-          # --env-file points at the Ansible-rendered prod env OUTSIDE the checkout,
-          # which the `git checkout --force` above would otherwise clobber with the
-          # repo's versioned `.env` (dev defaults).
+          # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
+          # the runner; the remote shell receives a fully-resolved script.
+          # btp-compose (Ansible-rendered, /usr/local/bin) derives PHP_IMAGE /
+          # PWA_IMAGE / PROVISIONER_IMAGE from the tag just checked out, and
+          # passes the prod env file Ansible renders OUTSIDE the checkout, which
+          # `git checkout --force` would otherwise clobber with the repo's
+          # versioned `.env` (dev defaults).
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
           cd "${repo_dir}"
           git fetch --tags --force
-          git checkout --force "${TAG}"
-          docker compose --env-file "${env_file}" -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+          git checkout --force "refs/tags/${TAG}"
+          btp-compose up -d --pull always
           EOF
 
   smoke-test:

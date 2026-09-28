@@ -45,7 +45,7 @@ In the OCI console:
     - Provision a fresh `VM.Standard.A1.Flex` (Ubuntu ARM64, 4 OCPU / 24 GB) with **no public IP**. On `Out of host capacity`, retry or change availability domain or region. First SSH via the OCI serial console or a temporary public IP.
     - From a workstation, in `ansible/`: `ansible-galaxy collection install -r requirements.yml`, then `ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`. This reinstalls Docker, Traefik, cloudflared, the shared Valhalla and PG-reference, the prod env file, both keypairs and the backup timer. See [`ansible/README.md`](../../ansible/README.md).
     - Seed the routing graph: `make routing-publish deploy@<vm-host> <slug> [slug...]` from a workstation that holds a built graph (see [valhalla-routing-graph.md](valhalla-routing-graph.md)), or ship the tar, set `valhalla_tiles_tar` in `group_vars/all.yml` and re-run the playbook.
-    - Deploy the app: re-run GHA `deploy-prod` for the current tag, or run `/opt/bike-trip-planner/deploy-prod.sh <tag>` on the VM.
+    - Deploy the app: re-run GHA `deploy-prod` for the current tag, or run `/opt/bike-trip-planner/deploy-prod.sh <tag>` on the VM. The fresh clone is on `main`, and `btp-compose` (every prod compose call) refuses to run until this step has put it on a release tag.
     - Restore PG-app from the latest backup: follow the restore procedure in [ADR-062](../adr/adr-062-backup-and-disaster-recovery.md#restore-procedure) (the `age` private key is in Bitwarden, see [secrets-inventory.md](secrets-inventory.md#bootstrap-total-loss)).
     - PG-reference is not backed up: it is reproducible by re-opening each zone (see [zone-opening.md](zone-opening.md)).
     - Update the `SSH_HOST` / `SSH_KNOWN_HOSTS` GitHub secrets if the host changed.

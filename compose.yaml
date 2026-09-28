@@ -541,7 +541,8 @@ services:
     # `prod` and `dev` build targets never reuse each other's image. Without it
     # both targets resolved to the same default tag, which is why recette needed a
     # forced `--build` to avoid running a `dev` image with an empty bind-mounted /app.
-    image: bike-trip-planner-provisioner:prod
+    # Prod overrides it with the GHCR image of the release tag (btp-compose).
+    image: ${PROVISIONER_IMAGE:-bike-trip-planner-provisioner:prod}
     build:
       context: ./
       dockerfile: .docker/provisioner/Dockerfile

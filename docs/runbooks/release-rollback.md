@@ -5,11 +5,6 @@ each image to its 10 most recent versions but never deletes a `vX.Y.Z` one, so e
 a rollback target. Rollback redeploys a previous tag; Doctrine migrations are not rolled back
 automatically.
 
-> **Known gap.** `deploy-prod` checks out the tag but does not pass image tags to compose: the
-> images come from `PHP_IMAGE` / `PWA_IMAGE` in `/etc/bike-trip-planner/app.env`, which
-> `ansible/group_vars/all.yml` sets to `:latest`, a tag `build-images` never pushes. Until the
-> deploy pins images per tag, use the VM path below, which sets them explicitly.
-
 ## Symptoms
 
 - Post-deploy smoke test failed (`/api/healthz` or `/api/health` red after a deploy; an
@@ -36,21 +31,16 @@ Check the Sentry releases page: confirm the new release is associated with the s
 
 ## Procedure
 
-1. **Redeploy the previous tag** (images already on GHCR, no rebuild). On the VM:
+1. **Redeploy the previous tag** (images already on GHCR, no rebuild). Either re-run the
+    `deploy-prod` job of the previous tag's `Deploy` run, or on the VM:
 
     ```bash
-    cd /opt/bike-trip-planner
-    git fetch --tags --force
-    git checkout --force <previous-tag>
-    PHP_IMAGE=ghcr.io/vincentchalamon/bike-trip-planner-php:<previous-tag> \
-    PWA_IMAGE=ghcr.io/vincentchalamon/bike-trip-planner-pwa:<previous-tag> \
-      docker compose --env-file /etc/bike-trip-planner/app.env -p prod \
-        -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+    /opt/bike-trip-planner/deploy-prod.sh <previous-tag>
     ```
 
-    Shell variables take precedence over `--env-file`, so this pins both images to the tag.
-    Re-running the `deploy-prod` job of the previous tag's `Deploy` run checks out that tag,
-    but see the known gap above for the images.
+    Both check out the tag and roll the stack through `btp-compose`, which derives
+    `PHP_IMAGE` / `PWA_IMAGE` / `PROVISIONER_IMAGE` from the tag the checkout is on: the
+    images always belong to the release whose compose files run them.
 
 2. **Verify the smoke test**:
 
