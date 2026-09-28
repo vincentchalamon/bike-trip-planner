@@ -727,9 +727,13 @@ jobs:
         # The /s/{code} page fetches the share server-side, out of page.route()'s
         # reach, so the Playwright globalSetup seeds a real one through the API
         # (pwa/tests/fixtures/shared-trip-seed.ts) with this token. It lives 15
-        # minutes (lexik token_ttl), hence minted right before the run.
+        # minutes (lexik token_ttl), hence minted right before the run. Like the
+        # smoke user, tolerate only "already exists" (reruns).
         run: |
-          docker compose exec -T php bin/console app:create-user e2e-share@example.com --no-invite
+          set -o pipefail
+          if ! docker compose exec -T php bin/console app:create-user e2e-share@example.com --no-invite 2>&1 | tee /tmp/create-share-user.log; then
+            grep -q 'already exists' /tmp/create-share-user.log
+          fi
           token=$(docker compose exec -T php bin/console lexik:jwt:generate-token e2e-share@example.com | tr -d '[:space:]')
           test -n "$token"
           echo "::add-mask::$token"
@@ -830,9 +834,13 @@ jobs:
         # The /s/{code} page fetches the share server-side, out of page.route()'s
         # reach, so the Playwright globalSetup seeds a real one through the API
         # (pwa/tests/fixtures/shared-trip-seed.ts) with this token. It lives 15
-        # minutes (lexik token_ttl), hence minted right before the run.
+        # minutes (lexik token_ttl), hence minted right before the run. Like the
+        # smoke user, tolerate only "already exists" (reruns).
         run: |
-          docker compose exec -T php bin/console app:create-user e2e-share@example.com --no-invite
+          set -o pipefail
+          if ! docker compose exec -T php bin/console app:create-user e2e-share@example.com --no-invite 2>&1 | tee /tmp/create-share-user.log; then
+            grep -q 'already exists' /tmp/create-share-user.log
+          fi
           token=$(docker compose exec -T php bin/console lexik:jwt:generate-token e2e-share@example.com | tr -d '[:space:]')
           test -n "$token"
           echo "::add-mask::$token"
