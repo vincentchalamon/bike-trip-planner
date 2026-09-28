@@ -18,6 +18,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Liveness and readiness probes for orchestration (Coolify, Uptime Kuma, smoke tests).
@@ -58,7 +59,9 @@ final readonly class HealthController
         private HttpClientInterface $valhallaClient,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,
+        #[Target('health_liveness')]
         private RateLimiterFactoryInterface $healthLivenessLimiter,
+        #[Target('health_readiness')]
         private RateLimiterFactoryInterface $healthReadinessLimiter,
         private ClockInterface $clock,
         private RedisHealthClientFactory $redisClientFactory,

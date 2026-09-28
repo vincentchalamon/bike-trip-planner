@@ -12,6 +12,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * A ceiling on `/mcp` per address, for what no other limiter can see.
@@ -34,6 +35,7 @@ use App\RateLimiter\RetryAfter;
 final readonly class McpEnvelopeThrottleListener
 {
     public function __construct(
+        #[Target('mcp_envelope')]
         private RateLimiterFactoryInterface $mcpEnvelopeLimiter,
         private ClockInterface $clock,
     ) {

@@ -9,6 +9,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * The one place that decides how often this deployment may call Nominatim.
@@ -30,6 +31,7 @@ final readonly class NominatimThrottle
 {
     public function __construct(
         private Security $security,
+        #[Target('geocode')]
         private RateLimiterFactoryInterface $geocodeLimiter,
         private ClockInterface $clock,
     ) {

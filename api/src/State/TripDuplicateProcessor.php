@@ -23,6 +23,7 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Duplicates an existing trip (deep clone: TripRequest + all Stage entities).
@@ -39,6 +40,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
+        #[Target('trip_duplicate')]
         private RateLimiterFactoryInterface $tripDuplicateLimiter,
         private ClockInterface $clock,
         private Idempotency $idempotency,

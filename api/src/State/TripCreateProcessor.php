@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * @implements ProcessorInterface<TripRequest, Trip>
@@ -34,6 +35,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripBootstrapper $bootstrapper,
         private TripLocker $tripLocker,
         private Security $security,
+        #[Target('trip_create')]
         private RateLimiterFactoryInterface $tripCreateLimiter,
         private Idempotency $idempotency,
     ) {

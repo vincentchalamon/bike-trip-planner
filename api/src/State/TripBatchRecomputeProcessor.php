@@ -26,6 +26,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Processes the batch recompute endpoint: applies N pending modifications in a
@@ -52,6 +53,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
         private TripLocker $tripLocker,
+        #[Target('trip_recompute')]
         private RateLimiterFactoryInterface $tripRecomputeLimiter,
         private ClockInterface $clock,
     ) {

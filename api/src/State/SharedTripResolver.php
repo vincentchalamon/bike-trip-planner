@@ -13,6 +13,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * The one door into a shared trip: resolve the short code, or answer 404.
@@ -35,6 +36,7 @@ final readonly class SharedTripResolver
     public function __construct(
         private TripShareRepositoryInterface $tripShareRepository,
         private RequestStack $requestStack,
+        #[Target('shared_trip')]
         private RateLimiterFactoryInterface $sharedTripLimiter,
         private ClockInterface $clock,
     ) {

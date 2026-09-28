@@ -18,6 +18,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Handles `POST /trips/{id}/nearby-pois`: runs the AI-free in-ride orchestrator
@@ -35,6 +36,7 @@ final readonly class NearbyPoiSearchProcessor implements ProcessorInterface
     public function __construct(
         private NearbyPoiFinder $finder,
         private Security $security,
+        #[Target('nearby_pois')]
         private RateLimiterFactoryInterface $nearbyPoisLimiter,
         private ClockInterface $clock,
     ) {

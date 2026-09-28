@@ -19,6 +19,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * How much an agent may ask for: counted per call, not per HTTP request.
@@ -53,7 +54,9 @@ final readonly class McpCallBudget implements RequestHandlerInterface
         private RequestHandlerInterface $inner,
         private McpToolScopes $toolScopes,
         private TokenStorageInterface $tokenStorage,
+        #[Target('mcp_tool_call')]
         private RateLimiterFactoryInterface $mcpToolCallLimiter,
+        #[Target('mcp_mutation')]
         private RateLimiterFactoryInterface $mcpMutationLimiter,
         private ClockInterface $clock,
     ) {

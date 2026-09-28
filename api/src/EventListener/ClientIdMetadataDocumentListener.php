@@ -24,6 +24,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Materialises a client that named itself by a URL, so league can find it (ADR-079).
@@ -50,7 +51,9 @@ final readonly class ClientIdMetadataDocumentListener
         private ClientMetadataResolver $resolver,
         private ClientManagerInterface $clients,
         private Security $security,
+        #[Target('oauth_client_metadata_user')]
         private RateLimiterFactoryInterface $oauthClientMetadataUserLimiter,
+        #[Target('oauth_client_metadata_host')]
         private RateLimiterFactoryInterface $oauthClientMetadataHostLimiter,
         private ClockInterface $clock,
     ) {

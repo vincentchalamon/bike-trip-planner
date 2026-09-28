@@ -26,6 +26,7 @@ use Twig\Environment;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Handles access request creation: rate limiting, email deduplication, HMAC link generation and email sending.
@@ -47,6 +48,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
         private AccessRequestHmacService $hmacService,
+        #[Target('access_request_ip')]
         private RateLimiterFactoryInterface $accessRequestIpLimiter,
         private ClockInterface $clock,
         #[Autowire(env: 'FRONTEND_URL')]

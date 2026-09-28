@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * GDPR right to portability: exports the current user's data as a downloadable
@@ -29,6 +30,7 @@ final readonly class AccountExportProvider implements ProviderInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private Security $security,
+        #[Target('account_export')]
         private RateLimiterFactoryInterface $accountExportLimiter,
         private ClockInterface $clock,
     ) {

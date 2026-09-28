@@ -12,6 +12,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Bounds the two OAuth endpoints (ADR-079).
@@ -30,7 +31,9 @@ use App\RateLimiter\RetryAfter;
 final readonly class OAuthEndpointThrottleListener
 {
     public function __construct(
+        #[Target('oauth_token')]
         private RateLimiterFactoryInterface $oauthTokenLimiter,
+        #[Target('oauth_authorize')]
         private RateLimiterFactoryInterface $oauthAuthorizeLimiter,
         private ClockInterface $clock,
         private Security $security,

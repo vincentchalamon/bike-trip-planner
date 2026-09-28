@@ -17,6 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Handles direct GPX file uploads, bypassing the URL-based route fetching pipeline.
@@ -31,6 +32,7 @@ final readonly class GpxUploadController
     public function __construct(
         private GpxUploadServiceInterface $gpxUploadService,
         private Security $security,
+        #[Target('gpx_upload')]
         private RateLimiterFactoryInterface $gpxUploadLimiter,
         private ClockInterface $clock,
         private LoggerInterface $logger,

@@ -26,6 +26,7 @@ use Twig\Environment;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Requests an email change (#777): validates the new address, creates a
@@ -49,7 +50,9 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         private TranslatorInterface $translator,
         private LoggerInterface $logger,
         private RequestStack $requestStack,
+        #[Target('email_change_user')]
         private RateLimiterFactoryInterface $emailChangeUserLimiter,
+        #[Target('email_change_ip')]
         private RateLimiterFactoryInterface $emailChangeIpLimiter,
         private ClockInterface $clock,
         #[Autowire(env: 'FRONTEND_URL')]
