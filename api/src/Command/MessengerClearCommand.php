@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Interact;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Completion\CompletionInput;
-use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Transport\Receiver\ReceiverInterface;
@@ -27,58 +25,28 @@ use Symfony\Contracts\Service\ServiceProviderInterface;
     name: 'app:messenger:clear',
     description: 'Clear messages from one or more Messenger transports',
 )]
-final class MessengerClearCommand extends Command
+final readonly class MessengerClearCommand
 {
     /**
      * @param ServiceProviderInterface<ReceiverInterface> $receiverLocator
      */
     public function __construct(
         #[Autowire(service: 'messenger.receiver_locator')]
-        private readonly ServiceProviderInterface $receiverLocator,
+        private ServiceProviderInterface $receiverLocator,
     ) {
-        parent::__construct();
     }
 
-    #[\Override]
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('transports', InputArgument::IS_ARRAY | InputArgument::OPTIONAL, 'Transport names to clear')
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Clear all configured transports');
-    }
-
-    #[\Override]
-    protected function interact(InputInterface $input, OutputInterface $output): void
-    {
-        /** @var string[] $transports */
-        $transports = $input->getArgument('transports');
-
-        if ([] !== $transports || $input->getOption('all')) {
-            return;
-        }
-
-        $availableTransports = array_keys($this->receiverLocator->getProvidedServices());
-
-        if ([] === $availableTransports) {
-            return;
-        }
-
-        $io = new SymfonyStyle($input, $output);
-
-        $chosen = $io->choice('Which transport do you want to clear?', $availableTransports);
-        $input->setArgument('transports', [$chosen]);
-    }
-
-    #[\Override]
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        /** @var string[] $transports */
-        $transports = $input->getArgument('transports');
-        $all = $input->getOption('all');
-
-        $availableNames = array_keys($this->receiverLocator->getProvidedServices());
+    /**
+     * @param list<string> $transports
+     */
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Argument('Transport names to clear', suggestedValues: [self::class, 'transportNames'])]
+        array $transports = [],
+        #[Option('Clear all configured transports')]
+        bool $all = false,
+    ): int {
+        $availableNames = $this->transportNames();
 
         if ($all && [] !== $transports) {
             $io->error('You cannot combine --all with explicit transport names.');
@@ -118,12 +86,29 @@ final class MessengerClearCommand extends Command
         return Command::SUCCESS;
     }
 
-    #[\Override]
-    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    #[Interact]
+    public function chooseTransport(InputInterface $input, SymfonyStyle $io): void
     {
-        if ($input->mustSuggestArgumentValuesFor('transports')) {
-            $suggestions->suggestValues(array_keys($this->receiverLocator->getProvidedServices()));
+        if ([] !== $input->getArgument('transports') || $input->getOption('all')) {
+            return;
         }
+
+        $availableTransports = $this->transportNames();
+
+        if ([] === $availableTransports) {
+            return;
+        }
+
+        $chosen = $io->choice('Which transport do you want to clear?', $availableTransports);
+        $input->setArgument('transports', [$chosen]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function transportNames(): array
+    {
+        return array_keys($this->receiverLocator->getProvidedServices());
     }
 
     private function drainTransport(ReceiverInterface $transport): int

@@ -6,10 +6,8 @@ namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
 use Symfony\Component\Process\Process;
@@ -38,7 +36,7 @@ use Symfony\Component\Process\Process;
     name: 'events-refresh',
     description: 'Refresh the events layer for every open zone: re-import the feeds and purge past events',
 )]
-final class EventsRefreshCommand extends Command
+final readonly class EventsRefreshCommand
 {
     private const string DEFAULT_DATATOURISME_DIR = '/data/datatourisme';
 
@@ -50,45 +48,41 @@ final class EventsRefreshCommand extends Command
 
     private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
 
-    private readonly ProvisionerLog $log;
+    private ProvisionerLog $log;
 
-    private readonly RunLock $lock;
+    private RunLock $lock;
 
-    private readonly ProcessRunner $processes;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql factory for zone discovery; defaults to a real {@see Process}
      * @param string|null                            $today          the purge boundary as `YYYY-MM-DD`; defaults to today in Europe/Paris
      */
     public function __construct(
-        private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
-        private readonly ?DataTourismeImporter $dataTourismeImporter = null,
-        private readonly string $openAgendaDir = self::DEFAULT_OPENAGENDA_DIR,
-        private readonly ?OpenAgendaImporter $openAgendaImporter = null,
-        private readonly string $workDir = self::DEFAULT_WORK_DIR,
-        private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
-        private readonly string $logFile = self::DEFAULT_LOG_FILE,
+        private string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
+        private ?DataTourismeImporter $dataTourismeImporter = null,
+        private string $openAgendaDir = self::DEFAULT_OPENAGENDA_DIR,
+        private ?OpenAgendaImporter $openAgendaImporter = null,
+        private string $workDir = self::DEFAULT_WORK_DIR,
+        private string $lockFile = self::DEFAULT_LOCK_FILE,
+        private string $logFile = self::DEFAULT_LOG_FILE,
         ?\Closure $processFactory = null,
-        private readonly ?string $today = null,
-        private readonly float $timeoutSeconds = 60.0,
+        private ?string $today = null,
+        private float $timeoutSeconds = 60.0,
     ) {
-        parent::__construct();
-
         $this->log = new ProvisionerLog($this->logFile);
         $this->lock = new RunLock($this->lockFile, $this->log);
 
         $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
-    protected function configure(): void
-    {
-        $this->addOption('zone', null, InputOption::VALUE_REQUIRED, 'Refresh a single open zone instead of all of them');
-        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'List the open zones and the purge date without importing anything');
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Option('Refresh a single open zone instead of all of them', name: 'zone')]
+        ?string $zoneOption = null,
+        #[Option('List the open zones and the purge date without importing anything')]
+        bool $dryRun = false,
+    ): int {
         $io->title('Events refresh');
 
         $today = $this->today ?? DataTourismeImporter::today();
@@ -104,8 +98,7 @@ final class EventsRefreshCommand extends Command
                 return Command::FAILURE;
             }
 
-            $zoneOption = $input->getOption('zone');
-            if (\is_string($zoneOption) && '' !== $zoneOption) {
+            if (null !== $zoneOption && '' !== $zoneOption) {
                 if (!\in_array($zoneOption, $zones, true)) {
                     $this->log->fail($io, \sprintf('Zone "%s" is not open. Open zones: %s.', $zoneOption, [] === $zones ? 'none' : implode(', ', $zones)));
 
@@ -123,7 +116,7 @@ final class EventsRefreshCommand extends Command
 
             $io->writeln(\sprintf('  Zones: %s.', implode(', ', $zones)));
 
-            if ((bool) $input->getOption('dry-run')) {
+            if ($dryRun) {
                 $io->note('Dry run — nothing downloaded, nothing written.');
 
                 return Command::SUCCESS;
