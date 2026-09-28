@@ -6,10 +6,8 @@ namespace App\Command;
 
 use App\Repository\AccessRequestRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -22,71 +20,44 @@ use Symfony\Component\Console\Style\SymfonyStyle;
     name: 'app:access-request:list',
     description: 'List verified access requests',
 )]
-final class AccessRequestListCommand extends Command
+final readonly class AccessRequestListCommand
 {
     public function __construct(
-        private readonly AccessRequestRepository $accessRequestRepository,
+        private AccessRequestRepository $accessRequestRepository,
     ) {
-        parent::__construct();
     }
 
-    #[\Override]
-    protected function configure(): void
-    {
-        $this
-            ->addOption('before', null, InputOption::VALUE_REQUIRED, 'Filter requests verified before this date (ISO 8601)')
-            ->addOption('after', null, InputOption::VALUE_REQUIRED, 'Filter requests verified after this date (ISO 8601)')
-            ->addOption('email', null, InputOption::VALUE_REQUIRED, 'Filter by email pattern (substring match)')
-            ->addOption('page', null, InputOption::VALUE_REQUIRED, 'Page number (default: 1)', '1')
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Results per page (default: 20)', '20');
-    }
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Option('Filter requests verified before this date (ISO 8601)')]
+        ?string $before = null,
+        #[Option('Filter requests verified after this date (ISO 8601)')]
+        ?string $after = null,
+        #[Option('Filter by email pattern (substring match)')]
+        ?string $email = null,
+        #[Option('Page number (default: 1)')]
+        string $page = '1',
+        #[Option('Results per page (default: 20)')]
+        string $limit = '20',
+    ): int {
+        try {
+            $beforeDate = $this->parseDate('before', $before);
+            $afterDate = $this->parseDate('after', $after);
+        } catch (\InvalidArgumentException $invalidArgumentException) {
+            $io->error($invalidArgumentException->getMessage());
 
-    #[\Override]
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        $before = null;
-        $after = null;
-
-        $beforeStr = $input->getOption('before');
-        if (\is_string($beforeStr) && '' !== $beforeStr) {
-            $before = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $beforeStr)
-                ?: \DateTimeImmutable::createFromFormat('Y-m-d', $beforeStr) ?: null;
-
-            if (null === $before) {
-                $io->error(\sprintf('Invalid --before date format: %s. Expected ISO 8601 (e.g. 2026-01-15 or 2026-01-15T00:00:00+00:00).', $beforeStr));
-
-                return Command::FAILURE;
-            }
+            return Command::FAILURE;
         }
 
-        $afterStr = $input->getOption('after');
-        if (\is_string($afterStr) && '' !== $afterStr) {
-            $after = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $afterStr)
-                ?: \DateTimeImmutable::createFromFormat('Y-m-d', $afterStr) ?: null;
-
-            if (null === $after) {
-                $io->error(\sprintf('Invalid --after date format: %s. Expected ISO 8601 (e.g. 2026-01-15 or 2026-01-15T00:00:00+00:00).', $afterStr));
-
-                return Command::FAILURE;
-            }
-        }
-
-        $emailPattern = $input->getOption('email');
-        if (!\is_string($emailPattern) || '' === $emailPattern) {
-            $emailPattern = null;
-        }
-
-        $page = max(1, (int) $input->getOption('page'));
-        $limit = max(1, min(100, (int) $input->getOption('limit')));
+        $pageNumber = max(1, (int) $page);
+        $pageSize = max(1, min(100, (int) $limit));
 
         $requests = $this->accessRequestRepository->findVerified(
-            before: $before,
-            after: $after,
-            emailPattern: $emailPattern,
-            page: $page,
-            limit: $limit,
+            before: $beforeDate,
+            after: $afterDate,
+            emailPattern: '' === $email ? null : $email,
+            page: $pageNumber,
+            limit: $pageSize,
         );
 
         if ([] === $requests) {
@@ -111,8 +82,22 @@ final class AccessRequestListCommand extends Command
             $rows,
         );
 
-        $io->success(\sprintf('Found %d verified access request(s) (page %d, limit %d).', \count($requests), $page, $limit));
+        $io->success(\sprintf('Found %d verified access request(s) (page %d, limit %d).', \count($requests), $pageNumber, $pageSize));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @throws \InvalidArgumentException when the value is neither ATOM nor Y-m-d
+     */
+    private function parseDate(string $option, ?string $value): ?\DateTimeImmutable
+    {
+        if (null === $value || '' === $value) {
+            return null;
+        }
+
+        return \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $value)
+            ?: \DateTimeImmutable::createFromFormat('Y-m-d', $value)
+            ?: throw new \InvalidArgumentException(\sprintf('Invalid --%s date format: %s. Expected ISO 8601 (e.g. 2026-01-15 or 2026-01-15T00:00:00+00:00).', $option, $value));
     }
 }

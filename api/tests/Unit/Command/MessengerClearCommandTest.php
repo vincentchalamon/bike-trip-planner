@@ -7,7 +7,9 @@ namespace App\Tests\Unit\Command;
 use App\Command\MessengerClearCommand;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Tester\CommandCompletionTester;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Messenger\Envelope;
@@ -177,6 +179,19 @@ final class MessengerClearCommandTest extends TestCase
 
         $this->assertSame(Command::FAILURE, $exitCode);
         $this->assertStringContainsString('cannot combine --all', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function completesTransportNames(): void
+    {
+        $application = new Application();
+        $command = $application->addCommand(new MessengerClearCommand($this->createReceiverLocator([
+            'async' => $this->createStub(ReceiverInterface::class),
+            'failed' => $this->createStub(ReceiverInterface::class),
+        ])));
+        \assert($command instanceof Command);
+
+        $this->assertSame(['async', 'failed'], new CommandCompletionTester($command)->complete(['']));
     }
 
     #[Test]

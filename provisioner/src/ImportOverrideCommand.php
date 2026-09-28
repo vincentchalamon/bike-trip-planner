@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -26,48 +24,42 @@ use Symfony\Component\Console\Style\SymfonyStyle;
     name: 'provision-override',
     description: 'Import an operator-supplied override.tsv into the live reference tables',
 )]
-final class ImportOverrideCommand extends Command
+final readonly class ImportOverrideCommand
 {
     private const string DEFAULT_ZONES_DIR = '/data/zones';
 
-    private readonly OverrideImporter $importer;
+    private OverrideImporter $importer;
 
     public function __construct(
-        private readonly string $zonesDir = self::DEFAULT_ZONES_DIR,
+        private string $zonesDir = self::DEFAULT_ZONES_DIR,
         ?OverrideImporter $importer = null,
     ) {
-        parent::__construct();
-
         $this->importer = $importer ?? new OverrideImporter();
     }
 
-    protected function configure(): void
-    {
-        $this->addArgument('zone', InputArgument::OPTIONAL, 'Geofabrik slug of the zone the corrections belong to');
-        $this->addArgument('file', InputArgument::OPTIONAL, 'Path to the override.tsv; defaults to /data/zones/<zone>/override.tsv');
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
+    public function __invoke(
+        SymfonyStyle $io,
+        // Optional at the console level, like `provision <zone>` (ADR-049): validating it here
+        // buys the list of known zones in the error, which "Not enough arguments" cannot give.
+        #[Argument('Geofabrik slug of the zone the corrections belong to', name: 'zone')]
+        ?string $zoneArgument = null,
+        #[Argument('Path to the override.tsv; defaults to /data/zones/<zone>/override.tsv', name: 'file')]
+        ?string $fileArgument = null,
+    ): int {
         $io->title('Reference override import');
 
-        $zoneArgument = $input->getArgument('zone');
-        $zone = \is_string($zoneArgument) ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
+        $zone = null !== $zoneArgument ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
 
         if (null === $zone) {
             $io->error(\sprintf(
-                'A zone is required: `make provision-override <zone> [file]`.%s%sKnown zones: %s',
-                \is_string($zoneArgument) && '' !== trim($zoneArgument) ? \sprintf(' "%s" is not a known zone.', $zoneArgument) : '',
-                \PHP_EOL,
-                implode(', ', GeofabrikRegionRegistry::slugs()),
+                'A zone is required: `make provision-override <zone> [file]`.%s',
+                GeofabrikRegionRegistry::unresolvedZoneHint($zoneArgument),
             ));
 
             return Command::FAILURE;
         }
 
-        $fileArgument = $input->getArgument('file');
-        $file = \is_string($fileArgument) && '' !== trim($fileArgument)
+        $file = null !== $fileArgument && '' !== trim($fileArgument)
             ? $fileArgument
             : \sprintf('%s/%s/override.tsv', $this->zonesDir, $zone['slug']);
 

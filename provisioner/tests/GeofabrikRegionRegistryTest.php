@@ -113,6 +113,16 @@ final class GeofabrikRegionRegistryTest extends TestCase
     }
 
     #[Test]
+    public function unresolvedZoneHintNamesTheRefusedValueOnlyWhenOneWasGiven(): void
+    {
+        $known = "\nKnown zones: ".implode(', ', GeofabrikRegionRegistry::slugs());
+
+        self::assertSame(' "atlantis" is not a known zone.'.$known, GeofabrikRegionRegistry::unresolvedZoneHint('atlantis'));
+        self::assertSame($known, GeofabrikRegionRegistry::unresolvedZoneHint(null));
+        self::assertSame($known, GeofabrikRegionRegistry::unresolvedZoneHint('  '));
+    }
+
+    #[Test]
     public function downloadUrlProducesValidGeofabrikUrl(): void
     {
         $url = GeofabrikRegionRegistry::downloadUrl('nord-pas-de-calais');

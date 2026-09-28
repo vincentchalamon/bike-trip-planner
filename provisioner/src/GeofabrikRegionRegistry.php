@@ -94,6 +94,19 @@ final class GeofabrikRegionRegistry
     }
 
     /**
+     * What follows "a zone is required" when the zone argument resolves to nothing: the
+     * refused value, if one was given, and the zones that would have been accepted.
+     */
+    public static function unresolvedZoneHint(?string $zone): string
+    {
+        return \sprintf(
+            "%s\nKnown zones: %s",
+            null !== $zone && '' !== trim($zone) ? \sprintf(' "%s" is not a known zone.', $zone) : '',
+            implode(', ', self::slugs()),
+        );
+    }
+
+    /**
      * @return list<string>
      */
     public static function slugs(): array

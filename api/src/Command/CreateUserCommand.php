@@ -10,12 +10,10 @@ use App\Entity\User;
 use App\Repository\AccessRequestRepository;
 use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
@@ -31,39 +29,31 @@ use Twig\Environment;
     name: 'app:create-user',
     description: 'Create a new user and send an invitation email',
 )]
-final class CreateUserCommand extends Command
+final readonly class CreateUserCommand
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly MagicLinkRepository $magicLinkRepository,
-        private readonly AccessRequestRepository $accessRequestRepository,
-        private readonly MailerInterface $mailer,
-        private readonly Environment $twig,
-        private readonly TranslatorInterface $translator,
+        private EntityManagerInterface $entityManager,
+        private MagicLinkRepository $magicLinkRepository,
+        private AccessRequestRepository $accessRequestRepository,
+        private MailerInterface $mailer,
+        private Environment $twig,
+        private TranslatorInterface $translator,
         #[Autowire(env: 'FRONTEND_URL')]
-        private readonly string $frontendUrl = 'https://localhost',
+        private string $frontendUrl = 'https://localhost',
     ) {
-        parent::__construct();
     }
 
-    #[\Override]
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
-            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr')
-            ->addOption('no-invite', null, InputOption::VALUE_NONE, 'Create the user without an invitation magic link or email (e.g. so a caller can drive /auth/request-link itself)');
-    }
-
-    #[\Override]
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        $email = $input->getArgument('email');
-
-        if (!\is_string($email) || '' === $email || !filter_var($email, \FILTER_VALIDATE_EMAIL)) {
-            $io->error(\sprintf('Invalid email address: %s', (string) $email));
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Argument('Email address of the new user')]
+        string $email,
+        #[Option('Locale for the invitation email', shortcut: 'l')]
+        string $locale = 'fr',
+        #[Option('Create the user without an invitation magic link or email (e.g. so a caller can drive /auth/request-link itself)')]
+        bool $noInvite = false,
+    ): int {
+        if ('' === $email || !filter_var($email, \FILTER_VALIDATE_EMAIL)) {
+            $io->error(\sprintf('Invalid email address: %s', $email));
 
             return Command::FAILURE;
         }
@@ -75,9 +65,6 @@ final class CreateUserCommand extends Command
 
             return Command::FAILURE;
         }
-
-        $locale = $input->getOption('locale');
-        \assert(\is_string($locale));
 
         if (!\in_array($locale, User::SUPPORTED_LOCALES, true)) {
             $io->error(\sprintf('Unsupported locale: %s. Supported locales: %s', $locale, implode(', ', User::SUPPORTED_LOCALES)));
@@ -99,7 +86,7 @@ final class CreateUserCommand extends Command
         // --no-invite: create the account only. An invitation magic link stays active
         // for 30 min and short-circuits AuthRequestLinkProcessor (hasActiveLinkForUser),
         // so a caller wanting to exercise /auth/request-link itself must skip it here.
-        if (true === $input->getOption('no-invite')) {
+        if ($noInvite) {
             $this->entityManager->flush();
             $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
             $io->info('Skipped invitation (--no-invite): no magic link created or emailed.');

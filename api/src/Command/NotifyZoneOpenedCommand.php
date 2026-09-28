@@ -6,12 +6,10 @@ namespace App\Command;
 
 use App\Notification\ZoneOpeningNotifier;
 use Doctrine\DBAL\Connection;
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -28,32 +26,22 @@ use Symfony\Component\Console\Style\SymfonyStyle;
     name: 'app:notifications:zone-opened',
     description: 'Announce a newly opened reference zone to opted-in users',
 )]
-final class NotifyZoneOpenedCommand extends Command
+final readonly class NotifyZoneOpenedCommand
 {
     public function __construct(
-        private readonly ZoneOpeningNotifier $notifier,
-        private readonly Connection $referenceConnection,
+        private ZoneOpeningNotifier $notifier,
+        private Connection $referenceConnection,
     ) {
-        parent::__construct();
     }
 
-    #[\Override]
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('slug', InputArgument::REQUIRED, 'Zone slug as promoted in osm.zones (e.g. corse)')
-            ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Display name (defaults to the osm.zones name for the slug)');
-    }
-
-    #[\Override]
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-        $slug = $input->getArgument('slug');
-        \assert(\is_string($slug));
-
-        $name = $input->getOption('name');
-        if (!\is_string($name) || '' === $name) {
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Argument('Zone slug as promoted in osm.zones (e.g. corse)')]
+        string $slug,
+        #[Option('Display name (defaults to the osm.zones name for the slug)')]
+        ?string $name = null,
+    ): int {
+        if (null === $name || '' === $name) {
             $name = $this->lookupZoneName($slug);
         }
 

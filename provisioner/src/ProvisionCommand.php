@@ -6,12 +6,10 @@ namespace Provisioner;
 
 use Provisioner\Exception\DownloadFailedException;
 use Provisioner\Exception\ImportFailedException;
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -37,7 +35,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
     name: 'provision',
     description: 'Open one OSM reference zone: download its extract and promote it into the PostGIS reference index',
 )]
-final class ProvisionCommand extends Command
+final readonly class ProvisionCommand
 {
     private const string DEFAULT_REGIONS_DIR = '/data/regions';
 
@@ -58,37 +56,35 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
 
-    private readonly ProvisionerLog $log;
+    private ProvisionerLog $log;
 
-    private readonly RunLock $lock;
+    private RunLock $lock;
 
-    private readonly OsmDataDownloader $downloader;
+    private OsmDataDownloader $downloader;
 
-    private readonly PostgisImporter $postgisImporter;
+    private PostgisImporter $postgisImporter;
 
-    private readonly RoutingPerimeter $routingPerimeter;
+    private RoutingPerimeter $routingPerimeter;
 
-    private readonly PromotionReport $promotionReport;
+    private PromotionReport $promotionReport;
 
     public function __construct(
-        private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
+        private string $regionsDir = self::DEFAULT_REGIONS_DIR,
         ?OsmDataDownloader $downloader = null,
-        private readonly string $filteredPbf = self::DEFAULT_FILTERED_PBF,
+        private string $filteredPbf = self::DEFAULT_FILTERED_PBF,
         ?PostgisImporter $postgisImporter = null,
-        private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
+        private string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
         // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
-        private readonly ?DataTourismeImporter $dataTourismeImporter = null,
-        private readonly string $openAgendaDir = self::DEFAULT_OPENAGENDA_DIR,
+        private ?DataTourismeImporter $dataTourismeImporter = null,
+        private string $openAgendaDir = self::DEFAULT_OPENAGENDA_DIR,
         // Built lazily in resolveOpenAgendaImporter() from OPENAGENDA_* env when not injected.
-        private readonly ?OpenAgendaImporter $openAgendaImporter = null,
-        private readonly string $zonesDir = self::DEFAULT_ZONES_DIR,
-        private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
-        private readonly string $logFile = self::DEFAULT_LOG_FILE,
+        private ?OpenAgendaImporter $openAgendaImporter = null,
+        private string $zonesDir = self::DEFAULT_ZONES_DIR,
+        private string $lockFile = self::DEFAULT_LOCK_FILE,
+        private string $logFile = self::DEFAULT_LOG_FILE,
         ?RoutingPerimeter $routingPerimeter = null,
         ?PromotionReport $promotionReport = null,
     ) {
-        parent::__construct();
-
         $this->log = new ProvisionerLog($this->logFile);
         $this->lock = new RunLock($this->lockFile, $this->log);
 
@@ -100,43 +96,38 @@ final class ProvisionCommand extends Command
         $this->promotionReport = $promotionReport ?? new PromotionReport();
     }
 
-    protected function configure(): void
-    {
+    public function __invoke(
+        SymfonyStyle $io,
         // Optional at the console level, required in fact: validating it here buys the
         // list of zones and the routing hint in the error, which "Not enough arguments"
         // cannot give.
-        $this->addArgument('zone', InputArgument::OPTIONAL, 'Geofabrik slug or name of the zone to open (e.g. bretagne)');
-        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded and imported without executing');
+        #[Argument('Geofabrik slug or name of the zone to open (e.g. bretagne)', name: 'zone')]
+        ?string $zoneArgument = null,
+        #[Option('Show what would be downloaded and imported without executing')]
+        bool $dryRun = false,
         // Local development only, and named so that using it in production reads as a
         // mistake. Without it, a dev machine cannot open any zone without first building the
         // national routing graph — hours and ~30 GB — just to work on accommodations. The
         // alternative an operator would otherwise improvise, dropping a fake extract into the
         // routing volume, is worse: `build-routing-graph.sh` skips downloading an extract that
         // is already present, so the next real build would silently build from the fake one.
-        $this->addOption('allow-unrouted-zone', null, InputOption::VALUE_NONE, 'Open the zone even if the routing graph does not cover it (local development; trips there cannot be routed)');
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
+        #[Option('Open the zone even if the routing graph does not cover it (local development; trips there cannot be routed)')]
+        bool $allowUnroutedZone = false,
+    ): int {
         $io->title('OSM Reference Zone Provisioner');
 
-        $zoneArgument = $input->getArgument('zone');
-        $zone = \is_string($zoneArgument) ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
+        $zone = null !== $zoneArgument ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
 
         if (null === $zone) {
             $this->log->fail($io, \sprintf(
-                'A zone is required: `make provision <zone>` opens exactly one (e.g. `make provision bretagne`).%s%s',
-                \is_string($zoneArgument) && '' !== trim($zoneArgument) ? \sprintf(' "%s" is not a known zone.', $zoneArgument) : '',
-                \sprintf("\nKnown zones: %s", implode(', ', GeofabrikRegionRegistry::slugs())),
+                'A zone is required: `make provision <zone>` opens exactly one (e.g. `make provision bretagne`).%s',
+                GeofabrikRegionRegistry::unresolvedZoneHint($zoneArgument),
             ));
 
             return Command::FAILURE;
         }
 
-        $dryRun = (bool) $input->getOption('dry-run');
-
-        if (!$this->assertRoutingCovers($io, $zone['country'], $zone['name'], (bool) $input->getOption('allow-unrouted-zone'))) {
+        if (!$this->assertRoutingCovers($io, $zone['country'], $zone['name'], $allowUnroutedZone)) {
             return Command::FAILURE;
         }
 

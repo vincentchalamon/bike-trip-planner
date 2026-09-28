@@ -8,8 +8,6 @@ use App\Entity\RefreshToken;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -26,19 +24,15 @@ use Symfony\Component\Console\Style\SymfonyStyle;
     name: 'app:purge-expired-tokens',
     description: 'Purge expired refresh tokens from abandoned sessions',
 )]
-final class PurgeExpiredTokensCommand extends Command
+final readonly class PurgeExpiredTokensCommand
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private EntityManagerInterface $entityManager,
     ) {
-        parent::__construct();
     }
 
-    #[\Override]
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function __invoke(SymfonyStyle $io): int
     {
-        $io = new SymfonyStyle($input, $output);
-
         /** @var int $deleted */
         $deleted = $this->entityManager->createQueryBuilder()
             ->delete(RefreshToken::class, 'rt')
