@@ -18,7 +18,7 @@ import {
   toElevationPercent,
   fromElevationPercent,
   getActivePresetKey,
-} from "@/lib/pacing-presets";
+} from "@btp/core/pacing-presets";
 
 interface PacingSettingsProps {
   fatigueFactor: number;

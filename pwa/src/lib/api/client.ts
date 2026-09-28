@@ -120,7 +120,7 @@ function getAuthHeader(): string | undefined {
  * Lightweight wrapper around `fetch` that injects the Accept-Language header
  * and the Authorization bearer token (when available).
  *
- * Used for non-OpenAPI calls (GPX upload, accommodation scan, etc.) where
+ * Used for non-OpenAPI calls (GPX upload, file exports, etc.) where
  * the openapi-fetch middleware pipeline is bypassed.
  */
 export async function apiFetch(
@@ -524,22 +524,14 @@ export async function scanAccommodations(
   radiusKm: number,
   stageId?: string,
 ): Promise<boolean> {
-  // Typed against the generated schema on purpose: this body is hand-assembled, so
-  // without the annotation a renamed field drifts silently past the type contract.
-  const body: components["schemas"]["AccommodationScan.AccommodationScanRequest"] =
+  const { response } = await apiClient.POST(
+    "/trips/{tripId}/accommodations/scan",
     {
-      radiusKm,
-      ...(stageId !== undefined && { stageId }),
-    };
-  const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/ld+json" },
-      body: JSON.stringify(body),
+      params: { path: { tripId } },
+      body: { radiusKm, ...(stageId !== undefined && { stageId }) },
     },
   );
-  return res.ok;
+  return response.ok;
 }
 
 /**
@@ -635,29 +627,6 @@ export async function applyBatchRecompute(
     body: { modifications },
   });
   return response.ok;
-}
-
-/**
- * Trigger the full Phase 2 enrichment pipeline (POIs, weather, terrain, …)
- * for a trip whose stages have been pre-computed during Phase 1.
- *
- * Returns `true` on HTTP 2xx; `false` otherwise.
- *
- * Note: until the OpenAPI schema is regenerated (after #322 lands on main),
- * the `/trips/{id}/analyze` route is not yet exposed via `apiClient.POST`,
- * so this function talks to the server through the lower-level {@link apiFetch}.
- * Once the typegen catches up, this can be swapped for
- * `apiClient.POST("/trips/{id}/analyze", { params: { path: { id } } })`.
- */
-export async function launchTripAnalysis(tripId: string): Promise<boolean> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}/analyze`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/ld+json",
-      Accept: "application/ld+json",
-    },
-  });
-  return res.ok;
 }
 
 /**

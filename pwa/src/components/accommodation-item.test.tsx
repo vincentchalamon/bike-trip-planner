@@ -101,9 +101,9 @@ describe("AccommodationItem edits", () => {
         accommodation={accommodation()}
         onUpdate={onUpdate}
         onRemove={vi.fn()}
-        initialEditing
       />,
     );
+    fireEvent.click(screen.getByLabelText(fr.accommodation.edit));
 
     fireEvent.change(screen.getByLabelText(fr.accommodation.urlLabel), {
       target: { value: typed },
@@ -231,9 +231,9 @@ describe("AccommodationItem type rendering", () => {
         accommodation={accommodation()}
         onUpdate={vi.fn()}
         onRemove={vi.fn()}
-        initialEditing
       />,
     );
+    fireEvent.click(screen.getByLabelText(fr.accommodation.edit));
 
     const select = screen.getByLabelText(fr.accommodation.typeLabel);
     expect([...select.querySelectorAll("option")].map((o) => o.value)).toEqual([

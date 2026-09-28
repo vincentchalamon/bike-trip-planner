@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageAlerts } from "@/components/stage-alerts";
 import { AccommodationPanel } from "@/components/accommodation-panel";
-import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { DiffHighlight } from "@/components/diff-highlight";
@@ -20,8 +19,9 @@ import {
   StageWeatherCard,
   StageSurfaceBreakdown,
 } from "@/components/StageDetail";
-import type { StageData, AccommodationData } from "@btp/core";
+import type { StageData } from "@btp/core";
 import { useTripStore } from "@/store/trip-store";
+import { useStageMutations } from "@/hooks/use-stage-mutations";
 import { useUiStore } from "@/store/ui-store";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 
@@ -37,26 +37,9 @@ interface StageCardProps {
   isFirst: boolean;
   isLast: boolean;
   canDelete: boolean;
-  onDelete: () => void;
-  onDistanceChange?: (distance: number) => void;
   isProcessing?: boolean;
   /** When true, all edit controls are hidden (trip is locked). */
   readOnly?: boolean;
-  onSubmitManualAccommodation: (
-    data: ManualAccommodationInput,
-  ) => Promise<boolean>;
-  onUpdateAccommodation: (
-    accIndex: number,
-    data: Partial<AccommodationData>,
-  ) => void;
-  onRemoveAccommodation: (accIndex: number) => void;
-  onSelectAccommodation?: (accIndex: number) => void;
-  onDeselectAccommodation?: () => void;
-  onExpandAccommodationRadius?: (currentRadiusKm: number) => Promise<boolean>;
-  onAddPoiWaypoint?: (poiLat: number, poiLon: number) => void;
-  newAccKey?: string | null;
-  stageOriginalIndex?: number;
-  onClearNewAcc?: () => void;
   onAccommodationHover?: (accIndex: number | null) => void;
 }
 
@@ -84,23 +67,13 @@ export function StageCard({
   isFirst,
   isLast,
   canDelete,
-  onDelete,
-  onDistanceChange,
   isProcessing,
   readOnly = false,
-  onSubmitManualAccommodation,
-  onUpdateAccommodation,
-  onRemoveAccommodation,
-  onSelectAccommodation,
-  onDeselectAccommodation,
-  onExpandAccommodationRadius,
-  onAddPoiWaypoint,
-  newAccKey,
-  stageOriginalIndex,
-  onClearNewAcc,
   onAccommodationHover,
 }: StageCardProps) {
   const t = useTranslations("stage");
+  const { handleDeleteStage, handleDistanceChange, handleAddPoiWaypoint } =
+    useStageMutations();
   const tripId = useTripStore((s) => s.trip?.id);
   const departureHour = useTripStore((s) => s.departureHour);
   const averageSpeed = useTripStore((s) => s.averageSpeed);
@@ -132,7 +105,7 @@ export function StageCard({
             variant="ghost"
             size="icon"
             className="absolute top-3 right-3 h-6 w-6 text-muted-icon cursor-pointer"
-            onClick={onDelete}
+            onClick={() => handleDeleteStage(stageIndex)}
             disabled={!canDelete}
             title={
               !canDelete
@@ -175,7 +148,11 @@ export function StageCard({
           isLast={isLast}
           isProcessing={isProcessing}
           readOnly={readOnly}
-          onDistanceChange={onDistanceChange}
+          onDistanceChange={
+            readOnly
+              ? undefined
+              : (distance) => handleDistanceChange(stageIndex, distance)
+          }
           departureHour={stage.isRestDay ? undefined : departureHour}
           averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
           difficultySlot={
@@ -230,7 +207,11 @@ export function StageCard({
             >
               <StageAlerts
                 alerts={stage.alerts}
-                onAddPoiWaypoint={onAddPoiWaypoint}
+                onAddPoiWaypoint={
+                  readOnly
+                    ? undefined
+                    : (lat, lon) => handleAddPoiWaypoint(stageIndex, lat, lon)
+                }
               />
             </DiffHighlight>
           </div>
@@ -266,15 +247,7 @@ export function StageCard({
             <AccommodationPanel
               accommodations={stage.accommodations}
               selectedAccommodation={stage.selectedAccommodation}
-              onUpdate={onUpdateAccommodation}
-              onRemove={onRemoveAccommodation}
-              onSubmitManual={onSubmitManualAccommodation}
-              onSelect={onSelectAccommodation}
-              onDeselect={onDeselectAccommodation}
-              onExpandRadius={onExpandAccommodationRadius}
-              newAccKey={newAccKey}
-              stageIndex={stageOriginalIndex}
-              onClearNewAcc={onClearNewAcc}
+              stageIndex={stageIndex}
               searchRadiusKm={
                 stage.accommodationSearchRadiusKm ??
                 DEFAULT_ACCOMMODATION_RADIUS_KM

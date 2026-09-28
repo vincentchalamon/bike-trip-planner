@@ -13,8 +13,8 @@ import { RoadbookEmptyState } from "@/components/roadbook-empty-state";
 import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
 import { useTripStore } from "@/store/trip-store";
-import type { StageData, AccommodationData } from "@btp/core";
-import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
+import { useStageMutations } from "@/hooks/use-stage-mutations";
+import type { StageData } from "@btp/core";
 
 const MIN_KM = 5;
 
@@ -24,34 +24,7 @@ interface StageDetailPanelProps {
   startDate: string | null;
   isProcessing?: boolean;
   readOnly?: boolean;
-  onDeleteStage: (index: number) => void;
-  onAddStage?: (afterIndex: number) => void;
-  onInsertRestDay?: (afterIndex: number) => void;
-  onDistanceChange?: (index: number, distance: number) => void;
-  onSubmitManualAccommodation: (
-    stageIndex: number,
-    data: ManualAccommodationInput,
-  ) => Promise<boolean>;
-  onUpdateAccommodation: (
-    stageIndex: number,
-    accIndex: number,
-    data: Partial<AccommodationData>,
-  ) => void;
-  onRemoveAccommodation: (stageIndex: number, accIndex: number) => void;
-  onSelectAccommodation?: (stageIndex: number, accIndex: number) => void;
-  onDeselectAccommodation?: (stageIndex: number) => void;
-  onExpandAccommodationRadius?: (
-    stageIndex: number,
-    currentRadiusKm: number,
-  ) => Promise<boolean>;
-  onAddPoiWaypoint?: (
-    stageIndex: number,
-    poiLat: number,
-    poiLon: number,
-  ) => void;
   onAccommodationHover?: (stageIndex: number, accIndex: number | null) => void;
-  newAccKey?: string | null;
-  onClearNewAcc?: () => void;
 }
 
 // Exported for unit testing the locale-aware formatting (recette #649 #6).
@@ -96,21 +69,10 @@ export function StageDetailPanel({
   startDate,
   isProcessing,
   readOnly = false,
-  onDeleteStage,
-  onAddStage,
-  onInsertRestDay,
-  onDistanceChange,
-  onSubmitManualAccommodation,
-  onUpdateAccommodation,
-  onRemoveAccommodation,
-  onSelectAccommodation,
-  onDeselectAccommodation,
-  onExpandAccommodationRadius,
-  onAddPoiWaypoint,
   onAccommodationHover,
-  newAccKey,
-  onClearNewAcc,
 }: StageDetailPanelProps) {
+  const { handleDeleteStage, handleAddStage, handleInsertRestDay } =
+    useStageMutations();
   const locale = useLocale();
   const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
@@ -269,7 +231,7 @@ export function StageDetailPanel({
                 dayNumber={stage.dayNumber}
                 stageIndex={i}
                 canDelete={!readOnly && stages.length > 2}
-                onDelete={() => onDeleteStage(i)}
+                onDelete={() => handleDeleteStage(i)}
               />
             ) : recomputingStages.has(stage.id) ? (
               <StageSkeleton />
@@ -282,44 +244,6 @@ export function StageDetailPanel({
                 canDelete={!readOnly && stages.length > 2}
                 isProcessing={isProcessing}
                 readOnly={readOnly}
-                onDelete={() => onDeleteStage(i)}
-                onDistanceChange={
-                  !readOnly && onDistanceChange
-                    ? (d) => onDistanceChange(i, d)
-                    : undefined
-                }
-                onSubmitManualAccommodation={(data) =>
-                  onSubmitManualAccommodation(i, data)
-                }
-                onUpdateAccommodation={(accIdx, data) =>
-                  onUpdateAccommodation(i, accIdx, data)
-                }
-                onRemoveAccommodation={(accIdx) =>
-                  onRemoveAccommodation(i, accIdx)
-                }
-                onSelectAccommodation={
-                  !readOnly && onSelectAccommodation
-                    ? (accIdx) => onSelectAccommodation(i, accIdx)
-                    : undefined
-                }
-                onDeselectAccommodation={
-                  !readOnly && onDeselectAccommodation
-                    ? () => onDeselectAccommodation(i)
-                    : undefined
-                }
-                onExpandAccommodationRadius={
-                  !readOnly && onExpandAccommodationRadius
-                    ? (r) => onExpandAccommodationRadius(i, r)
-                    : undefined
-                }
-                onAddPoiWaypoint={
-                  !readOnly && onAddPoiWaypoint
-                    ? (lat, lon) => onAddPoiWaypoint(i, lat, lon)
-                    : undefined
-                }
-                newAccKey={newAccKey}
-                stageOriginalIndex={i}
-                onClearNewAcc={onClearNewAcc}
                 onAccommodationHover={
                   onAccommodationHover
                     ? (accIdx) => onAccommodationHover(i, accIdx)
@@ -334,25 +258,20 @@ export function StageDetailPanel({
                 re-split (recette). */}
             {!readOnly &&
               !recomputingStages.has(stage.id) &&
-              i < stages.length - 1 &&
-              (onAddStage || onInsertRestDay) && (
+              i < stages.length - 1 && (
                 <div className="flex w-full flex-wrap gap-2">
-                  {onInsertRestDay &&
-                    !stage.isRestDay &&
-                    !stages[i + 1]?.isRestDay && (
-                      <AddRestDayButton
-                        afterIndex={i}
-                        dayNumber={stage.dayNumber}
-                        onClick={() => onInsertRestDay(i)}
-                      />
-                    )}
-                  {onAddStage && (
-                    <AddStageButton
+                  {!stage.isRestDay && !stages[i + 1]?.isRestDay && (
+                    <AddRestDayButton
                       afterIndex={i}
-                      onClick={() => onAddStage(i)}
-                      disabled={!canInsertStage(i)}
+                      dayNumber={stage.dayNumber}
+                      onClick={() => handleInsertRestDay(i)}
                     />
                   )}
+                  <AddStageButton
+                    afterIndex={i}
+                    onClick={() => handleAddStage(i)}
+                    disabled={!canInsertStage(i)}
+                  />
                 </div>
               )}
           </section>

@@ -4,19 +4,10 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
-import type {
-  StageData,
-  WeatherData,
-  ResupplyData,
-  AccommodationData,
-  AlertData,
-  SupplyMarkerData,
-  EventData,
-} from "@btp/core";
+import type { StageData, AccommodationData, AlertData } from "@btp/core";
 import { EMPTY_RESUPPLY, endDateFor } from "@btp/core";
 import {
   reconcileResync,
-  reconcileTripReady,
   reconcileStageUpdate,
   pruneStaleRecomputing as corePruneStaleRecomputing,
   renumberAfterStructuralEdit,
@@ -171,18 +162,6 @@ interface TripState {
     claim: symbol,
     previous: Partial<SettingsValues>,
   ) => SettingsField[];
-  updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
-  updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
-  updateStageSupplyTimeline: (
-    stageIndex: number,
-    markers: SupplyMarkerData[],
-  ) => void;
-  setStageEvents: (stageIndex: number, events: EventData[]) => void;
-  updateStageAccommodations: (
-    stageIndex: number,
-    accs: AccommodationData[],
-    searchRadiusKm?: number,
-  ) => void;
   updateStageAlerts: (
     stageIndex: number,
     alerts: AlertData[],
@@ -222,7 +201,6 @@ interface TripState {
   setDepartureHour: (departureHour: number) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
-  setComputationStatus: (status: Record<string, string>) => void;
   setIsLocked: (isLocked: boolean) => void;
   setOutOfZone: (outOfZone: boolean) => void;
   /** Undoable: returns what {@link rollbackStructuralEdit} needs to undo it. */
@@ -234,28 +212,12 @@ interface TripState {
     afterIndex: number,
     placeholder: StageData,
   ) => StructuralEdit;
-  updateStageAfterRouteRecalculation: (
-    stageIndex: number,
-    data: {
-      distance: number;
-      elevationGain: number;
-      coordinates: { lat: number; lon: number; ele: number }[];
-    },
-  ) => void;
-  /**
-   * Mode 1 — Atomic replacement of the stage array when `trip_ready` arrives.
-   *
-   * Preserves fields that the backend never ships in the enriched payload
-   * (reverse-geocoded labels, accommodation search radius, locally-managed
-   * accommodation selections). Accommodations whose endpoints match are kept
-   * as-is so selection state is not lost across re-analyses.
-   */
-  applyTripReady: (stages: StageData[]) => void;
   /**
    * Mode 2 — Per-stage replacement when `stage_updated` arrives.
    *
-   * Same preservation semantics as {@link applyTripReady} but for a single
-   * slice. No-op if the index is out of bounds (stale message).
+   * Preserves the fields the backend never ships (reverse-geocoded labels,
+   * accommodation search radius, a rider's accommodation selection) on a
+   * stable endpoint. No-op if the index is out of bounds (stale message).
    */
   applyStageUpdate: (
     stageId: string,
@@ -279,6 +241,11 @@ interface TripState {
    * Remove a stage index from the recomputing set (called when `stage_updated`
    * lands for that index). When the set becomes empty the progress bar hides.
    */
+  /**
+   * Mark a stage and the next one as recomputing: moving a stage's end point
+   * (accommodation selected, deselected or added) also moves the next start.
+   */
+  startAdjacentStageRecomputation: (stageIndex: number) => void;
   finishStageRecomputation: (stageId: string) => void;
   /** Clear all recomputing stages — safety net for lost `stage_updated` events. */
   clearRecomputingStages: () => void;
@@ -570,45 +537,6 @@ export const useTripStore = create<TripState>()(
       });
     },
 
-    updateStageWeather: (dayNumber, weather) =>
-      set((state) => {
-        const stage = state.stages.find((s) => s.dayNumber === dayNumber);
-        if (stage) stage.weather = weather;
-      }),
-
-    updateStageResupply: (stageIndex, resupply) =>
-      set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex].resupply = resupply;
-        }
-      }),
-
-    updateStageSupplyTimeline: (stageIndex, markers) =>
-      set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex].supplyTimeline = markers;
-        }
-      }),
-
-    setStageEvents: (stageIndex, events) =>
-      set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex].events = events;
-        }
-      }),
-
-    updateStageAccommodations: (stageIndex, accs, searchRadiusKm) =>
-      set((state) => {
-        const stage = state.stages[stageIndex];
-        if (!stage) return;
-        if (!stage.selectedAccommodation) {
-          stage.accommodations = accs;
-        }
-        if (searchRadiusKm !== undefined) {
-          stage.accommodationSearchRadiusKm = searchRadiusKm;
-        }
-      }),
-
     updateStageAlerts: (stageIndex, alerts, source) =>
       set((state) => {
         if (state.stages[stageIndex]) {
@@ -720,11 +648,6 @@ export const useTripStore = create<TripState>()(
     setEnabledAccommodationTypes: (types) =>
       set((state) => {
         state.enabledAccommodationTypes = types;
-      }),
-
-    setComputationStatus: (status) =>
-      set((state) => {
-        state.computationStatus = status;
       }),
 
     setIsLocked: (isLocked) =>
@@ -840,24 +763,6 @@ export const useTripStore = create<TripState>()(
       return { token, inverse: { kind: "remove", stageId: placeholder.id } };
     },
 
-    updateStageAfterRouteRecalculation: (stageIndex, data) =>
-      set((state) => {
-        const stage = state.stages[stageIndex];
-        if (!stage) return;
-        stage.distance = data.distance / 1000; // metres → km
-        stage.elevation = data.elevationGain;
-        stage.geometry = data.coordinates;
-      }),
-
-    applyTripReady: (stages) =>
-      set((state) => {
-        // Mode 1 terminal reconciliation: preserve client-only fields
-        // (labels, radius, supply timeline, non-empty accommodations/
-        // selection/alerts/events) on stable endpoints (see reconcileTripReady
-        // in core, #649).
-        state.stages = reconcileTripReady(state.stages, stages);
-      }),
-
     applyStageUpdate: (stageId, position, stage) =>
       set((state) => {
         // Mode 2 per-stage reconciliation: preserve client-only fields and
@@ -908,6 +813,13 @@ export const useTripStore = create<TripState>()(
           state.recomputingStages.add(stageId);
         }
       }),
+
+    startAdjacentStageRecomputation: (stageIndex) => {
+      const { stages, startStageRecomputation } = useTripStore.getState();
+      startStageRecomputation(
+        stages.slice(stageIndex, stageIndex + 2).map((stage) => stage.id),
+      );
+    },
 
     finishStageRecomputation: (stageId) =>
       set((state) => {

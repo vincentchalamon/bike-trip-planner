@@ -1,45 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
 import { StageDetailPanel } from "./StageDetailPanel";
 import { useTripStore } from "@/store/trip-store";
-import { useUiStore } from "@/store/ui-store";
-import type { StageData, AccommodationData } from "@btp/core";
-import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
+import type { StageData } from "@btp/core";
 
 interface RoadbookMasterDetailProps {
   stages: StageData[];
   startDate: string | null;
   isProcessing?: boolean;
   readOnly?: boolean;
-  onDeleteStage: (index: number) => void;
-  onAddStage?: (afterIndex: number) => void;
-  onInsertRestDay?: (afterIndex: number) => void;
-  onDistanceChange?: (index: number, distance: number) => void;
-  onSubmitManualAccommodation: (
-    stageIndex: number,
-    data: ManualAccommodationInput,
-  ) => Promise<boolean>;
-  onUpdateAccommodation: (
-    stageIndex: number,
-    accIndex: number,
-    data: Partial<AccommodationData>,
-  ) => void;
-  onRemoveAccommodation: (stageIndex: number, accIndex: number) => void;
-  onSelectAccommodation?: (stageIndex: number, accIndex: number) => void;
-  onDeselectAccommodation?: (stageIndex: number) => void;
-  onExpandAccommodationRadius?: (
-    stageIndex: number,
-    currentRadiusKm: number,
-  ) => Promise<boolean>;
-  onAddPoiWaypoint?: (
-    stageIndex: number,
-    poiLat: number,
-    poiLon: number,
-  ) => void;
   onAccommodationHover?: (stageIndex: number, accIndex: number | null) => void;
-  newAccKey?: string | null;
-  onClearNewAcc?: () => void;
 }
 
 /**
@@ -53,38 +23,14 @@ interface RoadbookMasterDetailProps {
  * Mobile fallback: sidebar collapses above the detail panel and stages are
  * rendered as a horizontally-scrollable list of pills (single-column layout).
  */
-export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
-  const {
-    stages,
-    startDate,
-    isProcessing,
-    readOnly,
-    onDeleteStage,
-    onAddStage,
-    onInsertRestDay,
-    onDistanceChange,
-    onSubmitManualAccommodation,
-    onUpdateAccommodation,
-    onRemoveAccommodation,
-    onSelectAccommodation,
-    onDeselectAccommodation,
-    onExpandAccommodationRadius,
-    onAddPoiWaypoint,
-    onAccommodationHover,
-    newAccKey,
-    onClearNewAcc,
-  } = props;
-
+export function RoadbookMasterDetail({
+  stages,
+  startDate,
+  isProcessing,
+  readOnly,
+  onAccommodationHover,
+}: RoadbookMasterDetailProps) {
   const selectedStageIndex = useTripStore((s) => s.selectedStageIndex);
-  const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
-
-  // Keep the legacy `activeDayNumber` UI flag in sync with the selected stage,
-  // so the sticky header continues to highlight the correct day. Scroll changes
-  // (scroll-spy) update `selectedStageIndex` directly.
-  useEffect(() => {
-    const stage = stages[selectedStageIndex];
-    setActiveDayNumber(stage?.dayNumber ?? null);
-  }, [selectedStageIndex, stages, setActiveDayNumber]);
 
   return (
     <div className="flex flex-col gap-6" data-testid="roadbook-master-detail">
@@ -96,20 +42,7 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
           startDate={startDate}
           isProcessing={isProcessing}
           readOnly={readOnly}
-          onDeleteStage={onDeleteStage}
-          onAddStage={onAddStage}
-          onInsertRestDay={onInsertRestDay}
-          onDistanceChange={onDistanceChange}
-          onSubmitManualAccommodation={onSubmitManualAccommodation}
-          onUpdateAccommodation={onUpdateAccommodation}
-          onRemoveAccommodation={onRemoveAccommodation}
-          onSelectAccommodation={onSelectAccommodation}
-          onDeselectAccommodation={onDeselectAccommodation}
-          onExpandAccommodationRadius={onExpandAccommodationRadius}
-          onAddPoiWaypoint={onAddPoiWaypoint}
           onAccommodationHover={onAccommodationHover}
-          newAccKey={newAccKey}
-          onClearNewAcc={onClearNewAcc}
         />
       </div>
     </div>

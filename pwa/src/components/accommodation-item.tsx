@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   X,
@@ -58,7 +58,6 @@ interface AccommodationItemProps {
   onSelect?: () => void;
   onDeselect?: () => void;
   isSelected?: boolean;
-  initialEditing?: boolean;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
   /** Read-only surfaces (shared view): hide every mutating control. */
@@ -72,13 +71,12 @@ export function AccommodationItem({
   onSelect,
   onDeselect,
   isSelected = false,
-  initialEditing = false,
   onHoverStart,
   onHoverEnd,
   readOnly = false,
 }: AccommodationItemProps) {
   const t = useTranslations("accommodation");
-  const [editing, setEditing] = useState(initialEditing);
+  const [editing, setEditing] = useState(false);
   const [editUrl, setEditUrl] = useState(accommodation.url ?? "");
   const [editName, setEditName] = useState(accommodation.name);
   const [editType, setEditType] = useState(accommodation.type);
@@ -88,14 +86,6 @@ export function AccommodationItem({
   const [editPriceMax, setEditPriceMax] = useState(
     String(accommodation.estimatedPriceMax),
   );
-  const urlInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus URL field when initially editing
-  useEffect(() => {
-    if (initialEditing && urlInputRef.current) {
-      urlInputRef.current.focus();
-    }
-  }, [initialEditing]);
 
   const TypeIcon = isAccommodationType(accommodation.type)
     ? ACCOMMODATION_TYPE_ICONS[accommodation.type]
@@ -135,11 +125,7 @@ export function AccommodationItem({
   }
 
   function cancelEditing() {
-    if (initialEditing) {
-      onRemove();
-    } else {
-      setEditing(false);
-    }
+    setEditing(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -156,7 +142,6 @@ export function AccommodationItem({
         {/* URL field */}
         <div className="flex items-center gap-2 pr-8">
           <Input
-            ref={urlInputRef}
             value={editUrl}
             onChange={(e) => setEditUrl(e.target.value)}
             onKeyDown={handleKeyDown}

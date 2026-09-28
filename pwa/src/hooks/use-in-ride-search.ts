@@ -65,7 +65,9 @@ function errorKeyFor(status: NearbyPoiSearchResult["status"]): InRideErrorKey {
  */
 export function useInRideSearch(): UseInRideSearchResult {
   const tripId = useTripStore((s) => s.trip?.id ?? null);
-  const activeDayNumber = useUiStore((s) => s.activeDayNumber);
+  const activeDayNumber = useTripStore(
+    (s) => s.stages[s.selectedStageIndex]?.dayNumber ?? null,
+  );
   const appendMessage = useUiStore((s) => s.appendMessage);
 
   const geo = useGeolocation();

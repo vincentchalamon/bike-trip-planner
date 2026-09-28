@@ -1,46 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
-import {
-  useTripStore,
-  useTripTemporalStore,
-  getUndoableSlice,
-  discardUndoEntry,
-} from "@/store/trip-store";
+import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
   newIdempotencyKey,
-  parseApiError,
-  preconditionHeader,
-  localizedApiErrorMessage,
   isNetworkError,
   uploadGpxFile,
-  scanAccommodations,
-  addManualAccommodation,
-  addPoiWaypointToRoute,
-  duplicateTrip,
-  deleteTrip,
-  launchTripAnalysis,
   applyBatchRecompute,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import { trackEvent, type PlausibleEvent } from "@/lib/plausible";
 import {
-  MAX_ACCOMMODATION_RADIUS_KM,
-  ACCOMMODATION_RADIUS_STEP_KM,
-  DEFAULT_ACCOMMODATION_RADIUS_KM,
-} from "@btp/core/constants";
-import { EMPTY_RESUPPLY } from "@btp/core";
-import type { StageAlert } from "@btp/core/reconciliation";
-import type { StageData } from "@btp/core";
-import type { AccommodationType } from "@/lib/accommodation-types";
-import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
+  disarmRecomputeSafetyNet,
+  getPacingState,
+  useReportApiError,
+} from "@/hooks/trip-mutation-support";
 
 /** Map a source URL to its Plausible import event (null if unrecognised). */
 export function importEventForUrl(url: string): PlausibleEvent | null {
@@ -51,32 +32,17 @@ export function importEventForUrl(url: string): PlausibleEvent | null {
 }
 
 /**
- * Last-resort delay after which a recompute that never fully settled (a lost
- * or obsolete `stage_updated`, e.g. after the day count changed) has its
- * `processing` overlay force-lifted. Generous enough to outlast a real
- * recompute + enrichment pass so it only fires on a genuinely stuck run (#840).
+ * The trip page's own concerns: creating a trip, the live Mercure link, the batch queue and
+ * the share modal. Stage, accommodation and trip-setting edits live in their own hooks
+ * (`useStageMutations`, `useAccommodationMutations`, `useTripSettings`), read by the
+ * components that trigger them.
  */
-const RECOMPUTE_OVERLAY_TIMEOUT_MS = 30000;
-
-/** Read current pacing + config state from the store without subscribing. */
-function getPacingState() {
-  const s = useTripStore.getState();
-  return {
-    fatigueFactor: s.fatigueFactor,
-    elevationPenalty: s.elevationPenalty,
-    maxDistancePerDay: s.maxDistancePerDay,
-    averageSpeed: s.averageSpeed,
-    ebikeMode: s.ebikeMode,
-    departureHour: s.departureHour,
-    enabledAccommodationTypes: s.enabledAccommodationTypes,
-  };
-}
-
 export function useTripPlanner() {
   const t = useTranslations();
   const router = useRouter();
 
-  // Group 1: Trip data — re-renders when trip metadata or stages change
+  const reportApiError = useReportApiError();
+
   const {
     trip,
     totalDistance,
@@ -101,7 +67,6 @@ export function useTripPlanner() {
     })),
   );
 
-  // Group 2: Pacing settings — re-renders when pacing config changes
   const {
     fatigueFactor,
     elevationPenalty,
@@ -122,32 +87,12 @@ export function useTripPlanner() {
     })),
   );
 
-  // Group 3: Store actions — stable references, single subscription
   const actions = useTripStore(
     useShallow((s) => ({
       setTrip: s.setTrip,
-      updateRouteData: s.updateRouteData,
-      updateTitle: s.updateTitle,
-      updateDates: s.updateDates,
       clearTrip: s.clearTrip,
-      removeLocalAccommodation: s.removeLocalAccommodation,
-      updateLocalAccommodation: s.updateLocalAccommodation,
-      selectAccommodation: s.selectAccommodation,
-      deselectAccommodation: s.deselectAccommodation,
-      deleteStage: s.deleteStage,
-      insertRestDay: s.insertRestDay,
-      insertStagePlaceholder: s.insertStagePlaceholder,
-      updatePacingSettingsInternal: s.updatePacingSettingsInternal,
-      setEbikeMode: s.setEbikeMode,
-      setEnabledAccommodationTypes: s.setEnabledAccommodationTypes,
-      updateStageAlerts: s.updateStageAlerts,
       setIsLocked: s.setIsLocked,
-      setDepartureHour: s.setDepartureHour,
       startStageRecomputation: s.startStageRecomputation,
-      claimSettings: s.claimSettings,
-      settleSettings: s.settleSettings,
-      revertSettings: s.revertSettings,
-      queueModification: s.queueModification,
       cancelAllModifications: s.cancelAllModifications,
       clearPendingModifications: s.clearPendingModifications,
     })),
@@ -162,27 +107,6 @@ export function useTripPlanner() {
   const setAccommodationScanning = useUiStore(
     (s) => s.setAccommodationScanning,
   );
-  const requestTripResync = useUiStore((s) => s.requestTripResync);
-
-  /**
-   * Surfaces a failed mutation, and re-reads the trip when the server refused it as computed
-   * against a version the trip has moved past.
-   *
-   * The edit is never replayed: the client had a view the server no longer holds, so
-   * re-sending it is the one recovery that could apply it to a state it was not meant for.
-   * Re-reading puts the user back in front of the current trip, with their change to redo.
-   */
-  function reportApiError(status: number, error: unknown): void {
-    const apiError = parseApiError(status, error);
-    toast.error(localizedApiErrorMessage(apiError, t));
-    if (apiError.type === "stale") requestTripResync();
-  }
-
-  const [newAccKey, setNewAccKey] = useState<string | null>(null);
-  const preDragPacingSnapshot = useRef<ReturnType<
-    typeof getUndoableSlice
-  > | null>(null);
-  const recomputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId);
@@ -195,16 +119,10 @@ export function useTripPlanner() {
     useUiStore.getState().clearHistory();
   }, [tripId]);
 
-  // Clear the recompute safety-net timer on unmount so it can't fire against a
-  // torn-down view (#840).
-  // Clear any pending safety-net timer on unmount and whenever the active trip
-  // changes, so a timer armed for one trip can never fire against another.
-  useEffect(
-    () => () => {
-      if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
-    },
-    [tripId],
-  );
+  // Clear any pending recompute safety-net timer on unmount and whenever the
+  // active trip changes, so a timer armed for one trip can never fire against
+  // another or against a torn-down view (#840).
+  useEffect(() => disarmRecomputeSafetyNet, [tripId]);
 
   async function handleMagicLink(sourceUrl: string) {
     actions.clearTrip();
@@ -296,877 +214,11 @@ export function useTripPlanner() {
     }
   }
 
-  async function handleDatesChange(
-    newStart: string | null,
-    newEnd: string | null,
-  ) {
-    const { startDate: previousStart, endDate: previousEnd } =
-      useTripStore.getState();
-    const undoToken = actions.updateDates(newStart, newEnd);
-    if (!tripId) return;
-    const claim = actions.claimSettings(["startDate", "endDate"]);
-
-    // updateDates pushed an undo entry: a refused change must leave no trace in the
-    // history, and must not undo a date change made while it was in flight.
-    const rollback = () => {
-      const previous = { startDate: previousStart, endDate: previousEnd };
-      discardUndoEntry(
-        undoToken,
-        { startDate: newStart, endDate: newEnd },
-        previous,
-      );
-      actions.revertSettings(claim, previous);
-    };
-
-    try {
-      const pacing = getPacingState();
-      const { data, error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          startDate: newStart,
-          endDate: newEnd,
-          ...pacing,
-        },
-      });
-
-      if (error) {
-        rollback();
-        reportApiError(response.status, error);
-      } else {
-        actions.settleSettings(claim);
-        if (data) actions.setIsLocked(data.isLocked === true);
-        setProcessing(true);
-        setAccommodationScanning(true);
-      }
-    } catch {
-      rollback();
-      toast.error(t("errors.failedUpdateDates"));
-    }
-  }
-
-  async function handleTitleChange(newTitle: string) {
-    const previousTitle = useTripStore.getState().trip?.title;
-    actions.updateTitle(newTitle);
-    if (!tripId) return;
-    const claim = actions.claimSettings(["title"]);
-
-    // Unless a newer rename has replaced it meanwhile.
-    const revertTitle = () => {
-      if (previousTitle !== undefined) {
-        actions.revertSettings(claim, { title: previousTitle });
-      }
-      actions.settleSettings(claim);
-    };
-
-    try {
-      const pacing = getPacingState();
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          title: newTitle,
-          ...pacing,
-        },
-      });
-      if (!response.ok) {
-        reportApiError(response.status, error);
-        revertTitle();
-      } else {
-        actions.settleSettings(claim);
-      }
-    } catch {
-      // Title save is best-effort on a network failure: no toast, but never keep a title
-      // the server does not have.
-      revertTitle();
-    }
-  }
-
-  async function handleDeleteStage(index: number) {
-    if (!tripId) return;
-
-    const currentStages = useTripStore.getState().stages;
-    const target = currentStages[index];
-    if (!target) return;
-    const stageId = target.id;
-    const isRestDay = target.isRestDay ?? false;
-    const edit = actions.deleteStage(index);
-
-    try {
-      const { error, response } = await apiClient.DELETE(
-        "/trips/{tripId}/stages/{stageId}",
-        {
-          params: {
-            path: { tripId, stageId },
-            header: preconditionHeader(tripId),
-          },
-        },
-      );
-      if (error) {
-        reportApiError(response.status, error);
-        useTripStore.getState().rollbackStructuralEdit(edit);
-      } else {
-        setProcessing(true);
-        if (!isRestDay) setAccommodationScanning(true);
-      }
-    } catch {
-      toast.error(t("errors.failedDeleteStage"));
-      useTripStore.getState().rollbackStructuralEdit(edit);
-    }
-  }
-
-  async function handleInsertRestDay(afterIndex: number) {
-    if (!tripId) return;
-
-    const stageId = useTripStore.getState().stages[afterIndex]?.id;
-    if (!stageId) return;
-    const edit = actions.insertRestDay(afterIndex);
-
-    try {
-      const { error, response } = await apiClient.POST(
-        "/trips/{tripId}/stages/{stageId}/rest-day",
-        {
-          params: {
-            path: { tripId, stageId },
-            header: preconditionHeader(tripId),
-          },
-          parseAs: "json",
-        },
-      );
-      if (!response.ok) {
-        reportApiError(response.status, error);
-        useTripStore.getState().rollbackStructuralEdit(edit);
-      } else {
-        setProcessing(true);
-      }
-    } catch {
-      toast.error(t("errors.failedInsertRestDay"));
-      useTripStore.getState().rollbackStructuralEdit(edit);
-    }
-  }
-
-  async function handleAddStage(afterIndex: number) {
-    if (!tripId) return;
-
-    const currentStages = useTripStore.getState().stages;
-    const prevStage = currentStages[afterIndex];
-    const nextStage = currentStages[afterIndex + 1];
-    const startPoint = prevStage?.endPoint ?? prevStage?.startPoint;
-    const endPoint = nextStage?.startPoint ?? prevStage?.endPoint;
-
-    if (!startPoint || !endPoint) {
-      toast.error(t("errors.failedAddStage"));
-      return;
-    }
-
-    const placeholder: StageData = {
-      // Provisional identity: replaced by the server's when stages_computed or
-      // trip_ready lands. Distinct so the reconciler treats it as its own stage.
-      id: `pending-${crypto.randomUUID()}`,
-      dayNumber: afterIndex + 2,
-      distance: 0,
-      elevation: 0,
-      elevationLoss: 0,
-      startPoint: {
-        lat: startPoint.lat,
-        lon: startPoint.lon,
-        ele: startPoint.ele ?? 0,
-      },
-      endPoint: {
-        lat: endPoint.lat,
-        lon: endPoint.lon,
-        ele: endPoint.ele ?? 0,
-      },
-      geometry: [],
-      label: null,
-      startLabel: prevStage?.endLabel ?? null,
-      endLabel: nextStage?.startLabel ?? null,
-      weather: null,
-      alerts: [],
-      resupply: EMPTY_RESUPPLY,
-      accommodations: [],
-      accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
-      supplyTimeline: [],
-      events: [],
-      isRestDay: false,
-    };
-    // insertStagePlaceholder pushes an undo snapshot internally before mutating.
-    const edit = actions.insertStagePlaceholder(afterIndex, placeholder);
-
-    try {
-      const { error, response } = await apiClient.POST(
-        "/trips/{tripId}/stages",
-        {
-          params: { path: { tripId }, header: preconditionHeader(tripId) },
-          body: { position: afterIndex + 1, startPoint, endPoint },
-        },
-      );
-      if (error) {
-        reportApiError(response.status, error);
-        useTripStore.getState().rollbackStructuralEdit(edit);
-      } else {
-        setProcessing(true);
-        setAccommodationScanning(true);
-      }
-    } catch {
-      toast.error(t("errors.failedAddStage"));
-      useTripStore.getState().rollbackStructuralEdit(edit);
-    }
-  }
-
-  /**
-   * Arm a last-resort timer that lifts the `processing` overlay if the current
-   * recompute never fully settles (lost/obsolete `stage_updated`, or a day-count
-   * change that leaves marked indices without a matching event). The timer
-   * captures the recompute token (and the trip it belongs to) at arm time and
-   * no-ops if a newer edit has since bumped the token or the user switched
-   * trips — so overlapping edits (or a trip switch) can't clear each other's
-   * overlay (#840).
-   */
-  function armRecomputeSafetyNet() {
-    if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
-    const version = useTripStore.getState().recomputeVersion;
-    const armedTripId = useTripStore.getState().trip?.id ?? null;
-    recomputeTimerRef.current = setTimeout(() => {
-      recomputeTimerRef.current = null;
-      const s = useTripStore.getState();
-      // Bail if a newer recompute superseded this one, everything already
-      // settled, or the user switched trips since arming — otherwise a stale
-      // timer from a previous trip could force-clear a different trip's
-      // legitimately in-flight overlay.
-      if (
-        s.recomputeVersion !== version ||
-        s.recomputingStages.size === 0 ||
-        (s.trip?.id ?? null) !== armedTripId
-      ) {
-        return;
-      }
-      s.clearRecomputingStages();
-      setProcessing(false);
-      setAccommodationScanning(false);
-    }, RECOMPUTE_OVERLAY_TIMEOUT_MS);
-  }
-
-  async function handleDistanceChange(index: number, distance: number) {
-    if (!tripId) return;
-
-    // Capture state before the mutation so we can push it on success.
-    const snapshot = getUndoableSlice(useTripStore.getState());
-
-    // Show the per-stage skeleton immediately — BEFORE awaiting the PATCH — so
-    // the edited card and every subsequent one indicate loading and block
-    // further edits while the backend re-splits. Otherwise the card keeps
-    // showing the old distance for the whole request round-trip, only updating
-    // when the `stage_updated` events land (recette: "la distance reste
-    // identique un moment"). The backend re-splits from `index` onward
-    // (StageUpdateProcessor → RecalculateStages over range(index, count-1)), so
-    // the shimmer covers the same range (#840).
-    const currentStages = useTripStore.getState().stages;
-    const stageId = currentStages[index]?.id;
-    if (!stageId) return;
-    setProcessing(true);
-    setAccommodationScanning(true);
-    actions.startStageRecomputation(
-      currentStages.slice(index).map((stage) => stage.id),
-    );
-    armRecomputeSafetyNet();
-
-    try {
-      const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{stageId}",
-        {
-          params: {
-            path: { tripId, stageId },
-            header: preconditionHeader(tripId),
-          },
-          headers: { "Content-Type": "application/merge-patch+json" },
-          body: { distance },
-        },
-      );
-      if (error) {
-        // Roll back the optimistic loading state so the cards become editable
-        // again instead of shimmering forever on a rejected edit.
-        useTripStore.getState().clearRecomputingStages();
-        setProcessing(false);
-        setAccommodationScanning(false);
-        reportApiError(response.status, error);
-      } else {
-        // Push snapshot only after a successful PATCH to avoid phantom undo entries
-        useTripTemporalStore.getState()._push(snapshot);
-      }
-    } catch {
-      useTripStore.getState().clearRecomputingStages();
-      setProcessing(false);
-      setAccommodationScanning(false);
-      toast.error(t("errors.failedUpdateLocation"));
-    }
-  }
-
-  async function patchPacingSettings(
-    newFatigue: number,
-    newElevation: number,
-    newMaxDistance: number,
-    newAverageSpeed: number,
-    newEbikeMode: boolean,
-    // When true, skip the recomputing skeleton: the change has already been
-    // reflected locally (e.g. the e-bike toggle clears terrain alerts and the
-    // stat row re-derives durations from `averageSpeed`), so the cards must
-    // stay mounted with their content instead of waiting for a `stages_computed`
-    // SSE that may never come for a purely local optimistic update.
-    optimistic = false,
-  ): Promise<boolean> {
-    if (!tripId) return false;
-
-    try {
-      const { departureHour: dh, enabledAccommodationTypes: eat } =
-        getPacingState();
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          fatigueFactor: newFatigue,
-          elevationPenalty: newElevation,
-          maxDistancePerDay: newMaxDistance,
-          averageSpeed: newAverageSpeed,
-          ebikeMode: newEbikeMode,
-          departureHour: dh,
-          enabledAccommodationTypes: eat,
-        },
-      });
-
-      if (error) {
-        reportApiError(response.status, error);
-        return false;
-      } else {
-        setProcessing(true);
-        setAccommodationScanning(true);
-        if (optimistic) return true;
-        // Mark every stage as recomputing so the timeline shows the shimmer
-        // skeleton until the `stages_computed` Mercure event lands. The stages
-        // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
-        // the whole trip view (toolbar, config, undo/redo) and defeats the
-        // in-place merge that preserves accommodations/labels (use-mercure).
-        const allStages = useTripStore.getState().stages;
-        if (allStages.length > 0) {
-          actions.startStageRecomputation(allStages.map((stage) => stage.id));
-        }
-        return true;
-      }
-    } catch {
-      toast.error(t("errors.failedUpdatePacing"));
-      return false;
-    }
-  }
-
-  function handlePacingChange(
-    newFatigue: number,
-    newElevation: number,
-    newMaxDistance: number,
-    newAverageSpeed: number,
-  ) {
-    // Capture the pre-drag snapshot on the very first onChange of each gesture,
-    // before any live-preview mutation touches the store.
-    if (preDragPacingSnapshot.current === null) {
-      preDragPacingSnapshot.current = getUndoableSlice(useTripStore.getState());
-    }
-    actions.updatePacingSettingsInternal(
-      newFatigue,
-      newElevation,
-      newMaxDistance,
-      newAverageSpeed,
-    );
-  }
-
-  async function handlePacingCommit(
-    newFatigue: number,
-    newElevation: number,
-    newMaxDistance: number,
-    newAverageSpeed: number,
-  ) {
-    // Push the pre-drag snapshot so Ctrl+Z restores the value before the gesture.
-    // For preset button clicks (no preceding onChange) fall back to current state,
-    // which is still the pre-change value since updatePacingSettingsInternal runs after.
-    const snapshot =
-      preDragPacingSnapshot.current ??
-      getUndoableSlice(useTripStore.getState());
-    preDragPacingSnapshot.current = null;
-    const undoToken = useTripTemporalStore.getState()._push(snapshot);
-    actions.updatePacingSettingsInternal(
-      newFatigue,
-      newElevation,
-      newMaxDistance,
-      newAverageSpeed,
-    );
-    const claim = actions.claimSettings([
-      "fatigueFactor",
-      "elevationPenalty",
-      "maxDistancePerDay",
-      "averageSpeed",
-    ]);
-    const saved = await patchPacingSettings(
-      newFatigue,
-      newElevation,
-      newMaxDistance,
-      newAverageSpeed,
-      getPacingState().ebikeMode,
-    );
-    if (!saved && tripId) {
-      const previous = {
-        fatigueFactor: snapshot.fatigueFactor,
-        elevationPenalty: snapshot.elevationPenalty,
-        maxDistancePerDay: snapshot.maxDistancePerDay,
-        averageSpeed: snapshot.averageSpeed,
-      };
-      discardUndoEntry(
-        undoToken,
-        {
-          fatigueFactor: newFatigue,
-          elevationPenalty: newElevation,
-          maxDistancePerDay: newMaxDistance,
-          averageSpeed: newAverageSpeed,
-        },
-        previous,
-      );
-      actions.revertSettings(claim, previous);
-    }
-    actions.settleSettings(claim);
-  }
-
-  async function handleDepartureHourChange(newDepartureHour: number) {
-    const previous = useTripStore.getState().departureHour;
-    actions.setDepartureHour(newDepartureHour);
-    if (!tripId) return;
-    const claim = actions.claimSettings(["departureHour"]);
-
-    try {
-      const pacing = getPacingState();
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          ...pacing,
-          departureHour: newDepartureHour,
-        },
-      });
-
-      if (error) {
-        actions.revertSettings(claim, { departureHour: previous });
-        reportApiError(response.status, error);
-      } else {
-        actions.settleSettings(claim);
-        setProcessing(true);
-        setAccommodationScanning(true);
-      }
-    } catch {
-      actions.revertSettings(claim, { departureHour: previous });
-      toast.error(t("errors.failedUpdatePacing"));
-    }
-  }
-
-  async function handleEbikeModeChange(newEbikeMode: boolean) {
-    const previousEbikeMode = useTripStore.getState().ebikeMode;
-    // The terrain alerts cleared below, by stage identity, so a refusal puts back
-    // only those and leaves any stage change made meanwhile alone.
-    const clearedTerrain = new Map<string, StageData["alerts"]>();
-    if (!newEbikeMode) {
-      for (const stage of useTripStore.getState().stages) {
-        const terrain = (stage.alerts as StageAlert[]).filter(
-          (a) => a.group === "terrain",
-        );
-        if (terrain.length > 0) clearedTerrain.set(stage.id, terrain);
-      }
-    }
-    actions.setEbikeMode(newEbikeMode);
-    const claim = actions.claimSettings(["ebikeMode"]);
-    if (!newEbikeMode) {
-      const currentStages = useTripStore.getState().stages;
-      currentStages.forEach((_, i) =>
-        actions.updateStageAlerts(i, [], "terrain"),
-      );
-    }
-    const pacing = getPacingState();
-    // The toggle is applied optimistically in-place (alerts cleared above,
-    // durations re-derived from the stat row): keep the cards mounted rather
-    // than swapping them for the recomputing skeleton.
-    const saved = await patchPacingSettings(
-      pacing.fatigueFactor,
-      pacing.elevationPenalty,
-      pacing.maxDistancePerDay,
-      pacing.averageSpeed,
-      newEbikeMode,
-      true,
-    );
-    // A toggle made while this one was in flight owns the mode and the alerts now.
-    if (!saved && tripId) {
-      const reverted = actions.revertSettings(claim, {
-        ebikeMode: previousEbikeMode,
-      });
-      if (reverted.includes("ebikeMode")) {
-        useTripStore.getState().stages.forEach((stage, i) => {
-          const terrain = clearedTerrain.get(stage.id);
-          if (terrain) actions.updateStageAlerts(i, terrain, "terrain");
-        });
-      }
-    }
-    actions.settleSettings(claim);
-  }
-
-  async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
-    const previous = useTripStore.getState().enabledAccommodationTypes;
-    actions.setEnabledAccommodationTypes(newTypes);
-    if (!tripId) return;
-    const claim = actions.claimSettings(["enabledAccommodationTypes"]);
-
-    try {
-      const pacing = getPacingState();
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId }, header: preconditionHeader(tripId) },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          ...pacing,
-          enabledAccommodationTypes: newTypes,
-        },
-      });
-
-      if (error) {
-        actions.revertSettings(claim, { enabledAccommodationTypes: previous });
-        reportApiError(response.status, error);
-      } else {
-        actions.settleSettings(claim);
-        setProcessing(true);
-        setAccommodationScanning(true);
-      }
-    } catch {
-      actions.revertSettings(claim, { enabledAccommodationTypes: previous });
-      toast.error(t("errors.failedUpdateAccommodationTypes"));
-    }
-  }
-
-  async function handleExpandAccommodationRadius(
-    stageIndex: number,
-    currentRadiusKm: number,
-  ): Promise<boolean> {
-    if (!tripId) return false;
-
-    const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
-    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return false;
-
-    try {
-      const stageId = useTripStore.getState().stages[stageIndex]?.id;
-      const ok = await scanAccommodations(tripId, nextRadius, stageId);
-      if (ok) {
-        setProcessing(true);
-        setAccommodationScanning(true);
-        return true;
-      } else {
-        toast.error(t("errors.unexpectedError"));
-        return false;
-      }
-    } catch {
-      toast.error(t("errors.unexpectedError"));
-      return false;
-    }
-  }
-
-  async function handleAddPoiWaypoint(
-    stageIndex: number,
-    poiLat: number,
-    poiLon: number,
-  ) {
-    if (!tripId) return;
-
-    // Inserting a POI waypoint re-routes the stage via Valhalla, which has no
-    // tiles outside the provisioned coverage area — block it for out-of-zone trips.
-    if (outOfZone) {
-      toast.error(t("outOfZone.editDisabled"));
-
-      return;
-    }
-
-    try {
-      const stageId = useTripStore.getState().stages[stageIndex]?.id;
-      if (!stageId) return;
-
-      const ok = await addPoiWaypointToRoute(tripId, stageId, poiLat, poiLon);
-      if (ok) {
-        setProcessing(true);
-      } else {
-        toast.error(t("errors.unexpectedError"));
-      }
-    } catch {
-      toast.error(t("errors.unexpectedError"));
-    }
-  }
-
-  /**
-   * Re-run the full enrichment pipeline for the currently-loaded trip: the
-   * rider asked for a tracé-wide modification, so weather is recomputed on top
-   * of the already-displayed trip view (ADR-043 — no wizard gate). The weather
-   * block spinner is flipped to `running` so the affected cards show their
-   * loading state until the matching Mercure events land. Errors surface as
-   * toasts and the trip view stays put so the user can retry.
-   */
-  async function handleLaunchAnalysis(): Promise<boolean> {
-    if (!tripId) return false;
-
-    try {
-      const ok = await launchTripAnalysis(tripId);
-      if (!ok) {
-        toast.error(t("tripPreview.analysisLaunchFailed"));
-        return false;
-      }
-      setProcessing(true);
-      setAccommodationScanning(true);
-      useUiStore.getState().setBlockStatus("weather", "running");
-      return true;
-    } catch (err) {
-      if (isNetworkError(err)) {
-        toast.error(t("errors.networkError"));
-      } else {
-        toast.error(t("tripPreview.analysisLaunchFailed"));
-      }
-      return false;
-    }
-  }
-
-  async function handleDuplicateTrip(): Promise<string | null> {
-    if (!tripId || !trip) return null;
-
-    try {
-      const result = await duplicateTrip(tripId);
-      if (!result) {
-        toast.error(t("config.duplicateFailed"));
-        return null;
-      }
-
-      toast.success(t("config.duplicateSuccess"));
-      router.push(`/trips/${result.id}`);
-      return result.id;
-    } catch (err) {
-      if (isNetworkError(err)) {
-        toast.error(t("errors.networkError"));
-      } else {
-        toast.error(t("config.duplicateFailed"));
-      }
-      return null;
-    }
-  }
-
-  /**
-   * Delete the loaded trip from the trip view itself (recette #649). Reuses the
-   * same `DELETE /trips/{id}` endpoint as the "Mes voyages" list, then clears
-   * the local store and navigates back to the trips list.
-   *
-   * @returns true on success, false otherwise.
-   */
-  async function handleDeleteTrip(): Promise<boolean> {
-    if (!tripId) return false;
-    try {
-      const ok = await deleteTrip(tripId);
-      if (!ok) {
-        toast.error(t("config.deleteFailed"));
-        return false;
-      }
-      toast.success(t("config.deleteSuccess"));
-      actions.clearTrip();
-      useUiStore.getState().setProcessing(false);
-      useUiStore.getState().setAccommodationScanning(false);
-      useUiStore.getState().setConfigPanelOpen(false);
-      router.push("/trips");
-      return true;
-    } catch (err) {
-      if (isNetworkError(err)) {
-        toast.error(t("errors.networkError"));
-      } else {
-        toast.error(t("config.deleteFailed"));
-      }
-      return false;
-    }
-  }
-
-  /**
-   * Bounce the rider back to Acte 2 (full re-analysis). Mirrors
-   * {@link handleLaunchAnalysis} but is invoked from the analysis card's
-   * "Relancer l'analyse" button.
-   */
-  async function relaunchFullAnalysis(): Promise<boolean> {
-    return handleLaunchAnalysis();
-  }
-
   const [isShareModalOpen, setShareModalOpen] = useState(false);
 
   function handleShareTrip(): void {
     if (!tripId || !trip) return;
     setShareModalOpen(true);
-  }
-
-  /**
-   * Add a hors-app accommodation (title/address/price/link) to a stage. The
-   * address is geocoded backend-side into the coordinates the accommodation
-   * carries; it becomes the selected one and the stage is re-routed — so this is
-   * blocked out of zone like every other reroute (POI waypoint, selection).
-   * Returns true only when the backend accepted it (the form closes then).
-   */
-  async function handleAddManualAccommodation(
-    stageIndex: number,
-    data: ManualAccommodationInput,
-  ): Promise<boolean> {
-    if (!tripId) return false;
-
-    if (outOfZone) {
-      toast.error(t("outOfZone.editDisabled"));
-      return false;
-    }
-
-    try {
-      const stageId = useTripStore.getState().stages[stageIndex]?.id;
-      if (!stageId) return false;
-
-      const { ok, status } = await addManualAccommodation(
-        tripId,
-        stageId,
-        data,
-      );
-      if (!ok) {
-        toast.error(
-          status === 422
-            ? t("errors.accommodationGeocodeFailed")
-            : t("errors.unexpectedError"),
-        );
-        return false;
-      }
-      setProcessing(true);
-      const current = useTripStore.getState().stages;
-      const affected = [current[stageIndex], current[stageIndex + 1]]
-        .filter((stage) => stage !== undefined)
-        .map((stage) => stage.id);
-      actions.startStageRecomputation(affected);
-      trackEvent("accommodation_selected", { type: "other" });
-      return true;
-    } catch {
-      toast.error(t("errors.unexpectedError"));
-      return false;
-    }
-  }
-
-  async function handleSelectAccommodation(
-    stageIndex: number,
-    accIndex: number,
-  ) {
-    if (!tripId) return;
-
-    const currentStages = useTripStore.getState().stages;
-    const acc = currentStages[stageIndex]?.accommodations[accIndex];
-    if (!acc) return;
-
-    const nextStageIndex =
-      stageIndex + 1 < currentStages.length ? stageIndex + 1 : null;
-
-    const stageId = currentStages[stageIndex]?.id;
-    if (!stageId) return;
-
-    // Optimistic update
-    actions.selectAccommodation(stageIndex, accIndex, nextStageIndex);
-
-    try {
-      const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{stageId}/accommodation",
-        {
-          params: {
-            path: { tripId, stageId },
-            header: preconditionHeader(tripId),
-          },
-          headers: { "Content-Type": "application/merge-patch+json" },
-          body: {
-            selectedAccommodationLat: acc.lat,
-            selectedAccommodationLon: acc.lon,
-          },
-        },
-      );
-      if (error) {
-        // 409 Conflict: the backend accommodation list was refreshed by a concurrent
-        // scan — trigger a fresh scan for this stage so the user can retry.
-        if (response.status === 409) {
-          useTripStore.getState().setStages([...currentStages]);
-          toast.info(t("errors.accommodationStale"));
-          const ok = await scanAccommodations(
-            tripId,
-            DEFAULT_ACCOMMODATION_RADIUS_KM,
-            stageId,
-          );
-          if (ok) {
-            setAccommodationScanning(true);
-          } else {
-            toast.error(t("errors.unexpectedError"));
-          }
-        } else {
-          reportApiError(response.status, error);
-          // Rollback on error: restore accommodations from store snapshot
-          useTripStore.getState().setStages([...currentStages]);
-        }
-      } else {
-        setProcessing(true);
-        // Mark affected stages as recomputing: the selected stage and the
-        // next one (its startPoint may have shifted to the accommodation).
-        const current = useTripStore.getState().stages;
-        const affected = [
-          current[stageIndex],
-          nextStageIndex !== null ? current[nextStageIndex] : undefined,
-        ]
-          .filter((stage) => stage !== undefined)
-          .map((stage) => stage.id);
-        actions.startStageRecomputation(affected);
-        trackEvent("accommodation_selected", { type: acc.type });
-      }
-    } catch {
-      toast.error(t("errors.failedSelectAccommodation"));
-      useTripStore.getState().setStages([...currentStages]);
-    }
-  }
-
-  async function handleDeselectAccommodation(stageIndex: number) {
-    if (!tripId) return;
-
-    const currentStages = useTripStore.getState().stages;
-    const stageId = currentStages[stageIndex]?.id;
-    if (!stageId) return;
-
-    // Optimistic update
-    actions.deselectAccommodation(stageIndex);
-
-    try {
-      const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{stageId}/accommodation",
-        {
-          params: {
-            path: { tripId, stageId },
-            header: preconditionHeader(tripId),
-          },
-          headers: { "Content-Type": "application/merge-patch+json" },
-          body: {
-            selectedAccommodationLat: null,
-            selectedAccommodationLon: null,
-          },
-        },
-      );
-      if (error) {
-        reportApiError(response.status, error);
-        useTripStore.getState().setStages([...currentStages]);
-      } else {
-        setProcessing(true);
-        setAccommodationScanning(true);
-        // Mark affected stages as recomputing: the deselected stage and the
-        // next one (its startPoint reverts to original after deselection).
-        const current = useTripStore.getState().stages;
-        const affected = [current[stageIndex], current[stageIndex + 1]]
-          .filter((stage) => stage !== undefined)
-          .map((stage) => stage.id);
-        actions.startStageRecomputation(affected);
-      }
-    } catch {
-      toast.error(t("errors.failedDeselectAccommodation"));
-      useTripStore.getState().setStages([...currentStages]);
-    }
   }
 
   async function handleApplyBatch() {
@@ -1238,7 +290,6 @@ export function useTripPlanner() {
     startDate,
     endDate,
     isProcessing,
-    newAccKey,
     firstWeather,
     isWeatherLoading,
     fatigueFactor,
@@ -1248,38 +299,14 @@ export function useTripPlanner() {
     ebikeMode,
     departureHour,
     enabledAccommodationTypes,
-    handleAccommodationTypesChange,
-    handleTitleChange,
-    updateLocalAccommodation: actions.updateLocalAccommodation,
-    removeLocalAccommodation: actions.removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
-    handleDatesChange,
-    handleDeleteStage,
-    handleAddStage,
-    handleDistanceChange,
-    handlePacingChange,
-    handlePacingCommit,
-    handleEbikeModeChange,
-    handleDepartureHourChange,
-    handleAddManualAccommodation,
-    handleSelectAccommodation,
-    handleDeselectAccommodation,
-    handleExpandAccommodationRadius,
-    handleInsertRestDay,
-    handleAddPoiWaypoint,
-    handleDuplicateTrip,
-    handleDeleteTrip,
-    handleLaunchAnalysis,
     handleShareTrip,
     isShareModalOpen,
     setShareModalOpen,
-    clearNewAccKey: () => setNewAccKey(null),
     pendingModifications,
     isBatchApplying,
     handleApplyBatch,
     handleCancelBatch,
-    queueModification: actions.queueModification,
-    relaunchFullAnalysis,
   };
 }

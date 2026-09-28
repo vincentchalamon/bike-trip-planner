@@ -5,13 +5,12 @@ import { useTranslations } from "next-intl";
 import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
 import { AddAccommodationButton } from "@/components/add-accommodation-button";
-import {
-  ManualAccommodationForm,
-  type ManualAccommodationInput,
-} from "@/components/manual-accommodation-form";
+import { ManualAccommodationForm } from "@/components/manual-accommodation-form";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/store/ui-store";
+import { useTripStore } from "@/store/trip-store";
+import { useAccommodationMutations } from "@/hooks/use-accommodation-mutations";
 import type { AccommodationData } from "@btp/core";
 import {
   MAX_ACCOMMODATION_RADIUS_KM,
@@ -22,16 +21,7 @@ import {
 interface AccommodationPanelProps {
   accommodations: AccommodationData[];
   selectedAccommodation?: AccommodationData | null;
-  onUpdate: (accIndex: number, data: Partial<AccommodationData>) => void;
-  onRemove: (accIndex: number) => void;
-  /** Submit a hors-app accommodation (title/address/price/link) to the backend. */
-  onSubmitManual: (data: ManualAccommodationInput) => Promise<boolean>;
-  onSelect?: (accIndex: number) => void;
-  onDeselect?: () => void;
-  onExpandRadius?: (currentRadiusKm: number) => Promise<boolean>;
-  newAccKey?: string | null;
-  stageIndex?: number;
-  onClearNewAcc?: () => void;
+  stageIndex: number;
   searchRadiusKm?: number;
   onAccommodationHover?: (accIndex: number | null) => void;
   readOnly?: boolean;
@@ -40,20 +30,24 @@ interface AccommodationPanelProps {
 export function AccommodationPanel({
   accommodations,
   selectedAccommodation,
-  onUpdate,
-  onRemove,
-  onSubmitManual,
-  onSelect,
-  onDeselect,
-  onExpandRadius,
-  newAccKey,
   stageIndex,
-  onClearNewAcc,
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
   onAccommodationHover,
   readOnly = false,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
+  const {
+    handleExpandAccommodationRadius,
+    handleAddManualAccommodation,
+    handleSelectAccommodation,
+    handleDeselectAccommodation,
+  } = useAccommodationMutations();
+  const updateLocalAccommodation = useTripStore(
+    (s) => s.updateLocalAccommodation,
+  );
+  const removeLocalAccommodation = useTripStore(
+    (s) => s.removeLocalAccommodation,
+  );
   const [showManualForm, setShowManualForm] = useState(false);
   const isAccommodationScanning = useUiStore((s) => s.isAccommodationScanning);
   // isExpanding: derived from state + prop — no effect needed.
@@ -77,11 +71,6 @@ export function AccommodationPanel({
     removingActiveRef.current = false;
   }, [accommodations]);
 
-  const newAccIndex =
-    newAccKey && stageIndex !== undefined
-      ? parseInt(newAccKey.split("-")[1] ?? "", 10)
-      : null;
-
   function isAccommodationSelected(originalIndex: number): boolean {
     if (!selectedAccommodation) return false;
     const acc = accommodations[originalIndex];
@@ -96,16 +85,12 @@ export function AccommodationPanel({
   const sortedIndices = useMemo(() => {
     return accommodations
       .map((_, i) => i)
-      .sort((a, b) => {
-        // Keep newly added accommodation at the end
-        if (a === newAccIndex) return 1;
-        if (b === newAccIndex) return -1;
-        return (
+      .sort(
+        (a, b) =>
           (accommodations[a]?.distanceToEndPoint ?? 0) -
-          (accommodations[b]?.distanceToEndPoint ?? 0)
-        );
-      });
-  }, [accommodations, newAccIndex]);
+          (accommodations[b]?.distanceToEndPoint ?? 0),
+      );
+  }, [accommodations]);
 
   const nextRadiusKm = searchRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
   const canExpand =
@@ -129,7 +114,7 @@ export function AccommodationPanel({
               <Info className="h-3.5 w-3.5 shrink-0" />
               <span>{t("noAccommodation", { radius: searchRadiusKm })}</span>
             </div>
-            {!readOnly && canExpand && onExpandRadius && (
+            {!readOnly && canExpand && (
               <div className="flex flex-col gap-1 pl-5">
                 {isExpanding ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -144,7 +129,10 @@ export function AccommodationPanel({
                       className="self-start"
                       onClick={async () => {
                         setExpandingFromRadius(searchRadiusKm);
-                        const ok = await onExpandRadius(searchRadiusKm);
+                        const ok = await handleExpandAccommodationRadius(
+                          stageIndex,
+                          searchRadiusKm,
+                        );
                         if (!ok) setExpandingFromRadius(null);
                       }}
                     >
@@ -170,26 +158,23 @@ export function AccommodationPanel({
               accommodation={acc}
               readOnly={readOnly}
               isSelected={isAccommodationSelected(originalIndex)}
-              onUpdate={(data) => {
-                onUpdate(originalIndex, data);
-                if (newAccKey === `${stageIndex}-${originalIndex}`) {
-                  onClearNewAcc?.();
-                }
-              }}
+              onUpdate={(data) =>
+                updateLocalAccommodation(stageIndex, originalIndex, data)
+              }
               onRemove={() => {
                 if (isAccommodationSelected(originalIndex)) {
                   removingActiveRef.current = true;
                 }
-                if (newAccKey === `${stageIndex}-${originalIndex}`) {
-                  onClearNewAcc?.();
-                }
-                onRemove(originalIndex);
+                removeLocalAccommodation(stageIndex, originalIndex);
               }}
-              onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
-              onDeselect={
-                isAccommodationSelected(originalIndex) ? onDeselect : undefined
+              onSelect={() =>
+                handleSelectAccommodation(stageIndex, originalIndex)
               }
-              initialEditing={newAccKey === `${stageIndex}-${originalIndex}`}
+              onDeselect={
+                isAccommodationSelected(originalIndex)
+                  ? () => handleDeselectAccommodation(stageIndex)
+                  : undefined
+              }
               onHoverStart={
                 onAccommodationHover
                   ? () => onAccommodationHover(originalIndex)
@@ -213,32 +198,31 @@ export function AccommodationPanel({
           <span>{t("loading")}</span>
         </div>
       )}
-      {!readOnly &&
-        !hasNoAccommodations &&
-        canExpand &&
-        onExpandRadius &&
-        !isExpanding && (
-          <div className="mt-2">
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={async () => {
-                setExpandingFromRadius(searchRadiusKm);
-                const ok = await onExpandRadius(searchRadiusKm);
-                if (!ok) setExpandingFromRadius(null);
-              }}
-            >
-              <ChevronRight className="h-3 w-3" />
-              {t("expandRadius", { radius: nextRadiusKm })}
-            </Button>
-          </div>
-        )}
+      {!readOnly && !hasNoAccommodations && canExpand && !isExpanding && (
+        <div className="mt-2">
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={async () => {
+              setExpandingFromRadius(searchRadiusKm);
+              const ok = await handleExpandAccommodationRadius(
+                stageIndex,
+                searchRadiusKm,
+              );
+              if (!ok) setExpandingFromRadius(null);
+            }}
+          >
+            <ChevronRight className="h-3 w-3" />
+            {t("expandRadius", { radius: nextRadiusKm })}
+          </Button>
+        </div>
+      )}
       {!readOnly && !selectedAccommodation && (
         <div className={accommodations.length > 0 ? "mt-3" : ""}>
           {showManualForm ? (
             <ManualAccommodationForm
               onSubmit={async (data) => {
-                const ok = await onSubmitManual(data);
+                const ok = await handleAddManualAccommodation(stageIndex, data);
                 if (ok) setShowManualForm(false);
                 return ok;
               }}

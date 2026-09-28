@@ -62,7 +62,6 @@ interface UiState {
   /** Whether the keyboard shortcuts help modal is open. */
   isHelpModalOpen: boolean;
   error: { type: string; message: string } | null;
-  activeDayNumber: number | null;
   /** Index (into active stages) of the stage currently focused on the map. null = global view. */
   focusedMapStageIndex: number | null;
   /** Currently hovered accommodation (from timeline or map marker). null = no hover. */
@@ -118,7 +117,6 @@ interface UiState {
   setConfigPanelOpen: (value: boolean) => void;
   setHelpModalOpen: (value: boolean) => void;
   setError: (error: { type: string; message: string } | null) => void;
-  setActiveDayNumber: (dayNumber: number | null) => void;
   setFocusedMapStageIndex: (index: number | null) => void;
   setHoveredAccommodation: (
     value: { stageIndex: number; accIndex: number } | null,
@@ -167,8 +165,6 @@ function writeBubbleSeenToStorage(): void {
  * - `isConfigPanelOpen` — whether the configuration sidebar is open
  * - `isHelpModalOpen` — whether the keyboard shortcuts help modal is open
  * - `error` — global error banner state (type + message), or `null`
- * - `activeDayNumber` — the day number currently highlighted across the UI
- *   (progress bar, map, elevation profile); `null` means no active day
  * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
  *   the map; `null` means global view (all stages visible)
  * - `viewMode` — current layout mode: "timeline", "map", or "split"
@@ -189,7 +185,6 @@ export const useUiStore = create<UiState>()(
     isConfigPanelOpen: false,
     isHelpModalOpen: false,
     error: null,
-    activeDayNumber: null,
     focusedMapStageIndex: null,
     hoveredAccommodation: null,
     // Default: "split". On mobile the ViewModeToggle component will override to "timeline"
@@ -235,11 +230,6 @@ export const useUiStore = create<UiState>()(
     setError: (error) =>
       set((state) => {
         state.error = error;
-      }),
-
-    setActiveDayNumber: (dayNumber) =>
-      set((state) => {
-        state.activeDayNumber = dayNumber;
       }),
 
     setFocusedMapStageIndex: (index) =>
