@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * The one place that decides how often this deployment may call Nominatim.
@@ -29,8 +30,8 @@ final readonly class NominatimThrottle
 {
     public function __construct(
         private Security $security,
-        #[Autowire(service: 'limiter.geocode')]
-        private RateLimiterFactory $limiter,
+        private RateLimiterFactoryInterface $geocodeLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -41,9 +42,9 @@ final readonly class NominatimThrottle
     {
         $key = $this->security->getUser()?->getUserIdentifier() ?? 'anonymous';
 
-        $limit = $this->limiter->create($key)->consume();
+        $limit = $this->geocodeLimiter->create($key)->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
     }
 }

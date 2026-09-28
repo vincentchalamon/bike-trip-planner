@@ -9,6 +9,7 @@ use App\Repository\UserRepository;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
+use Psr\Clock\ClockInterface;
 
 /**
  * Writes down that an application was let in, at the one moment that proves it was.
@@ -42,6 +43,7 @@ final readonly class GrantRecorder
         private Connection $connection,
         private UserRepository $users,
         private LoggerInterface $logger,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -76,7 +78,7 @@ final readonly class GrantRecorder
                 'user' => $user->getId()->toRfc4122(),
                 'client' => $clientIdentifier,
                 'scopes' => implode(' ', $scopes),
-                'now' => new \DateTimeImmutable()->format('Y-m-d H:i:s'),
+                'now' => $this->clock->now()->format('Y-m-d H:i:s'),
             ],
         );
     }

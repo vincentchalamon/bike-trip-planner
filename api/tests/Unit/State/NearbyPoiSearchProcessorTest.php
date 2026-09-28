@@ -28,6 +28,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 final class NearbyPoiSearchProcessorTest extends TestCase
 {
@@ -44,7 +45,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
         );
         $limiter->create($user->getId()->toRfc4122())->consume();
 
-        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security($user), $limiter);
+        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security($user), $limiter, new NativeClock());
 
         try {
             $processor->process($this->request(InRidePoiCategory::WATER), new Post(), ['id' => 'trip-1']);
@@ -61,7 +62,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
             ['osmType' => 'node', 'osmId' => 1, 'name' => 'Fountain', 'category' => 'drinking_water', 'lat' => 48.0, 'lon' => 2.0, 'openingHours' => null, 'tags' => []],
         ]);
 
-        $processor = new NearbyPoiSearchProcessor($finder, $this->security(new User('rider@example.com')), $this->freshLimiter());
+        $processor = new NearbyPoiSearchProcessor($finder, $this->security(new User('rider@example.com')), $this->freshLimiter(), new NativeClock());
 
         $response = $processor->process($this->request(InRidePoiCategory::WATER), new Post(), ['id' => 'trip-1']);
 
@@ -78,7 +79,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
     #[Test]
     public function usesTheCategoryDefaultRadiusWhenNoneIsRequested(): void
     {
-        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security(new User('rider@example.com')), $this->freshLimiter());
+        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security(new User('rider@example.com')), $this->freshLimiter(), new NativeClock());
 
         $response = $processor->process($this->request(InRidePoiCategory::WATER, null), new Post(), ['id' => 'trip-1']);
 
@@ -88,7 +89,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
     #[Test]
     public function clampsAnOutOfBoundsRadiusWithoutErrorAndEchoesTheAppliedValue(): void
     {
-        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security(new User('rider@example.com')), $this->freshLimiter());
+        $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security(new User('rider@example.com')), $this->freshLimiter(), new NativeClock());
 
         $tooWide = $processor->process($this->request(InRidePoiCategory::WATER, 999_999), new Post(), ['id' => 'trip-1']);
         self::assertSame(InRidePoiCategory::MAX_RADIUS_METERS, $tooWide->radiusMeters);

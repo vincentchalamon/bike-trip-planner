@@ -19,9 +19,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * Handles magic link request: rate limiting, user lookup, link creation, and email sending.
@@ -40,10 +40,8 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
-        #[Autowire(service: 'limiter.magic_link_email')]
-        private RateLimiterFactory $magicLinkEmailLimiter,
-        #[Autowire(service: 'limiter.magic_link_ip')]
-        private RateLimiterFactory $magicLinkIpLimiter,
+        private RateLimiterFactoryInterface $magicLinkEmailLimiter,
+        private RateLimiterFactoryInterface $magicLinkIpLimiter,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
     ) {

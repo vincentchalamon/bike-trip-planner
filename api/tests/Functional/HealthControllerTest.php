@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Clock\NativeClock;
 
 final class HealthControllerTest extends ApiTestCase
 {
@@ -549,7 +550,7 @@ final class HealthControllerTest extends ApiTestCase
         $redisUrl = $_SERVER['REDIS_URL'] ?? $_ENV['REDIS_URL'] ?? null;
         \assert(\is_string($redisUrl), 'REDIS_URL must be set for the health suite');
 
-        return new WorkerHeartbeat(new RedisHealthClientFactory($redisUrl), 'test');
+        return new WorkerHeartbeat(new RedisHealthClientFactory($redisUrl), 'test', new NativeClock());
     }
 
     private function clearWorkerHeartbeats(): void

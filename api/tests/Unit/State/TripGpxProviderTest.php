@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * One operation serves three formats, and they do not want the same thing (ADR-074).
@@ -107,7 +108,7 @@ final class TripGpxProviderTest extends TestCase
         $stageStore = $this->createMock(TripStageStoreInterface::class);
         $stageStore->expects($this->once())->method('getStages')->willReturn([$stage]);
 
-        $provider = new TripGpxProvider($repository, $stageStore, $this->createStub(ComputationTrackerInterface::class), new TripLocker());
+        $provider = new TripGpxProvider($repository, $stageStore, $this->createStub(ComputationTrackerInterface::class), new TripLocker(new NativeClock()));
         $export = $provider->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('fit'))->export();
 
         self::assertNotNull($export);
@@ -135,7 +136,7 @@ final class TripGpxProviderTest extends TestCase
             $repository,
             $this->createStub(TripStageStoreInterface::class),
             $this->createStub(ComputationTrackerInterface::class),
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
         );
 
         $this->expectException(TripNotFoundException::class);
@@ -158,7 +159,7 @@ final class TripGpxProviderTest extends TestCase
         $stageStore = $this->createStub(TripStageStoreInterface::class);
         $stageStore->method('getStages')->willReturn($withStages ? [$this->aStage()] : null);
 
-        return new TripGpxProvider($repository, $stageStore, $tracker, new TripLocker());
+        return new TripGpxProvider($repository, $stageStore, $tracker, new TripLocker(new NativeClock()));
     }
 
     private function aStage(): Stage

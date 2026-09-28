@@ -6,6 +6,7 @@ namespace App\State;
 
 use App\ApiResource\TripRequest;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Psr\Clock\ClockInterface;
 
 /**
  * Checks whether a trip is locked (startDate <= today) and throws 423 Locked if so.
@@ -14,8 +15,13 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  * is locked. This is semantically correct for a trip whose start date has passed:
  * the resource is locked by its temporal state, not by access permissions.
  */
-final class TripLocker
+final readonly class TripLocker
 {
+    public function __construct(
+        private ClockInterface $clock,
+    ) {
+    }
+
     public function assertNotLocked(TripRequest $request): void
     {
         if ($this->isLocked($request)) {
@@ -29,7 +35,7 @@ final class TripLocker
             return false;
         }
 
-        $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
+        $today = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))->setTime(0, 0);
 
         return $request->startDate <= $today;
     }

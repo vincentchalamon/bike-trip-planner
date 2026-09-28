@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Model\AccessToken;
 use League\Bundle\OAuth2ServerBundle\Model\AuthorizationCode;
 use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
+use Psr\Clock\ClockInterface;
 
 /**
  * Takes back what one user gave to one application — and nothing else.
@@ -41,8 +42,10 @@ use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
  */
 final readonly class GrantRevoker
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
+    ) {
     }
 
     public function revoke(OAuthGrant $grant): void
@@ -100,7 +103,7 @@ final readonly class GrantRevoker
                 ->update(OAuthGrant::class, 'g')
                 ->set('g.revokedAt', ':now')
                 ->where('g.id = :id')
-                ->setParameter('now', new \DateTimeImmutable())
+                ->setParameter('now', $this->clock->now())
                 ->setParameter('id', $grant->getId())
                 ->getQuery()
                 ->execute();

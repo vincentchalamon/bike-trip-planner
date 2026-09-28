@@ -18,10 +18,11 @@ use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * Duplicates an existing trip (deep clone: TripRequest + all Stage entities).
@@ -38,8 +39,8 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
-        #[Autowire(service: 'limiter.trip_duplicate')]
-        private RateLimiterFactory $duplicateLimiter,
+        private RateLimiterFactoryInterface $tripDuplicateLimiter,
+        private ClockInterface $clock,
         private Idempotency $idempotency,
     ) {
     }
@@ -62,9 +63,9 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             return $this->tripFor($already->toRfc4122());
         }
 
-        $limit = $this->duplicateLimiter->create($user->getId()->toRfc4122())->consume();
+        $limit = $this->tripDuplicateLimiter->create($user->getId()->toRfc4122())->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         $source = $data;

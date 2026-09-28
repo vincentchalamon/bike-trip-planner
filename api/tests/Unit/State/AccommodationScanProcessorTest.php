@@ -19,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Clock\NativeClock;
 
 final class AccommodationScanProcessorTest extends TestCase
 {
@@ -33,7 +34,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker(new NativeClock()));
 
         $this->expectException(NotFoundHttpException::class);
 
@@ -68,7 +69,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker(new NativeClock()));
 
         $data = new AccommodationScanRequest();
         $data->radiusKm = $radiusKm;
@@ -98,7 +99,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker(new NativeClock()));
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }
@@ -126,7 +127,7 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker());
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker, new TripLocker(new NativeClock()));
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }

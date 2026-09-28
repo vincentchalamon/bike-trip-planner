@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Psr\Log\NullLogger;
+use Symfony\Component\Clock\NativeClock;
 
 final class GpxUploadControllerTest extends TestCase
 {
@@ -51,7 +52,7 @@ final class GpxUploadControllerTest extends TestCase
             $file->method('getMimeType')->willReturn('application/gpx+xml');
             $file->method('getPathname')->willReturn($tmp);
 
-            $controller = new GpxUploadController($gpxService, $security, $limiter, new NullLogger());
+            $controller = new GpxUploadController($gpxService, $security, $limiter, new NativeClock(), new NullLogger());
             $request = new Request([], [], [], [], ['gpxFile' => $file]);
 
             // Answered, not thrown: every other 429 in the API is problem+json, and an

@@ -25,6 +25,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * When the authorization server is willing to open a connection on a caller's say-so.
@@ -161,6 +162,7 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
             $this->security,
             $spent,
             $this->limiter('per_host', 10),
+            new NativeClock(),
         );
 
         try {
@@ -190,6 +192,7 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
             $this->security,
             $this->limiter('per_user', 10),
             $spent,
+            new NativeClock(),
         );
 
         try {
@@ -222,6 +225,7 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
             $this->security,
             $this->limiter('per_user', 10),
             $this->limiter('per_host', 10),
+            new NativeClock(),
         );
     }
 

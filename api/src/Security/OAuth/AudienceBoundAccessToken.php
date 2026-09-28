@@ -9,6 +9,7 @@ use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\Traits\AccessTokenTrait;
 use League\OAuth2\Server\Entities\Traits\EntityTrait;
 use League\OAuth2\Server\Entities\Traits\TokenEntityTrait;
+use Psr\Clock\ClockInterface;
 
 /**
  * An access token that says which resource it was issued for (RFC 8707, ADR-079).
@@ -36,6 +37,7 @@ final class AudienceBoundAccessToken implements AccessTokenEntityInterface
 
     public function __construct(
         private readonly string $audience,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -52,13 +54,14 @@ final class AudienceBoundAccessToken implements AccessTokenEntityInterface
         $this->initJwtConfiguration();
 
         $client = $this->getClient()->getIdentifier();
+        $now = $this->clock->now();
         \assert('' !== $client && '' !== $this->audience);
 
         return $this->jwtConfiguration->builder()
             ->permittedFor($client, $this->audience)
             ->identifiedBy($this->getIdentifier())
-            ->issuedAt(new \DateTimeImmutable())
-            ->canOnlyBeUsedAfter(new \DateTimeImmutable())
+            ->issuedAt($now)
+            ->canOnlyBeUsedAfter($now)
             ->expiresAt($this->getExpiryDateTime())
             ->relatedTo($this->getSubjectIdentifier())
             ->withClaim('scopes', $this->getScopes())

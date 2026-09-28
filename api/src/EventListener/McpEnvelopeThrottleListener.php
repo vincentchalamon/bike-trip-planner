@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * A ceiling on `/mcp` per address, for what no other limiter can see.
@@ -33,8 +34,8 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 final readonly class McpEnvelopeThrottleListener
 {
     public function __construct(
-        #[Autowire(service: 'limiter.mcp_envelope')]
-        private RateLimiterFactory $limiter,
+        private RateLimiterFactoryInterface $mcpEnvelopeLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -46,7 +47,7 @@ final readonly class McpEnvelopeThrottleListener
             return;
         }
 
-        $limit = $this->limiter->create($request->getClientIp() ?? 'unknown')->consume();
+        $limit = $this->mcpEnvelopeLimiter->create($request->getClientIp() ?? 'unknown')->consume();
 
         if ($limit->isAccepted()) {
             return;
@@ -56,7 +57,7 @@ final readonly class McpEnvelopeThrottleListener
             'error' => 'rate_limited',
             'error_description' => 'Too many requests from this address.',
         ], Response::HTTP_TOO_MANY_REQUESTS);
-        $response->headers->set('Retry-After', (string) max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+        $response->headers->set('Retry-After', (string) RetryAfter::seconds($limit, $this->clock));
 
         $event->setResponse($response);
     }

@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Psr\Clock\ClockInterface;
 
 /**
  * Purges expired refresh tokens that were never rotated or revoked.
@@ -28,6 +29,7 @@ final readonly class PurgeExpiredTokensCommand
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -37,7 +39,7 @@ final readonly class PurgeExpiredTokensCommand
         $deleted = $this->entityManager->createQueryBuilder()
             ->delete(RefreshToken::class, 'rt')
             ->where('rt.expiresAt <= :now')
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', $this->clock->now())
             ->getQuery()
             ->execute();
 

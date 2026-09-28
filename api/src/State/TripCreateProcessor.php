@@ -17,11 +17,10 @@ use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripBootstrapper;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * @implements ProcessorInterface<TripRequest, Trip>
@@ -35,8 +34,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripBootstrapper $bootstrapper,
         private TripLocker $tripLocker,
         private Security $security,
-        #[Autowire(service: 'limiter.trip_create')]
-        private RateLimiterFactory $tripCreateLimiter,
+        private RateLimiterFactoryInterface $tripCreateLimiter,
         private Idempotency $idempotency,
     ) {
     }

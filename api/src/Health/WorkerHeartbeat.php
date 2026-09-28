@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Health;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Psr\Clock\ClockInterface;
 
 /**
  * Records that a Messenger consumer is alive, so readiness can say so (ADR-075).
@@ -35,6 +36,7 @@ readonly class WorkerHeartbeat
         private RedisHealthClientFactory $redisClientFactory,
         #[Autowire(param: 'kernel.environment')]
         private string $env,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -53,7 +55,7 @@ readonly class WorkerHeartbeat
     public function beat(string $workerId): void
     {
         $redis = $this->redisClientFactory->create();
-        $now = time();
+        $now = $this->clock->now()->getTimestamp();
 
         $redis->zAdd($this->key(), $now, $workerId);
         // Pruning belongs to the worker, not to the probe: a readiness call must stay a read.
@@ -69,7 +71,7 @@ readonly class WorkerHeartbeat
     {
         return $this->redisClientFactory->create()->zCount(
             $this->key(),
-            (string) (time() - self::ALIVE_WINDOW),
+            (string) ($this->clock->now()->getTimestamp() - self::ALIVE_WINDOW),
             '+inf',
         );
     }

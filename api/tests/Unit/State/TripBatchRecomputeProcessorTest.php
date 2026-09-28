@@ -30,6 +30,7 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 final class TripBatchRecomputeProcessorTest extends TestCase
 {
@@ -56,8 +57,9 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $this->createStub(ComputationTrackerInterface::class),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             $limiter,
+            new NativeClock(),
         );
 
         try {
@@ -117,8 +119,9 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
+            new NativeClock(),
         );
 
         $request = new TripBatchRecomputeRequest([
@@ -160,8 +163,9 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
+            new NativeClock(),
         );
     }
 

@@ -22,6 +22,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Clock\NativeClock;
 
 #[AllowMockObjectsWithoutExpectations]
 final class TripShareStageProviderTest extends TestCase
@@ -106,6 +107,7 @@ final class TripShareStageProviderTest extends TestCase
                 ['id' => 'shared_trip', 'policy' => 'fixed_window', 'limit' => 60, 'interval' => '60 seconds'],
                 new InMemoryStorage(),
             ),
+            new NativeClock(),
         );
     }
 }

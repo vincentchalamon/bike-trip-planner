@@ -21,9 +21,11 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * Handles access request creation: rate limiting, email deduplication, HMAC link generation and email sending.
@@ -45,8 +47,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
         private AccessRequestHmacService $hmacService,
-        #[Autowire(service: 'limiter.access_request_ip')]
-        private RateLimiterFactory $accessRequestIpLimiter,
+        private RateLimiterFactoryInterface $accessRequestIpLimiter,
+        private ClockInterface $clock,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
     ) {
@@ -70,7 +72,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
             $this->logger->debug('Access request IP rate limited', ['ip' => $clientIp]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_TOO_MANY_REQUESTS, [
-                'Retry-After' => (string) max(1, $ipLimit->getRetryAfter()->getTimestamp() - time()),
+                'Retry-After' => (string) RetryAfter::seconds($ipLimit, $this->clock),
             ]);
         }
 

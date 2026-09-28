@@ -21,6 +21,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 final class TripDuplicateProcessorTest extends TestCase
 {
@@ -47,8 +48,9 @@ final class TripDuplicateProcessorTest extends TestCase
             $this->createStub(ComputationTrackerInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             $security,
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             $limiter,
+            new NativeClock(),
             // Stubbed to answer "never seen before", so the limiter is what refuses: the
             // idempotency check runs first now, and a replay would short-circuit past it.
             $this->createStub(Idempotency::class),

@@ -21,6 +21,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Psr\Clock\ClockInterface;
 
 /**
  * Notes that an application actually did something, so a user can see it on their account page.
@@ -62,6 +63,7 @@ final readonly class McpGrantUsage implements RequestHandlerInterface
         #[Autowire(service: 'cache.oauth_grant_usage')]
         private CacheInterface $throttle,
         private LoggerInterface $logger,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -102,7 +104,7 @@ final readonly class McpGrantUsage implements RequestHandlerInterface
                     $this->connection->executeStatement(
                         'UPDATE oauth_grant SET last_used_at = :now WHERE user_id = :user AND client_identifier = :client AND revoked_at IS NULL',
                         [
-                            'now' => new \DateTimeImmutable()->format('Y-m-d H:i:s'),
+                            'now' => $this->clock->now()->format('Y-m-d H:i:s'),
                             'user' => $userId,
                             'client' => $client,
                         ],

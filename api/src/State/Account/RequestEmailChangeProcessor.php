@@ -21,9 +21,11 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * Requests an email change (#777): validates the new address, creates a
@@ -47,10 +49,9 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         private TranslatorInterface $translator,
         private LoggerInterface $logger,
         private RequestStack $requestStack,
-        #[Autowire(service: 'limiter.email_change_user')]
-        private RateLimiterFactory $emailChangeUserLimiter,
-        #[Autowire(service: 'limiter.email_change_ip')]
-        private RateLimiterFactory $emailChangeIpLimiter,
+        private RateLimiterFactoryInterface $emailChangeUserLimiter,
+        private RateLimiterFactoryInterface $emailChangeIpLimiter,
+        private ClockInterface $clock,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
     ) {
@@ -71,7 +72,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         $ipLimit = $this->emailChangeIpLimiter->create($clientIp)->consume();
         if (!$userLimit->isAccepted() || !$ipLimit->isAccepted()) {
             $limit = $userLimit->isAccepted() ? $ipLimit : $userLimit;
-            $secondsUntilRetry = max(0, $limit->getRetryAfter()->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
+            $secondsUntilRetry = RetryAfter::seconds($limit, $this->clock);
 
             throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: $this->translator->trans('email_change.error.rate_limited', [], 'account'));
         }

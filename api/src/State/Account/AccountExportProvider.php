@@ -11,11 +11,12 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * GDPR right to portability: exports the current user's data as a downloadable
@@ -28,8 +29,8 @@ final readonly class AccountExportProvider implements ProviderInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private Security $security,
-        #[Autowire(service: 'limiter.account_export')]
-        private RateLimiterFactory $exportLimiter,
+        private RateLimiterFactoryInterface $accountExportLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -41,9 +42,9 @@ final readonly class AccountExportProvider implements ProviderInterface
 
         // The query below walks every trip this user owns, with no upper bound: portability is
         // a once-in-a-while gesture and the limit says so.
-        $limit = $this->exportLimiter->create($user->getId()->toRfc4122())->consume();
+        $limit = $this->accountExportLimiter->create($user->getId()->toRfc4122())->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         /** @var list<TripRequest> $trips */

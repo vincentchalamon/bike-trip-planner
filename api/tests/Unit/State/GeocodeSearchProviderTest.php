@@ -19,6 +19,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * Moved here with the code it tests, when place search left the geocode controller to become
@@ -55,7 +56,7 @@ final class GeocodeSearchProviderTest extends TestCase
         $provider = new GeocodeSearchProvider(new NominatimPlaces(
             $this->createStub(HttpClientInterface::class),
             $cache,
-            new NominatimThrottle($security, $limiter),
+            new NominatimThrottle($security, $limiter, new NativeClock()),
         ));
 
         try {
@@ -82,6 +83,7 @@ final class GeocodeSearchProviderTest extends TestCase
                     ['id' => 'geocode', 'policy' => 'sliding_window', 'limit' => 1, 'interval' => '60 seconds'],
                     new InMemoryStorage(),
                 ),
+                new NativeClock(),
             ),
         ));
 

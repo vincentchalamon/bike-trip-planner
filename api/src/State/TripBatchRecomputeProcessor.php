@@ -19,12 +19,13 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Service\ModificationMessageResolver;
 use App\Service\TripAnalysisDispatcher;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 
 /**
  * Processes the batch recompute endpoint: applies N pending modifications in a
@@ -51,8 +52,8 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
         private TripLocker $tripLocker,
-        #[Autowire(service: 'limiter.trip_recompute')]
-        private RateLimiterFactory $recomputeLimiter,
+        private RateLimiterFactoryInterface $tripRecomputeLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -71,9 +72,9 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
 
         // Cap per trip: recompute re-dispatches the full enrichment pipeline onto
         // the shared workers, so it must not be scriptable faster than they drain (SEC-010).
-        $limit = $this->recomputeLimiter->create($tripId)->consume();
+        $limit = $this->tripRecomputeLimiter->create($tripId)->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         $stages = $this->stageStore->getStages($tripId);

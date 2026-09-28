@@ -8,6 +8,7 @@ use App\Repository\IdempotencyKeyRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Psr\Clock\ClockInterface;
 
 /**
  * Drops idempotency keys past their retention window.
@@ -23,12 +24,13 @@ final readonly class PurgeIdempotencyKeysCommand
 
     public function __construct(
         private IdempotencyKeyRepository $keys,
+        private ClockInterface $clock,
     ) {
     }
 
     public function __invoke(SymfonyStyle $io): int
     {
-        $cutoff = new \DateTimeImmutable(self::RETENTION);
+        $cutoff = $this->clock->now()->modify(self::RETENTION);
         $deleted = $this->keys->purgeOlderThan($cutoff);
 
         $io->success(\sprintf(
