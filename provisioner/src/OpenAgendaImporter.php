@@ -7,8 +7,6 @@ namespace Provisioner;
 use Provisioner\Exception\ImportFailedException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\ScopingHttpClient;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -73,10 +71,7 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
 
     private HttpClientInterface $httpClient;
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     private EventsPromotion $promotion;
 
@@ -101,7 +96,7 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
             ]),
             'https://public.opendatasoft.com/',
         );
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
         // Events are perishable, so promotion is upsert-and-purge, not the append-only
         // anti-join {@see ZonePromotion} runs for places (ADR-051 §4).
         $this->promotion = new EventsPromotion(self::SOURCE, self::LIVE_SCHEMA);
@@ -290,20 +285,20 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
      */
     private function load(string $stagingSchema, string $copyFile): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s; CREATE TABLE %1$s.events (%2$s);', $stagingSchema, self::EVENTS_DDL),
         ], 'psql create openagenda staging');
 
         $columns = implode(', ', self::EVENT_COLUMNS);
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf("\\copy %s.events (%s) FROM '%s'", $stagingSchema, $columns, $copyFile),
         ], 'psql copy events');
 
         // Serves the zone clip: the promotion tests every staged row against the zone
         // polygon with ST_Covers.
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('CREATE INDEX ON %s.events USING gist (geom);', $stagingSchema),
         ], 'psql index events');
@@ -315,7 +310,7 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
     private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
     {
         $path = $workDir.'/openagenda-zone-geometry.tsv';
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf(
                 "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
@@ -341,11 +336,11 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
      */
     private function promote(string $zoneSlug, string $stagingSchema, string $today): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
         ], 'psql prepare promotion report');
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
             $this->promotion->sql($zoneSlug, $stagingSchema, $today),
         ], \sprintf('psql upsert+purge openagenda events zone %s', $zoneSlug));
@@ -356,32 +351,9 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
      */
     private function dropStaging(string $stagingSchema): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop openagenda staging schema');
-    }
-
-    /**
-     * @param list<string> $command
-     *
-     * @throws ImportFailedException
-     */
-    private function runProcess(array $command, string $label): void
-    {
-        $process = ($this->processFactory)($command);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nCommand: %s\nStderr: %s", $label, (string) $process->getExitCode(), implode(' ', $command), $process->getErrorOutput()));
-        }
     }
 }

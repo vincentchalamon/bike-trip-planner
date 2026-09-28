@@ -7,8 +7,6 @@ namespace Provisioner;
 use Provisioner\Exception\ImportFailedException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\ScopingHttpClient;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -132,10 +130,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
 
     private HttpClientInterface $httpClient;
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     private WikidataEnrichmentPass $enrichmentPass;
 
@@ -152,7 +147,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         private string $fluxUrl,
         private DataTourismeMapper $mapper = new DataTourismeMapper(),
         ?HttpClientInterface $httpClient = null,
-        ?\Closure $processFactory = null,
+        private ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
         WikidataEnricher $enricher = new WikidataEnricher(),
         string $locale = 'fr',
@@ -169,7 +164,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             ]),
             'https://diffuseur.datatourisme.fr/',
         );
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($this->processFactory, $this->timeoutSeconds);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
         $this->promotion = new ZonePromotion(self::SOURCE, self::LIVE_SCHEMA, self::IDENTITY);
         // Events are perishable: promoted by upsert + purge, not the append-only anti-join
@@ -278,11 +273,11 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      */
     private function promoteEvents(string $stagingSchema, string $zoneSlug, string $today): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->eventsPromotion->reportDdl(),
         ], 'psql prepare events promotion report');
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
             $this->eventsPromotion->sql($zoneSlug, $stagingSchema, $today),
         ], \sprintf('psql upsert+purge datatourisme events zone %s', $zoneSlug));
@@ -296,7 +291,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
     {
         $path = $workDir.'/zone-geometry.tsv';
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf(
                 "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
@@ -541,19 +536,19 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             $ddl .= \sprintf(' CREATE TABLE %s.%s (%s);', $stagingSchema, $table, $columns);
         }
 
-        $this->runProcess(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $ddl], 'psql create tourism staging');
+        $this->processes->run(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $ddl], 'psql create tourism staging');
 
         foreach ($copyFiles as $table => $path) {
             $columns = implode(', ', self::TABLE_COLUMNS[$table]);
             $copy = \sprintf("\\copy %s.%s (%s) FROM '%s'", $stagingSchema, $table, $columns, $path);
-            $this->runProcess(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $copy], \sprintf('psql copy %s', $table));
+            $this->processes->run(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $copy], \sprintf('psql copy %s', $table));
         }
 
         foreach (array_keys(self::TABLE_COLUMNS) as $table) {
             // Not a mirror of the live index any more (promotion is an INSERT, so the
             // live indexes stay): this one serves the zone clip, which tests every
             // staged row against the zone polygon with ST_Covers.
-            $this->runProcess([
+            $this->processes->run([
                 'psql', '-v', 'ON_ERROR_STOP=1', '-c',
                 \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', $stagingSchema, $table),
             ], \sprintf('psql index %s', $table));
@@ -564,7 +559,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             // accommodations once per unnamed OSM row. Only that one table is ever matched
             // against, so only it pays for the extra index.
             if ('accommodations' === $table) {
-                $this->runProcess([
+                $this->processes->run([
                     'psql', '-v', 'ON_ERROR_STOP=1', '-c',
                     \sprintf('CREATE INDEX ON %s.%s USING gist ((geom::geography));', $stagingSchema, $table),
                 ], \sprintf('psql index %s geography', $table));
@@ -611,11 +606,11 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             $rejections,
         );
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
         ], 'psql prepare promotion report');
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
             $this->promotion->sql($zoneSlug, $stagingSchema, clipToZone: $zoneSlug, registryUpsert: $metadataRefresh),
         ], \sprintf('psql promote datatourisme zone %s', $zoneSlug));
@@ -629,7 +624,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      */
     private function loadEventsOnly(string $stagingSchema, string $eventsCopyFile): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf(
                 'DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s; CREATE TABLE %1$s.events (%2$s);',
@@ -639,12 +634,12 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         ], 'psql create events refresh staging');
 
         $columns = implode(', ', self::TABLE_COLUMNS['events']);
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf("\\copy %s.events (%s) FROM '%s'", $stagingSchema, $columns, $eventsCopyFile),
         ], 'psql copy events');
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('CREATE INDEX ON %s.events USING gist (geom);', $stagingSchema),
         ], 'psql index events');
@@ -655,32 +650,9 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      */
     private function dropStaging(string $stagingSchema): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop tourism staging schema');
-    }
-
-    /**
-     * @param list<string> $command
-     *
-     * @throws ImportFailedException
-     */
-    private function runProcess(array $command, string $label): void
-    {
-        $process = ($this->processFactory)($command);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nCommand: %s\nStderr: %s", $label, (string) $process->getExitCode(), implode(' ', $command), $process->getErrorOutput()));
-        }
     }
 }

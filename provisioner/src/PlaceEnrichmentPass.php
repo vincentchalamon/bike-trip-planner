@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
 
 /**
  * Resolves the missing names of a staging table and applies the completeness gate before
@@ -53,10 +50,7 @@ final readonly class PlaceEnrichmentPass
      */
     public const int DEFAULT_MATCH_RADIUS_METERS = 50;
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param string       $source            cache partition, also the report label ('osm', 'datatourisme')
@@ -80,7 +74,7 @@ final readonly class PlaceEnrichmentPass
         private ?string $matchTable = null,
         private int $matchRadiusMeters = self::DEFAULT_MATCH_RADIUS_METERS,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     /**
@@ -96,7 +90,7 @@ final readonly class PlaceEnrichmentPass
         // WikidataEnrichmentPass creates its own), and the scratch table is scoped to the
         // staging schema so two passes never drop each other's rows.
         $scratch = \sprintf('%s.place_resolved_%s', self::CACHE_SCHEMA, (string) preg_replace('/[^a-z0-9_]/i', '_', $stagingSchema));
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             'CREATE SCHEMA IF NOT EXISTS %1$s; CREATE TABLE IF NOT EXISTS %2$s (source text NOT NULL, source_id text NOT NULL, payload jsonb NOT NULL, status text NOT NULL, resolver_version integer NOT NULL, fetched_at timestamptz NOT NULL, PRIMARY KEY (source, source_id)); DROP TABLE IF EXISTS %3$s; CREATE TABLE %3$s (source_id text, payload jsonb, status text);',
             self::CACHE_SCHEMA,
             self::CACHE_TABLE,
@@ -104,7 +98,7 @@ final readonly class PlaceEnrichmentPass
         ), 'psql prepare place enrichment cache');
 
         $candidatesPath = $workDir.'/place-candidates.tsv';
-        $this->psql($this->exportCandidates($stagingSchema, $table, $candidatesPath), 'psql export name candidates');
+        $this->processes->psql($this->exportCandidates($stagingSchema, $table, $candidatesPath), 'psql export name candidates');
 
         $decisions = $this->resolveAll($candidatesPath);
         $counts = ['resolved' => 0, 'rejected' => 0, 'matched' => 0, 'ambiguous' => 0, 'reasons' => []];
@@ -128,10 +122,10 @@ final readonly class PlaceEnrichmentPass
                 fclose($handle);
             }
 
-            $this->psql(\sprintf("\\copy %s (source_id, payload, status) FROM '%s'", $scratch, $copyPath), 'psql copy resolved names');
+            $this->processes->psql(\sprintf("\\copy %s (source_id, payload, status) FROM '%s'", $scratch, $copyPath), 'psql copy resolved names');
             // Negative decisions are cached too, with the version that made them: that is
             // what makes a re-opening cheap and a resolver improvement retroactive.
-            $this->psql(\sprintf(
+            $this->processes->psql(\sprintf(
                 'INSERT INTO %1$s (source, source_id, payload, status, resolver_version, fetched_at) SELECT %2$s, source_id, payload, status, %3$d, now() FROM %4$s ON CONFLICT (source, source_id) DO UPDATE SET payload = excluded.payload, status = excluded.status, resolver_version = excluded.resolver_version, fetched_at = excluded.fetched_at;',
                 self::CACHE_TABLE,
                 $this->literal($this->source),
@@ -143,7 +137,7 @@ final readonly class PlaceEnrichmentPass
         // COALESCE only: completion, never rewriting (ADR-049 §4). A matched DataTourisme
         // record brings its description, site and hours along with the name (#885), under the
         // same rule — so an OSM value that exists always wins.
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             "UPDATE %1\$s.%2\$s a SET name = COALESCE(a.name, c.payload->>'name'), description = COALESCE(a.description, c.payload->>'description'), website = COALESCE(a.website, c.payload->>'website'), opening_hours = COALESCE(a.opening_hours, c.payload->>'opening_hours') FROM %3\$s c WHERE c.source = %4\$s AND c.source_id = %5\$s AND c.status = 'resolved';",
             $stagingSchema,
             $table,
@@ -153,7 +147,7 @@ final readonly class PlaceEnrichmentPass
         ), \sprintf('psql apply resolved names to %s.%s', $stagingSchema, $table));
 
         $rejectedPath = $workDir.'/place-rejected.tsv';
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             "\\copy (SELECT count(*) FROM %s.%s a WHERE %s) TO '%s'",
             $stagingSchema,
             $table,
@@ -169,14 +163,14 @@ final readonly class PlaceEnrichmentPass
 
         // The gate itself. Deleting from staging keeps the promotion's INSERT clean, so the
         // CHECK on the live table only ever fires on a bug here — which is the point.
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             'DELETE FROM %s.%s a WHERE %s;',
             $stagingSchema,
             $table,
             $this->gatePredicate($table),
         ), 'psql apply completeness gate');
 
-        $this->psql(\sprintf('DROP TABLE IF EXISTS %s;', $scratch), 'psql drop place enrichment scratch');
+        $this->processes->psql(\sprintf('DROP TABLE IF EXISTS %s;', $scratch), 'psql drop place enrichment scratch');
 
         foreach ($decisions as $decision) {
             if ('resolved' === $decision['status']) {
@@ -269,7 +263,7 @@ final readonly class PlaceEnrichmentPass
             $osmSchema,
         );
 
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             <<<'SQL'
                 \copy (SELECT %10$s AS source,
                               %1$s AS source_id,
@@ -520,26 +514,5 @@ final readonly class PlaceEnrichmentPass
     private function literal(string $value): string
     {
         return ZonePromotion::literal($value);
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    private function psql(string $sql, string $label): void
-    {
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nStderr: %s", $label, (string) $process->getExitCode(), $process->getErrorOutput()));
-        }
     }
 }

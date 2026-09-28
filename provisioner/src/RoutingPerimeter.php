@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -36,10 +34,7 @@ final readonly class RoutingPerimeter
 {
     public const string DEFAULT_DIR = '/routing';
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql process factory; shared with the caller so commands are captured in tests
@@ -49,7 +44,7 @@ final readonly class RoutingPerimeter
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 60.0,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     public function isObservable(): bool
@@ -121,19 +116,6 @@ final readonly class RoutingPerimeter
                 implode(', ', array_map(ZonePromotion::literal(...), $slugs)),
             );
 
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('psql record routing perimeter timed out after %.1fs', $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('psql record routing perimeter failed: %s', $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("psql record routing perimeter failed (exit %s).\nStderr: %s", (string) $process->getExitCode(), $process->getErrorOutput()));
-        }
+        $this->processes->psql($sql, 'psql record routing perimeter', singleTransaction: true);
     }
 }

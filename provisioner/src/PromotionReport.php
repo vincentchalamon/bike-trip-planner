@@ -22,10 +22,7 @@ use Symfony\Component\Process\Process;
  */
 final readonly class PromotionReport
 {
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql process factory; shared with the caller so commands are captured in tests
@@ -34,24 +31,29 @@ final readonly class PromotionReport
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 60.0,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     /**
+     * Only the rows promoted since `$since`, the start of the run being reported. The table
+     * keeps one row per (source, zone, table), overwritten by each promotion, so a source that
+     * this run skipped or failed still has the figures of its last successful run there, and
+     * reporting them would present an old promotion as today's.
+     *
      * @return list<array{source: string, table: string, candidates: int, inserted: int}> empty when the report cannot be read
      */
-    public function forZone(string $zoneSlug, string $workDir): array
+    public function forZone(string $zoneSlug, string $workDir, \DateTimeImmutable $since): array
     {
         $path = $workDir.'/promotion-report.tsv';
         $sql = \sprintf(
-            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s ORDER BY source, table_name) TO '%s'",
+            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s AND promoted_at >= %s::timestamptz ORDER BY source, table_name) TO '%s'",
             ZonePromotion::REPORT_TABLE,
             ZonePromotion::literal($zoneSlug),
+            ZonePromotion::literal($since->format(\DateTimeInterface::RFC3339_EXTENDED)),
             $path,
         );
 
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
+        $process = $this->processes->process(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
 
         try {
             $process->run();
