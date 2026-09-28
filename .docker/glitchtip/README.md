@@ -3,6 +3,8 @@
 Production-grade error tracker for Bike Trip Planner. See [ADR-031](../../docs/adr/adr-031-error-tracking-strategy.md) for the rationale.
 
 > **Beta posture (Sprint 34.5, issue #568):** this stack is **not deployed** during the restricted beta. The Sentry SDKs point at **Sentry SaaS free tier** instead (set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` to the SaaS DSN). These files are kept for reversibility: deploy the stack below and switch the DSN/`SENTRY_URL` back to `errors.bike-trip-planner.com` to restore self-hosting. See the "Beta posture" section in ADR-031.
+>
+> **Coolify is gone:** the installation procedure below predates [ADR-061](../../docs/adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md) and still describes a Coolify resource. It is not wired into the Ansible deployment; bringing the stack back means porting it to Ansible first.
 
 ## Architecture
 
