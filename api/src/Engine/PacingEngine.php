@@ -167,18 +167,6 @@ final readonly class PacingEngine implements PacingEngineInterface
                 }
             }
 
-            if (\count($stagePoints) < 2) {
-                // Absorb into remaining
-                $remaining = array_merge($stagePoints, $remaining);
-                if (null !== $stageRawPoints) {
-                    $remainingRaw = null !== $remainingRaw
-                        ? array_merge($stageRawPoints, $remainingRaw)
-                        : $stageRawPoints;
-                }
-
-                continue;
-            }
-
             $elevationSource = $stageRawPoints ?? $stagePoints;
 
             $distance = $this->distanceCalculator->calculateTotalDistance($stagePoints);
