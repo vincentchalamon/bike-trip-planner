@@ -4,17 +4,24 @@ declare(strict_types=1);
 
 namespace App\Engine;
 
+use App\OpeningHours\Modifier;
+use App\OpeningHours\OpeningHoursGrammar;
+use App\OpeningHours\Rule;
+use App\OpeningHours\SelectorKind;
+
 /**
- * A deliberately small reader of the OSM `opening_hours` grammar.
+ * Planning's reading of an OSM `opening_hours` value, over the shared
+ * {@see OpeningHoursGrammar}. Deliberately narrow.
  *
- * Only the shapes that cover the vast majority of resupply POIs are modelled:
- * `24/7`, a bare list of time spans (`09:00-12:00,14:00-19:00`), and
+ * Only the shapes that cover the vast majority of resupply POIs are accepted:
+ * `24/7` alone, a bare list of time spans (`09:00-12:00,14:00-19:00`), and
  * `;`-separated rules made of an optional weekday selector (`Mo`, `Mo-Fr`,
- * `Mo,We,Fr`, `Mo-Fr,Su`) followed by either `off`/`closed` or time spans.
+ * `Mo,We,Fr`, `Mo-Fr,Su`, in any case) followed by either `off`/`closed` or
+ * comma-separated time spans.
  *
- * Anything else — month ranges, `week`, `sunrise`, `Su[1]`, `open`, comments —
- * makes {@see parse} return null. The value is then *unknown*, never *closed*:
- * callers must not conclude on a string they did not understand.
+ * Anything else — month ranges, dates, `week`, `sunrise`, `Su[1]`, `open`,
+ * comments — makes {@see parse} return null. The value is then *unknown*, never
+ * *closed*: callers must not conclude on a string they did not understand.
  *
  * `PH`/`SH` (public/school holiday) rules are skipped rather than rejected.
  * Whether a date is a public holiday is the calendar checker's business, and
@@ -23,12 +30,6 @@ namespace App\Engine;
  */
 final readonly class OpeningHours
 {
-    /** @var array<string, int> ISO-8601 weekday numbers (1 = Monday). */
-    private const array WEEKDAYS = [
-        'mo' => 1, 'tu' => 2, 'we' => 3, 'th' => 4,
-        'fr' => 5, 'sa' => 6, 'su' => 7,
-    ];
-
     /**
      * @param array<int, list<array{open: float, close: float}>> $slotsByWeekday ISO weekday => open slots, in decimal hours
      */
@@ -38,37 +39,31 @@ final readonly class OpeningHours
     }
 
     /**
-     * Returns null when the string is not one of the modelled shapes.
+     * Returns null when the string is not one of the accepted shapes.
      */
     public static function parse(string $spec): ?self
     {
-        $spec = trim($spec);
+        $schedule = OpeningHoursGrammar::parse($spec);
 
-        if ('24/7' === $spec) {
+        if ('24/7' === $schedule->text) {
             return new self(array_fill_keys(range(1, 7), [['open' => 0.0, 'close' => 24.0]]));
         }
 
         $slotsByWeekday = [];
         $matched = false;
 
-        foreach (explode(';', $spec) as $rawRule) {
-            $rule = trim($rawRule);
-
-            if ('' === $rule) {
+        foreach ($schedule->rules as $rule) {
+            if ($rule->holidayScoped) {
                 continue;
             }
 
-            if (1 === preg_match('/^(?:PH|SH)\b/i', $rule)) {
-                continue;
-            }
+            $judged = self::judge($rule);
 
-            $parsed = self::parseRule($rule);
-
-            if (null === $parsed) {
+            if (null === $judged) {
                 return null;
             }
 
-            [$days, $slots] = $parsed;
+            [$days, $slots] = $judged;
 
             foreach ($days as $day) {
                 $slotsByWeekday[$day] = $slots;
@@ -114,46 +109,65 @@ final readonly class OpeningHours
     }
 
     /**
-     * A single `;`-separated rule: `[<weekday selector> ]<time spans|off>`.
+     * The days a rule covers and their slots, or null when planning does not
+     * accept the rule: `24/7` among other rules, `open`, a selector that is not
+     * only weekdays, `off` next to times, spans not separated by one comma, a
+     * time part broken across lines after a selector.
      *
      * @return array{list<int>, list<array{open: float, close: float}>}|null
      */
-    private static function parseRule(string $rule): ?array
+    private static function judge(Rule $rule): ?array
     {
-        $days = range(1, 7);
-        $rest = $rule;
-
-        if (1 === preg_match('/^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:\s*[-,]\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))*)\s+(.*)$/i', $rule, $matches)) {
-            $selected = self::parseWeekdays($matches[1]);
-
-            if (null === $selected) {
-                return null;
-            }
-
-            $days = $selected;
-            $rest = trim($matches[2]);
+        if ($rule->always || Modifier::OPEN === $rule->modifier) {
+            return null;
         }
 
-        if (\in_array(strtolower($rest), ['off', 'closed'], true)) {
-            return [$days, []];
+        $days = range(1, 7);
+
+        if (null !== $rule->selector) {
+            $days = [];
+
+            foreach ($rule->selector as $item) {
+                if (SelectorKind::WEEKDAYS !== $item->kind) {
+                    return null;
+                }
+
+                array_push($days, ...$item->weekdayList());
+            }
+
+            $days = array_values(array_unique($days));
+        }
+
+        if (Modifier::OFF === $rule->modifier) {
+            return [] === $rule->spans ? [$days, []] : null;
+        }
+
+        if ([] === $rule->spans) {
+            return null;
         }
 
         $slots = [];
 
-        foreach (explode(',', $rest) as $rawSpan) {
-            if (1 !== preg_match('/^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/', $rawSpan, $span)) {
+        foreach ($rule->spans as $index => $span) {
+            if (0 !== $index && !$span->followsSingleComma()) {
                 return null;
             }
 
-            $open = (int) $span[1] + (int) $span[2] / 60;
-            $close = (int) $span[3] + (int) $span[4] / 60;
+            // After a selector, the time part must sit on one line (the whitespace
+            // right after the selector aside); a bare time part may wrap.
+            if (null !== $rule->selector && (str_contains($span->dashWhitespace, "\n") || (0 !== $index && str_contains($span->separator, "\n")))) {
+                return null;
+            }
+
+            $open = $span->startHour + $span->startMinute / 60;
+            $close = $span->endHour + $span->endMinute / 60;
 
             if ($open > 24.0 || $close > 24.0) {
                 return null;
             }
 
             if ($close < $open) {
-                if (7 !== \count(array_unique($days))) {
+                if (7 !== \count($days)) {
                     // The tail belongs to the *next* day, which this reader does not
                     // track per day. Folding it back would leave that next day with no
                     // rule at all, hence reported as known closed during the spillover —
@@ -174,47 +188,6 @@ final readonly class OpeningHours
         }
 
         return [$days, $slots];
-    }
-
-    /**
-     * @return list<int>|null
-     */
-    private static function parseWeekdays(string $selector): ?array
-    {
-        $days = [];
-
-        foreach (explode(',', $selector) as $part) {
-            $part = trim($part);
-
-            if (1 === preg_match('/^([A-Za-z]{2})\s*-\s*([A-Za-z]{2})$/', $part, $range)) {
-                $from = self::WEEKDAYS[strtolower($range[1])] ?? null;
-                $to = self::WEEKDAYS[strtolower($range[2])] ?? null;
-
-                if (null === $from || null === $to) {
-                    return null;
-                }
-
-                for ($day = $from;; $day = $day % 7 + 1) {
-                    $days[] = $day;
-
-                    if ($day === $to) {
-                        break;
-                    }
-                }
-
-                continue;
-            }
-
-            $day = self::WEEKDAYS[strtolower($part)] ?? null;
-
-            if (null === $day) {
-                return null;
-            }
-
-            $days[] = $day;
-        }
-
-        return array_values(array_unique($days));
     }
 
     /**
