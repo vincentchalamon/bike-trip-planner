@@ -1,6 +1,6 @@
 # Spike — Feasibility of an MCP server in the API (17/09/2026)
 
-> **Written verdict of a time-boxed investigation, on branch `spike/mcp-feasibility`, never merged.**
+> **Written verdict of a time-boxed investigation.** It ran on the throwaway branch `spike/mcp-feasibility`, never merged and deleted on 28/09/2026; this document is what remains of it.
 > It gave rise to [ADR-063](../adr/adr-063-transport-agnostic-authorization.md) and
 > [ADR-064](../adr/adr-064-mcp-server-as-third-api-client.md), which carry the decisions;
 > this document keeps the measurements and the paths taken to get there.
@@ -298,8 +298,9 @@ call time.
 
 ## Second pass - what the critical review proved, and corrected
 
-The first draft inferred a lot from reading code. A real functional test
-(`api/tests/Functional/McpToolCallTest.php`, 4 green tests) settled it.
+The first draft inferred a lot from reading code. A real functional test written on the spike
+branch (`api/tests/Functional/McpToolCallTest.php`, 4 green tests; the file of that name on
+`main` is the later test of the shipped server, not this one) settled it.
 
 ### ✅ PROVEN: `security:` is enforced at call time, not only at listing time
 

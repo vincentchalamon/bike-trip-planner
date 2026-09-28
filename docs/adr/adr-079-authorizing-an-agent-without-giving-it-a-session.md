@@ -9,6 +9,7 @@ not what an agent needs, and this records why a second mechanism exists rather t
 `/mcp` has a refusal that must be visible.
 **Continues** [ADR-063](adr-063-transport-agnostic-authorization.md) and
 [ADR-064](adr-064-mcp-server-as-third-api-client.md).
+**Evidence:** [`league/oauth2-server` feasibility spike, 23/09/2026](../spikes/oauth2-server-feasibility-2026-09-23.md)
 
 ## Context
 
