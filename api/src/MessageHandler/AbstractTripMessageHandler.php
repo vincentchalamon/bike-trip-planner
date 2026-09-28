@@ -10,6 +10,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Mercure\ProgressPublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -22,6 +23,8 @@ abstract readonly class AbstractTripMessageHandler
 {
     private TripCompletionGate $completionGate;
 
+    private ProgressPublisher $progress;
+
     public function __construct(
         protected ComputationTrackerInterface $computationTracker,
         protected TripUpdatePublisherInterface $publisher,
@@ -32,13 +35,15 @@ abstract readonly class AbstractTripMessageHandler
         protected MessageBusInterface $messageBus,
         protected AlertRenderer $alertRenderer,
     ) {
-        // The gate is a stateless collaborator built from dependencies the handler
-        // already receives, so we construct it here rather than threading the
-        // service through the ~20 child constructors or relying on a #[Required]
-        // setter (which manual instantiations — e.g. integration tests — skip,
-        // leaving the readonly property uninitialized). The terminal-gate logic
-        // stays single-sourced in TripCompletionGate.
+        // The gate and the progress publisher are stateless collaborators built from
+        // dependencies the handler already receives, so we construct them here rather
+        // than threading them through the ~20 child constructors or relying on a
+        // #[Required] setter (which manual instantiations — e.g. integration tests —
+        // skip, leaving the readonly property uninitialized). The terminal-gate logic
+        // stays single-sourced in TripCompletionGate, the progress event in
+        // ProgressPublisher, which the GPX upload uses too.
         $this->completionGate = new TripCompletionGate($this->computationTracker, $this->publisher, $this->messageBus, $this->generationTracker);
+        $this->progress = new ProgressPublisher($this->computationTracker, $this->publisher);
     }
 
     /**
@@ -160,38 +165,12 @@ abstract readonly class AbstractTripMessageHandler
 
         // Mode 1 — progress bar: publish a business-data-free progress event
         // after every handler completes, so the frontend can drive its narrative stepper.
-        $this->publishProgress($tripId, $computation);
+        $this->progress->publish($tripId, $computation);
 
         // Issue #299 — gate: when every initialized enrichment has settled
         // (done OR failed), publish the terminal TRIP_COMPLETE event and dispatch
         // AllEnrichmentsCompleted. Shared with ComputationFailureSubscriber so the
         // happy path and the retries-exhausted path evaluate the same condition.
         $this->completionGate->evaluate($tripId);
-    }
-
-    /**
-     * Publishes the computation_step_completed progress event and returns the progress snapshot.
-     *
-     * Counts are derived from the {@see ComputationTrackerInterface::getProgress()}
-     * helper so a single handler failure does not stall the progress bar
-     * (failed statuses still count toward the total settled steps).
-     *
-     * @return array{completed: int, failed: int, settled: int, total: int}
-     */
-    private function publishProgress(string $tripId, ComputationName $step): array
-    {
-        $progress = $this->computationTracker->getProgress($tripId);
-
-        if (0 !== $progress['total']) {
-            $this->publisher->publishComputationStepCompleted(
-                $tripId,
-                $step,
-                $progress['completed'],
-                $progress['total'],
-                $progress['failed'],
-            );
-        }
-
-        return $progress;
     }
 }

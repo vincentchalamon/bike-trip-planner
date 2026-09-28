@@ -9,14 +9,12 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Enum\TripStatus;
-use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
-use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripBootstrapper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -31,7 +29,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
         TripStageStoreInterface $stageStore,
-        private StructuralComputationService $structuralComputation,
+        private TripBootstrapper $bootstrapper,
         private TripAnalysisDispatcher $analysisDispatcher,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
@@ -50,26 +48,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         }
 
         $this->executeWithTracking($tripId, ComputationName::STAGES, function () use ($tripId, $request, $generation): void {
-            $stages = $this->structuralComputation->generateStages($tripId, $request);
-
-            if (\count($stages) < TripStatus::MIN_STAGES) {
-                $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
-            }
-
-            $this->stageStore->storeStages($tripId, $stages);
-
-            // ADR-043: structural readiness is reached as soon as the stages are
-            // persisted — independently of the terminal enrichment gate, so a trip
-            // without dates (weather/calendar never settle) still becomes `ready`.
-            if (\count($stages) >= TripStatus::MIN_STAGES) {
-                $this->tripRequestRepository->storeStatus($tripId, TripStatus::READY->value);
-            }
-
-            $this->publisher->publish(
-                $tripId,
-                MercureEventType::STAGES_COMPUTED,
-                ['stages' => $this->structuralComputation->serializeStagesForEvent($stages)],
-            );
+            $this->bootstrapper->storeStages($tripId, $request);
 
             $this->analysisDispatcher->dispatch($tripId, $request, $generation);
         });
