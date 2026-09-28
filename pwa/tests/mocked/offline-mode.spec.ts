@@ -1,5 +1,18 @@
 import { test, expect } from "../fixtures/base.fixture";
+import type { Page } from "@playwright/test";
 import { mockAllApis } from "../fixtures/api-mocks";
+
+// Flip `navigator.onLine` along with the event: `useOnlineStatus` reads the
+// property, as a real connectivity change would update it.
+async function setConnectivity(page: Page, online: boolean): Promise<void> {
+  await page.evaluate((value) => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => value,
+    });
+    window.dispatchEvent(new Event(value ? "online" : "offline"));
+  }, online);
+}
 
 /**
  * Tests for the offline mode feature (issue #72).
@@ -19,9 +32,7 @@ test.describe("Offline mode", () => {
     test("shows offline banner when browser goes offline", async ({
       mockedPage,
     }) => {
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(mockedPage, false);
 
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
@@ -32,9 +43,7 @@ test.describe("Offline mode", () => {
     test("offline banner has role=status and aria-live=polite", async ({
       mockedPage,
     }) => {
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(mockedPage, false);
 
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
@@ -45,16 +54,12 @@ test.describe("Offline mode", () => {
     test("shows reconnection banner when back online after being offline", async ({
       mockedPage,
     }) => {
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(mockedPage, false);
       await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
 
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("online"));
-      });
+      await setConnectivity(mockedPage, true);
 
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
@@ -73,16 +78,12 @@ test.describe("Offline mode", () => {
       await page.goto("/");
       await page.waitForLoadState("networkidle");
 
-      await page.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(page, false);
       await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
 
-      await page.evaluate(() => {
-        window.dispatchEvent(new Event("online"));
-      });
+      await setConnectivity(page, true);
       await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
@@ -97,9 +98,7 @@ test.describe("Offline mode", () => {
     test("magic-link input is disabled when offline", async ({
       mockedPage,
     }) => {
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(mockedPage, false);
 
       await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
@@ -116,9 +115,7 @@ test.describe("Offline mode", () => {
       await page.goto("/");
       await page.waitForLoadState("networkidle");
 
-      await page.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(page, false);
 
       await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
@@ -131,18 +128,14 @@ test.describe("Offline mode", () => {
     test("magic-link input re-enabled when back online", async ({
       mockedPage,
     }) => {
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("offline"));
-      });
+      await setConnectivity(mockedPage, false);
       await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
       const input = mockedPage.getByTestId("magic-link-input");
       await expect(input).toBeDisabled();
 
-      await mockedPage.evaluate(() => {
-        window.dispatchEvent(new Event("online"));
-      });
+      await setConnectivity(mockedPage, true);
       await expect(input).toBeEnabled({ timeout: 3000 });
     });
   });
