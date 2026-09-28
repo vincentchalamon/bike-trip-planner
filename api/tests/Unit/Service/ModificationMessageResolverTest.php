@@ -16,13 +16,13 @@ use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
-use App\Service\ComputationDependencyResolver;
+use App\Service\ModificationMessageResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class ComputationDependencyResolverTest extends TestCase
+final class ModificationMessageResolverTest extends TestCase
 {
-    private ComputationDependencyResolver $resolver;
+    private ModificationMessageResolver $resolver;
 
     /** Stage identifiers in display order, as the batch processor passes them. */
     private const array STAGE_IDS = [
@@ -33,7 +33,7 @@ final class ComputationDependencyResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resolver = new ComputationDependencyResolver(new EnrichmentMessageFactory());
+        $this->resolver = new ModificationMessageResolver(new EnrichmentMessageFactory());
     }
 
     #[Test]

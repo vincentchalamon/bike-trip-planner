@@ -16,7 +16,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\ComputationDependencyResolver;
+use App\Service\ModificationMessageResolver;
 use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -35,7 +35,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  *
  * This avoids N sequential recomputations when the user accumulates several
  * modifications before confirming them. The dependency resolution is delegated
- * to {@see ComputationDependencyResolver}.
+ * to {@see ModificationMessageResolver}.
  *
  * @implements ProcessorInterface<TripBatchRecomputeRequest, Trip>
  */
@@ -44,7 +44,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private TripGenerationTrackerInterface $generationTracker,
-        private ComputationDependencyResolver $dependencyResolver,
+        private ModificationMessageResolver $dependencyResolver,
         private MessageBusInterface $messageBus,
         private ComputationTrackerInterface $computationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,

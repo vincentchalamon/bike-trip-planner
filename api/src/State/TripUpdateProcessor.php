@@ -11,7 +11,7 @@ use App\Concurrency\IfMatch;
 use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationDependencyResolver;
+use App\ComputationTracker\ParameterChangeResolver;
 use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -34,7 +34,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
-        private ComputationDependencyResolver $dependencyResolver,
+        private ParameterChangeResolver $dependencyResolver,
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,

@@ -25,7 +25,7 @@ use App\Message\ScanAccommodations;
  * - 'dates':         FetchWeather, CheckCalendar, ScanEvents, CheckCulturalPois
  * - 'pacing':        RecalculateStages (all stages)
  */
-final readonly class ComputationDependencyResolver
+final readonly class ModificationMessageResolver
 {
     public function __construct(
         private EnrichmentMessageFactory $messageFactory,

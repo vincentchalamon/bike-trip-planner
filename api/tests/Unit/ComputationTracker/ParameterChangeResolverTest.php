@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Unit\ComputationTracker;
 
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationDependencyResolver;
+use App\ComputationTracker\ParameterChangeResolver;
 use App\Enum\ComputationName;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class ComputationDependencyResolverTest extends TestCase
+final class ParameterChangeResolverTest extends TestCase
 {
-    private ComputationDependencyResolver $resolver;
+    private ParameterChangeResolver $resolver;
 
     #[\Override]
     protected function setUp(): void
     {
-        $this->resolver = new ComputationDependencyResolver();
+        $this->resolver = new ParameterChangeResolver();
     }
 
     #[Test]
