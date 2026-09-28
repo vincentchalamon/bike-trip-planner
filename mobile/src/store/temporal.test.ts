@@ -278,3 +278,88 @@ describe('a refused edit reverts only itself (overlapping edits)', () => {
   });
 });
 
+describe('a refused dates edit keeps the end date true to the stages', () => {
+  function deferred<T extends (...args: never[]) => unknown>(fn: T) {
+    const settle: ((status: number) => void)[] = [];
+    mock(fn).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          settle.push((status) => resolve({ ok: status < 400, status })),
+        ) as ReturnType<T>,
+    );
+    return settle;
+  }
+
+  it('re-derives it when a rest day was accepted after the dates edit', async () => {
+    const configs = deferred(updateTripConfig);
+    const restDays = deferred(insertRestDay);
+
+    const dates = runUpdateDates('t1', '2026-09-01', '2026-09-02', ctx(), jest.fn());
+    const restDay = runInsertRestDay('t1', 0, ctx(), jest.fn());
+    restDays[0]!(202);
+    await restDay;
+    configs[0]!(422);
+    await dates;
+
+    // Three stages from the restored start: the pre-edit end date counted two.
+    expect(useTripStore.getState().stages).toHaveLength(3);
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      endDate: '2026-08-03',
+    });
+  });
+
+  it('restores it when the rest day was accepted before the dates edit', async () => {
+    const configs = deferred(updateTripConfig);
+    const restDays = deferred(insertRestDay);
+
+    const restDay = runInsertRestDay('t1', 0, ctx(), jest.fn());
+    const dates = runUpdateDates('t1', '2026-09-01', '2026-09-03', ctx(), jest.fn());
+    restDays[0]!(202);
+    await restDay;
+    configs[0]!(422);
+    await dates;
+
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      endDate: '2026-08-03',
+    });
+  });
+
+  it('keeps it true in the undo history too', async () => {
+    const configs = deferred(updateTripConfig);
+    const restDays = deferred(insertRestDay);
+    useTripStore.setState({ fatigueFactor: 0.8 });
+
+    const dates = runUpdateDates('t1', '2026-09-01', '2026-09-02', ctx(), jest.fn());
+    const restDay = runInsertRestDay('t1', 0, ctx(), jest.fn());
+    const pacing = runUpdatePacing(
+      't1',
+      {
+        fatigueFactor: 0.9,
+        elevationPenalty: 100,
+        maxDistancePerDay: 80,
+        averageSpeed: 15,
+        ebikeMode: false,
+        departureHour: 8,
+      },
+      ctx(),
+      jest.fn(),
+    );
+    restDays[0]!(202);
+    configs[1]!(202);
+    await Promise.all([restDay, pacing]);
+    configs[0]!(422);
+    await dates;
+
+    // Undoing the pacing lands on the state just before it: three stages.
+    temporal().undo();
+    expect(useTripStore.getState().stages).toHaveLength(3);
+    expect(useTripStore.getState()).toMatchObject({
+      fatigueFactor: 0.8,
+      startDate: '2026-08-01',
+      endDate: '2026-08-03',
+    });
+  });
+});
+

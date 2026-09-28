@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { StageData } from "@btp/core";
 import {
   FieldClaims,
+  datesToRestore,
   revertFields,
+  revertSnapshotFields,
   revertStructuralEdit,
 } from "@btp/core/optimistic";
 
@@ -164,5 +166,48 @@ describe("FieldClaims", () => {
 
     expect(claims.release(settled)).toEqual([]);
     expect(claims.release(pending)).toEqual([]);
+  });
+});
+
+describe("datesToRestore", () => {
+  const previous = { startDate: "2026-10-01", endDate: "2026-10-03" };
+  const trip = (count: number) => ({
+    startDate: "2026-11-01",
+    endDate: "2026-11-04",
+    stages: Array.from({ length: count }),
+  });
+
+  it("restores both dates it still owns", () => {
+    expect(datesToRestore(["startDate", "endDate"], previous, trip(4))).toEqual(
+      previous,
+    );
+  });
+
+  it("re-derives the end date a structural edit took over", () => {
+    expect(datesToRestore(["startDate"], previous, trip(4))).toEqual({
+      startDate: "2026-10-01",
+      endDate: "2026-10-04",
+    });
+  });
+
+  it("touches nothing a newer dates edit owns", () => {
+    expect(datesToRestore([], previous, trip(4))).toEqual({});
+  });
+});
+
+describe("revertSnapshotFields", () => {
+  it("re-derives an end date a structural edit derived from the refused start", () => {
+    const snapshot = {
+      startDate: "2026-11-01",
+      endDate: "2026-11-04",
+      stages: Array.from({ length: 4 }),
+    };
+    expect(
+      revertSnapshotFields(
+        snapshot,
+        { startDate: "2026-11-01", endDate: "2026-11-03" },
+        { startDate: "2026-10-01", endDate: "2026-10-03" },
+      ),
+    ).toEqual({ startDate: "2026-10-01", endDate: "2026-10-04" });
   });
 });

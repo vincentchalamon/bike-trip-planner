@@ -40,12 +40,16 @@ export type TripConfig = TripSettings;
 const DEFAULT_CONFIG: TripConfig = DEFAULT_TRIP_SETTINGS;
 
 // The endDate patch for a structural edit that changed the stage count; the
-// authoritative value arrives over SSE. {} without a start date.
-function endDatePatch(
+// authoritative value arrives over SSE. {} without a start date. It claims the
+// end date: a dates edit still in flight no longer owns it, so its refusal
+// re-derives it too rather than restore a value counted for other stages.
+export function endDatePatch(
   startDate: string | null,
   stageCount: number,
 ): Partial<TripConfig> {
-  return startDate ? { endDate: endDateFor(startDate, stageCount) } : {};
+  if (!startDate) return {};
+  configClaims.claim(['endDate']);
+  return { endDate: endDateFor(startDate, stageCount) };
 }
 
 // Which in-flight optimistic edit last wrote each config field (see FieldClaims in

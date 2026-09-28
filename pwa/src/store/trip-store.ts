@@ -16,8 +16,9 @@ import {
 } from "@btp/core/reconciliation";
 import {
   FieldClaims,
+  datesToRestore,
   neighboursAt,
-  revertFields,
+  revertSnapshotFields,
   revertStructuralEdit,
   type StructuralInverse,
 } from "@btp/core/optimistic";
@@ -429,6 +430,21 @@ export type SettingsValues = TripSettingsSlice & { title: string };
 // Module scope, like the undo history: which in-flight edit last wrote each field.
 const settingsClaims = new FieldClaims<SettingsField>();
 
+/**
+ * Re-derive the end date from the start date and the stage count after a structural
+ * change, and claim it: a dates edit still in flight no longer owns it, so its refusal
+ * re-derives it too rather than restore a value counted for other stages.
+ */
+function deriveEndDate(state: {
+  startDate: string | null;
+  endDate: string | null;
+  stages: StageData[];
+}): void {
+  if (!state.startDate) return;
+  state.endDate = endDateFor(state.startDate, state.stages.length);
+  settingsClaims.claim(["endDate"]);
+}
+
 /** An optimistic structural edit: its undo entry and what reverts it. */
 export interface StructuralEdit {
   token: UndoToken;
@@ -495,10 +511,25 @@ export const useTripStore = create<TripState>()(
     },
 
     revertSettings: (claim, previous) => {
-      const owned = settingsClaims
-        .release(claim)
-        .filter((field) => field in previous);
+      const released = settingsClaims.release(claim);
+      // A dates edit: the end date follows its own rule (see datesToRestore).
+      const dates =
+        "startDate" in previous
+          ? datesToRestore(
+              released,
+              {
+                startDate: previous.startDate ?? null,
+                endDate: previous.endDate ?? null,
+              },
+              get(),
+            )
+          : {};
+      const owned = released.filter(
+        (field) =>
+          field in previous && field !== "startDate" && field !== "endDate",
+      );
       set((state) => {
+        Object.assign(state, dates);
         for (const field of owned) {
           if (field === "title") {
             if (state.trip && previous.title !== undefined) {
@@ -509,7 +540,7 @@ export const useTripStore = create<TripState>()(
           }
         }
       });
-      return owned;
+      return [...owned, ...(Object.keys(dates) as SettingsField[])];
     },
 
     rollbackStructuralEdit: ({ token, inverse }) => {
@@ -532,7 +563,7 @@ export const useTripStore = create<TripState>()(
         }
         pruneStaleRecomputing(state);
         if (state.startDate) {
-          state.endDate = endDateFor(state.startDate, state.stages.length);
+          deriveEndDate(state);
         }
       });
     },
@@ -681,7 +712,7 @@ export const useTripStore = create<TripState>()(
         // Shrink the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
-          state.endDate = endDateFor(state.startDate, state.stages.length);
+          deriveEndDate(state);
         }
       });
       return {
@@ -738,7 +769,7 @@ export const useTripStore = create<TripState>()(
         // the end date so the global range and the export reflect the new day
         // immediately (recette #649). The backend mirrors this on persist.
         if (state.startDate) {
-          state.endDate = endDateFor(state.startDate, state.stages.length);
+          deriveEndDate(state);
         }
       });
       return { token, inverse: { kind: "remove", stageId: restDayId } };
@@ -757,7 +788,7 @@ export const useTripStore = create<TripState>()(
         // Extend the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
-          state.endDate = endDateFor(state.startDate, state.stages.length);
+          deriveEndDate(state);
         }
       });
       return { token, inverse: { kind: "remove", stageId: placeholder.id } };
@@ -781,7 +812,7 @@ export const useTripStore = create<TripState>()(
         // last-stage edit split off a day, mirroring insertRestDay/deleteStage
         // — otherwise endDate is one day short for downstream readers (#649).
         if (appendedTrailingStage && state.startDate) {
-          state.endDate = endDateFor(state.startDate, state.stages.length);
+          deriveEndDate(state);
         }
       }),
 
@@ -911,9 +942,9 @@ export const useTripStore = create<TripState>()(
  * Withdraw the undo entry of an optimistic edit the server refused.
  *
  * Any snapshot taken after the refused edit captured its optimistic value, so each
- * field it set goes back to `previous` there too — but only where the snapshot
- * still holds the refused value (see `revertFields`), otherwise undoing a later,
- * accepted edit would bring the refused value back.
+ * field it set goes back to `previous` there too, but only where the snapshot
+ * still holds the refused value (see `revertSnapshotFields`). Otherwise undoing
+ * a later, accepted edit would bring the refused value back.
  */
 export function discardUndoEntry(
   token: UndoToken,
@@ -924,7 +955,7 @@ export function discardUndoEntry(
     const slice = snapshot as UndoableSlice;
     return {
       ...slice,
-      ...structuredClone(revertFields(slice, optimistic, previous)),
+      ...structuredClone(revertSnapshotFields(slice, optimistic, previous)),
     };
   });
 }

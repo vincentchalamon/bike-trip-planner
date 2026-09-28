@@ -2,8 +2,9 @@ import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY, endDateFor } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import {
+  datesToRestore,
   neighboursAt,
-  revertFields,
+  revertSnapshotFields,
   revertStructuralEdit,
   type StructuralInverse,
 } from '@btp/core/optimistic';
@@ -37,6 +38,7 @@ import { deleteTripCache } from './trip-cache';
 import type { Modification, TripConfig, UndoableSlice } from './trip-store';
 import {
   configClaims,
+  endDatePatch,
   getUndoableSlice,
   useTripStore,
   useTripTemporalStore,
@@ -134,10 +136,25 @@ export async function run(
   const revert = () => {
     opts.rollback?.();
     if (settings && claim) {
-      const owned = configClaims
-        .release(claim)
-        .filter((field) => field in settings.previous);
-      const patch: Partial<TripConfig> = {};
+      const released = configClaims.release(claim);
+      // A dates edit: the end date follows its own rule (see datesToRestore).
+      const patch: Partial<TripConfig> =
+        'startDate' in settings.previous
+          ? datesToRestore(
+              released,
+              {
+                startDate: settings.previous.startDate ?? null,
+                endDate: settings.previous.endDate ?? null,
+              },
+              useTripStore.getState(),
+            )
+          : {};
+      const owned = released.filter(
+        (field) =>
+          field in settings.previous &&
+          field !== 'startDate' &&
+          field !== 'endDate',
+      );
       for (const field of owned) {
         if (field === 'title') ctx.setTitle(settings.previous.title ?? '');
         else Object.assign(patch, { [field]: settings.previous[field] });
@@ -148,9 +165,7 @@ export async function run(
       const { stages, startDate } = useTripStore.getState();
       const reverted = revertStructuralEdit(stages, inverse);
       ctx.setStages(reverted);
-      if (startDate) {
-        ctx.setConfig({ endDate: endDateFor(startDate, reverted.length) });
-      }
+      ctx.setConfig(endDatePatch(startDate, reverted.length));
     }
     if (undoToken === null) return;
     // Withdraw this edit's own entry, not the latest: another undoable edit may
@@ -162,7 +177,9 @@ export async function run(
         slice = {
           ...slice,
           ...(JSON.parse(
-            JSON.stringify(revertFields(slice, settings.next, settings.previous)),
+            JSON.stringify(
+              revertSnapshotFields(slice, settings.next, settings.previous),
+            ),
           ) as Partial<UndoableSlice>),
         };
       }

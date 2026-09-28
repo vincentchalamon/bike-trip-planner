@@ -13,6 +13,7 @@
 
 import { renumberAfterStructuralEdit } from "./reconciliation";
 import type { StageData } from "./schemas";
+import { endDateFor } from "./stage-dates";
 
 /** Where a stage sat: the stages around it, null at either end of the trip. */
 export interface StageNeighbours {
@@ -147,4 +148,68 @@ export class FieldClaims<K extends PropertyKey = string> {
   clear(): void {
     this.owner.clear();
   }
+}
+
+/** The part of a trip the end-date rule reads. */
+export interface DatedTrip {
+  startDate: string | null;
+  endDate: string | null;
+  stages: readonly unknown[];
+}
+
+type TripDates = Pick<DatedTrip, "startDate" | "endDate">;
+
+/**
+ * The date fields to set to undo a refused dates edit on the live trip, given the
+ * fields its claim still owns.
+ *
+ * The end date is not free-standing: every structural edit re-derives it from the
+ * start date and the stage count, and claims it. When one has done so since the
+ * refused edit, the pre-edit end date counted the stages as they were before that
+ * edit, so restoring it would leave the trip a day short or long. It is re-derived
+ * from the restored start date and the current stage count instead.
+ */
+export function datesToRestore(
+  owned: readonly string[],
+  previous: TripDates,
+  trip: DatedTrip,
+): Partial<TripDates> {
+  const patch: Partial<TripDates> = {};
+  if (!owned.includes("startDate")) {
+    if (owned.includes("endDate")) patch.endDate = previous.endDate;
+    return patch;
+  }
+  patch.startDate = previous.startDate;
+  if (owned.includes("endDate")) patch.endDate = previous.endDate;
+  else if (previous.startDate !== null) {
+    patch.endDate = endDateFor(previous.startDate, trip.stages.length);
+  }
+  return patch;
+}
+
+/**
+ * {@link revertFields} for an undo snapshot, keeping the end-date rule: a snapshot
+ * recorded after a structural edit holds an end date derived from the refused start
+ * date rather than the refused end date itself, so it is re-derived from the
+ * restored start date and the snapshot's own stage count.
+ */
+export function revertSnapshotFields<T extends DatedTrip>(
+  snapshot: T,
+  optimistic: Partial<T>,
+  previous: Partial<T>,
+): Partial<T> {
+  const patch = revertFields(snapshot, optimistic, previous);
+  if (
+    "startDate" in patch &&
+    !("endDate" in patch) &&
+    "endDate" in optimistic
+  ) {
+    const startDate = patch.startDate ?? null;
+    if (startDate !== null) {
+      Object.assign(patch, {
+        endDate: endDateFor(startDate, snapshot.stages.length),
+      });
+    }
+  }
+  return patch;
 }
