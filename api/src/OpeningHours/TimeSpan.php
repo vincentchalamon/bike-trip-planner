@@ -31,21 +31,9 @@ final readonly class TimeSpan
         return str_contains($this->separator.$this->dashWhitespace, "\n");
     }
 
-    /** A line break in its separator before the separator's trailing whitespace (`\n, ` but not `,\n`). */
-    public function breaksLineBeforeTrailingWhitespace(): bool
-    {
-        return str_contains(rtrim($this->separator), "\n");
-    }
-
     /** Separated from the previous span by exactly one comma, whitespace aside. */
     public function followsSingleComma(): bool
     {
         return 1 === substr_count($this->separator, ',');
-    }
-
-    /** Separated from the previous span by a separator ending in whitespace (`, ` or ` `). */
-    public function followsWhitespace(): bool
-    {
-        return 1 === preg_match('/\s$/', $this->separator);
     }
 }

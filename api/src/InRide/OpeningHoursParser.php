@@ -273,9 +273,7 @@ final readonly class OpeningHoursParser
      *
      * In-ride never looks for a keyword or for spans across a line break: text it
      * does not split off stays in the selector, and the selector item it lands in
-     * turns unreadable, so only the items before it can still match. A rule
-     * without selector whose spans follow whitespace (`09:00-12:00, 14:00-18:00`)
-     * reads its first spans as a selector, hence nothing.
+     * turns unreadable, so only the items before it can still match.
      *
      * @return array{list<SelectorItem>|null, list<TimeSpan>, Modifier|null}|null
      */
@@ -299,36 +297,7 @@ final readonly class OpeningHoursParser
             return [$this->lastItemUnreadable($selector), [], $modifier];
         }
 
-        if (null === $selector) {
-            return null === $this->splitIndex($spans) ? [null, $spans, $modifier] : null;
-        }
-
         return [$selector, $spans, $modifier];
-    }
-
-    /**
-     * The first span after which in-ride would cut the rule: it follows
-     * whitespace and no line break precedes that whitespace.
-     *
-     * @param list<TimeSpan> $spans
-     */
-    private function splitIndex(array $spans): ?int
-    {
-        $lineBroken = false;
-
-        foreach ($spans as $index => $span) {
-            if (0 !== $index
-                && !$lineBroken
-                && $span->followsWhitespace()
-                && !$span->breaksLineBeforeTrailingWhitespace()
-            ) {
-                return $index;
-            }
-
-            $lineBroken = $lineBroken || $span->breaksLine();
-        }
-
-        return null;
     }
 
     /**

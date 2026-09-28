@@ -94,6 +94,12 @@ final class OpeningHoursParserTest extends TestCase
         yield 'spaced span, after it' => ['Mo,Tu 09:00 - 12:00', '2024-06-03 13:00:00', OpeningStatus::CLOSED];
         yield 'spaced span on a weekday range' => ['Mo-Fr 09:00 - 12:00', '2024-06-05 10:00:00', OpeningStatus::OPEN];
 
+        // No selector means every day, whatever sits between the spans: before,
+        // `, ` made the first span read as a selector and the whole tag unknown.
+        yield 'bare spans after a comma and a space, morning' => ['09:00-12:00, 14:00-18:00', '2024-06-09 10:00:00', OpeningStatus::OPEN];
+        yield 'bare spans after a comma and a space, lunch' => ['09:00-12:00, 14:00-18:00', '2024-06-09 13:00:00', OpeningStatus::CLOSED];
+        yield 'bare spans after a space' => ['09:00-12:00 14:00-18:00', '2024-06-04 15:00:00', OpeningStatus::OPEN];
+
         // Public holidays: cover both FR and BE locales so the parser stays
         // useful for Belgian itineraries.
         yield 'FR Bastille Day (Jul 14) marks PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-07-14 12:00:00', OpeningStatus::CLOSED];
