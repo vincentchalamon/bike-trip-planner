@@ -45,6 +45,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "expo-doctor": "^1.20.4",
     "jest": "^30.5.2",
     "jest-expo": "~57.0.0",
     "typescript": "~6.0.3",
@@ -59,7 +60,9 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "doctor": "expo-doctor",
+    "bundle": "expo export --platform android"
   },
   "expo": {
     "install": {

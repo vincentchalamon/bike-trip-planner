@@ -953,7 +953,7 @@ jobs:
         run: npm run test:unit --workspace pwa -- --coverage
 
   mobile-checks:
-    name: Mobile (tsc + jest)
+    name: Mobile
     needs: changes
     if: >-
       !cancelled() &&
@@ -976,3 +976,17 @@ jobs:
         run: npm run lint --workspace mobile
       - name: Run jest
         run: npm run test --workspace mobile
+      # tsc and jest never go through Metro or Hermes, so an import Metro cannot
+      # resolve, or a native module off the SDK's version range, only surfaced at
+      # APK build time on a tooled machine. The export stops at the Hermes
+      # bytecode and needs no Android SDK. Both steps read app.config.js, which
+      # fails closed without EXPO_PUBLIC_API_URL; the value only feeds the App
+      # Link host there.
+      - name: Check dependencies against the Expo SDK
+        env:
+          EXPO_PUBLIC_API_URL: https://ci.invalid
+        run: npm run doctor --workspace mobile
+      - name: Bundle the Android app
+        env:
+          EXPO_PUBLIC_API_URL: https://ci.invalid
+        run: npm run bundle --workspace mobile -- --output-dir "$RUNNER_TEMP/mobile-bundle"
