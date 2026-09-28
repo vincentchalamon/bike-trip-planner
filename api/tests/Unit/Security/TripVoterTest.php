@@ -13,8 +13,6 @@ use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 use Symfony\Component\Uid\Uuid;
@@ -24,17 +22,13 @@ final class TripVoterTest extends TestCase
     /** @var EntityManagerInterface&Stub */
     private EntityManagerInterface $entityManager;
 
-    /** @var CacheItemPoolInterface&Stub */
-    private CacheItemPoolInterface $tripStateCache;
-
     private TripVoter $voter;
 
     #[\Override]
     protected function setUp(): void
     {
         $this->entityManager = $this->createStub(EntityManagerInterface::class);
-        $this->tripStateCache = $this->createStub(CacheItemPoolInterface::class);
-        $this->voter = new TripVoter($this->entityManager, $this->tripStateCache);
+        $this->voter = new TripVoter($this->entityManager);
     }
 
     #[Test]
@@ -88,59 +82,22 @@ final class TripVoterTest extends TestCase
 
         $this->mockDatabaseOwnershipCheck(1);
 
-        // Redis must not be consulted when the DB check succeeds
-        $tripStateCache = $this->createMock(CacheItemPoolInterface::class);
-        $tripStateCache->expects($this->never())->method('getItem');
-        $this->voter = new TripVoter($this->entityManager, $tripStateCache);
-
         $result = $this->voter->vote($token, $subject, [TripVoter::TRIP_EDIT]);
 
         $this->assertSame(VoterInterface::ACCESS_GRANTED, $result);
     }
 
     #[Test]
-    public function grantWhenOwnerFoundInRedis(): void
-    {
-        $userId = Uuid::v7();
-        $user = new User('owner@example.com', $userId);
-        $token = $this->createStub(TokenInterface::class);
-        $token->method('getUser')->willReturn($user);
-
-        $tripId = '01936f6e-0000-7000-8000-000000000002';
-        $subject = new TripRequest();
-        $subject->id = Uuid::fromString($tripId);
-
-        $this->mockDatabaseOwnershipCheck(0);
-
-        $cacheItem = $this->createStub(CacheItemInterface::class);
-        $cacheItem->method('isHit')->willReturn(true);
-        $cacheItem->method('get')->willReturn($userId->toRfc4122());
-
-        $this->tripStateCache
-            ->method('getItem')
-            ->willReturn($cacheItem);
-
-        $result = $this->voter->vote($token, $subject, [TripVoter::TRIP_DELETE]);
-
-        $this->assertSame(VoterInterface::ACCESS_GRANTED, $result);
-    }
-
-    #[Test]
-    public function denyWhenNotFoundInDatabaseOrRedis(): void
+    public function denyWhenNotFoundInDatabase(): void
     {
         $user = new User('stranger@example.com');
         $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
 
-        $tripId = '01936f6e-0000-7000-8000-000000000003';
         $subject = new TripRequest();
-        $subject->id = Uuid::fromString($tripId);
+        $subject->id = Uuid::fromString('01936f6e-0000-7000-8000-000000000003');
 
         $this->mockDatabaseOwnershipCheck(0);
-
-        $cacheItem = $this->createStub(CacheItemInterface::class);
-        $cacheItem->method('isHit')->willReturn(false);
-        $this->tripStateCache->method('getItem')->willReturn($cacheItem);
 
         $result = $this->voter->vote($token, $subject, [TripVoter::TRIP_VIEW]);
 
@@ -158,10 +115,6 @@ final class TripVoterTest extends TestCase
         $tripId = '01936f6e-0000-7000-8000-000000000004';
 
         $this->mockDatabaseOwnershipCheck(1);
-
-        $tripStateCache = $this->createMock(CacheItemPoolInterface::class);
-        $tripStateCache->expects($this->never())->method('getItem');
-        $this->voter = new TripVoter($this->entityManager, $tripStateCache);
 
         // Stage operations pass the tripId as a plain string, not a TripRequest
         $result = $this->voter->vote($token, $tripId, [TripVoter::TRIP_VIEW]);

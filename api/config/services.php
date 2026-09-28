@@ -7,8 +7,6 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\NullTripUpdatePublisher;
 use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Push\FcmClient;
-use App\Push\PushSenderInterface;
 use App\RouteFetcher\RouteSourceBaseUri;
 use App\Security\OAuth\McpCallBudget;
 use App\Security\OAuth\McpGrantUsage;
@@ -51,8 +49,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->bind('Doctrine\DBAL\Connection $referenceConnection', service('doctrine.dbal.reference_connection'));
 
     $services->load('App\\', __DIR__.'/../src/');
-
-    $services->alias(PushSenderInterface::class, FcmClient::class);
 
     // The only HTTP client in this application whose HOST is chosen by a third party: an
     // OAuth client names itself by the HTTPS URL its metadata document is served from
@@ -134,7 +130,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         $services->set($guard)
             ->decorate('api_platform.state_processor.write', null, $priority)
             ->args([service($guard.'.inner')])
-            ->autowire()
             ->autoconfigure(false);
 
         // A second instance for MCP: one definition cannot decorate two services.
@@ -142,7 +137,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         $services->set($id, $guard)
             ->decorate('api_platform.mcp.state_processor.write', null, $priority)
             ->args([service($id.'.inner')])
-            ->autowire()
             ->autoconfigure(false);
     }
 
@@ -168,7 +162,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpDeserializeProvider::class)
         ->decorate('api_platform.state_provider.main', null, 250)
         ->args([service(McpDeserializeProvider::class.'.inner')])
-        ->autowire()
         ->autoconfigure(false);
 
     // The scope is decided on each message the SDK has parsed, not on the `Mcp-Name` header: the
@@ -183,7 +176,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpScopeGuard::class)
         ->decorate('api_platform.mcp.handler')
         ->args([service(McpScopeGuard::class.'.inner')])
-        ->autowire()
         ->autoconfigure(false);
 
     // Counted per parsed message, like the scope. Priority 10 places it INSIDE the scope guard
@@ -191,7 +183,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpCallBudget::class)
         ->decorate('api_platform.mcp.handler', null, 10)
         ->args([service(McpCallBudget::class.'.inner')])
-        ->autowire()
         ->autoconfigure(false);
 
     // Priority 20: inside the budget, so a call only counts as "use" once it was allowed and
@@ -200,7 +191,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpGrantUsage::class)
         ->decorate('api_platform.mcp.handler', null, 20)
         ->args([service(McpGrantUsage::class.'.inner')])
-        ->autowire()
         ->autoconfigure(false);
 
     // The envelope a tool that answers a list publishes, around the item schema the factory

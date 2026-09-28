@@ -62,8 +62,8 @@ interface ComputationTrackerInterface
      * one generation had published `trip_ready`, no later generation ever published another
      * (ADR-073).
      *
-     * Note: implemented via PSR-6 get/save; the TOCTOU window is sub-millisecond
-     * (significantly safer than the unchecked gate). True atomic NX is tracked in #303.
+     * The check and the claim are made under the per-trip status lock, so two workers settling
+     * the last computations at once cannot both win (#303).
      */
     public function claimReadyPublication(string $tripId, ?int $generation = null): bool;
 

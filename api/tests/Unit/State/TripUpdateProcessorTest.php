@@ -11,7 +11,7 @@ use App\Service\TripCompletionGate;
 use Psr\Log\NullLogger;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationDependencyResolver;
+use App\ComputationTracker\ParameterChangeResolver;
 use App\ComputationTracker\ComputationSupersession;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -59,7 +59,7 @@ final class TripUpdateProcessorTest extends TestCase
             $this->messageBus,
             $this->tripStateManager,
             $this->computationTracker,
-            new ComputationDependencyResolver(),
+            new ParameterChangeResolver(),
             $generationTracker,
             $security,
             new TripLocker(),
@@ -131,7 +131,7 @@ final class TripUpdateProcessorTest extends TestCase
             $this->messageBus,
             $this->tripStateManager,
             $this->computationTracker,
-            new ComputationDependencyResolver(),
+            new ParameterChangeResolver(),
             $generationTracker,
             $security,
             new TripLocker(),

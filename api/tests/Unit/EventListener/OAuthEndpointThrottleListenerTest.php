@@ -55,6 +55,27 @@ final class OAuthEndpointThrottleListenerTest extends TestCase
     }
 
     /**
+     * RFC 6585 and every client's backoff read the header: a bare 429 leaves the caller to guess,
+     * and a guessing agent retries at once.
+     */
+    #[Test]
+    public function aRefusalSaysWhenToComeBack(): void
+    {
+        $listener = $this->listener(tokenLimit: 1);
+
+        $listener($this->event('oauth2_token', '203.0.113.9'));
+
+        try {
+            $listener($this->event('oauth2_token', '203.0.113.9'));
+            self::fail('The second call should have been refused.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            $retryAfter = $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? null;
+            self::assertIsInt($retryAfter);
+            self::assertGreaterThanOrEqual(1, $retryAfter);
+        }
+    }
+
+    /**
      * Two callers whose IP cannot be resolved share one budget. The alternative — a fresh
      * bucket per unresolvable caller — is the same as no limit at all.
      */

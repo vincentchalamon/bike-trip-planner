@@ -25,19 +25,8 @@ use App\Message\ScanAccommodations;
  * - 'dates':         FetchWeather, CheckCalendar, ScanEvents, CheckCulturalPois
  * - 'pacing':        RecalculateStages (all stages)
  */
-final readonly class ComputationDependencyResolver
+final readonly class ModificationMessageResolver
 {
-    /**
-     * Pointless on a trip with no start date: each needs a calendar date to resolve against.
-     *
-     * @var list<ComputationName>
-     */
-    private const array REQUIRES_DATES = [
-        ComputationName::WEATHER,
-        ComputationName::CALENDAR,
-        ComputationName::EVENTS,
-    ];
-
     public function __construct(
         private EnrichmentMessageFactory $messageFactory,
     ) {
@@ -56,7 +45,7 @@ final readonly class ComputationDependencyResolver
     private function add(array $needed, ComputationTrigger $trigger, bool $hasDates): array
     {
         foreach (ComputationName::dependingOn($trigger) as $computation) {
-            if (!$hasDates && \in_array($computation, self::REQUIRES_DATES, true)) {
+            if (!$hasDates && $computation->requiresStartDate()) {
                 continue;
             }
 

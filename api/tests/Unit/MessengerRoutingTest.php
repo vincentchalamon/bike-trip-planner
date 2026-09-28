@@ -6,7 +6,6 @@ namespace App\Tests\Unit;
 
 use App\Enum\ComputationName;
 use App\Message\BelongsToATripGeneration;
-use App\State\AnalyzeTripProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -84,8 +83,7 @@ final class MessengerRoutingTest extends TestCase
             static fn (ComputationName $c): bool => ComputationName::ROUTE !== $c && ComputationName::STAGES !== $c,
         ));
 
-        /** @var list<ComputationName> $actual */
-        $actual = new \ReflectionClass(AnalyzeTripProcessor::class)->getConstant('ANALYSIS_COMPUTATIONS');
+        $actual = ComputationName::analysisPipeline();
 
         sort($expected);
         sort($actual);
@@ -93,7 +91,7 @@ final class MessengerRoutingTest extends TestCase
         self::assertSame(
             array_map(static fn (ComputationName $c): string => $c->value, $expected),
             array_map(static fn (ComputationName $c): string => $c->value, $actual),
-            'AnalyzeTripProcessor::ANALYSIS_COMPUTATIONS drifted from ComputationName::pipeline(): the reset/re-dispatch '.
+            'ComputationName::analysisPipeline() drifted from ComputationName::pipeline(): the reset/re-dispatch '.
             'cycle of POST /trips/{id}/analyze must cover every enrichment computation, i.e. the whole pipeline except '.
             'the structural ROUTE and STAGES steps (ADR-043).',
         );

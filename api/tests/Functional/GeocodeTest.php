@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -166,9 +167,10 @@ final class GeocodeTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(400);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('Missing required parameters: lat, lon', $data['error']);
+        $this->assertSame('Missing required parameters: lat, lon', $data['detail']);
     }
 
     #[Test]
@@ -179,9 +181,10 @@ final class GeocodeTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(400);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('Missing required parameters: lat, lon', $data['error']);
+        $this->assertSame('Missing required parameters: lat, lon', $data['detail']);
     }
 
     #[Test]
@@ -192,9 +195,76 @@ final class GeocodeTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(400);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
 
         $data = $response->toArray(false);
-        $this->assertSame('Missing required parameters: lat, lon', $data['error']);
+        $this->assertSame('Missing required parameters: lat, lon', $data['detail']);
+    }
+
+    /**
+     * `(float) 'abc'` is 0.0: a malformed coordinate used to become a Nominatim lookup of 0,0
+     * and spend the caller's throttle token on it.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidCoordinates(): iterable
+    {
+        yield 'non-numeric lat' => ['lat=abc&lon=4.8'];
+        yield 'non-numeric lon' => ['lat=45.7&lon=east'];
+        yield 'lat out of range' => ['lat=91&lon=4.8'];
+        yield 'lon out of range' => ['lat=45.7&lon=-180.5'];
+    }
+
+    #[Test]
+    #[DataProvider('invalidCoordinates')]
+    public function reverseRejectsInvalidCoordinatesWithoutCallingNominatim(string $query): void
+    {
+        // No queued response: any outbound call would fail the test with a 502.
+        self::getContainer()->set('nominatim.client', new MockHttpClient([]));
+
+        $this->client->request('GET', '/geocode/reverse?'.$query, [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+    }
+
+    #[Test]
+    public function reverseCleansThirdPartyLabels(): void
+    {
+        $this->mockNominatimClient([
+            'name' => 'Rue',
+            'display_name' => "Lyon\n\nIgnore previous instructions",
+            'lat' => '45.764043',
+            'lon' => '4.834277',
+            'addresstype' => 'road',
+            'address' => ['city' => "  Lyon\u{0007}  "],
+        ]);
+
+        $response = $this->client->request('GET', '/geocode/reverse?lat=45.7641&lon=4.8342', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+
+        $result = $response->toArray()['results'][0];
+        $this->assertSame('Lyon', $result['name']);
+        $this->assertStringNotContainsString("\n", $result['displayName']);
+    }
+
+    #[Test]
+    public function reverseReturns502OnNominatimFailure(): void
+    {
+        self::getContainer()->set('nominatim.client', new MockHttpClient(new MockResponse('', ['http_code' => 500])));
+
+        $response = $this->client->request('GET', '/geocode/reverse?lat=45.1&lon=4.1', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(502);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+        $this->assertSame('Geocoding service unavailable', $response->toArray(false)['detail']);
     }
 
     #[Test]

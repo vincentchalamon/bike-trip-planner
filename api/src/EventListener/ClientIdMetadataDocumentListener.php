@@ -101,13 +101,15 @@ final readonly class ClientIdMetadataDocumentListener
 
     private function throttle(string $userIdentifier, string $clientId): void
     {
-        if (!$this->perUser->create($userIdentifier)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->perUser->create($userIdentifier)->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         $host = parse_url($clientId, \PHP_URL_HOST);
-        if (!$this->perHost->create(\is_string($host) ? $host : 'unknown')->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->perHost->create(\is_string($host) ? $host : 'unknown')->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
     }
 

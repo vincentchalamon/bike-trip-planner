@@ -10,7 +10,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Represents a single user modification in a batch recompute request.
  *
  * Each modification describes which stage is affected and what kind of change
- * was made. The {@see \App\Service\ComputationDependencyResolver} uses this
+ * was made. The {@see \App\Service\ModificationMessageResolver} uses this
  * information to determine which computations need to be re-run.
  */
 final class TripModification

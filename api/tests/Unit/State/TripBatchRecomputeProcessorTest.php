@@ -17,7 +17,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateStages;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\ComputationDependencyResolver;
+use App\Service\ModificationMessageResolver;
 use App\Service\TripAnalysisDispatcher;
 use App\State\TripBatchRecomputeProcessor;
 use App\Concurrency\IfMatch;
@@ -50,7 +50,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $processor = new TripBatchRecomputeProcessor(
             $this->createStub(TripRequestRepositoryInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
-            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
+            new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $this->createStub(ComputationTrackerInterface::class),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
@@ -109,7 +109,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $processor = new TripBatchRecomputeProcessor(
             $tripStateManager,
             $generationTracker,
-            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
+            new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
@@ -150,7 +150,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         return new TripBatchRecomputeProcessor(
             $tripStateManager,
             $generationTracker,
-            new ComputationDependencyResolver(new EnrichmentMessageFactory()),
+            new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),

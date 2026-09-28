@@ -129,4 +129,20 @@ final class ComputationTriggerTest extends TestCase
 
         self::assertCount(13, $both);
     }
+
+    /**
+     * What a trip without a start date is spared: only what falls back to today instead of
+     * skipping. Each of them is date-triggered, so a date edit re-runs it.
+     */
+    #[Test]
+    public function whatRequiresAStartDateIsDateTriggered(): void
+    {
+        $requiring = array_values(array_filter(ComputationName::cases(), static fn (ComputationName $c): bool => $c->requiresStartDate()));
+
+        self::assertSame([ComputationName::WEATHER, ComputationName::CALENDAR, ComputationName::EVENTS], $requiring);
+
+        foreach ($requiring as $computation) {
+            self::assertContains(ComputationTrigger::DATES, $computation->triggers());
+        }
+    }
 }

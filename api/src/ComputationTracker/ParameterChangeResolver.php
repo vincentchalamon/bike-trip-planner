@@ -8,7 +8,7 @@ use App\ApiResource\TripRequest;
 use App\Enum\ComputationName;
 use App\Enum\ComputationTrigger;
 
-final class ComputationDependencyResolver
+final class ParameterChangeResolver
 {
     /** @var array<string, array<ComputationName>> */
     private const array PARAMETER_DEPENDENCIES = [

@@ -8,8 +8,6 @@ use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Uid\Uuid;
@@ -17,8 +15,11 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Grants access to trip operations based on ownership.
  *
- * Checks the PostgreSQL trip table first (user column), with a Redis fallback
- * for trips that are still being computed (not yet persisted).
+ * Reads the owner from the PostgreSQL trip table (user column) and nothing else. Every creation
+ * path flushes the row, owner included, before answering, so there is no window a cached copy
+ * of the owner would cover. The Redis copy that used to back this up was only ever consulted
+ * when the database said "not the owner", which in practice meant a deleted trip, and it then
+ * reopened that trip to its former owner for the rest of the cache TTL.
  *
  * The subject is a trip identity in any of the three shapes the framework hands
  * over: the entity itself, the raw route string, or a `Uuid` — API Platform's
@@ -38,8 +39,6 @@ final class TripVoter extends Voter
 
     public const string TRIP_DELETE = 'TRIP_DELETE';
 
-    public const int CACHE_TTL = 1800; // 30 minutes
-
     private const array SUPPORTED_ATTRIBUTES = [
         self::TRIP_VIEW,
         self::TRIP_EDIT,
@@ -48,8 +47,6 @@ final class TripVoter extends Voter
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        #[Autowire(service: 'cache.trip_state')]
-        private readonly CacheItemPoolInterface $tripStateCache,
     ) {
     }
 
@@ -79,18 +76,7 @@ final class TripVoter extends Voter
             return false;
         }
 
-        return $this->isOwner($user, $tripId);
-    }
-
-    private function isOwner(User $user, string $tripId): bool
-    {
-        // Primary check: PostgreSQL TripRequest.user column
-        if ($this->isOwnerInDatabase($user, $tripId)) {
-            return true;
-        }
-
-        // Fallback: Redis (for trips still being computed, not yet in DB)
-        return $this->isOwnerInRedis($user, $tripId);
+        return $this->isOwnerInDatabase($user, $tripId);
     }
 
     private function isOwnerInDatabase(User $user, string $tripId): bool
@@ -110,17 +96,5 @@ final class TripVoter extends Voter
             ->getSingleScalarResult();
 
         return (int) $count > 0;
-    }
-
-    private function isOwnerInRedis(User $user, string $tripId): bool
-    {
-        $key = \sprintf('trip.%s.user_id', $tripId);
-        $item = $this->tripStateCache->getItem($key);
-
-        if (!$item->isHit()) {
-            return false;
-        }
-
-        return $item->get() === $user->getId()->toRfc4122();
     }
 }
