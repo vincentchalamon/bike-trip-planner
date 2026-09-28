@@ -17,6 +17,9 @@ use App\Geo\NearbyNameDeduplicator;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
+use App\Weather\WeatherForecastSerializer;
+use App\Mapper\StageArrayMapper;
+use App\Mapper\EventArrayMapper;
 use App\MessageHandler\ScanPoisHandler;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
@@ -77,6 +80,44 @@ final class ScanPoisHandlerTest extends TestCase
         self::assertSame(['Boulangerie', 'Boulangerie'], array_column($data['resupply']['foodAtLunch'], 'name'));
     }
 
+    /**
+     * The live payload had a fourth, private copy of the resupply POI shape, two keys short of
+     * the one /detail serves. It is StageArrayMapper's now, like every other stage payload.
+     */
+    #[Test]
+    public function thePublishedResupplyHasTheClientPoiShape(): void
+    {
+        $stage = $this->createStage('trip-1', 1, 80.0);
+        $tripStateManager = $this->createTripStateManager([$stage]);
+
+        $registry = $this->poiSourceRegistry([
+            ['name' => 'Chez Paul', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+
+        $published = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
+                if (MercureEventType::POIS_SCANNED === $type) {
+                    $published = $payload;
+                }
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        $poi = $published['resupply']['foodAtLunch'][0] ?? null;
+        self::assertIsArray($poi);
+        self::assertSame(['name', 'category', 'lat', 'lon', 'distanceFromStart', 'osmType', 'osmId'], array_keys($poi));
+    }
+
     private function createStage(string $tripId, int $dayNumber, float $distance = 80.0): Stage
     {
         return new Stage(
@@ -131,6 +172,7 @@ final class ScanPoisHandlerTest extends TestCase
             new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
+            new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );
