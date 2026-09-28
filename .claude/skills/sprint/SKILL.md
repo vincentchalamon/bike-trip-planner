@@ -83,6 +83,7 @@ You are implementing GitHub issue #<number>: <title>
 7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
 8. If you add new dependencies to composer.json or package.json, include "DEPS_CHANGED" in your final message
 9. Focus only on writing correct, well-structured code and committing it
+10. The session scratchpad is shared with the other agents: write your helper scripts and logs under `<scratchpad>/<issue-number>/`, never at its root, where a parallel agent will overwrite them
 ```
 
 Use `isolation: "worktree"` for each agent, with `model` set per the tiering above.
@@ -171,6 +172,9 @@ Each cycle:
    git push --force-with-lease
    ```
    Verify afterwards that `git log origin/main..HEAD` lists **only** the child's commits. For a 3-deep stack (A→B→C), do this bottom-up as each parent merges. **If the stack was created with `gh stack`, run `gh stack rebase` instead** — it detects the merged parent and switches to `--onto` mode on its own.
+6. **Check the remote before every rebase or push** — the user sometimes rebases a stack themselves, or merges a parent mid-cycle. `git fetch --prune` first, then compare each local tip with `origin/<branch>`. When they differ, `git range-diff` the two: identical patches mean someone already did the rebase, so adopt the remote head instead of pushing yours. Push with `--force-with-lease=<branch>:<sha-you-fetched>`, never a bare `--force-with-lease` against a stale local ref.
+7. **Never hand-resolve a mechanical commit** (a formatter pass, a lockfile regen). Drop it from the rebase, rebase the rest, then re-run the tool on the new base and commit its output. With squash merges, a 100-file reformat conflicts with every PR that landed before it, and hand-merging it is where content gets lost.
+8. **A rebase can absorb your fix.** When the base already contains an equivalent change and the conflict resolution keeps main's side, your commit shrinks to tests only: reword it (`test(...)`, not `fix(...)`) and correct the PR body. The review bot flags a commit whose message claims a fix its diff no longer contains.
 
 **Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with **no new blocking comment** (Critical/High). Wait for that workflow to finish before evaluating its output — after a push it is triggered asynchronously and may still be `pending`/`in_progress`.
 
