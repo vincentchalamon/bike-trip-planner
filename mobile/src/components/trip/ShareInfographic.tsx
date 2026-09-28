@@ -10,6 +10,7 @@ import {
   type DifficultyLabels,
 } from '../../lib/share';
 import { formatTripDateRange } from '../../lib/dates';
+import { stageColor } from '../map/stage-colors';
 
 // Off-screen infographic card captured to PNG by react-native-view-shot (#1048).
 // RN adaptation of the web canvas (pwa/src/lib/infographic.ts): same content
@@ -21,22 +22,6 @@ export const CARD_HEIGHT = 560;
 const PADDING = 20;
 const MAP_HEIGHT = 220;
 const PROFILE_HEIGHT = 90;
-
-// Per-stage palette (mirror of infographic.ts STAGE_PALETTE).
-const STAGE_PALETTE = [
-  '#38bdf8',
-  '#f97316',
-  '#a78bfa',
-  '#4ade80',
-  '#fb7185',
-  '#facc15',
-  '#22d3ee',
-  '#c084fc',
-];
-
-function stageColor(index: number): string {
-  return STAGE_PALETTE[index % STAGE_PALETTE.length]!;
-}
 
 const mercY = (lat: number) => {
   const rad = (lat * Math.PI) / 180;
@@ -79,8 +64,10 @@ export function projectRoute(
     y: offY + (mercY(lat) - minY) * scale,
   });
 
-  const polylines = active.map((stage, i) => ({
-    color: stageColor(i),
+  // Keyed on dayNumber like the map and the elevation profile, so a stage wears
+  // the same colour on the shared image as on screen.
+  const polylines = active.map((stage) => ({
+    color: stageColor(stage.dayNumber),
     points: stage.geometry
       .map((p) => {
         const { x, y } = toXY(p.lon, p.lat);
