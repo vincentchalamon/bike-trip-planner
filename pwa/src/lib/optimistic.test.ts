@@ -69,6 +69,20 @@ describe("revertStructuralEdit", () => {
     ]);
   });
 
+  it("puts a deleted last stage back last, behind a stage inserted after its predecessor", () => {
+    const restDay = { ...makeStage(9), id: "rest", isRestDay: true };
+    expect(
+      back(
+        revertStructuralEdit([stages[0]!, restDay], {
+          kind: "restore",
+          stage: stages[1]!,
+          afterStageId: "stage-1",
+          beforeStageId: null,
+        }),
+      ),
+    ).toEqual(["stage-1", "rest", "stage-2"]);
+  });
+
   it("never duplicates a stage that is already there", () => {
     const result = revertStructuralEdit(stages, {
       kind: "restore",

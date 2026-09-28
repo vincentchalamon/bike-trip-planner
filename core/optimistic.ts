@@ -38,21 +38,20 @@ export function neighboursAt(
 }
 
 /**
- * Where a stage with these neighbours goes back: in front of the stage that
- * followed it, which is where the server still has it (an insertion made meanwhile
- * after the preceding stage landed in front of it there too); failing that, after
- * the stage that preceded it; failing both, first if it was first, else last.
+ * Where a stage with these neighbours goes back, which is where the server still
+ * has it. Every insertion lands after some stage, so one made meanwhile after the
+ * preceding stage sits in front of this one there: it goes back last if it was
+ * last, else in front of the stage that followed it; failing that, first if it was
+ * first, else after the stage that preceded it; failing everything, last.
  */
 function slotFor(stages: StageData[], place: StageNeighbours): number {
-  const indexOf = (id: string | null) =>
-    id === null ? -1 : stages.findIndex((s) => s.id === id);
+  const indexOf = (id: string) => stages.findIndex((s) => s.id === id);
+  if (place.beforeStageId === null) return stages.length;
   const before = indexOf(place.beforeStageId);
   if (before !== -1) return before;
+  if (place.afterStageId === null) return 0;
   const after = indexOf(place.afterStageId);
-  if (after !== -1) return after + 1;
-  return place.afterStageId === null && place.beforeStageId !== null
-    ? 0
-    : stages.length;
+  return after !== -1 ? after + 1 : stages.length;
 }
 
 function insertAt(
