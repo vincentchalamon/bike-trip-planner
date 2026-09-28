@@ -14,10 +14,12 @@ use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\ReadResourceResult;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * How much an agent may ask for: counted per call, not per HTTP request.
@@ -52,10 +54,11 @@ final readonly class McpCallBudget implements RequestHandlerInterface
         private RequestHandlerInterface $inner,
         private McpToolScopes $toolScopes,
         private TokenStorageInterface $tokenStorage,
-        #[Autowire(service: 'limiter.mcp_tool_call')]
-        private RateLimiterFactory $calls,
-        #[Autowire(service: 'limiter.mcp_mutation')]
-        private RateLimiterFactory $mutations,
+        #[Target('mcp_tool_call')]
+        private RateLimiterFactoryInterface $mcpToolCallLimiter,
+        #[Target('mcp_mutation')]
+        private RateLimiterFactoryInterface $mcpMutationLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -86,13 +89,13 @@ final readonly class McpCallBudget implements RequestHandlerInterface
 
         $key = $this->caller();
 
-        $limit = $this->calls->create($key)->consume();
+        $limit = $this->mcpToolCallLimiter->create($key)->consume();
         if ($limit->isAccepted() && 'trips:write' === $this->toolScopes->requiredBy($name)) {
-            $limit = $this->mutations->create($key)->consume();
+            $limit = $this->mcpMutationLimiter->create($key)->consume();
         }
 
         if (!$limit->isAccepted()) {
-            $retryAfter = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+            $retryAfter = RetryAfter::seconds($limit, $this->clock);
 
             return new Error(
                 $request->getId(),

@@ -11,6 +11,7 @@ use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
+use Psr\Clock\ClockInterface;
 
 /**
  * Mints tokens that name the resource they are for (ADR-079), and records who was let in.
@@ -34,6 +35,7 @@ final readonly class AudienceBoundAccessTokenRepository implements AccessTokenRe
         private McpResource $resource,
         private GrantRecorder $grants,
         private LoggerInterface $logger,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -42,7 +44,7 @@ final readonly class AudienceBoundAccessTokenRepository implements AccessTokenRe
      */
     public function getNewToken(ClientEntityInterface $clientEntity, array $scopes, ?string $userIdentifier = null): AccessTokenEntityInterface
     {
-        $accessToken = new AudienceBoundAccessToken($this->resource->canonicalUri());
+        $accessToken = new AudienceBoundAccessToken($this->resource->canonicalUri(), $this->clock);
         $accessToken->setClient($clientEntity);
 
         if (null !== $userIdentifier && '' !== $userIdentifier) {

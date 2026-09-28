@@ -12,6 +12,7 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 final class McpEnvelopeThrottleListenerTest extends TestCase
 {
@@ -68,6 +69,6 @@ final class McpEnvelopeThrottleListenerTest extends TestCase
         return new McpEnvelopeThrottleListener(new RateLimiterFactory(
             ['id' => 'mcp_envelope', 'policy' => 'fixed_window', 'limit' => $limit, 'interval' => '60 seconds'],
             new InMemoryStorage(),
-        ));
+        ), new NativeClock());
     }
 }

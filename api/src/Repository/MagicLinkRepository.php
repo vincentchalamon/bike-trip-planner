@@ -8,6 +8,7 @@ use App\Entity\MagicLink;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -20,6 +21,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
     public function __construct(
         ManagerRegistry $registry,
         private readonly LoggerInterface $logger,
+        private readonly ClockInterface $clock,
     ) {
         parent::__construct($registry, MagicLink::class);
     }
@@ -39,7 +41,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
         }
 
         $plainToken = bin2hex(random_bytes(64));
-        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
+        $expiresAt = $this->now()->modify(\sprintf('+%d minutes', self::TTL_MINUTES));
 
         // Store only the hash at rest (SEC-003): the plaintext travels in the
         // magic link and never touches the database.
@@ -63,11 +65,9 @@ final class MagicLinkRepository extends ServiceEntityRepository
      */
     public function consumeByToken(string $token): ?User
     {
-        // Use PHP DateTimeImmutable as single source of truth for timestamps.
         // Format without offset (Y-m-d H:i:s) to match Doctrine's storage format
         // for TIMESTAMP WITHOUT TIME ZONE columns.
-        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-        $formatted = $now->format('Y-m-d H:i:s');
+        $formatted = $this->now()->format('Y-m-d H:i:s');
         // The stored value is the hash of the token that travelled in the link.
         $tokenHash = hash('sha256', $token);
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
@@ -114,11 +114,24 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->andWhere('ml.consumedAt IS NULL')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('user', $user)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', $this->now())
             ->setMaxResults(1)
             ->getQuery()
             ->getSingleScalarResult();
 
         return (int) $count > 0;
+    }
+
+    /**
+     * The one "now" every expiry here is written and compared with, pinned to UTC.
+     *
+     * `expires_at` is a TIMESTAMP WITHOUT TIME ZONE: Doctrine writes the wall-clock digits of
+     * whatever zone the value carries, and consumeByToken() compares them to a UTC "now". An
+     * expiry written in the PHP default zone drifted by that zone's offset: under
+     * Europe/Paris a 30-minute link stayed consumable for two and a half hours.
+     */
+    private function now(): \DateTimeImmutable
+    {
+        return $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
     }
 }

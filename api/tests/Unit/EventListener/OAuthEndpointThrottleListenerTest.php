@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * The budget on the two OAuth endpoints, and who shares one.
@@ -137,6 +138,7 @@ final class OAuthEndpointThrottleListenerTest extends TestCase
         return new OAuthEndpointThrottleListener(
             $this->limiter('oauth_token', $tokenLimit),
             $this->limiter('oauth_authorize', $authorizeLimit),
+            new NativeClock(),
             $this->security,
         );
     }

@@ -19,6 +19,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * The throttle on the anonymous share surface.
@@ -113,6 +114,7 @@ final class SharedTripResolverTest extends TestCase
                 ['id' => 'shared_trip', 'policy' => 'fixed_window', 'limit' => $limit, 'interval' => '60 seconds'],
                 new InMemoryStorage(),
             ),
+            new NativeClock(),
         );
     }
 }

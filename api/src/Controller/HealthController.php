@@ -12,10 +12,13 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Liveness and readiness probes for orchestration (Coolify, Uptime Kuma, smoke tests).
@@ -56,10 +59,11 @@ final readonly class HealthController
         private HttpClientInterface $valhallaClient,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,
-        #[Autowire(service: 'limiter.health_liveness')]
-        private RateLimiterFactory $healthLivenessLimiter,
-        #[Autowire(service: 'limiter.health_readiness')]
-        private RateLimiterFactory $healthReadinessLimiter,
+        #[Target('health_liveness')]
+        private RateLimiterFactoryInterface $healthLivenessLimiter,
+        #[Target('health_readiness')]
+        private RateLimiterFactoryInterface $healthReadinessLimiter,
+        private ClockInterface $clock,
         private RedisHealthClientFactory $redisClientFactory,
         private WorkerHeartbeat $workerHeartbeat,
     ) {
@@ -136,14 +140,14 @@ final readonly class HealthController
         ], $httpStatus);
     }
 
-    private function enforceRateLimit(RateLimiterFactory $factory, Request $request, bool $bestEffort = false): void
+    private function enforceRateLimit(RateLimiterFactoryInterface $factory, Request $request, bool $bestEffort = false): void
     {
         try {
             $limiter = $factory->create($request->getClientIp() ?? 'anonymous');
 
             $limit = $limiter->consume();
             if (!$limit->isAccepted()) {
-                throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+                throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
             }
         } catch (TooManyRequestsHttpException $e) {
             throw $e;

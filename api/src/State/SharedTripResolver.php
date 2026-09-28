@@ -7,11 +7,13 @@ namespace App\State;
 use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * The one door into a shared trip: resolve the short code, or answer 404.
@@ -34,8 +36,9 @@ final readonly class SharedTripResolver
     public function __construct(
         private TripShareRepositoryInterface $tripShareRepository,
         private RequestStack $requestStack,
-        #[Autowire(service: 'limiter.shared_trip')]
-        private RateLimiterFactory $limiter,
+        #[Target('shared_trip')]
+        private RateLimiterFactoryInterface $sharedTripLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -74,9 +77,9 @@ final readonly class SharedTripResolver
     {
         $ip = $this->requestStack->getCurrentRequest()?->getClientIp() ?? 'unknown';
 
-        $limit = $this->limiter->create($ip)->consume();
+        $limit = $this->sharedTripLimiter->create($ip)->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
     }
 }

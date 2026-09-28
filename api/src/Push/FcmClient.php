@@ -7,6 +7,7 @@ namespace App\Push;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Clock\ClockInterface;
 
 /**
  * FCM HTTP v1 sender (epic #1051).
@@ -38,6 +39,7 @@ final class FcmClient implements PushSenderInterface
         private readonly HttpClientInterface $fcmClient,
         private readonly FcmCredentials $credentials,
         private readonly LoggerInterface $logger,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -214,7 +216,7 @@ final class FcmClient implements PushSenderInterface
 
     private function accessToken(): string
     {
-        if (null !== $this->accessToken && time() < $this->accessTokenExpiresAt) {
+        if (null !== $this->accessToken && $this->clock->now()->getTimestamp() < $this->accessTokenExpiresAt) {
             return $this->accessToken;
         }
 
@@ -233,14 +235,14 @@ final class FcmClient implements PushSenderInterface
         }
 
         $this->accessToken = $payload['access_token'];
-        $this->accessTokenExpiresAt = time() + (($payload['expires_in'] ?? self::TOKEN_TTL) - 60);
+        $this->accessTokenExpiresAt = $this->clock->now()->getTimestamp() + (($payload['expires_in'] ?? self::TOKEN_TTL) - 60);
 
         return $this->accessToken;
     }
 
     private function buildAssertion(): string
     {
-        $now = time();
+        $now = $this->clock->now()->getTimestamp();
         $header = ['alg' => 'RS256', 'typ' => 'JWT'];
         $claims = [
             'iss' => $this->credentials->clientEmail(),

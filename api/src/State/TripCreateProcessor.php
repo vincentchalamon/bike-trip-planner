@@ -14,14 +14,16 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
+use App\RateLimiter\RetryAfter;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripBootstrapper;
+use Psr\Clock\ClockInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * @implements ProcessorInterface<TripRequest, Trip>
@@ -35,9 +37,10 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripBootstrapper $bootstrapper,
         private TripLocker $tripLocker,
         private Security $security,
-        #[Autowire(service: 'limiter.trip_create')]
-        private RateLimiterFactory $tripCreateLimiter,
+        #[Target('trip_create')]
+        private RateLimiterFactoryInterface $tripCreateLimiter,
         private Idempotency $idempotency,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -61,7 +64,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         $limit = $limiter->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         $tripId = $this->bootstrapper->create($data, $user, $user->getLocale());

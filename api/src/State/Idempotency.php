@@ -13,11 +13,11 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\Types\Types;
 use Symfony\Bridge\Doctrine\Types\UuidType;
-use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Uid\Uuid;
+use Psr\Clock\ClockInterface;
 
 /**
  * Lets a creation be asked for twice and answered once (ADR-077).
@@ -142,7 +142,7 @@ readonly class Idempotency
                 'idempotency_key' => $key,
                 'request_digest' => $this->digest($context),
                 'resource_id' => $resourceId,
-                'created_at' => new \DateTimeImmutable(),
+                'created_at' => $this->clock->now(),
             ], [
                 'id' => UuidType::NAME,
                 'user_id' => UuidType::NAME,

@@ -14,9 +14,11 @@ use App\Entity\User;
 use App\Geo\GeoPoint;
 use App\InRide\NearbyPoiFinder;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Handles `POST /trips/{id}/nearby-pois`: runs the AI-free in-ride orchestrator
@@ -34,8 +36,9 @@ final readonly class NearbyPoiSearchProcessor implements ProcessorInterface
     public function __construct(
         private NearbyPoiFinder $finder,
         private Security $security,
-        #[Autowire(service: 'limiter.nearby_pois')]
-        private RateLimiterFactory $nearbyPoisLimiter,
+        #[Target('nearby_pois')]
+        private RateLimiterFactoryInterface $nearbyPoisLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -50,7 +53,7 @@ final readonly class NearbyPoiSearchProcessor implements ProcessorInterface
         \assert($user instanceof User);
         $limit = $this->nearbyPoisLimiter->create($user->getId()->toRfc4122())->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         $tripId = $uriVariables['id'] ?? '';

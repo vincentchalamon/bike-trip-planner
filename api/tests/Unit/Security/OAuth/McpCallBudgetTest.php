@@ -27,6 +27,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 use Symfony\Component\Security\Core\User\InMemoryUser;
+use Symfony\Component\Clock\NativeClock;
 
 /**
  * Who shares a bucket, and what spends from it — the two questions a limiter gets wrong
@@ -167,6 +168,6 @@ final class McpCallBudgetTest extends TestCase
             }
         };
 
-        return new McpCallBudget($inner, new McpToolScopes($names, $metadata), $this->tokens, $this->calls, $this->mutations);
+        return new McpCallBudget($inner, new McpToolScopes($names, $metadata), $this->tokens, $this->calls, $this->mutations, new NativeClock());
     }
 }

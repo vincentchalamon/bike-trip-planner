@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Bounds the two OAuth endpoints (ADR-079).
@@ -29,10 +31,11 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 final readonly class OAuthEndpointThrottleListener
 {
     public function __construct(
-        #[Autowire(service: 'limiter.oauth_token')]
-        private RateLimiterFactory $tokenLimiter,
-        #[Autowire(service: 'limiter.oauth_authorize')]
-        private RateLimiterFactory $authorizeLimiter,
+        #[Target('oauth_token')]
+        private RateLimiterFactoryInterface $oauthTokenLimiter,
+        #[Target('oauth_authorize')]
+        private RateLimiterFactoryInterface $oauthAuthorizeLimiter,
+        private ClockInterface $clock,
         private Security $security,
     ) {
     }
@@ -42,19 +45,19 @@ final readonly class OAuthEndpointThrottleListener
         $request = $event->getRequest();
 
         [$limiter, $key] = match ($request->attributes->get('_route')) {
-            'oauth2_token' => [$this->tokenLimiter, $request->getClientIp() ?? 'unknown'],
-            'oauth2_authorize' => [$this->authorizeLimiter, $this->security->getUser()?->getUserIdentifier() ?? 'unknown'],
+            'oauth2_token' => [$this->oauthTokenLimiter, $request->getClientIp() ?? 'unknown'],
+            'oauth2_authorize' => [$this->oauthAuthorizeLimiter, $this->security->getUser()?->getUserIdentifier() ?? 'unknown'],
             default => [null, ''],
         };
 
-        if (!$limiter instanceof RateLimiterFactory) {
+        if (!$limiter instanceof RateLimiterFactoryInterface) {
             return;
         }
 
         $limit = $limiter->create($key)->consume();
 
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
     }
 }

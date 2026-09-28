@@ -29,6 +29,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Clock\NativeClock;
 
 #[AllowMockObjectsWithoutExpectations]
 final class TripUpdateProcessorTest extends TestCase
@@ -62,7 +63,7 @@ final class TripUpdateProcessorTest extends TestCase
             new ParameterChangeResolver(),
             $generationTracker,
             $security,
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
             $this->inertSupersession(),
         );
@@ -134,7 +135,7 @@ final class TripUpdateProcessorTest extends TestCase
             new ParameterChangeResolver(),
             $generationTracker,
             $security,
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
             $this->inertSupersession(),
         );

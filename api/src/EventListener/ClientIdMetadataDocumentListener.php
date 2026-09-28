@@ -15,14 +15,16 @@ use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Materialises a client that named itself by a URL, so league can find it (ADR-079).
@@ -49,10 +51,11 @@ final readonly class ClientIdMetadataDocumentListener
         private ClientMetadataResolver $resolver,
         private ClientManagerInterface $clients,
         private Security $security,
-        #[Autowire(service: 'limiter.oauth_client_metadata_user')]
-        private RateLimiterFactory $perUser,
-        #[Autowire(service: 'limiter.oauth_client_metadata_host')]
-        private RateLimiterFactory $perHost,
+        #[Target('oauth_client_metadata_user')]
+        private RateLimiterFactoryInterface $oauthClientMetadataUserLimiter,
+        #[Target('oauth_client_metadata_host')]
+        private RateLimiterFactoryInterface $oauthClientMetadataHostLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -101,15 +104,15 @@ final readonly class ClientIdMetadataDocumentListener
 
     private function throttle(string $userIdentifier, string $clientId): void
     {
-        $limit = $this->perUser->create($userIdentifier)->consume();
+        $limit = $this->oauthClientMetadataUserLimiter->create($userIdentifier)->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
 
         $host = parse_url($clientId, \PHP_URL_HOST);
-        $limit = $this->perHost->create(\is_string($host) ? $host : 'unknown')->consume();
+        $limit = $this->oauthClientMetadataHostLimiter->create(\is_string($host) ? $host : 'unknown')->consume();
         if (!$limit->isAccepted()) {
-            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+            throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
         }
     }
 

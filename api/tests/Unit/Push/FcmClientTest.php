@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -189,9 +190,29 @@ final class FcmClientTest extends TestCase
         self::assertSame([], $invalid);
     }
 
-    private function client(MockHttpClient $oauthClient, MockHttpClient $fcmClient, ?LoggerInterface $logger = null): FcmClient
+    #[Test]
+    public function exchangesANewAccessTokenOnceTheCachedOneIsAboutToExpire(): void
     {
-        return new FcmClient($oauthClient, $fcmClient, $this->credentials(), $logger ?? new NullLogger());
+        $clock = new MockClock('2026-09-28 12:00:00');
+        $token = static fn (): MockResponse => new MockResponse((string) json_encode(['access_token' => 'ya29.test', 'expires_in' => 3600]));
+        $oauthClient = new MockHttpClient([$token(), $token()]);
+        $fcmClient = new MockHttpClient([new MockResponse('{}'), new MockResponse('{}'), new MockResponse('{}')]);
+        $client = $this->client($oauthClient, $fcmClient, clock: $clock);
+
+        $client->send(['a'], 'T', 'B');
+        // Refreshed a minute ahead of the announced lifetime, so a token is never sent expired.
+        $clock->sleep(3600 - 61);
+        $client->send(['a'], 'T', 'B');
+        self::assertSame(1, $oauthClient->getRequestsCount());
+
+        $clock->sleep(2);
+        $client->send(['a'], 'T', 'B');
+        self::assertSame(2, $oauthClient->getRequestsCount());
+    }
+
+    private function client(MockHttpClient $oauthClient, MockHttpClient $fcmClient, ?LoggerInterface $logger = null, ?MockClock $clock = null): FcmClient
+    {
+        return new FcmClient($oauthClient, $fcmClient, $this->credentials(), $logger ?? new NullLogger(), $clock ?? new MockClock());
     }
 
     private function credentials(): FcmCredentials

@@ -9,13 +9,15 @@ use App\Entity\User;
 use App\Service\GpxUploadServiceInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
  * Handles direct GPX file uploads, bypassing the URL-based route fetching pipeline.
@@ -30,8 +32,9 @@ final readonly class GpxUploadController
     public function __construct(
         private GpxUploadServiceInterface $gpxUploadService,
         private Security $security,
-        #[Autowire(service: 'limiter.gpx_upload')]
-        private RateLimiterFactory $gpxUploadLimiter,
+        #[Target('gpx_upload')]
+        private RateLimiterFactoryInterface $gpxUploadLimiter,
+        private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
     }
@@ -99,7 +102,7 @@ final readonly class GpxUploadController
             return ProblemResponse::create(
                 Response::HTTP_TOO_MANY_REQUESTS,
                 'Too many GPX uploads. Try again later.',
-                ['Retry-After' => (string) max(1, $limit->getRetryAfter()->getTimestamp() - time())],
+                ['Retry-After' => (string) RetryAfter::seconds($limit, $this->clock)],
             );
         }
 
