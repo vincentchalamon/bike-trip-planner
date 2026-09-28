@@ -40,7 +40,7 @@ describe('reduceAnalysisEvent', () => {
     const running = reduceAnalysisEvent(INITIAL_FOLLOW_STATE, step(1, 4));
     const next = reduceAnalysisEvent(running, {
       type: 'computation_error',
-      data: { computation: 'weather', message: 'x', retryable: true },
+      data: { computation: 'weather', retryable: true },
     });
     expect(next).toBe(running);
     expect(next.failed).toBe(false);
@@ -49,7 +49,7 @@ describe('reduceAnalysisEvent', () => {
   it('marks failed and stops computing on a non-retryable error', () => {
     const next = reduceAnalysisEvent(INITIAL_FOLLOW_STATE, {
       type: 'computation_error',
-      data: { computation: 'route', message: 'x', retryable: false },
+      data: { computation: 'route', retryable: false },
     });
     expect(next).toMatchObject({ computing: false, failed: true });
   });

@@ -34,8 +34,13 @@ test.describe("Error handling", () => {
     await submitUrl();
     await injectEvent(validationErrorEvent());
     await expect(
-      mockedPage.getByText("URL source invalide ou inaccessible."),
+      mockedPage.getByText(
+        "L'itinéraire est inaccessible. Vérifiez l'URL et réessayez.",
+      ),
     ).toBeVisible({ timeout: 5000 });
+    await expect(
+      mockedPage.getByText("Raw server message, never displayed."),
+    ).toHaveCount(0);
   });
 
   test("shows toast on computation_error SSE", async ({
@@ -46,7 +51,7 @@ test.describe("Error handling", () => {
     await submitUrl();
     await injectEvent(computationErrorEvent(false));
     await expect(
-      mockedPage.getByText("Service meteo temporairement indisponible."),
+      mockedPage.getByText("La météo n'a pas pu être récupérée."),
     ).toBeVisible({ timeout: 5000 });
   });
 

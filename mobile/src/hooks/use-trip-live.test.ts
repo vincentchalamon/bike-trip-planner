@@ -265,7 +265,7 @@ describe('computing state machine driven by SSE', () => {
     dispatch(stepCompleted);
     dispatch({
       type: 'computation_error',
-      data: { computation: 'weather', message: 'boom', retryable: false },
+      data: { computation: 'weather', retryable: false },
     });
     expect(store().computing).toBe(false);
   });
@@ -275,7 +275,7 @@ describe('computing state machine driven by SSE', () => {
     dispatch(stepCompleted);
     dispatch({
       type: 'computation_error',
-      data: { computation: 'weather', message: 'transient', retryable: true },
+      data: { computation: 'weather', retryable: true },
     });
     expect(store().computing).toBe(true);
   });
@@ -291,7 +291,7 @@ describe('computing state machine driven by SSE', () => {
 
     dispatch({
       type: 'computation_error',
-      data: { computation: 'route', message: 'fatal', retryable: false },
+      data: { computation: 'route', retryable: false },
     });
     expect(store().diffBaseline).not.toBeNull();
   });
@@ -302,7 +302,7 @@ describe('computing state machine driven by SSE', () => {
 
     dispatch({
       type: 'computation_error',
-      data: { computation: 'route', message: 'transient', retryable: true },
+      data: { computation: 'route', retryable: true },
     });
     // Still running → the recompute may yet produce a trip_ready that diffs.
     expect(store().diffBaseline).not.toBeNull();

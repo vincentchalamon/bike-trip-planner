@@ -25,6 +25,8 @@ export interface SideEffectContext {
   currentStages: StageData[];
   signal: AbortSignal;
   timers: Map<string, ReturnType<typeof setTimeout>>;
+  /** next-intl translator scoped to the root namespace, for the error toasts. */
+  t: (key: string, values?: Record<string, string>) => string;
 }
 
 type SideEffect<K extends MercureEvent["type"]> = (
@@ -162,16 +164,18 @@ const SIDE_EFFECTS: {
     }
   },
 
-  validation_error: (event) => {
+  validation_error: (event, { t }) => {
     const ui = useUiStore.getState();
-    toast.error(event.data.message);
+    toast.error(t("mercure.validationError", { code: event.data.code }));
     ui.setProcessing(false);
     ui.setAccommodationScanning(false);
   },
 
-  computation_error: (event) => {
+  computation_error: (event, { t }) => {
     const ui = useUiStore.getState();
-    toast.error(`Computation failed: ${event.data.message}`);
+    toast.error(
+      t("mercure.computationFailed", { computation: event.data.computation }),
+    );
 
     // Map the failed computation onto its per-block spinner so the matching block surfaces an
     // error + retry affordance (ADR-043). Weather/wind → weather. Other computations have no

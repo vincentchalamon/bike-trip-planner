@@ -176,7 +176,7 @@ describe("reduceMercureEvent — trip-level events", () => {
       baseState({ recomputingStages: new Set(["stage-1"]) }),
       {
         type: "computation_error",
-        data: { computation: "weather", message: "e", retryable: true },
+        data: { computation: "weather", retryable: true },
       },
     );
     expect(retry.recomputingStages.size).toBe(1);
@@ -185,7 +185,7 @@ describe("reduceMercureEvent — trip-level events", () => {
       baseState({ recomputingStages: new Set(["stage-1"]) }),
       {
         type: "computation_error",
-        data: { computation: "weather", message: "e", retryable: false },
+        data: { computation: "weather", retryable: false },
       },
     );
     expect(fatal.recomputingStages.size).toBe(0);
@@ -1024,7 +1024,7 @@ describe("Mercure contract drift guard (#1030)", () => {
       trip_ready: { stages: [], computationStatus: {} },
       stage_updated: { stageId: "stage-1", stage: enriched() },
       validation_error: { code: "", message: "" },
-      computation_error: { computation: "", message: "", retryable: false },
+      computation_error: { computation: "", retryable: false },
       computations_superseded: { computations: [], categories: [] },
     };
 

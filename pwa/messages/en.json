@@ -1064,5 +1064,9 @@
     "loopbackWarning": "This application runs on your own machine. Nothing can prove it is the one you think it is: only authorize it if you just started it yourself.",
     "approve": "Authorize",
     "deny": "Refuse"
+  },
+  "mercure": {
+    "computationFailed": "{computation, select, route {The route could not be loaded.} stages {The stages could not be computed.} pois {Points of interest could not be retrieved.} accommodations {Accommodations could not be retrieved.} terrain {The terrain analysis could not be completed.} weather {The weather forecast could not be retrieved.} calendar {The calendar check could not be completed.} wind {The wind analysis could not be completed.} bike_shops {Bike shops could not be retrieved.} water_points {Water points could not be retrieved.} route_segment {The route segment could not be recalculated.} cultural_pois {Cultural sites could not be retrieved.} railway_stations {Railway stations could not be retrieved.} health_services {Health services could not be retrieved.} border_crossing {The border crossing check could not be completed.} ferries {Ferries could not be retrieved.} fords {Fords could not be retrieved.} events {Events could not be retrieved.} other {Part of the analysis could not be completed.}}",
+    "validationError": "{code, select, MIN_STAGES {A minimum of 2 stages is required.} ROUTE_FETCH_FAILED {The route could not be fetched. Please check the URL and try again.} EMPTY_ROUTE {The route is empty.} other {Invalid data.}}"
   }
 }

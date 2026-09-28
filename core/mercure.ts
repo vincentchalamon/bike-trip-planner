@@ -455,8 +455,10 @@ export type MercureEvent =
     }
   | { type: "validation_error"; data: { code: string; message: string } }
   | {
+      // No message: the exception text stays in the server log. Clients translate a label
+      // from `computation`.
       type: "computation_error";
-      data: { computation: string; message: string; retryable: boolean };
+      data: { computation: string; retryable: boolean };
     }
   | {
       // Signal, not data: the trip moved and these computations were abandoned before they
