@@ -2783,6 +2783,15 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_tripIdaccommodationsscan_post: {
@@ -3043,6 +3052,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3709,6 +3727,8 @@ export interface operations {
             /** @description Rate limit reached */
             429: {
                 headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -4890,6 +4910,15 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     gpxUpload: {
@@ -5358,6 +5387,15 @@ export interface operations {
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     "api_trips_idnearby-pois_post": {
@@ -5429,6 +5467,8 @@ export interface operations {
             /** @description Rate limit reached */
             429: {
                 headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5514,6 +5554,15 @@ export interface operations {
             /** @description This operation requires an "If-Match" header carrying the trip version, taken from the ETag of the response that served it. */
             428: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5663,6 +5712,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     "api_s_shortCode.fit_get": {
@@ -5708,6 +5766,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     "api_s_shortCode.gpx_get": {
@@ -5752,6 +5819,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5808,6 +5884,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_s_shortCodestages_stageId_get: {
@@ -5855,6 +5940,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Error"];
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -19,7 +19,7 @@ export async function fetchAccountExport(): Promise<ArrayBuffer> {
     headers: { Accept: LD_JSON },
     parseAs: 'arrayBuffer',
   });
-  if (error || !response.ok) {
+  if (error || !response.ok || data === undefined) {
     throw new Error('Failed to export account');
   }
   return data;

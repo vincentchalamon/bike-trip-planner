@@ -65,11 +65,13 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         $neutralMessage = $this->translator->trans('access_request.neutral_message', [], 'access_request');
 
         // Rate limit by IP: max 3 requests per hour
-        $ipLimiter = $this->accessRequestIpLimiter->create($clientIp);
-        if (!$ipLimiter->consume()->isAccepted()) {
+        $ipLimit = $this->accessRequestIpLimiter->create($clientIp)->consume();
+        if (!$ipLimit->isAccepted()) {
             $this->logger->debug('Access request IP rate limited', ['ip' => $clientIp]);
 
-            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_TOO_MANY_REQUESTS);
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_TOO_MANY_REQUESTS, [
+                'Retry-After' => (string) max(1, $ipLimit->getRetryAfter()->getTimestamp() - time()),
+            ]);
         }
 
         // Silently ignore if user already exists

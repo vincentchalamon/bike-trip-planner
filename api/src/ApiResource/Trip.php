@@ -15,6 +15,7 @@ use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use App\OpenApi\RetryAfter;
 use App\ApiResource\Mcp\AnalyzeTripInput;
 use App\ApiResource\Mcp\CreateTripInput;
 use App\ApiResource\Mcp\DeleteTripInput;
@@ -85,6 +86,11 @@ use App\ApiResource\Mcp\ListTripsInput;
         new Post(
             uriTemplate: '/trips{._format}',
             status: 202,
+            openapi: new Operation(
+                responses: [
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+            ),
             security: "is_granted('ROLE_USER')",
             validationContext: ['groups' => ['trip_request:create']],
             input: TripRequest::class,
@@ -100,6 +106,7 @@ use App\ApiResource\Mcp\ListTripsInput;
             openapi: new Operation(
                 responses: [
                     404 => new Response(description: 'Trip not found'),
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.',
             ),
@@ -116,7 +123,7 @@ use App\ApiResource\Mcp\ListTripsInput;
                 responses: [
                     404 => new Response(description: 'Trip not found'),
                     422 => new Response(description: 'Unknown POI category or invalid request payload'),
-                    429 => new Response(description: 'Rate limit reached'),
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'Search the nearest points of interest of one intent category around a rider mid-ride.',
             ),
@@ -153,6 +160,7 @@ use App\ApiResource\Mcp\ListTripsInput;
                 responses: [
                     404 => new Response(description: 'Trip not found'),
                     422 => new Response(description: 'Trip has no stages to recompute'),
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.',
             ),

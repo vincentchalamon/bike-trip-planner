@@ -41,8 +41,9 @@ final readonly class AccountExportProvider implements ProviderInterface
 
         // The query below walks every trip this user owns, with no upper bound: portability is
         // a once-in-a-while gesture and the limit says so.
-        if (!$this->exportLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->exportLimiter->create($user->getId()->toRfc4122())->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         /** @var list<TripRequest> $trips */

@@ -74,8 +74,9 @@ final readonly class SharedTripResolver
     {
         $ip = $this->requestStack->getCurrentRequest()?->getClientIp() ?? 'unknown';
 
-        if (!$this->limiter->create($ip)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->limiter->create($ip)->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
     }
 }

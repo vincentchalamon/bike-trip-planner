@@ -54,7 +54,11 @@ final class TripDuplicateProcessorTest extends TestCase
             $this->createStub(Idempotency::class),
         );
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $processor->process(new TripRequest(), new Post(), ['id' => 't']);
+        try {
+            $processor->process(new TripRequest(), new Post(), ['id' => 't']);
+            self::fail('The limiter should have refused the call.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertGreaterThan(0, $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? 0);
+        }
     }
 }

@@ -48,8 +48,12 @@ final class SharedTripResolverTest extends TestCase
 
         self::assertSame((string) $trip->id, $resolver->resolve('Ab3kX9mP'));
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $resolver->resolve('Ab3kX9mP');
+        try {
+            $resolver->resolve('Ab3kX9mP');
+            self::fail('The limiter should have refused the call.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertGreaterThan(0, $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? 0);
+        }
     }
 
     /**

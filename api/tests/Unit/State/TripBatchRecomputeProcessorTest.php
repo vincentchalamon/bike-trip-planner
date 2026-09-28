@@ -58,12 +58,16 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $limiter,
         );
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $processor->process(
-            new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
-            new Post(),
-            ['id' => 't'],
-        );
+        try {
+            $processor->process(
+                new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
+                new Post(),
+                ['id' => 't'],
+            );
+            self::fail('The limiter should have refused the call.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertGreaterThan(0, $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? 0);
+        }
     }
 
     /**
