@@ -56,14 +56,21 @@ curl -s https://<host>/api/health | jq '.deps.reference_data.zones'
 dev stack; with `make provision-recette <zone>`, the local iso-prod recette stack. The
 local-development specifics are in the next section.
 
-> **Production status.** Opening a zone on the prod VM is not wired yet. The `provisioner`
-> service writes to the database named by its `PG*` variables, which default to the per-stack
-> PG-app (`database`); nothing in `deploy/prod/compose.yaml` or
-> `ansible/roles/app_deploy/templates/env.j2` retargets it at the shared `pg-reference`, the
-> service is not attached to the `btp-shared` network, the DataTourisme / OpenAgenda
-> credentials are not in Vault, and the read-only `reference_ro` role that
-> `REFERENCE_DATABASE_URL` expects is created by nothing in the repository. Until that lands,
-> the steps below apply to local and recette stacks only.
+**In production**, run the same steps on the VM as the `deploy` user, with `btp-compose`
+instead of `make` (the provisioner image of the release tag the checkout is on):
+
+```bash
+btp-compose --profile provisioning run --rm provisioner bretagne
+```
+
+`deploy/prod/compose.yaml` attaches the `provisioner` to `btp-shared` and points its `PG*`
+variables at the shared `pg-reference`, as the database owner (`REFERENCE_DB_OWNER_*` in the
+prod env file, from Vault). The DataTourisme / OpenAgenda credentials come from the same file
+(`vault_datatourisme_*`, `vault_openagenda_api_key`, `openagenda_dataset`); an empty one skips
+its source. The app reads the result as `reference_ro`, which the Ansible `shared_infra` role
+creates with `SELECT` on `osm` and `tourism` only (default privileges cover the tables the
+provisioner creates later). The routing check reads the shared Valhalla volume, so step 1 is
+`make routing-publish` from a workstation, not `make routing-build` on the VM.
 
 ### 1. Make sure the routing graph covers the zone
 

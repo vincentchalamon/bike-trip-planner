@@ -12,6 +12,8 @@
 #    over the `edge` network; the base keeps the published ports for dev/recette.
 #  - php + worker join `btp-shared` to reach the shared Valhalla and the shared
 #    PG-référence (both Ansible-managed, external to every app stack).
+#  - provisioner joins `btp-shared` too and writes to PG-référence as its owner,
+#    instead of the in-stack PG-app `database` the base points it at.
 #  - The in-stack `valhalla`/`valhalla-builder` (base, `routing` profile) stay
 #    DORMANT in prod: the profile is never enabled here, so routing is served only
 #    by the shared resource on btp-shared.
@@ -20,7 +22,7 @@
 #    talks HTTP to it).
 #
 # Only ${DOMAIN} (and the reference DB / Mercure secrets) need to be in the VM
-# `.env`; nothing host-specific is hardcoded here.
+# env file; nothing host-specific is hardcoded here.
 
 # Shared prod env for php + worker (YAML anchor to avoid duplicating the block).
 x-prod-env: &prod-env
@@ -36,9 +38,9 @@ x-prod-env: &prod-env
   TRUSTED_HOSTS: "^(www\\.${DOMAIN}|php)$$"
   # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
   VALHALLA_BASE_URI: http://valhalla:8002
-  # Shared read-only PG-référence (osm/tourism, ADR-060), reached on btp-shared.
-  # Defaults to the Ansible-managed `pg-reference` host; the DSN (incl. the RO
-  # password) may be overridden wholesale from the VM `.env`.
+  # Shared read-only PG-référence (osm/tourism, ADR-060), reached on btp-shared
+  # as the `reference_ro` role Ansible creates (shared_infra). The prod env file
+  # sets the full DSN (env.j2); the fallback only keeps the shape documented.
   REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://reference_ro:${REFERENCE_DB_PASSWORD:-}@pg-reference:5432/reference?serverVersion=18&charset=utf8}"
 
 services:
@@ -70,6 +72,23 @@ services:
       - btp-shared
     environment:
       <<: *prod-env
+
+  # Reference-data provisioning (`btp-compose --profile provisioning run --rm
+  # provisioner <zone>`, and the events-refresh timer). The only writer of
+  # PG-référence (ADR-060), so it connects as the database OWNER, not as the
+  # read-only `reference_ro` the app uses: it applies reference_schema.sql and
+  # creates the per-zone staging schemas.
+  provisioner:
+    networks:
+      - default
+      - btp-shared
+    # The base waits for the in-stack PG-app `database`; prod never touches it.
+    depends_on: !reset {}
+    environment:
+      PGHOST: pg-reference
+      PGUSER: "${REFERENCE_DB_OWNER_USER:-}"
+      PGPASSWORD: "${REFERENCE_DB_OWNER_PASSWORD:-}"
+      PGDATABASE: "${REFERENCE_DB_NAME:-}"
 
 volumes:
   # The routing graph lives in the shared Valhalla stack's volume

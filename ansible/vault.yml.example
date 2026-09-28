@@ -72,10 +72,18 @@ vault_database_name: "bike_trip_planner"
 vault_reference_db_user: "reference"
 vault_reference_db_password: "REPLACE_ME"
 vault_reference_db_name: "reference"
-# DSN the app uses to READ the reference DB. Point it at a read-only role in
-# production (created during data provisioning, plan W2.3). `pg-reference` is the
-# service alias on the btp-shared network.
-vault_reference_database_url: "postgresql://reference_ro:REPLACE_ME@pg-reference:5432/reference?serverVersion=18&charset=utf8"
+# Password of the read-only role the app reads the reference DB with. The
+# shared_infra role creates the role (SELECT on osm + tourism only) and env.j2
+# derives REFERENCE_DATABASE_URL from it. Generate it with `openssl rand -hex 32`
+# (hex: nothing to URL-encode, no `$` for compose to interpolate).
+vault_reference_ro_password: "REPLACE_ME"
+
+# --- Reference-data feeds (provisioner) --------------------------------------
+# DataTourisme flux (ADR-040) and OpenAgenda (ADR-051). OPENAGENDA_DATASET is a
+# non-secret in group_vars/all.yml; the public OpenAgenda export needs no key.
+vault_datatourisme_flux_id: ""                    # empty = source skipped
+vault_datatourisme_app_key: ""                    # empty = source skipped
+vault_openagenda_api_key: ""                      # empty = source skipped
 
 # --- Sentry (ADR-031) --------------------------------------------------------
 vault_sentry_dsn: ""                              # empty = disabled
