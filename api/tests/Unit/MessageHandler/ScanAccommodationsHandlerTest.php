@@ -17,11 +17,14 @@ use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryBasedDistributor;
 use App\Geo\GeometryDistributorInterface;
 use App\Geo\HaversineDistance;
+use App\Mapper\EventArrayMapper;
+use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Weather\WeatherForecastSerializer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -75,6 +78,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $distributor,
             $seasonalityChecker,
             new CandidateRanker(),
+            new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );
@@ -404,6 +408,53 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $handler(new ScanAccommodations('trip-3', isExpandScan: true));
 
         $this->assertCount(2, $stage->accommodations);
+    }
+
+    /**
+     * The live payload used to be built inline and left the address out, so an expand scan
+     * replaced a kept accommodation on the open page with one that had lost it.
+     */
+    #[Test]
+    public function expandScanPublishesTheKeptAccommodationInFull(): void
+    {
+        $stage = $this->createStage('trip-3', 48.5, 2.5);
+        $stage->accommodations = [new Accommodation(
+            name: 'Camping du Lac',
+            type: 'camp_site',
+            lat: 48.4,
+            lon: 2.4,
+            estimatedPriceMin: 8.0,
+            estimatedPriceMax: 25.0,
+            isExactPrice: false,
+            address: '1 route du Lac',
+        )];
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $registry = $this->createStub(AccommodationSourceRegistry::class);
+        $registry->method('fetchAll')->willReturn([]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([0 => []]);
+
+        $published = null;
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')->willReturnCallback(static function (string $tripId, MercureEventType $type, array $data) use (&$published): void {
+            $published = $data;
+        });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->createStub(GeoDistanceInterface::class), $distributor);
+        $handler(new ScanAccommodations('trip-3', isExpandScan: true));
+
+        $this->assertIsArray($published);
+        $this->assertSame(
+            new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper())->accommodation($stage->accommodations[0]),
+            $published['accommodations'][0],
+        );
+        $this->assertSame('1 route du Lac', $published['accommodations'][0]['address']);
     }
 
     #[Test]

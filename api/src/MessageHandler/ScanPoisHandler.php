@@ -20,6 +20,7 @@ use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
+use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
@@ -61,6 +62,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private ResupplyBuilder $resupplyBuilder,
         private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
+        private StageArrayMapper $stageMapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
@@ -201,7 +203,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $this->tripStateManager->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
-                    'resupply' => $this->resupplyToArray($stage->resupply),
+                    'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
                     'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripStateManager->getLocale($tripId) ?? 'en'),
                 ]);
 
@@ -232,25 +234,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     private function hasResupplyPoi(array $pois): bool
     {
         return array_any($pois, fn (PointOfInterest $poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
-    }
-
-    /**
-     * @return array{
-     *     foodAtLunch: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float}>,
-     *     waterMorning: array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float}|null,
-     *     waterAfternoon: array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float}|null,
-     *     foodAtArrival: list<array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float}>,
-     * }
-     */
-    private function resupplyToArray(Resupply $resupply): array
-    {
-        return $resupply->map(static fn (PointOfInterest $p): array => [
-            'name' => $p->name,
-            'category' => $p->category,
-            'lat' => $p->lat,
-            'lon' => $p->lon,
-            'distanceFromStart' => $p->distanceFromStart,
-        ]);
     }
 
     /**

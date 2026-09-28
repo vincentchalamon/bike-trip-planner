@@ -9,9 +9,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Concurrency\TripVersionEtag;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\PointOfInterest;
-use App\ApiResource\Model\Resupply;
-use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
@@ -19,11 +16,10 @@ use App\Alert\AlertRenderer;
 use App\Alert\ReaderLocale;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\Mapper\EventArrayMapper;
+use App\Mapper\StageArrayMapper;
 use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Weather\WeatherForecastSerializer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -41,8 +37,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private TripLocker $tripLocker,
         private ComputationTrackerInterface $computationTracker,
-        private WeatherForecastSerializer $weatherSerializer,
-        private EventArrayMapper $eventMapper,
+        private StageArrayMapper $stageMapper,
         private AlertRenderer $alertRenderer,
         private ReaderLocale $readerLocale,
     ) {
@@ -265,8 +260,8 @@ final readonly class TripDetailProvider implements ProviderInterface
             'distance' => $stage->distance,
             'elevation' => $stage->elevation,
             'elevationLoss' => $stage->elevationLoss,
-            'startPoint' => $this->serializeCoord($stage->startPoint),
-            'endPoint' => $this->serializeCoord($stage->endPoint),
+            'startPoint' => $this->stageMapper->coordinate($stage->startPoint),
+            'endPoint' => $this->stageMapper->coordinate($stage->endPoint),
             // Geometry is split off to GET /trips/{id}/route (ADR-057): it is the only
             // O(points) per-stage field, and the roadbook summary never renders it.
             'label' => $stage->label,
@@ -274,7 +269,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'endLabel' => $stage->endLabel,
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
-            'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
+            'weather' => $this->stageMapper->weatherForClient($stage->weather),
             'weatherAvailability' => $this->weatherAvailability($stage, $startDate, $weatherStatus),
             // Passed through as the producer wrote it, `group` included: normalising here is
             // what used to drop the richer fields some producers emit (ADR-068).
@@ -282,75 +277,13 @@ final readonly class TripDetailProvider implements ProviderInterface
             // Persisted since ADR-068, and served here for the same reason the alerts are:
             // an anonymous visitor to /s/{shortCode} never receives SSE, so a payload the
             // producer only published is a payload they never see.
-            'events' => array_map($this->eventMapper->toArray(...), $stage->events),
+            'events' => array_map($this->stageMapper->event(...), $stage->events),
             'supplyTimeline' => $stage->supplyTimeline,
-            'resupply' => $this->serializeResupply($stage->resupply),
-            'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
+            'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
+            'accommodations' => array_map($this->stageMapper->accommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
-                ? $this->serializeAccommodation($stage->selectedAccommodation)
+                ? $this->stageMapper->accommodation($stage->selectedAccommodation)
                 : null,
-        ];
-    }
-
-    /**
-     * @return array{lat: float, lon: float, ele: float}
-     */
-    private function serializeCoord(Coordinate $coord): array
-    {
-        return ['lat' => $coord->lat, 'lon' => $coord->lon, 'ele' => $coord->ele];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serializeResupply(?Resupply $resupply): array
-    {
-        return ($resupply ?? new Resupply())->map($this->serializePoi(...));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serializePoi(PointOfInterest $poi): array
-    {
-        return [
-            'name' => $poi->name,
-            'category' => $poi->category,
-            'lat' => $poi->lat,
-            'lon' => $poi->lon,
-            'distanceFromStart' => $poi->distanceFromStart,
-            'osmType' => $poi->osmType,
-            'osmId' => $poi->osmId,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serializeAccommodation(Accommodation $acc): array
-    {
-        return [
-            'name' => $acc->name,
-            'type' => $acc->type,
-            'lat' => $acc->lat,
-            'lon' => $acc->lon,
-            'estimatedPriceMin' => $acc->estimatedPriceMin,
-            'estimatedPriceMax' => $acc->estimatedPriceMax,
-            'isExactPrice' => $acc->isExactPrice,
-            'url' => $acc->url,
-            'possibleClosed' => $acc->possibleClosed,
-            'distanceToEndPoint' => $acc->distanceToEndPoint,
-            // Same enrichment fields as StagePayloadMapper (issues #870, #873), so a
-            // reload and the anonymous shared view are as detailed as the live SSE.
-            'source' => $acc->source,
-            'description' => $acc->description,
-            'imageUrl' => $acc->imageUrl,
-            'wikipediaUrl' => $acc->wikipediaUrl,
-            'openingHours' => $acc->openingHours,
-            'phone' => $acc->phone,
-            'address' => $acc->address,
-            'osmType' => $acc->osmType,
-            'osmId' => $acc->osmId,
         ];
     }
 }

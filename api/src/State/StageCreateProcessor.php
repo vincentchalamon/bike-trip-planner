@@ -79,15 +79,14 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
             array_splice($stages, $position, 0, [$newStage]);
 
-            return $this->reindexDayNumbers($stages);
-        }, IfMatch::expectedVersion($context));
+            return $stages;
+        }, IfMatch::expectedVersion($context), resequence: true);
 
         TripVersionEtag::stamp($context, $write?->version);
 
         // The trip was asserted to exist above, so the write happened.
         \assert($write instanceof StageWriteResult);
 
-        $stages = $write->stages;
         // The generation comes back from inside the locked write. Re-reading it here would
         // hand us whichever version won the race after the lock was released.
         $generation = $write->version;
@@ -107,31 +106,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             generation: $generation,
         ));
 
-        // Keep the trip's day window in step with the stage count: a trip spans
-        // exactly one calendar day per stage (rest days included), so adding a
-        // stage shifts the end date forward so the global range, the export and a
-        // later re-pacing all stay consistent (recette #649). Reuse the request
-        // asserted above — storeStages only flushes, never detaches it (review).
-        $startDate = $tripRequest->startDate;
-        if ($startDate instanceof \DateTimeImmutable) {
-            $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
-            $this->tripStateManager->storeRequest($tripId, $tripRequest);
-        }
-
         return $this->stageResponseMapper->map($newStage);
-    }
-
-    /**
-     * @param list<Stage> $stages
-     *
-     * @return list<Stage>
-     */
-    private function reindexDayNumbers(array $stages): array
-    {
-        foreach ($stages as $i => $stage) {
-            $stage->dayNumber = $i + 1;
-        }
-
-        return $stages;
     }
 }

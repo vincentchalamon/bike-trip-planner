@@ -204,6 +204,58 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         ));
     }
 
+    /**
+     * An insertion renumbers the days and moves the end date in the write that bumped the
+     * version, not in a second write the recomputation could overtake.
+     */
+    #[Test]
+    public function aResequencedInsertionRenumbersAndMovesTheEndDateInTheSameWrite(): void
+    {
+        $tripId = $this->seedTripStarting('2026-07-01', '2026-07-03');
+        $before = $this->repository->getVersion($tripId);
+        self::assertNotNull($before);
+
+        $written = $this->repository->mutateStages($tripId, function (array $stages) use ($tripId): array {
+            array_splice($stages, 1, 0, [$this->stage($tripId, 99)]);
+
+            return $stages;
+        }, resequence: true);
+
+        self::assertNotNull($written);
+        self::assertSame($before + 1, $written->version);
+        self::assertSame([1, 2, 3, 4], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->repository->getStages($tripId) ?? []));
+        self::assertSame('2026-07-04', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
+        self::assertSame($before + 1, $this->repository->getVersion($tripId));
+    }
+
+    /**
+     * A reorder keeps the stage count, so it leaves the end date where it was, even when that
+     * date does not match the count (pacing does not maintain it).
+     */
+    #[Test]
+    public function aResequencedMoveRenumbersAndLeavesTheEndDate(): void
+    {
+        $tripId = $this->seedTripStarting('2026-07-01', '2026-07-10');
+
+        $this->repository->mutateStages($tripId, static fn (array $stages): array => array_reverse($stages), resequence: true);
+
+        $stages = $this->repository->getStages($tripId) ?? [];
+        self::assertSame([1, 2, 3], array_map(static fn (Stage $stage): int => $stage->dayNumber, $stages));
+        self::assertSame([43.0, 42.0, 41.0], array_map(static fn (Stage $stage): float => $stage->distance, $stages));
+        self::assertSame('2026-07-10', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
+    }
+
+    #[Test]
+    public function anUnsequencedMutationKeepsTheDayNumbersAndTheEndDate(): void
+    {
+        $tripId = $this->seedTripStarting('2026-07-01', '2026-07-03');
+
+        $this->repository->mutateStages($tripId, static fn (array $stages): array => \array_slice($stages, 0, 2));
+
+        self::assertSame([1, 2], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->repository->getStages($tripId) ?? []));
+        self::assertSame('2026-07-03', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
+    }
+
     #[Test]
     public function writingTheCollectionBumpsTheVersionAndATargetedWriteDoesNot(): void
     {
@@ -403,6 +455,23 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
         $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->repository->storeStages($tripId, [
+            $this->stage($tripId, 1),
+            $this->stage($tripId, 2),
+            $this->stage($tripId, 3),
+        ]);
+
+        return $tripId;
+    }
+
+    private function seedTripStarting(string $startDate, string $endDate): string
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $request = new TripRequest(Uuid::fromString($tripId));
+        $request->startDate = new \DateTimeImmutable($startDate);
+        $request->endDate = new \DateTimeImmutable($endDate);
+
+        $this->repository->initializeTrip($tripId, $request);
         $this->repository->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),

@@ -19,6 +19,9 @@ use App\Geo\HaversineDistance;
 use App\Geo\NearbyNameDeduplicator;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
+use App\Weather\WeatherForecastSerializer;
+use App\Mapper\StageArrayMapper;
+use App\Mapper\EventArrayMapper;
 use App\MessageHandler\ScanPoisHandler;
 use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
@@ -227,6 +230,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new ResupplyBuilder(),
             new PoiLabelResolver($translator),
             $this->createStub(RiderTimeEstimatorInterface::class),
+            new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );
