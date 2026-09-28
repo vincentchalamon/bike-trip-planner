@@ -16,11 +16,13 @@
  *   docs/assets/screenshots/share-modal.png         — tutorial, share dialog
  *   pwa/public/images/screenshot-map.jpg            — landing carousel (16:9)
  *   pwa/public/images/screenshot-stage.jpg          — landing carousel (16:9)
+ *   pwa/public/images/screenshot-analysis.jpg       - landing carousel (16:9)
  *
  * Map tiles (MapLibre) load over the network, so a short settle delay lets them
  * paint before capture; review the generated images by eye. Framings rely only
- * on stable roadbook test ids (view-mode-*, split-view-container, stage-card-N),
- * not on the top bar, so they survive UI chrome changes.
+ * on stable roadbook test ids (view-mode-*, split-view-container, stage-card-N,
+ * stage-alerts, stage-difficulty-composed), not on the top bar, so they survive
+ * UI chrome changes.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -161,6 +163,26 @@ test.describe("landing", () => {
     await settle(mockedPage);
     await mockedPage.screenshot({
       path: path.join(LANDING_DIR, "screenshot-stage.jpg"),
+      type: "jpeg",
+      quality: JPEG_QUALITY,
+      clip: { ...CLIP_16_9 },
+    });
+  });
+
+  // Split view renders the full 3-bar difficulty gauge; the compact timeline
+  // cell only shows the overall pill. Day 1 carries the terrain alert of
+  // fullTripEventSequence(), so both halves of the analysis are on screen.
+  test("analysis slide", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    await showSplitView(mockedPage);
+    const stage = mockedPage.getByTestId("stage-card-1");
+    await stage.getByTestId("stage-alerts").waitFor();
+    await stage
+      .getByTestId("stage-difficulty-composed")
+      .evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await settle(mockedPage);
+    await mockedPage.screenshot({
+      path: path.join(LANDING_DIR, "screenshot-analysis.jpg"),
       type: "jpeg",
       quality: JPEG_QUALITY,
       clip: { ...CLIP_16_9 },

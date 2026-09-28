@@ -197,7 +197,7 @@ export const en: typeof fr = {
         'The Bike Trip Planner source code is distributed under an open-source license; the usage and redistribution terms are available in the GitHub repository.\n\nRoute and mapping data come from third-party sources (OpenStreetMap, DataTourisme, OpenAgenda, Wikidata) and remain subject to their respective licenses, credited within the application.\n\nThird-party trademarks, logos and content (Komoot, Strava, RideWithGPS, Garmin, Wahoo) remain the property of their respective owners.',
     },
     privacyContent: {
-      lastUpdated: 'Last updated: 29 May 2026',
+      lastUpdated: 'Last updated: 28 September 2026',
       controllerTitle: 'Data controller',
       controllerBody:
         'The data controller is the publisher of Bike Trip Planner (see the legal notice).\n\nFor any question about your personal data, contact us at: __CONTACT_EMAIL__.',
@@ -209,7 +209,7 @@ export const en: typeof fr = {
         'Your data is used to authenticate you, save and restore your trips, and compute route analyses (pacing, alerts, accommodation, weather).\n\nAnonymous audience measurement is used solely to understand overall usage of the service and improve its usability.',
       dataTitle: 'Data collected',
       dataBody:
-        'Account: your email address, required for magic-link sign-in.\n\nTrips: your trip configuration (title, dates, rider profile, stages, selected accommodation) is stored so you can access it from any device.\n\nRoute data: imported raw GPS points are cached temporarily (Redis) and then deleted automatically.\n\nNo sensitive data is collected, and no data is sold to third parties.',
+        'Account: your email address, required for magic-link sign-in.\n\nTrips: your trip configuration (title, dates, rider profile, stages, selected accommodation) is stored so you can access it from any device.\n\nRoute data: imported raw GPS points are cached temporarily (Redis) and then deleted automatically.\n\nMobile app: the device tokens used to send you push notifications, and your notification preferences.\n\nNo sensitive data is collected, and no data is sold to third parties.',
       retentionTitle: 'Retention period',
       retentionBody:
         'Your account and trips are kept for as long as your account is active. You may request their deletion at any time; deletion triggers an immediate and irreversible anonymisation of your account.\n\nRaw cached route data is kept for a maximum of 24 hours.\n\nAnonymous audience measurement data is aggregated and cannot be used to re-identify you.',
@@ -218,7 +218,7 @@ export const en: typeof fr = {
         'In accordance with the GDPR, you have the right of access, rectification, erasure, restriction, objection and portability of your data.\n\nTo exercise these rights, contact us at: __CONTACT_EMAIL__. We respond within one month.\n\nYou also have the right to lodge a complaint with your supervisory authority (in France, the CNIL — www.cnil.fr).',
       processorsTitle: 'Processors',
       processorsBody:
-        'Infrastructure hosting: a cloud provider chosen by the operator of this instance.\n\nSending sign-in emails: a transactional email delivery provider.\n\nOpen-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them.',
+        'Infrastructure hosting: a cloud provider chosen by the operator of this instance.\n\nSending sign-in emails: a transactional email delivery provider.\n\nMobile push notifications: Google Firebase Cloud Messaging, which receives your device token and the content of the notification (title and text).\n\nOpen-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them.',
       analyticsTitle: 'Audience measurement (Plausible)',
       analyticsBody:
         'We use Plausible Analytics, a privacy-friendly audience measurement solution, self-hosted on the same infrastructure as the application.\n\nPlausible sets no cookies and uses no fingerprinting techniques. No data is shared with third parties for advertising purposes.\n\nIP addresses and user agents (browser) are anonymised and never stored; no data can be used to identify you or track you across sites.\n\nPurpose: to understand, in aggregate, which pages are visited and overall usage in order to improve the service. Retention: aggregated statistics only, no individual data.\n\nNo consent banner is required because no personal data is collected; you nevertheless retain the objection rights described above.',
