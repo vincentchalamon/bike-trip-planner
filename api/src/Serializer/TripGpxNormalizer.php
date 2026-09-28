@@ -4,89 +4,36 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Stage;
-use App\ApiResource\Trip;
-use App\Repository\TripRequestRepositoryInterface;
 use App\Serializer\Mapper\WaypointMapper;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
- * Normalizes a {@see Trip} resource into a single-track GPX structure.
- *
- * All stage geometries are merged into one continuous `<trkseg>` so that
- * GPS devices and applications display the trip as a single valid tour.
- * Waypoints (POIs, accommodations) from all stages are merged into the global
- * `<wpt>` list.
+ * A {@see \App\ApiResource\Trip} as a single-track GPX: one continuous `<trkseg>`, so that GPS
+ * devices and applications display the trip as a single valid tour, and the waypoints of every
+ * stage in the global `<wpt>` list.
  */
-final readonly class TripGpxNormalizer implements NormalizerInterface
+final readonly class TripGpxNormalizer extends AbstractTripNormalizer
 {
-    public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
-    ) {
+    protected function format(): string
+    {
+        return 'gpx';
+    }
+
+    protected function header(TripExport $export): array
+    {
+        return ['trackName' => $export->name, 'sourceUrl' => $export->sourceUrl];
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{lat: float, lon: float, name: string, symbol: string, type: string}
      */
-    public function normalize(mixed $data, ?string $format = null, array $context = []): array
+    protected function waypoint(string $name, string $category, float $lat, float $lon): array
     {
-        if (!$data instanceof Trip) {
-            throw new \InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Trip::class, get_debug_type($data)));
-        }
-
-        /** @var list<Stage> $stages */
-        $stages = $context['trip_stages'] ?? $this->tripStateManager->getStages($data->id) ?? [];
-
-        $points = [];
-        $waypoints = [];
-
-        foreach ($stages as $stage) {
-            $stagePoints = array_map(
-                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-                $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-            );
-            array_push($points, ...$stagePoints);
-
-            foreach ($stage->resupply?->all() ?? [] as $poi) {
-                $waypoints[] = [
-                    'lat' => $poi->lat,
-                    'lon' => $poi->lon,
-                    'name' => $poi->name,
-                    'symbol' => WaypointMapper::gpxSymbol($poi->category),
-                    'type' => $poi->category,
-                ];
-            }
-
-            foreach ($stage->accommodations as $accommodation) {
-                $waypoints[] = [
-                    'lat' => $accommodation->lat,
-                    'lon' => $accommodation->lon,
-                    'name' => $accommodation->name,
-                    'symbol' => WaypointMapper::gpxSymbol($accommodation->type),
-                    'type' => $accommodation->type,
-                ];
-            }
-        }
-
         return [
-            'trackName' => $this->tripStateManager->getTitle($data->id) ?? $data->id,
-            'sourceUrl' => $this->tripStateManager->getRequest($data->id)?->sourceUrl,
-            'points' => $points,
-            'waypoints' => $waypoints,
+            'lat' => $lat,
+            'lon' => $lon,
+            'name' => $name,
+            'symbol' => WaypointMapper::gpxSymbol($category),
+            'type' => $category,
         ];
-    }
-
-    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
-    {
-        return $data instanceof Trip && 'gpx' === $format;
-    }
-
-    /**
-     * @return array<class-string, bool>
-     */
-    public function getSupportedTypes(?string $format): array
-    {
-        return [Trip::class => 'gpx' === $format];
     }
 }

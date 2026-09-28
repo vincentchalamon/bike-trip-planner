@@ -11,8 +11,8 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
-use App\Repository\TripRequestRepositoryInterface;
 use App\Serializer\TripGpxNormalizer;
+use App\Serializer\TripExport;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -41,12 +41,9 @@ final class TripGpxNormalizerTest extends TestCase
             geometry: [new Coordinate(50.700, 3.100, 50.0), new Coordinate(50.800, 3.200, 60.0)],
         );
 
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([$stage1, $stage2]);
-        $repository->method('getTitle')->willReturn('My Trip');
 
-        $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
+        $normalizer = new TripGpxNormalizer();
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('My Trip', null, [$stage1, $stage2]));
         $result = $normalizer->normalize($trip, 'gpx');
 
         self::assertIsArray($result);
@@ -84,11 +81,9 @@ final class TripGpxNormalizerTest extends TestCase
         );
         $stage2->addAccommodation(new Accommodation('Hotel', 'hotel', 50.780, 3.190, 80.0, 120.0, false));
 
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
-        $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
+        $normalizer = new TripGpxNormalizer();
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('trip-abc', null, [$stage1, $stage2]));
         $result = $normalizer->normalize($trip, 'gpx');
 
         /** @var list<array{name: string, lat: float, lon: float}> $waypoints */
@@ -101,11 +96,9 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function normalizeWithEmptyStagesReturnsEmptyPointsAndWaypoints(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([]);
 
-        $normalizer = new TripGpxNormalizer($repository);
-        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
+        $normalizer = new TripGpxNormalizer();
+        $trip = new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('trip-abc', null, []));
         $result = $normalizer->normalize($trip, 'gpx');
 
         self::assertSame([], $result['points']);
@@ -115,8 +108,7 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function supportsOnlyTripInGpxFormat(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $normalizer = new TripGpxNormalizer($repository);
+        $normalizer = new TripGpxNormalizer();
 
         $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $stage = new Stage('t', 1, 1.0, 0.0, new Coordinate(0, 0), new Coordinate(0, 0));
@@ -132,21 +124,24 @@ final class TripGpxNormalizerTest extends TestCase
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/12345';
 
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([]);
-        $repository->method('getRequest')->willReturn($request);
 
-        $normalizer = new TripGpxNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'gpx');
+        $normalizer = new TripGpxNormalizer();
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('trip-abc', $request->sourceUrl, [])), 'gpx');
 
         self::assertSame('https://www.komoot.com/tour/12345', $result['sourceUrl']);
     }
 
     #[Test]
+    public function aTripLoadedWithoutItsExportIsRefused(): void
+    {
+        $this->expectException(\LogicException::class);
+        new TripGpxNormalizer()->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'gpx');
+    }
+
+    #[Test]
     public function normalizeWithInvalidDataThrowsException(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $normalizer = new TripGpxNormalizer($repository);
+        $normalizer = new TripGpxNormalizer();
 
         $this->expectException(\InvalidArgumentException::class);
         $normalizer->normalize('not a trip', 'gpx');
