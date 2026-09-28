@@ -145,6 +145,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
             'endPoint' => ['lat' => 45.1, 'lon' => 5.1, 'ele' => 250.5],
             'label' => 'Day one',
             'isRestDay' => false,
+            'onCycleNetwork' => 0.0,
             'geometry' => [['lat' => 45.01, 'lon' => 5.01, 'ele' => 200.5], ['lat' => 45.1, 'lon' => 5.1, 'ele' => 250.5]],
             'weather' => $this->publishedWeather(),
             'alerts' => [],
