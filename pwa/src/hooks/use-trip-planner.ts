@@ -366,7 +366,10 @@ export function useTripPlanner() {
     if (!target) return;
     const stageId = target.id;
     const isRestDay = target.isRestDay ?? false;
-    const snapshot = [...currentStages];
+    const snapshot = {
+      stages: currentStages,
+      endDate: useTripStore.getState().endDate,
+    };
     actions.deleteStage(index);
 
     try {
@@ -381,24 +384,23 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(snapshot);
+        useTripStore.getState().rollbackStages(snapshot);
       } else {
         setProcessing(true);
         if (!isRestDay) setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(snapshot);
+      useTripStore.getState().rollbackStages(snapshot);
     }
   }
 
   async function handleInsertRestDay(afterIndex: number) {
     if (!tripId) return;
 
-    const snapshot = [...useTripStore.getState().stages];
-    const stageId = useTripStore.getState().stages[afterIndex]?.id;
+    const { stages, endDate } = useTripStore.getState();
+    const snapshot = { stages, endDate };
+    const stageId = stages[afterIndex]?.id;
     if (!stageId) return;
     actions.insertRestDay(afterIndex);
 
@@ -415,22 +417,20 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(snapshot);
+        useTripStore.getState().rollbackStages(snapshot);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(snapshot);
+      useTripStore.getState().rollbackStages(snapshot);
     }
   }
 
   async function handleAddStage(afterIndex: number) {
     if (!tripId) return;
 
-    const currentStages = useTripStore.getState().stages;
+    const { stages: currentStages, endDate } = useTripStore.getState();
     const prevStage = currentStages[afterIndex];
     const nextStage = currentStages[afterIndex + 1];
     const startPoint = prevStage?.endPoint ?? prevStage?.startPoint;
@@ -485,16 +485,18 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(currentStages);
+        useTripStore
+          .getState()
+          .rollbackStages({ stages: currentStages, endDate });
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(currentStages);
+      useTripStore
+        .getState()
+        .rollbackStages({ stages: currentStages, endDate });
     }
   }
 

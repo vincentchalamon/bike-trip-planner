@@ -231,3 +231,32 @@ describe("useTripPlanner — batch recompute", () => {
     ]);
   });
 });
+
+describe("useTripPlanner — a refused structural edit restores the trip's day window", () => {
+  it.each([
+    [
+      "a deleted stage",
+      (p: ReturnType<typeof useTripPlanner>) => p.handleDeleteStage(1),
+    ],
+    [
+      "an inserted rest day",
+      (p: ReturnType<typeof useTripPlanner>) => p.handleInsertRestDay(0),
+    ],
+    [
+      "an added stage",
+      (p: ReturnType<typeof useTripPlanner>) => p.handleAddStage(0),
+    ],
+  ])("puts the end date back after %s", async (_, edit) => {
+    holder.status = 422;
+    useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await edit(result.current);
+    });
+
+    expect(useTripStore.getState().stages).toHaveLength(3);
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+});

@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { getUndoableSlice, useTripStore } from "./trip-store";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  getUndoableSlice,
+  useTripStore,
+  useTripTemporalStore,
+} from "./trip-store";
 import {
   DEFAULT_ACCOMMODATION_TYPES,
   FILTERABLE_ACCOMMODATION_TYPES,
@@ -444,6 +448,29 @@ describe("events preservation (recette)", () => {
     const result = useTripStore.getState().stages[0]!;
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.name).toBe("New");
+  });
+});
+
+describe("rollbackStages", () => {
+  beforeEach(() => useTripStore.getState().clearTrip());
+
+  it("restores the stages and the end date, and drops the undo entry the edit pushed", () => {
+    const store = useTripStore.getState();
+    store.updateDatesInternal("2026-10-01", "2026-10-03");
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    const { stages, endDate } = useTripStore.getState();
+
+    store.deleteStage(1);
+    useTripStore.getState().rollbackStages({ stages, endDate });
+
+    const state = useTripStore.getState();
+    expect(state.stages.map((s) => s.id)).toEqual([
+      "stage-1",
+      "stage-2",
+      "stage-3",
+    ]);
+    expect(state.endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
   });
 });
 

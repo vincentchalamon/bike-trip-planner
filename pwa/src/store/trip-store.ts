@@ -139,6 +139,14 @@ interface TripState {
     }[];
   }) => void;
   setStages: (stages: StageData[]) => void;
+  /**
+   * Undo an optimistic structural edit the server refused: drop the undo entry
+   * the edit pushed and put back the stages and the end date it changed.
+   */
+  rollbackStages: (snapshot: {
+    stages: StageData[];
+    endDate: string | null;
+  }) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
   updateStageSupplyTimeline: (
@@ -455,6 +463,14 @@ export const useTripStore = create<TripState>()(
         // `processing` overlay open forever (#840).
         pruneStaleRecomputing(state);
       }),
+
+    rollbackStages: (snapshot) => {
+      useTripTemporalStore.getState()._pop();
+      useTripStore.getState().setStages(snapshot.stages);
+      set((state) => {
+        state.endDate = snapshot.endDate;
+      });
+    },
 
     updateStageWeather: (dayNumber, weather) =>
       set((state) => {
