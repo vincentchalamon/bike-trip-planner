@@ -28,6 +28,7 @@ use App\MessageHandler\AnalyzeTerrainHandler;
 use App\Osm\WaysRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -73,6 +74,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         AnalyzerRegistryInterface $analyzerRegistry,
         TripUpdatePublisherInterface $publisher,
         WaysRepositoryInterface $waysRepository,
@@ -90,6 +92,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $analyzerRegistry,
             $waysRepository,
@@ -104,13 +107,15 @@ final class AnalyzeTerrainHandlerTest extends TestCase
     public function noStagesReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn(null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $this->createStub(AnalyzerRegistryInterface::class),
             $publisher,
             $this->createStub(WaysRepositoryInterface::class),
@@ -128,12 +133,13 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
             ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
         ]);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
 
@@ -160,6 +166,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $analyzerRegistry,
             $this->createStub(TripUpdatePublisherInterface::class),
             $waysRepository,
@@ -185,11 +192,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
         ]);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('fr');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
 
@@ -223,6 +231,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $analyzerRegistry,
             $publisher,
             $this->waysRepository([]),
@@ -241,11 +250,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
         ]);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('fr');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
 
@@ -293,6 +303,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $analyzerRegistry,
             $publisher,
             $this->waysRepository([]),
@@ -330,9 +341,10 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripRequest->ebikeMode = false;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn(null);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
 
@@ -359,6 +371,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $analyzerRegistry,
             $this->createStub(TripUpdatePublisherInterface::class),
             $waysRepository,

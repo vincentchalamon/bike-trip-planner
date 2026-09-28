@@ -17,6 +17,7 @@ use App\Mercure\MercureEventType;
 use App\MessageHandler\FetchWeatherHandler;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Weather\RawForecast;
 use App\Weather\RawHourlySlot;
 use App\Weather\WeatherForecastDeriver;
@@ -95,8 +96,9 @@ final class FetchWeatherHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $messageBus = $this->createStub(MessageBusInterface::class);
@@ -112,6 +114,7 @@ final class FetchWeatherHandlerTest extends TestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $provider,
             $cache,
             new RiderTimeEstimator(),

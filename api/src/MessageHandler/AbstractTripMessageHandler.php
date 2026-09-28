@@ -10,6 +10,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\TripCompletionGate;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -24,6 +25,7 @@ abstract readonly class AbstractTripMessageHandler
         protected TripGenerationTrackerInterface $generationTracker,
         protected LoggerInterface $logger,
         protected TripRequestRepositoryInterface $tripRequestRepository,
+        protected TripStageStoreInterface $stageStore,
         protected MessageBusInterface $messageBus,
         protected AlertRenderer $alertRenderer,
     ) {

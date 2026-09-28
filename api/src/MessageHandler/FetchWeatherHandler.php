@@ -19,6 +19,7 @@ use App\Message\AnalyzeWind;
 use App\Message\CheckFords;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Weather\RawForecast;
 use App\Weather\RawHourlySlot;
 use App\Weather\RelativeWindCalculator;
@@ -42,6 +43,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
@@ -52,7 +54,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         AlertRenderer $alertRenderer,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(FetchWeather $message): void
@@ -60,7 +62,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $generation = $message->generation;
         $request = $this->tripRequestRepository->getRequest($tripId);
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (!$request instanceof TripRequest || null === $stages) {
             return;
@@ -173,7 +175,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             // slower sibling handler (pois/terrain) re-writing the whole collection
             // can no longer wipe it (recette #649).
             foreach ($stages as $stage) {
-                $this->tripRequestRepository->updateStageWeather($tripId, $stage->id, $stage->weather);
+                $this->stageStore->updateStageWeather($tripId, $stage->id, $stage->weather);
             }
 
             $this->publisher->publish($tripId, MercureEventType::WEATHER_FETCHED, [

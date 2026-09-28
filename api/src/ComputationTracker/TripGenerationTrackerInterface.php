@@ -27,7 +27,7 @@ interface TripGenerationTrackerInterface
      * $expectedVersion carries a client's `If-Match` precondition for the two operations
      * that bump the version without rewriting the stage collection (trip settings, batch
      * recompute). It is compared inside the write's critical section, never before it —
-     * see {@see \App\Repository\TripRequestRepositoryInterface::bumpVersion()}. Every other
+     * see {@see \App\Repository\TripStageStoreInterface::bumpVersion()}. Every other
      * caller, workers included, passes nothing and is unaffected.
      *
      * @throws PreconditionFailedHttpException when $expectedVersion is stale

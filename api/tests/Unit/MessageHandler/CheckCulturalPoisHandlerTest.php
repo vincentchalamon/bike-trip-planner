@@ -18,6 +18,7 @@ use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,7 +47,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     #[Test]
     public function renderedMessageTranslatesThePoiType(string $locale, string $poiType, string $expected): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->createStage(1)], $locale);
+        $stageStore = $this->createStageStore([$this->createStage(1)]);
 
         $registry = $this->makeRegistryWithPois([
             ['name' => 'Castle Rock', 'type' => $poiType, 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'],
@@ -67,7 +68,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator());
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator(), $locale);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -93,7 +94,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     {
         // Issue #874: the message used to read ": monument (monument, 340m…)" and
         // the raw OSM slug was surfaced as the POI name.
-        $tripStateManager = $this->createTripStateManager([$this->createStage(1)], $locale);
+        $stageStore = $this->createStageStore([$this->createStage(1)]);
 
         $registry = $this->makeRegistryWithPois([
             ['name' => null, 'type' => 'monument', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'],
@@ -114,7 +115,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator());
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator(), $locale);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -147,12 +148,13 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     }
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         CulturalPoiSourceRegistry $registry,
         GeoDistanceInterface $haversine,
         ?GeometryDistributorInterface $distributor = null,
         ?TranslatorInterface $translator = null,
+        string $locale = 'en',
     ): CheckCulturalPoisHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -166,12 +168,16 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $distributor ??= $this->createStub(GeometryDistributorInterface::class);
         $translator ??= $stubTranslator;
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckCulturalPoisHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $registry,
             $distributor,
             $haversine,
@@ -184,11 +190,10 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function createTripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
+    private function createStageStore(?array $stages): TripStageStoreInterface
     {
-        $manager = $this->createStub(TripRequestRepositoryInterface::class);
+        $manager = $this->createStub(TripStageStoreInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn($locale);
 
         return $manager;
     }
@@ -223,7 +228,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     #[Test]
     public function theOsmIdentityReachesTheAlert(array $identity, ?string $expectedType, ?int $expectedId): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->createStage(1)]);
+        $stageStore = $this->createStageStore([$this->createStage(1)]);
 
         $registry = $this->makeRegistryWithPois([
             ['name' => 'Castle Rock', 'type' => 'castle', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'] + $identity,
@@ -244,7 +249,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -266,7 +271,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     #[Test]
     public function nullStagesYieldsNoPublish(): void
     {
-        $tripStateManager = $this->createTripStateManager(null);
+        $stageStore = $this->createStageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
@@ -274,7 +279,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $registry = $this->makeRegistryWithPois([]);
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine);
         $handler(new CheckCulturalPois('trip-1'));
     }
 
@@ -282,7 +287,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     public function restDayStageIsSkippedAndRegistryIsNeverCalled(): void
     {
         $restDay = $this->createStage(1, true);
-        $tripStateManager = $this->createTripStateManager([$restDay]);
+        $stageStore = $this->createStageStore([$restDay]);
 
         $registry = $this->createMock(CulturalPoiSourceRegistry::class);
         $registry->expects($this->never())->method('fetchAllForStages');
@@ -296,7 +301,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -310,7 +315,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     public function noPoisFromRegistryYieldsEmptyAlerts(): void
     {
         $stage = $this->createStage(1);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $stageStore = $this->createStageStore([$stage]);
 
         $registry = $this->makeRegistryWithPois([]);
 
@@ -326,7 +331,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -339,7 +344,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     public function resultsCappedAtThreeAndSortedByProximity(): void
     {
         $stage = $this->createStage(1);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             ['name' => 'Museum A', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm'],
@@ -381,7 +386,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -400,7 +405,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     public function enrichmentFieldsFromDataTourismeAreIncludedInAlert(): void
     {
         $stage = $this->createStage(1);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             [
@@ -434,7 +439,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -455,7 +460,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     public function osmPoiWithoutEnrichmentFieldsDoesNotIncludeThemInAlert(): void
     {
         $stage = $this->createStage(1);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             [
@@ -489,7 +494,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);

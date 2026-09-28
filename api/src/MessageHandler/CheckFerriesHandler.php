@@ -18,6 +18,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckFerries;
 use App\Osm\FerryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -42,17 +43,18 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private FerryRepositoryInterface $ferryRepository,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckFerries $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -101,7 +103,7 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::FERRY, $this->groupByStage($alerts));
+            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::FERRY, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::FERRY_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

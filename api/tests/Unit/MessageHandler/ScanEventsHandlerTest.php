@@ -20,6 +20,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -44,6 +45,7 @@ final class ScanEventsHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         EventSourceInterface $eventSource,
     ): ScanEventsHandler {
@@ -58,6 +60,7 @@ final class ScanEventsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             new EventSourceRegistry([$eventSource], new NearbyNameDeduplicator(new HaversineDistance()), new HaversineDistance()),
             new EventArrayMapper(),
             $this->createStub(MessageBusInterface::class),
@@ -99,9 +102,10 @@ final class ScanEventsHandlerTest extends TestCase
         $publisher->expects($this->never())->method('publish');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn(null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventSourceInterface::class));
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->createStub(EventSourceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
@@ -112,10 +116,11 @@ final class ScanEventsHandlerTest extends TestCase
         $publisher->expects($this->never())->method('publish');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$this->createStage(1)]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$this->createStage(1)]);
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventSourceInterface::class));
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->createStub(EventSourceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
@@ -134,15 +139,16 @@ final class ScanEventsHandlerTest extends TestCase
         $stage = $this->createStage(1, true);
         $written = [];
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest(new \DateTimeImmutable('2026-07-01')));
-        $tripStateManager->method('updateStageEvents')->willReturnCallback(
+        $stageStore->method('updateStageEvents')->willReturnCallback(
             static function (string $tripId, string $stageId, array $events) use (&$written): void {
                 $written[$stageId] = $events;
             },
         );
 
-        $handler = $this->createHandler($tripStateManager, $this->createStub(TripUpdatePublisherInterface::class), $eventSource);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $this->createStub(TripUpdatePublisherInterface::class), $eventSource);
         $handler(new ScanEvents('trip-1'));
 
         self::assertSame([$stage->id => []], $written);
@@ -173,10 +179,11 @@ final class ScanEventsHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $eventSource);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $eventSource);
         $handler(new ScanEvents('trip-1'));
 
         $events = array_values(array_filter($published, static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type']));
@@ -215,9 +222,10 @@ final class ScanEventsHandlerTest extends TestCase
 
         $written = [];
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest(new \DateTimeImmutable('2026-07-10')));
-        $tripStateManager->method('updateStageEvents')->willReturnCallback(
+        $stageStore->method('updateStageEvents')->willReturnCallback(
             static function (string $tripId, string $stageId, array $events) use (&$written): void {
                 $written[$stageId] = $events;
             },
@@ -231,7 +239,7 @@ final class ScanEventsHandlerTest extends TestCase
             },
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $eventSource);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $eventSource);
         $handler(new ScanEvents('trip-1'));
 
         self::assertCount(1, $written[$stages[0]->id]);

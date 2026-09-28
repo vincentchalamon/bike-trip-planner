@@ -16,6 +16,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\ModificationMessageResolver;
 use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -43,6 +44,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private TripGenerationTrackerInterface $generationTracker,
         private ModificationMessageResolver $dependencyResolver,
         private MessageBusInterface $messageBus,
@@ -74,7 +76,7 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
             throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
         if (null === $stages) {
             throw new NotFoundHttpException('Trip not found.');
         }

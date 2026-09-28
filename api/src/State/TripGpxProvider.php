@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Serializer\TripExport;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -32,6 +33,7 @@ final readonly class TripGpxProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private ComputationTrackerInterface $computationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -63,7 +65,7 @@ final readonly class TripGpxProvider implements ProviderInterface
         // run on. Both mean the same thing to an export: there is no file to build.
         $export = null;
         if (!$isCanonicalRead) {
-            $stages = $this->tripStateManager->getStages($id) ?? [];
+            $stages = $this->stageStore->getStages($id) ?? [];
             if ([] === $stages) {
                 throw new TripNotFoundException();
             }

@@ -22,6 +22,7 @@ use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -31,6 +32,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
@@ -61,7 +63,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         // between would otherwise be reverted by the snapshot read here. Both editing
         // modes (explicit points and distance-driven split) share the one critical
         // section; only the set of stages to recalculate differs afterwards.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($tripId, $data, $stageId, &$index, &$stage): array {
+        $write = $this->stageStore->mutateStages($tripId, function (array $stages) use ($tripId, $data, $stageId, &$index, &$stage): array {
             $index = $this->stageLocator->indexOf($stages, $stageId);
 
             $stage = $stages[$index];

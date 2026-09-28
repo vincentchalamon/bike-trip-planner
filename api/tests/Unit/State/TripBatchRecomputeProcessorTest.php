@@ -17,6 +17,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateStages;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\ModificationMessageResolver;
 use App\Service\TripAnalysisDispatcher;
 use App\State\TripBatchRecomputeProcessor;
@@ -49,6 +50,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
 
         $processor = new TripBatchRecomputeProcessor(
             $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createStub(TripStageStoreInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,
@@ -97,7 +99,8 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
@@ -108,6 +111,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
 
         $processor = new TripBatchRecomputeProcessor(
             $tripStateManager,
+            $stageStore,
             $generationTracker,
             new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,
@@ -134,7 +138,8 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $coord = new Coordinate(lat: 45.0, lon: 5.0);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             new Stage(tripId: 't', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord),
         ]);
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
@@ -149,6 +154,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
 
         return new TripBatchRecomputeProcessor(
             $tripStateManager,
+            $stageStore,
             $generationTracker,
             new ModificationMessageResolver(new EnrichmentMessageFactory()),
             $messageBus,

@@ -23,6 +23,7 @@ use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
 use PHPUnit\Framework\Attributes\Test;
@@ -53,6 +54,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         StructuralComputationService $structuralComputation,
         MessageBusInterface $messageBus,
@@ -68,6 +70,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $structuralComputation,
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             $messageBus,
@@ -131,6 +134,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $publisher,
             $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
@@ -188,6 +192,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $publisher,
             $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
@@ -241,6 +246,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $publisher,
             $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
@@ -293,6 +299,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $publisher,
             $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
@@ -314,6 +321,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $publisher,
             $this->structuralComputation($tripStateManager, $this->createStub(PacingEngineInterface::class)),
             $messageBus,

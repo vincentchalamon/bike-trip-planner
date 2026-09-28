@@ -31,6 +31,7 @@ use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -56,6 +57,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private PoiSourceRegistry $poiSourceRegistry,
         private WaterPointRepositoryInterface $waterPointRepository,
@@ -68,13 +70,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanPois $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -202,7 +204,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // Same array to both consumers (ADR-068), the empty one included: a rerun that
                 // finds nothing has to clear the previous alerts on a live client too, or the
                 // database and the open page disagree until a reload.
-                $this->tripRequestRepository->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
+                $this->stageStore->updateStageAlertsForGroup($tripId, $stage->id, AlertGroup::POIS, $alerts);
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
                     'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
@@ -214,7 +216,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // Published and persisted unconditionally, empty list included: the timeline is
                 // recomputed wholesale, so an empty result has to clear a previous one on both
                 // sides rather than leave it standing.
-                $this->tripRequestRepository->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
+                $this->stageStore->updateStageSupplyTimeline($tripId, $stage->id, $clusteredMarkers);
                 $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
                     'stageId' => $stage->id,
                     'markers' => $clusteredMarkers,
@@ -225,7 +227,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             // (recette #649). The lunch/resupply alerts added above are delivered live
             // via Mercure (above); AnalyzeTerrain owns the persisted alerts column.
             foreach ($stages as $stage) {
-                $this->tripRequestRepository->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
+                $this->stageStore->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
             }
         });
     }

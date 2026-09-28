@@ -20,6 +20,7 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -53,6 +54,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
@@ -90,7 +95,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
             endPoint: new Coordinate(46.0, 6.0),
         );
 
-        $repo->storeStages($tripId, [$stage0, $stage1]);
+        $stageStore->storeStages($tripId, [$stage0, $stage1]);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -118,8 +123,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertSame('Stage', $data['@type']);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);
@@ -179,6 +184,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
         $request->startDate = new \DateTimeImmutable('today +1 year');
@@ -216,7 +225,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
             endPoint: new Coordinate(46.0, 6.0),
         );
 
-        $repo->storeStages($tripId, [$stage0, $stage1]);
+        $stageStore->storeStages($tripId, [$stage0, $stage1]);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -259,7 +268,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         // stages the processor addressed.
         $stageIds = array_map(
             static fn (Stage $stage): string => $stage->id,
-            self::getContainer()->get(TripRequestRepositoryInterface::class)->getStages(self::TRIP_ID) ?? [],
+            self::getContainer()->get(TripStageStoreInterface::class)->getStages(self::TRIP_ID) ?? [],
         );
         $this->assertSame($stageIds[0], $scanMessage->stageId);
         $this->assertFalse($scanMessage->isExpandScan);
@@ -280,6 +289,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
@@ -319,7 +332,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
             endPoint: new Coordinate(46.0, 6.0),
         );
 
-        $repo->storeStages($tripId, [$stage0, $stage1]);
+        $stageStore->storeStages($tripId, [$stage0, $stage1]);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);

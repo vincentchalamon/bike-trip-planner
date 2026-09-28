@@ -20,6 +20,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBorderCrossing;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -41,17 +42,18 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckBorderCrossing $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -64,7 +66,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             if (\count($checkPoints) < 2) {
                 // Nothing found is a result, not an absence of one: the group is cleared so a
                 // previous run's alerts do not survive as stale.
-                $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, []);
+                $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, []);
                 $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                     'alerts' => [],
                 ]);
@@ -127,7 +129,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
+            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::BORDER_CROSSING, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::BORDER_CROSSING_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

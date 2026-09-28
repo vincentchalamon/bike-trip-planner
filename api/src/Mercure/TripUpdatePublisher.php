@@ -7,6 +7,7 @@ namespace App\Mercure;
 use App\ApiResource\Stage;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -18,6 +19,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         private StagePayloadMapper $stagePayloadMapper,
         private CurrentCorrelationIdProvider $correlationIdProvider,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private LoggerInterface $logger,
     ) {
     }
@@ -33,7 +35,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         // version that no longer exists, and every edit it attempted afterwards would be
         // refused with 412 until it reloaded. Mercure is the invalidation channel, so the
         // invalidation token belongs on it.
-        $version = $this->tripStateManager->getVersion($tripId);
+        $version = $this->stageStore->getVersion($tripId);
         if (null !== $version) {
             $payload['version'] = $version;
         }

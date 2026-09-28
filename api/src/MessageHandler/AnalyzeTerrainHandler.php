@@ -20,6 +20,7 @@ use App\Message\AnalyzeTerrain;
 use App\Osm\WaysRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -42,6 +43,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private WaysRepositoryInterface $waysRepository,
@@ -50,13 +52,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(AnalyzeTerrain $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages || [] === $stages) {
             return;
@@ -105,7 +107,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $renderedByStage[$stage->id] = $this->alertRenderer->render($alertsData[$stage->id], $stage->dayNumber, $locale);
             }
 
-            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
+            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
 
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
                 'alertsByStage' => $renderedByStage,

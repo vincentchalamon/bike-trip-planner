@@ -14,6 +14,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateRouteSegment;
 use App\MessageHandler\RecalculateRouteSegmentHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Routing\RoutingProviderInterface;
 use App\Routing\RoutingResult;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,7 +47,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
 
         $routingProvider = $this->createMock(RoutingProviderInterface::class);
         $routingProvider->expects($this->once())
@@ -78,6 +80,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -96,7 +99,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
     public function invokeWithNullStagesReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn(null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
         $routingProvider = $this->createMock(RoutingProviderInterface::class);
         $routingProvider->expects($this->never())->method('calculateRoute');
@@ -112,6 +116,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -139,7 +144,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
 
         $routingProvider = $this->createMock(RoutingProviderInterface::class);
         $routingProvider->expects($this->never())->method('calculateRoute');
@@ -155,6 +161,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $routingProvider,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),

@@ -11,6 +11,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\ApiTestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -109,11 +110,11 @@ final class TripRouteConditionalTest extends ApiTestCase
     #[Test]
     public function theValidatorTracksTheGeometryAndNothingElse(): void
     {
-        $repo = $this->seedTrip();
+        $stageStore = $this->seedTrip();
         $before = $this->routeEtag();
 
-        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id;
-        $repo->updateStageWeather(self::TRIP_ID, $stageId, new WeatherForecast(
+        $stageId = ($stageStore->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $stageStore->updateStageWeather(self::TRIP_ID, $stageId, new WeatherForecast(
             icon: 'sun',
             description: 'Clear',
             tempMin: 8.0,
@@ -128,7 +129,7 @@ final class TripRouteConditionalTest extends ApiTestCase
 
         $this->assertSame($before, $this->routeEtag(), 'An enrichment invalidated the map cache.');
 
-        $repo->storeStages(self::TRIP_ID, [$this->stage(46.0)]);
+        $stageStore->storeStages(self::TRIP_ID, [$this->stage(46.0)]);
 
         $this->assertNotSame($before, $this->routeEtag(), 'Regenerating the stages left a stale validator.');
     }
@@ -233,19 +234,22 @@ final class TripRouteConditionalTest extends ApiTestCase
         $this->assertStringContainsString('no-store', $this->header($again, 'cache-control'));
     }
 
-    private function seedTrip(): TripRequestRepositoryInterface
+    private function seedTrip(): TripStageStoreInterface
     {
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
 
         $request = new TripRequest(Uuid::fromString(self::TRIP_ID));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
         $repo->initializeTrip(self::TRIP_ID, $request);
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
-        $repo->storeStages(self::TRIP_ID, [$this->stage(45.0)]);
+        $stageStore->storeStages(self::TRIP_ID, [$this->stage(45.0)]);
 
-        return $repo;
+        return $stageStore;
     }
 
     private function stage(float $lat): StageDto

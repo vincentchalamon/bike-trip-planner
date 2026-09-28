@@ -16,6 +16,7 @@ use App\MessageHandler\FetchAndParseRouteHandler;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -63,6 +64,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
             $points,
             $registry,
             $this->createStub(DistanceCalculatorInterface::class),

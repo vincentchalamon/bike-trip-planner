@@ -19,6 +19,7 @@ use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -46,6 +47,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private StageLocator $stageLocator,
@@ -71,7 +73,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         // Read, edit and write as one unit: an accommodation scan running concurrently
         // writes the very column this edits, and the snapshot read here would revert it.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($data, $stageId, $isDeselect, &$index, &$stage): array {
+        $write = $this->stageStore->mutateStages($tripId, function (array $stages) use ($data, $stageId, $isDeselect, &$index, &$stage): array {
             $index = $this->stageLocator->indexOf($stages, $stageId);
 
             $stage = $stages[$index];

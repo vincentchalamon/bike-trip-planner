@@ -29,6 +29,7 @@ use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
@@ -48,7 +49,8 @@ final class ScanPoisHandlerTest extends TestCase
         // published, each labelled by its category in the trip locale rather than
         // by the raw OSM slug (issue #874).
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage], 'fr');
+        $tripStateManager = $this->createTripStateManager('fr');
+        $stageStore = $this->createStageStore([$stage]);
 
         $registry = $this->poiSourceRegistry([
             ['name' => null, 'category' => 'bakery', 'lat' => 48.1000, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
@@ -69,7 +71,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, $this->createAlertTranslator());
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, $this->createAlertTranslator());
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -89,7 +91,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function thePublishedResupplyHasTheClientPoiShape(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $registry = $this->poiSourceRegistry([
             ['name' => 'Chez Paul', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'openingHours' => null, 'website' => null],
@@ -111,7 +114,7 @@ final class ScanPoisHandlerTest extends TestCase
                 }
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poi = $published['resupply']['foodAtLunch'][0] ?? null;
@@ -141,6 +144,7 @@ final class ScanPoisHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         PoiSourceRegistry $poiSourceRegistry,
         WaterPointRepositoryInterface $waterPointRepository,
@@ -167,6 +171,7 @@ final class ScanPoisHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $points ?? $this->decimatedPoints(),
             $poiSourceRegistry,
             $waterPointRepository,
@@ -192,20 +197,26 @@ final class ScanPoisHandlerTest extends TestCase
         return $points;
     }
 
-    /**
-     * @param list<Stage>|null $stages
-     */
     private function createTripStateManager(
-        ?array $stages,
         string $locale = 'en',
         ?TripRequest $tripRequest = null,
     ): TripRequestRepositoryInterface {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn($locale);
         $tripStateManager->method('getRequest')->willReturn($tripRequest ?? new TripRequest());
 
         return $tripStateManager;
+    }
+
+    /**
+     * @param list<Stage>|null $stages
+     */
+    private function createStageStore(?array $stages): TripStageStoreInterface
+    {
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
+
+        return $stageStore;
     }
 
     /**
@@ -299,7 +310,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function allResupplyPoisClosedAtEstimatedTimeEmitsWarning(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         // Both carry real OSM hours, so the passage time can actually be judged.
         $pois = [
@@ -323,7 +335,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -340,7 +352,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function atLeastOneOpenResupplyPoiEmitsNoTimingWarning(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00,19:00-22:00'),
@@ -363,7 +376,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -380,7 +393,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function noResupplyPoisEmitsNoTimingWarning(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [$this->poi('Belvedere', 'viewpoint', 48.2, 2.2)];
         $poiRepository = $this->poiSourceRegistry($pois);
@@ -397,7 +411,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -413,7 +427,8 @@ final class ScanPoisHandlerTest extends TestCase
     #[Test]
     public function noStagesReturnsEarly(): void
     {
-        $tripStateManager = $this->createTripStateManager(null);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
@@ -421,7 +436,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $distributor = $this->createStub(GeometryDistributorInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
     }
 
@@ -430,7 +445,8 @@ final class ScanPoisHandlerTest extends TestCase
     {
         // Stage >= 40km with no resupply POIs in the local index → lunch nudge
         $stage = $this->createStage('trip-1', 1, 50.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -444,7 +460,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -470,7 +486,8 @@ final class ScanPoisHandlerTest extends TestCase
             geometry: [new Coordinate(48.0, 2.0)],
             isRestDay: true,
         );
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -484,7 +501,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -514,7 +531,8 @@ final class ScanPoisHandlerTest extends TestCase
             ],
             isRestDay: true,
         );
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             $this->poi('Le Bistrot', 'restaurant', 48.2, 2.2, '12:00-14:00,19:00-22:00'),
@@ -538,7 +556,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -555,7 +573,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function resolveScheduleMapsBakeryCorrectly(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         // No OSM hours: the category fallback is still allowed to conclude "open".
         $pois = [$this->poi('Boulangerie', 'bakery', 48.2, 2.2)];
@@ -576,7 +595,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -600,7 +619,8 @@ final class ScanPoisHandlerTest extends TestCase
     private function alertsForStage(array $pois, float $passageTime, ?TripRequest $tripRequest = null): array
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage], 'en', $tripRequest);
+        $tripStateManager = $this->createTripStateManager('en', $tripRequest);
+        $stageStore = $this->createStageStore([$stage]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
@@ -615,7 +635,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry($pois), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $this->poiSourceRegistry($pois), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -744,7 +764,8 @@ final class ScanPoisHandlerTest extends TestCase
     public function poisWithin500mAreClusteredIntoSingleMarker(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             $this->poi('Bistrot A', 'restaurant', 48.2, 2.2),
@@ -777,7 +798,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $timelineEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::SUPPLY_TIMELINE === $e['type']);
@@ -796,7 +817,8 @@ final class ScanPoisHandlerTest extends TestCase
     {
         $stage1 = $this->createStage('trip-1', 1, 50.0);
         $stage2 = $this->createStage('trip-1', 2, 50.0);
-        $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage1, $stage2]);
 
         // The corridor read uses the decimated points as a {lat, lon} route.
         $capturedRoute = null;
@@ -810,7 +832,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         self::assertSame([
@@ -825,9 +847,10 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn(null);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
@@ -849,7 +872,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, points: $points);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, points: $points);
         $handler(new ScanPois('trip-1'));
 
         self::assertIsArray($capturedRoute);
@@ -865,7 +888,8 @@ final class ScanPoisHandlerTest extends TestCase
     {
         // A (anchor) → B (490m, within cluster) → C (980m from A, beyond anchor radius).
         $stage = $this->createStage('trip-1', 1, 80.0);
-        $tripStateManager = $this->createTripStateManager([$stage]);
+        $tripStateManager = $this->createTripStateManager();
+        $stageStore = $this->createStageStore([$stage]);
 
         $pois = [
             $this->poi('POI A', 'restaurant', 48.0, 2.0),
@@ -899,7 +923,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $timelineEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::SUPPLY_TIMELINE === $e['type']);

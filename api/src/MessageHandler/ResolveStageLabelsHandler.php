@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Message\ResolveStageLabels;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
@@ -26,6 +27,7 @@ final readonly class ResolveStageLabelsHandler
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
     ) {
     }
@@ -38,7 +40,7 @@ final readonly class ResolveStageLabelsHandler
         // to rewrite by hand now lives once, in StaleMessageMiddleware. The reason it needs
         // one at all is unchanged — a newer recompute may have moved the stage endpoints, so
         // resolving labels for the old ones would persist them against the wrong dayNumbers.
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
         if (null === $stages) {
             return;
         }
@@ -53,7 +55,7 @@ final readonly class ResolveStageLabelsHandler
                 ? $startLabel
                 : $this->adminBoundaryRepository->findLocalityAt($stage->endPoint->lat, $stage->endPoint->lon, $locale);
 
-            $this->tripStateManager->updateStageLabels($tripId, $stage->id, $startLabel, $endLabel);
+            $this->stageStore->updateStageLabels($tripId, $stage->id, $startLabel, $endLabel);
         }
     }
 }

@@ -14,6 +14,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -30,6 +31,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private MessageBusInterface $messageBus,
         private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
@@ -50,7 +52,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $stages = $this->stageStore->getStages($tripId) ?? [];
         $index = $this->stageLocator->indexOf($stages, $stageId);
         $stage = $stages[$index];
 

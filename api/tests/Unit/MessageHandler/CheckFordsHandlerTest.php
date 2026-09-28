@@ -16,6 +16,7 @@ use App\Message\CheckFords;
 use App\MessageHandler\CheckFordsHandler;
 use App\Osm\FordRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -27,9 +28,10 @@ final class CheckFordsHandlerTest extends TestCase
     use AlertMessageTestTrait;
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         FordRepositoryInterface $fordRepository,
+        string $locale = 'en',
     ): CheckFordsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -39,12 +41,16 @@ final class CheckFordsHandlerTest extends TestCase
             static fn (string $id): string => $id,
         );
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckFordsHandler(
             $computationTracker,
             $publisher,
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $fordRepository,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -52,11 +58,10 @@ final class CheckFordsHandlerTest extends TestCase
     }
 
     /** @param list<Stage>|null $stages */
-    private function createTripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function createStageStore(?array $stages): TripStageStoreInterface
     {
-        $manager = $this->createStub(TripRequestRepositoryInterface::class);
+        $manager = $this->createStub(TripStageStoreInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn('en');
 
         return $manager;
     }
@@ -105,7 +110,7 @@ final class CheckFordsHandlerTest extends TestCase
     #[Test]
     public function emitsANudgeInDryWeather(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1, precipitationProbability: 10)]);
+        $stageStore = $this->createStageStore([$this->stage(1, precipitationProbability: 10)]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -123,14 +128,14 @@ final class CheckFordsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->fordRepository());
+        $handler = $this->createHandler($stageStore, $publisher, $this->fordRepository());
         $handler(new CheckFords('trip-1'));
     }
 
     #[Test]
     public function escalatesToAWarningWhenRainIsForecast(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1, precipitationProbability: 80)]);
+        $stageStore = $this->createStageStore([$this->stage(1, precipitationProbability: 80)]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -147,7 +152,7 @@ final class CheckFordsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->fordRepository());
+        $handler = $this->createHandler($stageStore, $publisher, $this->fordRepository());
         $handler(new CheckFords('trip-1'));
     }
 
@@ -155,7 +160,7 @@ final class CheckFordsHandlerTest extends TestCase
     public function escalatesToAWarningAtExactThreshold(): void
     {
         // precipitationProbability == RAIN_THRESHOLD_PERCENT (50) must trigger a warning, not a nudge.
-        $tripStateManager = $this->createTripStateManager([$this->stage(1, precipitationProbability: 50)]);
+        $stageStore = $this->createStageStore([$this->stage(1, precipitationProbability: 50)]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -166,7 +171,7 @@ final class CheckFordsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => 'warning' === $data['alerts'][0]['type']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->fordRepository());
+        $handler = $this->createHandler($stageStore, $publisher, $this->fordRepository());
         $handler(new CheckFords('trip-1'));
     }
 
@@ -174,7 +179,7 @@ final class CheckFordsHandlerTest extends TestCase
     public function treatsMissingForecastAsDry(): void
     {
         // No weather on the stage → no rain info → nudge, not warning.
-        $tripStateManager = $this->createTripStateManager([$this->stage(1)]);
+        $stageStore = $this->createStageStore([$this->stage(1)]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -185,14 +190,14 @@ final class CheckFordsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => 'nudge' === $data['alerts'][0]['type']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->fordRepository());
+        $handler = $this->createHandler($stageStore, $publisher, $this->fordRepository());
         $handler(new CheckFords('trip-1'));
     }
 
     #[Test]
     public function skipsRestDays(): void
     {
-        $tripStateManager = $this->createTripStateManager([$this->stage(1, isRestDay: true)]);
+        $stageStore = $this->createStageStore([$this->stage(1, isRestDay: true)]);
 
         $fordRepository = $this->createMock(FordRepositoryInterface::class);
         $fordRepository->expects($this->never())->method('findNearStage');
@@ -206,7 +211,7 @@ final class CheckFordsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $fordRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $fordRepository);
         $handler(new CheckFords('trip-1'));
     }
 
@@ -216,7 +221,7 @@ final class CheckFordsHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $handler = $this->createHandler($this->createTripStateManager(null), $publisher, $this->createStub(FordRepositoryInterface::class));
+        $handler = $this->createHandler($this->createStageStore(null), $publisher, $this->createStub(FordRepositoryInterface::class));
         $handler(new CheckFords('trip-1'));
     }
 }

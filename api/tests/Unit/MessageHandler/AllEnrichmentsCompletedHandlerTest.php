@@ -14,6 +14,7 @@ use App\MessageHandler\AllEnrichmentsCompletedHandler;
 use App\Notification\AnalysisNotifier;
 use App\Notification\NotificationDispatcherInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -45,8 +46,8 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn($statuses);
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects(self::once())
@@ -60,7 +61,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $handler = new AllEnrichmentsCompletedHandler(
             $tracker,
             $publisher,
-            $tripStateManager,
+            $stageStore,
             $this->noopAnalysisNotifier(),
             new NullLogger(),
         );
@@ -79,12 +80,12 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects(self::never())->method('publishTripReady');
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
 
         $handler = new AllEnrichmentsCompletedHandler(
             $tracker,
             $publisher,
-            $tripStateManager,
+            $stageStore,
             $this->noopAnalysisNotifier(),
             new NullLogger(),
         );
@@ -101,8 +102,8 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn([]);
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn(null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects(self::once())
@@ -116,7 +117,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $handler = new AllEnrichmentsCompletedHandler(
             $tracker,
             $publisher,
-            $tripStateManager,
+            $stageStore,
             $this->noopAnalysisNotifier(),
             new NullLogger(),
         );

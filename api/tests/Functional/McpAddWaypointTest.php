@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -125,8 +126,8 @@ final class McpAddWaypointTest extends ApiTestCase
     {
         $this->entityManager()->clear();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
 
         $stages = $repo->getStages(self::TRIP_ID);
         self::assertIsArray($stages);
@@ -158,8 +159,13 @@ final class McpAddWaypointTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $stageStore->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 80.0,

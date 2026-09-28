@@ -22,6 +22,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -54,6 +55,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private CulturalPoiSourceRegistry $registry,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
@@ -61,13 +63,13 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckCulturalPois $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -100,7 +102,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             if ([] === $stageGeometries) {
                 // Nothing found is a result, not an absence of one: the group is cleared so a
                 // previous run's alerts do not survive as stale.
-                $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, []);
+                $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, []);
                 $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
                     'alerts' => [],
                 ]);
@@ -208,7 +210,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, $this->groupByStage($alerts));
+            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::CULTURAL_POI, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

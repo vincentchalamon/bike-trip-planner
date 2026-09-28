@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\ComputationTracker;
 
 use App\ComputationTracker\TripGenerationTracker;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +21,7 @@ final class TripGenerationTrackerTest extends TestCase
     #[Test]
     public function theCurrentGenerationIsTheTripVersion(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createMock(TripStageStoreInterface::class);
         $repository->expects(self::once())->method('getVersion')->with('trip-1')->willReturn(7);
 
         self::assertSame(7, new TripGenerationTracker($repository)->current('trip-1'));
@@ -30,7 +30,7 @@ final class TripGenerationTrackerTest extends TestCase
     #[Test]
     public function incrementingBumpsTheTripVersion(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createMock(TripStageStoreInterface::class);
         $repository->expects(self::once())->method('bumpVersion')->with('trip-1')->willReturn(8);
 
         self::assertSame(8, new TripGenerationTracker($repository)->increment('trip-1'));
@@ -39,7 +39,7 @@ final class TripGenerationTrackerTest extends TestCase
     #[Test]
     public function anUnknownTripHasNoGeneration(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripStageStoreInterface::class);
         $repository->method('getVersion')->willReturn(null);
 
         self::assertNull(new TripGenerationTracker($repository)->current('unknown'));
@@ -49,7 +49,7 @@ final class TripGenerationTrackerTest extends TestCase
     #[Test]
     public function initializingWritesNothing(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createMock(TripStageStoreInterface::class);
         $repository->expects(self::never())->method('bumpVersion');
 
         new TripGenerationTracker($repository)->initialize('trip-1');

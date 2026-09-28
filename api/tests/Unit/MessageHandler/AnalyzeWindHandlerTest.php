@@ -16,6 +16,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\MessageHandler\AnalyzeWindHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -47,7 +48,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     public function renderedMessageMatchesTheHeadwindCondition(string $locale, string $expected): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             $this->createStage('trip-1', 1, $this->createWeather(windSpeed: 25.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
             $this->createStage('trip-1', 2, $this->createWeather(windSpeed: 30.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
         ]);
@@ -66,7 +68,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -106,6 +108,7 @@ final class AnalyzeWindHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         ?TripGenerationTrackerInterface $generationTracker = null,
     ): AnalyzeWindHandler {
@@ -127,6 +130,7 @@ final class AnalyzeWindHandlerTest extends TestCase
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );
@@ -154,7 +158,8 @@ final class AnalyzeWindHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1, $extreme)]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$this->createStage('trip-1', 1, $extreme)]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -174,7 +179,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -184,7 +189,8 @@ final class AnalyzeWindHandlerTest extends TestCase
         // A legacy forecast without hourly data must not trip the extreme thresholds
         // on its default field values (apparentTempMin defaults to 0.0).
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1, $this->createWeather())]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$this->createStage('trip-1', 1, $this->createWeather())]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -196,7 +202,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -204,7 +210,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     public function noComfortAlertWhenAllStagesHaveGoodComfort(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             $this->createStage('trip-1', 1, $this->createWeather(comfortIndex: 80)),
             $this->createStage('trip-1', 2, $this->createWeather(comfortIndex: 60)),
         ]);
@@ -219,7 +226,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -231,7 +238,8 @@ final class AnalyzeWindHandlerTest extends TestCase
         $alsoPoor = $this->createStage('trip-1', 3, $this->createWeather(comfortIndex: 20));
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$poor, $fine, $alsoPoor]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$poor, $fine, $alsoPoor]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -255,7 +263,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -267,7 +275,8 @@ final class AnalyzeWindHandlerTest extends TestCase
         $calm = $this->createStage('trip-1', 3, $this->createWeather(windSpeed: 5.0, relativeWind: WeatherForecast::RELATIVE_WIND_TAILWIND));
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$windy, $alsoWindy, $calm]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$windy, $alsoWindy, $calm]);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -291,7 +300,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -299,7 +308,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     public function bothAlertsWhenHeadwindAndPoorComfort(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             $this->createStage('trip-1', 1, $this->createWeather(windSpeed: 30.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND, comfortIndex: 20)),
             $this->createStage('trip-1', 2, $this->createWeather(windSpeed: 28.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND, comfortIndex: 15)),
         ]);
@@ -317,7 +327,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                     && ['wind_headwind', 'wind_headwind', 'comfort_poor_conditions', 'comfort_poor_conditions'] === array_column($data['alerts'], 'code')),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -325,7 +335,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     public function noAlertWhenNoStagesHaveWeather(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             $this->createStage('trip-1', 1),
             $this->createStage('trip-1', 2),
         ]);
@@ -340,7 +351,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 
@@ -348,7 +359,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     public function comfortAlertBoundary(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
             $this->createStage('trip-1', 1, $this->createWeather(comfortIndex: 40)), // exactly at yellow/red boundary → no alert
             $this->createStage('trip-1', 2, $this->createWeather(comfortIndex: 39)), // one below threshold → alert fires
         ]);
@@ -368,7 +380,7 @@ final class AnalyzeWindHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
 }

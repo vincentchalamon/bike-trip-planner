@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Concurrency\IfMatch;
 use App\Concurrency\VersionPrecondition;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * Requires an `If-Match` precondition on every operation that edits a trip's structure.
@@ -48,7 +48,7 @@ final readonly class PreconditionProcessor implements ProcessorInterface
      */
     public function __construct(
         private ProcessorInterface $decorated,
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
     ) {
     }
 
@@ -79,6 +79,6 @@ final readonly class PreconditionProcessor implements ProcessorInterface
             return;
         }
 
-        VersionPrecondition::assert($precondition->expectedVersion, $this->tripStateManager->getVersion($tripId), $tripId);
+        VersionPrecondition::assert($precondition->expectedVersion, $this->stageStore->getVersion($tripId), $tripId);
     }
 }

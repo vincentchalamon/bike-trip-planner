@@ -23,6 +23,7 @@ use App\Message\CheckWaterPoints;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -41,6 +42,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
@@ -48,13 +50,13 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckWaterPoints $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -115,7 +117,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::WATER_POINT, $this->groupByStage($alerts));
+            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::WATER_POINT, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::WATER_POINT_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

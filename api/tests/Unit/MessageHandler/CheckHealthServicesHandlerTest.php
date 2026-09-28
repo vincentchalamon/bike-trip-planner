@@ -16,6 +16,7 @@ use App\MessageHandler\CheckHealthServicesHandler;
 use App\Osm\HealthServiceRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -40,7 +41,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
     #[Test]
     public function nudgeMessageDerivesItsThresholdFromTheConstant(string $locale, string $expected): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 1), $locale);
+        $stageStore = $this->stageStore($this->createStages('trip-1', 1));
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -56,10 +57,11 @@ final class CheckHealthServicesHandlerTest extends TestCase
             );
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->healthServiceRepository([]),
             $this->createStub(GeoDistanceInterface::class),
+            locale: $locale,
         );
         $handler(new CheckHealthServices('trip-1'));
     }
@@ -104,33 +106,37 @@ final class CheckHealthServicesHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function tripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
+    private function stageStore(?array $stages): TripStageStoreInterface
     {
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn($locale);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
 
-        return $tripStateManager;
+        return $stageStore;
     }
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         HealthServiceRepositoryInterface $healthServiceRepository,
         GeoDistanceInterface $haversine,
         ?TransientTripPointsStoreInterface $points = null,
+        string $locale = 'en',
     ): CheckHealthServicesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckHealthServicesHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $healthServiceRepository,
             $haversine,
@@ -142,7 +148,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
     #[Test]
     public function nearbyHealthServiceEmitsNoAlert(): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1'));
+        $stageStore = $this->stageStore($this->createStages('trip-1'));
         $healthServiceRepository = $this->healthServiceRepository([
             ['name' => 'Pharmacie du Centre', 'category' => 'pharmacy', 'lat' => 48.25, 'lon' => 2.25],
         ]);
@@ -160,14 +166,14 @@ final class CheckHealthServicesHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $healthServiceRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $healthServiceRepository, $haversine);
         $handler(new CheckHealthServices('trip-1'));
     }
 
     #[Test]
     public function noHealthServiceEmitsNudgeForEveryStage(): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1'));
+        $stageStore = $this->stageStore($this->createStages('trip-1'));
         $healthServiceRepository = $this->healthServiceRepository([]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -187,14 +193,14 @@ final class CheckHealthServicesHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $healthServiceRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $healthServiceRepository, $haversine);
         $handler(new CheckHealthServices('trip-1'));
     }
 
     #[Test]
     public function distantHealthServiceEmitsNudge(): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 2));
+        $stageStore = $this->stageStore($this->createStages('trip-1', 2));
         $healthServiceRepository = $this->healthServiceRepository([
             ['name' => 'Hôpital Lointain', 'category' => 'hospital', 'lat' => 49.0, 'lon' => 3.0],
         ]);
@@ -217,7 +223,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $healthServiceRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $healthServiceRepository, $haversine);
         $handler(new CheckHealthServices('trip-1'));
     }
 
@@ -256,7 +262,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
             );
 
         $handler = $this->createHandler(
-            $this->tripStateManager($stages),
+            $this->stageStore($stages),
             $publisher,
             $this->healthServiceRepository([]),
             $this->createStub(GeoDistanceInterface::class),
@@ -267,13 +273,13 @@ final class CheckHealthServicesHandlerTest extends TestCase
     #[Test]
     public function nullStagesReturnsEarly(): void
     {
-        $tripStateManager = $this->tripStateManager(null);
+        $stageStore = $this->stageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->healthServiceRepository([]),
             $this->createStub(GeoDistanceInterface::class),

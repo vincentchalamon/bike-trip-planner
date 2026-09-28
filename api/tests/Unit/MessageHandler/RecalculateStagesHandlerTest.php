@@ -32,6 +32,7 @@ use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -44,6 +45,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         MessageBusInterface $messageBus,
         ?TripGenerationTrackerInterface $generationTracker = null,
@@ -57,6 +59,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $messageBus,
             $this->createAlertRenderer(),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
@@ -91,7 +94,8 @@ final class RecalculateStagesHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
 
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
@@ -110,7 +114,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         // user-requested distance (issue #774).
         $publisher->expects($this->never())->method('publish');
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $messageBus);
 
         $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [], triggers: []));
     }
@@ -119,13 +123,15 @@ final class RecalculateStagesHandlerTest extends TestCase
     public function noStagesReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn(null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $publisher,
             $this->createStub(MessageBusInterface::class),
         );
@@ -153,7 +159,8 @@ final class RecalculateStagesHandlerTest extends TestCase
         $stages = [$makeStage(1), $makeStage(2)];
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
         $request = new TripRequest();
         $request->startDate = new \DateTimeImmutable('+1 month');
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -171,6 +178,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $this->createStub(TripUpdatePublisherInterface::class),
             $messageBus,
         );
@@ -222,7 +230,8 @@ final class RecalculateStagesHandlerTest extends TestCase
         $stages = [$makeStage(1), $makeStage(2)];
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
         $request = new TripRequest();
         $request->startDate = new \DateTimeImmutable('+1 month');
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -240,6 +249,7 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $this->createStub(TripUpdatePublisherInterface::class),
             $messageBus,
         );
@@ -276,7 +286,8 @@ final class RecalculateStagesHandlerTest extends TestCase
         $stages = [$makeStage(1), $makeStage(2), $makeStage(3)];
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
 
         $request = new TripRequest();
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -294,7 +305,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             }
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $messageBus);
 
         $handler(new RecalculateStages(tripId: 'trip-1', affectedStageIds: [$stages[0]->id, $stages[2]->id]));
 

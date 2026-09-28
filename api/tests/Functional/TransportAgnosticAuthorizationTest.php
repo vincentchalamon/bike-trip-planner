@@ -11,6 +11,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -199,10 +200,14 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
         // The interface: one implementation, and the one every provider reads through.
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
 
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $stageStore->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,

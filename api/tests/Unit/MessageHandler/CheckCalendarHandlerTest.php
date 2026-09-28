@@ -16,6 +16,7 @@ use App\Message\CheckCalendar;
 use App\MessageHandler\CheckCalendarHandler;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -47,8 +48,9 @@ final class CheckCalendarHandlerTest extends TestCase
         $request->startDate = new \DateTimeImmutable('2026-07-14');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);
-        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1)]);
+        $stageStore->method('getStages')->willReturn([$this->createStage('trip-1', 1)]);
         $tripStateManager->method('getLocale')->willReturn($locale);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -66,6 +68,7 @@ final class CheckCalendarHandlerTest extends TestCase
 
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $publisher,
             $this->adminBoundaryRepository(['FR']),
         );
@@ -84,20 +87,27 @@ final class CheckCalendarHandlerTest extends TestCase
         );
     }
 
-    /**
-     * @param list<Stage> $stages
-     */
-    private function tripStateManager(array $stages, \DateTimeImmutable $startDate): TripRequestRepositoryInterface
+    private function tripStateManager(\DateTimeImmutable $startDate): TripRequestRepositoryInterface
     {
         $request = new TripRequest();
         $request->startDate = $startDate;
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);
-        $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn('en');
 
         return $tripStateManager;
+    }
+
+    /**
+     * @param list<Stage> $stages
+     */
+    private function stageStore(array $stages): TripStageStoreInterface
+    {
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
+
+        return $stageStore;
     }
 
     /**
@@ -121,6 +131,7 @@ final class CheckCalendarHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         AdminBoundaryRepositoryInterface $adminBoundaryRepository,
     ): CheckCalendarHandler {
@@ -145,6 +156,7 @@ final class CheckCalendarHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $adminBoundaryRepository,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -172,7 +184,8 @@ final class CheckCalendarHandlerTest extends TestCase
         );
 
         $handler = $this->createHandler(
-            $this->tripStateManager($stages, $startDate),
+            $this->tripStateManager($startDate),
+            $this->stageStore($stages),
             $publisher,
             $this->adminBoundaryRepository($countryCodes),
         );

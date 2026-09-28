@@ -15,6 +15,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\State\StagePoiWaypointProcessor;
 use App\State\StageLocator;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -33,6 +34,8 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
+    private MockObject&TripStageStoreInterface $stageStore;
+
     private MockObject&MessageBusInterface $messageBus;
 
     private StageResponseMapper $stageResponseMapper;
@@ -43,6 +46,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $this->stageStore = $this->createMock(TripStageStoreInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->stageResponseMapper = new StageResponseMapper(
             $this->createStub(ComputationTrackerInterface::class),
@@ -60,6 +64,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
         $this->processor = new StagePoiWaypointProcessor(
             $this->tripStateManager,
+            $this->stageStore,
             $this->messageBus,
             $this->stageResponseMapper,
             $generationTracker,
@@ -85,7 +90,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
     public function validRequestDispatchesRecalculateRouteSegment(): void
     {
         $stage = $this->createStage(1);
-        $this->tripStateManager->method('getStages')->willReturn([$stage]);
+        $this->stageStore->method('getStages')->willReturn([$stage]);
 
         $dispatchedMessages = [];
         $this->messageBus->method('dispatch')->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
@@ -109,7 +114,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
     #[Test]
     public function unknownStageIdThrowsNotFoundHttpException(): void
     {
-        $this->tripStateManager->method('getStages')->willReturn([]);
+        $this->stageStore->method('getStages')->willReturn([]);
         $this->expectException(NotFoundHttpException::class);
 
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);

@@ -16,6 +16,7 @@ use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisher;
 use App\MessageHandler\AbstractTripMessageHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\Weather\WeatherForecastSerializer;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -56,7 +57,7 @@ final class AbstractTripMessageHandlerTest extends TestCase
             $warnings[] = $context;
         });
 
-        $handler = new readonly class ($this->createStub(ComputationTrackerInterface::class), $this->createPublisher($hub), $this->createStub(TripGenerationTrackerInterface::class), $logger, $this->createStub(TripRequestRepositoryInterface::class), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()) extends AbstractTripMessageHandler {
+        $handler = new readonly class ($this->createStub(ComputationTrackerInterface::class), $this->createPublisher($hub), $this->createStub(TripGenerationTrackerInterface::class), $logger, $this->createStub(TripRequestRepositoryInterface::class), $this->createStub(TripStageStoreInterface::class), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()) extends AbstractTripMessageHandler {
             public function run(string $tripId, ComputationName $computation, callable $callback): void
             {
                 $this->executeWithTracking($tripId, $computation, $callback);
@@ -89,7 +90,7 @@ final class AbstractTripMessageHandlerTest extends TestCase
 
     private function createPublisher(HubInterface $hub): TripUpdatePublisher
     {
-        $versionSource = $this->createStub(TripRequestRepositoryInterface::class);
+        $versionSource = $this->createStub(TripStageStoreInterface::class);
         $versionSource->method('getVersion')->willReturn(1);
 
         $stack = new RequestStack();
@@ -99,6 +100,7 @@ final class AbstractTripMessageHandlerTest extends TestCase
             $hub,
             new StagePayloadMapper(new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()), $this->createAlertRenderer()),
             $correlationIds,
+            $this->createStub(TripRequestRepositoryInterface::class),
             $versionSource,
             new NullLogger(),
         );

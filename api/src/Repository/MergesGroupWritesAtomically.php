@@ -8,7 +8,7 @@ namespace App\Repository;
  * Declares that this implementation merges a group write into the stored alerts itself,
  * without a read-modify-write of the whole collection.
  *
- * {@see LockingTripRequestRepository} reads it to decide whether the enrichment writes need
+ * {@see LockingTripStageStore} reads it to decide whether the enrichment writes need
  * the per-trip lock. An implementation that does a single `jsonb_set` UPDATE does not: the
  * merge is the database's, so a dozen producers finishing at once all survive (ADR-068) and
  * serialising them behind a 3-second bounded acquire would only turn a burst into failed

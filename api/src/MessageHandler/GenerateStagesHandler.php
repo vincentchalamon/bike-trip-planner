@@ -14,6 +14,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
 use Psr\Log\LoggerInterface;
@@ -29,12 +30,13 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private StructuralComputationService $structuralComputation,
         private TripAnalysisDispatcher $analysisDispatcher,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(GenerateStages $message): void
@@ -54,7 +56,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
             }
 
-            $this->tripRequestRepository->storeStages($tripId, $stages);
+            $this->stageStore->storeStages($tripId, $stages);
 
             // ADR-043: structural readiness is reached as soon as the stages are
             // persisted — independently of the terminal enrichment gate, so a trip

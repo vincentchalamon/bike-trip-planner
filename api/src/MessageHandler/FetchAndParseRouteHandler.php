@@ -19,6 +19,7 @@ use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -33,6 +34,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
         private DistanceCalculatorInterface $distanceCalculator,
@@ -41,7 +43,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(FetchAndParseRoute $message): void

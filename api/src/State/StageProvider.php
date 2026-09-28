@@ -7,7 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Stage;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * @implements ProviderInterface<Stage>
@@ -15,7 +15,7 @@ use App\Repository\TripRequestRepositoryInterface;
 final readonly class StageProvider implements ProviderInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private StageLocator $stageLocator,
     ) {
     }
@@ -28,7 +28,7 @@ final readonly class StageProvider implements ProviderInterface
         $tripId = $uriVariables['tripId'] ?? '';
         $stageId = $uriVariables['stageId'] ?? '';
 
-        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $stages = $this->stageStore->getStages($tripId) ?? [];
 
         return $stages[$this->stageLocator->indexOf($stages, $stageId)];
     }

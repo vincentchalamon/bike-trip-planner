@@ -12,6 +12,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\ApiTestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
@@ -56,13 +57,17 @@ final class TripAcceptedBodyTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString(self::TRIP_ID));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = $startDate;
 
         $repo->initializeTrip(self::TRIP_ID, $request);
         $this->associateTripWithUser(self::TRIP_ID, $this->testUser);
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $stageStore->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,

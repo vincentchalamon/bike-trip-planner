@@ -9,7 +9,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\StageResponse;
 use App\Mapper\StageResponseMapper;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * Read one stage in full (geometry, resupply, accommodations, events, classified
@@ -21,7 +21,7 @@ use App\Repository\TripRequestRepositoryInterface;
 final readonly class StageDetailProvider implements ProviderInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private StageResponseMapper $mapper,
     ) {
     }
@@ -34,7 +34,7 @@ final readonly class StageDetailProvider implements ProviderInterface
         // One row, not the whole collection. This used to read every stage of the trip —
         // eight JSONB columns each, one object per geometry point — and then walk the list to
         // keep one and discard the rest.
-        $stage = $this->tripStateManager->getStage($tripId, $stageId);
+        $stage = $this->stageStore->getStage($tripId, $stageId);
         if (!$stage instanceof Stage) {
             throw StageLocator::missing($stageId);
         }

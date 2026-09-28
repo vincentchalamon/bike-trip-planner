@@ -17,6 +17,7 @@ use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\Repository\StageWriteResult;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -27,6 +28,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private StageLocator $stageLocator,
@@ -51,7 +53,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         // Read, edit and write as one unit: an enrichment worker writing a column in
         // between would otherwise be reverted by the snapshot read here.
-        $write = $this->tripStateManager->mutateStages($tripId, function (array $stages) use ($stageId, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
+        $write = $this->stageStore->mutateStages($tripId, function (array $stages) use ($stageId, $sourceType, &$isRestDayDeletion, &$mergedIndex): array {
             $index = $this->stageLocator->indexOf($stages, $stageId);
 
             if (\count($stages) <= 2) {
