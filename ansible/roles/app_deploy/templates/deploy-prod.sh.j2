@@ -11,5 +11,5 @@ TAG="${1:?usage: deploy-prod.sh <tag>}"
 git fetch --tags --prune --force
 git checkout --force "refs/tags/${TAG}"
 
-btp-compose pull
-btp-compose up -d
+/usr/local/bin/btp-compose pull
+/usr/local/bin/btp-compose up -d

@@ -249,7 +249,7 @@ jobs:
           cd "${repo_dir}"
           git fetch --tags --force
           git checkout --force "refs/tags/${TAG}"
-          btp-compose up -d --pull always
+          /usr/local/bin/btp-compose up -d --pull always
           EOF
 
   smoke-test:
