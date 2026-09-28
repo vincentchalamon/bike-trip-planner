@@ -246,13 +246,8 @@ test.describe("Accommodations", () => {
     injectSequence,
     mockedPage,
   }) => {
-    let scanRequestBody: unknown = null;
-
     // Intercept the accommodation scan request
-    await mockedPage.route("**/trips/*/accommodations/scan", (route, req) => {
-      if (req.method() === "POST") {
-        scanRequestBody = JSON.parse(req.postData() ?? "{}");
-      }
+    await mockedPage.route("**/trips/*/accommodations/scan", (route) => {
       return route.fulfill({
         status: 202,
         contentType: "application/ld+json",
@@ -281,9 +276,11 @@ test.describe("Accommodations", () => {
         req.url().includes("/accommodations/scan") && req.method() === "POST",
     );
     await expandButton.click();
-    await requestPromise;
+    // Read the body off the request itself: the route handler runs after
+    // `waitForRequest` resolves, so a variable it fills can still be empty here.
+    const request = await requestPromise;
 
-    expect(scanRequestBody).toMatchObject({ radiusKm: 7 });
+    expect(request.postDataJSON()).toMatchObject({ radiusKm: 7 });
   });
 
   test("keeps the enrichment and the source badge after a reload", async ({
