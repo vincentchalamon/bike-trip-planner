@@ -16,7 +16,10 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     extraHTTPHeaders: { Accept: "text/html" },
   });
   for (const route of ["/", "/trips/warmup"]) {
-    await context.get(route, { timeout: 120_000 });
+    const response = await context.get(route, { timeout: 120_000 });
+    if (!response.ok()) {
+      throw new Error(`Warm-up of ${route} got HTTP ${response.status()}`);
+    }
   }
   await context.dispose();
 }
