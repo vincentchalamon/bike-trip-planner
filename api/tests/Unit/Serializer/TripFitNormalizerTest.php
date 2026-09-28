@@ -10,8 +10,8 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
-use App\Repository\TripRequestRepositoryInterface;
 use App\Serializer\TripFitNormalizer;
+use App\Serializer\TripExport;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -40,12 +40,9 @@ final class TripFitNormalizerTest extends TestCase
             geometry: [new Coordinate(50.700, 3.100, 50.0), new Coordinate(50.800, 3.200, 60.0)],
         );
 
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([$stage1, $stage2]);
-        $repository->method('getTitle')->willReturn('My Trip');
 
-        $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
+        $normalizer = new TripFitNormalizer();
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('My Trip', null, [$stage1, $stage2])), 'fit');
 
         self::assertIsArray($result);
         self::assertSame('My Trip', $result['courseName']);
@@ -80,11 +77,9 @@ final class TripFitNormalizerTest extends TestCase
         );
         $stage2->addAccommodation(new Accommodation('Hotel', 'hotel', 50.780, 3.190, 80.0, 120.0, false));
 
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
-        $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
+        $normalizer = new TripFitNormalizer();
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('trip-abc', null, [$stage1, $stage2])), 'fit');
 
         /** @var list<array{name: string, type: string, lat: float, lon: float}> $waypoints */
         $waypoints = $result['waypoints'];
@@ -98,11 +93,9 @@ final class TripFitNormalizerTest extends TestCase
     #[Test]
     public function normalizeWithEmptyStagesReturnsEmptyPointsAndWaypoints(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->willReturn([]);
 
-        $normalizer = new TripFitNormalizer($repository);
-        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false), 'fit');
+        $normalizer = new TripFitNormalizer();
+        $result = $normalizer->normalize(new Trip('trip-abc', computationStatus: [], isLocked: false, export: new TripExport('trip-abc', null, [])), 'fit');
 
         self::assertSame([], $result['points']);
         self::assertSame([], $result['waypoints']);
@@ -111,8 +104,7 @@ final class TripFitNormalizerTest extends TestCase
     #[Test]
     public function supportsOnlyTripInFitFormat(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $normalizer = new TripFitNormalizer($repository);
+        $normalizer = new TripFitNormalizer();
 
         $trip = new Trip('trip-abc', computationStatus: [], isLocked: false);
         $stage = new Stage('t', 1, 1.0, 0.0, new Coordinate(0, 0), new Coordinate(0, 0));
@@ -125,8 +117,7 @@ final class TripFitNormalizerTest extends TestCase
     #[Test]
     public function normalizeWithInvalidDataThrowsException(): void
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $normalizer = new TripFitNormalizer($repository);
+        $normalizer = new TripFitNormalizer();
 
         $this->expectException(\InvalidArgumentException::class);
         $normalizer->normalize('not a trip', 'fit');

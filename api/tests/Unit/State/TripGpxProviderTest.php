@@ -88,6 +88,41 @@ final class TripGpxProviderTest extends TestCase
         $provider->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('gpx'));
     }
 
+    /**
+     * The stages read to decide whether there is a file are the ones the file is built from:
+     * the normalizers used to reload them, hydrating every stage twice per download.
+     */
+    #[Test]
+    public function anExportCarriesWhatItReadToTheNormalizer(): void
+    {
+        $request = new TripRequest();
+        $request->title = 'Alps';
+        $request->sourceUrl = 'https://www.komoot.com/tour/1';
+
+        $stage = $this->aStage();
+
+        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository->method('getRequest')->willReturn($request);
+        $repository->expects($this->once())->method('getStages')->willReturn([$stage]);
+
+        $provider = new TripGpxProvider($repository, $this->createStub(ComputationTrackerInterface::class), new TripLocker());
+        $export = $provider->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('fit'))->export();
+
+        self::assertNotNull($export);
+        self::assertSame('Alps', $export->name);
+        self::assertSame('https://www.komoot.com/tour/1', $export->sourceUrl);
+        self::assertSame([$stage], $export->stages);
+    }
+
+    #[Test]
+    public function anUntitledTripIsNamedByItsIdentifierAndTheCanonicalReadCarriesNoExport(): void
+    {
+        $tracker = $this->createStub(ComputationTrackerInterface::class);
+
+        self::assertSame(self::TRIP_ID, $this->provider($tracker)->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('gpx'))->export()?->name);
+        self::assertNull($this->provider($tracker)->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('jsonld'))->export());
+    }
+
     #[Test]
     public function anUnknownTripIsNotFoundInAnyFormat(): void
     {

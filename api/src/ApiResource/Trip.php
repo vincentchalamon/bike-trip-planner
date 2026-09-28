@@ -39,6 +39,8 @@ use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
 use App\JsonSchema\Mcp\McpCollectionSchema;
+use App\Serializer\TripExport;
+use Symfony\Component\Serializer\Attribute\Ignore;
 use App\ApiResource\Mcp\ChallengeOrAcknowledgement;
 use App\ApiResource\Mcp\TripCreated;
 use App\ApiResource\Mcp\WriteAcknowledgement;
@@ -375,6 +377,11 @@ final readonly class Trip
     // as the schema description of the resource — or, on the constructor, of all three
     // properties at once, overwriting the one `computationStatus` has below.
 
+    //
+    // `$export` only carries what TripGpxProvider already loaded to the GPX and FIT
+    // normalizers. Private is not enough to keep it out of the published schema: the
+    // serializer's own metadata lists every property whatever its visibility, hence #[Ignore].
+
     /**
      * @param array<string, string> $computationStatus Map of ComputationName->value to status string
      */
@@ -382,6 +389,13 @@ final readonly class Trip
         public string $id,
         public array $computationStatus,
         public bool $isLocked,
+        #[Ignore]
+        private ?TripExport $export = null,
     ) {
+    }
+
+    public function export(): ?TripExport
+    {
+        return $this->export;
     }
 }

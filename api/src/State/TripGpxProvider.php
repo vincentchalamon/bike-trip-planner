@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Serializer\TripExport;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -22,8 +23,8 @@ use Symfony\Component\HttpFoundation\Request;
  * Declaring the format was the easy half; the body is this class.
  *
  * `computationStatus` and `isLocked` are what the write responses already carry, so the
- * canonical read carries the same. The export normalizers ignore both and reload the stages
- * themselves.
+ * canonical read carries the same. The export normalizers ignore both, and build the file from
+ * the stages loaded here.
  *
  * @implements ProviderInterface<Trip>
  */
@@ -60,8 +61,16 @@ final readonly class TripGpxProvider implements ProviderInterface
         // `[]` for a trip it knows has no stages. Only the first produced this 404, so the rule
         // this comment describes held by accident of the implementation the tests happened to
         // run on. Both mean the same thing to an export: there is no file to build.
-        if (!$isCanonicalRead && [] === ($this->tripStateManager->getStages($id) ?? [])) {
-            throw new TripNotFoundException();
+        $export = null;
+        if (!$isCanonicalRead) {
+            $stages = $this->tripStateManager->getStages($id) ?? [];
+            if ([] === $stages) {
+                throw new TripNotFoundException();
+            }
+
+            // Handed to the normalizer rather than reloaded there: this read is the one the
+            // file is built from.
+            $export = new TripExport($request->title ?? $id, $request->sourceUrl, $stages);
         }
 
         return new Trip(
@@ -73,6 +82,7 @@ final readonly class TripGpxProvider implements ProviderInterface
             // Free — the request is already loaded — so it is answered truthfully on every
             // path rather than fabricating a `false` for a trip that is in fact locked.
             isLocked: $this->tripLocker->isLocked($request),
+            export: $export,
         );
     }
 
