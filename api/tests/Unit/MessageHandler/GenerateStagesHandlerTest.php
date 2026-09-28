@@ -15,6 +15,7 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
+use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Enum\TripStatus;
 use App\Mercure\MercureEventType;
@@ -26,6 +27,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -328,5 +330,89 @@ final class GenerateStagesHandlerTest extends TestCase
         );
 
         $handler(new GenerateStages('trip-1'));
+    }
+
+    /**
+     * @return iterable<string, array{int, list<string>}>
+     */
+    public static function stageCounts(): iterable
+    {
+        yield 'ready' => [2, ['storeStages:2', 'storeStatus:ready', 'publish:stages_computed:2', 'dispatched', 'publishComputationStepCompleted:stages:2/14/0']];
+        yield 'below the minimum' => [1, ['publishValidationError:MIN_STAGES', 'storeStages:1', 'publish:stages_computed:1', 'dispatched', 'publishComputationStepCompleted:stages:2/14/0']];
+    }
+
+    /**
+     * Pins what a stage generation writes and publishes, in order: the enrichments are handed
+     * off before the progress step, which the tracking wrapper publishes last.
+     *
+     * @param list<string> $expected
+     */
+    #[Test]
+    #[DataProvider('stageCounts')]
+    public function aGenerationWritesAndPublishesInAFixedOrder(int $count, array $expected): void
+    {
+        $log = [];
+        $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
+        $stages = array_map(
+            static fn (int $day): Stage => new Stage(tripId: 'trip-1', dayNumber: $day, distance: 40.0, elevation: 100.0, startPoint: $coordinate, endPoint: $coordinate),
+            range(1, $count),
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $tripStateManager->method('storeStatus')->willReturnCallback(static function (string $tripId, string $status) use (&$log): void {
+            $log[] = 'storeStatus:'.$status;
+        });
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0]]);
+
+        $pacingEngine = $this->createStub(PacingEngineInterface::class);
+        $pacingEngine->method('generateStages')->willReturn($stages);
+
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('storeStages')->willReturnCallback(static function (string $tripId, array $stored) use (&$log): void {
+            $log[] = 'storeStages:'.\count($stored);
+        });
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')->willReturnCallback(static function (string $tripId, MercureEventType $type, array $data = []) use (&$log): void {
+            $log[] = 'publish:'.$type->value.':'.\count($data['stages']);
+        });
+        $publisher->method('publishValidationError')->willReturnCallback(static function (string $tripId, string $code) use (&$log): void {
+            $log[] = 'publishValidationError:'.$code;
+        });
+        $publisher->method('publishComputationStepCompleted')->willReturnCallback(static function (string $tripId, ComputationName $step, int $completed, int $total, int $failed = 0) use (&$log): void {
+            $log[] = \sprintf('publishComputationStepCompleted:%s:%d/%d/%d', $step->value, $completed, $total, $failed);
+        });
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(static function (object $message) use (&$log): Envelope {
+            if ('dispatched' !== end($log)) {
+                $log[] = 'dispatched';
+            }
+
+            return new Envelope($message);
+        });
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 2, 'failed' => 0, 'settled' => 2, 'total' => 14]);
+
+        $handler = new GenerateStagesHandler(
+            $computationTracker,
+            $publisher,
+            $this->createStub(TripGenerationTrackerInterface::class),
+            new NullLogger(),
+            $tripStateManager,
+            $stageStore,
+            $this->structuralComputation($tripStateManager, $pacingEngine, points: $points),
+            new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
+            $messageBus,
+            $this->createAlertRenderer(),
+        );
+
+        $handler(new GenerateStages('trip-1'));
+
+        self::assertSame($expected, $log);
     }
 }
