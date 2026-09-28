@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Engine;
 
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculator;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngine;
 use App\Engine\RouteSimplifierInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PacingEngineTest extends TestCase
 {
     private PacingEngine $engine;
@@ -267,6 +272,34 @@ final class PacingEngineTest extends TestCase
         $this->assertGreaterThanOrEqual(500.0, $lastStage->elevation);
     }
 
+    /**
+     * @return iterable<string, array{int, int, float}>
+     */
+    public static function tracksShorterThanTheirDays(): iterable
+    {
+        // The track runs out before the last day: the leftover goes to the last stage built.
+        yield 'track ends exactly on a split' => [3, 2, 60.0];
+        yield 'track ends mid-target' => [20, 10, 5.0];
+    }
+
+    #[Test]
+    #[DataProvider('tracksShorterThanTheirDays')]
+    public function lastStageGeometryReachesTheEndOfTheTrackWhenTheLeftoverIsMerged(int $pointCount, int $days, float $kmPerSegment): void
+    {
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+        $engine = new PacingEngine($this->distanceCalculator($kmPerSegment), new ElevationCalculator(), $routeSimplifier);
+        $points = $this->createTrack($pointCount);
+
+        $stages = $engine->generateStages('trip-1', $points, $days, ($pointCount - 1) * $kmPerSegment, rawPoints: $points);
+
+        $this->assertLessThan($days, \count($stages));
+        $lastStage = $stages[\count($stages) - 1];
+        $this->assertSame($points[$pointCount - 1], $lastStage->endPoint);
+        $this->assertSame($lastStage->endPoint, $lastStage->geometry[\count($lastStage->geometry) - 1]);
+        $this->assertEqualsWithDelta(($pointCount - 1) * $kmPerSegment, array_sum(array_map(static fn (Stage $s): float => $s->distance, $stages)), 0.001);
+    }
+
     #[Test]
     public function generateStagesAppliesMaxDistancePerDayCap(): void
     {
@@ -314,6 +347,13 @@ final class PacingEngineTest extends TestCase
                 }
 
                 return [\array_slice($points, $startIndex), [], $accumulated];
+            },
+        );
+        $distanceCalculator->method('findClosestIndex')->willReturnCallback(
+            static function (array $points, Coordinate $target): int {
+                $distances = array_map(static fn (Coordinate $p): float => hypot($p->lat - $target->lat, $p->lon - $target->lon), $points);
+
+                return (int) array_search(min(\PHP_FLOAT_MAX, ...$distances), $distances, true);
             },
         );
 
