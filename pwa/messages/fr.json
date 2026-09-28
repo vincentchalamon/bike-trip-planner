@@ -490,70 +490,6 @@
     "viewAll": "Voir tous ({count})",
     "noDate": "Non daté"
   },
-  "stepper": {
-    "ariaLabel": "Étapes du processus",
-    "preparation": "Préparation",
-    "preview": "Aperçu",
-    "analysis": "Analyse",
-    "myTrip": "Mon voyage",
-    "mobileLabel": "Étape {current}/{total} — {stepName}"
-  },
-  "processingProgress": {
-    "subtitle": "Analyse en cours… cela peut prendre quelques minutes.",
-    "progressLabel": "Progression globale",
-    "progressPercent": "{percent}%",
-    "failureMessage": "Échec : {message}",
-    "categories": {
-      "terrain_security": {
-        "label": "Analyse du terrain",
-        "description": "Surface, trafic, pentes, continuité",
-        "running": "Analyse du terrain…",
-        "done": "Terrain analysé",
-        "failed": "Analyse du terrain indisponible"
-      },
-      "supply": {
-        "label": "Points d'intérêt",
-        "description": "Points d'eau, commerces, sites culturels",
-        "running": "Recherche des points d'intérêt…",
-        "done": "Points d'intérêt collectés",
-        "failed": "Recherche des POI indisponible"
-      },
-      "accommodations": {
-        "label": "Hébergements",
-        "description": "Campings, gîtes, hôtels",
-        "running": "Identification des hébergements…",
-        "done": "Hébergements identifiés",
-        "failed": "Recherche d'hébergements indisponible"
-      },
-      "weather": {
-        "label": "Météo",
-        "description": "Prévisions, vent, conditions",
-        "running": "Récupération des prévisions météo…",
-        "done": "Prévisions récupérées",
-        "failed": "Météo indisponible"
-      },
-      "services": {
-        "label": "Sécurité & services",
-        "description": "Magasins vélo, secours, gares, frontières",
-        "running": "Recensement des services le long du tracé…",
-        "done": "Services recensés",
-        "failed": "Services indisponibles"
-      },
-      "context": {
-        "label": "Événements locaux",
-        "description": "Calendrier, fêtes, jours fériés",
-        "running": "Recherche d'événements locaux…",
-        "done": "Événements locaux récupérés",
-        "failed": "Événements locaux indisponibles"
-      }
-    },
-    "statusLabels": {
-      "done": "terminé",
-      "inProgress": "en cours",
-      "failed": "échec",
-      "pending": "en attente"
-    }
-  },
   "cardSelection": {
     "heading": "Comment veux-tu commencer ?",
     "linkTitle": "Lien",
@@ -580,28 +516,9 @@
     "tripSavedToAccount": "Voyage enregistré dans Mes voyages."
   },
   "tripPreview": {
-    "title": "Aperçu de ton itinéraire",
-    "subtitle": "Vérifie le tracé, les étapes et les paramètres avant de lancer l'analyse complète.",
-    "stagesHeading": "Découpage en étapes",
-    "stagesCount": "{count, plural, =0 {# étape} one {# étape} other {# étapes}}",
-    "stageDay": "Jour {day}",
-    "stageDistance": "{distance} km",
-    "stageElevation": "D+ {elevation} m",
-    "stageEndPoint": "Arrivée : {lat}°, {lon}°",
-    "launchAnalysis": "Lancer l'analyse",
-    "launchAnalysisAria": "Lancer l'analyse complète de l'itinéraire",
-    "launchingAnalysis": "Lancement de l'analyse...",
-    "modifyParameters": "Modifier les paramètres",
-    "modifyParametersAria": "Ouvrir le panneau de configuration pour modifier les paramètres",
-    "changeRoute": "Changer d'itinéraire",
-    "changeRouteAria": "Retourner à l'écran de préparation pour changer d'itinéraire",
-    "analysisLaunched": "Analyse lancée",
     "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessaie."
   },
   "chat": {
-    "offline": {
-      "label": "Tu es hors ligne. L'assistant est indisponible."
-    },
     "inRide": {
       "openInMaps": "Ouvrir dans Google Maps",
       "detourBadge": "+{km} km",
@@ -621,16 +538,6 @@
       "errorNetwork": "Pas de connexion. Vérifie ton réseau et réessaie.",
       "errorRateLimit": "Trop de recherches. Patiente un instant et réessaie.",
       "errorGeneric": "La recherche a échoué. Réessaie.",
-      "category": {
-        "water": "Eau",
-        "shelter": "Abri",
-        "food": "Manger",
-        "resupply": "Courses",
-        "mechanic": "Réparateur",
-        "health": "Pharmacie",
-        "train": "Train",
-        "charging": "Recharge"
-      },
       "question": {
         "water": "Trouver de l'eau",
         "shelter": "M'abriter",
@@ -752,7 +659,7 @@
       "title": "Comment ça marche",
       "subtitle": "Quatre étapes pour transformer un tracé en aventure prête à partir.",
       "step1Title": "Importe",
-      "step1Description": "Colle un lien Komoot, Strava, RideWithGPS, importe un GPX ou laisse l'IA générer un itinéraire.",
+      "step1Description": "Colle un lien Komoot, Strava ou RideWithGPS, ou importe un GPX.",
       "step2Title": "Analyse",
       "step2Description": "Notre moteur découpe ton parcours en étapes journalières et détecte alertes, météo et points-clés.",
       "step3Title": "Planifie",
@@ -798,7 +705,7 @@
     },
     "sources": {
       "title": "Sources supportées",
-      "subtitle": "Importe ton itinéraire depuis ta plateforme préférée — ou laisse l'IA en générer un.",
+      "subtitle": "Importe ton itinéraire depuis ta plateforme préférée.",
       "komootType": "Tour ou collection",
       "stravaType": "Route publique",
       "rwgpsType": "Route publique",
@@ -808,7 +715,7 @@
       "title": "Aperçu de l'application",
       "map": "Carte globale",
       "stage": "Étape détaillée",
-      "analysis": "Analyse IA",
+      "analysis": "Analyse de l'itinéraire",
       "prev": "Précédent",
       "next": "Suivant"
     },
@@ -1057,7 +964,7 @@
   "privacy": {
     "title": "Politique de confidentialité",
     "intro": "Comment Bike Trip Planner collecte, utilise et protège tes données personnelles, conformément au RGPD.",
-    "lastUpdated": "Dernière mise à jour : 29 mai 2026",
+    "lastUpdated": "Dernière mise à jour : 28 septembre 2026",
     "tocLabel": "Sommaire",
     "backToHome": "Retour à l'accueil",
     "sections": {
@@ -1088,6 +995,7 @@
           "Compte : ton adresse email, nécessaire à la connexion par lien magique.",
           "Voyages : la configuration de tes voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour te permettre d'y accéder depuis n'importe quel appareil.",
           "Données de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.",
+          "Application mobile : les jetons d'appareil utilisés pour t'envoyer des notifications push, et tes préférences de notification.",
           "Aucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers."
         ]
       },
@@ -1112,6 +1020,7 @@
         "paragraphs": [
           "Hébergement de l'infrastructure : prestataire cloud choisi par l'opérateur de cette instance.",
           "Envoi des emails de connexion : prestataire d'envoi d'emails transactionnels.",
+          "Notifications push de l'application mobile : Google Firebase Cloud Messaging, qui reçoit le jeton de ton appareil et le contenu de la notification (titre et texte).",
           "Sources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise."
         ]
       },

@@ -197,7 +197,7 @@ export const fr = {
         "Le code source de Bike Trip Planner est distribué sous licence open-source ; les conditions d'utilisation et de redistribution figurent dans le dépôt GitHub.\n\nLes données d'itinéraire et cartographiques proviennent de sources tierces (OpenStreetMap, DataTourisme, OpenAgenda, Wikidata) et restent soumises à leurs licences respectives, créditées sur l'application.\n\nLes marques, logos et contenus appartenant à des tiers (Komoot, Strava, RideWithGPS, Garmin, Wahoo) demeurent la propriété de leurs détenteurs respectifs.",
     },
     privacyContent: {
-      lastUpdated: 'Dernière mise à jour : 29 mai 2026',
+      lastUpdated: 'Dernière mise à jour : 28 septembre 2026',
       controllerTitle: 'Responsable du traitement',
       controllerBody:
         "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).\n\nPour toute question relative à tes données personnelles, contacte-nous à : __CONTACT_EMAIL__.",
@@ -209,7 +209,7 @@ export const fr = {
         "Tes données sont utilisées pour t'authentifier, sauvegarder et restituer tes voyages, et calculer les analyses d'itinéraire (pacing, alertes, hébergements, météo).\n\nLa mesure d'audience anonyme sert uniquement à comprendre l'usage global du service et à en améliorer l'ergonomie.",
       dataTitle: 'Données collectées',
       dataBody:
-        "Compte : ton adresse email, nécessaire à la connexion par lien magique.\n\nVoyages : la configuration de tes voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour te permettre d'y accéder depuis n'importe quel appareil.\n\nDonnées de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.\n\nAucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers.",
+        "Compte : ton adresse email, nécessaire à la connexion par lien magique.\n\nVoyages : la configuration de tes voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour te permettre d'y accéder depuis n'importe quel appareil.\n\nDonnées de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.\n\nApplication mobile : les jetons d'appareil utilisés pour t'envoyer des notifications push, et tes préférences de notification.\n\nAucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers.",
       retentionTitle: 'Durée de conservation',
       retentionBody:
         "Ton compte et tes voyages sont conservés tant que ton compte est actif. Tu peux demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de ton compte.\n\nLes données de tracé brutes en cache sont conservées au maximum 24 heures.\n\nLes données de mesure d'audience anonyme sont agrégées et ne permettent pas de te réidentifier.",
@@ -218,7 +218,7 @@ export const fr = {
         "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de tes données.\n\nPour exercer ces droits, contacte-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.\n\nTu as également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr).",
       processorsTitle: 'Sous-traitants',
       processorsBody:
-        "Hébergement de l'infrastructure : prestataire cloud choisi par l'opérateur de cette instance.\n\nEnvoi des emails de connexion : prestataire d'envoi d'emails transactionnels.\n\nSources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise.",
+        "Hébergement de l'infrastructure : prestataire cloud choisi par l'opérateur de cette instance.\n\nEnvoi des emails de connexion : prestataire d'envoi d'emails transactionnels.\n\nNotifications push de l'application mobile : Google Firebase Cloud Messaging, qui reçoit le jeton de ton appareil et le contenu de la notification (titre et texte).\n\nSources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise.",
       analyticsTitle: "Mesure d'audience (Plausible)",
       analyticsBody:
         "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur la même infrastructure que l'application.\n\nPlausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.\n\nLes adresses IP et les agents utilisateurs (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de t'identifier ou de te suivre entre les sites.\n\nFinalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.\n\nAucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; tu conserves néanmoins tes droits d'opposition décrits ci-dessus.",

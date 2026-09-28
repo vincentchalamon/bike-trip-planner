@@ -64,7 +64,7 @@ denied tool's reference.
 
 Expressions must follow ADR-063 — `request.` does not exist here.
 
-### 3. BTP is an OAuth 2.1 Resource Server, never an Authorization Server
+### 3. BTP is an OAuth 2.1 Resource Server, never an Authorization Server (*superseded, see amendment*)
 
 `mcp/sdk` ships the Resource Server complete: RFC 9728 Protected Resource Metadata,
 `AuthorizationMiddleware`, `JwtTokenValidator`, `JwksProvider`, OIDC discovery, and an
@@ -100,7 +100,7 @@ Tools live in a `mcp` bucket separate from `operations:`. Proven, not assumed: t
 exports with and without the `mcp:` block are **byte-for-byte identical**. `core/schema.d.ts`,
 the CI drift guard and the `pwa` / `mobile` builds are unaffected.
 
-### 6. What is deliberately excluded from the tool surface
+### 6. What is deliberately excluded from the tool surface (*superseded in part, see amendment*)
 
 The dividing line is **interaction versus information**, not web versus agent.
 
@@ -144,6 +144,20 @@ arrives with its keys stripped** — `{"route": "done", "weather": "running"}` l
 either describes. That is data loss. **Nothing in a tool's answer may be keyed by data.** The
 payload is also duplicated: `content[0].text` repeats `structuredContent` verbatim, so
 everything is paid for twice.
+
+*Added 28/09/2026, two decisions the code no longer follows:*
+
+**§3 is superseded: BTP is its own Authorization Server.** The authorization server "left to a
+later ADR" is embedded in the application: `league/oauth2-server` (through its Symfony
+bundle) issues the tokens, with the discovery documents, client resolution, audience and
+consent screen built around it. No upstream sits behind `OAuthProxyMiddleware`. See
+[ADR-079](adr-079-authorizing-an-agent-without-giving-it-a-session.md).
+
+**§6, last row: there are no progress notifications.** Mercure streaming stays excluded, but
+not because progress notifications cover the need: no tool emits one. `create_trip` and
+`analyze_trip` return at once, and the agent polls `get_trip`, which says `partial: true` while
+the stages are not computed. See
+[ADR-080 §12](adr-080-thirteen-tools-and-everything-that-is-not-one.md#12-the-agents-loop-is-the-progress-bar).
 
 ## Consequences
 

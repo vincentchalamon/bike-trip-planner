@@ -6,6 +6,11 @@
 > [`docs/runbooks/uptime-monitoring.md`](../../docs/runbooks/uptime-monitoring.md)).
 > These files are kept for reversibility: deploy the stack below to restore the
 > self-hosted primary layer post-beta.
+>
+> **Coolify is gone:** the procedure below predates
+> [ADR-061](../../docs/adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md)
+> and still describes a Coolify resource. It is not wired into the Ansible
+> deployment; bringing the stack back means porting it to Ansible first.
 
 Uptime Kuma is the **primary** uptime monitor for Bike Trip Planner. It runs on
 the same Coolify host as the application (Oracle Cloud Always Free VM, see

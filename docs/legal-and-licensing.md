@@ -55,7 +55,6 @@ Authoritative text lives on the in-app `/privacy` page. Key points, as implement
   (magic-link emails); Google Firebase Cloud Messaging for mobile push notifications (device
   token and notification content). Open-data services (Open-Meteo, Nominatim) receive
   coordinates or search terms, no identifying personal data.
-  The in-app `/privacy` page does not list Firebase Cloud Messaging yet.
 - **Analytics:** self-hosted **Plausible** (EU) — cookieless, no fingerprinting, IP and
   User-Agent anonymised, no cross-site tracking. The script is loaded on environment
   configuration alone; no consent banner is required (legitimate interest, #572). See

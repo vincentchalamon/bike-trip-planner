@@ -1,9 +1,9 @@
 # GlitchTip self-hosted stack (P1.1, ADR-031).
 #
-# Deployed as an independent Coolify service stack — not part of the main
-# bike-trip-planner compose project so the app and the error tracker have
-# distinct lifecycles. Exposed at https://errors.bike-trip-planner.com via the
-# Coolify-managed Traefik (Let's Encrypt auto-TLS).
+# Not deployed during the beta (ADR-039: Sentry SaaS instead), and not wired
+# into the Ansible deployment (ADR-061). Kept as an independent stack, outside
+# the main bike-trip-planner compose project, so the app and the error tracker
+# keep distinct lifecycles if it is ever brought back.
 #
 # Resource envelope: ~500 MB RAM, ~2 GB persistent volume over the 30-day
 # retention window.

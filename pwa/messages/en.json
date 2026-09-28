@@ -490,70 +490,6 @@
     "viewAll": "View all ({count})",
     "noDate": "No date"
   },
-  "stepper": {
-    "ariaLabel": "Process steps",
-    "preparation": "Preparation",
-    "preview": "Preview",
-    "analysis": "Analysis",
-    "myTrip": "My Trip",
-    "mobileLabel": "Step {current}/{total} — {stepName}"
-  },
-  "processingProgress": {
-    "subtitle": "Analysis in progress… this may take a few minutes.",
-    "progressLabel": "Overall progress",
-    "progressPercent": "{percent}%",
-    "failureMessage": "Failed: {message}",
-    "categories": {
-      "terrain_security": {
-        "label": "Terrain analysis",
-        "description": "Surface, traffic, slopes, continuity",
-        "running": "Analysing terrain…",
-        "done": "Terrain analysed",
-        "failed": "Terrain analysis unavailable"
-      },
-      "supply": {
-        "label": "Points of interest",
-        "description": "Water points, shops, cultural sites",
-        "running": "Looking up points of interest…",
-        "done": "Points of interest collected",
-        "failed": "POI lookup unavailable"
-      },
-      "accommodations": {
-        "label": "Accommodations",
-        "description": "Campings, lodges, hotels",
-        "running": "Identifying accommodations…",
-        "done": "Accommodations identified",
-        "failed": "Accommodation lookup unavailable"
-      },
-      "weather": {
-        "label": "Weather",
-        "description": "Forecasts, wind, conditions",
-        "running": "Fetching weather forecasts…",
-        "done": "Forecasts ready",
-        "failed": "Weather unavailable"
-      },
-      "services": {
-        "label": "Safety & services",
-        "description": "Bike shops, rescue, stations, borders",
-        "running": "Mapping services along the route…",
-        "done": "Services mapped",
-        "failed": "Services unavailable"
-      },
-      "context": {
-        "label": "Local events",
-        "description": "Calendar, festivals, holidays",
-        "running": "Looking up local events…",
-        "done": "Local events ready",
-        "failed": "Local events unavailable"
-      }
-    },
-    "statusLabels": {
-      "done": "done",
-      "inProgress": "in progress",
-      "failed": "failed",
-      "pending": "pending"
-    }
-  },
   "cardSelection": {
     "heading": "How would you like to start?",
     "linkTitle": "Link",
@@ -580,28 +516,9 @@
     "tripSavedToAccount": "Trip saved to My trips."
   },
   "tripPreview": {
-    "title": "Your route preview",
-    "subtitle": "Check the track, the stages and the settings before launching the full analysis.",
-    "stagesHeading": "Stage breakdown",
-    "stagesCount": "{count, plural, =0 {# stage} one {# stage} other {# stages}}",
-    "stageDay": "Day {day}",
-    "stageDistance": "{distance} km",
-    "stageElevation": "Elev+ {elevation} m",
-    "stageEndPoint": "Arrival: {lat}°, {lon}°",
-    "launchAnalysis": "Launch analysis",
-    "launchAnalysisAria": "Launch the full route analysis",
-    "launchingAnalysis": "Launching analysis...",
-    "modifyParameters": "Modify parameters",
-    "modifyParametersAria": "Open the configuration panel to modify parameters",
-    "changeRoute": "Change route",
-    "changeRouteAria": "Return to the preparation screen to change the route",
-    "analysisLaunched": "Analysis launched",
     "analysisLaunchFailed": "Failed to launch analysis. Please retry."
   },
   "chat": {
-    "offline": {
-      "label": "You are offline. The assistant is unavailable."
-    },
     "inRide": {
       "openInMaps": "Open in Google Maps",
       "detourBadge": "+{km} km",
@@ -621,16 +538,6 @@
       "errorNetwork": "No connection. Check your network and try again.",
       "errorRateLimit": "Too many searches. Wait a moment and try again.",
       "errorGeneric": "Search failed. Try again.",
-      "category": {
-        "water": "Water",
-        "shelter": "Shelter",
-        "food": "Food",
-        "resupply": "Groceries",
-        "mechanic": "Bike shop",
-        "health": "Pharmacy",
-        "train": "Train",
-        "charging": "Charging"
-      },
       "question": {
         "water": "Find water",
         "shelter": "Find shelter",
@@ -752,7 +659,7 @@
       "title": "How it works",
       "subtitle": "Four steps to turn a route into a ride-ready adventure.",
       "step1Title": "Import",
-      "step1Description": "Paste a Komoot, Strava or RideWithGPS link, upload a GPX, or have AI generate a route for you.",
+      "step1Description": "Paste a Komoot, Strava or RideWithGPS link, or upload a GPX.",
       "step2Title": "Analyse",
       "step2Description": "Our engine splits the route into daily stages and surfaces alerts, weather and key points.",
       "step3Title": "Plan",
@@ -798,7 +705,7 @@
     },
     "sources": {
       "title": "Supported sources",
-      "subtitle": "Import your route from your favourite platform — or have AI generate one.",
+      "subtitle": "Import your route from your favourite platform.",
       "komootType": "Tour or collection",
       "stravaType": "Public route",
       "rwgpsType": "Public route",
@@ -808,7 +715,7 @@
       "title": "App preview",
       "map": "Global map",
       "stage": "Stage detail",
-      "analysis": "AI analysis",
+      "analysis": "Route analysis",
       "prev": "Previous",
       "next": "Next"
     },
@@ -1057,7 +964,7 @@
   "privacy": {
     "title": "Privacy policy",
     "intro": "How Bike Trip Planner collects, uses and protects your personal data, in accordance with the GDPR.",
-    "lastUpdated": "Last updated: 29 May 2026",
+    "lastUpdated": "Last updated: 28 September 2026",
     "tocLabel": "Contents",
     "backToHome": "Back to home",
     "sections": {
@@ -1088,6 +995,7 @@
           "Account: your email address, required for magic-link sign-in.",
           "Trips: your trip configuration (title, dates, rider profile, stages, selected accommodation) is stored so you can access it from any device.",
           "Route data: imported raw GPS points are cached temporarily (Redis) and then deleted automatically.",
+          "Mobile app: the device tokens used to send you push notifications, and your notification preferences.",
           "No sensitive data is collected, and no data is sold to third parties."
         ]
       },
@@ -1112,6 +1020,7 @@
         "paragraphs": [
           "Infrastructure hosting: a cloud provider chosen by the operator of this instance.",
           "Sending sign-in emails: a transactional email delivery provider.",
+          "Mobile push notifications: Google Firebase Cloud Messaging, which receives your device token and the content of the notification (title and text).",
           "Open-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them."
         ]
       },

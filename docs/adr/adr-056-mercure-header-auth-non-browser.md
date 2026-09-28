@@ -1,6 +1,6 @@
 # ADR-056: Mercure Header-Auth for Non-Browser SSE Clients
 
-- **Status:** Accepted
+- **Status:** Accepted; **amended** - see the amendment of 28/09/2026 before Consequences
 - **Date:** 2026-08-13
 - **Depends on:** ADR-023 (Authentication Strategy), ADR-038 (Hide Forbidden as Not Found), ADR-053 (Mobile Strategy — Dedicated Native App)
 
@@ -49,6 +49,33 @@ any authenticated client, and have the native client present it as an
   agnostic API (ADR-023): the backend does not sniff who is calling. The web keeps
   reading its HttpOnly cookie; the mobile client fetches the body token and holds
   it only in memory for the lifetime of the subscription.
+
+## Amendment, 28/09/2026 - Mercure 1.0 (#1298)
+
+The hub moved to protocol 1.0. The decision stands (one token, two delivery
+channels, header on mobile), but several details above describe the 0.x hub:
+
+- **The token is an RFC 9068 access token, not a hand-rolled HS256 JWT.**
+  `MercureTokenIssuer` no longer builds the claims itself: it asks the bundle's
+  token factory (`protocol_version: 1.0` in `api/config/packages/mercure.php`),
+  which mints `typ: at+jwt` with `iss`/`aud` and an `authorization_details` grant
+  instead of the `mercure.subscribe` claim. Scope (`/trips/{id}`) and TTL (1 h)
+  are unchanged.
+- **The cookie is `__Secure-mercure_access_token`**, not `mercureAuthorization`.
+  The `__Secure-` prefix is only accepted on a secure origin, so `withSecure(true)`
+  on the cookie is required, not defensive. It stays HttpOnly, `SameSite=Strict`,
+  path `/.well-known/mercure`.
+- **The hub trusts an `issuer` block, not `subscriber_jwt`.** The Caddyfile
+  declares `issuer {$MERCURE_ISSUER}` with `publisher` and `subscriber` keys; the
+  identifier must equal the `iss` the backend mints.
+- **`?authorization=` is gone as a fallback.** The 1.0 hub rejects an access token
+  in the query string (RFC 9700), so the `Authorization: Bearer` header is the only
+  channel besides the cookie. Caddy no longer has anything to redact: the access-log
+  filter on that parameter was removed.
+- **Subscriptions use `?match=`, not `?topic=`**: `?match=/trips/{id}` on both the
+  PWA and the mobile client.
+
+See [Mobile Mercure auth](../mobile-mercure-auth.md) for the current channel table.
 
 ## Consequences
 
