@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, PanResponder, Pressable, Text, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { Alert, Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,7 +38,7 @@ import type { MutationFailure } from '../../../src/store/gating';
 import { useTripStore } from '../../../src/store/trip-store';
 import { readTripCache } from '../../../src/store/trip-cache';
 import { formatFreshness } from '../../../src/lib/freshness';
-import { swipeToView } from '../../../src/lib/swipe';
+import { useSwipeTabs } from '../../../src/hooks/use-swipe-tabs';
 
 type TripView = 'roadbook' | 'map';
 
@@ -97,35 +97,13 @@ export default function TripRoadbook() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [view, setView] = useState<TripView>('roadbook');
-  // Mount TripMapView only once the Map tab is first opened, then keep it mounted
-  // (never re-mount). Gating the first mount preserves ADR-057's "route fetched
-  // only when the map is actually viewed" — TripMapView calls useTripRoute()
-  // unconditionally — while still avoiding the expensive native re-mount (#1176).
-  const [hasViewedMap, setHasViewedMap] = useState(view === 'map');
-  useEffect(() => {
-    if (view === 'map') setHasViewedMap(true);
-  }, [view]);
+  // TripMapView calls useTripRoute() unconditionally, so `hasViewedMap` gating its
+  // first mount is what keeps the route fetched only once the map is viewed.
+  const { view, setView, hasViewedMap, panHandlers } = useSwipeTabs();
   const [configOpen, setConfigOpen] = useState(false);
   const [configSection, setConfigSection] = useState<'dates' | undefined>(undefined);
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Horizontal swipe between the roadbook and map tabs, mirroring the segmented
-  // control. Claims only a decisive horizontal gesture so the roadbook's
-  // vertical scroll (and, over the native map, its own pan) keep working.
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, g) =>
-          Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
-        onPanResponderRelease: (_, g) => {
-          const next = swipeToView(g.dx);
-          if (next) setView(next);
-        },
-      }),
-    [],
-  );
 
   function openDatesConfig() {
     setConfigSection('dates');
@@ -270,7 +248,7 @@ export default function TripRoadbook() {
         ) : null}
       </View>
 
-      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <View style={{ flex: 1 }} {...panHandlers}>
         {/* Once opened, both tabs stay mounted (perf #1176): MapLibre's native
             view is expensive to tear down and recreate (GPU textures, tile
             cache), so swapping it out on every Roadbook<->Carte toggle re-pays
