@@ -1,0 +1,28 @@
+-- {{ ansible_managed }}
+-- Read-only role the app reads PG-reference with (ADR-060). Fed to psql on STDIN
+-- by shared_infra, never written to disk nor passed in argv: it carries the
+-- role's password. Idempotent: every run re-converges the role and its grants.
+\set ON_ERROR_STOP on
+\set ro_password '{{ vault_reference_ro_password | replace("\\", "\\\\") | replace("'", "\\'") }}'
+
+SELECT format('CREATE ROLE %I LOGIN', '{{ pg_reference_ro_user }}')
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ pg_reference_ro_user }}')
+\gexec
+ALTER ROLE "{{ pg_reference_ro_user }}" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'ro_password';
+
+-- Pre-created (owned by the provisioner's role) so the grants below have a
+-- target before the first zone is opened; reference_schema.sql uses
+-- CREATE SCHEMA IF NOT EXISTS and accepts them.
+CREATE SCHEMA IF NOT EXISTS osm AUTHORIZATION "{{ vault_reference_db_user }}";
+CREATE SCHEMA IF NOT EXISTS tourism AUTHORIZATION "{{ vault_reference_db_user }}";
+CREATE SCHEMA IF NOT EXISTS provisioner AUTHORIZATION "{{ vault_reference_db_user }}";
+
+-- osm + tourism are the only schemas api/src reads. provisioner (bookkeeping)
+-- and the per-zone *_staging_* schemas stay private to the owner.
+GRANT CONNECT ON DATABASE "{{ vault_reference_db_name }}" TO "{{ pg_reference_ro_user }}";
+GRANT USAGE ON SCHEMA osm, tourism TO "{{ pg_reference_ro_user }}";
+GRANT SELECT ON ALL TABLES IN SCHEMA osm, tourism TO "{{ pg_reference_ro_user }}";
+-- Tables the provisioner creates later (reference_schema.sql, promotion) are
+-- readable without re-running this: they are created by the owner, in these schemas.
+ALTER DEFAULT PRIVILEGES FOR ROLE "{{ vault_reference_db_user }}" IN SCHEMA osm, tourism
+  GRANT SELECT ON TABLES TO "{{ pg_reference_ro_user }}";

@@ -2,8 +2,8 @@
 # Shared PostGIS reference DB (split PG, deployment plan W2). Holds osm / tourism / provisioner
 # schemas, read by every app stack (prod + previews) over btp-shared as
 # `pg-reference`. Deployed by Ansible, NOT by any app stack or PaaS.
-# The read-only app role and the schema DDL are created during data
-# provisioning (plan W2); this only stands the server up.
+# shared_infra then creates the read-only app role (pg-reference-ro.sql.j2); the
+# schema DDL is applied by the provisioner, the only writer, before each import.
 services:
   pg-reference:
     image: {{ pg_reference_image }}

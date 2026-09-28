@@ -23,6 +23,48 @@
     project_name: "{{ pg_reference_project }}"
     state: present
 
+# Over TCP on purpose: on first boot the image's init server listens on the
+# socket only, so a socket probe would succeed and then race its restart.
+- name: Wait for PG-reference to accept connections
+  community.docker.docker_container_exec:
+    container: "{{ pg_reference_project }}-pg-reference-1"
+    argv:
+      - pg_isready
+      - -h
+      - 127.0.0.1
+      - -U
+      - "{{ vault_reference_db_user }}"
+      - -d
+      - "{{ vault_reference_db_name }}"
+  register: pg_reference_ready
+  until: pg_reference_ready.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+  failed_when: pg_reference_ready.rc != 0
+
+# The SQL, password included, goes in on STDIN: never argv (/proc/<pid>/cmdline
+# is world-readable, #1326) and never a file on the VM. no_log keeps it out of
+# the Ansible output too.
+- name: Converge the read-only app role on PG-reference
+  community.docker.docker_container_exec:
+    container: "{{ pg_reference_project }}-pg-reference-1"
+    argv:
+      - psql
+      - -v
+      - ON_ERROR_STOP=1
+      - -X
+      - -q
+      - -U
+      - "{{ vault_reference_db_user }}"
+      - -d
+      - "{{ vault_reference_db_name }}"
+    stdin: "{{ lookup('ansible.builtin.template', 'pg-reference-ro.sql.j2') }}"
+  register: pg_reference_ro
+  failed_when: pg_reference_ro.rc != 0
+  changed_when: false
+  no_log: true
+
 # --- Valhalla (shared, serve-only) — from the repo checkout (PR-A) -----------
 # Pre-create the tiles volume with the deterministic name the valhalla-shared
 # project uses, so we can seed it BEFORE the serve-only container starts (an

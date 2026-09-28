@@ -70,9 +70,10 @@ file, and the provisioner image of the release tag the checkout is on):
 `--profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M
 bin/events-refresh`, plus `--zone=<slug>` when `events_refresh_zone` is set.
 
-> **Do not enable the timer yet.** The provisioner has no route to the shared `pg-reference`
-> and no feed credentials in production (see the production status in
-> [zone-opening.md](zone-opening.md#procedure)).
+It writes to the shared `pg-reference` as its owner, with the feed credentials of the prod env
+file (see the production procedure in [zone-opening.md](zone-opening.md#procedure)). Enable
+the timer once at least one zone is open and a feed is configured: with none, a run has
+nothing to refresh.
 
 Verify a run (against the reference database):
 

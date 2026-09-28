@@ -63,6 +63,9 @@ valhalla_tiles_seed_force: false
 
 pg_reference_project: "pg-reference"
 pg_reference_image: "postgis/postgis:18-3.6-alpine"
+# Read-only role the app reads PG-reference with (SELECT on osm + tourism),
+# created by shared_infra. Its password is vault_reference_ro_password.
+pg_reference_ro_user: "reference_ro"
 
 # --- App runtime env (non-secret half of the prod env file) ------------------
 # SERVER_NAME / FRONTEND_URL / MERCURE_PUBLIC_URL / TRUSTED_HOSTS are NOT set
@@ -80,6 +83,9 @@ valhalla_base_uri: "http://valhalla:8002"
 mailer_sender_email: "noreply@bike-trip-planner.com"
 contact_email: "contact@bike-trip-planner.com"
 app_release: ""
+# OpenAgenda dataset slug of the Opendatasoft export (ADR-051); empty = the
+# OpenAgenda step of the provisioner is skipped.
+openagenda_dataset: ""
 # Android App Links (ADR-053), served by the pwa at /.well-known/assetlinks.json.
 # Public values, not secrets. The fingerprint is the PUBLIC Expo debug keystore's,
 # the one that signs the CI sideload APK: whoever holds that keystore can sign an

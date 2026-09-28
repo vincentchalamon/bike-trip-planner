@@ -51,8 +51,10 @@ For rotation, see [secrets-rotation.md](secrets-rotation.md).
 | `DATABASE_USERNAME` | PG-app user | `vault_database_username` -> `app.env` | `php`, `worker`, `database` | Static | ADR-022 |
 | `DATABASE_PASSWORD` | PG-app password | `vault_database_password` -> `app.env` | `php`, `worker`, `database` | Twice a year + on-compromise | ADR-022 |
 | `DATABASE_NAME` | PG-app database name | `vault_database_name` -> `app.env` | `php`, `worker`, `database` | Static | ADR-022 |
-| `REFERENCE_DATABASE_URL` | DSN of the read-only role on PG-reference (contains its password) | `vault_reference_database_url` -> `app.env` | `php`, `worker` | On-compromise | ADR-060 |
-| PG-reference superuser | User, password, database name | `vault_reference_db_user`, `vault_reference_db_password`, `vault_reference_db_name` -> `/opt/shared-infra/pg-reference/compose.yaml` | `pg-reference` | On-compromise | ADR-060 |
+| `REFERENCE_DATABASE_URL` | DSN of the read-only `reference_ro` role on PG-reference, derived by `env.j2` | `vault_reference_ro_password` -> `app.env` (DSN), and the role's password on PG-reference (`shared_infra`, fed to `psql` on STDIN) | `php`, `worker` | On-compromise (change it in Vault, re-run the playbook, then `dc up -d`) | ADR-060 |
+| PG-reference superuser | User, password, database name | `vault_reference_db_user`, `vault_reference_db_password`, `vault_reference_db_name` -> `/opt/shared-infra/pg-reference/compose.yaml`, and `app.env` as `REFERENCE_DB_OWNER_USER` / `REFERENCE_DB_OWNER_PASSWORD` / `REFERENCE_DB_NAME` | `pg-reference`, `provisioner` (the only writer) | On-compromise | ADR-060 |
+| `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` | DataTourisme flux credentials | `vault_datatourisme_flux_id`, `vault_datatourisme_app_key` -> `app.env` (empty = source skipped) | `provisioner` | On-compromise | ADR-040 |
+| `OPENAGENDA_API_KEY` | OpenAgenda key (optional, the public export needs none) | `vault_openagenda_api_key` -> `app.env` (empty = none) | `provisioner` | On-compromise | ADR-051 |
 | `SENTRY_DSN` | Error-tracking DSN (Sentry SaaS during the beta, ADR-039) | `vault_sentry_dsn` -> `app.env` | `php`, `worker`, `pwa` (server side) | On-compromise | ADR-031 |
 | `NEXT_PUBLIC_SENTRY_DSN` | Same, exposed to the browser bundle | `vault_next_public_sentry_dsn` -> `app.env`, and the GitHub secret of the same name (build arg) | `pwa` | Same as `SENTRY_DSN` | ADR-031 |
 | Cloudflare Tunnel credentials | Tunnel credentials JSON (`TunnelSecret`) | `vault_cloudflared_tunnel_credentials` -> `/etc/cloudflared/credentials.json` | `cloudflared` | On-compromise | ADR-061 |
@@ -63,20 +65,10 @@ For rotation, see [secrets-rotation.md](secrets-rotation.md).
 | OCI Object Storage keys | Customer Secret Key (S3-compatible) | `vault_oci_access_key_id`, `vault_oci_secret_access_key` (+ endpoint, region) -> `rclone.conf` | `btp-backup.service` (rclone, only if `oci` is in `backup_remotes`) | Yearly + on-compromise | ADR-062 |
 
 Non-secret runtime values (`DOMAIN`, `TRUSTED_PROXIES`, `VALHALLA_BASE_URI`,
-`MAILER_SENDER_EMAIL`, `CONTACT_EMAIL`, `ANDROID_APP_PACKAGE` /
+`MAILER_SENDER_EMAIL`, `CONTACT_EMAIL`, `OPENAGENDA_DATASET`, `ANDROID_APP_PACKAGE` /
 `ANDROID_SHA256_CERT_FINGERPRINTS`, the image repositories) live in
 `ansible/group_vars/all.yml`. The image tag is not configured anywhere: `btp-compose` takes
 it from the release tag the checkout is on.
-
-### Referenced by `compose.yaml` but not rendered by Ansible
-
-These are wired in `compose.yaml` but absent from `env.j2`, so they are **empty in
-production** today:
-
-| Name | Consumer | Effect when empty |
-|---|---|---|
-| `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` | `provisioner` | DataTourisme step skipped |
-| `OPENAGENDA_DATASET` / `OPENAGENDA_API_KEY` (key optional, public export) | `provisioner` | OpenAgenda step skipped |
 
 ## CI/CD secrets (consumed by GitHub Actions)
 
