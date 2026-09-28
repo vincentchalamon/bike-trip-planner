@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
+use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -445,7 +446,7 @@ final readonly class PlaceEnrichmentPass
      */
     private function decodeMatch(string $json): ?array
     {
-        $decoded = json_decode(str_replace(['\\t', '\\n', '\\r', '\\\\'], ["\t", "\n", "\r", '\\'], $json), true);
+        $decoded = json_decode($this->copyDecoded($json), true);
         if (!\is_array($decoded) || !isset($decoded['n']) || !is_numeric($decoded['n']) || 0 === (int) $decoded['n']) {
             return null;
         }
@@ -466,8 +467,7 @@ final readonly class PlaceEnrichmentPass
      */
     private function decodeTags(string $json): array
     {
-        // COPY escapes tabs and newlines inside the jsonb text; undo that before decoding.
-        $decoded = json_decode(str_replace(['\\t', '\\n', '\\r', '\\\\'], ["\t", "\n", "\r", '\\'], $json), true);
+        $decoded = json_decode($this->copyDecoded($json), true);
         if (!\is_array($decoded)) {
             return [];
         }
@@ -502,6 +502,16 @@ final readonly class PlaceEnrichmentPass
         ));
     }
 
+    /**
+     * Undoes COPY text escaping in one pass. Sequential replacements would re-read their own
+     * output: the `\\n` COPY writes for a JSON `\n` escape would become a backslash and a real
+     * line feed, i.e. invalid JSON.
+     */
+    private function copyDecoded(string $value): string
+    {
+        return strtr($value, ['\\\\' => '\\', '\\t' => "\t", '\\n' => "\n", '\\r' => "\r"]);
+    }
+
     private function copyValue(string $value): string
     {
         return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $value);
@@ -524,6 +534,8 @@ final readonly class PlaceEnrichmentPass
             $process->run();
         } catch (ProcessTimedOutException $processTimedOutException) {
             throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
+        } catch (ProcessExceptionInterface $processException) {
+            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
         }
 
         if (!$process->isSuccessful()) {

@@ -7,6 +7,7 @@ namespace Provisioner;
 use Provisioner\Exception\ImportFailedException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\ScopingHttpClient;
+use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
@@ -375,6 +376,8 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
             $process->run();
         } catch (ProcessTimedOutException $processTimedOutException) {
             throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
+        } catch (ProcessExceptionInterface $processException) {
+            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
         }
 
         if (!$process->isSuccessful()) {

@@ -599,8 +599,8 @@ final class DataTourismeMapper
     private function dates(array $object): array
     {
         return [
-            $this->firstString($object['schema:startDate'] ?? null),
-            $this->firstString($object['schema:endDate'] ?? null),
+            EventDate::normalize($this->firstString($object['schema:startDate'] ?? null)),
+            EventDate::normalize($this->firstString($object['schema:endDate'] ?? null)),
         ];
     }
 

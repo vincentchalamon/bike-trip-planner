@@ -75,6 +75,18 @@ final class OpenAgendaMapperTest extends TestCase
     }
 
     #[Test]
+    public function normalisesTheCanonicalUrlLikeEveryOtherImportedLink(): void
+    {
+        // The rider opens this link from the app: a non-http(s) scheme must never be stored.
+        self::assertNull($this->mapper->map($this->record(['canonicalurl' => 'javascript:alert(1)'])));
+        self::assertNull($this->mapper->map($this->record(['canonicalurl' => 'voir le site'])));
+
+        $row = $this->mapper->map($this->record(['canonicalurl' => 'openagenda.com/events/e-42']));
+        self::assertNotNull($row);
+        self::assertSame('https://openagenda.com/events/e-42', $row['url']);
+    }
+
+    #[Test]
     public function dropsARecordWithoutAUsableDateRange(): void
     {
         $noStart = $this->record();
@@ -84,6 +96,13 @@ final class OpenAgendaMapperTest extends TestCase
         $noEnd = $this->record();
         unset($noEnd['lastdate_end']);
         self::assertNull($this->mapper->map($noEnd));
+    }
+
+    #[Test]
+    public function dropsARecordWhoseDateIsNotOnTheCalendar(): void
+    {
+        // Shaped like a date, refused by the `date` column: it would abort the whole \copy.
+        self::assertNull($this->mapper->map($this->record(['lastdate_end' => '2026-02-30T23:00:00+01:00'])));
     }
 
     #[Test]

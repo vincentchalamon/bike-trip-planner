@@ -329,6 +329,54 @@ final class PlaceEnrichmentPassTest extends TestCase
     }
 
     #[Test]
+    public function aMultiLineCuratedDescriptionDoesNotLoseTheMatch(): void
+    {
+        // jsonb renders a line break as the JSON escape `\n`, and COPY text then doubles its
+        // backslash: the export line carries `\\n`. Undoing the two escapes out of order turned
+        // that into a backslash and a real line feed, i.e. invalid JSON, and the match vanished.
+        $match = json_encode([
+            'n' => 1,
+            'id' => 'FR-456',
+            'name' => 'Gite des Tilleuls',
+            'description' => "Premiere ligne\nSeconde ligne\tet \"guillemets\" \\ fin",
+            'distance_m' => 8.0,
+        ], \JSON_THROW_ON_ERROR);
+        $tags = json_encode(['operator' => "Commune\nde Jongieux"], \JSON_THROW_ON_ERROR);
+
+        $counts = $this->pass([
+            "N/1\tguest_house\t".$this->copyEscaped($tags)."\t\tSarlat\t".$this->copyEscaped($match),
+        ], matchTable: 'tourism_staging_bretagne.accommodations')
+            ->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertSame(1, $counts['matched']);
+        $copy = (string) file_get_contents($this->workDir.'/place-resolved.copy');
+        self::assertStringContainsString('Gite des Tilleuls', $copy);
+        self::assertStringContainsString('FR-456', $copy);
+    }
+
+    #[Test]
+    public function aMultiLineTagSurvivesTheCopyRoundTrip(): void
+    {
+        $tags = json_encode(['operator' => "Commune\nde Jongieux"], \JSON_THROW_ON_ERROR);
+
+        $counts = $this->pass([
+            "N/1\tcamp_site\t".$this->copyEscaped($tags)."\t\tJongieux\t{}",
+        ])->run($this->workDir, 'osm_staging_bretagne', 'accommodations');
+
+        self::assertSame(1, $counts['resolved']);
+        self::assertStringContainsString('Jongieux', (string) file_get_contents($this->workDir.'/place-resolved.copy'));
+    }
+
+    /**
+     * What `\copy ... TO` in text format writes for a value: backslash first, then the
+     * control characters.
+     */
+    private function copyEscaped(string $value): string
+    {
+        return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $value);
+    }
+
+    #[Test]
     public function refusesRatherThanChoosingBetweenTwoCandidates(): void
     {
         // Two neighbouring campsites, or a hotel and its restaurant at one address. Nothing

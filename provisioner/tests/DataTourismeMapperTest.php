@@ -160,6 +160,29 @@ final class DataTourismeMapperTest extends TestCase
     }
 
     #[Test]
+    public function normalisesEventDatesTheWayTheDateColumnAcceptsThem(): void
+    {
+        // One value the `date` column refuses would abort the whole \copy of the flux.
+        $row = $this->mapper->map($this->object(
+            ['schema:Event', 'EntertainmentAndEvent', 'CulturalEvent', 'Festival'],
+            ['schema:startDate' => ['2026-09-26T10:00:00+02:00'], 'schema:endDate' => ['prochainement']],
+        ));
+
+        self::assertNotNull($row);
+        self::assertSame('2026-09-26', $row['startDate']);
+        self::assertNull($row['endDate']);
+
+        $impossible = $this->mapper->map($this->object(
+            ['schema:Event', 'EntertainmentAndEvent', 'CulturalEvent', 'Festival'],
+            ['schema:startDate' => ['2026-02-30'], 'schema:endDate' => ['2026-02-31']],
+        ));
+
+        self::assertNotNull($impossible);
+        self::assertNull($impossible['startDate']);
+        self::assertNull($impossible['endDate']);
+    }
+
+    #[Test]
     public function classifiesEventBeforePlaceWhenBothTypesPresent(): void
     {
         // An event venue can also carry place types; the event head wins.

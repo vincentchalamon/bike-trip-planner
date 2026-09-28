@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
+use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -127,6 +128,8 @@ final readonly class RoutingPerimeter
             $process->run();
         } catch (ProcessTimedOutException $processTimedOutException) {
             throw new ImportFailedException(\sprintf('psql record routing perimeter timed out after %.1fs', $this->timeoutSeconds), 0, $processTimedOutException);
+        } catch (ProcessExceptionInterface $processException) {
+            throw new ImportFailedException(\sprintf('psql record routing perimeter failed: %s', $processException->getMessage()), 0, $processException);
         }
 
         if (!$process->isSuccessful()) {

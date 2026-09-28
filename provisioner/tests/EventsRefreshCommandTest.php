@@ -137,6 +137,7 @@ final class EventsRefreshCommandTest extends TestCase
         array $zones,
         ?DataTourismeImporter $dataTourisme = null,
         ?OpenAgendaImporter $openAgenda = null,
+        ?\Closure $processFactory = null,
     ): CommandTester {
         $command = new EventsRefreshCommand(
             dataTourismeDir: $this->tmpDir.'/datatourisme',
@@ -146,7 +147,7 @@ final class EventsRefreshCommandTest extends TestCase
             workDir: $this->tmpDir.'/work',
             lockFile: $this->tmpDir.'/provision.lock',
             logFile: $this->tmpDir.'/provisioner.log',
-            processFactory: $this->zoneDiscoveryFactory($zones),
+            processFactory: $processFactory ?? $this->zoneDiscoveryFactory($zones),
             today: '2026-07-15',
         );
 
@@ -247,6 +248,23 @@ final class EventsRefreshCommandTest extends TestCase
 
         self::assertSame(0, $tester->execute([], ['interactive' => false]), $tester->getDisplay());
         self::assertStringContainsString('No open zone to refresh', $tester->getDisplay());
+        self::assertSame([], $this->dtCommands);
+    }
+
+    #[Test]
+    public function anUnreadableRegistryFailsRatherThanReportingNoOpenZone(): void
+    {
+        // A database that is down must not read as "nothing is open": the weekly job would
+        // report success while refreshing nothing.
+        $tester = $this->tester(
+            [],
+            $this->dataTourismeImporter(),
+            processFactory: static fn (array $command): Process => new Process(['sh', '-c', 'echo "connection refused" >&2; exit 2']),
+        );
+
+        self::assertSame(1, $tester->execute([], ['interactive' => false]), $tester->getDisplay());
+        self::assertStringNotContainsString('No open zone to refresh', $tester->getDisplay());
+        self::assertStringContainsString('connection refused', (string) file_get_contents($this->tmpDir.'/provisioner.log'));
         self::assertSame([], $this->dtCommands);
     }
 

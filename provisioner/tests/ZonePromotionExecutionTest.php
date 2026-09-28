@@ -45,6 +45,19 @@ final class ZonePromotionExecutionTest extends TestCase
      */
     private ?array $psql = null;
 
+    /**
+     * CI provisions PostGIS for this test, so an unreachable database there is a broken
+     * setup to surface, not a missing local tool to skip past.
+     */
+    private function skipUnlessRequired(string $reason): never
+    {
+        if (false !== getenv('CI')) {
+            self::fail($reason);
+        }
+
+        self::markTestSkipped($reason);
+    }
+
     protected function setUp(): void
     {
         [$host, $port, $database, $user, $password] = $this->credentials();
@@ -54,7 +67,7 @@ final class ZonePromotionExecutionTest extends TestCase
                 $this->pdo = new \PDO(\sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, $port, $database), $user, $password);
                 $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             } catch (\PDOException $pdoException) {
-                self::markTestSkipped(\sprintf('no reachable PostgreSQL: %s', $pdoException->getMessage()));
+                $this->skipUnlessRequired(\sprintf('no reachable PostgreSQL: %s', $pdoException->getMessage()));
             }
         } elseif (null !== $this->psqlBinary()) {
             putenv('PGPASSWORD='.$password);
@@ -65,10 +78,10 @@ final class ZonePromotionExecutionTest extends TestCase
                 // Reset before skipping, or tearDown() would try to clean up through a
                 // connection that was just proven unusable and turn the skip into an error.
                 $this->psql = null;
-                self::markTestSkipped(\sprintf('no reachable PostgreSQL: %s', $runtimeException->getMessage()));
+                $this->skipUnlessRequired(\sprintf('no reachable PostgreSQL: %s', $runtimeException->getMessage()));
             }
         } else {
-            self::markTestSkipped('neither pdo_pgsql nor the psql binary is available');
+            $this->skipUnlessRequired('neither pdo_pgsql nor the psql binary is available');
         }
 
         $this->exec(\sprintf('DROP SCHEMA IF EXISTS %s, %s CASCADE', self::LIVE, self::STAGING));
@@ -164,7 +177,9 @@ final class ZonePromotionExecutionTest extends TestCase
         \assert(null !== $this->psql);
         [$host, $port, $database, $user] = $this->psql;
 
-        $process = new Process(array_merge([$this->psqlBinary() ?? 'psql', '-h', $host, '-p', $port, '-d', $database, '-U', $user], $arguments));
+        // Explicit: Process forwards only the variables also in $_SERVER, so the putenv() of
+        // setUp() alone never reaches psql.
+        $process = new Process(array_merge([$this->psqlBinary() ?? 'psql', '-h', $host, '-p', $port, '-d', $database, '-U', $user], $arguments), null, ['PGPASSWORD' => (string) getenv('PGPASSWORD')]);
         $process->setTimeout(60.0);
         $process->run();
 

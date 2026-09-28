@@ -14,7 +14,8 @@ namespace Provisioner;
  * than later:
  *
  * - **A link is mandatory.** An event a rider cannot open is noise (ADR-051); a
- *   record without a `canonicalurl` is skipped, mirroring the DataTourisme mapper.
+ *   record without a usable `canonicalurl` is skipped, mirroring the DataTourisme mapper;
+ *   the link goes through {@see WebsiteUrl}, like every DataTourisme link.
  * - **A usable date range is mandatory.** The events read path matches
  *   `start_date <= day <= end_date`; an undated record can never match a stage day.
  *
@@ -76,7 +77,7 @@ final class OpenAgendaMapper
      */
     public function map(array $record): ?array
     {
-        $url = $this->firstString($record['canonicalurl'] ?? null);
+        $url = WebsiteUrl::normalize($this->firstString($record['canonicalurl'] ?? null));
         if (null === $url) {
             return null;
         }
@@ -214,9 +215,7 @@ final class OpenAgendaMapper
     /** Date part (YYYY-MM-DD) of an ISO date or datetime ("2026-07-01T18:00:00+02:00" → "2026-07-01"). */
     private function date(mixed $value): ?string
     {
-        $string = $this->firstString($value);
-
-        return null !== $string && 1 === preg_match('/^(\d{4}-\d{2}-\d{2})/', $string, $matches) ? $matches[1] : null;
+        return EventDate::normalize($this->firstString($value));
     }
 
     private function normalize(string $value): string
