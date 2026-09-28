@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Accommodation;
 
+use App\OpeningHours\OpeningHoursGrammar;
+use App\OpeningHours\SelectorKind;
+
 /**
  * Determines seasonality of an OSM accommodation from its tags.
  *
@@ -14,13 +17,6 @@ namespace App\Accommodation;
  */
 final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
 {
-    /** @var array<string, int> */
-    private const array MONTH_MAP = [
-        'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4,
-        'may' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
-        'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
-    ];
-
     /** Months considered "winter off-season" when seasonal=yes has no opening_hours. */
     private const array WINTER_MONTHS = [11, 12, 1, 2, 3];
 
@@ -42,41 +38,34 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
     }
 
     /**
-     * Parses simplified opening_hours strings of the form "Mmm-Mmm", optionally
-     * followed by time spans only.
-     *
-     * Examples handled: "Apr-Oct", "May-Sep", "Apr-Oct 10:00-20:00", "Jun-Sep; Mo off".
-     * Returns null when the pattern is not recognised — including a season
-     * followed by anything but spans ("Apr-Oct 10:00-18:00, Nov-Mar 10:00-12:00"
-     * says more than one season).
+     * Reads a first rule made of a month range alone, optionally followed by time
+     * spans ("Apr-Oct", "Oct-Mar", "Apr-Oct 10:00-20:00", "Jun-Sep; Mo off"), over
+     * the shared {@see OpeningHoursGrammar}. Anything else is null: a season
+     * followed by more than spans ("Apr-Oct 10:00-18:00, Nov-Mar 10:00-12:00")
+     * says more than one season.
      */
     private function parseOpeningHours(string $openingHours, \DateTimeImmutable $date): ?bool
     {
-        $rules = array_filter(array_map(trim(...), explode(';', $openingHours)), static fn (string $rule): bool => '' !== $rule);
-        $rule = array_first($rules) ?? '';
-        $span = '\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}';
+        $rule = OpeningHoursGrammar::parse($openingHours)->rules[0] ?? null;
 
-        if (!preg_match('/^([A-Za-z]{3})-([A-Za-z]{3})(?:\s+'.$span.'(?:[\s,]+'.$span.')*)?$/', $rule, $matches)) {
+        if (null === $rule || null !== $rule->modifier || null === $rule->selector || 1 !== \count($rule->selector)) {
             return null;
         }
 
-        $fromKey = strtolower($matches[1]);
-        $toKey = strtolower($matches[2]);
+        $season = $rule->selector[0];
 
-        if (!isset(self::MONTH_MAP[$fromKey], self::MONTH_MAP[$toKey])) {
+        if (SelectorKind::MONTH_RANGE !== $season->kind) {
             return null;
         }
 
-        $from = self::MONTH_MAP[$fromKey];
-        $to = self::MONTH_MAP[$toKey];
         $month = (int) $date->format('n');
 
-        if ($from <= $to) {
+        if ($season->from <= $season->to) {
             // e.g. Apr(4)-Oct(10): contiguous range within a calendar year
-            return $month >= $from && $month <= $to;
+            return $month >= $season->from && $month <= $season->to;
         }
 
         // e.g. Oct(10)-Mar(3): wraps across the year boundary
-        return $month >= $from || $month <= $to;
+        return $month >= $season->from || $month <= $season->to;
     }
 }

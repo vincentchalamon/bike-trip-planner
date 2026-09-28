@@ -78,6 +78,20 @@ final class OpeningHoursGrammarTest extends TestCase
     }
 
     #[Test]
+    public function readsAMonthRange(): void
+    {
+        $selector = OpeningHoursGrammar::parse('oct-Mar 10:00-12:00')->rules[0]->selector;
+
+        self::assertNotNull($selector);
+        self::assertSame(SelectorKind::MONTH_RANGE, $selector[0]->kind);
+        self::assertSame([10, 3], [$selector[0]->from, $selector[0]->to]);
+
+        $unknownMonth = OpeningHoursGrammar::parse('Apr-Foo')->rules[0]->selector;
+        self::assertNotNull($unknownMonth);
+        self::assertSame(SelectorKind::UNKNOWN, $unknownMonth[0]->kind);
+    }
+
+    #[Test]
     public function aTimePartThatIsNotSpansStaysInTheSelector(): void
     {
         $rule = OpeningHoursGrammar::parse('Mo-Fr 09:00+')->rules[0];

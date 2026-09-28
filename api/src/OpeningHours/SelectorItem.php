@@ -14,8 +14,8 @@ namespace App\OpeningHours;
 final readonly class SelectorItem
 {
     /**
-     * @param int $from first weekday (1 = Monday) for WEEKDAYS, month for MONTH_DAY
-     * @param int $to   last weekday for WEEKDAYS, day of the month for MONTH_DAY
+     * @param int $from first weekday (1 = Monday) for WEEKDAYS, (first) month for MONTH_DAY and MONTH_RANGE
+     * @param int $to   last weekday for WEEKDAYS, day of the month for MONTH_DAY, last month for MONTH_RANGE
      */
     private function __construct(
         public SelectorKind $kind,
@@ -38,6 +38,11 @@ final readonly class SelectorItem
     public static function monthDay(int $month, int $day): self
     {
         return new self(SelectorKind::MONTH_DAY, true, $month, $day);
+    }
+
+    public static function monthRange(int $from, int $to): self
+    {
+        return new self(SelectorKind::MONTH_RANGE, true, $from, $to);
     }
 
     public static function empty(): self
