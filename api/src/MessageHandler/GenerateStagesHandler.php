@@ -28,20 +28,20 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private StructuralComputationService $structuralComputation,
         private TripAnalysisDispatcher $analysisDispatcher,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(GenerateStages $message): void
     {
         $tripId = $message->tripId;
         $generation = $message->generation;
-        $request = $this->tripStateManager->getRequest($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
 
         if (!$request instanceof TripRequest) {
             return;
@@ -54,13 +54,13 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
             }
 
-            $this->tripStateManager->storeStages($tripId, $stages);
+            $this->tripRequestRepository->storeStages($tripId, $stages);
 
             // ADR-043: structural readiness is reached as soon as the stages are
             // persisted — independently of the terminal enrichment gate, so a trip
             // without dates (weather/calendar never settle) still becomes `ready`.
             if (\count($stages) >= TripStatus::MIN_STAGES) {
-                $this->tripStateManager->storeStatus($tripId, TripStatus::READY->value);
+                $this->tripRequestRepository->storeStatus($tripId, TripStatus::READY->value);
             }
 
             $this->publisher->publish(

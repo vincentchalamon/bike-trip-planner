@@ -43,19 +43,19 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private RailwayStationRepositoryInterface $railwayStationRepository,
         private GeoDistanceInterface $haversine,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckRailwayStations $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages) {
             return;
@@ -68,7 +68,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             if ([] === $endPoints) {
                 // Nothing found is a result, not an absence of one: the group is cleared so a
                 // previous run's alerts do not survive as stale.
-                $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::RAILWAY_STATION, []);
+                $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::RAILWAY_STATION, []);
                 $this->publisher->publish($tripId, MercureEventType::RAILWAY_STATION_ALERTS, ['alerts' => []]);
 
                 return;
@@ -122,7 +122,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::RAILWAY_STATION, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::RAILWAY_STATION, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::RAILWAY_STATION_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

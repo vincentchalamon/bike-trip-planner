@@ -56,25 +56,25 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(CheckCalendar $message): void
     {
         $tripId = $message->tripId;
-        $request = $this->tripStateManager->getRequest($tripId);
-        $stages = $this->tripStateManager->getStages($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (!$request instanceof TripRequest || null === $stages) {
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages, $locale): void {
             $startDate = $request->startDate ?? new \DateTimeImmutable('today');
@@ -108,7 +108,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             // Same array to the database and to the wire (ADR-068): grouped by the stage
             // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
             // second is renumbered by every structural edit and is derived on read.
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, $this->groupByStage($alerts));
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, $this->groupByStage($alerts));
 
             $this->publisher->publish($tripId, MercureEventType::CALENDAR_ALERTS, [
                 'alerts' => $this->renderForWire($tripId, $alerts),

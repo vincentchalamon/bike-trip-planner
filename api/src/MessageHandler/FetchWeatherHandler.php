@@ -41,7 +41,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
         private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
@@ -52,21 +52,21 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         AlertRenderer $alertRenderer,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(FetchWeather $message): void
     {
         $tripId = $message->tripId;
         $generation = $message->generation;
-        $request = $this->tripStateManager->getRequest($tripId);
-        $stages = $this->tripStateManager->getStages($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (!$request instanceof TripRequest || null === $stages) {
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $request, $stages, $locale, $generation): void {
             $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
@@ -173,7 +173,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             // slower sibling handler (pois/terrain) re-writing the whole collection
             // can no longer wipe it (recette #649).
             foreach ($stages as $stage) {
-                $this->tripStateManager->updateStageWeather($tripId, $stage->id, $stage->weather);
+                $this->tripRequestRepository->updateStageWeather($tripId, $stage->id, $stage->weather);
             }
 
             $this->publisher->publish($tripId, MercureEventType::WEATHER_FETCHED, [
