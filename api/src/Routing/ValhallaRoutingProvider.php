@@ -26,12 +26,12 @@ final readonly class ValhallaRoutingProvider implements RoutingProviderInterface
 
         return $this->cache->get($cacheKey, function (ItemInterface $item) use ($from, $to, $via): RoutingResult {
             $locations = [
-                ['lat' => $from->lat, 'lon' => $from->lon],
+                $from->toLatLon(),
                 ...array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    static fn (Coordinate $c): array => $c->toLatLon(),
                     $via,
                 ),
-                ['lat' => $to->lat, 'lon' => $to->lon],
+                $to->toLatLon(),
             ];
 
             $response = $this->httpClient->request('POST', '/route', [

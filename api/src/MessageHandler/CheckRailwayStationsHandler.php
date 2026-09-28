@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
@@ -80,7 +81,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             }
 
             // Read railway stations from the local-first index near the stage endpoints (ADR-040).
-            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $endPoints);
+            $route = array_map(static fn (Coordinate $point): array => $point->toLatLon(), $endPoints);
 
             $stationLocations = [];
             foreach ($this->railwayStationRepository->findInCorridor($route, self::STATION_PROXIMITY_METERS) as $station) {
@@ -94,12 +95,15 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                     continue;
                 }
 
-                if ($this->hasNearbyStation($stage, $stationLocations)) {
+                if (
+                    Nearest::anyWithin($this->haversine, $stage->startPoint, $stationLocations, self::STATION_PROXIMITY_METERS)
+                    || Nearest::anyWithin($this->haversine, $stage->endPoint, $stationLocations, self::STATION_PROXIMITY_METERS)
+                ) {
                     continue;
                 }
 
                 // Find the nearest station across the entire trip for navigation
-                $nearestStation = $this->findNearestStation($stage->endPoint, $stationLocations);
+                $nearestStation = Nearest::to($this->haversine, $stage->endPoint, $stationLocations);
 
                 $alerts[] = AlertPayload::forStage($stage, new Alert(
                     code: AlertCode::RAILWAY_STATION_NONE_NEARBY,
@@ -146,51 +150,5 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
         }
 
         return $points;
-    }
-
-    /**
-     * Checks whether a station is within proximity of either endpoint of the stage.
-     *
-     * @param list<array{lat: float, lon: float}> $stationLocations
-     */
-    private function hasNearbyStation(Stage $stage, array $stationLocations): bool
-    {
-        foreach ($stationLocations as $station) {
-            $distToStart = $this->haversine->inMeters($stage->startPoint->lat, $stage->startPoint->lon, $station['lat'], $station['lon']);
-            $distToEnd = $this->haversine->inMeters($stage->endPoint->lat, $stage->endPoint->lon, $station['lat'], $station['lon']);
-
-            if ($distToStart < self::STATION_PROXIMITY_METERS || $distToEnd < self::STATION_PROXIMITY_METERS) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Finds the nearest station to a given point across all discovered stations.
-     *
-     * @param list<array{lat: float, lon: float}> $stationLocations
-     *
-     * @return array{lat: float, lon: float}|null
-     */
-    private function findNearestStation(Coordinate $point, array $stationLocations): ?array
-    {
-        if ([] === $stationLocations) {
-            return null;
-        }
-
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = null;
-
-        foreach ($stationLocations as $station) {
-            $dist = $this->haversine->inMeters($point->lat, $point->lon, $station['lat'], $station['lon']);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearest = $station;
-            }
-        }
-
-        return $nearest;
     }
 }

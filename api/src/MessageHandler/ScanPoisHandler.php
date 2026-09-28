@@ -7,7 +7,6 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
-use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
@@ -93,15 +92,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed, $startDate): void {
             // Decode the route corridor from the decimated points (fallback: stage geometry).
-            $decimatedData = $this->points->getDecimatedPoints($tripId);
-            $allPoints = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_merge(...array_map(
-                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                    $stages,
-                ));
-
-            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $allPoints);
+            $route = $this->routeCorridor($this->points, $tripId, $stages);
 
             // Read POIs and real drinking-water points from the local-first index along the
             // route corridor (ADR-040), then distribute them to stages by geometry. POIs come

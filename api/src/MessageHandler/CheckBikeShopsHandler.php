@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
@@ -82,15 +81,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             }
 
             // Read bike shops from the local-first index along the route corridor (ADR-040).
-            $decimatedData = $this->points->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_merge(...array_map(
-                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                    $stages,
-                ));
-
-            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
+            $route = $this->routeCorridor($this->points, $tripId, $stages);
 
             // Parse bike shop locations, distinguishing repair shops from sale-only shops
             $repairShopLocations = [];
@@ -111,16 +102,14 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     continue;
                 }
 
-                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-                $midpoint = $geometry[(int) (\count($geometry) / 2)];
-                $hasNearbyRepair = array_any($repairShopLocations, fn (array $shop): bool => $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS);
+                $midpoint = $stage->midpoint();
 
-                if ($hasNearbyRepair) {
+                if (Nearest::anyWithin($this->haversine, $midpoint, $repairShopLocations, self::BIKE_SHOP_PROXIMITY_METERS)) {
                     continue;
                 }
 
                 $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
-                $nearestShop = $this->findNearestShop($midpoint, $allShops);
+                $nearestShop = Nearest::to($this->haversine, $midpoint, $allShops);
                 $stagesWithoutBikeShop[] = AlertPayload::forStage($stage, new Alert(
                     code: AlertCode::BIKE_SHOP_NONE_NEARBY,
                     type: AlertType::NUDGE,
@@ -140,32 +129,5 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 'alerts' => $this->renderForWire($tripId, $stagesWithoutBikeShop),
             ]);
         });
-    }
-
-    /**
-     * Finds the nearest bike shop to a given midpoint.
-     *
-     * @param list<array{lat: float, lon: float}> $shops
-     *
-     * @return array{lat: float, lon: float}|null
-     */
-    private function findNearestShop(Coordinate $midpoint, array $shops): ?array
-    {
-        if ([] === $shops) {
-            return null;
-        }
-
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = null;
-
-        foreach ($shops as $shop) {
-            $dist = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearest = $shop;
-            }
-        }
-
-        return $nearest;
     }
 }

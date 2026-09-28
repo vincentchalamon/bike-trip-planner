@@ -32,37 +32,6 @@ final readonly class WaterPointRepository implements WaterPointRepositoryInterfa
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
-        if ([] === $route) {
-            return [];
-        }
-
-        /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->referenceConnection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
-                FROM osm.water_points
-                WHERE ST_DWithin(
-                    geom::geography,
-                    ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                    :radius
-                )
-                SQL,
-            [
-                'wkt' => WktGeometry::lineStringOrPoint($route),
-                'radius' => $radiusMeters,
-            ],
-        );
-
-        $waterPoints = [];
-        foreach ($rows as $row) {
-            $waterPoints[] = [
-                'name' => null !== $row['name'] ? (string) $row['name'] : null,
-                'category' => (string) $row['category'],
-                'lat' => (float) $row['lat'],
-                'lon' => (float) $row['lon'],
-            ];
-        }
-
-        return $waterPoints;
+        return new CorridorPointQuery($this->referenceConnection, CorridorPointTable::WATER_POINTS)->find($route, $radiusMeters);
     }
 }

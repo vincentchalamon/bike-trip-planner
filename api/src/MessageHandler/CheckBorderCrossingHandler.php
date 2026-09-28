@@ -119,7 +119,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                     parameterFormats: ['%country%' => AlertParameterFormat::COUNTRY->value],
                     lat: $crossingPoint->lat,
                     lon: $crossingPoint->lon,
-                    action: new AlertAction(AlertActionKind::NAVIGATE, 'alert.border_crossing.action', ['lat' => $crossingPoint->lat, 'lon' => $crossingPoint->lon]),
+                    action: new AlertAction(AlertActionKind::NAVIGATE, 'alert.border_crossing.action', $crossingPoint->toLatLon()),
                 ));
             }
 

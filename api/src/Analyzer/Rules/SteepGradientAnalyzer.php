@@ -113,7 +113,7 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
             action: new AlertAction(
                 kind: AlertActionKind::NAVIGATE,
                 labelKey: 'alert.steep_gradient.action',
-                payload: ['lat' => $start->lat, 'lon' => $start->lon],
+                payload: $start->toLatLon(),
             ),
         );
     }

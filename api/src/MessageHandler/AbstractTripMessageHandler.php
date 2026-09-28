@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Alert\AlertRenderer;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Service\TripCompletionGate;
@@ -64,6 +67,27 @@ abstract readonly class AbstractTripMessageHandler
         }
 
         return $grouped;
+    }
+
+    /**
+     * The route line a corridor query runs along: the trip's decimated points, or the
+     * stages' own geometry (start-end for a stage without one) once those have expired.
+     *
+     * @param list<Stage> $stages
+     *
+     * @return list<array{lat: float, lon: float}>
+     */
+    protected function routeCorridor(TransientTripPointsStoreInterface $points, string $tripId, array $stages): array
+    {
+        $decimated = $points->getDecimatedPoints($tripId);
+        $line = null !== $decimated
+            ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimated)
+            : array_merge(...array_map(
+                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
+                $stages,
+            ));
+
+        return array_map(static fn (Coordinate $point): array => $point->toLatLon(), $line);
     }
 
     /**

@@ -33,7 +33,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
         $points = array_map(
-            static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
+            static fn (Coordinate $point): array => $point->toLatLon(),
             array_values($endPoints),
         );
 

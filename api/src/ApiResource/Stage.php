@@ -496,4 +496,14 @@ final class Stage
     {
         $this->events[] = $event;
     }
+
+    /**
+     * The middle vertex of the stage line, or of start-end when the stage has no geometry.
+     */
+    public function midpoint(): Coordinate
+    {
+        $geometry = $this->geometry ?: [$this->startPoint, $this->endPoint];
+
+        return $geometry[(int) (\count($geometry) / 2)];
+    }
 }

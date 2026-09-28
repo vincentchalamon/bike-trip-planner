@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Poi;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\Coordinate;
 use App\Geo\GeoDistanceInterface;
 
@@ -50,18 +51,7 @@ final readonly class SupplyTimelineBuilder
      */
     public function findNearestGeometryIndex(array $geometry, float $lat, float $lon): int
     {
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = 0;
-
-        foreach ($geometry as $i => $point) {
-            $dist = $this->haversine->inMeters($point->lat, $point->lon, $lat, $lon);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearest = $i;
-            }
-        }
-
-        return $nearest;
+        return Nearest::vertexIndex($this->haversine, $geometry, $lat, $lon);
     }
 
     /**

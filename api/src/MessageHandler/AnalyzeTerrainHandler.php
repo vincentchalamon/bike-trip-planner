@@ -7,7 +7,6 @@ namespace App\MessageHandler;
 use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\Analyzer\AnalyzerRegistryInterface;
-use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -126,15 +125,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
      */
     private function fetchOsmWaysByStage(string $tripId, array $stages): array
     {
-        $decimatedData = $this->points->getDecimatedPoints($tripId);
-        $points = null !== $decimatedData
-            ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-            : array_merge(...array_map(
-                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                $stages,
-            ));
-
-        $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
+        $route = $this->routeCorridor($this->points, $tripId, $stages);
 
         $ways = $this->waysRepository->findInCorridor($route, self::WAYS_CORRIDOR_RADIUS_METERS);
 

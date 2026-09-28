@@ -106,7 +106,7 @@ final readonly class GeometryBasedDistributor implements GeometryDistributorInte
             $result[$i] = [];
             $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
             $stageGeometries[$i] = array_map(
-                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                static fn (Coordinate $c): array => $c->toLatLon(),
                 $geometry,
             );
         }
