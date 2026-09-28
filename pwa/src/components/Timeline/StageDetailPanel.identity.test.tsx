@@ -58,8 +58,6 @@ function stage(id: string, dayNumber: number): StageData {
   };
 }
 
-const noop = () => {};
-
 function panel(stages: StageData[]) {
   return (
     <StageDetailPanel
@@ -67,10 +65,6 @@ function panel(stages: StageData[]) {
       selectedIndex={0}
       startDate={null}
       readOnly
-      onDeleteStage={noop}
-      onSubmitManualAccommodation={() => Promise.resolve(false)}
-      onUpdateAccommodation={noop}
-      onRemoveAccommodation={noop}
     />
   );
 }

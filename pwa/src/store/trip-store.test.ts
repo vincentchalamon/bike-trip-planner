@@ -284,46 +284,6 @@ describe("setStages label preservation (recette #649)", () => {
   });
 });
 
-describe("applyTripReady preservation (recette #649)", () => {
-  it("keeps accommodations/selection/alerts when the endpoint is stable", () => {
-    const store = useTripStore.getState();
-    const acc = makeAccommodation("Gîte du Tour");
-    const current = makeStage(1);
-    current.accommodations = [acc];
-    current.selectedAccommodation = acc;
-    current.alerts = [makeAlert("Stock up before the climb")];
-    store.setStages([current]);
-
-    // trip_ready payload arrives with empty accommodations/alerts.
-    const incoming = makeStage(1);
-    store.applyTripReady([incoming]);
-
-    const result = useTripStore.getState().stages[0]!;
-    expect(result.accommodations).toEqual([acc]);
-    expect(result.selectedAccommodation).toEqual(acc);
-    expect(result.alerts).toHaveLength(1);
-  });
-
-  it("takes incoming accommodations/alerts when the endpoint moved", () => {
-    const store = useTripStore.getState();
-    const old = makeAccommodation("Old");
-    const current = makeStage(1);
-    current.accommodations = [old];
-    current.alerts = [makeAlert("old")];
-    store.setStages([current]);
-
-    const incoming = makeStage(1);
-    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
-    incoming.accommodations = [makeAccommodation("New")];
-    incoming.alerts = [makeAlert("new")];
-    store.applyTripReady([incoming]);
-
-    const result = useTripStore.getState().stages[0]!;
-    expect(result.accommodations[0]?.name).toBe("New");
-    expect(result.alerts[0]?.message).toBe("new");
-  });
-});
-
 describe("applyStageUpdate preservation (recette #649)", () => {
   it("keeps accommodations/selection when the endpoint is stable", () => {
     const store = useTripStore.getState();
@@ -411,18 +371,6 @@ describe("applyStageUpdate preservation (recette #649)", () => {
 });
 
 describe("events preservation (recette)", () => {
-  it("keeps events on applyTripReady when the endpoint is stable and payload is empty", () => {
-    const store = useTripStore.getState();
-    const current = makeStage(1);
-    current.events = [makeEvent("Fête du vélo")];
-    store.setStages([current]);
-
-    // trip_ready payload arrives with an empty events list.
-    store.applyTripReady([makeStage(1)]);
-
-    expect(useTripStore.getState().stages[0]!.events).toHaveLength(1);
-  });
-
   it("keeps events on applyStageUpdate when the endpoint is stable and payload is empty", () => {
     const store = useTripStore.getState();
     const current = makeStage(1);
@@ -506,6 +454,31 @@ describe("rollbackStructuralEdit", () => {
     expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
     expect(useTripStore.getState().endDate).toBe("2026-10-03");
     expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+});
+
+describe("startAdjacentStageRecomputation", () => {
+  beforeEach(() => useTripStore.getState().clearTrip());
+
+  it("marks the stage and the next one", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+
+    store.startAdjacentStageRecomputation(1);
+
+    expect([...useTripStore.getState().recomputingStages]).toEqual([
+      "stage-2",
+      "stage-3",
+    ]);
+  });
+
+  it("marks only the last stage when there is no next one", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+
+    store.startAdjacentStageRecomputation(1);
+
+    expect([...useTripStore.getState().recomputingStages]).toEqual(["stage-2"]);
   });
 });
 

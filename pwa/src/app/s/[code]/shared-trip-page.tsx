@@ -27,8 +27,6 @@ import {
 } from "@btp/core";
 import type { StageData, TripSettings, TripTotals } from "@btp/core";
 
-const noop = () => {};
-
 function SharedTripLoader({ code }: { code: string }) {
   const t = useTranslations("sharePage");
   const viewMode = useUiStore((s) => s.viewMode);
@@ -225,10 +223,6 @@ function SharedTripLoader({ code }: { code: string }) {
                       startDate={settings.startDate}
                       isProcessing={false}
                       readOnly
-                      onDeleteStage={noop}
-                      onSubmitManualAccommodation={() => Promise.resolve(false)}
-                      onUpdateAccommodation={noop}
-                      onRemoveAccommodation={noop}
                     />
                   ) : (
                     <p className="text-center text-muted-foreground">

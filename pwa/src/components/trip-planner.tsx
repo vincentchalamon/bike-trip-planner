@@ -21,6 +21,7 @@ import { RecentTrips } from "@/components/recent-trips";
 import { OfflineBanner } from "@/components/offline-banner";
 import { InRideBubble } from "@/components/in-ride/InRideBubble";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useTripSettings } from "@/hooks/use-trip-settings";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTripStore } from "@/store/trip-store";
@@ -67,7 +68,6 @@ export function TripPlanner() {
     startDate,
     endDate,
     isProcessing,
-    newAccKey,
     firstWeather,
     isWeatherLoading,
     fatigueFactor,
@@ -77,37 +77,27 @@ export function TripPlanner() {
     ebikeMode,
     departureHour,
     enabledAccommodationTypes,
-    handleAccommodationTypesChange,
-    handleTitleChange,
-    updateLocalAccommodation,
-    removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
-    handleDatesChange,
-    handleDeleteStage,
-    handleAddStage,
-    handleDistanceChange,
-    handlePacingChange,
-    handlePacingCommit,
-    handleEbikeModeChange,
-    handleDepartureHourChange,
-    handleAddManualAccommodation,
-    handleSelectAccommodation,
-    handleDeselectAccommodation,
-    handleExpandAccommodationRadius,
-    handleInsertRestDay,
-    handleAddPoiWaypoint,
-    handleDuplicateTrip,
-    handleDeleteTrip,
     handleShareTrip,
     isShareModalOpen,
     setShareModalOpen,
-    clearNewAccKey,
     pendingModifications,
     isBatchApplying,
     handleApplyBatch,
     handleCancelBatch,
   } = useTripPlanner();
+  const {
+    handleTitleChange,
+    handleDatesChange,
+    handlePacingChange,
+    handlePacingCommit,
+    handleEbikeModeChange,
+    handleDepartureHourChange,
+    handleAccommodationTypesChange,
+    handleDuplicateTrip,
+    handleDeleteTrip,
+  } = useTripSettings();
 
   // Auto-submit when ?link= query param is present
   useLinkParam(handleMagicLink);
@@ -187,12 +177,6 @@ export function TripPlanner() {
       if (detail.weather !== undefined)
         ui.setBlockStatus("weather", detail.weather);
     };
-    const onSetActiveDayNumber = (e: Event) => {
-      const value = (e as CustomEvent<number | null>).detail;
-      useUiStore
-        .getState()
-        .setActiveDayNumber(typeof value === "number" ? value : null);
-    };
     const onSetTripId = (e: Event) => {
       const id = (e as CustomEvent<string | null>).detail;
       if (id) {
@@ -203,18 +187,10 @@ export function TripPlanner() {
     };
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_block_status", onBlockStatus);
-    window.addEventListener(
-      "__test_set_active_day_number",
-      onSetActiveDayNumber,
-    );
     window.addEventListener("__test_set_trip_id", onSetTripId);
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
       window.removeEventListener("__test_set_block_status", onBlockStatus);
-      window.removeEventListener(
-        "__test_set_active_day_number",
-        onSetActiveDayNumber,
-      );
       window.removeEventListener("__test_set_trip_id", onSetTripId);
     };
   }, []);
@@ -499,22 +475,7 @@ export function TripPlanner() {
                       startDate={startDate}
                       isProcessing={isProcessing}
                       readOnly={isLocked || !isOnline || outOfZone}
-                      onDeleteStage={handleDeleteStage}
-                      onAddStage={handleAddStage}
-                      onInsertRestDay={handleInsertRestDay}
-                      onDistanceChange={handleDistanceChange}
-                      onSubmitManualAccommodation={handleAddManualAccommodation}
-                      onUpdateAccommodation={updateLocalAccommodation}
-                      onRemoveAccommodation={removeLocalAccommodation}
-                      onSelectAccommodation={handleSelectAccommodation}
-                      onDeselectAccommodation={handleDeselectAccommodation}
-                      onExpandAccommodationRadius={
-                        handleExpandAccommodationRadius
-                      }
-                      onAddPoiWaypoint={handleAddPoiWaypoint}
                       onAccommodationHover={handleAccommodationHover}
-                      newAccKey={newAccKey}
-                      onClearNewAcc={clearNewAccKey}
                     />
                   </div>
                 )}

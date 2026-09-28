@@ -56,8 +56,15 @@ vi.mock("@/components/ui/sonner", () => ({
 }));
 
 import { useTripPlanner } from "./use-trip-planner";
+import { useStageMutations } from "./use-stage-mutations";
+import { useTripSettings } from "./use-trip-settings";
 import { useTripStore, useTripTemporalStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
+
+/** Every hook the trip page wires together, as one surface to drive. */
+function usePlanner() {
+  return { ...useTripPlanner(), ...useStageMutations(), ...useTripSettings() };
+}
 
 function stage(dayNumber: number): StageData {
   const point = { lat: 0, lon: 0, ele: 0 };
@@ -108,7 +115,7 @@ describe("useTripPlanner — a stale refusal asks for a resync (ADR-067)", () =>
   it.each([412, 428])("bumps the resync token on a %i", async (status) => {
     holder.status = status;
     const before = useUiStore.getState().resyncToken;
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleDeleteStage(1);
@@ -120,7 +127,7 @@ describe("useTripPlanner — a stale refusal asks for a resync (ADR-067)", () =>
   it("bumps the resync token on a refused rest-day insertion", async () => {
     holder.status = 412;
     const before = useUiStore.getState().resyncToken;
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleInsertRestDay(0);
@@ -133,7 +140,7 @@ describe("useTripPlanner — a stale refusal asks for a resync (ADR-067)", () =>
   it("leaves it alone on a refusal that is not about staleness", async () => {
     holder.status = 422;
     const before = useUiStore.getState().resyncToken;
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleDeleteStage(1);
@@ -147,7 +154,7 @@ describe("useTripPlanner — a refused title is rolled back", () => {
   it("restores the previous title and asks for a resync on a 412", async () => {
     holder.status = 412;
     const before = useUiStore.getState().resyncToken;
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleTitleChange("Renamed");
@@ -165,7 +172,7 @@ describe("useTripPlanner — a refused trip setting is rolled back", () => {
   ])("restores the dates and drops the undo entry when %s", async (_, fail) => {
     fail();
     useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleDatesChange("2026-11-01", "2026-11-03");
@@ -179,7 +186,7 @@ describe("useTripPlanner — a refused trip setting is rolled back", () => {
   it("restores the departure hour", async () => {
     holder.status = 422;
     useTripStore.setState({ departureHour: 8 });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleDepartureHourChange(6);
@@ -201,7 +208,7 @@ describe("useTripPlanner — a refused trip setting is rolled back", () => {
       ebikeMode: true,
       stages: [{ ...stage(1), alerts: [terrain] }, stage(2)],
     });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handleEbikeModeChange(false);
@@ -214,7 +221,7 @@ describe("useTripPlanner — a refused trip setting is rolled back", () => {
   it("restores the pacing and drops the undo entry", async () => {
     holder.status = 422;
     useTripStore.setState({ fatigueFactor: 0.8, maxDistancePerDay: 80 });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await result.current.handlePacingCommit(0.9, 100, 120, 15);
@@ -234,7 +241,7 @@ describe("useTripPlanner — batch recompute", () => {
         { stageId: "stage-2", type: "distance", label: "Day 2" },
       ],
     });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
     const apply = result.current.handleApplyBatch;
 
     // A day split off stage 2 between the render and the click.
@@ -259,20 +266,20 @@ describe("useTripPlanner — a refused structural edit restores the trip's day w
   it.each([
     [
       "a deleted stage",
-      (p: ReturnType<typeof useTripPlanner>) => p.handleDeleteStage(1),
+      (p: ReturnType<typeof usePlanner>) => p.handleDeleteStage(1),
     ],
     [
       "an inserted rest day",
-      (p: ReturnType<typeof useTripPlanner>) => p.handleInsertRestDay(0),
+      (p: ReturnType<typeof usePlanner>) => p.handleInsertRestDay(0),
     ],
     [
       "an added stage",
-      (p: ReturnType<typeof useTripPlanner>) => p.handleAddStage(0),
+      (p: ReturnType<typeof usePlanner>) => p.handleAddStage(0),
     ],
   ])("puts the end date back after %s", async (_, edit) => {
     holder.status = 422;
     useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     await act(async () => {
       await edit(result.current);
@@ -293,7 +300,7 @@ describe("useTripPlanner — a refused edit withdraws its own undo entry, not th
       endDate: "2026-10-03",
       fatigueFactor: 0.8,
     });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     // Three edits in flight at once: the dates, then two pacing commits.
     let dates!: Promise<void>, first!: Promise<void>, second!: Promise<void>;
@@ -340,7 +347,7 @@ describe("useTripPlanner — a refused edit reverts only itself", () => {
     const settle: ((status: number) => void)[] = [];
     holder.deferred = settle;
     useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     let deletion!: Promise<void>, restDay!: Promise<void>;
     act(() => {
@@ -381,7 +388,7 @@ describe("useTripPlanner — a refused edit reverts only itself", () => {
       ebikeMode: true,
       stages: [{ ...stage(1), alerts: [terrain] }, stage(2)],
     });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     let toggle!: Promise<void>;
     act(() => {
@@ -419,7 +426,7 @@ describe("useTripPlanner — a refused setting leaves a newer one alone", () => 
   it("keeps dates changed while a refused date change was in flight", async () => {
     const settle = deferred();
     useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     let refused!: Promise<void>, accepted!: Promise<void>;
     act(() => {
@@ -451,7 +458,7 @@ describe("useTripPlanner — a refused setting leaves a newer one alone", () => 
   it("keeps pacing committed while a refused pacing commit was in flight", async () => {
     const settle = deferred();
     useTripStore.setState({ fatigueFactor: 0.8, maxDistancePerDay: 80 });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     let refused!: Promise<void>, accepted!: Promise<void>;
     act(() => {
@@ -478,7 +485,7 @@ describe("useTripPlanner — a refused setting leaves a newer one alone", () => 
   it("keeps a departure hour changed while a refused change was in flight", async () => {
     const settle = deferred();
     useTripStore.setState({ departureHour: 8 });
-    const { result } = renderHook(() => useTripPlanner());
+    const { result } = renderHook(() => usePlanner());
 
     let refused!: Promise<void>, accepted!: Promise<void>;
     act(() => {
