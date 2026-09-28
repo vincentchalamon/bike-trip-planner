@@ -17,6 +17,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
 use App\MessageHandler\CheckBikeShopsHandler;
 use App\Osm\BikeShopRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -72,6 +73,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
         BikeShopRepositoryInterface $bikeShopRepository,
         GeoDistanceInterface $haversine,
         ?ComputationTrackerInterface $computationTracker = null,
+        ?TransientTripPointsStoreInterface $points = null,
     ): CheckBikeShopsHandler {
         if (!$computationTracker instanceof ComputationTrackerInterface) {
             $stub = $this->createStub(ComputationTrackerInterface::class);
@@ -98,6 +100,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $bikeShopRepository,
             $haversine,
             $messageBus,
@@ -110,7 +113,6 @@ final class CheckBikeShopsHandlerTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($this->createStages($tripId, $stageCount));
         $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         return $tripStateManager;
     }
@@ -226,9 +228,10 @@ final class CheckBikeShopsHandlerTest extends TestCase
         );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -251,6 +254,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $publisher,
             $this->bikeShopRepository([]),
             $this->createStub(GeoDistanceInterface::class),
+            points: $points,
         );
         $handler(new CheckBikeShops('trip-1'));
     }

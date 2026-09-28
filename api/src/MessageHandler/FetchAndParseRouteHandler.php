@@ -17,6 +17,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use Psr\Log\LoggerInterface;
@@ -31,7 +32,8 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
@@ -39,14 +41,14 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(FetchAndParseRoute $message): void
     {
         $tripId = $message->tripId;
         $generation = $message->generation;
-        $request = $this->tripStateManager->getRequest($tripId);
+        $request = $this->tripRequestRepository->getRequest($tripId);
 
         if (!$request instanceof TripRequest || null === $request->sourceUrl) {
             return;
@@ -87,17 +89,17 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 return;
             }
 
-            $this->tripStateManager->storeRawPoints($tripId, array_map(
+            $this->points->storeRawPoints($tripId, array_map(
                 static fn ($c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
                 $allPoints,
             ));
 
-            $this->tripStateManager->storeSourceType($tripId, $result->sourceType->value);
-            $this->tripStateManager->storeTitle($tripId, $result->title);
+            $this->tripRequestRepository->storeSourceType($tripId, $result->sourceType->value);
+            $this->tripRequestRepository->storeTitle($tripId, $result->title);
 
             // Store decimated points (full route for pacing) for single-track sources
             $decimated = $this->routeSimplifier->simplify($allPoints);
-            $this->tripStateManager->storeDecimatedPoints($tripId, array_map(
+            $this->points->storeDecimatedPoints($tripId, array_map(
                 static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
                 $decimated,
             ));
@@ -124,7 +126,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                     );
                 }
 
-                $this->tripStateManager->storeTracksData($tripId, $tracksData);
+                $this->points->storeTracksData($tripId, $tracksData);
             }
 
             $this->messageBus->dispatch(new GenerateStages($tripId, $generation));

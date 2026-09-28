@@ -32,6 +32,7 @@ use App\Poi\ResupplyBuilder;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Tourism\FoodPoiRepository;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -190,6 +191,8 @@ final class ScanPoisCorridorTest extends KernelTestCase
         // (ADR-068), so what it wrote is captured here rather than read off the DTO.
         $this->writtenAlerts = [];
         $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn($decimated);
         $tripStateManager->method('updateStageAlertsForGroup')->willReturnCallback(
             /** @param list<array<string, mixed>> $alerts */
             function (string $tripId, string $stageId, AlertGroup $group, array $alerts): void {
@@ -199,7 +202,6 @@ final class ScanPoisCorridorTest extends KernelTestCase
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
-        $tripStateManager->method('getDecimatedPoints')->willReturn($decimated);
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -217,6 +219,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $points,
             new PoiSourceRegistry(
                 [
                     new OsmPoiSource(new PoiRepository($this->connection)),

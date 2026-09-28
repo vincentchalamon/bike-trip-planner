@@ -14,6 +14,7 @@ use App\Engine\RouteSimplifierInterface;
 use App\Message\FetchAndParseRoute;
 use App\MessageHandler\FetchAndParseRouteHandler;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
@@ -33,6 +34,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         $request->sourceUrl = 'https://www.komoot.com/tour/123';
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);
 
         // The fetcher fails with the documented RuntimeException (e.g. a private tour).
@@ -61,6 +63,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $points,
             $registry,
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),

@@ -14,6 +14,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckHealthServices;
 use App\MessageHandler\CheckHealthServicesHandler;
 use App\Osm\HealthServiceRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -108,7 +109,6 @@ final class CheckHealthServicesHandlerTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn($locale);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         return $tripStateManager;
     }
@@ -118,6 +118,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         HealthServiceRepositoryInterface $healthServiceRepository,
         GeoDistanceInterface $haversine,
+        ?TransientTripPointsStoreInterface $points = null,
     ): CheckHealthServicesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -130,6 +131,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $healthServiceRepository,
             $haversine,
             $this->createStub(MessageBusInterface::class),

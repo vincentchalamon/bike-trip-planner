@@ -21,6 +21,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
@@ -38,9 +39,11 @@ final class GenerateStagesHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         PacingEngineInterface $pacingEngine,
         ?DistanceCalculatorInterface $distanceCalculator = null,
+        ?TransientTripPointsStoreInterface $points = null,
     ): StructuralComputationService {
         return new StructuralComputationService(
             $tripStateManager,
+            $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $distanceCalculator ?? $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
@@ -90,13 +93,14 @@ final class GenerateStagesHandlerTest extends TestCase
         $tripRequest = new TripRequest();
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
         ]);
-        $tripStateManager->method('getRawPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
 
         $pacingEngine = $this->createStub(PacingEngineInterface::class);
         $pacingEngine->method('generateStages')->willReturn([$stage, $stage]);
@@ -128,7 +132,7 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
-            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
         );
 
@@ -144,13 +148,14 @@ final class GenerateStagesHandlerTest extends TestCase
         $tripRequest->maxDistancePerDay = 45.0; // beginner profile
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
         ]);
-        $tripStateManager->method('getRawPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
 
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         // 142km total → ceil(142/45) = 4 days (not ceil(142/80) = 2)
@@ -184,7 +189,7 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
-            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
         );
 
@@ -209,13 +214,14 @@ final class GenerateStagesHandlerTest extends TestCase
         $tripRequest = new TripRequest();
 
         $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
         ]);
-        $tripStateManager->method('getRawPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
 
         // Status must be posted to `ready` once at least MIN_STAGES stages are stored.
         $tripStateManager->expects($this->once())
@@ -236,7 +242,7 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
-            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
         );
 
@@ -261,12 +267,13 @@ final class GenerateStagesHandlerTest extends TestCase
         $tripRequest = new TripRequest();
 
         $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
         ]);
-        $tripStateManager->method('getRawPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
 
         $tripStateManager->expects($this->never())->method('storeStatus');
 
@@ -287,7 +294,7 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
-            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator, points: $points),
             $messageBus,
         );
 

@@ -17,6 +17,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckWaterPoints;
 use App\MessageHandler\CheckWaterPointsHandler;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -91,6 +92,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
         WaterPointRepositoryInterface $waterPointRepository,
         GeometryDistributorInterface $distributor,
         GeoDistanceInterface $haversine,
+        ?TransientTripPointsStoreInterface $points = null,
     ): CheckWaterPointsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -103,6 +105,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $points ?? $this->decimatedPoints(),
             $waterPointRepository,
             $distributor,
             $haversine,
@@ -135,6 +138,17 @@ final class CheckWaterPointsHandlerTest extends TestCase
         return $repository;
     }
 
+    private function decimatedPoints(): TransientTripPointsStoreInterface
+    {
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
+        ]);
+
+        return $points;
+    }
+
     /**
      * @param list<Stage>|null $stages
      */
@@ -143,10 +157,6 @@ final class CheckWaterPointsHandlerTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn($locale);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
 
         return $tripStateManager;
     }

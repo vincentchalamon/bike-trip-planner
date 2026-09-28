@@ -18,6 +18,7 @@ use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Osm\WaysRepositoryInterface;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -40,7 +41,8 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
-        private TripRequestRepositoryInterface $tripStateManager,
+        TripRequestRepositoryInterface $tripRequestRepository,
+        private TransientTripPointsStoreInterface $points,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private WaysRepositoryInterface $waysRepository,
         private GeometryDistributorInterface $distributor,
@@ -48,20 +50,20 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
     }
 
     public function __invoke(AnalyzeTerrain $message): void
     {
         $tripId = $message->tripId;
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->tripRequestRepository->getStages($tripId);
 
         if (null === $stages || [] === $stages) {
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $request = $this->tripStateManager->getRequest($tripId);
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $request = $this->tripRequestRepository->getRequest($tripId);
         $ebikeMode = (bool) $request?->ebikeMode;
         $startDate = $request?->startDate;
         $departureHour = $request?->departureHour ?? 8; // @phpstan-ignore nullsafe.neverNull
@@ -103,7 +105,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $renderedByStage[$stage->id] = $this->alertRenderer->render($alertsData[$stage->id], $stage->dayNumber, $locale);
             }
 
-            $this->tripStateManager->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
+            $this->tripRequestRepository->updateTripAlertsForGroup($tripId, AlertGroup::TERRAIN, $alertsData);
 
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
                 'alertsByStage' => $renderedByStage,
@@ -123,7 +125,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
      */
     private function fetchOsmWaysByStage(string $tripId, array $stages): array
     {
-        $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+        $decimatedData = $this->points->getDecimatedPoints($tripId);
         $points = null !== $decimatedData
             ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
             : array_merge(...array_map(

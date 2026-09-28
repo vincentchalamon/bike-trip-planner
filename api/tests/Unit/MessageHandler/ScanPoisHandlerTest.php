@@ -27,6 +27,7 @@ use App\Poi\PoiSourceInterface;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
+use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -147,6 +148,7 @@ final class ScanPoisHandlerTest extends TestCase
         GeoDistanceInterface $haversine,
         RiderTimeEstimatorInterface $riderTimeEstimator,
         ?TranslatorInterface $translator = null,
+        ?TransientTripPointsStoreInterface $points = null,
     ): ScanPoisHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -165,6 +167,7 @@ final class ScanPoisHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $points ?? $this->decimatedPoints(),
             $poiSourceRegistry,
             $waterPointRepository,
             $distributor,
@@ -176,6 +179,17 @@ final class ScanPoisHandlerTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );
+    }
+
+    private function decimatedPoints(): TransientTripPointsStoreInterface
+    {
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
+        ]);
+
+        return $points;
     }
 
     /**
@@ -190,10 +204,6 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn($locale);
         $tripStateManager->method('getRequest')->willReturn($tripRequest ?? new TripRequest());
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
 
         return $tripStateManager;
     }
@@ -815,10 +825,11 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         // No decimated points → corridor falls back to the 6-point stage geometry.
         $capturedRoute = null;
@@ -838,7 +849,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator, points: $points);
         $handler(new ScanPois('trip-1'));
 
         self::assertIsArray($capturedRoute);

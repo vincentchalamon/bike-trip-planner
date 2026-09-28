@@ -22,9 +22,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsAlias;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -33,15 +31,11 @@ use Symfony\Component\Uid\Uuid;
 #[AsAlias(TripRequestRepositoryInterface::class)]
 final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, ComputationStatusStore, OwnedTripFinderInterface, MergesGroupWritesAtomically
 {
-    private const int CACHE_TTL = 1800; // 30 minutes for transient data
-
     /** Tolerance (m) between the stage line and a cycle route to count as "on network". */
     private const int CYCLE_NETWORK_TOLERANCE_METERS = 30;
 
     public function __construct(
         ManagerRegistry $registry,
-        #[Autowire(service: 'cache.trip_state')]
-        private readonly CacheItemPoolInterface $tripStateCache,
         private readonly CycleRouteRepositoryInterface $cycleRouteRepository,
         private readonly CoverageRepositoryInterface $coverageRepository,
         private readonly StageArrayMapper $stageMapper,
@@ -121,53 +115,6 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
         $trip->title = $title;
         $this->getEntityManager()->flush();
-    }
-
-    /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
-    public function storeRawPoints(string $tripId, array $rawPoints): void
-    {
-        $this->cacheSet(\sprintf('trip.%s.raw_points', $tripId), $rawPoints);
-    }
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getRawPoints(string $tripId): ?array
-    {
-        /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet(\sprintf('trip.%s.raw_points', $tripId));
-
-        return $value;
-    }
-
-    /** @param list<array{lat: float, lon: float, ele: float}> $decimatedPoints */
-    public function storeDecimatedPoints(string $tripId, array $decimatedPoints): void
-    {
-        $this->cacheSet(\sprintf('trip.%s.decimated_points', $tripId), $decimatedPoints);
-    }
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getDecimatedPoints(string $tripId): ?array
-    {
-        /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet(\sprintf('trip.%s.decimated_points', $tripId));
-
-        return $value;
-    }
-
-    /**
-     * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData
-     */
-    public function storeTracksData(string $tripId, array $tracksData): void
-    {
-        $this->cacheSet(\sprintf('trip.%s.tracks_data', $tripId), $tracksData);
-    }
-
-    /** @return list<list<array{lat: float, lon: float, ele: float}>>|null */
-    public function getTracksData(string $tripId): ?array
-    {
-        /** @var list<list<array{lat: float, lon: float, ele: float}>>|null $value */
-        $value = $this->cacheGet(\sprintf('trip.%s.tracks_data', $tripId));
-
-        return $value;
     }
 
     public function storeSourceType(string $tripId, string $sourceType): void
@@ -1139,27 +1086,5 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         return $dto;
-    }
-
-    // --- Redis cache helpers for transient data ---
-
-    private function cacheSet(string $key, mixed $value): void
-    {
-        $item = $this->tripStateCache->getItem($key);
-        $item->set($value);
-        $item->expiresAfter(self::CACHE_TTL);
-
-        $this->tripStateCache->save($item);
-    }
-
-    private function cacheGet(string $key): mixed
-    {
-        $item = $this->tripStateCache->getItem($key);
-
-        if (!$item->isHit()) {
-            return null;
-        }
-
-        return $item->get();
     }
 }

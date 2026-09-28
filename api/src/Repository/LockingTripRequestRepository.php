@@ -245,30 +245,6 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
         $this->decorated->storeTitle($tripId, $title);
     }
 
-    /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
-    public function storeRawPoints(string $tripId, array $rawPoints): void
-    {
-        $this->decorated->storeRawPoints($tripId, $rawPoints);
-    }
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getRawPoints(string $tripId): ?array
-    {
-        return $this->decorated->getRawPoints($tripId);
-    }
-
-    /** @param list<array{lat: float, lon: float, ele: float}> $decimatedPoints */
-    public function storeDecimatedPoints(string $tripId, array $decimatedPoints): void
-    {
-        $this->decorated->storeDecimatedPoints($tripId, $decimatedPoints);
-    }
-
-    /** @return list<array{lat: float, lon: float, ele: float}>|null */
-    public function getDecimatedPoints(string $tripId): ?array
-    {
-        return $this->decorated->getDecimatedPoints($tripId);
-    }
-
     /** @return list<Stage>|null */
     public function getStages(string $tripId): ?array
     {
@@ -311,18 +287,6 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
     public function bumpVersion(string $tripId, ?int $expectedVersion = null): int
     {
         return $this->withStagesLock($tripId, fn (): int => $this->decorated->bumpVersion($tripId, $expectedVersion));
-    }
-
-    /** @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData */
-    public function storeTracksData(string $tripId, array $tracksData): void
-    {
-        $this->decorated->storeTracksData($tripId, $tracksData);
-    }
-
-    /** @return list<list<array{lat: float, lon: float, ele: float}>>|null */
-    public function getTracksData(string $tripId): ?array
-    {
-        return $this->decorated->getTracksData($tripId);
     }
 
     public function storeSourceType(string $tripId, string $sourceType): void
