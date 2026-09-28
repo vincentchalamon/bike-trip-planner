@@ -48,6 +48,8 @@ describe("buildTripText", () => {
       sourceUrl: "https://www.komoot.com/tour/123",
       stages: [buildStage(1, 60, 800), buildStage(2, 60, 700)],
       startDate: "2026-06-25",
+      locale: "fr",
+      today: "2026-06-01",
       labels,
     });
 
@@ -63,6 +65,8 @@ describe("buildTripText", () => {
       sourceUrl: "",
       stages: [buildStage(1, 60, 800)],
       startDate: "2026-06-25",
+      locale: "fr",
+      today: "2026-06-01",
       labels,
     });
 
@@ -80,6 +84,8 @@ describe("buildTripText", () => {
       sourceUrl: "",
       stages: [],
       startDate: null,
+      locale: "fr",
+      today: "2026-06-01",
       labels,
     });
 

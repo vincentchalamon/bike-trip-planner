@@ -1,26 +1,25 @@
 /// <reference types="jest" />
+import { stageDate, todayUtc } from '@btp/core';
 import {
   formatStageDate,
   isStageToday,
-  stageDateFor,
   summaryColorKey,
-  todayUtc,
   tripStateFromDates,
 } from './roadbook-dates';
 
-describe('stageDateFor', () => {
+describe('stageDate (core)', () => {
   it('returns startDate for day 1 and shifts one UTC day per dayNumber', () => {
-    expect(stageDateFor('2026-08-13', 1)).toBe('2026-08-13');
-    expect(stageDateFor('2026-08-13', 3)).toBe('2026-08-15');
+    expect(stageDate('2026-08-13', 1)).toBe('2026-08-13');
+    expect(stageDate('2026-08-13', 3)).toBe('2026-08-15');
   });
 
   it('crosses a month boundary in UTC (timezone-stable)', () => {
-    expect(stageDateFor('2026-08-31', 2)).toBe('2026-09-01');
+    expect(stageDate('2026-08-31', 2)).toBe('2026-09-01');
   });
 
   it('returns null without a start date or on garbage', () => {
-    expect(stageDateFor(null, 1)).toBeNull();
-    expect(stageDateFor('not-a-date', 1)).toBeNull();
+    expect(stageDate(null, 1)).toBeNull();
+    expect(stageDate('not-a-date', 1)).toBeNull();
   });
 });
 

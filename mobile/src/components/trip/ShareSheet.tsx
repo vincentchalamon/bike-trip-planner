@@ -27,6 +27,7 @@ import {
   getTripShare,
   revokeTripShare,
 } from '../../api/trips';
+import { todayUtc } from '@btp/core';
 import { buildTripText, computeTripTotals } from '../../lib/share';
 import { captureAndShareInfographic } from '../../lib/share-image';
 import { ShareInfographic } from './ShareInfographic';
@@ -47,7 +48,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
   // the roadbook without the map ever mounting; pull the route in when it opens
   // so the captured infographic has a real route line.
   useTripRoute({ enabled: visible });
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const s = styles(theme);
   const title = useTripStore((st) => st.title) ?? '';
@@ -127,6 +128,8 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
       sourceUrl,
       stages,
       startDate,
+      locale: i18n.language,
+      today: todayUtc(),
       labels: {
         totalDistance: t('share.totalDistance'),
         totalElevation: t('share.totalElevation'),
@@ -136,7 +139,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
     // read-only `/s/<code>` URL is included only once a link exists (mirrors the
     // web ShareModal's fullText).
     return shareUrl ? `${base}\n\n${t('share.viewOnline')} : ${shareUrl}` : base;
-  }, [title, stages, sourceUrl, startDate, shareUrl, t]);
+  }, [title, stages, sourceUrl, startDate, shareUrl, t, i18n.language]);
 
   const handleCopyText = useCallback(async () => {
     await Clipboard.setStringAsync(buildText());

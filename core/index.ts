@@ -6,3 +6,4 @@ export * from "./budget";
 export * from "./difficulty";
 export * from "./trip-text";
 export * from "./trip-detail";
+export * from "./stage-dates";

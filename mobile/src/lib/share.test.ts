@@ -124,6 +124,8 @@ describe('buildTripText (#1048, re-exported from @btp/core)', () => {
         stage({ dayNumber: 2 }),
       ],
       startDate: '2026-06-01',
+      locale: 'fr',
+      today: '2026-05-01',
       labels,
     });
 
