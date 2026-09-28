@@ -179,7 +179,10 @@ Accepted, and written down rather than discovered:
 
 - **No "authorized applications" screen.** A user cannot see or revoke a grant they gave. A
   grant also survives logging out: logout revokes refresh tokens, not OAuth grants. This is
-  the most visible gap and the natural next unit.
+  the most visible gap and the natural next unit. *The screen is closed by
+  [ADR-082](adr-082-the-table-carries-the-dates-the-tokens-carry-the-truth.md). A grant still
+  survives logging out (`AuthLogoutProcessor` only removes refresh tokens); revoking it is
+  done from that screen.*
 - **No per-trip consent.** `trips:read` reaches every trip the account owns.
 - **CIMD has no domain trust policy.** The specification allows one (MAY). Nothing here
   protects against a public address fronting an internal service, or against a metadata host

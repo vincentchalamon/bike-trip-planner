@@ -33,8 +33,8 @@ API had settled were expressed in HTTP headers, and `POST /mcp` has none.
 | `create_trip` | `POST /trips` | `trips:write` |
 | `update_trip_settings` | `PATCH /trips/{id}` | `trips:write` |
 | `edit_stages` | five `Stage` operations | `trips:write` |
-| `add_waypoint` | `POST /stages/{stageId}/poi-waypoint` | `trips:write` |
-| `choose_accommodation` | `PATCH /stages/{stageId}/accommodation` | `trips:write` |
+| `add_waypoint` | `POST /trips/{tripId}/stages/{stageId}/poi-waypoint` | `trips:write` |
+| `choose_accommodation` | `PATCH /trips/{tripId}/stages/{stageId}/accommodation` | `trips:write` |
 | `analyze_trip` | `POST /trips/{id}/analyze` | `trips:write` |
 | `share_trip` | `POST /trips/{tripId}/share` | `trips:write` |
 | `unshare_trip` | `DELETE /trips/{tripId}/share` | `trips:write` |
