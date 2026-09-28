@@ -4,42 +4,25 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
+use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
-use App\ApiResource\Model\WeatherForecast;
-use App\ApiResource\Stage;
-use App\Enum\AlertCode;
-use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
+use App\Enum\AlertParameterFormat;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Message\AnalyzeWind;
+use App\Weather\WeatherStageRule;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+/**
+ * Raises the weather alerts of each stage, one per {@see WeatherStageRule} it trips.
+ */
 #[AsMessageHandler]
 final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 {
-    private const float WIND_SPEED_THRESHOLD_KMH = 25.0;
-
-    private const float HEADWIND_RATIO_THRESHOLD = 0.6; // 60%
-
-    private const int COMFORT_INDEX_POOR_THRESHOLD = 39;
-
-    /** Apparent temperature at or above this (°C) flags a heat-risk stage. */
-    private const float HEAT_APPARENT_MAX_C = 32.0;
-
-    /** Apparent temperature at or below this (°C) flags a cold-risk stage. */
-    private const float COLD_APPARENT_MIN_C = 2.0;
-
-    /** Total precipitation over the riding window at or above this (mm) flags heavy rain. */
-    private const float RAIN_HEAVY_MM = 10.0;
-
-    /** Wind gusts at or above this (km/h) flag a strong-gust stage. */
-    private const float WIND_GUSTS_STRONG_KMH = 50.0;
-
     public function __invoke(AnalyzeWind $message): void
     {
         $tripId = $message->tripId;
@@ -50,134 +33,24 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         }
 
         $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages): void {
-            /** @var list<Stage> $headwindStages */
-            $headwindStages = [];
-            /** @var list<Stage> $poorComfortStages */
-            $poorComfortStages = [];
-            /** @var list<Stage> $heatStages */
-            $heatStages = [];
-            /** @var list<Stage> $coldStages */
-            $coldStages = [];
-            /** @var list<Stage> $rainStages */
-            $rainStages = [];
-            /** @var list<Stage> $gustStages */
-            $gustStages = [];
-
-            foreach ($stages as $stage) {
-                if (null === $stage->weather) {
-                    continue;
-                }
-
-                $weather = $stage->weather;
-
-                // Count headwind stages using the pre-computed relativeWindDirection
-                if (
-                    $weather->windSpeed >= self::WIND_SPEED_THRESHOLD_KMH
-                    && WeatherForecast::RELATIVE_WIND_HEADWIND === $weather->relativeWindDirection
-                ) {
-                    $headwindStages[] = $stage;
-                }
-
-                // Count stages with poor comfort index
-                if ($weather->comfortIndex <= self::COMFORT_INDEX_POOR_THRESHOLD) {
-                    $poorComfortStages[] = $stage;
-                }
-
-                // The apparent-temperature / rain-mm / gust thresholds are only
-                // meaningful once the hourly derivation has populated those fields;
-                // skip legacy/partial forecasts that carry defaults.
-                if ([] === $weather->hourly) {
-                    continue;
-                }
-
-                if ($weather->apparentTempMax >= self::HEAT_APPARENT_MAX_C) {
-                    $heatStages[] = $stage;
-                }
-
-                if ($weather->apparentTempMin <= self::COLD_APPARENT_MIN_C) {
-                    $coldStages[] = $stage;
-                }
-
-                if ($weather->precipitationMm >= self::RAIN_HEAVY_MM) {
-                    $rainStages[] = $stage;
-                }
-
-                if ($weather->windGusts >= self::WIND_GUSTS_STRONG_KMH) {
-                    $gustStages[] = $stage;
-                }
-            }
-
-            $stagesWithWeather = \count(array_filter($stages, static fn (Stage $s): bool => $s->weather instanceof WeatherForecast));
-
-            $dismissAction = new AlertAction(
-                kind: AlertActionKind::DISMISS,
-                labelKey: 'alert.wind.action',
-            );
-
             $alerts = [];
 
-            // The headwind rule stays trip-wide in what triggers it — it is about a trip
-            // spent riding into the wind, not about one windy day — so the ratio threshold
-            // is unchanged. Only the placement changes: the alert now sits on the stages
-            // that actually carry the headwind instead of being counted up into one message
-            // pinned to the first day (ADR-066).
-            if (
-                $stagesWithWeather > 0
-                && (\count($headwindStages) / $stagesWithWeather) >= self::HEADWIND_RATIO_THRESHOLD
-            ) {
-                foreach ($headwindStages as $stage) {
-                    $alerts[] = $this->stageAlert(
-                        $stage,
-                        AlertCode::WIND_HEADWIND,
-                        'alert.wind.stage',
-                        ['%threshold%' => self::WIND_SPEED_THRESHOLD_KMH],
-                        $dismissAction,
-                    );
+            foreach (WeatherStageRule::cases() as $rule) {
+                $parameters = $rule->parameters();
+
+                foreach ($rule->stagesRaising($stages) as $stage) {
+                    $alerts[] = AlertPayload::forStage($stage, new Alert(
+                        code: $rule->code(),
+                        type: AlertType::WARNING,
+                        messageKey: $rule->messageKey(),
+                        parameters: $parameters,
+                        parameterFormats: array_map(
+                            static fn (): string => AlertParameterFormat::DECIMAL->value,
+                            $parameters,
+                        ),
+                        action: new AlertAction(AlertActionKind::DISMISS, WeatherStageRule::ACTION_LABEL_KEY),
+                    ));
                 }
-            }
-
-            foreach ($poorComfortStages as $stage) {
-                $alerts[] = $this->stageAlert($stage, AlertCode::COMFORT_POOR_CONDITIONS, 'alert.comfort.stage', [], $dismissAction);
-            }
-
-            foreach ($heatStages as $stage) {
-                $alerts[] = $this->stageAlert(
-                    $stage,
-                    AlertCode::HEAT_EXTREME,
-                    'alert.heat.stage',
-                    ['%threshold%' => self::HEAT_APPARENT_MAX_C],
-                    $dismissAction,
-                );
-            }
-
-            foreach ($coldStages as $stage) {
-                $alerts[] = $this->stageAlert(
-                    $stage,
-                    AlertCode::COLD_EXTREME,
-                    'alert.cold.stage',
-                    ['%threshold%' => self::COLD_APPARENT_MIN_C],
-                    $dismissAction,
-                );
-            }
-
-            foreach ($rainStages as $stage) {
-                $alerts[] = $this->stageAlert(
-                    $stage,
-                    AlertCode::RAIN_HEAVY,
-                    'alert.rain.stage',
-                    ['%threshold%' => self::RAIN_HEAVY_MM],
-                    $dismissAction,
-                );
-            }
-
-            foreach ($gustStages as $stage) {
-                $alerts[] = $this->stageAlert(
-                    $stage,
-                    AlertCode::WIND_GUSTS_STRONG,
-                    'alert.gusts.stage',
-                    ['%threshold%' => self::WIND_GUSTS_STRONG_KMH],
-                    $dismissAction,
-                );
             }
 
             // Same array to the database and to the wire (ADR-068): grouped by the stage
@@ -189,25 +62,5 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         });
-    }
-
-    /**
-     * @param array<string, int|float> $parameters
-     *
-     * @return array<string, mixed>
-     */
-    private function stageAlert(Stage $stage, AlertCode $code, string $key, array $parameters, AlertAction $action): array
-    {
-        return AlertPayload::forStage($stage, new Alert(
-            code: $code,
-            type: AlertType::WARNING,
-            messageKey: $key,
-            parameters: $parameters,
-            parameterFormats: array_map(
-                static fn (): string => AlertParameterFormat::DECIMAL->value,
-                $parameters,
-            ),
-            action: $action,
-        ));
     }
 }
