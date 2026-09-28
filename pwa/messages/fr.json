@@ -644,7 +644,6 @@
   },
   "sharePage": {
     "title": "Voyage partagé",
-    "loading": "Chargement du voyage partagé...",
     "error": "Ce lien de partage est invalide ou a été révoqué.",
     "backToHome": "Retour à l'accueil",
     "readOnlyBanner": "Vue partagée — lecture seule",

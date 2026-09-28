@@ -644,7 +644,6 @@
   },
   "sharePage": {
     "title": "Shared trip",
-    "loading": "Loading shared trip...",
     "error": "This share link is invalid or has been revoked.",
     "backToHome": "Back to home",
     "readOnlyBanner": "Shared view — read only",

@@ -2,9 +2,6 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
-import { TripNotFound } from "@/components/trip-not-found";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { TripSummary } from "@/components/trip-summary";
 import { MapPanel } from "@/components/Map/MapPanel";
@@ -13,92 +10,84 @@ import { HydrationBoundary } from "@/components/hydration-boundary";
 import { SiteChrome } from "@/components/site-chrome";
 import { SharedViewBanner } from "@/components/shared-view-banner";
 import { TripDownloads } from "@/components/trip-downloads";
-import { fetchSharedTrip, fetchSharedTripRoute } from "@/lib/api/client";
+import { fetchSharedTripRoute, type SharedTripDetail } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
 import {
-  DEFAULT_TRIP_SETTINGS,
   computeEstimatedBudget,
   computeTripTotals,
   stageDataFromDetail,
   tripSettingsFromDetail,
 } from "@btp/core";
-import type { StageData, TripSettings, TripTotals } from "@btp/core";
+import type { StageData } from "@btp/core";
 
-function SharedTripLoader({ code }: { code: string }) {
+function SharedTripLoader({
+  code,
+  trip,
+}: {
+  code: string;
+  trip: SharedTripDetail;
+}) {
   const t = useTranslations("sharePage");
   const viewMode = useUiStore((s) => s.viewMode);
   const setStagesInStore = useTripStore((s) => s.setStages);
   const clearTrip = useTripStore((s) => s.clearTrip);
-  const [loadError, setLoadError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [title, setTitle] = useState<string | null>(null);
-  const [stages, setStages] = useState<StageData[]>([]);
-  const [totals, setTotals] = useState<TripTotals | null>(null);
-  const [settings, setSettings] = useState<TripSettings>(DEFAULT_TRIP_SETTINGS);
+  const [geometryByDay, setGeometryByDay] = useState<Map<
+    number | undefined,
+    StageData["geometry"]
+  > | null>(null);
   const [focusedStageIndex, setFocusedStageIndex] = useState<number | null>(
     null,
   );
 
+  const title = trip.title ?? null;
+  // Server-persisted reverse-geocoded labels (recette #649 #3c) matter most
+  // here: the anonymous view cannot call the auth-gated /geocode endpoint.
+  const detailStages = useMemo(
+    () => (trip.stages ?? []).map(stageDataFromDetail),
+    [trip],
+  );
+  // The page renders these stages, not the store's, so the route geometry
+  // (split off /detail, ADR-057) must be merged here too: the store's
+  // applyRoute alone never reaches the map / elevation profile.
+  const stages = useMemo(
+    () =>
+      geometryByDay
+        ? detailStages.map((s) =>
+            geometryByDay.has(s.dayNumber)
+              ? { ...s, geometry: geometryByDay.get(s.dayNumber)! }
+              : s,
+          )
+        : detailStages,
+    [detailStages, geometryByDay],
+  );
+  const totals = useMemo(() => computeTripTotals(stages), [stages]);
+  const settings = useMemo(() => tripSettingsFromDetail(trip), [trip]);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSharedTrip() {
-      try {
-        const data = await fetchSharedTrip(code);
+    // Hydrate the trip store so that <RoadbookMasterDetail /> (which reads
+    // `selectedStageIndex` from the store) works correctly. The store stays
+    // local: no `setTrip()` call means no API/PATCH calls can be issued from
+    // this read-only view.
+    setStagesInStore(detailStages);
 
-        if (!data || cancelled) {
-          if (!cancelled) setLoadError(true);
-          return;
-        }
-
-        setTitle(data.title ?? null);
-
-        // Server-persisted reverse-geocoded labels (recette #649 #3c) matter most
-        // here: the anonymous view cannot call the auth-gated /geocode endpoint.
-        const parsedStages = (data.stages ?? []).map(stageDataFromDetail);
-
-        setStages(parsedStages);
-        // Pull the route geometry (split off /detail, ADR-057) via the public code.
-        // The page renders this component's local `stages` state, so the geometry
-        // must land there too — the store's applyRoute alone never reaches the map
-        // / elevation profile on the anonymous view.
-        void fetchSharedTripRoute(code)
-          .then((route) => {
-            if (cancelled || !route) return;
-            useTripStore.getState().applyRoute(route);
-            const geometryByDay = new Map(
-              (route.stages ?? []).map((s) => [
-                s.dayNumber,
-                (s.geometry ?? []) as StageData["geometry"],
-              ]),
-            );
-            setStages((prev) =>
-              prev.map((s) =>
-                geometryByDay.has(s.dayNumber)
-                  ? { ...s, geometry: geometryByDay.get(s.dayNumber)! }
-                  : s,
-              ),
-            );
-          })
-          .catch(() => {});
-        // Hydrate the trip store so that <RoadbookMasterDetail /> (which
-        // reads `selectedStageIndex` from the store) works correctly. The
-        // store stays local — no `setTrip()` call means no API/PATCH calls
-        // can be issued from this read-only view.
-        setStagesInStore(parsedStages);
-
-        setTotals(computeTripTotals(parsedStages));
-        setSettings(tripSettingsFromDetail(data));
-
-        setIsLoaded(true);
-      } catch {
-        if (!cancelled) setLoadError(true);
-      }
-    }
-
-    void loadSharedTrip();
+    void fetchSharedTripRoute(code)
+      .then((route) => {
+        if (cancelled || !route) return;
+        useTripStore.getState().applyRoute(route);
+        setGeometryByDay(
+          new Map(
+            (route.stages ?? []).map((s) => [
+              s.dayNumber,
+              (s.geometry ?? []) as StageData["geometry"],
+            ]),
+          ),
+        );
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;
@@ -106,7 +95,7 @@ function SharedTripLoader({ code }: { code: string }) {
       // stages into a fresh planner session.
       clearTrip();
     };
-  }, [code, setStagesInStore, clearTrip]);
+  }, [code, detailStages, setStagesInStore, clearTrip]);
 
   const estimatedBudget = useMemo(
     () => computeEstimatedBudget(stages),
@@ -118,33 +107,6 @@ function SharedTripLoader({ code }: { code: string }) {
     [],
   );
   const handleResetView = useCallback(() => setFocusedStageIndex(null), []);
-
-  if (loadError) {
-    return (
-      <ShareProvider value={null}>
-        <SiteChrome>
-          <div data-testid="share-error">
-            <TripNotFound variant="share" />
-          </div>
-        </SiteChrome>
-      </ShareProvider>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <ShareProvider value={null}>
-        <SiteChrome>
-          <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-            <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>{t("loading")}</span>
-            </div>
-          </main>
-        </SiteChrome>
-      </ShareProvider>
-    );
-  }
 
   const showTimeline = viewMode === "timeline" || viewMode === "split";
   const showMap = viewMode === "map" || viewMode === "split";
@@ -178,9 +140,9 @@ function SharedTripLoader({ code }: { code: string }) {
 
             {/* Summary */}
             <TripSummary
-              totalDistance={totals?.totalDistance ?? null}
-              totalElevation={totals?.totalElevation ?? null}
-              totalElevationLoss={totals?.totalElevationLoss ?? null}
+              totalDistance={totals.totalDistance}
+              totalElevation={totals.totalElevation}
+              totalElevationLoss={totals.totalElevationLoss}
               weather={stages[0]?.weather ?? null}
               isWeatherLoading={false}
               isProcessing={false}
@@ -263,12 +225,16 @@ function SharedTripLoader({ code }: { code: string }) {
   );
 }
 
-export default function SharedTripPage({ code }: { code: string }) {
+export default function SharedTripPage({
+  code,
+  trip,
+}: {
+  code: string;
+  trip: SharedTripDetail;
+}) {
   return (
     <HydrationBoundary>
-      <Suspense fallback={null}>
-        <SharedTripLoader code={code} />
-      </Suspense>
+      <SharedTripLoader code={code} trip={trip} />
     </HydrationBoundary>
   );
 }

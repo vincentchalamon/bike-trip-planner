@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { getTripId } from "../../fixtures/api-mocks";
+import { seededShare } from "../../fixtures/shared-trip-seed";
 import { SHARE_BUTTON_TESTID } from "./common.steps";
 
 // ---------------------------------------------------------------------------
@@ -256,62 +257,30 @@ Then(
   },
 );
 
-When(/^j'accède à \/s\/<code_court>$/, async ({ mockedPage }) => {
-  const shortCode = "Ab3kX9mP";
-  await mockedPage.route(`**/s/${shortCode}`, (route, request) => {
-    if (request.method() !== "GET") return route.fallback();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        title: "Tour de l'Ardeche",
-        startDate: null,
-        endDate: null,
-        fatigueFactor: 0.9,
-        elevationPenalty: 50,
-        maxDistancePerDay: 80,
-        averageSpeed: 15,
-        stages: [],
-      }),
-    });
-  });
-  await mockedPage.goto(`/s/${shortCode}`);
+// The page fetches the share server-side, out of `page.route()`'s reach: these
+// steps open the real share seeded by the Playwright globalSetup.
+When(/^j'accède à \/s\/<code_court>$/, async ({ $test, mockedPage }) => {
+  const share = seededShare();
+  $test.skip(!share, "No seeded share: set E2E_JWT (see shared-trip-seed.ts).");
+  await mockedPage.goto(`/s/${share!.code}`);
 });
 
-When(/^I navigate to \/s\/<short_code>$/, async ({ mockedPage }) => {
-  const shortCode = "Ab3kX9mP";
-  await mockedPage.route(`**/s/${shortCode}`, (route, request) => {
-    if (request.method() !== "GET") return route.fallback();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        title: "Tour de l'Ardeche",
-        startDate: null,
-        endDate: null,
-        fatigueFactor: 0.9,
-        elevationPenalty: 50,
-        maxDistancePerDay: 80,
-        averageSpeed: 15,
-        stages: [],
-      }),
-    });
-  });
-  await mockedPage.goto(`/s/${shortCode}`);
+When(/^I navigate to \/s\/<short_code>$/, async ({ $test, mockedPage }) => {
+  const share = seededShare();
+  $test.skip(!share, "No seeded share: set E2E_JWT (see shared-trip-seed.ts).");
+  await mockedPage.goto(`/s/${share!.code}`);
 });
 
 Then("je vois le résumé du voyage partagé", async ({ mockedPage }) => {
   await expect(
-    mockedPage
-      .getByTestId("trip-title")
-      .or(mockedPage.getByText("Tour de l'Ardeche")),
-  ).toBeVisible({ timeout: 5000 });
+    mockedPage.getByRole("heading", { name: seededShare()!.title }),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible();
 });
 
 Then("I see the shared trip summary", async ({ mockedPage }) => {
   await expect(
-    mockedPage
-      .getByTestId("trip-title")
-      .or(mockedPage.getByText("Tour de l'Ardeche")),
-  ).toBeVisible({ timeout: 5000 });
+    mockedPage.getByRole("heading", { name: seededShare()!.title }),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible();
 });
