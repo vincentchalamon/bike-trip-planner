@@ -718,6 +718,7 @@ jobs:
         # creates and mails the link it reads back. Tolerate only "already exists"
         # (reruns); any other seeding failure must fail the job fast here, not at login.
         run: |
+          set -o pipefail
           if docker compose exec -T php bin/console app:create-user smoke@example.com --locale=fr --no-invite 2>&1 | tee /tmp/create-user.log; then
             echo 'smoke user created'
           else
