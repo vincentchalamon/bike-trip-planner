@@ -4,61 +4,41 @@ declare(strict_types=1);
 
 namespace App\InRide;
 
-use Yasumi\ProviderInterface;
-use Yasumi\Yasumi;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use App\OpeningHours\Modifier;
+use App\OpeningHours\OpeningHoursGrammar;
+use App\OpeningHours\PublicHolidayCalendar;
+use App\OpeningHours\Rule;
+use App\OpeningHours\SelectorItem;
+use App\OpeningHours\SelectorKind;
+use App\OpeningHours\TimeSpan;
 
 /**
- * Parses OSM `opening_hours` tags and answers "is it open?" questions.
+ * In-ride's reading of an OSM `opening_hours` value, over the shared
+ * {@see OpeningHoursGrammar}: answers "is it open now?" for a given date-time.
  *
- * Scope: the most common patterns found on OSM in France/Belgium:
- *   - `24/7`
- *   - Weekday rules: `Mo`, `Tu`, ..., `Su` (single days, ranges `Mo-Fr`, lists `Mo,We,Fr`)
- *   - Time ranges: `09:00-12:00`, multiple per day separated by `,`
- *   - Multiple rule groups separated by `;`
- *   - `PH off` (public holiday closed) — best effort using `azuyalabs/yasumi`
- *   - `PH HH:MM-HH:MM` (public holiday hours)
- *   - Single-date holidays: `dec 25 off`
- *   - The `off` / `closed` modifier
+ * Understood: `24/7`; weekday rules (`Mo`, ranges `Mo-Fr`, lists `Mo,We,Fr`, in
+ * their canonical spelling); several time spans per rule; `;`-separated rules,
+ * later positive rules adding to earlier ones; `PH` (public holidays of
+ * {@see self::DEFAULT_HOLIDAY_COUNTRIES} unless told otherwise); single-date
+ * rules (`dec 25 off`); the `off`/`closed`/`open` modifiers; spans crossing
+ * midnight.
  *
- * Out of scope (silently ignored — closed fallback): week numbers, month ranges,
- * sunset/sunrise, easter, complex date selectors. Unknown tokens cause the rule
- * to be skipped (defensive parsing — never throws).
+ * A rule it cannot read (week numbers, month ranges, sunrise/sunset, `SH`...) is
+ * skipped, never fatal: the other rules still decide.
  */
-final class OpeningHoursParser
+final readonly class OpeningHoursParser
 {
-    private const array DAYS = ['Mo' => 1, 'Tu' => 2, 'We' => 3, 'Th' => 4, 'Fr' => 5, 'Sa' => 6, 'Su' => 7];
-
-    private const array MONTHS = [
-        'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'may' => 5, 'jun' => 6,
-        'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
-    ];
-
     /**
-     * Yasumi provider locales evaluated by {@see self::isPublicHoliday()}. The
-     * class docblock advertises France + Belgium coverage; both providers ship
-     * with the `azuyalabs/yasumi` package the project already depends on.
+     * Countries whose public holidays a `PH` rule refers to when the caller does
+     * not name them: in-ride coverage is France and Belgium.
      *
      * @var list<string>
      */
-    private const array HOLIDAY_LOCALES = ['France', 'Belgium'];
+    public const array DEFAULT_HOLIDAY_COUNTRIES = ['FR', 'BE'];
 
-    /**
-     * Process-wide cache of Yasumi holiday providers keyed by `locale-year`.
-     * Yasumi recomputes the full holiday set on every {@see Yasumi::create()}
-     * call (~120 µs per call), so a typical in-ride page rendering N POIs with
-     * `PH` tags would burn 2N × |locales| initialisations without this cache.
-     *
-     * @var array<string, ProviderInterface>
-     */
-    private static array $yasumiCache = [];
-
-    private readonly LoggerInterface $logger;
-
-    public function __construct(?LoggerInterface $logger = null)
-    {
-        $this->logger = $logger ?? new NullLogger();
+    public function __construct(
+        private PublicHolidayCalendar $holidays = new PublicHolidayCalendar(),
+    ) {
     }
 
     /**
@@ -79,10 +59,14 @@ final class OpeningHoursParser
      * in-ride discards a line that is almost certainly closed, while planning
      * keeps it with an uncertainty flag. Both agree that "no information" is
      * never "closed".
+     *
+     * @param list<string> $holidayCountries ISO 3166-1 alpha-2 codes a `PH` rule refers to
      */
-    public function status(string $tag, \DateTimeImmutable $now): OpeningStatus
+    public function status(string $tag, \DateTimeImmutable $now, array $holidayCountries = self::DEFAULT_HOLIDAY_COUNTRIES): OpeningStatus
     {
-        $intervals = $this->intervalsForDate($tag, $now);
+        $rules = OpeningHoursGrammar::parse($tag)->rules;
+
+        $intervals = $this->intervalsForDate($rules, $now, $holidayCountries);
         if (null !== $intervals) {
             foreach ($intervals as [$start, $end]) {
                 if ($now >= $start && $now < $end) {
@@ -93,17 +77,19 @@ final class OpeningHoursParser
             return OpeningStatus::CLOSED;
         }
 
-        return $this->hasAnyParseableRule($tag, $now) ? OpeningStatus::CLOSED : OpeningStatus::UNKNOWN;
+        return $this->hasAnyParseableRule($rules, $now, $holidayCountries) ? OpeningStatus::CLOSED : OpeningStatus::UNKNOWN;
     }
 
     /**
      * Returns the closing time of the currently-open interval, or null if closed/unparseable.
      *
      * For intervals that span midnight (`22:00-02:00`), the returned datetime is on the next day.
+     *
+     * @param list<string> $holidayCountries ISO 3166-1 alpha-2 codes a `PH` rule refers to
      */
-    public function closesAt(string $tag, \DateTimeImmutable $now): ?\DateTimeImmutable
+    public function closesAt(string $tag, \DateTimeImmutable $now, array $holidayCountries = self::DEFAULT_HOLIDAY_COUNTRIES): ?\DateTimeImmutable
     {
-        $intervals = $this->intervalsForDate($tag, $now);
+        $intervals = $this->intervalsForDate(OpeningHoursGrammar::parse($tag)->rules, $now, $holidayCountries);
         if (null === $intervals) {
             return null;
         }
@@ -118,54 +104,34 @@ final class OpeningHoursParser
     }
 
     /**
-     * Returns true if at least one rule of the tag is syntactically parseable,
-     * regardless of whether it applies to `$date`. Distinguishes a tag that is
-     * merely silent for the date (parseable -> closed) from one that is noise
+     * Returns true if at least one rule of the tag is readable, regardless of
+     * whether it applies to `$date`. Distinguishes a tag that is merely silent
+     * for the date (parseable -> closed) from one that is noise
      * (`garbage data here`, empty -> unknown).
+     *
+     * @param list<Rule>   $rules
+     * @param list<string> $holidayCountries
      */
-    private function hasAnyParseableRule(string $tag, \DateTimeImmutable $date): bool
+    private function hasAnyParseableRule(array $rules, \DateTimeImmutable $date, array $holidayCountries): bool
     {
-        $rules = array_map(trim(...), explode(';', trim($tag)));
-
-        foreach ($rules as $rule) {
-            if ('' === $rule) {
-                continue;
-            }
-
-            if (null !== $this->parseRule($rule, $date)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($rules, fn (Rule $rule): bool => null !== $this->judge($rule, $date, $holidayCountries));
     }
 
     /**
      * Computes the list of open intervals for the day containing `$now`, considering
      * intervals from the previous day that spill over past midnight.
      *
-     * Returns null if the tag is empty or unparseable.
+     * Returns null when neither day has a rule that applies.
+     *
+     * @param list<Rule>   $rules
+     * @param list<string> $holidayCountries
      *
      * @return list<array{0: \DateTimeImmutable, 1: \DateTimeImmutable}>|null
      */
-    private function intervalsForDate(string $tag, \DateTimeImmutable $now): ?array
+    private function intervalsForDate(array $rules, \DateTimeImmutable $now, array $holidayCountries): ?array
     {
-        $tag = trim($tag);
-        if ('' === $tag) {
-            return null;
-        }
-
-        try {
-            $today = $this->intervalsForSingleDate($tag, $now);
-            $yesterday = $this->intervalsForSingleDate($tag, $now->modify('-1 day'));
-        } catch (\Throwable $throwable) {
-            $this->logger->info('Failed to parse opening_hours tag', [
-                'tag' => $tag,
-                'error' => $throwable->getMessage(),
-            ]);
-
-            return null;
-        }
+        $today = $this->intervalsForSingleDate($rules, $now, $holidayCountries);
+        $yesterday = $this->intervalsForSingleDate($rules, $now->modify('-1 day'), $holidayCountries);
 
         // Neither date had a rule for the tag → no information available.
         if (null === $today && null === $yesterday) {
@@ -180,7 +146,7 @@ final class OpeningHoursParser
         // even though yesterday's 22:00-02:00 interval otherwise crosses
         // midnight. `intervalsForSingleDate` returns `null` for "no rule
         // matched" and `[]` for "explicitly closed".
-        $todayExplicitlyClosed = is_array($today) && [] === $today;
+        $todayExplicitlyClosed = [] === $today;
         if (!$todayExplicitlyClosed) {
             foreach ($yesterday ?? [] as [$start, $end]) {
                 if ($end > $start && $end->format('Y-m-d') !== $start->format('Y-m-d')) {
@@ -197,38 +163,35 @@ final class OpeningHoursParser
     }
 
     /**
-     * Parses the tag and returns intervals that apply to the given calendar date.
+     * The intervals the rules give the calendar date: null when no rule applies
+     * to it, `[]` when one closes it.
+     *
+     * @param list<Rule>   $rules
+     * @param list<string> $holidayCountries
      *
      * @return list<array{0: \DateTimeImmutable, 1: \DateTimeImmutable}>|null
      */
-    private function intervalsForSingleDate(string $tag, \DateTimeImmutable $date): ?array
+    private function intervalsForSingleDate(array $rules, \DateTimeImmutable $date, array $holidayCountries): ?array
     {
-        $rules = array_map(trim(...), explode(';', $tag));
-        $rules = array_values(array_filter($rules, static fn (string $r): bool => '' !== $r));
-
-        if ([] === $rules) {
-            return null;
-        }
-
         /** @var list<array{0: \DateTimeImmutable, 1: \DateTimeImmutable}> $intervals */
         $intervals = [];
         $matchedAnyRule = false;
         $closedByRule = false;
 
         foreach ($rules as $rule) {
-            $parsed = $this->parseRule($rule, $date);
-            if (null === $parsed) {
-                // Unparseable rule: skip but keep going — defensive.
+            $judged = $this->judge($rule, $date, $holidayCountries);
+            if (null === $judged) {
+                // Unreadable rule: skip but keep going — defensive.
                 continue;
             }
 
-            if (!$parsed['matches']) {
+            if (!$judged['matches']) {
                 continue;
             }
 
             $matchedAnyRule = true;
 
-            if ($parsed['off']) {
+            if ($judged['off']) {
                 // Explicit off: this rule says closed on this date.
                 $closedByRule = true;
                 $intervals = [];
@@ -237,7 +200,7 @@ final class OpeningHoursParser
 
             // A positive rule cancels a previous "off" matched rule (later rules override).
             $closedByRule = false;
-            foreach ($parsed['intervals'] as $interval) {
+            foreach ($judged['intervals'] as $interval) {
                 $intervals[] = $interval;
             }
         }
@@ -257,53 +220,28 @@ final class OpeningHoursParser
     }
 
     /**
-     * Parses a single rule (between `;` separators).
+     * What one rule says about `$date`, or null when in-ride cannot read it.
+     *
+     * @param list<string> $holidayCountries
      *
      * @return array{matches: bool, off: bool, intervals: list<array{0: \DateTimeImmutable, 1: \DateTimeImmutable}>}|null
      */
-    private function parseRule(string $rule, \DateTimeImmutable $date): ?array
+    private function judge(Rule $rule, \DateTimeImmutable $date, array $holidayCountries): ?array
     {
-        $rule = trim($rule);
-        if ('' === $rule) {
+        $allDay = [[$date->setTime(0, 0), $date->modify('+1 day')->setTime(0, 0)]];
+
+        if ($rule->always) {
+            return ['matches' => true, 'off' => false, 'intervals' => $allDay];
+        }
+
+        $read = $this->read($rule);
+        if (null === $read) {
             return null;
         }
 
-        // 24/7 — always open.
-        if ('24/7' === $rule) {
-            return [
-                'matches' => true,
-                'off' => false,
-                'intervals' => [[
-                    $date->setTime(0, 0),
-                    $date->modify('+1 day')->setTime(0, 0),
-                ]],
-            ];
-        }
+        [$selector, $spans, $modifier] = $read;
 
-        // Detect trailing modifier (off | closed | open).
-        $off = false;
-        $body = $rule;
-        if (preg_match('/^(.*?)\s+(off|closed)$/i', $rule, $m)) {
-            $off = true;
-            $body = trim($m[1]);
-        } elseif (preg_match('/^(.*?)\s+open$/i', $rule, $m)) {
-            $body = trim($m[1]);
-        }
-
-        // Split selector (date/day part) from time ranges.
-        // Time ranges look like HH:MM-HH:MM; everything before the first one is the selector.
-        $selector = $body;
-        $timesPart = '';
-
-        if (preg_match('/^(.*?)\s+(\d{1,2}:\d{2}-\d{1,2}:\d{2}(?:[\s,]+\d{1,2}:\d{2}-\d{1,2}:\d{2})*)\s*$/', $body, $m)) {
-            $selector = trim($m[1]);
-            $timesPart = trim($m[2]);
-        } elseif (preg_match('/^(\d{1,2}:\d{2}-\d{1,2}:\d{2}(?:[\s,]+\d{1,2}:\d{2}-\d{1,2}:\d{2})*)$/', $body, $m)) {
-            $selector = '';
-            $timesPart = trim($m[1]);
-        }
-
-        $matches = $this->selectorMatches($selector, $date);
+        $matches = $this->selectorMatches($selector, $date, $holidayCountries);
         if (null === $matches) {
             return null;
         }
@@ -312,23 +250,16 @@ final class OpeningHoursParser
             return ['matches' => false, 'off' => false, 'intervals' => []];
         }
 
-        if ($off) {
+        if (Modifier::OFF === $modifier) {
             return ['matches' => true, 'off' => true, 'intervals' => []];
         }
 
-        if ('' === $timesPart) {
+        if ([] === $spans) {
             // Matched selector with no times and not "off" → treat as open all day.
-            return [
-                'matches' => true,
-                'off' => false,
-                'intervals' => [[
-                    $date->setTime(0, 0),
-                    $date->modify('+1 day')->setTime(0, 0),
-                ]],
-            ];
+            return ['matches' => true, 'off' => false, 'intervals' => $allDay];
         }
 
-        $intervals = $this->parseTimes($timesPart, $date);
+        $intervals = $this->intervals($spans, $date);
         if (null === $intervals) {
             return null;
         }
@@ -337,150 +268,160 @@ final class OpeningHoursParser
     }
 
     /**
-     * Returns true if the selector matches the given date, false if not, null if unparseable.
-     * Empty selector means "every day".
+     * The selector, spans and modifier in-ride reads from a rule, or null when it
+     * reads nothing.
+     *
+     * This is the tokenisation in-ride has always had, pinned by the
+     * characterisation matrix. It only reads compact spans (`09:00-12:00`, no
+     * whitespace around the dash), it never looks for a keyword or for spans
+     * across a line break, and text it cannot read as spans or keyword stays in the
+     * selector: the selector item it lands in turns unreadable, so only the items
+     * before it can still match. A rule without selector whose spans follow
+     * whitespace (`09:00-12:00, 14:00-18:00`) thus reads its first spans as a
+     * selector, hence nothing.
+     *
+     * @return array{list<SelectorItem>|null, list<TimeSpan>, Modifier|null}|null
      */
-    private function selectorMatches(string $selector, \DateTimeImmutable $date): ?bool
+    private function read(Rule $rule): ?array
     {
-        $selector = trim($selector);
-        if ('' === $selector) {
-            return true;
+        $selector = $rule->selector;
+        $spans = $rule->spans;
+        $modifier = $rule->modifier;
+
+        if (null === $selector && $modifier instanceof Modifier && [] === $spans) {
+            // A bare `off`/`open`: no whitespace precedes the keyword, so it is the selector.
+            return null;
         }
 
-        // The selector may combine date-range and weekday parts. We support:
-        //  - Weekday lists/ranges: `Mo-Fr`, `Sa`, `Mo,We,Fr`, `PH`
-        //  - Single-date specifiers: `dec 25`, `Jan 1`
-        // We try to detect a date specifier first; if found, it must include the date.
-        // Otherwise we fall back to a weekday specifier.
-
-        if (preg_match('/^([A-Za-z]{3})\s+(\d{1,2})$/', $selector, $m)) {
-            $monthKey = strtolower($m[1]);
-            if (!isset(self::MONTHS[$monthKey])) {
-                return null;
-            }
-
-            $month = self::MONTHS[$monthKey];
-            $day = (int) $m[2];
-
-            return (int) $date->format('n') === $month && (int) $date->format('j') === $day;
+        $breaksLine = $rule->selectorBreaksLine || array_any($spans, static fn (TimeSpan $span): bool => $span->breaksLine());
+        if ($modifier instanceof Modifier && $breaksLine) {
+            return [$this->lastItemUnreadable($selector), [], null];
         }
 
-        // Weekday selector. May contain commas (lists) and dashes (ranges) and `PH`.
-        return $this->weekdaySelectorMatches($selector, $date);
+        if ([] !== $spans && $rule->selectorBreaksLine) {
+            return [$this->lastItemUnreadable($selector), [], $modifier];
+        }
+
+        $compact = array_all($spans, static fn (TimeSpan $span): bool => $span->isCompact());
+
+        if (null === $selector) {
+            return $compact && null === $this->splitIndex($spans, false) ? [null, $spans, $modifier] : null;
+        }
+
+        if ($compact) {
+            return [$selector, $spans, $modifier];
+        }
+
+        $split = $this->splitIndex($spans, true);
+
+        return [$this->lastItemUnreadable($selector), null === $split ? [] : \array_slice($spans, $split), $modifier];
     }
 
     /**
-     * Matches weekday-like selectors. Returns null for syntax we don't recognise.
+     * The first span after which in-ride would cut the rule: it follows
+     * whitespace, no line break precedes that whitespace, and, when asked, it
+     * starts a compact tail.
+     *
+     * @param list<TimeSpan> $spans
      */
-    private function weekdaySelectorMatches(string $selector, \DateTimeImmutable $date): ?bool
+    private function splitIndex(array $spans, bool $compactTail): ?int
     {
-        $parts = array_map(trim(...), explode(',', $selector));
+        $lineBroken = false;
+
+        foreach ($spans as $index => $span) {
+            if (0 !== $index
+                && !$lineBroken
+                && $span->followsWhitespace()
+                && !$span->breaksLineBeforeTrailingWhitespace()
+                && (!$compactTail || array_all(\array_slice($spans, $index), static fn (TimeSpan $tail): bool => $tail->isCompact()))
+            ) {
+                return $index;
+            }
+
+            $lineBroken = $lineBroken || $span->breaksLine();
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<SelectorItem>|null $selector null reads as a single item
+     *
+     * @return list<SelectorItem>
+     */
+    private function lastItemUnreadable(?array $selector): array
+    {
+        $selector ??= [];
+        array_pop($selector);
+        $selector[] = SelectorItem::unknown();
+
+        return $selector;
+    }
+
+    /**
+     * Returns true if the selector matches the given date, false if not, null if
+     * unreadable. No selector means "every day". Items are tried in order: the
+     * first that matches wins, the first unreadable one before any match makes the
+     * whole selector unreadable.
+     *
+     * @param list<SelectorItem>|null $selector
+     * @param list<string>            $holidayCountries
+     */
+    private function selectorMatches(?array $selector, \DateTimeImmutable $date, array $holidayCountries): ?bool
+    {
+        if (null === $selector) {
+            return true;
+        }
+
         $dayOfWeek = (int) $date->format('N'); // 1=Mo .. 7=Su
 
-        foreach ($parts as $part) {
-            if ('' === $part) {
+        foreach ($selector as $item) {
+            if (SelectorKind::EMPTY === $item->kind) {
                 continue;
             }
 
-            if ('PH' === $part) {
-                if ($this->isPublicHoliday($date)) {
-                    return true;
-                }
-
-                continue;
+            if (!$item->canonical) {
+                return null;
             }
 
-            if (preg_match('/^([A-Z][a-z])-([A-Z][a-z])$/', $part, $m)) {
-                if (!isset(self::DAYS[$m[1]], self::DAYS[$m[2]])) {
-                    return null;
-                }
-
-                $from = self::DAYS[$m[1]];
-                $to = self::DAYS[$m[2]];
-                if ($from <= $to) {
-                    if ($dayOfWeek >= $from && $dayOfWeek <= $to) {
+            switch ($item->kind) {
+                case SelectorKind::MONTH_DAY:
+                    return (int) $date->format('n') === $item->from && (int) $date->format('j') === $item->to;
+                case SelectorKind::PUBLIC_HOLIDAY:
+                    if ($this->holidays->isHoliday($date, $holidayCountries)) {
                         return true;
                     }
-                } elseif ($dayOfWeek >= $from || $dayOfWeek <= $to) {
-                    // Wraparound: Fr-Mo means Fr, Sa, Su, Mo.
-                    return true;
-                }
 
-                continue;
-            }
+                    break;
+                case SelectorKind::WEEKDAYS:
+                    if (\in_array($dayOfWeek, $item->weekdayList(), true)) {
+                        return true;
+                    }
 
-            if (preg_match('/^[A-Z][a-z]$/', $part)) {
-                if (!isset(self::DAYS[$part])) {
+                    break;
+                default:
                     return null;
-                }
-
-                if (self::DAYS[$part] === $dayOfWeek) {
-                    return true;
-                }
-
-                continue;
             }
-
-            // Unknown selector token: bail out (defensive).
-            return null;
         }
 
         return false;
     }
 
     /**
-     * Best-effort public holiday detection using {@see self::HOLIDAY_LOCALES}.
-     * `azuyalabs/yasumi` is a hard composer dependency of the project, so no
-     * fallback is needed when the class is missing.
-     */
-    private function isPublicHoliday(\DateTimeImmutable $date): bool
-    {
-        try {
-            $year = (int) $date->format('Y');
-            $needle = new \DateTime($date->format('Y-m-d'), $date->getTimezone());
-
-            // Check every supported locale (FR + BE) so a date that is a public
-            // holiday in either country triggers `PH off` rules — a Belgian
-            // shop tagged `Mo-Fr 09:00-18:00; PH off` must read as closed on
-            // July 21 (Belgian National Day) even though Yasumi/France has no
-            // such date.
-            foreach (self::HOLIDAY_LOCALES as $locale) {
-                $key = $locale.'-'.$year;
-                self::$yasumiCache[$key] ??= Yasumi::create($locale, $year);
-
-                if (self::$yasumiCache[$key]->isHoliday($needle)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } catch (\Throwable $throwable) {
-            $this->logger->info('Failed to compute public holiday', ['error' => $throwable->getMessage()]);
-
-            return false;
-        }
-    }
-
-    /**
-     * Parses a comma- or space-separated list of `HH:MM-HH:MM` ranges.
+     * Turns spans into intervals on `$date`, or null when a span is out of range.
+     *
+     * @param list<TimeSpan> $spans
      *
      * @return list<array{0: \DateTimeImmutable, 1: \DateTimeImmutable}>|null
      */
-    private function parseTimes(string $timesPart, \DateTimeImmutable $date): ?array
+    private function intervals(array $spans, \DateTimeImmutable $date): ?array
     {
-        $ranges = preg_split('/[\s,]+/', $timesPart) ?: [];
-        $ranges = array_values(array_filter($ranges, static fn (string $r): bool => '' !== $r));
-
         $intervals = [];
-        foreach ($ranges as $range) {
-            if (!preg_match('/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/', $range, $m)) {
-                return null;
-            }
-
-            $startH = (int) $m[1];
-            $startM = (int) $m[2];
-            $endH = (int) $m[3];
-            $endM = (int) $m[4];
+        foreach ($spans as $span) {
+            $startH = $span->startHour;
+            $startM = $span->startMinute;
+            $endH = $span->endHour;
+            $endM = $span->endMinute;
 
             // OSM accepts 24:00 only as an *end* marker (midnight of the next day),
             // so the start hour caps at 23 while the end hour caps at 24 with a
@@ -496,7 +437,7 @@ final class OpeningHoursParser
 
             $start = $date->setTime($startH, $startM);
 
-            if (24 === $endH && 0 === $endM) {
+            if (24 === $endH) {
                 $end = $date->modify('+1 day')->setTime(0, 0);
             } elseif ($endH < $startH) {
                 // Overnight: end is on the next day.

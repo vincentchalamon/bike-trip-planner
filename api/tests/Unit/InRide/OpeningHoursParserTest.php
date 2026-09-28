@@ -121,6 +121,18 @@ final class OpeningHoursParserTest extends TestCase
         self::assertSame($expected, $this->parser->status($tag, $now));
     }
 
+    #[Test]
+    public function publicHolidaysFollowTheCountriesGiven(): void
+    {
+        $belgianNationalDay = new \DateTimeImmutable('2025-07-21 12:00:00'); // a Monday, and no French holiday
+        $tag = 'Mo-Su 09:00-18:00; PH off';
+
+        self::assertSame(OpeningStatus::CLOSED, $this->parser->status($tag, $belgianNationalDay));
+        self::assertSame(OpeningStatus::CLOSED, $this->parser->status($tag, $belgianNationalDay, ['BE']));
+        self::assertSame(OpeningStatus::OPEN, $this->parser->status($tag, $belgianNationalDay, ['FR']));
+        self::assertNotNull($this->parser->closesAt($tag, $belgianNationalDay, ['FR']));
+    }
+
     /**
      * Explicit proof that `intervalsForSingleDate()` returning null (not `[]`)
      * for an unmatched single-day rule is load-bearing: Monday's `22:00-02:00`

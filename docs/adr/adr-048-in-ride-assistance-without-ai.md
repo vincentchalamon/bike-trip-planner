@@ -123,7 +123,7 @@ The in-ride chat's persisted history lived in the `trip_chat_message` table. Thi
 ### Negative
 
 - **Opening-hours filtering in PHP** (not SQL) forces the larger candidate cap of §9 and its extra rows read per query — a deliberate trade for correctness of the "open now" filter and a meaningful "widen search".
-- **Two opening-hours engines** (`App\InRide\OpeningHoursParser` and `App\Engine\OpeningHours`) now coexist with an assumed divergence (§4). This is intentional but is duplicated logic to keep in step on the one shared invariant.
+- **Two opening-hours policies** (`App\InRide\OpeningHoursParser` and `App\Engine\OpeningHours`) coexist with an assumed divergence (§4). Since the opening-hours refactor they share one grammar (`App\OpeningHours\OpeningHoursGrammar`, which structures a value and judges nothing); only the verdicts stay duplicated, on purpose, pinned by a characterisation matrix (`OpeningHoursCharacterisationTest`).
 - **`trip_chat_message` lingers** as dead schema until the next release (§14).
 
 ### Neutral
@@ -152,7 +152,7 @@ The in-ride chat's persisted history lived in the `trip_chat_message` table. Thi
 
 ### Unify the two opening-hours engines
 
-**Rejected** (§4). Their verdicts diverge on purpose — in-ride drops a certainly-closed line, planning keeps it flagged. Forcing one behaviour would break one of the two callers.
+**Rejected** (§4). Their verdicts diverge on purpose — in-ride drops a certainly-closed line, planning keeps it flagged. Forcing one behaviour would break one of the two callers. The grammar underneath was later shared (one parser, two policies); the verdicts were not merged.
 
 ## Sources
 
