@@ -1056,21 +1056,10 @@ export async function revokeTripShare(tripId: string): Promise<boolean> {
   return res.ok;
 }
 
-/**
- * Fetch a shared trip via short code (anonymous, no auth required).
- */
+// A shared trip read via short code (anonymous). Fetched server-side by the
+// /s/{code} page, which hands it to the client view.
 export type SharedTripDetail =
   components["schemas"]["TripShare.TripDetail.jsonld"];
-
-export async function fetchSharedTrip(
-  shortCode: string,
-): Promise<SharedTripDetail | null> {
-  const res = await fetch(`${API_URL}/s/${encodeURIComponent(shortCode)}`, {
-    headers: { Accept: "application/ld+json" },
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<SharedTripDetail>;
-}
 
 // All-stages geometry, split off the trip summary (ADR-057), fetched on demand.
 export type TripRoute = components["schemas"]["TripRoute.jsonld"];

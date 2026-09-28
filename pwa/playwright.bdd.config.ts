@@ -16,6 +16,8 @@ const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir,
+  // Seeds a real share for the /s/<code_court> steps (no-op without E2E_JWT).
+  globalSetup: "./tests/fixtures/shared-trip-seed.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

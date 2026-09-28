@@ -9,6 +9,8 @@ export default defineConfig({
   // The visual-regression suite (tests/visual/) has its own multi-project config
   // and is run on demand via `make visual-test`.
   testIgnore: ["**/screenshots/**", "**/visual/**"],
+  // Seeds a real share for the /s/{code} specs (no-op without E2E_JWT).
+  globalSetup: "./tests/fixtures/shared-trip-seed.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -554,8 +554,9 @@ export function buildShareUrl(shortCode: string): string {
 // ---------------------------------------------------------------------------
 // Anonymous shared-trip consultation (#1177). The `/s/<code>` endpoints require
 // no auth (the JWT header, when present, is simply ignored server-side), and
-// serve a read-only projection of the trip. Mirrors the web's fetchSharedTrip /
-// fetchSharedTripRoute / downloadSharedTripFile (pwa's api/client).
+// serve a read-only projection of the trip. Mirrors the web's server-side fetch
+// in app/s/[code]/page.tsx and its fetchSharedTripRoute / downloadSharedTripFile
+// (pwa's api/client).
 // ---------------------------------------------------------------------------
 
 export type SharedTripDetail = components['schemas']['TripShare.TripDetail.jsonld'];
