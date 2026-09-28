@@ -54,14 +54,10 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
      */
     public function markSupersededUnlessSettled(string $tripId, ComputationName $computation): bool
     {
-        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
-        $lock->acquire(blocking: true);
-
-        try {
+        return $this->withStatusLock($tripId, function () use ($tripId, $computation): bool {
             $statuses = $this->getStatuses($tripId) ?? [];
-            $current = $statuses[$computation->value] ?? null;
 
-            if (ComputationStatus::PENDING->value !== $current && ComputationStatus::RUNNING->value !== $current) {
+            if (!$this->isInFlight($statuses[$computation->value] ?? null)) {
                 return false;
             }
 
@@ -69,28 +65,28 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
             $this->set($this->statusKey($tripId), $statuses);
 
             return true;
-        } finally {
-            $lock->release();
-        }
+        });
     }
 
     /**
      * The dual, and cheap on the common path: a computation that is already `pending` or
      * `running` is read and left alone, without taking the lock or writing.
+     *
+     * That first read only decides whether the lock is worth taking. Another worker may start
+     * the computation while this one waits for the lock, so the decision is made again under
+     * it; rearming on the stale read would turn that worker's `running` back into `pending`.
      */
     public function rearmIfSettled(string $tripId, ComputationName $computation): bool
     {
         $current = ($this->getStatuses($tripId) ?? [])[$computation->value] ?? null;
-        if (null === $current || ComputationStatus::PENDING->value === $current || ComputationStatus::RUNNING->value === $current) {
+        if (null === $current || $this->isInFlight($current)) {
             return false;
         }
 
-        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
-        $lock->acquire(blocking: true);
-
-        try {
+        return $this->withStatusLock($tripId, function () use ($tripId, $computation): bool {
             $statuses = $this->getStatuses($tripId) ?? [];
-            if (!isset($statuses[$computation->value])) {
+            $current = $statuses[$computation->value] ?? null;
+            if (null === $current || $this->isInFlight($current)) {
                 return false;
             }
 
@@ -98,9 +94,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
             $this->set($this->statusKey($tripId), $statuses);
 
             return true;
-        } finally {
-            $lock->release();
-        }
+        });
     }
 
     public function resetComputation(string $tripId, ComputationName $computation): void
@@ -110,17 +104,21 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
 
     public function claimReadyPublication(string $tripId, ?int $generation = null): bool
     {
-        $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId, $generation));
-        if ($item->isHit()) {
-            return false;
-        }
+        // Check and set under the lock: two workers settling the last computations at once
+        // would otherwise both read "unclaimed" and both publish `trip_ready` (#303).
+        return $this->withStatusLock($tripId, function () use ($tripId, $generation): bool {
+            $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId, $generation));
+            if ($item->isHit()) {
+                return false;
+            }
 
-        $item->set(true);
-        $item->expiresAfter(self::TTL);
+            $item->set(true);
+            $item->expiresAfter(self::TTL);
 
-        $this->tripStateCache->save($item);
+            $this->tripStateCache->save($item);
 
-        return true;
+            return true;
+        });
     }
 
     public function getProgress(string $tripId): array
@@ -209,16 +207,35 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
      */
     private function updateStatus(string $tripId, ComputationName $computation, string $status): void
     {
+        $this->withStatusLock($tripId, function () use ($tripId, $computation, $status): void {
+            $statuses = $this->getStatuses($tripId) ?? [];
+            $statuses[$computation->value] = $status;
+            $this->set($this->statusKey($tripId), $statuses);
+        });
+    }
+
+    /**
+     * @template T
+     *
+     * @param callable(): T $critical
+     *
+     * @return T
+     */
+    private function withStatusLock(string $tripId, callable $critical): mixed
+    {
         $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
         $lock->acquire(blocking: true);
 
         try {
-            $statuses = $this->getStatuses($tripId) ?? [];
-            $statuses[$computation->value] = $status;
-            $this->set($this->statusKey($tripId), $statuses);
+            return $critical();
         } finally {
             $lock->release();
         }
+    }
+
+    private function isInFlight(?string $status): bool
+    {
+        return ComputationStatus::PENDING->value === $status || ComputationStatus::RUNNING->value === $status;
     }
 
     private function set(string $key, mixed $value): void
