@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   getUndoableSlice,
+  revertStructuralEdit,
   useTripStore,
   useTripTemporalStore,
 } from "./trip-store";
@@ -451,26 +452,112 @@ describe("events preservation (recette)", () => {
   });
 });
 
-describe("rollbackStages", () => {
-  beforeEach(() => useTripStore.getState().clearTrip());
+describe("rollbackStructuralEdit", () => {
+  beforeEach(() => {
+    useTripStore.getState().clearTrip();
+    useTripStore.getState().updateDatesInternal("2026-10-01", "2026-10-03");
+    useTripStore
+      .getState()
+      .setStages([makeStage(1), makeStage(2), makeStage(3)]);
+  });
 
-  it("restores the stages and the end date, and drops the undo entry the edit pushed", () => {
-    const store = useTripStore.getState();
-    store.updateDatesInternal("2026-10-01", "2026-10-03");
-    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
-    const { stages, endDate } = useTripStore.getState();
+  const ids = () => useTripStore.getState().stages.map((s) => s.id);
 
-    const token = store.deleteStage(1);
-    useTripStore.getState().rollbackStages(token, { stages, endDate });
+  it("restores a refused deletion and the end date, and drops its undo entry", () => {
+    const edit = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().rollbackStructuralEdit(edit);
 
-    const state = useTripStore.getState();
-    expect(state.stages.map((s) => s.id)).toEqual([
+    expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
+    expect(useTripStore.getState().stages.map((s) => s.dayNumber)).toEqual([
+      1, 2, 3,
+    ]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+
+  it("keeps a rest day inserted while the refused deletion was in flight", () => {
+    const refused = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().insertRestDay(0);
+    const restDayId = useTripStore.getState().stages[1]!.id;
+
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    expect(ids()).toEqual(["stage-1", restDayId, "stage-2", "stage-3"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-04");
+  });
+
+  it("removes only the refused insertion when a deletion landed meanwhile", () => {
+    const refused = useTripStore.getState().insertRestDay(0);
+    useTripStore.getState().deleteStage(3);
+
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    expect(ids()).toEqual(["stage-1", "stage-2"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-02");
+  });
+
+  it("scrubs the refused edit from the later undo entries", () => {
+    const refused = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().insertRestDay(0);
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    // Undoing the accepted rest day must not bring the refused deletion back.
+    useTripTemporalStore.getState().undo();
+
+    expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+});
+
+describe("revertStructuralEdit", () => {
+  const stages = [makeStage(1), makeStage(2), makeStage(3)];
+  const back = (result: StageData[]) => result.map((s) => s.id);
+
+  it("puts a deleted first stage back first", () => {
+    expect(
+      back(
+        revertStructuralEdit(stages.slice(1), {
+          kind: "restore",
+          stage: stages[0]!,
+          afterStageId: null,
+          beforeStageId: "stage-2",
+        }),
+      ),
+    ).toEqual(["stage-1", "stage-2", "stage-3"]);
+  });
+
+  it("falls back to the preceding stage, then the end, when neighbours have gone", () => {
+    const middle = {
+      kind: "restore",
+      stage: stages[1]!,
+      afterStageId: "stage-1",
+      beforeStageId: "stage-3",
+    } as const;
+    expect(back(revertStructuralEdit([stages[0]!], middle))).toEqual([
       "stage-1",
       "stage-2",
-      "stage-3",
     ]);
-    expect(state.endDate).toBe("2026-10-03");
-    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+    expect(back(revertStructuralEdit([makeStage(9)], middle))).toEqual([
+      "stage-9",
+      "stage-2",
+    ]);
+  });
+
+  it("never duplicates a stage that is already there", () => {
+    const result = revertStructuralEdit(stages, {
+      kind: "restore",
+      stage: stages[1]!,
+      afterStageId: "stage-1",
+      beforeStageId: "stage-3",
+    });
+    expect(result).toBe(stages);
+  });
+
+  it("is a no-op for an insertion the server already replaced", () => {
+    expect(
+      revertStructuralEdit(stages, { kind: "remove", stageId: "pending-x" }),
+    ).toBe(stages);
   });
 });
 

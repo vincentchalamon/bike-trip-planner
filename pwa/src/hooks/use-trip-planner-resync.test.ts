@@ -334,3 +334,77 @@ describe("useTripPlanner — a refused edit withdraws its own undo entry, not th
     expect(useTripTemporalStore.getState().canUndo).toBe(false);
   });
 });
+
+describe("useTripPlanner — a refused edit reverts only itself", () => {
+  it("keeps a rest day accepted while a refused deletion was in flight", async () => {
+    const settle: ((status: number) => void)[] = [];
+    holder.deferred = settle;
+    useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
+    const { result } = renderHook(() => useTripPlanner());
+
+    let deletion!: Promise<void>, restDay!: Promise<void>;
+    act(() => {
+      deletion = result.current.handleDeleteStage(1);
+    });
+    act(() => {
+      restDay = result.current.handleInsertRestDay(0);
+    });
+    const restDayId = useTripStore.getState().stages[1]!.id;
+    await act(async () => {
+      settle[1]!(200);
+      await restDay;
+      settle[0]!(422);
+      await deletion;
+    });
+
+    const state = useTripStore.getState();
+    expect(state.stages.map((s) => s.id)).toEqual([
+      "stage-1",
+      restDayId,
+      "stage-2",
+      "stage-3",
+    ]);
+    expect(state.endDate).toBe("2026-10-04");
+  });
+
+  it("puts back the terrain alerts of a refused e-bike toggle without undoing a stage change made meanwhile", async () => {
+    const settle: ((status: number) => void)[] = [];
+    holder.deferred = settle;
+    const terrain = {
+      type: "warning" as const,
+      message: "Steep",
+      lat: 0,
+      lon: 0,
+      group: "terrain",
+    };
+    useTripStore.setState({
+      ebikeMode: true,
+      stages: [{ ...stage(1), alerts: [terrain] }, stage(2)],
+    });
+    const { result } = renderHook(() => useTripPlanner());
+
+    let toggle!: Promise<void>;
+    act(() => {
+      toggle = result.current.handleEbikeModeChange(false);
+    });
+    // A day lands in front while the toggle is in flight.
+    act(() => {
+      useTripStore.setState({
+        stages: [stage(0), ...useTripStore.getState().stages],
+      });
+    });
+    await act(async () => {
+      settle[0]!(422);
+      await toggle;
+    });
+
+    const state = useTripStore.getState();
+    expect(state.ebikeMode).toBe(true);
+    expect(state.stages.map((s) => s.id)).toEqual([
+      "stage-0",
+      "stage-1",
+      "stage-2",
+    ]);
+    expect(state.stages[1]?.alerts).toEqual([terrain]);
+  });
+});

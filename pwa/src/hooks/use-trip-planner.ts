@@ -37,6 +37,7 @@ import {
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@btp/core/constants";
 import { EMPTY_RESUPPLY } from "@btp/core";
+import type { StageAlert } from "@btp/core/reconciliation";
 import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
@@ -370,11 +371,7 @@ export function useTripPlanner() {
     if (!target) return;
     const stageId = target.id;
     const isRestDay = target.isRestDay ?? false;
-    const snapshot = {
-      stages: currentStages,
-      endDate: useTripStore.getState().endDate,
-    };
-    const undoToken = actions.deleteStage(index);
+    const edit = actions.deleteStage(index);
 
     try {
       const { error, response } = await apiClient.DELETE(
@@ -388,25 +385,23 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripStore.getState().rollbackStages(undoToken, snapshot);
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
         if (!isRestDay) setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
-      useTripStore.getState().rollbackStages(undoToken, snapshot);
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
   async function handleInsertRestDay(afterIndex: number) {
     if (!tripId) return;
 
-    const { stages, endDate } = useTripStore.getState();
-    const snapshot = { stages, endDate };
-    const stageId = stages[afterIndex]?.id;
+    const stageId = useTripStore.getState().stages[afterIndex]?.id;
     if (!stageId) return;
-    const undoToken = actions.insertRestDay(afterIndex);
+    const edit = actions.insertRestDay(afterIndex);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -421,20 +416,20 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         reportApiError(response.status, error);
-        useTripStore.getState().rollbackStages(undoToken, snapshot);
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
-      useTripStore.getState().rollbackStages(undoToken, snapshot);
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
   async function handleAddStage(afterIndex: number) {
     if (!tripId) return;
 
-    const { stages: currentStages, endDate } = useTripStore.getState();
+    const currentStages = useTripStore.getState().stages;
     const prevStage = currentStages[afterIndex];
     const nextStage = currentStages[afterIndex + 1];
     const startPoint = prevStage?.endPoint ?? prevStage?.startPoint;
@@ -477,7 +472,7 @@ export function useTripPlanner() {
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.
-    const undoToken = actions.insertStagePlaceholder(afterIndex, placeholder);
+    const edit = actions.insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -489,18 +484,14 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripStore
-          .getState()
-          .rollbackStages(undoToken, { stages: currentStages, endDate });
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
-      useTripStore
-        .getState()
-        .rollbackStages(undoToken, { stages: currentStages, endDate });
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
@@ -740,7 +731,18 @@ export function useTripPlanner() {
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
-    const previous = useTripStore.getState();
+    const previousEbikeMode = useTripStore.getState().ebikeMode;
+    // The terrain alerts cleared below, by stage identity, so a refusal puts back
+    // only those and leaves any stage change made meanwhile alone.
+    const clearedTerrain = new Map<string, StageData["alerts"]>();
+    if (!newEbikeMode) {
+      for (const stage of useTripStore.getState().stages) {
+        const terrain = (stage.alerts as StageAlert[]).filter(
+          (a) => a.group === "terrain",
+        );
+        if (terrain.length > 0) clearedTerrain.set(stage.id, terrain);
+      }
+    }
     actions.setEbikeMode(newEbikeMode);
     if (!newEbikeMode) {
       const currentStages = useTripStore.getState().stages;
@@ -761,8 +763,11 @@ export function useTripPlanner() {
       true,
     );
     if (!saved && tripId) {
-      actions.setEbikeMode(previous.ebikeMode);
-      useTripStore.getState().setStages(previous.stages);
+      actions.setEbikeMode(previousEbikeMode);
+      useTripStore.getState().stages.forEach((stage, i) => {
+        const terrain = clearedTerrain.get(stage.id);
+        if (terrain) actions.updateStageAlerts(i, terrain, "terrain");
+      });
     }
   }
 

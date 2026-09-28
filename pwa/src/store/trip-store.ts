@@ -143,14 +143,11 @@ interface TripState {
   }) => void;
   setStages: (stages: StageData[]) => void;
   /**
-   * Undo an optimistic structural edit the server refused: withdraw the undo
-   * entry the edit pushed (`token`) and put back the stages and the end date it
-   * changed.
+   * Undo an optimistic structural edit the server refused: withdraw its undo
+   * entry and apply its inverse to the stages as they are now, so an edit made
+   * while this one was in flight survives.
    */
-  rollbackStages: (
-    token: UndoToken,
-    snapshot: { stages: StageData[]; endDate: string | null },
-  ) => void;
+  rollbackStructuralEdit: (edit: StructuralEdit) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
   updateStageSupplyTimeline: (
@@ -205,15 +202,15 @@ interface TripState {
   setComputationStatus: (status: Record<string, string>) => void;
   setIsLocked: (isLocked: boolean) => void;
   setOutOfZone: (outOfZone: boolean) => void;
-  /** Undoable: returns the token of the undo entry it pushed. */
-  deleteStage: (stageIndex: number) => UndoToken;
-  /** Undoable: returns the token of the undo entry it pushed. */
-  insertRestDay: (afterIndex: number) => UndoToken;
+  /** Undoable: returns what {@link rollbackStructuralEdit} needs to undo it. */
+  deleteStage: (stageIndex: number) => StructuralEdit;
+  /** Undoable: returns what {@link rollbackStructuralEdit} needs to undo it. */
+  insertRestDay: (afterIndex: number) => StructuralEdit;
   /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
   insertStagePlaceholder: (
     afterIndex: number,
     placeholder: StageData,
-  ) => UndoToken;
+  ) => StructuralEdit;
   updateStageAfterRouteRecalculation: (
     stageIndex: number,
     data: {
@@ -421,8 +418,65 @@ function pruneStaleRecomputing(state: {
   );
 }
 
+/** What undoes one optimistic structural edit, expressed by stage identity. */
+export type StructuralInverse =
+  | { kind: "remove"; stageId: string }
+  | {
+      kind: "restore";
+      stage: StageData;
+      /** The stages that surrounded it, null at either end of the trip. */
+      afterStageId: string | null;
+      beforeStageId: string | null;
+    };
+
+export interface StructuralEdit {
+  token: UndoToken;
+  inverse: StructuralInverse;
+}
+
+/**
+ * Apply the inverse of a refused structural edit to `stages`, leaving every other
+ * stage alone. It goes by identity rather than by restoring a snapshot: another edit
+ * may have landed while the refused one was in flight, and it must survive.
+ *
+ * A deleted stage goes back in front of the stage that followed it, which is where
+ * the server still has it: an insertion made meanwhile after the preceding stage
+ * landed in front of it there too. Failing that, after the stage that preceded it;
+ * failing both, at the end. A stage already present is not duplicated. An inserted stage is removed by its provisional id, a no-op once the
+ * server has replaced it.
+ */
+export function revertStructuralEdit(
+  stages: StageData[],
+  inverse: StructuralInverse,
+): StageData[] {
+  if (inverse.kind === "remove") {
+    if (!stages.some((s) => s.id === inverse.stageId)) return stages;
+    return renumberAfterStructuralEdit(
+      stages.filter((s) => s.id !== inverse.stageId),
+    );
+  }
+  if (stages.some((s) => s.id === inverse.stage.id)) return stages;
+  const indexOf = (id: string | null) =>
+    id === null ? -1 : stages.findIndex((s) => s.id === id);
+  const before = indexOf(inverse.beforeStageId);
+  const after = indexOf(inverse.afterStageId);
+  const at =
+    before !== -1
+      ? before
+      : after !== -1
+        ? after + 1
+        : inverse.afterStageId === null && inverse.beforeStageId !== null
+          ? 0
+          : stages.length;
+  return renumberAfterStructuralEdit([
+    ...stages.slice(0, at),
+    inverse.stage,
+    ...stages.slice(at),
+  ]);
+}
+
 export const useTripStore = create<TripState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     ...initialState,
 
     setTrip: (trip) =>
@@ -474,11 +528,28 @@ export const useTripStore = create<TripState>()(
         pruneStaleRecomputing(state);
       }),
 
-    rollbackStages: (token, snapshot) => {
-      discardUndoEntry(token, snapshot);
-      useTripStore.getState().setStages(snapshot.stages);
+    rollbackStructuralEdit: ({ token, inverse }) => {
+      useTripTemporalStore.getState()._discard(token, (snapshot) => {
+        const slice = snapshot as UndoableSlice;
+        const stages = revertStructuralEdit(slice.stages, inverse);
+        return {
+          ...slice,
+          stages,
+          endDate: slice.startDate
+            ? endDateFor(slice.startDate, stages.length)
+            : slice.endDate,
+        };
+      });
       set((state) => {
-        state.endDate = snapshot.endDate;
+        state.stages = revertStructuralEdit(state.stages, inverse);
+        const max = Math.max(0, state.stages.length - 1);
+        if (state.selectedStageIndex > max) {
+          state.selectedStageIndex = max;
+        }
+        pruneStaleRecomputing(state);
+        if (state.startDate) {
+          state.endDate = endDateFor(state.startDate, state.stages.length);
+        }
       });
     },
 
@@ -650,6 +721,8 @@ export const useTripStore = create<TripState>()(
       }),
 
     deleteStage: (stageIndex) => {
+      const { stages } = get();
+      const removed = stages[stageIndex];
       // Push snapshot before deletion so the user can undo accidental removal.
       const token = useTripTemporalStore
         .getState()
@@ -671,10 +744,23 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
-      return token;
+      return {
+        token,
+        inverse: removed
+          ? {
+              kind: "restore",
+              stage: removed,
+              afterStageId: stages[stageIndex - 1]?.id ?? null,
+              beforeStageId: stages[stageIndex + 1]?.id ?? null,
+            }
+          : { kind: "remove", stageId: "" },
+      };
     },
 
     insertRestDay: (afterIndex) => {
+      // Provisional identity: replaced by the server's on the next
+      // stages_computed / trip_ready.
+      const restDayId = `pending-${crypto.randomUUID()}`;
       // Push snapshot before insertion so the user can undo rest-day addition.
       const token = useTripTemporalStore
         .getState()
@@ -684,9 +770,7 @@ export const useTripStore = create<TripState>()(
         if (!afterStage) return;
 
         const restDay: StageData = {
-          // Provisional identity: replaced by the server's on the next
-          // stages_computed / trip_ready.
-          id: `pending-${crypto.randomUUID()}`,
+          id: restDayId,
           dayNumber: afterIndex + 2,
           distance: 0,
           elevation: 0,
@@ -718,7 +802,7 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
-      return token;
+      return { token, inverse: { kind: "remove", stageId: restDayId } };
     },
 
     insertStagePlaceholder: (afterIndex, placeholder) => {
@@ -737,7 +821,7 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
-      return token;
+      return { token, inverse: { kind: "remove", stageId: placeholder.id } };
     },
 
     updateStageAfterRouteRecalculation: (stageIndex, data) =>
