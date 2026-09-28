@@ -692,9 +692,7 @@ type SchemaAlert = NonNullable<NonNullable<SchemaStage["alerts"]>>[number];
 type Uncovered<P, T> = Exclude<keyof P, keyof T>;
 
 type Covered<P, T, Label extends string> =
-  Uncovered<P, T> extends never
-    ? true
-    : Record<Label, Uncovered<P, T>>;
+  Uncovered<P, T> extends never ? true : Record<Label, Uncovered<P, T>>;
 
 /**
  * Every event that ships a list of alerts, derived rather than listed: adding one brings
@@ -708,10 +706,12 @@ type AlertEventType = {
     : never;
 }[MercureEventType];
 
-type AlertElement<K extends AlertEventType> =
-  Extract<MercureEvent, { type: K }>["data"] extends { alerts: (infer A)[] }
-    ? A
-    : never;
+type AlertElement<K extends AlertEventType> = Extract<
+  MercureEvent,
+  { type: K }
+>["data"] extends { alerts: (infer A)[] }
+  ? A
+  : never;
 
 /**
  * An alert on the wire is an alert plus the stage it hangs off, so the target is the
@@ -743,12 +743,28 @@ type _AlertsAreCovered = {
  * was sent. That gap is named here rather than hidden.
  */
 type _PayloadsAreCovered = [
-  Covered<CoordinatePayload, SchemaOf<"Coordinate.jsonld">, "ERROR_CoordinatePayload">,
+  Covered<
+    CoordinatePayload,
+    SchemaOf<"Coordinate.jsonld">,
+    "ERROR_CoordinatePayload"
+  >,
   Covered<PoiPayload, SchemaOf<"PointOfInterest.jsonld">, "ERROR_PoiPayload">,
-  Covered<ResupplyPayload, SchemaOf<"Resupply.jsonld">, "ERROR_ResupplyPayload">,
-  Covered<AccommodationPayload, SchemaOf<"Accommodation.jsonld">, "ERROR_AccommodationPayload">,
+  Covered<
+    ResupplyPayload,
+    SchemaOf<"Resupply.jsonld">,
+    "ERROR_ResupplyPayload"
+  >,
+  Covered<
+    AccommodationPayload,
+    SchemaOf<"Accommodation.jsonld">,
+    "ERROR_AccommodationPayload"
+  >,
   Covered<EventPayload, SchemaOf<"Event.jsonld">, "ERROR_EventPayload">,
-  Covered<HourlyWeatherSlotPayload, SchemaOf<"HourlyWeatherSlot.jsonld">, "ERROR_HourlyWeatherSlotPayload">,
+  Covered<
+    HourlyWeatherSlotPayload,
+    SchemaOf<"HourlyWeatherSlot.jsonld">,
+    "ERROR_HourlyWeatherSlotPayload"
+  >,
   Covered<StagePayload, SchemaStage, "ERROR_StagePayload">,
   Covered<AlertPayload, SchemaAlert, "ERROR_AlertPayload">,
 ];

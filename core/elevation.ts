@@ -30,7 +30,10 @@ export function haversineKm(
  * arguments overflows the engine's argument limit (RangeError: Maximum call stack size
  * exceeded), stricter under Hermes. Callers guarantee a non-empty array.
  */
-export function minMax(values: readonly number[]): { min: number; max: number } {
+export function minMax(values: readonly number[]): {
+  min: number;
+  max: number;
+} {
   let min = values[0]!;
   let max = values[0]!;
   for (const v of values) {
@@ -69,7 +72,12 @@ export function buildProfilePoints(
   const entries: { stage: StageData; stageIndex: number }[] =
     focusedStageIndex !== null
       ? activeStages[focusedStageIndex]
-        ? [{ stage: activeStages[focusedStageIndex]!, stageIndex: focusedStageIndex }]
+        ? [
+            {
+              stage: activeStages[focusedStageIndex]!,
+              stageIndex: focusedStageIndex,
+            },
+          ]
         : []
       : activeStages.map((stage, idx) => ({ stage, stageIndex: idx }));
 
@@ -98,12 +106,19 @@ export function buildProfilePoints(
       let gradient = 0;
       if (prevEle !== null && prevDistKm !== null) {
         const deltaKm = distKm - prevDistKm;
-        if (deltaKm > 0) gradient = ((currEle - prevEle) / (deltaKm * 1000)) * 100;
+        if (deltaKm > 0)
+          gradient = ((currEle - prevEle) / (deltaKm * 1000)) * 100;
       }
       prevEle = currEle;
       prevDistKm = distKm;
 
-      points.push({ distanceKm: distKm, ele: currEle, gradient, stageIndex, coordIndex: ci });
+      points.push({
+        distanceKm: distKm,
+        ele: currEle,
+        gradient,
+        stageIndex,
+        coordIndex: ci,
+      });
     }
 
     cumulativeKm = points[points.length - 1]?.distanceKm ?? cumulativeKm;

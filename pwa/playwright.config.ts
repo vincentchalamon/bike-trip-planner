@@ -14,9 +14,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
-    ? [["github"], ["json", { outputFile: "playwright-report.json" }]]
+    ? [["line"], ["github"], ["html", { open: "never" }]]
     : "line",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
@@ -25,21 +24,16 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  projects: process.env.CI
-    ? [
-        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-        { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-        { name: "webkit", use: { ...devices["Desktop Safari"] } },
-      ]
-    : [
-        {
-          name: "chromium",
-          use: {
-            ...devices["Desktop Chrome"],
-            ...(chromiumExecutable && {
-              launchOptions: { executablePath: chromiumExecutable },
-            }),
-          },
-        },
-      ],
+  // Chromium only, CI included: Firefox and WebKit never ran against this suite.
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(chromiumExecutable && {
+          launchOptions: { executablePath: chromiumExecutable },
+        }),
+      },
+    },
+  ],
 });

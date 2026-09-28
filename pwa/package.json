@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format:check": "prettier --check .",
     "i18n:check": "node scripts/i18n-check.mjs",
     "typegen": "openapi-typescript openapi.json -o ../core/schema.d.ts",
     "test:ts": "tsc --noEmit",

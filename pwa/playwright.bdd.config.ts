@@ -21,9 +21,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
     ? [
+        ["line"] as [string],
         ["github"] as [string],
         cucumberReporter("html", {
           outputFile: "recette-report/index.html",
@@ -45,20 +45,16 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  projects: process.env.CI
-    ? [
-        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-        { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-      ]
-    : [
-        {
-          name: "chromium",
-          use: {
-            ...devices["Desktop Chrome"],
-            ...(chromiumExecutable && {
-              launchOptions: { executablePath: chromiumExecutable },
-            }),
-          },
-        },
-      ],
+  // Chromium only, CI included: Firefox never ran against these scenarios.
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(chromiumExecutable && {
+          launchOptions: { executablePath: chromiumExecutable },
+        }),
+      },
+    },
+  ],
 });
