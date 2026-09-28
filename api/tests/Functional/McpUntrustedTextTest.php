@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -267,7 +268,7 @@ final class McpUntrustedTextTest extends ApiTestCase
         self::assertInstanceOf(User::class, $owner);
         $this->associateTripWithUser(self::TRIP_ID, $owner);
 
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $this->stageStore()->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,
@@ -278,12 +279,12 @@ final class McpUntrustedTextTest extends ApiTestCase
             label: $planted,
         )]);
 
-        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
         self::assertIsString($stageId);
 
-        $repo->updateStageLabels(self::TRIP_ID, $stageId, $planted, 'Villard-de-Lans');
+        $this->stageStore()->updateStageLabels(self::TRIP_ID, $stageId, $planted, 'Villard-de-Lans');
 
-        $repo->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
             'code' => 'cultural_poi_suggestion',
             'type' => 'nudge',
             'messageKey' => 'alert.cultural_poi.suggestion',
@@ -292,7 +293,7 @@ final class McpUntrustedTextTest extends ApiTestCase
             'lon' => 6.1,
         ]]);
 
-        $repo->updateStageAccommodations(self::TRIP_ID, $stageId, [new Accommodation(
+        $this->stageStore()->updateStageAccommodations(self::TRIP_ID, $stageId, [new Accommodation(
             name: $planted,
             type: 'guest_house',
             lat: 45.49,
@@ -304,5 +305,13 @@ final class McpUntrustedTextTest extends ApiTestCase
         )]);
 
         return $stageId;
+    }
+
+    private function stageStore(): DoctrineTripStageStore
+    {
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
+        \assert($store instanceof DoctrineTripStageStore);
+
+        return $store;
     }
 }

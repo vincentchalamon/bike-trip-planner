@@ -13,6 +13,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -55,9 +56,9 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         $repository = $this->doctrineRepository();
         $this->seedTrip($repository);
 
-        $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
         foreach (AlertGroup::cases() as $group) {
-            $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, $group, [[
+            $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, $group, [[
                 'code' => null,
                 'type' => 'nudge',
                 'messageKey' => \sprintf('alert.from.%s', $group->value),
@@ -94,8 +95,8 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         $repository = $this->doctrineRepository();
         $this->seedTrip($repository);
 
-        $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
-        $repository->updateStageEvents(self::TRIP_ID, $stageId, [new Event(
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $this->stageStore()->updateStageEvents(self::TRIP_ID, $stageId, [new Event(
             name: 'Festival de Jazz',
             type: 'festival',
             lat: 45.5,
@@ -129,15 +130,15 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         $repository = $this->doctrineRepository();
         $this->seedTrip($repository);
 
-        $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
-        $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::FERRY, [
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::FERRY, [
             ['code' => 'ferry_crossing', 'type' => 'warning', 'messageKey' => 'alert.ferry.warning'],
         ]);
-        $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, [
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, [
             ['code' => 'elevation_gain', 'type' => 'warning', 'messageKey' => 'alert.elevation.warning'],
         ]);
         // Terrain runs again and finds nothing; the ferry must not go with it.
-        $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, []);
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, []);
 
         $shortCode = $this->createShare();
         $response = $this->client->request('GET', \sprintf('/s/%s', $shortCode), [
@@ -180,7 +181,7 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
         $repository->storeStatus(self::TRIP_ID, 'ready');
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
 
-        $repository->storeStages(self::TRIP_ID, [new StageDto(
+        $this->stageStore()->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,
@@ -189,5 +190,13 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0), new Coordinate(45.5, 6.5, 800.0)],
         )]);
+    }
+
+    private function stageStore(): DoctrineTripStageStore
+    {
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
+        \assert($store instanceof DoctrineTripStageStore);
+
+        return $store;
     }
 }

@@ -17,6 +17,7 @@ use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\Mercure\StagePayloadMapper;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\State\TripDetailProvider;
 use App\Weather\WeatherForecastSerializer;
 use Doctrine\DBAL\Connection;
@@ -38,16 +39,22 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class StageArrayShapeCharacterisationTest extends KernelTestCase
 {
-    private DoctrineTripRequestRepository $repository;
+    private DoctrineTripStageStore $store;
+
+    private DoctrineTripRequestRepository $trips;
 
     #[\Override]
     protected function setUp(): void
     {
         self::bootKernel();
 
-        /** @var DoctrineTripRequestRepository $repository */
-        $repository = self::getContainer()->get(DoctrineTripRequestRepository::class);
-        $this->repository = $repository;
+        /** @var DoctrineTripStageStore $store */
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
+        $this->store = $store;
+
+        /** @var DoctrineTripRequestRepository $trips */
+        $trips = self::getContainer()->get(DoctrineTripRequestRepository::class);
+        $this->trips = $trips;
     }
 
     #[Test]
@@ -80,7 +87,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
     {
         [$tripId] = $this->seed();
 
-        $stage = ($this->repository->getStages($tripId) ?? [])[0];
+        $stage = ($this->store->getStages($tripId) ?? [])[0];
 
         self::assertEquals($this->forecast(), $stage->weather);
         self::assertEquals($this->resupply(), $stage->resupply);
@@ -160,7 +167,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
     public function aForecastWrittenByTheWeatherHandlerReloadsAsItWasPublished(): void
     {
         [$tripId, $stageId] = $this->seed();
-        $this->repository->updateStageWeather($tripId, $stageId, $this->forecast());
+        $this->store->updateStageWeather($tripId, $stageId, $this->forecast());
 
         /** @var WeatherForecastSerializer $serializer */
         $serializer = self::getContainer()->get(WeatherForecastSerializer::class);
@@ -184,7 +191,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
             ['weather' => json_encode($this->legacyStoredWeather(), \JSON_THROW_ON_ERROR), 'id' => $stageId],
         );
 
-        $stage = ($this->repository->getStages($tripId) ?? [])[0];
+        $stage = ($this->store->getStages($tripId) ?? [])[0];
 
         self::assertEquals(new WeatherForecast('sun', 'Sunny', 12.0, 24.0, 15.46, 'NW', 10, 55, 80, 'headwind'), $stage->weather);
     }
@@ -196,12 +203,12 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->startDate = new \DateTimeImmutable('2020-06-01', new \DateTimeZone('UTC'));
 
-        $this->repository->initializeTrip($tripId, $request);
+        $this->trips->initializeTrip($tripId, $request);
 
         $stage = $this->stage($tripId);
-        $this->repository->storeStages($tripId, [$stage]);
-        $this->repository->updateStageEvents($tripId, $stage->id, [$this->event()]);
-        $this->repository->updateStageSupplyTimeline($tripId, $stage->id, [['km' => 12.5, 'type' => 'water']]);
+        $this->store->storeStages($tripId, [$stage]);
+        $this->store->updateStageEvents($tripId, $stage->id, [$this->event()]);
+        $this->store->updateStageSupplyTimeline($tripId, $stage->id, [['km' => 12.5, 'type' => 'water']]);
 
         return [$tripId, $stage->id];
     }

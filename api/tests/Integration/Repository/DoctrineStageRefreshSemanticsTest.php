@@ -9,6 +9,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
@@ -37,7 +38,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
 {
-    private DoctrineTripRequestRepository $repository;
+    private DoctrineTripStageStore $store;
+
+    private DoctrineTripRequestRepository $trips;
 
     private EntityManagerInterface $entityManager;
 
@@ -48,9 +51,13 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
 
         $container = self::getContainer();
 
-        /** @var DoctrineTripRequestRepository $repository */
-        $repository = $container->get(DoctrineTripRequestRepository::class);
-        $this->repository = $repository;
+        /** @var DoctrineTripStageStore $store */
+        $store = $container->get(DoctrineTripStageStore::class);
+        $this->store = $store;
+
+        /** @var DoctrineTripRequestRepository $trips */
+        $trips = $container->get(DoctrineTripRequestRepository::class);
+        $this->trips = $trips;
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = $container->get(EntityManagerInterface::class);
@@ -61,7 +68,7 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function aPlainReReadServesTheStaleIdentityMap(): void
     {
         $tripId = $this->seedTrip();
-        $this->repository->getStages($tripId);
+        $this->store->getStages($tripId);
 
         $this->writeWeatherOutsideTheUnitOfWork($tripId, dayNumber: 1);
 
@@ -75,7 +82,7 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function hintRefreshObservesAConcurrentColumnWrite(): void
     {
         $tripId = $this->seedTrip();
-        $this->repository->getStages($tripId);
+        $this->store->getStages($tripId);
 
         $this->writeWeatherOutsideTheUnitOfWork($tripId, dayNumber: 1);
 
@@ -99,14 +106,14 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function readingOneStageObservesAConcurrentColumnWrite(): void
     {
         $tripId = $this->seedTrip();
-        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+        $stageId = ($this->store->getStages($tripId) ?? [])[0]->id;
 
         $this->entityManager->getConnection()->executeStatement(
             'UPDATE stage SET start_label = :label WHERE trip_id = :trip AND day_number = 1',
             ['label' => 'concurrent', 'trip' => $tripId],
         );
 
-        $stage = $this->repository->getStage($tripId, $stageId);
+        $stage = $this->store->getStage($tripId, $stageId);
 
         self::assertNotNull($stage);
         self::assertSame('concurrent', $stage->startLabel);
@@ -116,7 +123,7 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function hintRefreshObservesAConcurrentInsert(): void
     {
         $tripId = $this->seedTrip();
-        $this->repository->getStages($tripId);
+        $this->store->getStages($tripId);
 
         $this->insertStageOutsideTheUnitOfWork($tripId, dayNumber: 3, position: 2);
 
@@ -127,7 +134,7 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function hintRefreshObservesAConcurrentDelete(): void
     {
         $tripId = $this->seedTrip();
-        $this->repository->getStages($tripId);
+        $this->store->getStages($tripId);
 
         $this->deleteStageOutsideTheUnitOfWork($tripId, dayNumber: 2);
 
@@ -143,7 +150,7 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     public function theOwningCollectionStaysStaleEvenAfterHintRefresh(): void
     {
         $tripId = $this->seedTrip();
-        $this->repository->getStages($tripId);
+        $this->store->getStages($tripId);
 
         $this->deleteStageOutsideTheUnitOfWork($tripId, dayNumber: 2);
         $this->queryStages($tripId, refresh: true);
@@ -219,8 +226,8 @@ final class DoctrineStageRefreshSemanticsTest extends KernelTestCase
     private function seedTrip(): string
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
-        $this->repository->storeStages($tripId, [
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->store->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),
         ]);

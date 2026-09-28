@@ -12,6 +12,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -276,8 +277,8 @@ final class TripListTest extends ApiTestCase
         $this->seedTrip($tripId);
 
         $container = self::getContainer();
-        /** @var DoctrineTripRequestRepository $repo */
-        $repo = $container->get(DoctrineTripRequestRepository::class);
+        /** @var DoctrineTripStageStore $repo */
+        $repo = $container->get(DoctrineTripStageStore::class);
 
         $stage = static fn (int $day, float $distance, bool $restDay): Stage => new Stage(
             tripId: $tripId,
