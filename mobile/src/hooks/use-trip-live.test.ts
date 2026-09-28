@@ -79,6 +79,7 @@ function enrichedPayload(): EnrichedStagePayload {
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
+    onCycleNetwork: 0,
     startPoint: A,
     endPoint: B,
     geometry: [],

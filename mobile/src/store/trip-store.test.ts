@@ -1,9 +1,9 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
-import { EMPTY_RESUPPLY } from '@btp/core';
+import { EMPTY_RESUPPLY, stageDataFromDetail } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import type { TripDetail } from '../api/trips';
-import { stageDataFromDetail, useTripStore } from './trip-store';
+import { useTripStore } from './trip-store';
 
 const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
@@ -94,6 +94,11 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
     expect(mapped.alerts[0]?.group).toBe('ferry');
   });
 
+  // The mobile copy of the mapper dropped the persisted share, so the badge read 0.
+  it('stageDataFromDetail keeps the on-cycle-network share', () => {
+    expect(stageDataFromDetail(apiStage({ onCycleNetwork: 0.82 })).onCycleNetwork).toBe(0.82);
+  });
+
   it('applyStageUpdate reconciles via core (preserves prev label on a stable endpoint)', () => {
     useTripStore.setState({ stages: [stageData({ endLabel: 'Lyon' })], loading: false });
     useTripStore.getState().applyStageUpdate('stage-1', 0, stageData({ endLabel: null }));
@@ -158,6 +163,19 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
     expect(s.fatigueFactor).toBe(0.7);
     expect(s.maxDistancePerDay).toBe(120);
     expect(s.enabledAccommodationTypes).toEqual(['hotel']);
+  });
+
+  // The API serializes dates as date-times. Stored raw, `stageDateFor` built
+  // `2026-08-01T00:00:00+02:00T00:00:00Z` and every roadbook date came out null.
+  it('hydrates the trip dates as calendar days', () => {
+    useTripStore.getState().hydrate('t1', {
+      stages: [],
+      startDate: '2026-08-01T00:00:00+02:00',
+      endDate: '2026-08-05T00:00:00+02:00',
+    } as unknown as TripDetail);
+    const s = useTripStore.getState();
+    expect(s.startDate).toBe('2026-08-01');
+    expect(s.endDate).toBe('2026-08-05');
   });
 
   it('insertRestDayOptimistic inserts a rest day, renumbers, extends endDate', () => {

@@ -3,123 +3,14 @@
 import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
-import { minMax, type StageData } from "@btp/core";
+import {
+  buildProfilePoints,
+  findClosestProfilePoint,
+  minMax,
+  type ProfilePoint,
+  type StageData,
+} from "@btp/core";
 import { getStageColor } from "./stage-colors";
-
-/** Haversine distance between two lat/lon points in km. */
-function haversineKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-/** Binary search for the point with the closest distanceKm to target. */
-function findClosestPoint<T extends { distanceKm: number }>(
-  points: T[],
-  target: number,
-): T {
-  let lo = 0;
-  let hi = points.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (points[mid]!.distanceKm < target) lo = mid + 1;
-    else hi = mid;
-  }
-  // Check lo-1 as well in case it's closer
-  if (
-    lo > 0 &&
-    Math.abs(points[lo - 1]!.distanceKm - target) <
-      Math.abs(points[lo]!.distanceKm - target)
-  ) {
-    return points[lo - 1]!;
-  }
-  return points[lo]!;
-}
-
-interface ProfilePoint {
-  distanceKm: number;
-  ele: number;
-  /** Slope from the previous point to this one, in percent. 0 for the first point. */
-  gradient: number;
-  stageIndex: number;
-  coordIndex: number;
-}
-
-/** Builds a flat array of profile points for one or all stages. */
-function buildProfilePoints(
-  stages: StageData[],
-  focusedStageIndex: number | null,
-): ProfilePoint[] {
-  const activeStages = stages.filter((s) => !s.isRestDay);
-  const entries: { stage: StageData; stageIndex: number }[] =
-    focusedStageIndex !== null
-      ? activeStages[focusedStageIndex]
-        ? [
-            {
-              stage: activeStages[focusedStageIndex]!,
-              stageIndex: focusedStageIndex,
-            },
-          ]
-        : []
-      : activeStages.map((stage, idx) => ({ stage, stageIndex: idx }));
-
-  const points: ProfilePoint[] = [];
-  let cumulativeKm = 0;
-  let prevEle: number | null = null;
-  let prevDistKm: number | null = null;
-
-  for (const { stage, stageIndex } of entries) {
-    const coords = stage.geometry;
-    if (coords.length < 2) continue;
-
-    for (let ci = 0; ci < coords.length; ci++) {
-      const currEle = coords[ci]!.ele;
-      let distKm = cumulativeKm;
-
-      if (ci > 0) {
-        const prev = coords[ci - 1]!;
-        const curr = coords[ci]!;
-        const lastPoint = points[points.length - 1];
-        distKm =
-          (lastPoint?.distanceKm ?? cumulativeKm) +
-          haversineKm(prev.lat, prev.lon, curr.lat, curr.lon);
-      }
-
-      // gradient = delta_ele_m / delta_dist_m * 100
-      let gradient = 0;
-      if (prevEle !== null && prevDistKm !== null) {
-        const deltaKm = distKm - prevDistKm;
-        if (deltaKm > 0)
-          gradient = ((currEle - prevEle) / (deltaKm * 1000)) * 100;
-      }
-      prevEle = currEle;
-      prevDistKm = distKm;
-
-      points.push({
-        distanceKm: distKm,
-        ele: currEle,
-        gradient,
-        stageIndex,
-        coordIndex: ci,
-      });
-    }
-
-    cumulativeKm = points[points.length - 1]?.distanceKm ?? cumulativeKm;
-  }
-
-  return points;
-}
 
 // SVG viewport constants
 const VW = 800;
@@ -241,7 +132,8 @@ export const ElevationProfile = memo(function ElevationProfile({
       const svgX = ((e.clientX - rect.left) / rect.width) * VW;
       const distKm = ((svgX - PAD_L) / (VW - PAD_L - PAD_R)) * maxDist;
 
-      const best = findClosestPoint(points, distKm);
+      const best = findClosestProfilePoint(points, distKm);
+      if (!best) return;
       onHover(best.coordIndex, best.stageIndex);
 
       const screenX = e.clientX - rect.left;

@@ -240,8 +240,11 @@ export function StageDetailPanel({
           tStage("day", { dayNumber: stage.dayNumber });
 
         return (
+          // Keyed on identity, not position: the card holds session state (the
+          // dismissed alerts), which must stay with its stage across a move,
+          // an insertion or a deletion rather than pass to the next occupant.
           <section
-            key={`stage-detail-${i}`}
+            key={stage.id}
             ref={isSelected ? selectedRef : undefined}
             aria-label={dayTitle}
             data-stage-index={i}

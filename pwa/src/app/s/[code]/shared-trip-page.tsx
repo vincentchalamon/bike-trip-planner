@@ -19,12 +19,13 @@ import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
 import {
-  MEAL_COST_MIN,
-  MEAL_COST_MAX,
-  mealsForStage,
-} from "@/lib/budget-constants";
-import { EMPTY_RESUPPLY } from "@btp/core";
-import type { StageData } from "@btp/core";
+  DEFAULT_TRIP_SETTINGS,
+  computeEstimatedBudget,
+  computeTripTotals,
+  stageDataFromDetail,
+  tripSettingsFromDetail,
+} from "@btp/core";
+import type { StageData, TripSettings, TripTotals } from "@btp/core";
 
 const noop = () => {};
 
@@ -37,19 +38,8 @@ function SharedTripLoader({ code }: { code: string }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
   const [stages, setStages] = useState<StageData[]>([]);
-  const [startDate, setStartDate] = useState<string | null>(null);
-  const [endDate, setEndDate] = useState<string | null>(null);
-  const [totalDistance, setTotalDistance] = useState<number | null>(null);
-  const [totalElevation, setTotalElevation] = useState<number | null>(null);
-  const [totalElevationLoss, setTotalElevationLoss] = useState<number | null>(
-    null,
-  );
-  const [pacingConfig, setPacingConfig] = useState<{
-    fatigueFactor: number;
-    elevationPenalty: number;
-    maxDistancePerDay: number;
-    averageSpeed: number;
-  } | null>(null);
+  const [totals, setTotals] = useState<TripTotals | null>(null);
+  const [settings, setSettings] = useState<TripSettings>(DEFAULT_TRIP_SETTINGS);
   const [focusedStageIndex, setFocusedStageIndex] = useState<number | null>(
     null,
   );
@@ -67,46 +57,10 @@ function SharedTripLoader({ code }: { code: string }) {
         }
 
         setTitle(data.title ?? null);
-        setStartDate(data.startDate?.split("T")[0] ?? null);
-        setEndDate(data.endDate?.split("T")[0] ?? null);
 
-        const parsedStages: StageData[] = (data.stages ?? []).map((s) => ({
-          id: (s.stageId as string) ?? "",
-          dayNumber: (s.dayNumber as number) ?? 0,
-          distance: (s.distance as number) ?? 0,
-          elevation: (s.elevation as number) ?? 0,
-          elevationLoss: (s.elevationLoss as number) ?? 0,
-          startPoint: (s.startPoint as StageData["startPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          endPoint: (s.endPoint as StageData["endPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          // Summary carries no geometry (ADR-057); fetched via GET /route.
-          geometry: [],
-          label: (s.label as string) ?? null,
-          // Server-persisted reverse-geocoded labels (recette #649 #3c): the
-          // anonymous shared view cannot call the auth-gated /geocode endpoint,
-          // so it relies entirely on these to show city names, not coordinates.
-          startLabel: (s.startLabel as string) ?? null,
-          endLabel: (s.endLabel as string) ?? null,
-          weather: (s.weather as StageData["weather"]) ?? null,
-          alerts: (s.alerts as StageData["alerts"]) ?? [],
-          resupply: (s.resupply as StageData["resupply"]) ?? EMPTY_RESUPPLY,
-          accommodations:
-            (s.accommodations as StageData["accommodations"]) ?? [],
-          selectedAccommodation:
-            (s.selectedAccommodation as StageData["selectedAccommodation"]) ??
-            null,
-          accommodationSearchRadiusKm: 5,
-          isRestDay: (s.isRestDay as boolean) ?? false,
-          supplyTimeline: [],
-          events: [],
-        }));
+        // Server-persisted reverse-geocoded labels (recette #649 #3c) matter most
+        // here: the anonymous view cannot call the auth-gated /geocode endpoint.
+        const parsedStages = (data.stages ?? []).map(stageDataFromDetail);
 
         setStages(parsedStages);
         // Pull the route geometry (split off /detail, ADR-057) via the public code.
@@ -138,21 +92,8 @@ function SharedTripLoader({ code }: { code: string }) {
         // can be issued from this read-only view.
         setStagesInStore(parsedStages);
 
-        const activeStages = parsedStages.filter((s) => !s.isRestDay);
-        setTotalDistance(activeStages.reduce((sum, s) => sum + s.distance, 0));
-        setTotalElevation(
-          activeStages.reduce((sum, s) => sum + s.elevation, 0),
-        );
-        setTotalElevationLoss(
-          parsedStages.reduce((sum, s) => sum + (s.elevationLoss ?? 0), 0),
-        );
-
-        setPacingConfig({
-          fatigueFactor: data.fatigueFactor ?? 0.9,
-          elevationPenalty: data.elevationPenalty ?? 50,
-          maxDistancePerDay: data.maxDistancePerDay ?? 80,
-          averageSpeed: data.averageSpeed ?? 15,
-        });
+        setTotals(computeTripTotals(parsedStages));
+        setSettings(tripSettingsFromDetail(data));
 
         setIsLoaded(true);
       } catch {
@@ -170,35 +111,10 @@ function SharedTripLoader({ code }: { code: string }) {
     };
   }, [code, setStagesInStore, clearTrip]);
 
-  const estimatedBudget = useMemo(() => {
-    const nonRestStages = stages.filter((s) => !s.isRestDay);
-    const lastActiveIndex = nonRestStages.length - 1;
-    const restDayCount = stages.filter((s) => s.isRestDay).length;
-    let accMin = 0;
-    let accMax = 0;
-    let foodMin = restDayCount * 3 * MEAL_COST_MIN;
-    let foodMax = restDayCount * 3 * MEAL_COST_MAX;
-    nonRestStages.forEach((s, i) => {
-      const isFirst = i === 0;
-      const isLast = i === lastActiveIndex;
-      foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
-      foodMax += mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
-      if (!isLast) {
-        if (s.selectedAccommodation) {
-          accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
-          accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
-        } else if (s.accommodations.length > 0) {
-          accMin +=
-            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
-            s.accommodations.length;
-          accMax +=
-            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
-            s.accommodations.length;
-        }
-      }
-    });
-    return { min: accMin + foodMin, max: accMax + foodMax };
-  }, [stages]);
+  const estimatedBudget = useMemo(
+    () => computeEstimatedBudget(stages),
+    [stages],
+  );
 
   const handleStageClick = useCallback(
     (idx: number) => setFocusedStageIndex(idx),
@@ -265,20 +181,20 @@ function SharedTripLoader({ code }: { code: string }) {
 
             {/* Summary */}
             <TripSummary
-              totalDistance={totalDistance}
-              totalElevation={totalElevation}
-              totalElevationLoss={totalElevationLoss}
+              totalDistance={totals?.totalDistance ?? null}
+              totalElevation={totals?.totalElevation ?? null}
+              totalElevationLoss={totals?.totalElevationLoss ?? null}
               weather={stages[0]?.weather ?? null}
               isWeatherLoading={false}
               isProcessing={false}
               estimatedBudgetMin={estimatedBudget.min}
               estimatedBudgetMax={estimatedBudget.max}
-              startDate={startDate}
-              endDate={endDate}
-              fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
-              elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
-              maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
-              averageSpeed={pacingConfig?.averageSpeed ?? 15}
+              startDate={settings.startDate}
+              endDate={settings.endDate}
+              fatigueFactor={settings.fatigueFactor}
+              elevationPenalty={settings.elevationPenalty}
+              maxDistancePerDay={settings.maxDistancePerDay}
+              averageSpeed={settings.averageSpeed}
               readOnly
             />
 
@@ -306,7 +222,7 @@ function SharedTripLoader({ code }: { code: string }) {
                   {stages.length > 0 ? (
                     <RoadbookMasterDetail
                       stages={stages}
-                      startDate={startDate}
+                      startDate={settings.startDate}
                       isProcessing={false}
                       readOnly
                       onDeleteStage={noop}

@@ -79,6 +79,7 @@ function enriched(
     distance: 50,
     elevation: 0,
     elevationLoss: 0,
+    onCycleNetwork: 0,
     startPoint: A,
     endPoint: B,
     geometry: [],
@@ -878,6 +879,30 @@ describe("reduceMercureEvent — structural / terminal events", () => {
     });
     expect(next.stages[0]!.endLabel).toBe("Lyon"); // preserved on stable endpoint
     expect([...next.recomputingStages]).toEqual(["stage-2"]);
+  });
+
+  // The enriched payload did not carry the share, so the first trip_ready or
+  // stage_updated reset every cycle-network badge to 0 until the next reload.
+  it("trip_ready and stage_updated carry the on-cycle-network share", () => {
+    const state = baseState({ stages: [stage({ onCycleNetwork: 0.2 })] });
+    const ready = reduceMercureEvent(state, {
+      type: "trip_ready",
+      data: {
+        stages: [enriched({ onCycleNetwork: 0.7 })],
+        computationStatus: {},
+      },
+    });
+    expect(ready.stages[0]!.onCycleNetwork).toBe(0.7);
+
+    const updated = reduceMercureEvent(ready, {
+      type: "stage_updated",
+      data: {
+        stageId: "stage-1",
+        position: 0,
+        stage: enriched({ onCycleNetwork: 0.9 }),
+      },
+    });
+    expect(updated.stages[0]!.onCycleNetwork).toBe(0.9);
   });
 });
 

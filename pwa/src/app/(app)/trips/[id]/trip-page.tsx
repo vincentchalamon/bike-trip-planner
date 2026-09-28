@@ -17,8 +17,11 @@ import { useUiStore } from "@/store/ui-store";
 import { apiFetch, fetchTripRoute } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { resolveStageLabels } from "@/lib/mercure/stage-labels";
-import { EMPTY_RESUPPLY } from "@btp/core";
-import type { StageData } from "@btp/core";
+import {
+  computeTripTotals,
+  stageDataFromDetail,
+  tripSettingsFromDetail,
+} from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { components } from "@btp/core/schema";
 import {
@@ -76,73 +79,23 @@ function TripLoader({ tripId }: { tripId: string }) {
         sourceUrl: data.sourceUrl ?? "",
       });
 
-      updateDatesInternal(
-        data.startDate?.split("T")[0] ?? null,
-        data.endDate?.split("T")[0] ?? null,
-      );
-
+      const settings = tripSettingsFromDetail(data);
+      updateDatesInternal(settings.startDate, settings.endDate);
       updatePacingSettingsInternal(
-        data.fatigueFactor ?? 0.9,
-        data.elevationPenalty ?? 50,
-        data.maxDistancePerDay ?? 80,
-        data.averageSpeed ?? 15,
+        settings.fatigueFactor,
+        settings.elevationPenalty,
+        settings.maxDistancePerDay,
+        settings.averageSpeed,
       );
-
-      setEbikeMode(data.ebikeMode ?? false);
-      setDepartureHour(data.departureHour ?? 8);
+      setEbikeMode(settings.ebikeMode);
+      setDepartureHour(settings.departureHour);
       setEnabledAccommodationTypes(
-        (data.enabledAccommodationTypes ?? []) as AccommodationType[],
+        settings.enabledAccommodationTypes as AccommodationType[],
       );
       setIsLocked(data.isLocked === true);
       setOutOfZone(data.outOfZone === true);
 
-      // Convert stages to Zustand StageData shape
-      const stages: StageData[] = (data.stages ?? []).map((s) => {
-        return {
-          id: s.stageId ?? "",
-          dayNumber: s.dayNumber ?? 0,
-          distance: s.distance ?? 0,
-          elevation: s.elevation ?? 0,
-          elevationLoss: s.elevationLoss ?? 0,
-          startPoint: (s.startPoint as StageData["startPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          endPoint: (s.endPoint as StageData["endPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          // Summary carries no geometry (ADR-057); fetched via GET /route.
-          geometry: [],
-          label: s.label ?? null,
-          startLabel: s.startLabel ?? null,
-          endLabel: s.endLabel ?? null,
-          weather: (s.weather as StageData["weather"]) ?? null,
-          // Tag persisted alerts with their producing group so a later
-          // `terrain_alerts` Mercure event (e.g. after selecting an
-          // accommodation) REPLACES rather than duplicates them. Since #794,
-          // Every producer persists its own alerts now, each carrying its group
-          // (ADR-068) — assuming "terrain" here would have wiped twelve of them.
-          alerts: (s.alerts as StageData["alerts"]) ?? [],
-          resupply: (s.resupply as StageData["resupply"]) ?? EMPTY_RESUPPLY,
-          accommodations:
-            (s.accommodations as StageData["accommodations"]) ?? [],
-          selectedAccommodation:
-            (s.selectedAccommodation as StageData["selectedAccommodation"]) ??
-            null,
-          accommodationSearchRadiusKm: 5,
-          isRestDay: s.isRestDay ?? false,
-          onCycleNetwork: s.onCycleNetwork ?? 0,
-          // Persisted and served since ADR-068. Defaulting these to [] was the
-          // read-side half of the same hole: the producers wrote them, /detail
-          // returned them, and the hydrate threw them away.
-          supplyTimeline:
-            (s.supplyTimeline as StageData["supplyTimeline"]) ?? [],
-          events: (s.events as StageData["events"]) ?? [],
-        };
-      });
+      const stages = (data.stages ?? []).map(stageDataFromDetail);
 
       setStages(stages);
       // Pull the route geometry split off /detail (ADR-057) and merge it in.
@@ -153,20 +106,8 @@ function TripLoader({ tripId }: { tripId: string }) {
         .catch(() => {});
 
       if (stages.length > 0) {
-        const totalDistance = stages
-          .filter((s) => !s.isRestDay)
-          .reduce((sum, s) => sum + s.distance, 0);
-        const totalElevation = stages
-          .filter((s) => !s.isRestDay)
-          .reduce((sum, s) => sum + s.elevation, 0);
-
         useTripStore.getState().updateRouteData({
-          totalDistance,
-          totalElevation,
-          totalElevationLoss: stages.reduce(
-            (sum, s) => sum + (s.elevationLoss ?? 0),
-            0,
-          ),
+          ...computeTripTotals(stages),
           sourceType: "persisted",
           title: data.title ?? null,
         });

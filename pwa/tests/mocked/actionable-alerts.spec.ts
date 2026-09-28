@@ -32,6 +32,7 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
           distance: 72.5,
           elevation: 1180,
           elevationLoss: 920,
+          onCycleNetwork: 0,
           startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
           endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
           geometry: [
@@ -132,6 +133,7 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
           distance: 72.5,
           elevation: 1180,
           elevationLoss: 920,
+          onCycleNetwork: 0,
           startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
           endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
           geometry: [
@@ -346,6 +348,7 @@ test.describe("StageAlerts — severity grouping", () => {
             distance: 72.5,
             elevation: 1180,
             elevationLoss: 920,
+            onCycleNetwork: 0,
             startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
             endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
             geometry: [
