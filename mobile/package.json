@@ -48,6 +48,7 @@
     "expo-doctor": "^1.20.4",
     "jest": "^30.5.2",
     "jest-expo": "~57.0.0",
+    "prettier": "^3.9.8",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.1"
   },
@@ -61,6 +62,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
     "test": "jest",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json}\"",
     "doctor": "expo-doctor",
     "bundle": "expo export --platform android"
   },
