@@ -2,7 +2,7 @@
 
 > **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
 
-- **Status:** Accepted
+- **Status:** Withdrawn by [ADR-052](adr-052-remove-ai-support.md) (AI support removed)
 - **Date:** 2026-05-22
 - **Depends on:** ADR-028 (Ollama/LLaMA Integration Architecture)
 - **Supersedes / refines:** none — operational evolution of the LLM transport layer

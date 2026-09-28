@@ -6,7 +6,7 @@ wakes a backgrounded/closed app (ADR-058). Distinct from the in-app local
 triggers scheduled on-device (`mobile/src/notifications/local.*`,
 `plan.ts`) — this runbook only covers the **server → device** leg.
 
-## Symptômes
+## Symptoms
 
 - A device never receives a push (weather/safety, analysis-done, or
   zone-opening) despite being registered and eligible.
@@ -18,7 +18,7 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
   notification appears while the app is open and already showing the live
   update via Mercure.
 
-## Diagnostic
+## Diagnosis
 
 ### Server side
 
@@ -29,15 +29,19 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
    silent drop:
 
     ```bash
-    make php-shell
-    bin/console debug:container --env-vars | grep FCM_SERVICE_ACCOUNT_JSON
+    docker compose exec php sh -c 'test -n "$FCM_SERVICE_ACCOUNT_JSON" && echo set || echo EMPTY'
+    docker compose exec worker sh -c 'test -n "$FCM_SERVICE_ACCOUNT_JSON" && echo set || echo EMPTY'
     ```
+
+    (In production, use the `dc` alias from [README.md](README.md#conventions).) The check
+    prints no value, on purpose: the variable holds a private key.
 
     In dev/recette this is expected to be empty (ADR-058 leaves it unset on
     purpose so unrelated endpoints keep working); in **production** an empty
-    value is the bug — check the prod `.env` (Ansible Vault) and that `compose.yaml` (not
-    only `compose.dev.yaml`) passes it through to **both** `php` and `worker`
-    (project convention, see `CLAUDE.md` "New runtime secret?").
+    value is the bug: check `vault_fcm_service_account_json` in Ansible Vault (rendered into
+    `/etc/bike-trip-planner/app.env`) and that `compose.yaml` (not only `compose.dev.yaml`)
+    passes it through to **both** `php` and `worker` (project convention, see `CLAUDE.md`
+    "New runtime variable?").
 
 2. **Check the failed transport** for stuck `SendPushNotification` messages:
 
@@ -106,15 +110,16 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
    `data` payload the backend attaches (`App\Enum\NotificationCategory`) — a
    mismatch here is a mapping bug in that file, not a delivery problem.
 
-## Procédure
+## Procedure
 
 1. **Configure the credential** (once per environment): in the Firebase
-   console, generate a service-account private key (JSON) for the project, and
-   set it as `FCM_SERVICE_ACCOUNT_JSON` in Ansible Vault → prod `.env` (production)
-   or a local `.env` (recette/dev testing). It must reach **both** `php` and
-   `worker` — already wired as a passthrough in `compose.yaml` (lines defining
-   `FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"`); do not
-   re-invent this in `compose.dev.yaml` alone.
+   console, generate a service-account private key (JSON) for the project. In
+   production, compact it to one line (`jq -c . key.json`) and set it as
+   `vault_fcm_service_account_json` in Ansible Vault, then re-render and reload
+   the stack (see [secrets-rotation.md](secrets-rotation.md#common-steps)). For
+   recette/dev testing, export `FCM_SERVICE_ACCOUNT_JSON` before starting the
+   stack. `compose.yaml` already passes it through to **both** `php` and
+   `worker`; do not re-invent this in `compose.dev.yaml` alone.
 
 2. **Retry a transient failure** (e.g. after fixing the credential):
 
@@ -136,7 +141,7 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
    log out and back in — `registerDeviceToken()` runs on login and is
    idempotent (upsert by token).
 
-## Post-action
+## Verification and follow-up
 
 - Confirm `messenger:stats` shows the `SendPushNotification` queue draining and
   `failed` empty.
@@ -147,9 +152,9 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
   right after a fresh install, suspect it reinstalled with a new token while
   the old row lingered (expected — the old row prunes itself on the next send
   attempt, not instantly).
-- If the root cause was a credential rotation, update the secret store (Ansible
-  Vault → prod `.env`), not just the running container's env (a redeploy without
-  the secret reverts it to empty).
+- If the root cause was a credential rotation, update Ansible Vault, not just
+  the running container's env: the next deploy re-reads
+  `/etc/bike-trip-planner/app.env`, which the playbook renders from Vault.
 
 ## References
 
@@ -159,5 +164,5 @@ triggers scheduled on-device (`mobile/src/notifications/local.*`,
 - `mobile/src/notifications/push.ts` — device token registration/rotation
 - `docs/runbooks/mercure-disconnected.md` — the SSE liveness check
   `analysisDone` depends on
-- `CLAUDE.md` — "New runtime secret? Wire it into `compose.yaml`, not just
+- `CLAUDE.md` — "New runtime variable? Wire it into `compose.yaml`, not just
   dev/recette."

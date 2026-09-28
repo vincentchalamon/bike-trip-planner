@@ -28,6 +28,7 @@ The app combines several open datasets; each keeps its own licence and attributi
 | OpenAgenda (events) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Credit the source; commercial use and modification allowed |
 | Wikidata | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Public domain — no attribution required |
 | Open-Meteo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Credit Open-Meteo |
+| Nominatim (geocoding) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) | OpenStreetMap attribution; respect the public usage policy |
 
 How each source is used and cached: [External data sources](external-data-sources.md).
 
@@ -40,15 +41,21 @@ Authoritative text lives on the in-app `/privacy` page. Key points, as implement
 - **Legal bases:** email processing for magic-link sign-in and account management
   (Art. 6(1)(b) GDPR); anonymous audience measurement on legitimate interest (Art. 6(1)(f)).
 - **Data stored:** account email; trip configuration (title, dates, rider profile, stages,
-  selected accommodation). Raw imported GPS points are cached in Redis for at most 24 h, then
-  deleted automatically.
+  selected accommodation); share links; notification preferences and push device tokens
+  (mobile app); the AI applications the user authorized (OAuth grants). Raw imported GPS
+  points are cached in Redis for at most 24 h, then deleted automatically.
 - **Right to erasure** — `DELETE /users/me`: irreversibly anonymises the email, purges all trips
-  (cascading to stages, chat history, shares and per-trip preferences), and revokes refresh
-  tokens. Erasure is immediate; there is no purge cron. See [ADR-035](adr/adr-035-rgpd-account-erasure.md).
+  (cascading to stages, shares and per-trip preferences), magic links and access
+  requests, revokes refresh tokens and every OAuth token issued to an AI agent, and deletes
+  the authorized-application records. Erasure is immediate; there is no purge cron. See
+  [ADR-035](adr/adr-035-rgpd-account-erasure.md).
 - **Right to portability** — `GET /users/me/export`: a JSON archive of the profile, trips and
   preferences.
-- **Processors:** EU cloud hosting; a transactional email provider (magic-link emails). Open-data
-  sources (OSM, weather) receive no identifying personal data.
+- **Processors:** the cloud host chosen by the operator; a transactional email provider
+  (magic-link emails); Google Firebase Cloud Messaging for mobile push notifications (device
+  token and notification content). Open-data services (Open-Meteo, Nominatim) receive
+  coordinates or search terms, no identifying personal data.
+  The in-app `/privacy` page does not list Firebase Cloud Messaging yet.
 - **Analytics:** self-hosted **Plausible** (EU) — cookieless, no fingerprinting, IP and
   User-Agent anonymised, no cross-site tracking. The script is loaded on environment
   configuration alone; no consent banner is required (legitimate interest, #572). See

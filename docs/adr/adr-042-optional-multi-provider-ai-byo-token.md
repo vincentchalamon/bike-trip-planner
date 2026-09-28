@@ -2,7 +2,7 @@
 
 > **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
 
-- **Status:** Accepted
+- **Status:** Withdrawn by [ADR-052](adr-052-remove-ai-support.md) (AI support removed)
 - **Date:** 2026-06-19
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-027 (Gate mechanism and two-phase pipeline), ADR-030 (symfony/ai adoption), ADR-035 (GDPR account erasure)
 - **Supersedes / refines:** ADR-028 (Ollama/LLaMA integration), ADR-030 (symfony/ai transport layer), ADR-039 (beta right-sizing — the LLM RAM/CPU budget freed)

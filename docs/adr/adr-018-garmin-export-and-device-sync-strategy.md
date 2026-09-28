@@ -1,135 +1,135 @@
 # ADR-018: Garmin Export and Device Sync Strategy
 
-- **Status:** Proposed
+- **Status:** Accepted - Phase 1 (enriched GPX + FIT download) is implemented; Phase 2 (Garmin Connect push) is not
 - **Date:** 2026-03-04
-- **Depends on:** ADR-004 (GPX decimation), Export GPX enrichi (waypoints)
+- **Depends on:** ADR-004 (GPX decimation), Enriched GPX export (waypoints)
 
 ## Context and Problem Statement
 
-Le Bike Trip Planner génère des itinéraires multi-étapes pour le bikepacking. Actuellement, l'export se limite à un fichier GPX par étape (trace `<trk>/<trkpt>` avec lat/lon/ele, ~1 500 points après décimation Douglas-Peucker). Le rider doit télécharger le GPX puis l'importer manuellement dans son GPS Garmin.
+Bike Trip Planner generates multi-stage bikepacking itineraries. Currently, the export is limited to one GPX file per stage (a `<trk>/<trkpt>` track with lat/lon/ele, ~1,500 points after Douglas-Peucker decimation). The rider has to download the GPX and then import it manually into their Garmin GPS.
 
-Deux besoins identifiés :
+Two identified needs:
 
-1. **Format natif Garmin** — Le GPX fonctionne mais le FIT (binaire propriétaire Garmin) est le format natif des courses Garmin : plus compact, supporte les Course Points (POIs sur le parcours), et évite une conversion côté GPS.
-2. **Push automatique vers le GPS** — Éliminer l'étape manuelle d'import en envoyant directement l'itinéraire sur le compte Garmin Connect de l'utilisateur, avec sync automatique vers le périphérique.
+1. **Native Garmin format** - GPX works, but FIT (Garmin's proprietary binary format) is the native format for Garmin courses: more compact, supports Course Points (POIs along the route), and avoids a conversion on the GPS side.
+2. **Automatic push to the GPS** - Remove the manual import step by sending the itinerary directly to the user's Garmin Connect account, with automatic sync to the device.
 
-### Clarification ADR-004
+### ADR-004 Clarification
 
-L'ADR-004 mentionne en conséquence neutre que les données décimées ne conviennent pas pour "re-export high-fidelity GPS traces for Garmin devices". Cette remarque concerne le re-export de traces haute fidélité (enregistrement d'activité). Pour la **navigation de course** (suivre la ligne violette sur un Edge/Fenix), ~1 500 points/étape est largement suffisant — Komoot et Strava envoient des courses avec une densité similaire.
+ADR-004 mentions, as a neutral consequence, that decimated data is not suitable to "re-export high-fidelity GPS traces for Garmin devices". That remark concerns re-exporting high-fidelity traces (activity recording). For **course navigation** (following the purple line on an Edge/Fenix), ~1,500 points per stage is more than enough - Komoot and Strava send courses with a similar density.
 
 ## Considered Options
 
-### Option A : Téléchargement GPX uniquement (statu quo amélioré)
+### Option A: GPX download only (improved status quo)
 
-Conserver le format GPX, enrichir avec des waypoints (`<wpt>`) pour les hébergements, points d'eau et commerces. Ajouter un bouton de téléchargement GPX global (toutes les étapes concaténées).
+Keep the GPX format, enriched with waypoints (`<wpt>`) for accommodations, water points and shops. Add a global GPX download button (all stages concatenated).
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Compatibilité GPS | Universelle (Garmin, Wahoo, Hammerhead, Coros...) |
-| Compacité | Faible (XML verbeux, ~5× plus lourd que FIT) |
-| Course Points / POIs | Supportés via `<wpt>`, mais conversion nécessaire côté GPS |
-| Effort d'implémentation | Minimal (le `GpxWriter` existe, ajout de `<wpt>`) |
-| UX | Import manuel obligatoire |
+| GPS compatibility | Universal (Garmin, Wahoo, Hammerhead, Coros...) |
+| Compactness | Low (verbose XML, ~5× heavier than FIT) |
+| Course Points / POIs | Supported via `<wpt>`, but conversion needed on the GPS side |
+| Implementation effort | Minimal (the `GpxWriter` exists, add `<wpt>`) |
+| UX | Manual import required |
 
-### Option B : Téléchargement FIT (format binaire Garmin)
+### Option B: FIT download (Garmin binary format)
 
-Nouveau `FitWriter` backend générant le format binaire FIT via `pack()` natif PHP. Le FIT encode directement des Course Points typés (Food, Water, Summit, Generic...) reconnus nativement par les GPS Garmin.
+A new backend `FitWriter` generating the FIT binary format via PHP's native `pack()`. FIT directly encodes typed Course Points (Food, Water, Summit, Generic...) that Garmin GPS units recognize natively.
 
-Structure du fichier :
+File structure:
 
 ```text
 Header (14 bytes)
 ├── FILE_ID     (type=course, manufacturer, product)
-├── COURSE      (nom, sport=cycling)
+├── COURSE      (name, sport=cycling)
 ├── EVENT       (timer start)
-├── RECORD[]    (lat/lon en semicircles, altitude, distance cumulative)
-├── COURSE_POINT[]  (POIs : hébergements, points d'eau, commerces)
-├── LAP         (résumé start/end, distance totale)
+├── RECORD[]    (lat/lon in semicircles, altitude, cumulative distance)
+├── COURSE_POINT[]  (POIs: accommodations, water points, shops)
+├── LAP         (start/end summary, total distance)
 └── EVENT       (timer stop)
 CRC16
 ```
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| Compatibilité GPS | Garmin uniquement (Wahoo/Hammerhead acceptent aussi le FIT, mais le GPX reste plus universel) |
-| Compacité | ~5× plus compact que GPX |
-| Course Points / POIs | Natifs, typés (Food, Water, Summit...), affichés directement sur le GPS |
-| Effort d'implémentation | Moyen (~200-300 lignes, `pack()` natif, aucune dépendance externe) |
-| UX | Import manuel, mais fichier plus léger et POIs natifs |
+| GPS compatibility | Garmin only (Wahoo/Hammerhead also accept FIT, but GPX remains more universal) |
+| Compactness | ~5× more compact than GPX |
+| Course Points / POIs | Native, typed (Food, Water, Summit...), displayed directly on the GPS |
+| Implementation effort | Medium (~200-300 lines, native `pack()`, no external dependency) |
+| UX | Manual import, but a lighter file and native POIs |
 
-Coordonnées en "semicircles" : `round(degrees / 180 × 2^31)`. Descriptions des Course Points limitées à 16 bytes.
+Coordinates in "semicircles": `round(degrees / 180 × 2^31)`. Course Point descriptions are limited to 16 bytes.
 
-### Option C : Push via Garmin Connect Courses API
+### Option C: Push via the Garmin Connect Courses API
 
-Le backend pousse le fichier FIT directement sur le compte Garmin Connect de l'utilisateur via l'API Courses. Le périphérique reçoit la course automatiquement au prochain sync (Bluetooth/WiFi/USB). C'est le mécanisme utilisé par Komoot et Strava.
+The backend pushes the FIT file directly to the user's Garmin Connect account via the Courses API. The device receives the course automatically at the next sync (Bluetooth/WiFi/USB). This is the mechanism used by Komoot and Strava.
 
-| Critère | Évaluation |
+| Criterion | Assessment |
 |---------|------------|
-| UX | Optimale : 1 clic, sync automatique vers le GPS |
-| Effort d'implémentation | Élevé (OAuth 2.0 PKCE, gestion des tokens, refresh automatique) |
-| Prérequis | Persistance BDD (stockage tokens), infra de production (callback OAuth HTTPS), approbation Garmin Developer Program |
-| Garmin Developer Program | Gratuit, approbation ~2 jours, ouvert aux développeurs individuels |
-| Contrainte OAuth | OAuth 1.0 retiré le 31/12/2026 → implémenter directement en OAuth 2.0 PKCE |
-| Spécifications API | Disponibles uniquement après approbation au programme |
+| UX | Optimal: 1 click, automatic sync to the GPS |
+| Implementation effort | High (OAuth 2.0 PKCE, token management, automatic refresh) |
+| Prerequisites | DB persistence (token storage), production infrastructure (HTTPS OAuth callback), Garmin Developer Program approval |
+| Garmin Developer Program | Free, ~2-day approval, open to individual developers |
+| OAuth constraint | OAuth 1.0 retired on 31/12/2026 → implement OAuth 2.0 PKCE directly |
+| API specifications | Available only after acceptance into the program |
 
-### Option D : Push via Strava comme intermédiaire (Strava → Garmin Connect → GPS)
+### Option D: Push via Strava as an intermediary (Strava → Garmin Connect → GPS)
 
-Pousser l'itinéraire vers Strava, qui synchronise ensuite automatiquement vers Garmin Connect.
+Push the itinerary to Strava, which then syncs automatically to Garmin Connect.
 
-**Non viable.** L'API Strava v3 est read-only pour les routes :
+**Not viable.** The Strava v3 API is read-only for routes:
 
-- `GET /routes/{id}` — consulter
-- `GET /routes/{id}/export/gpx` — exporter
-- `GET /athletes/{id}/routes` — lister
+- `GET /routes/{id}` - view
+- `GET /routes/{id}/export/gpx` - export
+- `GET /athletes/{id}/routes` - list
 
-Il n'existe aucun endpoint `POST` pour créer une route programmatiquement. Seul l'upload d'*activités* (sorties enregistrées) est supporté, pas les *routes planifiées*. De plus, même si l'endpoint existait, cela ajouterait un intermédiaire inutile par rapport au push direct vers Garmin Connect (Option C).
+There is no `POST` endpoint to create a route programmatically. Only uploading *activities* (recorded rides) is supported, not *planned routes*. Moreover, even if the endpoint existed, it would add a needless intermediary compared with a direct push to Garmin Connect (Option C).
 
 ## Decision Outcome
 
-**Retenu : Options A + B (Phase 1) puis Option C (Phase 2), séquentiellement. Option D rejetée.**
+**Chosen: Options A + B (Phase 1), then Option C (Phase 2), sequentially. Option D rejected.**
 
-### Phase 1 : GPX enrichi + FIT (téléchargement)
+### Phase 1: Enriched GPX + FIT (download)
 
-Les deux formats sont complémentaires :
+The two formats are complementary:
 
-- **GPX enrichi** (Option A) : compatibilité universelle, utile pour les GPS non-Garmin
-- **FIT** (Option B) : format natif Garmin, plus compact, Course Points typés
+- **Enriched GPX** (Option A): universal compatibility, useful for non-Garmin GPS units
+- **FIT** (Option B): native Garmin format, more compact, typed Course Points
 
-Boutons de téléchargement :
+Download buttons:
 
-- Par étape : GPX + FIT dans la `stage-card`
-- Itinéraire global : GPX + FIT dans le `trip-summary`
+- Per stage: GPX + FIT in the `stage-card`
+- Whole itinerary: GPX + FIT in the `trip-summary`
 
-Le `FitWriter` est implémentable sans dépendance externe (`pack()` natif PHP). Le GPX enrichi nécessite l'ajout de `<wpt>` dans le `GpxWriter` existant.
+The `FitWriter` can be implemented without any external dependency (PHP's native `pack()`). The enriched GPX requires adding `<wpt>` to the existing `GpxWriter`.
 
-### Phase 2 : Push Garmin Connect (Option C)
+### Phase 2: Garmin Connect push (Option C)
 
-Une fois en place : persistance BDD (tokens OAuth), infrastructure de production (callback HTTPS), et approbation au Garmin Developer Program.
+Once the following are in place: DB persistence (OAuth tokens), production infrastructure (HTTPS callback), and Garmin Developer Program approval.
 
-### Rejet de l'Option D (Strava)
+### Rejection of Option D (Strava)
 
-L'API Strava ne permet pas de créer des routes. L'option est techniquement impossible.
+The Strava API does not allow creating routes. The option is technically impossible.
 
 ## Consequences
 
 ### Positive
 
-- **Valeur immédiate (Phase 1)** — Le FIT en téléchargement apporte le format natif Garmin sans aucune dépendance externe ni infrastructure supplémentaire.
-- **Couverture universelle** — GPX pour tous les GPS, FIT pour l'expérience Garmin optimale.
-- **Réutilisation (Phase 2)** — Le fichier FIT généré par le `FitWriter` est réutilisé tel quel pour le push Garmin Connect.
+- **Immediate value (Phase 1)** - FIT download brings the native Garmin format without any external dependency or additional infrastructure.
+- **Universal coverage** - GPX for every GPS, FIT for the optimal Garmin experience.
+- **Reuse (Phase 2)** - The FIT file generated by the `FitWriter` is reused as-is for the Garmin Connect push.
 
 ### Negative
 
-- **FIT est un format binaire propriétaire** — Pas de SDK FIT officiel en PHP ; l'encodage via `pack()` nécessite une implémentation manuelle du protocole (header, définitions de messages, CRC16). Risque d'erreurs subtiles sur des cas limites.
-- **Phase 2 : couplage Garmin** — L'intégration OAuth crée une dépendance sur un service tiers (disponibilité, changements d'API, processus d'approbation).
+- **FIT is a proprietary binary format** - There is no official FIT SDK for PHP; encoding via `pack()` requires a manual implementation of the protocol (header, message definitions, CRC16). Risk of subtle errors on edge cases.
+- **Phase 2: Garmin coupling** - The OAuth integration creates a dependency on a third-party service (availability, API changes, approval process).
 
 ### Neutral
 
-- La Phase 2 est bloquée par des prérequis structurels (BDD, infra de production, approbation Garmin) qui seront traités indépendamment.
+- Phase 2 is blocked by structural prerequisites (DB, production infrastructure, Garmin approval) that will be handled independently.
 
 ## Sources
 
 - [Garmin FIT SDK](https://developer.garmin.com/fit/protocol/)
-- [Strava API v3 Reference](https://developers.strava.com/docs/reference/) — confirme l'absence d'endpoint de création de route
+- [Strava API v3 Reference](https://developers.strava.com/docs/reference/) - confirms there is no route creation endpoint
 - [Strava Routes to Garmin Device](https://support.strava.com/hc/en-us/articles/115000919304-Syncing-Strava-Routes-to-your-Garmin-Device)
 - [Garmin Connect Developer Program](https://www.garmin.com/en-US/forms/GarminConnectDeveloperAccess/)

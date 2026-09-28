@@ -1,46 +1,56 @@
 # Release Rollback
 
-GHCR keeps images by SHA and by tag (the `build-images` job prunes to the 10 most recent versions per service). Rollback reverts the running stack to a previous tag's images by redeploying that tag; Doctrine migrations are not rolled back automatically.
+GHCR keeps every image by commit SHA and, for releases, by `vX.Y.Z` tag. `build-images` prunes
+each image to its 10 most recent versions but never deletes a `vX.Y.Z` one, so every release is
+a rollback target. Rollback redeploys a previous tag; Doctrine migrations are not rolled back
+automatically.
 
-## Symptômes
+> **Known gap.** `deploy-prod` checks out the tag but does not pass image tags to compose: the
+> images come from `PHP_IMAGE` / `PWA_IMAGE` in `/etc/bike-trip-planner/app.env`, which
+> `ansible/group_vars/all.yml` sets to `:latest`, a tag `build-images` never pushes. Until the
+> deploy pins images per tag, use the VM path below, which sets them explicitly.
 
-- Post-deploy smoke test failed (`curl /api/healthz` or `/api/health` red after a deploy)
-- New error surge in GlitchTip whose first occurrence matches the deploy timestamp
+## Symptoms
+
+- Post-deploy smoke test failed (`/api/healthz` or `/api/health` red after a deploy; an
+  incident issue is opened automatically)
+- New error surge in Sentry whose first occurrence matches the deploy timestamp
 - PWA reports a regression after a release (broken feature, JS errors, 5xx on a previously-working route)
 
-## Diagnostic
-
-Identify the offending release:
-
-```bash
-git log --oneline -10
-```
+## Diagnosis
 
 Identify the live and previous tags:
 
-1. GitHub → Actions → `Deploy` runs, or `git tag --sort=-creatordate | head` — confirm the tag currently live (also in the `commit` field of `/api/healthz`) and the previous green tag.
+1. GitHub → Actions → `Deploy` runs, or `git tag --sort=-creatordate | head`. `/api/healthz`
+    does not expose the commit (SEC-011); on the VM, `git -C /opt/bike-trip-planner describe --tags`
+    shows the checked-out tag.
 2. Note both `v*` tags: the offending one and the rollback target.
 
-Inspect the last few migrations:
+Inspect the last few migrations (on the VM, `dc` alias from [README.md](README.md#conventions)):
 
 ```bash
-docker compose -p prod exec php bin/console doctrine:migrations:list | tail -20
+dc exec php bin/console doctrine:migrations:list | tail -20
 ```
 
-Check GlitchTip releases page — confirm the new release SHA is associated with the spike.
+Check the Sentry releases page: confirm the new release is associated with the spike.
 
-## Procédure
+## Procedure
 
-1. **Redeploy the previous tag** (fast path — images already on GHCR, no rebuild):
-    - **From CI:** GitHub → Actions → the `Deploy` run for the previous green tag → "Re-run jobs". `deploy-prod` SSHes to the VM and rolls the stack to that tag.
-    - **From the VM** (if CI is unavailable):
+1. **Redeploy the previous tag** (images already on GHCR, no rebuild). On the VM:
 
-      ```bash
-      cd /opt/bike-trip-planner   # ${PROD_REPO_DIR}
-      git fetch --tags --force
-      git checkout --force <previous-tag>
-      docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
-      ```
+    ```bash
+    cd /opt/bike-trip-planner
+    git fetch --tags --force
+    git checkout --force <previous-tag>
+    PHP_IMAGE=ghcr.io/vincentchalamon/bike-trip-planner-php:<previous-tag> \
+    PWA_IMAGE=ghcr.io/vincentchalamon/bike-trip-planner-pwa:<previous-tag> \
+      docker compose --env-file /etc/bike-trip-planner/app.env -p prod \
+        -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+    ```
+
+    Shell variables take precedence over `--env-file`, so this pins both images to the tag.
+    Re-running the `deploy-prod` job of the previous tag's `Deploy` run checks out that tag,
+    but see the known gap above for the images.
 
 2. **Verify the smoke test**:
 
@@ -52,26 +62,26 @@ Check GlitchTip releases page — confirm the new release SHA is associated with
 3. **Handle migrations**. Doctrine migrations are forward-only by default. Three scenarios:
 
     - **Additive migration only** (new column, new table) — leave the schema as-is. The old image ignores the new column; verify there is no NOT NULL without default that would break inserts.
-    - **Destructive migration shipped** (dropped column, renamed table) — the old image will crash. Revert the schema manually:
+    - **Destructive migration shipped** (dropped column, renamed table): the old image will crash. Revert the schema manually:
 
       ```bash
-      docker compose -p prod exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
+      dc exec php bin/console doctrine:migrations:execute --down "DoctrineMigrations\\VersionYYYYMMDDHHMMSS"
       ```
 
-      Only attempt this if a `down()` exists; otherwise restore from the most recent PostgreSQL backup.
+      Only attempt this if a `down()` exists; otherwise restore from the most recent PG-app backup ([ADR-062](../adr/adr-062-backup-and-disaster-recovery.md#restore-procedure)).
 
     - **Data migration** (UPDATE rows) — generally non-reversible; assess data loss and decide whether to keep the new image patched-forward instead of rolling back.
 
-4. **Inform users** via the status page if downtime exceeded 5 min.
+4. **Inform users** (GitHub issue or PWA banner) if downtime exceeded 5 min. There is no public status page in beta.
 
-5. **Open a follow-up issue** linking the failing PR. The PR template (`PULL_REQUEST_TEMPLATE.md`) requires the GlitchTip event ID and the incident issue link for the fix.
+5. **Open a follow-up issue** linking the failing PR. The PR template (`.github/PULL_REQUEST_TEMPLATE.md`) asks the fix to link the error-tracking event ID and the incident issue.
 
-## Post-action
+## Verification and follow-up
 
 - Application back on the previous green SHA, smoke test green.
-- GlitchTip release page shows the regression confined to the rolled-back release.
+- The Sentry release page shows the regression confined to the rolled-back release.
 - Issue auto-created by `incident-create.yml` is updated with the rollback timestamp and the linked offending PR.
-- Migration policy reviewed in the post-mortem: destructive migrations must follow the 2-release rule (add → migrate code → drop deprecated) per the migrations ADR.
+- Migration policy reviewed in the post-mortem: destructive migrations must follow the 2-release rule (add → migrate code → drop deprecated) per ADR-032.
 
 ## References
 

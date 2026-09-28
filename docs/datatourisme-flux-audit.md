@@ -1,5 +1,13 @@
 # DataTourisme flux field audit
 
+!!! note "Historical analysis"
+    This is a point-in-time measurement, published on 2026-08-04 against a snapshot of the flux
+    dated 2026-07-18. The figures describe that snapshot, not the current flux. DataTourisme is
+    still imported by the provisioner (`provisioner/src/DataTourismeImporter.php`,
+    `DataTourismeMapper.php`), and as of 2026-09-27 the recommendations below have not been
+    implemented: the Accueil Vélo label and `hasPricingMode` are still not imported, and the
+    mapping defects of section 5 are still present.
+
 Read-only measurement of the DataTourisme national flux we already download, run for
 [issue #879](https://github.com/vincentchalamon/bike-trip-planner/issues/879). It answers three questions with
 numbers rather than assumptions:

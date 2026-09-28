@@ -5,9 +5,10 @@ name is **not imported** (ADR-049 §3). This runbook covers the loop that lets a
 fix the refusals worth fixing — reading the report, writing the corrections, importing
 them — and the one limitation the design accepts.
 
-It is deliberately narrow. The zone-opening procedure itself lives in
-[valhalla-routing-graph.md](valhalla-routing-graph.md) for the routing half and in the
-zone-opening runbook for the reference half; this file is only about the corrections.
+It is deliberately narrow. Opening a zone is [zone-opening.md](zone-opening.md) (and the
+routing graph it depends on, [valhalla-routing-graph.md](valhalla-routing-graph.md)); this file
+is only about the corrections. Like the opening itself, it runs against a local or recette
+stack (`make provision-override` uses the dev compose project).
 
 ## 1. Read the report
 

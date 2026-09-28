@@ -30,7 +30,7 @@ production. At serving time Valhalla mmaps the tiles without rebuilding.
 runbook is its replacement. It was previously named `osm-france-refresh.md`, a
 name that suggested it covered OSM data in general.
 
-## Symptômes
+## When to use
 
 - Scheduled monthly routing refresh is due (data drifts over weeks, not hours).
 - New cycleways / road closures missing from routes for several weeks.
@@ -41,12 +41,12 @@ name that suggested it covered OSM data in general.
   tile URLs found. Nothing to do.` — the volume holds no graph, and the serving
   container is not allowed to build one. Run step 1.
 
-This is **planned maintenance**, not an incident. For corrupted tiles or a hot
-rebuild, see [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md). For
+This is **planned maintenance**, not an incident. For corrupted tiles or a
+routing outage, see [valhalla-unavailable.md](valhalla-unavailable.md). For
 empty POI / accommodation results this is the wrong runbook: that is reference
 data, re-run `make provision`.
 
-## Diagnostic
+## Diagnosis
 
 Confirm what is currently served:
 
@@ -63,7 +63,7 @@ A healthy France graph shows `valhalla_tiles.tar` plus `valhalla_tiles/` and
 Locally, one `<country>-latest.osm.pbf` per country of the perimeter sits
 alongside them; production only needs the tar.
 
-## Procédure
+## Procedure
 
 Build steps run on a local workstation (>= 8 GB free RAM, ~30 GB disk).
 Production steps are marked **(prod)** and run on the prod host over SSH (the
@@ -200,7 +200,9 @@ docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml exec valhalla 
 Lille -> Cassel (Hauts-de-France, ~40 km) must route on the France graph:
 
 ```bash
-docker compose exec php curl -sS -X POST http://valhalla:8002/route \
+cd /opt/bike-trip-planner
+docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml \
+  exec php curl -sS -X POST http://valhalla:8002/route \
   -H 'Content-Type: application/json' \
   -d '{"locations":[{"lat":50.6292,"lon":3.0573},{"lat":50.8000,"lon":2.4869}],"costing":"bicycle"}' \
   | jq '.trip.summary'
@@ -210,14 +212,15 @@ Expect a non-error response with a `length` of roughly 40-60 km. Confirm the
 application health endpoint too:
 
 ```bash
-docker compose exec php curl -sS http://localhost/api/health | jq '.valhalla'
+curl -sS https://www.<domain>/api/health | jq '.deps.valhalla'
 ```
 
 ## Memory budget
 
 Requalified in #881, when build and serve stopped sharing a container:
 
-- **`valhalla` (serve): 2 GB.** A page-cache budget, not an allocation:
+- **`valhalla` (serve): 3 GB in production** (`deploy/valhalla/compose.yaml`),
+  2 GB locally (`compose.yaml`). A page-cache budget, not an allocation:
   `valhalla_service` mmaps `valhalla_tiles.tar`, so the limit decides how much of
   the extract stays cached. Anonymous memory is the config plus per-request A*
   search state (tens to a few hundred MB for a long bicycle route). Sizing rule
@@ -229,10 +232,10 @@ Requalified in #881, when build and serve stopped sharing a container:
   extract's node count and exceeds any steady-state limit in `compose.yaml`. It
   runs alone, on demand, then exits.
 
-## Post-action
+## Verification and follow-up
 
 - `docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml ps valhalla`
-  reports `healthy`; `/api/health` shows `valhalla: ok`.
+  reports `healthy`; `/api/health` shows `deps.valhalla.status = "ok"`.
 - The Lille -> Cassel `/route` smoke test returns a valid trip.
 - Trigger one real trip computation through the app to confirm route + stage
   generation succeed end to end.
@@ -247,8 +250,8 @@ Requalified in #881, when build and serve stopped sharing a container:
 - ADR-040 — Tier-1 PostGIS reference index (the *other* dataset)
 - ADR-061 — Deployment: Ansible + GHA-SSH + Traefik + Tunnel; the shared
   `valhalla-shared` compose project is deployed standalone by Ansible
-- [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) — corrupted-tile /
-  hot rebuild
+- [valhalla-unavailable.md](valhalla-unavailable.md) — routing outage /
+  corrupted tiles
 - `Makefile` targets `routing-build`, `routing-up` (local build/serve) and
   `routing-publish` (ships the built tar to `valhalla-shared` on the shared-infra
   host, steps 3-6 of this runbook); `provision` is the unrelated reference target

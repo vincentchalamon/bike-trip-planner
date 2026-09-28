@@ -1,6 +1,6 @@
 # ADR-020: Dynamic Overpass Region Provisioning
 
-- **Status:** Superseded
+- **Status:** Superseded by [ADR-025](adr-025-removal-of-self-hosted-overpass.md), then [ADR-040](adr-040-local-first-reference-data-postgis.md)
 - **Date:** 2026-03-05
 - **Extends:** ADR-017 (Valhalla Routing Engine and Self-Hosted Overpass Integration)
 - **Depends on:** ADR-016 Option F (Self-hosted Overpass — foundation implemented)

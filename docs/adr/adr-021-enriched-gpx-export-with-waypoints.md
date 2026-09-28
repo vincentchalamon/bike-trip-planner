@@ -1,6 +1,6 @@
 # ADR-021: Enriched GPX Export with Waypoints
 
-- **Status:** Proposed
+- **Status:** Accepted - implemented (waypoints in the GPX export, shared with the FIT Course Points)
 - **Date:** 2026-03-05
 - **Depends on:** ADR-004 (GPX parsing, decimation, GpxStreamParser), ADR-018 (Garmin export strategy)
 - **Enables:** ADR-018 Phase 1 (GPX enrichi), ADR-018 Option B (FIT Course Points via shared DTO)

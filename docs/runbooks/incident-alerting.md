@@ -16,7 +16,9 @@ the official GitHub mobile app.
 
 ```text
 GlitchTip ─────────┐
-Uptime Kuma ───────┼──► POST /repos/.../dispatches (Bearer INCIDENT_DISPATCH_TOKEN)
+Uptime Kuma ───────┤
+deploy smoke-test ─┤
+UptimeRobot ───────┴──► POST /repos/.../dispatches (Bearer INCIDENT_DISPATCH_TOKEN)
 UptimeRobot ───────┘                 │
                                      ▼
               GitHub repository_dispatch event
@@ -50,19 +52,20 @@ External services call the GitHub REST API
 
 - **Secret name:** `INCIDENT_DISPATCH_TOKEN` (already provisioned)
 - **Type:** Fine-grained PAT
-- **Scopes:** `Contents: read` + `Metadata: read` (required by GitHub) plus
-  `Administration > Repository dispatch: write` on this repository only
-- **Storage:** GitHub Actions secrets _and_ injected into GlitchTip / Uptime
-  Kuma / UptimeRobot webhook configuration UIs
-- **Rotation:** every 90 days. Calendar reminder in the on-call doc
+- **Permissions:** `Contents: Read and write` on this repository only (what
+  `POST /dispatches` requires; `Metadata: Read` is added automatically)
+- **Storage:** GitHub Actions secret (read by the `smoke-test` job of
+  `deploy.yml`, which dispatches an `uptime_alert` when the post-deploy probe
+  fails) _and_ the webhook configuration of each external monitor
+- **Rotation:** every 90 days
 
-The workflow itself authenticates with the built-in `GITHUB_TOKEN` (scope
-`issues: write`); it does **not** read `INCIDENT_DISPATCH_TOKEN`.
+`incident-create.yml` itself authenticates with the built-in `GITHUB_TOKEN`
+(scope `issues: write`); it does **not** read `INCIDENT_DISPATCH_TOKEN`.
 
 ### Rotating `INCIDENT_DISPATCH_TOKEN`
 
 1. GitHub → Settings → Developer settings → Fine-grained tokens → generate new
-    token, same scopes, 90-day expiry.
+    token, same permissions, 90-day expiry.
 2. Update the secret in Settings → Secrets and variables → Actions.
 3. Update the bearer token in:
     - GlitchTip → project Settings → Alerts → webhook integration
@@ -247,9 +250,10 @@ command must comment on the existing issue (no duplicate).
 ## Troubleshooting
 
 - **No issue appears:** check the Actions tab for a failed
-  `Incident — auto-create issue` run. The most common cause is a malformed
-  `client_payload` JSON; the workflow logs the raw payload (truncated to
-  500 chars) in the `Parse payload` step.
+  `Incident — auto-create issue` run. The `Parse payload, dedupe, create or
+  comment` step logs the received `event_type`; the created issue embeds the
+  raw payload (truncated to 4000 characters). If no run exists at all, the
+  dispatch itself was rejected (see the HTTP codes below).
 - **Duplicate issues for the same incident:** the fingerprint changed. Confirm
   the upstream service is sending stable `culprit` / `monitor_name` values.
 - **HTTP 401 from `dispatches`:** the PAT expired. See "Rotating

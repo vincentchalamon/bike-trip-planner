@@ -4,7 +4,7 @@ How to get a working build of the mobile app onto a real device or emulator
 during development — the day-to-day loop, distinct from the two standalone
 paths documented elsewhere (see References).
 
-## Symptômes (when to use)
+## When to use
 
 - You changed native code, added a native module, or bumped an Expo SDK/plugin,
   and Metro-only (`npx expo start` against Expo Go) is not enough or not
@@ -14,7 +14,7 @@ paths documented elsewhere (see References).
 - `adb install` fails, the app crashes on launch, or the device never shows up
   as a build target.
 
-## Diagnostic
+## Diagnosis
 
 The mobile app is an **Expo CNG (Continuous Native Generation) project**:
 `mobile/android` and `mobile/ios` are generated on demand by `expo prebuild`
@@ -37,7 +37,7 @@ A device listed as `unauthorized` means the "Allow USB debugging" prompt on the
 phone was not accepted (or was accepted for a different machine's RSA key) —
 unlock the phone and accept the prompt, then re-run `adb devices`.
 
-## Procédure
+## Procedure
 
 1. **Install dependencies once**, from the repo root (links `@btp/core` via
    npm workspaces — see ADR-053):
@@ -46,7 +46,20 @@ unlock the phone and accept the prompt, then re-run `adb devices`.
     npm install
     ```
 
-2. **Build the dev client and install it** on the connected device/emulator:
+2. **Point the app at a reachable API** (see `mobile/README.md`, "Pointing at the API").
+    `EXPO_PUBLIC_API_URL` has no default: `app.config.js` refuses to resolve and the app throws
+    at startup without it. Create `mobile/.env` before building:
+
+    ```dotenv
+    EXPO_PUBLIC_API_URL=https://<your-tunnel>.ngrok-free.dev
+    EXPO_PUBLIC_WEB_URL=https://<your-tunnel>.ngrok-free.dev
+    EXPO_PUBLIC_CONTACT_EMAIL=contact@bike-trip-planner.com
+    ```
+
+    The host must be reachable from the phone (`localhost` never is). `EXPO_PUBLIC_*` values
+    are inlined at bundle time: restart Metro after changing them.
+
+3. **Build the dev client and install it** on the connected device/emulator:
 
     ```bash
     cd mobile
@@ -56,11 +69,6 @@ unlock the phone and accept the prompt, then re-run `adb devices`.
     This runs `expo prebuild` (regenerating `android/`), compiles the native
     project, and installs the resulting debug APK — Metro serves the JS bundle,
     nothing is baked in.
-
-3. **Point the app at a reachable API** before or after the build (see
-   `mobile/README.md`, "Pointing at the API"): `EXPO_PUBLIC_API_URL` is read at
-   bundle time, so set it in `mobile/.env` or export it before step 2 if you
-   need a non-default host.
 
 4. **Subsequent JS-only changes** don't need a rebuild — just restart the
    Metro server against the already-installed dev client:
@@ -76,7 +84,7 @@ unlock the phone and accept the prompt, then re-run `adb devices`.
     adb install -r android/app/build/outputs/apk/debug/app-debug.apk
     ```
 
-## Post-action
+## Verification and follow-up
 
 - Confirm the app opens to the login screen and Metro's terminal shows the
   device connected ("Android Bundled ... " logs streaming).

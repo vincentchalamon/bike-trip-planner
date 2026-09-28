@@ -2,7 +2,7 @@
 
 > **Withdrawn (2026-08-11) — AI support has been removed from the product. See [ADR-052](adr-052-remove-ai-support.md).** This record is kept for historical context only.
 
-- **Status:** Proposed
+- **Status:** Withdrawn by [ADR-052](adr-052-remove-ai-support.md) (AI support removed)
 - **Date:** 2026-06-23
 - **Depends on:** ADR-042 (Per-User BYO-Token AI), ADR-043 (Synchronous Structural Computation)
 

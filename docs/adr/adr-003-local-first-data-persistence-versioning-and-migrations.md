@@ -1,6 +1,6 @@
 # ADR-003: Local-First Data Persistence, Versioning, and Migrations
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-022](adr-022-persistent-storage-strategy.md) (trips are persisted server-side; there is no `localStorage` trip state or `.json` import to migrate any more)
 
 **Date:** 2026-02-19
 

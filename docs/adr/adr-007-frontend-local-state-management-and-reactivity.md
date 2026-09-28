@@ -1,8 +1,5 @@
 # ADR-007: Frontend Local State Management and Reactivity (Zustand)
 
-*(Note: Adjusting the sequential numbering to ADR-011 to follow the previously established sequence, while addressing
-the exact topic you requested).*
-
 **Status:** Accepted
 
 **Date:** 2026-02-19

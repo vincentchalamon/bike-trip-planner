@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-11
-- **Withdraws:** ADR-028 (Ollama/LLaMA integration), ADR-030 (symfony/ai adoption), ADR-042 (optional multi-provider AI, BYO token), ADR-045 (conversational AI trip-brief chat), ADR-046 (temporary AI feature flag), and the historical [LLaMA.md](../LLaMA.md) architecture note.
+- **Withdraws:** ADR-028 (Ollama/LLaMA integration), ADR-030 (symfony/ai adoption), ADR-042 (optional multi-provider AI, BYO token), ADR-045 (conversational AI trip-brief chat), ADR-046 (temporary AI feature flag), and the historical [LLaMA.md](https://github.com/vincentchalamon/bike-trip-planner/blob/2ce989d4/docs/LLaMA.md) architecture note (removed from the docs, kept in git history).
 - **Preserves:** ADR-048 (in-ride assistance without AI).
 
 ## Context
@@ -23,6 +23,6 @@ Remove all AI support:
 ## Consequences
 
 - Reintroducing AI later means re-implementing it, not toggling it back on. The removal PR is the reference diff for what a future implementation would need to restore.
-- The full AI history is preserved through the withdrawn ADRs (ADR-028, ADR-030, ADR-042, ADR-045, ADR-046) and LLaMA.md, each carrying a "Withdrawn" banner pointing here.
+- The full AI history is preserved through the withdrawn ADRs (ADR-028, ADR-030, ADR-042, ADR-045, ADR-046) and LLaMA.md (git history), each carrying a "Withdrawn" banner pointing here.
 - One encrypted-credential surface is gone; the sole remaining consumer of the encryption key is the refresh-token encryptor, which the rename now reflects.
 - **Baseline schema hand-edit (one-time, verified-safe exception).** The `ai_*` columns were removed directly from `api/migrations/schema/baseline_schema.sql` rather than through the documented `migrate` + `pg_dump --schema-only` regeneration its header prescribes. ADR-032's pre-launch addendum sanctions rewriting the baseline while nothing has shipped, and the drop was verified safe (no index, constraint, or comment referenced the dropped columns). This is a deliberate exception, not the standard process — a future baseline change must still go through the documented regeneration.

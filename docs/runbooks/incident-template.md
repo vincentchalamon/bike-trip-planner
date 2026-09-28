@@ -8,18 +8,18 @@ One paragraph, plain language: what broke, who was affected, how long, what fixe
 
 - **Severity**: P1 / P2 / P3 (see `severity-levels.md`)
 - **Start**: `YYYY-MM-DD HH:MM UTC`
-- **Detection**: `YYYY-MM-DD HH:MM UTC` (how it was detected — Uptime Kuma, UptimeRobot, user report, GlitchTip…)
+- **Detection**: `YYYY-MM-DD HH:MM UTC` (how it was detected: UptimeRobot, Sentry, post-deploy smoke test, user report…)
 - **Mitigation**: `YYYY-MM-DD HH:MM UTC`
 - **Resolution**: `YYYY-MM-DD HH:MM UTC`
 - **Duration of user impact**: `Xh Ym`
 - **Linked issues / PRs**: `#…`
-- **GlitchTip event(s)**: `<event id + link>`
+- **Error-tracking event(s)**: `<event id + link>` (Sentry in beta)
 - **Correlation IDs**: `<request_id list>`
 
 ## Impact
 
 - Users affected (estimated count or percentage of traffic)
-- Features impacted (trip creation, routing, narrative, export…)
+- Features impacted (trip creation, routing, export, push notifications…)
 - Data integrity impact (lost, duplicated, stale)
 - External dependencies impacted (Garmin Connect callback, etc.)
 

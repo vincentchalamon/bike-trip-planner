@@ -1,6 +1,6 @@
 # ADR-039: Beta Right-Sizing on the Oracle Free Tier + Corrected RAM/CPU/Disk Budget
 
-- **Status:** Proposed — flips to Accepted once the implementing PRs land (#563 merged; #564-#569 open in Sprint 34.5)
+- **Status:** Accepted - implemented (#563-#569); its LLM sizing is void since [ADR-052](adr-052-remove-ai-support.md)
 - **Date:** 2026-06-01
 - **Depends on:** ADR-019 (Deployment Infrastructure), ADR-028 (Ollama/LLaMA integration), ADR-031 (Error tracking), ADR-034 (Usage analytics), ADR-037 (Dev/Prod Docker convergence)
 - **Amends:** ADR-019 (RAM budget correction)
@@ -29,7 +29,7 @@ Adopt a **beta right-sizing profile** for the Oracle Free Tier deployment, optim
 
 ### 1. Single 3B model, on-demand (no resident 8B)
 
-Run **only `llama3.2:3b`**, loaded on demand rather than kept hot for both models. The 8B analysis model (ADR-028) is not resident in the beta profile: keeping two models pinned in memory is what pushed the budget over, and the 8B pass is the heaviest CPU consumer. The 3B model covers the conversational brief intake and the in-ride POI assistant. Stage analysis narrative either uses the 3B model or is deferred; this is an explicit beta trade-off documented in `docs/LLaMA.md`. Ollama `keep_alive` is tuned so the single model unloads under memory pressure instead of co-resident pinning.
+Run **only `llama3.2:3b`**, loaded on demand rather than kept hot for both models. The 8B analysis model (ADR-028) is not resident in the beta profile: keeping two models pinned in memory is what pushed the budget over, and the 8B pass is the heaviest CPU consumer. The 3B model covers the conversational brief intake and the in-ride POI assistant. Stage analysis narrative either uses the 3B model or is deferred; this is an explicit beta trade-off documented in [`docs/LLaMA.md`](https://github.com/vincentchalamon/bike-trip-planner/blob/2ce989d4/docs/LLaMA.md) (removed since ADR-052). Ollama `keep_alive` is tuned so the single model unloads under memory pressure instead of co-resident pinning.
 
 ### 2. Split Messenger workers: `async` vs `llm`
 
@@ -74,7 +74,7 @@ The corrected budget reflects the actual beta profile (single 3B on demand, publ
 | Worker `llm` (×1) | LLM inference, serialised | ~350 MB |
 | PostgreSQL | Persistance | ~250 MB |
 | Valhalla (France) | Routing | ~1.5 GB |
-| Ollama (`llama3.2:3b`, on demand) | Inférence LLM | ~3-4 GB |
+| Ollama (`llama3.2:3b`, on demand) | LLM inference | ~3-4 GB |
 | **Total beta** | | **~9-9.5 GB RAM** |
 
 Observability (Sentry) and uptime (UptimeRobot) are **off-VM SaaS**; analytics is **deferred**. Overpass is the public API (off-VM). Disk: ~5 GB (France PBF + Valhalla tiles) + ~2.5 GB (single 3B model).
@@ -89,7 +89,7 @@ For completeness, the realistic cost of the *fully self-hosted* target (both mod
 | Coolify + Traefik | ~700 MB |
 | App core (php + pwa + redis + postgres + workers) | ~2.5 GB |
 | Valhalla | ~1.5 GB |
-| Ollama (3B + 8B résidents) | ~7 GB |
+| Ollama (3B + 8B resident) | ~7 GB |
 | GlitchTip (web + worker + pg + redis) | ~1 GB |
 | Plausible + ClickHouse | ~2 GB |
 | Uptime Kuma | ~150 MB |
@@ -147,6 +147,6 @@ The Docker Compose topology (ADR-037) is portable as-is; the migration is an inf
 - [ADR-031](adr-031-error-tracking-strategy.md) — Error tracking (GlitchTip self-hosted target)
 - [ADR-034](adr-034-usage-analytics-plausible.md) — Usage analytics (Plausible CE target)
 - [ADR-037](adr-037-docker-dev-prod-convergence.md) — Dev/Prod Docker convergence on FrankenPHP
-- [docs/LLaMA.md](../LLaMA.md) — LLM architecture and beta 3B profile
+- [docs/LLaMA.md](https://github.com/vincentchalamon/bike-trip-planner/blob/2ce989d4/docs/LLaMA.md) — LLM architecture (removed since ADR-052) and beta 3B profile
 - [docs/runbooks/uptime-monitoring.md](../runbooks/uptime-monitoring.md) — Uptime Kuma + UptimeRobot
 - [Oracle Cloud Always Free Resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
