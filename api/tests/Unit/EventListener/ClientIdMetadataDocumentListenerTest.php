@@ -163,10 +163,40 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
             $this->limiter('per_host', 10),
         );
 
-        $this->expectException(TooManyRequestsHttpException::class);
+        try {
+            $listener($this->event('oauth2_authorize'));
+            self::fail('The call should have been refused.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            $retryAfter = $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? null;
+            self::assertIsInt($retryAfter);
+            self::assertGreaterThanOrEqual(1, $retryAfter);
+        } finally {
+            self::assertSame(0, $http->getRequestsCount());
+        }
+    }
+
+    #[Test]
+    public function aHostPastItsBudgetSaysWhenToComeBack(): void
+    {
+        $http = new MockHttpClient([]);
+        $this->clients->method('find')->willReturn(null);
+
+        $spent = $this->limiter('per_host', 1);
+        $spent->create(parse_url(self::CLIENT_ID, \PHP_URL_HOST))->consume();
+
+        $listener = new ClientIdMetadataDocumentListener(
+            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test'),
+            $this->clients,
+            $this->security,
+            $this->limiter('per_user', 10),
+            $spent,
+        );
 
         try {
             $listener($this->event('oauth2_authorize'));
+            self::fail('The call should have been refused.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertIsInt($tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? null);
         } finally {
             self::assertSame(0, $http->getRequestsCount());
         }

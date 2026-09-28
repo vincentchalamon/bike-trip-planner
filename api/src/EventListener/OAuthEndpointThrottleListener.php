@@ -51,8 +51,10 @@ final readonly class OAuthEndpointThrottleListener
             return;
         }
 
-        if (!$limiter->create($key)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $limiter->create($key)->consume();
+
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
     }
 }
