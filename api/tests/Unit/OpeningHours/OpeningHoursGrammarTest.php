@@ -46,7 +46,7 @@ final class OpeningHoursGrammarTest extends TestCase
         self::assertNotNull($rule->selector);
         self::assertSame(SelectorKind::WEEKDAYS, $rule->selector[0]->kind);
         self::assertFalse($rule->selector[0]->canonical);
-        self::assertFalse($rule->spans[0]->isCompact());
+        self::assertSame('  ', $rule->spans[0]->dashWhitespace);
         self::assertSame(Modifier::OPEN, $rule->modifier);
     }
 

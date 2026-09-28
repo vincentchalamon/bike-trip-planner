@@ -25,12 +25,6 @@ final readonly class TimeSpan
     ) {
     }
 
-    /** Written without whitespace around the dash (`09:00-12:00`, not `09:00 - 12:00`). */
-    public function isCompact(): bool
-    {
-        return '' === $this->dashWhitespace;
-    }
-
     /** A line break inside the span or before it. */
     public function breaksLine(): bool
     {
