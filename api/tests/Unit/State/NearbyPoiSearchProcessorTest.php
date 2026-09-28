@@ -16,6 +16,7 @@ use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\NearbyPoiFinder;
 use App\InRide\OpeningHoursParser;
 use App\InRide\RouteTail;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
@@ -135,6 +136,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
         $stageStore = $this->createStub(TripStageStoreInterface::class);
         $trip->method('getLocale')->willReturn('en');
         $stageStore->method('getStageGeometry')->willReturn(null);
+        $boundaries = $this->createStub(AdminBoundaryRepositoryInterface::class);
 
         return new NearbyPoiFinder(
             $repo,
@@ -147,6 +149,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
             new PoiLabelResolver($this->createAlertTranslator()),
             $trip,
             $stageStore,
+            $boundaries,
         );
     }
 }
