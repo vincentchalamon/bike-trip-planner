@@ -1,12 +1,8 @@
 // Pure elevation-profile maths shared by the web and mobile clients (#1041).
-// Extracted (same semantics) from the web ElevationProfile component
-// (pwa/src/components/Map/ElevationProfile.tsx) so both platforms build the
-// identical cumulative distance/altitude profile and hover mapping. No React /
-// React Native / SVG dependency — only the `StageData` shape from schemas.
-//
-// The web component still owns its own copy for now; this module is the
-// framework-free source both consumers are meant to converge on (mobile does so
-// in #1041; the web migration is deliberately out of scope here).
+// Both the web ElevationProfile component and the mobile profile build the
+// identical cumulative distance/altitude profile and hover mapping from here.
+// No React / React Native / SVG dependency — only the `StageData` shape from
+// schemas.
 
 import type { StageData } from "./schemas";
 
