@@ -21,6 +21,7 @@ function stageUpdatedWithDistanceChange(dayNumber: number): MercureEvent {
         distance: 55.0,
         elevation: 720,
         elevationLoss: 640,
+        onCycleNetwork: 0,
         startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
         endPoint: { lat: 44.5, lon: 4.4, ele: 500 },
         geometry: [
@@ -58,6 +59,7 @@ function stageUpdatedWithNewAlerts(dayNumber: number): MercureEvent {
         distance: 72.5,
         elevation: 1180,
         elevationLoss: 920,
+        onCycleNetwork: 0,
         startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
         endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
         geometry: [

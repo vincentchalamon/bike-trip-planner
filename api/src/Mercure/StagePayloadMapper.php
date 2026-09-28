@@ -51,6 +51,9 @@ final readonly class StagePayloadMapper
             'endPoint' => $this->coordinateToPayload($stage->endPoint),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
+            // Read back from the stage row with the rest of the list, so the terminal and
+            // per-stage events carry the persisted share instead of wiping it client-side.
+            'onCycleNetwork' => $stage->onCycleNetwork,
             'geometry' => array_map(
                 $this->coordinateToPayload(...),
                 $stage->geometry,

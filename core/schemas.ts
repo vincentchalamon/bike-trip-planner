@@ -251,8 +251,8 @@ export const StageDataSchema = z.object({
   isRestDay: z.boolean().default(false),
   /**
    * Fraction (0..1) of the stage that follows a signed cycle route (ADR-040).
-   * Optional/forward-compatible: present on the persisted trip detail, absent
-   * from the live SSE payloads (treated as 0).
+   * Served by /detail and carried by `trip_ready` / `stage_updated`; optional
+   * because a stage built client-side (placeholder, rest day) has none yet.
    */
   onCycleNetwork: z.number().min(0).max(1).optional(),
   supplyTimeline: z.array(SupplyMarkerSchema).default([]),

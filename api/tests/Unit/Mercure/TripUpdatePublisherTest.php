@@ -99,6 +99,7 @@ final class TripUpdatePublisherTest extends TestCase
                 self::assertCount(2, $decoded['data']['stages']);
                 self::assertSame(1, $decoded['data']['stages'][0]['dayNumber']);
                 self::assertSame(80.0, $decoded['data']['stages'][0]['distance']);
+                self::assertSame(0.4, $decoded['data']['stages'][0]['onCycleNetwork']);
                 self::assertSame(['terrain' => 'done', 'weather' => 'failed'], $decoded['data']['computationStatus']);
 
                 return 'id';
@@ -131,6 +132,7 @@ final class TripUpdatePublisherTest extends TestCase
                 self::assertSame(2, $decoded['data']['position']);
                 self::assertSame(3, $decoded['data']['stage']['dayNumber']);
                 self::assertIsArray($decoded['data']['stage']['geometry']);
+                self::assertSame(0.4, $decoded['data']['stage']['onCycleNetwork']);
 
                 return 'id';
             });
@@ -220,7 +222,7 @@ final class TripUpdatePublisherTest extends TestCase
 
     private function createStage(int $dayNumber): Stage
     {
-        return new Stage(
+        $stage = new Stage(
             tripId: self::TRIP_ID,
             dayNumber: $dayNumber,
             distance: 80.0,
@@ -231,5 +233,8 @@ final class TripUpdatePublisherTest extends TestCase
             label: 'Stage '.$dayNumber,
             elevationLoss: 400.0,
         );
+        $stage->onCycleNetwork = 0.4;
+
+        return $stage;
     }
 }

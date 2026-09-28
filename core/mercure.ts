@@ -30,6 +30,8 @@ export interface StagePayload {
  * the backend — keep both in sync.
  */
 export interface EnrichedStagePayload extends StagePayload {
+  /** Fraction (0..1) of the stage on a signed cycle route, as persisted (ADR-040). */
+  onCycleNetwork: number;
   weather: WeatherPayload["weather"];
   alerts: AlertPayload[];
   resupply: ResupplyPayload;

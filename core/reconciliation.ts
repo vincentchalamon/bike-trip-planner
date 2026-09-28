@@ -59,6 +59,7 @@ export function enrichedPayloadToStageData(
     selectedAccommodation: payload.selectedAccommodation,
     accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     isRestDay: payload.isRestDay ?? false,
+    onCycleNetwork: payload.onCycleNetwork,
     supplyTimeline: [],
     events: payload.events ?? [],
   };
