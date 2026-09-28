@@ -1,12 +1,7 @@
 import { useEffect } from 'react';
-import type { StageData } from '@btp/core';
-import {
-  fetchSharedTrip,
-  fetchSharedTripRoute,
-  type SharedTripDetail,
-  type TripDetail,
-} from '../api/trips';
-import { stageDataFromDetail, useTripStore } from '../store/trip-store';
+import { stageDataFromDetail, tripSettingsFromDetail } from '@btp/core';
+import { fetchSharedTrip, fetchSharedTripRoute } from '../api/trips';
+import { useTripStore } from '../store/trip-store';
 
 // The store actions the shared consultation drives. A read-only subset of the
 // live orchestration (no SSE reconciliation): the shared view never mutates.
@@ -20,11 +15,6 @@ export interface SharedTripStore {
   setStatus: ReturnType<typeof useTripStore.getState>['setStatus'];
   applyRoute: ReturnType<typeof useTripStore.getState>['applyRoute'];
 }
-
-// The shared stage DTO is structurally the trip /detail stage; reuse the store's
-// mapper. (The DTO carries no `id`/live fields the mapper reads, only geometry &
-// summary, so the cast is safe — same field names as TripDetail.stages.)
-type SharedStage = NonNullable<SharedTripDetail['stages']>[number];
 
 /**
  * Hydrate the shared store from `/s/<code>` then merge the on-demand geometry
@@ -52,21 +42,12 @@ export async function runSharedTrip(
     return;
   }
 
-  const stages: StageData[] = (detail.stages ?? []).map((s) =>
-    stageDataFromDetail(s as SharedStage as NonNullable<TripDetail['stages']>[number]),
-  );
-  store.setStages(stages);
+  // The shared DTO is structurally the /detail one, so the same core mapper applies.
+  store.setStages((detail.stages ?? []).map(stageDataFromDetail));
   store.setTitle(detail.title ?? '');
   store.setIsLocked(detail.isLocked ?? false);
   store.setOutOfZone(detail.outOfZone ?? false);
-  store.setConfig({
-    startDate: detail.startDate ?? null,
-    endDate: detail.endDate ?? null,
-    fatigueFactor: detail.fatigueFactor ?? 0.9,
-    elevationPenalty: detail.elevationPenalty ?? 50,
-    maxDistancePerDay: detail.maxDistancePerDay ?? 80,
-    averageSpeed: detail.averageSpeed ?? 15,
-  });
+  store.setConfig(tripSettingsFromDetail(detail));
   store.setStatus({ loading: false, error: null });
 
   // Geometry (ADR-057) is split off the summary; pull it via the public code and

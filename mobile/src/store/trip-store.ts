@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import type { StageData } from '@btp/core';
-import { EMPTY_RESUPPLY } from '@btp/core';
+import type { StageData, TripSettings } from '@btp/core';
+import {
+  DEFAULT_TRIP_SETTINGS,
+  EMPTY_RESUPPLY,
+  stageDataFromDetail,
+  tripSettingsFromDetail,
+} from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import type { MercureEvent } from '@btp/core/mercure';
 import {
@@ -12,47 +17,6 @@ import {
 import type { TripDetail, TripRoute } from '../api/trips';
 import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
 import { createTemporalStore } from './temporal-middleware';
-
-type ApiStage = NonNullable<TripDetail['stages']>[number];
-
-// Map a persisted /detail stage to the store's StageData shape. Field names
-// match the API; client-only fields (labels, radius, supply timeline) get
-// defaults. Mirrors the web hydrate in pwa's trip-page.
-export function stageDataFromDetail(s: ApiStage): StageData {
-  return {
-    id: s.stageId ?? '',
-    dayNumber: s.dayNumber ?? 0,
-    distance: s.distance ?? 0,
-    elevation: s.elevation ?? 0,
-    elevationLoss: s.elevationLoss ?? 0,
-    startPoint: (s.startPoint as StageData['startPoint']) ?? {
-      lat: 0,
-      lon: 0,
-      ele: 0,
-    },
-    endPoint: (s.endPoint as StageData['endPoint']) ?? { lat: 0, lon: 0, ele: 0 },
-    // The summary carries no geometry (ADR-057): it is hydrated on demand from
-    // GET /route (map) and GET /stages/{i}/detail (stage view).
-    geometry: [],
-    label: s.label ?? null,
-    startLabel: s.startLabel ?? null,
-    endLabel: s.endLabel ?? null,
-    weather: (s.weather as StageData['weather']) ?? null,
-    // Every producer persists its own alerts now, each carrying its group (ADR-068) —
-    // assuming 'terrain' here would have wiped twelve of them on the first event.
-    alerts: (s.alerts as StageData['alerts']) ?? [],
-    resupply: (s.resupply as StageData['resupply']) ?? EMPTY_RESUPPLY,
-    accommodations: (s.accommodations as StageData['accommodations']) ?? [],
-    selectedAccommodation:
-      (s.selectedAccommodation as StageData['selectedAccommodation']) ?? null,
-    accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
-    isRestDay: s.isRestDay ?? false,
-    // Persisted and served since ADR-068 — see the web hydrate for why defaulting
-    // these to [] threw away what the producers had just written.
-    supplyTimeline: (s.supplyTimeline as StageData['supplyTimeline']) ?? [],
-    events: (s.events as StageData['events']) ?? [],
-  };
-}
 
 /**
  * A single user modification accumulated in the batch queue before being sent
@@ -68,29 +32,9 @@ export interface Modification {
 }
 
 /** Editable pacing / dates / preferences slice, mirrored from the web store. */
-export interface TripConfig {
-  startDate: string | null;
-  endDate: string | null;
-  fatigueFactor: number;
-  elevationPenalty: number;
-  maxDistancePerDay: number;
-  averageSpeed: number;
-  ebikeMode: boolean;
-  departureHour: number;
-  enabledAccommodationTypes: string[];
-}
+export type TripConfig = TripSettings;
 
-const DEFAULT_CONFIG: TripConfig = {
-  startDate: null,
-  endDate: null,
-  fatigueFactor: 0.9,
-  elevationPenalty: 50,
-  maxDistancePerDay: 80,
-  averageSpeed: 15,
-  ebikeMode: false,
-  departureHour: 8,
-  enabledAccommodationTypes: [],
-};
+const DEFAULT_CONFIG: TripConfig = DEFAULT_TRIP_SETTINGS;
 
 // Add `days` to a YYYY-MM-DD / ISO date string, returning YYYY-MM-DD. Used for
 // the optimistic endDate when a structural edit changes the stage count; the
@@ -239,17 +183,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       outOfZone: detail.outOfZone ?? false,
       computing: false,
       geometryLoaded: false,
-      startDate: detail.startDate ?? null,
-      endDate: detail.endDate ?? null,
-      fatigueFactor: detail.fatigueFactor ?? DEFAULT_CONFIG.fatigueFactor,
-      elevationPenalty:
-        detail.elevationPenalty ?? DEFAULT_CONFIG.elevationPenalty,
-      maxDistancePerDay:
-        detail.maxDistancePerDay ?? DEFAULT_CONFIG.maxDistancePerDay,
-      averageSpeed: detail.averageSpeed ?? DEFAULT_CONFIG.averageSpeed,
-      ebikeMode: detail.ebikeMode ?? DEFAULT_CONFIG.ebikeMode,
-      departureHour: detail.departureHour ?? DEFAULT_CONFIG.departureHour,
-      enabledAccommodationTypes: detail.enabledAccommodationTypes ?? [],
+      ...tripSettingsFromDetail(detail),
       pendingModifications: [],
       stageDiffs: new Set<number>(),
       diffBaseline: null,

@@ -16,6 +16,7 @@
     "./budget": "./budget.ts",
     "./difficulty": "./difficulty.ts",
     "./trip-text": "./trip-text.ts",
+    "./trip-detail": "./trip-detail.ts",
     "./package.json": "./package.json"
   },
   "scripts": {
