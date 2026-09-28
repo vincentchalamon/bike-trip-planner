@@ -94,8 +94,13 @@ final readonly class GpxUploadController
         // POST /trips, just before the expensive createTrip, so it cannot be scripted
         // to exhaust storage/workers (SEC-006). Cheap early validation 4xx are not
         // throttled (and need no authenticated user).
-        if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            return ProblemResponse::create(Response::HTTP_TOO_MANY_REQUESTS, 'Too many GPX uploads. Try again later.');
+        $limit = $this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume();
+        if (!$limit->isAccepted()) {
+            return ProblemResponse::create(
+                Response::HTTP_TOO_MANY_REQUESTS,
+                'Too many GPX uploads. Try again later.',
+                ['Retry-After' => (string) max(1, $limit->getRetryAfter()->getTimestamp() - time())],
+            );
         }
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $user->getLocale(), $user);

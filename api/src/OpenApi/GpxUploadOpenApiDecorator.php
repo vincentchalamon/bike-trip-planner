@@ -89,7 +89,7 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                     // whole API, not here; 413 is never emitted — post_max_size (32M) sits
                     // above upload_max_filesize (30M), so an oversized body surfaces as an
                     // invalid file, i.e. a 400.
-                    429 => $this->problemResponse('Too many GPX uploads for this user'),
+                    429 => $this->problemResponse('Too many GPX uploads for this user')->withHeaders(new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'Upload a GPX file to create a trip',
                 description: 'Parses the GPX file synchronously, creates a trip, and dispatches async computations (stage generation, OSM scan).',

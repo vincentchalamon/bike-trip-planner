@@ -5036,6 +5036,8 @@ export interface operations {
             /** @description Too many GPX uploads for this user */
             429: {
                 headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {

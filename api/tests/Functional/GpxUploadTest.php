@@ -25,6 +25,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 final class GpxUploadTest extends ApiTestCase
 {
@@ -387,14 +388,38 @@ final class GpxUploadTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
     }
 
-    // Note: a functional "11 uploads → 429" test is intentionally omitted. The
-    // test cache pool is cache.adapter.array, which implements ResetInterface and
-    // is cleared by Symfony's service resetter after every request (independently
-    // of disableReboot()), so a real sliding-window limiter never accumulates
-    // across HTTP requests here. This is why the existing 429 tests in the suite
-    // mock a provider 429 rather than exhausting a real limiter. The limiter
-    // wiring itself (limiter.gpx_upload consumed before createTrip) is covered by
-    // the controller change.
+    #[Test]
+    public function aThrottledUploadIsToldWhenToRetry(): void
+    {
+        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt(\sprintf('throttled-gpx-%s@test.com', bin2hex(random_bytes(4))));
+        $client = self::createClient();
+        // The limiter's array pool dies with the kernel, which the browser reboots between
+        // requests unless told not to.
+        $client->disableReboot();
+
+        /** @var RateLimiterFactory $factory */
+        $factory = self::getContainer()->get('limiter.gpx_upload');
+        $limiter = $factory->create($user->getId()->toRfc4122());
+        for ($i = 0; $i < 10; ++$i) {
+            $this->assertTrue($limiter->consume()->isAccepted());
+        }
+
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/valid-route.gpx',
+            'valid-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $response = $client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($token)),
+            'extra' => ['files' => ['gpxFile' => $file]],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertGreaterThan(0, (int) ($response->getHeaders(false)['retry-after'][0] ?? 0));
+    }
 
     #[Test]
     public function uploadWithOptionalParameters(): void
