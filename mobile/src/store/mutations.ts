@@ -28,7 +28,7 @@ import {
 } from './gating';
 import { useOfflineStore } from './offline-store';
 import { deleteTripCache } from './trip-cache';
-import type { Modification, TripConfig } from './trip-store';
+import type { Modification, TripConfig, UndoableSlice } from './trip-store';
 import {
   getUndoableSlice,
   useTripStore,
@@ -92,9 +92,13 @@ export async function run(
     // list rather than leaving the user stuck on it.
     onConflict?: () => void;
     // Push a pre-edit undo snapshot before the optimistic apply (roadbook
-    // structural/dates/pacing edits, #1178). Popped on rollback so a failed
+    // structural/dates/pacing edits, #1178). Withdrawn on rollback so a failed
     // mutation leaves no phantom undo entry.
     undoable?: boolean;
+    // The undoable fields `rollback` puts back. Written into the undo entries
+    // recorded after this one too: they captured the refused value, and undoing
+    // a later accepted edit must not bring it back.
+    restores?: Partial<UndoableSlice>;
   },
   onFailure: OnFailure,
 ): Promise<boolean> {
@@ -103,17 +107,34 @@ export async function run(
     onFailure(blocked);
     return false;
   }
-  if (opts.undoable) {
+  const undoToken = opts.undoable
+    ? useTripTemporalStore
+        .getState()
+        ._push(getUndoableSlice(useTripStore.getState()))
+    : null;
+  const restores = opts.restores;
+  // Withdraw this edit's own entry, not the latest: another undoable edit may
+  // have been recorded, and even settled, while this request was in flight.
+  const withdraw = () => {
+    if (undoToken === null) return;
     useTripTemporalStore
       .getState()
-      ._push(getUndoableSlice(useTripStore.getState()));
-  }
+      ._discard(
+        undoToken,
+        restores
+          ? (snapshot) => ({
+              ...(snapshot as UndoableSlice),
+              ...(JSON.parse(JSON.stringify(restores)) as Partial<UndoableSlice>),
+            })
+          : undefined,
+      );
+  };
   opts.optimistic?.();
   try {
     const { ok, status } = await opts.call();
     if (!ok) {
       opts.rollback?.();
-      if (opts.undoable) useTripTemporalStore.getState()._pop();
+      withdraw();
       const reason = normalizeStatus(status);
       if (reason === 'conflict') opts.onConflict?.();
       onFailure(reason);
@@ -122,7 +143,7 @@ export async function run(
     return true;
   } catch {
     opts.rollback?.();
-    if (opts.undoable) useTripTemporalStore.getState()._pop();
+    withdraw();
     onFailure('network');
     return false;
   }
@@ -163,6 +184,7 @@ export function runUpdateDates(
     {
       requiresRouting: false,
       undoable: true,
+      restores: snapshot,
       optimistic: () => ctx.setConfig({ startDate, endDate }),
       rollback: () => ctx.setConfig(snapshot),
       call: () =>
@@ -199,6 +221,12 @@ export function runUpdatePacing(
     {
       requiresRouting: false,
       undoable: true,
+      restores: {
+        fatigueFactor: ctx.fatigueFactor,
+        elevationPenalty: ctx.elevationPenalty,
+        maxDistancePerDay: ctx.maxDistancePerDay,
+        averageSpeed: ctx.averageSpeed,
+      },
       optimistic: () => ctx.setConfig(pacing),
       rollback: () => ctx.setConfig(snapshot),
       call: () => updateTripConfig(tripId, configPatch(ctx, pacing)),

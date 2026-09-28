@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import type { StageData } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
-import { runInsertRestDay, runUpdateDates } from './mutations';
+import { runInsertRestDay, runUpdateDates, runUpdatePacing } from './mutations';
 import { runDeleteStage } from './delete-stage';
 import { useTripStore, useTripTemporalStore } from './trip-store';
 import { useOfflineStore } from './offline-store';
@@ -125,6 +125,54 @@ describe('roadbook undo/redo (#1178)', () => {
     expect(ok).toBe(false);
     expect(onFailure).toHaveBeenCalledWith('offline');
     expect(insertRestDay).not.toHaveBeenCalled();
+    expect(temporal().canUndo).toBe(false);
+  });
+
+  it('a refused edit withdraws its own entry, not the one recorded after it', async () => {
+    // Every config PATCH waits until the test settles it, so the three edits
+    // below overlap and land in the order chosen here.
+    const settle: ((status: number) => void)[] = [];
+    mock(updateTripConfig).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          settle.push((status) => resolve({ ok: status < 400, status })),
+        ),
+    );
+    useTripStore.setState({ fatigueFactor: 0.8 });
+    const pacing = (fatigueFactor: number) => ({
+      fatigueFactor,
+      elevationPenalty: 100,
+      maxDistancePerDay: 80,
+      averageSpeed: 15,
+      ebikeMode: false,
+      departureHour: 8,
+    });
+
+    const dates = runUpdateDates('t1', '2026-09-01', '2026-09-10', ctx(), jest.fn());
+    const first = runUpdatePacing('t1', pacing(0.9), ctx(), jest.fn());
+    const second = runUpdatePacing('t1', pacing(1), ctx(), jest.fn());
+    // Both pacing edits are accepted, then the dates are refused.
+    settle[1]!(202);
+    settle[2]!(202);
+    await Promise.all([first, second]);
+    settle[0]!(422);
+    await dates;
+
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      fatigueFactor: 1,
+    });
+    temporal().undo();
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      endDate: '2026-08-02',
+      fatigueFactor: 0.9,
+    });
+    temporal().undo();
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      fatigueFactor: 0.8,
+    });
     expect(temporal().canUndo).toBe(false);
   });
 });
