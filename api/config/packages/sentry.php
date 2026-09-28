@@ -23,11 +23,6 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 return static function (ContainerConfigurator $containerConfigurator): void {
     $services = $containerConfigurator->services();
 
-    // Always register the filter so unit tests can run it directly.
-    $services->set(ExceptionFilter::class)
-        ->autowire()
-        ->autoconfigure();
-
     if ('prod' === $containerConfigurator->env()) {
         $services->set(UserDataEnricher::class)
             ->args([
