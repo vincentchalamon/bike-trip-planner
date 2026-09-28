@@ -185,7 +185,7 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
       endDate: '2026-08-02',
       loading: false,
     });
-    useTripStore.getState().insertRestDayOptimistic(0);
+    useTripStore.getState().insertRestDayOptimistic(0, 'pending-rest');
     const s = useTripStore.getState();
     expect(s.stages.map((x) => x.dayNumber)).toEqual([1, 2, 3]);
     expect(s.stages[1]!.isRestDay).toBe(true);
@@ -223,7 +223,7 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
   // "Sunday" alert rode along to a day that no longer is one.
   it.each([
     ['deleteStageOptimistic', () => useTripStore.getState().deleteStageOptimistic(0)],
-    ['insertRestDayOptimistic', () => useTripStore.getState().insertRestDayOptimistic(0)],
+    ['insertRestDayOptimistic', () => useTripStore.getState().insertRestDayOptimistic(0, 'pending-rest')],
     [
       'insertStageOptimistic',
       () => useTripStore.getState().insertStageOptimistic(0, stageData({ id: 'new' })),

@@ -176,3 +176,105 @@ describe('roadbook undo/redo (#1178)', () => {
     expect(temporal().canUndo).toBe(false);
   });
 });
+
+describe('a refused edit reverts only itself (overlapping edits)', () => {
+  // Each mocked request waits until the test settles it, in the order it chooses.
+  function deferred<T extends (...args: never[]) => unknown>(fn: T) {
+    const settle: ((status: number) => void)[] = [];
+    mock(fn).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          settle.push((status) => resolve({ ok: status < 400, status })),
+        ) as ReturnType<T>,
+    );
+    return settle;
+  }
+
+  it('keeps dates changed while a refused date change was in flight', async () => {
+    const settle = deferred(updateTripConfig);
+
+    const refused = runUpdateDates('t1', '2026-09-01', '2026-09-10', ctx(), jest.fn());
+    const accepted = runUpdateDates('t1', '2026-10-01', '2026-10-10', ctx(), jest.fn());
+    settle[1]!(202);
+    await accepted;
+    settle[0]!(422);
+    await refused;
+
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-10-01',
+      endDate: '2026-10-10',
+    });
+    temporal().undo();
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: '2026-08-01',
+      endDate: '2026-08-02',
+    });
+    expect(temporal().canUndo).toBe(false);
+  });
+
+  it('keeps pacing committed while a refused pacing edit was in flight, the shared value included', async () => {
+    const settle = deferred(updateTripConfig);
+    useTripStore.setState({ fatigueFactor: 0.8, maxDistancePerDay: 80 });
+    const pacing = (maxDistancePerDay: number) => ({
+      fatigueFactor: 0.9,
+      elevationPenalty: 100,
+      maxDistancePerDay,
+      averageSpeed: 15,
+      ebikeMode: false,
+      departureHour: 8,
+    });
+
+    const refused = runUpdatePacing('t1', pacing(80), ctx(), jest.fn());
+    const accepted = runUpdatePacing('t1', pacing(120), ctx(), jest.fn());
+    settle[1]!(202);
+    await accepted;
+    settle[0]!(422);
+    await refused;
+
+    // Both set the fatigue to 0.9; the newer edit owns it, so it is not reverted.
+    expect(useTripStore.getState()).toMatchObject({
+      fatigueFactor: 0.9,
+      maxDistancePerDay: 120,
+    });
+  });
+
+  it('keeps a rest day accepted while a refused deletion was in flight', async () => {
+    const deletions = deferred(deleteStage);
+    const restDays = deferred(insertRestDay);
+
+    const refused = runDeleteStage('t1', 1, ctx(), jest.fn());
+    const accepted = runInsertRestDay('t1', 0, ctx(), jest.fn());
+    const restDayId = useTripStore.getState().stages[1]!.id;
+    restDays[0]!(202);
+    await accepted;
+    deletions[0]!(422);
+    await refused;
+
+    const state = useTripStore.getState();
+    expect(state.stages.map((s) => s.id)).toEqual(['stage-1', restDayId, 'stage-2']);
+    expect(state.stages.map((s) => s.dayNumber)).toEqual([1, 2, 3]);
+    expect(state.endDate).toBe('2026-08-03');
+    // Undoing the accepted rest day must not bring the refused deletion back.
+    temporal().undo();
+    expect(useTripStore.getState().stages.map((s) => s.id)).toEqual([
+      'stage-1',
+      'stage-2',
+    ]);
+    expect(temporal().canUndo).toBe(false);
+  });
+
+  it('keeps a stage deleted while a refused rest-day insertion was in flight', async () => {
+    const deletions = deferred(deleteStage);
+    const restDays = deferred(insertRestDay);
+
+    const refused = runInsertRestDay('t1', 0, ctx(), jest.fn());
+    const accepted = runDeleteStage('t1', 2, ctx(), jest.fn());
+    deletions[0]!(202);
+    await accepted;
+    restDays[0]!(422);
+    await refused;
+
+    expect(useTripStore.getState().stages.map((s) => s.id)).toEqual(['stage-1']);
+  });
+});
+

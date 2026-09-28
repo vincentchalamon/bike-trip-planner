@@ -9,6 +9,7 @@ import {
 } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import type { MercureEvent } from '@btp/core/mercure';
+import { FieldClaims } from '@btp/core/optimistic';
 import {
   type ReconciledState,
   reduceMercureEvent,
@@ -46,6 +47,10 @@ function endDatePatch(
 ): Partial<TripConfig> {
   return startDate ? { endDate: endDateFor(startDate, stageCount) } : {};
 }
+
+// Which in-flight optimistic edit last wrote each config field (see FieldClaims in
+// @btp/core/optimistic): a refusal reverts only the fields its edit still owns.
+export const configClaims = new FieldClaims<keyof TripConfig | 'title'>();
 
 // The diff-highlight expiry, kept outside the store so reset/hydrate can cancel
 // it rather than let it fire into the next trip.
@@ -120,7 +125,7 @@ interface TripState extends TripConfig {
   // arrives via SSE reconciliation; on API failure the caller restores the
   // pre-edit snapshot via setStages.
   deleteStageOptimistic: (index: number) => void;
-  insertRestDayOptimistic: (afterIndex: number) => void;
+  insertRestDayOptimistic: (afterIndex: number, restDayId: string) => void;
   insertStageOptimistic: (afterIndex: number, placeholder: StageData) => void;
   moveStageOptimistic: (fromIndex: number, toIndex: number) => void;
   selectAccommodationOptimistic: (
@@ -297,13 +302,13 @@ export const useTripStore = create<TripState>((set, get) => ({
       const stages = renumberAfterStructuralEdit(state.stages.filter((_, i) => i !== index));
       return { stages, ...endDatePatch(state.startDate, stages.length) };
     }),
-  insertRestDayOptimistic: (afterIndex) =>
+  insertRestDayOptimistic: (afterIndex, restDayId) =>
     set((state) => {
       const after = state.stages[afterIndex];
       if (!after) return {};
       const restDay: StageData = {
         // Provisional identity until the server's lands.
-        id: `pending-${Date.now()}-${afterIndex}`,
+        id: restDayId,
         dayNumber: afterIndex + 2,
         distance: 0,
         elevation: 0,
@@ -423,6 +428,8 @@ export const useTripStore = create<TripState>((set, get) => ({
   setStatus: (patch) => set(patch),
   reset: () => {
     useTripTemporalStore.getState().clear();
+    // A refusal still in flight for the previous trip must not revert this one.
+    configClaims.clear();
     cancelDiffExpiry();
     set({
       tripId: null,
