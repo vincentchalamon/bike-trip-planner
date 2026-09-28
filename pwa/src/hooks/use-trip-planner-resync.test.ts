@@ -4,12 +4,34 @@ import { EMPTY_RESUPPLY, type StageData } from "@btp/core";
 
 // Only the HTTP boundary is faked: parseApiError and the rest of the client keep their real
 // behaviour, so the status→"stale" mapping is exercised rather than restated.
-const holder = vi.hoisted(() => ({ status: 200, offline: false }));
+const holder = vi.hoisted(() => ({
+  status: 200,
+  offline: false,
+  // When set, each request waits until the test settles it with a status, so
+  // overlapping requests can be made to land in any order.
+  deferred: null as ((status: number) => void)[] | null,
+}));
 
 vi.mock("@/lib/api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/client")>();
   const respond = async () => {
     if (holder.offline) throw new TypeError("Failed to fetch");
+    if (holder.deferred) {
+      const queue = holder.deferred;
+      return new Promise<{
+        data: undefined;
+        error: object | undefined;
+        response: Response;
+      }>((resolve) =>
+        queue.push((status) =>
+          resolve({
+            data: undefined,
+            error: status < 400 ? undefined : {},
+            response: new Response(null, { status }),
+          }),
+        ),
+      );
+    }
 
     return {
       data: undefined,
@@ -66,6 +88,7 @@ function stage(dayNumber: number): StageData {
 
 beforeEach(() => {
   holder.offline = false;
+  holder.deferred = null;
   useTripStore.getState().clearTrip();
   useTripStore.setState({
     trip: { id: "t1", title: "Trip", sourceUrl: "" },
@@ -257,6 +280,57 @@ describe("useTripPlanner — a refused structural edit restores the trip's day w
 
     expect(useTripStore.getState().stages).toHaveLength(3);
     expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+});
+
+describe("useTripPlanner — a refused edit withdraws its own undo entry, not the latest", () => {
+  it("keeps the accepted edits undoable, in order, without the refused value", async () => {
+    const settle: ((status: number) => void)[] = [];
+    holder.deferred = settle;
+    useTripStore.setState({
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+      fatigueFactor: 0.8,
+    });
+    const { result } = renderHook(() => useTripPlanner());
+
+    // Three edits in flight at once: the dates, then two pacing commits.
+    let dates!: Promise<void>, first!: Promise<void>, second!: Promise<void>;
+    act(() => {
+      dates = result.current.handleDatesChange("2026-11-01", "2026-11-03");
+    });
+    act(() => {
+      first = result.current.handlePacingCommit(0.9, 100, 80, 15);
+    });
+    act(() => {
+      second = result.current.handlePacingCommit(1, 100, 80, 15);
+    });
+    // Both pacing commits are accepted, then the dates are refused.
+    await act(async () => {
+      settle[1]!(200);
+      settle[2]!(200);
+      await Promise.all([first, second]);
+      settle[0]!(422);
+      await dates;
+    });
+
+    const undo = () => act(() => useTripTemporalStore.getState().undo());
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      fatigueFactor: 1,
+    });
+    undo();
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+      fatigueFactor: 0.9,
+    });
+    undo();
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      fatigueFactor: 0.8,
+    });
     expect(useTripTemporalStore.getState().canUndo).toBe(false);
   });
 });

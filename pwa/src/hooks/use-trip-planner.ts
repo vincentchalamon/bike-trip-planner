@@ -9,6 +9,7 @@ import {
   useTripStore,
   useTripTemporalStore,
   getUndoableSlice,
+  discardUndoEntry,
 } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
@@ -297,12 +298,15 @@ export function useTripPlanner() {
   ) {
     const { startDate: previousStart, endDate: previousEnd } =
       useTripStore.getState();
-    actions.updateDates(newStart, newEnd);
+    const undoToken = actions.updateDates(newStart, newEnd);
     if (!tripId) return;
 
     // updateDates pushed an undo entry: a refused change must leave no trace in the history.
     const rollback = () => {
-      useTripTemporalStore.getState()._pop();
+      discardUndoEntry(undoToken, {
+        startDate: previousStart,
+        endDate: previousEnd,
+      });
       useTripStore.getState().updateDatesInternal(previousStart, previousEnd);
     };
 
@@ -370,7 +374,7 @@ export function useTripPlanner() {
       stages: currentStages,
       endDate: useTripStore.getState().endDate,
     };
-    actions.deleteStage(index);
+    const undoToken = actions.deleteStage(index);
 
     try {
       const { error, response } = await apiClient.DELETE(
@@ -384,14 +388,14 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripStore.getState().rollbackStages(snapshot);
+        useTripStore.getState().rollbackStages(undoToken, snapshot);
       } else {
         setProcessing(true);
         if (!isRestDay) setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
-      useTripStore.getState().rollbackStages(snapshot);
+      useTripStore.getState().rollbackStages(undoToken, snapshot);
     }
   }
 
@@ -402,7 +406,7 @@ export function useTripPlanner() {
     const snapshot = { stages, endDate };
     const stageId = stages[afterIndex]?.id;
     if (!stageId) return;
-    actions.insertRestDay(afterIndex);
+    const undoToken = actions.insertRestDay(afterIndex);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -417,13 +421,13 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         reportApiError(response.status, error);
-        useTripStore.getState().rollbackStages(snapshot);
+        useTripStore.getState().rollbackStages(undoToken, snapshot);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
-      useTripStore.getState().rollbackStages(snapshot);
+      useTripStore.getState().rollbackStages(undoToken, snapshot);
     }
   }
 
@@ -473,7 +477,7 @@ export function useTripPlanner() {
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.
-    actions.insertStagePlaceholder(afterIndex, placeholder);
+    const undoToken = actions.insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -487,7 +491,7 @@ export function useTripPlanner() {
         reportApiError(response.status, error);
         useTripStore
           .getState()
-          .rollbackStages({ stages: currentStages, endDate });
+          .rollbackStages(undoToken, { stages: currentStages, endDate });
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -496,7 +500,7 @@ export function useTripPlanner() {
       toast.error(t("errors.failedAddStage"));
       useTripStore
         .getState()
-        .rollbackStages({ stages: currentStages, endDate });
+        .rollbackStages(undoToken, { stages: currentStages, endDate });
     }
   }
 
@@ -676,7 +680,7 @@ export function useTripPlanner() {
       preDragPacingSnapshot.current ??
       getUndoableSlice(useTripStore.getState());
     preDragPacingSnapshot.current = null;
-    useTripTemporalStore.getState()._push(snapshot);
+    const undoToken = useTripTemporalStore.getState()._push(snapshot);
     actions.updatePacingSettingsInternal(
       newFatigue,
       newElevation,
@@ -691,7 +695,12 @@ export function useTripPlanner() {
       getPacingState().ebikeMode,
     );
     if (!saved && tripId) {
-      useTripTemporalStore.getState()._pop();
+      discardUndoEntry(undoToken, {
+        fatigueFactor: snapshot.fatigueFactor,
+        elevationPenalty: snapshot.elevationPenalty,
+        maxDistancePerDay: snapshot.maxDistancePerDay,
+        averageSpeed: snapshot.averageSpeed,
+      });
       actions.updatePacingSettingsInternal(
         snapshot.fatigueFactor,
         snapshot.elevationPenalty,

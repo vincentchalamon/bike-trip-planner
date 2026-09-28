@@ -46,7 +46,10 @@ export interface Modification {
 }
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { DEFAULT_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
-import { createTemporalStore } from "@/store/temporal-middleware";
+import {
+  createTemporalStore,
+  type UndoToken,
+} from "@/store/temporal-middleware";
 
 // Required for Immer to allow mutating Set/Map drafts (used by recomputingStages).
 enableMapSet();
@@ -140,13 +143,14 @@ interface TripState {
   }) => void;
   setStages: (stages: StageData[]) => void;
   /**
-   * Undo an optimistic structural edit the server refused: drop the undo entry
-   * the edit pushed and put back the stages and the end date it changed.
+   * Undo an optimistic structural edit the server refused: withdraw the undo
+   * entry the edit pushed (`token`) and put back the stages and the end date it
+   * changed.
    */
-  rollbackStages: (snapshot: {
-    stages: StageData[];
-    endDate: string | null;
-  }) => void;
+  rollbackStages: (
+    token: UndoToken,
+    snapshot: { stages: StageData[]; endDate: string | null },
+  ) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
   updateStageSupplyTimeline: (
@@ -182,7 +186,8 @@ interface TripState {
   ) => void;
   deselectAccommodation: (stageIndex: number) => void;
   updateTitle: (title: string) => void;
-  updateDates: (startDate: string | null, endDate: string | null) => void;
+  /** Undoable: returns the token of the undo entry it pushed. */
+  updateDates: (startDate: string | null, endDate: string | null) => UndoToken;
   /** Internal setter — updates dates WITHOUT pushing to the undo history. */
   updateDatesInternal: (
     startDate: string | null,
@@ -200,10 +205,15 @@ interface TripState {
   setComputationStatus: (status: Record<string, string>) => void;
   setIsLocked: (isLocked: boolean) => void;
   setOutOfZone: (outOfZone: boolean) => void;
-  deleteStage: (stageIndex: number) => void;
-  insertRestDay: (afterIndex: number) => void;
+  /** Undoable: returns the token of the undo entry it pushed. */
+  deleteStage: (stageIndex: number) => UndoToken;
+  /** Undoable: returns the token of the undo entry it pushed. */
+  insertRestDay: (afterIndex: number) => UndoToken;
   /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
-  insertStagePlaceholder: (afterIndex: number, placeholder: StageData) => void;
+  insertStagePlaceholder: (
+    afterIndex: number,
+    placeholder: StageData,
+  ) => UndoToken;
   updateStageAfterRouteRecalculation: (
     stageIndex: number,
     data: {
@@ -464,8 +474,8 @@ export const useTripStore = create<TripState>()(
         pruneStaleRecomputing(state);
       }),
 
-    rollbackStages: (snapshot) => {
-      useTripTemporalStore.getState()._pop();
+    rollbackStages: (token, snapshot) => {
+      discardUndoEntry(token, snapshot);
       useTripStore.getState().setStages(snapshot.stages);
       set((state) => {
         state.endDate = snapshot.endDate;
@@ -580,13 +590,14 @@ export const useTripStore = create<TripState>()(
 
     updateDates: (startDate, endDate) => {
       // Push snapshot before mutation so the user can undo date changes.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         state.startDate = startDate;
         state.endDate = endDate;
       });
+      return token;
     },
 
     updateDatesInternal: (startDate, endDate) =>
@@ -640,7 +651,7 @@ export const useTripStore = create<TripState>()(
 
     deleteStage: (stageIndex) => {
       // Push snapshot before deletion so the user can undo accidental removal.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -660,11 +671,12 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return token;
     },
 
     insertRestDay: (afterIndex) => {
       // Push snapshot before insertion so the user can undo rest-day addition.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -706,11 +718,12 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return token;
     },
 
     insertStagePlaceholder: (afterIndex, placeholder) => {
       // Push snapshot before insertion so the user can undo stage addition.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -724,6 +737,7 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return token;
     },
 
     updateStageAfterRouteRecalculation: (stageIndex, data) =>
@@ -878,6 +892,23 @@ export const useTripStore = create<TripState>()(
     },
   })),
 );
+
+/**
+ * Withdraw the undo entry of an optimistic edit the server refused.
+ *
+ * `restored` is what the rollback put back. Any snapshot taken after the refused
+ * edit captured its optimistic value for those fields, so they get `restored` too —
+ * otherwise undoing a later, accepted edit would bring the refused value back.
+ */
+export function discardUndoEntry(
+  token: UndoToken,
+  restored: Partial<UndoableSlice>,
+): void {
+  useTripTemporalStore.getState()._discard(token, (snapshot) => ({
+    ...(snapshot as UndoableSlice),
+    ...structuredClone(restored),
+  }));
+}
 
 /**
  * Companion temporal store that provides undo/redo for the trip store.

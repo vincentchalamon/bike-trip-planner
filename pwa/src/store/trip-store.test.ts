@@ -460,8 +460,8 @@ describe("rollbackStages", () => {
     store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
     const { stages, endDate } = useTripStore.getState();
 
-    store.deleteStage(1);
-    useTripStore.getState().rollbackStages({ stages, endDate });
+    const token = store.deleteStage(1);
+    useTripStore.getState().rollbackStages(token, { stages, endDate });
 
     const state = useTripStore.getState();
     expect(state.stages.map((s) => s.id)).toEqual([
