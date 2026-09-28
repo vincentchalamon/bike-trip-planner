@@ -158,12 +158,12 @@ final readonly class PacingEngine implements PacingEngineInterface
                 $remaining = [];
                 $remainingRaw = null;
             } else {
-                [$stagePoints, $remaining] = $this->distanceCalculator->splitAtDistance($remaining, 0, $targetKm);
+                [$stagePoints, $remaining, $stageKm] = $this->distanceCalculator->splitAtDistance($remaining, 0, $targetKm);
 
                 if (null !== $remainingRaw) {
-                    [$stageRawPoints, $remainingRaw] = $this->distanceCalculator->splitAtDistance($remainingRaw, 0, $targetKm);
-                } else {
-                    $stageRawPoints = null;
+                    $rawEnd = $this->rawIndexOf($remainingRaw, $stagePoints[\count($stagePoints) - 1], $stageKm);
+                    $stageRawPoints = \array_slice($remainingRaw, 0, $rawEnd + 1);
+                    $remainingRaw = \array_slice($remainingRaw, $rawEnd);
                 }
             }
 
@@ -212,5 +212,27 @@ final readonly class PacingEngine implements PacingEngineInterface
         }
 
         return $stages;
+    }
+
+    /**
+     * Index, in the raw points, of the decimated stage end.
+     *
+     * The raw track is split where the decimated one was, not at the same accumulated distance:
+     * GPS jitter makes the raw track longer, so an independent split lands earlier and the gap
+     * grows stage after stage, taking each stage's elevation from a shifted stretch of road.
+     *
+     * The search starts one point before the raw track has covered the decimated stage length.
+     * Decimated points are raw vertices kept by Douglas-Peucker, so the raw path to the stage end
+     * is at least that long; starting there keeps an earlier pass through the same place (a loop,
+     * an out-and-back) from being picked.
+     *
+     * @param list<Coordinate> $rawPoints
+     */
+    private function rawIndexOf(array $rawPoints, Coordinate $stageEnd, float $stageKm): int
+    {
+        [$reached] = $this->distanceCalculator->splitAtDistance($rawPoints, 0, $stageKm);
+        $from = max(0, \count($reached) - 2);
+
+        return $from + $this->distanceCalculator->findClosestIndex(\array_slice($rawPoints, $from), $stageEnd);
     }
 }
