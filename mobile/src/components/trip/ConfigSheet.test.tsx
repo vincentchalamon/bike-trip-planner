@@ -96,40 +96,40 @@ beforeEach(() => {
   act(() => {
     useTripStore.getState().reset();
     useTripStore.setState({
-    tripId: 't1',
-    title: 'Trip',
-    stages: [
-      {
-        id: 'stage-1',
-        dayNumber: 1,
-        distance: 50,
-        elevation: 100,
-        elevationLoss: 0,
-        startPoint: P,
-        endPoint: { lat: 1, lon: 1, ele: 0 },
-        geometry: [],
-        label: null,
-        startLabel: null,
-        endLabel: null,
-        weather: null,
-        alerts: [],
-        resupply: EMPTY_RESUPPLY,
-        accommodations: [],
-        selectedAccommodation: null,
-        accommodationSearchRadiusKm: 5,
-        isRestDay: false,
-        supplyTimeline: [],
-        events: [],
-      },
-    ],
-    isLocked: false,
-    maxDistancePerDay: 80,
-    averageSpeed: 15,
-    fatigueFactor: 0.9,
-    elevationPenalty: 50,
-    ebikeMode: false,
-    departureHour: 8,
-    enabledAccommodationTypes: ['hotel', 'hostel'],
+      tripId: 't1',
+      title: 'Trip',
+      stages: [
+        {
+          id: 'stage-1',
+          dayNumber: 1,
+          distance: 50,
+          elevation: 100,
+          elevationLoss: 0,
+          startPoint: P,
+          endPoint: { lat: 1, lon: 1, ele: 0 },
+          geometry: [],
+          label: null,
+          startLabel: null,
+          endLabel: null,
+          weather: null,
+          alerts: [],
+          resupply: EMPTY_RESUPPLY,
+          accommodations: [],
+          selectedAccommodation: null,
+          accommodationSearchRadiusKm: 5,
+          isRestDay: false,
+          supplyTimeline: [],
+          events: [],
+        },
+      ],
+      isLocked: false,
+      maxDistancePerDay: 80,
+      averageSpeed: 15,
+      fatigueFactor: 0.9,
+      elevationPenalty: 50,
+      ebikeMode: false,
+      departureHour: 8,
+      enabledAccommodationTypes: ['hotel', 'hostel'],
     });
   });
 });
@@ -276,9 +276,7 @@ describe('ConfigSheet dates deep-link (maquette 05a)', () => {
   });
 
   it('does not scroll when opened without initialSection', () => {
-    const raf = jest
-      .spyOn(globalThis, 'requestAnimationFrame')
-      .mockImplementation(() => 0);
+    const raf = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(() => 0);
     render(<ConfigSheet tripId="t1" visible onClose={jest.fn()} />);
     expect(raf).not.toHaveBeenCalled();
     raf.mockRestore();

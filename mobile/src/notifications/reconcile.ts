@@ -56,7 +56,10 @@ export async function reconcileLocalNotifications(input: {
       // date changed) must be re-applied — the identifier being present says
       // nothing about when it fires. Cancel then reschedule at the new time.
       const current = scheduled.get(action.identifier);
-      if (typeof current === 'number' && Math.abs(current - action.fireAt) > FIRE_TIME_TOLERANCE_MS) {
+      if (
+        typeof current === 'number' &&
+        Math.abs(current - action.fireAt) > FIRE_TIME_TOLERANCE_MS
+      ) {
         await cancelLocalNotification(action.identifier);
         await commit(action);
       }

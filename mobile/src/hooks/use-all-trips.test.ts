@@ -39,8 +39,7 @@ function renderProbe(key: number | null) {
     get value(): TripListItem[] {
       return value;
     },
-    rerender: (k: number | null) =>
-      act(() => renderer.update(createElement(Probe, { k }))),
+    rerender: (k: number | null) => act(() => renderer.update(createElement(Probe, { k }))),
   };
 }
 
@@ -64,9 +63,7 @@ describe('useAllTrips', () => {
   it('drops a stale in-flight response so it cannot clobber the newer list', async () => {
     const first = deferred<TripListItem[]>();
     const second = deferred<TripListItem[]>();
-    mockFetch
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
+    mockFetch.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
 
     const probe = renderProbe(1); // starts the first fetch
     probe.rerender(2); // key changed: the first effect is cleaned up (cancelled)

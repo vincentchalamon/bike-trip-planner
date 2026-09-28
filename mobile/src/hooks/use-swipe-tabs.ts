@@ -14,8 +14,7 @@ export function useSwipeTabs() {
     hasViewedMap: false,
   });
   const setView = useCallback(
-    (view: SwipeView) =>
-      setTabs((s) => ({ view, hasViewedMap: s.hasViewedMap || view === 'map' })),
+    (view: SwipeView) => setTabs((s) => ({ view, hasViewedMap: s.hasViewedMap || view === 'map' })),
     [],
   );
 

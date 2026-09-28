@@ -45,9 +45,7 @@ export interface UseInRideSearch {
   widen: (position: SearchPosition) => void;
 }
 
-function errorKeyFor(
-  status: Exclude<NearbyPoiSearchResult['status'], 'ok'>,
-): InRideErrorKey {
+function errorKeyFor(status: Exclude<NearbyPoiSearchResult['status'], 'ok'>): InRideErrorKey {
   switch (status) {
     case 'network':
       return 'errorNetwork';
@@ -69,24 +67,15 @@ function errorKeyFor(
  * search has started, so tapping several intents in a row never renders an
  * out-of-order recap.
  */
-export function useInRideSearch(
-  tripId: string,
-  stageDay?: number | null,
-): UseInRideSearch {
+export function useInRideSearch(tripId: string, stageDay?: number | null): UseInRideSearch {
   const [isSearching, setIsSearching] = useState(false);
   const [errorKey, setErrorKey] = useState<InRideErrorKey | null>(null);
   const [recap, setRecap] = useState<InRideRecap | null>(null);
-  const [activeCategory, setActiveCategory] = useState<InRidePoiCategory | null>(
-    null,
-  );
+  const [activeCategory, setActiveCategory] = useState<InRidePoiCategory | null>(null);
   const seqRef = useRef(0);
 
   const run = useCallback(
-    async (
-      category: InRidePoiCategory,
-      position: SearchPosition,
-      radiusMeters?: number,
-    ) => {
+    async (category: InRidePoiCategory, position: SearchPosition, radiusMeters?: number) => {
       const seq = (seqRef.current += 1);
       setActiveCategory(category);
       setIsSearching(true);
@@ -142,10 +131,7 @@ export function useInRideSearch(
   );
 
   const canWiden =
-    !isSearching &&
-    recap !== null &&
-    !recap.capReached &&
-    recap.radiusMeters < MAX_RADIUS_METERS;
+    !isSearching && recap !== null && !recap.capReached && recap.radiusMeters < MAX_RADIUS_METERS;
 
   return {
     isSearching,

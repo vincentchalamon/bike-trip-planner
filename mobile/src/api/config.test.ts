@@ -28,9 +28,7 @@ afterEach(() => {
 
 describe('API_BASE_URL https guard (#1174)', () => {
   it('rejects a non-https API URL in a non-development build', () => {
-    expect(() => loadConfigWith({ dev: false, apiUrl: 'http://api.example.org' })).toThrow(
-      /https/,
-    );
+    expect(() => loadConfigWith({ dev: false, apiUrl: 'http://api.example.org' })).toThrow(/https/);
   });
 
   it('accepts an https API URL in a non-development build', () => {

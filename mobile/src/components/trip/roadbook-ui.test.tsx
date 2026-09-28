@@ -58,14 +58,22 @@ beforeAll(async () => {
 
 describe('StageCard dates', () => {
   it('falls back to "Jour N" when no date is provided', () => {
-    const t = texts(render(<StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />));
+    const t = texts(
+      render(<StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />),
+    );
     expect(t.join(' ')).toContain('Jour 1');
   });
 
   it('shows the stage date instead of the day number when provided', () => {
     const t = texts(
       render(
-        <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} date="2026-08-13" />,
+        <StageCard
+          stage={stage()}
+          index={0}
+          locked={false}
+          onDelete={jest.fn()}
+          date="2026-08-13"
+        />,
       ),
     );
     expect(t.join(' ')).toContain('13');
@@ -75,14 +83,27 @@ describe('StageCard dates', () => {
   it('renders the "Aujourd\'hui" pastille only when isToday', () => {
     const withBadge = texts(
       render(
-        <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} date="2026-08-13" isToday />,
+        <StageCard
+          stage={stage()}
+          index={0}
+          locked={false}
+          onDelete={jest.fn()}
+          date="2026-08-13"
+          isToday
+        />,
       ),
     );
     expect(withBadge).toContain(fr.trip.today);
 
     const withoutBadge = texts(
       render(
-        <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} date="2026-08-13" />,
+        <StageCard
+          stage={stage()}
+          index={0}
+          locked={false}
+          onDelete={jest.fn()}
+          date="2026-08-13"
+        />,
       ),
     );
     expect(withoutBadge).not.toContain(fr.trip.today);
@@ -90,9 +111,7 @@ describe('StageCard dates', () => {
 });
 
 function queryByLabel(tree: any, label: string): any {
-  const found = tree.root.findAll(
-    (node: any) => node.props.accessibilityLabel === label,
-  );
+  const found = tree.root.findAll((node: any) => node.props.accessibilityLabel === label);
   return found[0] ?? null;
 }
 
@@ -101,9 +120,7 @@ function queryByLabel(tree: any, label: string): any {
 // affordance renders on the card itself.
 describe('StageCard row affordances', () => {
   it('hides the delete action when locked', () => {
-    const tree = render(
-      <StageCard stage={stage()} index={0} locked onDelete={jest.fn()} />,
-    );
+    const tree = render(<StageCard stage={stage()} index={0} locked onDelete={jest.fn()} />);
     expect(queryByLabel(tree, fr.trip.deleteA11y.replace('{{day}}', '1'))).toBeNull();
   });
 
@@ -111,18 +128,14 @@ describe('StageCard row affordances', () => {
     const tree = render(
       <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />,
     );
-    expect(
-      queryByLabel(tree, fr.trip.deleteA11y.replace('{{day}}', '1')),
-    ).not.toBeNull();
+    expect(queryByLabel(tree, fr.trip.deleteA11y.replace('{{day}}', '1'))).not.toBeNull();
   });
 
   it('never renders a distance-edit affordance on the card', () => {
     const tree = render(
       <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />,
     );
-    expect(
-      queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1')),
-    ).toBeNull();
+    expect(queryByLabel(tree, fr.trip.edit.editDistanceA11y.replace('{{day}}', '1'))).toBeNull();
   });
 
   it('never renders the "? → ?" placeholder when no labels are resolved', () => {
@@ -146,14 +159,14 @@ describe('StageCard row affordances', () => {
 
 describe('RoadbookBanner', () => {
   it('renders the message for each variant', () => {
-    expect(texts(render(<RoadbookBanner variant="locked" message={fr.trip.banners.locked} />))).toContain(
-      fr.trip.banners.locked,
-    );
+    expect(
+      texts(render(<RoadbookBanner variant="locked" message={fr.trip.banners.locked} />)),
+    ).toContain(fr.trip.banners.locked);
     expect(
       texts(render(<RoadbookBanner variant="outOfZone" message={fr.trip.banners.outOfZone} />)),
     ).toContain(fr.trip.banners.outOfZone);
-    expect(texts(render(<RoadbookBanner variant="noDates" message={fr.trip.banners.noDates} />))).toContain(
-      fr.trip.banners.noDates,
-    );
+    expect(
+      texts(render(<RoadbookBanner variant="noDates" message={fr.trip.banners.noDates} />)),
+    ).toContain(fr.trip.banners.noDates);
   });
 });

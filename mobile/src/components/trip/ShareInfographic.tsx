@@ -40,11 +40,7 @@ interface ProjectedRoute {
 }
 
 /** Project the trip route into the map box (WebMercator, fit + centered). */
-export function projectRoute(
-  stages: StageData[],
-  w: number,
-  h: number,
-): ProjectedRoute {
+export function projectRoute(stages: StageData[], w: number, h: number): ProjectedRoute {
   const active = stages.filter((s) => !s.isRestDay && s.geometry.length >= 2);
   const all = active.flatMap((s) => s.geometry);
   if (all.length < 2) {
@@ -105,143 +101,143 @@ interface ShareInfographicProps {
 }
 
 // forwardRef so the parent can hand this View to captureRef (share-image.ts).
-export const ShareInfographic = forwardRef<View, ShareInfographicProps>(
-  function ShareInfographic({ title, stages, startDate, endDate, labels }, ref) {
-    const totals = useMemo(() => computeTripTotals(stages), [stages]);
-    const budget = useMemo(() => computeEstimatedBudget(stages), [stages]);
-    const difficulty = useMemo(
-      () => computeOverallDifficulty(stages, labels.difficulty),
-      [stages, labels.difficulty],
-    );
-    const mapW = CARD_WIDTH - PADDING * 2;
-    const route = useMemo(
-      () => projectRoute(stages, mapW, MAP_HEIGHT),
-      [stages, mapW],
-    );
-    const profile = useMemo(() => buildProfilePoints(stages, null), [stages]);
+export const ShareInfographic = forwardRef<View, ShareInfographicProps>(function ShareInfographic(
+  { title, stages, startDate, endDate, labels },
+  ref,
+) {
+  const totals = useMemo(() => computeTripTotals(stages), [stages]);
+  const budget = useMemo(() => computeEstimatedBudget(stages), [stages]);
+  const difficulty = useMemo(
+    () => computeOverallDifficulty(stages, labels.difficulty),
+    [stages, labels.difficulty],
+  );
+  const mapW = CARD_WIDTH - PADDING * 2;
+  const route = useMemo(() => projectRoute(stages, mapW, MAP_HEIGHT), [stages, mapW]);
+  const profile = useMemo(() => buildProfilePoints(stages, null), [stages]);
 
-    const activeCount = stages.filter((s) => !s.isRestDay).length;
-    const datesValue =
-      formatTripDateRange(startDate, endDate, undefined, {
-        separator: ' → ',
-        month: 'short',
-        startStyle: 'full',
-      }) || `${activeCount}`;
+  const activeCount = stages.filter((s) => !s.isRestDay).length;
+  const datesValue =
+    formatTripDateRange(startDate, endDate, undefined, {
+      separator: ' → ',
+      month: 'short',
+      startStyle: 'full',
+    }) || `${activeCount}`;
 
-    const stats: Array<{ icon: string; label: string; value: string; color: string }> = [
-      {
-        icon: '🚴',
-        label: labels.distance,
-        value: `${Math.round(totals.totalDistance)} km`,
-        color: '#38bdf8',
-      },
-      {
-        icon: '⛰️',
-        label: labels.elevation,
-        value: `⬆ ${Math.round(totals.totalElevation)}m ⬇ ${Math.round(totals.totalElevationLoss)}m`,
-        color: '#f97316',
-      },
-      {
-        icon: '📅',
-        label: labels.dates,
-        value: datesValue,
-        color: '#a78bfa',
-      },
-      {
-        icon: '💶',
-        label: labels.budget,
-        value:
-          budget.min > 0 || budget.max > 0
-            ? `${Math.round(budget.min)}–${Math.round(budget.max)}€`
-            : '—',
-        color: '#4ade80',
-      },
-      {
-        icon: '💪',
-        label: labels.difficulty.label,
-        value: difficulty.label,
-        color: difficulty.color,
-      },
-    ];
+  const stats: Array<{ icon: string; label: string; value: string; color: string }> = [
+    {
+      icon: '🚴',
+      label: labels.distance,
+      value: `${Math.round(totals.totalDistance)} km`,
+      color: '#38bdf8',
+    },
+    {
+      icon: '⛰️',
+      label: labels.elevation,
+      value: `⬆ ${Math.round(totals.totalElevation)}m ⬇ ${Math.round(totals.totalElevationLoss)}m`,
+      color: '#f97316',
+    },
+    {
+      icon: '📅',
+      label: labels.dates,
+      value: datesValue,
+      color: '#a78bfa',
+    },
+    {
+      icon: '💶',
+      label: labels.budget,
+      value:
+        budget.min > 0 || budget.max > 0
+          ? `${Math.round(budget.min)}–${Math.round(budget.max)}€`
+          : '—',
+      color: '#4ade80',
+    },
+    {
+      icon: '💪',
+      label: labels.difficulty.label,
+      value: difficulty.label,
+      color: difficulty.color,
+    },
+  ];
 
-    const profilePath = useMemo(() => {
-      if (profile.length < 2) return null;
-      const eles = profile.map((p) => p.ele);
-      const { min: minEle, max: maxEle } = minMax(eles);
-      const range = maxEle - minEle;
-      const displayMin = minEle - Math.max(range * 0.1, 10);
-      const displayMax = maxEle + Math.max(range * 1.5, 100);
-      const dRange = displayMax - displayMin || 1;
-      const w = CARD_WIDTH - PADDING * 2;
-      const maxDist = profile[profile.length - 1]!.distanceKm || 1;
-      const toX = (km: number) => (km / maxDist) * w;
-      const toY = (ele: number) =>
-        PROFILE_HEIGHT - ((ele - displayMin) / dRange) * PROFILE_HEIGHT;
-      const line = profile
-        .map(
-          (p, i) =>
-            `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.ele).toFixed(1)}`,
-        )
-        .join(' ');
-      return `${line} L${w.toFixed(1)},${PROFILE_HEIGHT} L0,${PROFILE_HEIGHT} Z`;
-    }, [profile]);
+  const profilePath = useMemo(() => {
+    if (profile.length < 2) return null;
+    const eles = profile.map((p) => p.ele);
+    const { min: minEle, max: maxEle } = minMax(eles);
+    const range = maxEle - minEle;
+    const displayMin = minEle - Math.max(range * 0.1, 10);
+    const displayMax = maxEle + Math.max(range * 1.5, 100);
+    const dRange = displayMax - displayMin || 1;
+    const w = CARD_WIDTH - PADDING * 2;
+    const maxDist = profile[profile.length - 1]!.distanceKm || 1;
+    const toX = (km: number) => (km / maxDist) * w;
+    const toY = (ele: number) => PROFILE_HEIGHT - ((ele - displayMin) / dRange) * PROFILE_HEIGHT;
+    const line = profile
+      .map(
+        (p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.ele).toFixed(1)}`,
+      )
+      .join(' ');
+    return `${line} L${w.toFixed(1)},${PROFILE_HEIGHT} L0,${PROFILE_HEIGHT} Z`;
+  }, [profile]);
 
-    return (
-      <View ref={ref} collapsable={false} style={styles.card} testID="share-infographic">
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-        <View style={styles.separator} />
+  return (
+    <View ref={ref} collapsable={false} style={styles.card} testID="share-infographic">
+      <Text style={styles.title} numberOfLines={1}>
+        {title}
+      </Text>
+      <View style={styles.separator} />
 
-        <View style={styles.map}>
-          {route.polylines.length > 0 ? (
-            <Svg width={mapW} height={MAP_HEIGHT}>
-              {route.polylines.map((pl, i) => (
-                <Polyline
-                  key={i}
-                  points={pl.points}
-                  fill="none"
-                  stroke={pl.color}
-                  strokeWidth={2.5}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-              ))}
-              {route.start ? (
-                <Circle cx={route.start.x} cy={route.start.y} r={5} fill="#22c55e" />
-              ) : null}
-              {route.end ? (
-                <Circle cx={route.end.x} cy={route.end.y} r={5} fill="#ef4444" />
-              ) : null}
-            </Svg>
-          ) : null}
-        </View>
-
-        <View style={styles.stats}>
-          {stats.map((stat) => (
-            <View key={stat.label} style={styles.statRow}>
-              <Text style={styles.statIcon}>{stat.icon}</Text>
-              <View style={styles.statText}>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-                <Text style={[styles.statValue, { color: stat.color }]} numberOfLines={1}>
-                  {stat.value}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {profilePath ? (
-          <Svg width={CARD_WIDTH - PADDING * 2} height={PROFILE_HEIGHT} style={styles.profile}>
-            <Path d={profilePath} fill="#38bdf8" fillOpacity={0.25} stroke="#38bdf8" strokeWidth={1.5} />
+      <View style={styles.map}>
+        {route.polylines.length > 0 ? (
+          <Svg width={mapW} height={MAP_HEIGHT}>
+            {route.polylines.map((pl, i) => (
+              <Polyline
+                key={i}
+                points={pl.points}
+                fill="none"
+                stroke={pl.color}
+                strokeWidth={2.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            ))}
+            {route.start ? (
+              <Circle cx={route.start.x} cy={route.start.y} r={5} fill="#22c55e" />
+            ) : null}
+            {route.end ? <Circle cx={route.end.x} cy={route.end.y} r={5} fill="#ef4444" /> : null}
           </Svg>
         ) : null}
-
-        <Text style={styles.footer}>© {labels.powered}</Text>
       </View>
-    );
-  },
-);
+
+      <View style={styles.stats}>
+        {stats.map((stat) => (
+          <View key={stat.label} style={styles.statRow}>
+            <Text style={styles.statIcon}>{stat.icon}</Text>
+            <View style={styles.statText}>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+              <Text style={[styles.statValue, { color: stat.color }]} numberOfLines={1}>
+                {stat.value}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {profilePath ? (
+        <Svg width={CARD_WIDTH - PADDING * 2} height={PROFILE_HEIGHT} style={styles.profile}>
+          <Path
+            d={profilePath}
+            fill="#38bdf8"
+            fillOpacity={0.25}
+            stroke="#38bdf8"
+            strokeWidth={1.5}
+          />
+        </Svg>
+      ) : null}
+
+      <Text style={styles.footer}>© {labels.powered}</Text>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   card: {

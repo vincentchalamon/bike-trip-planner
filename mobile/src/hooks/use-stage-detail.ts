@@ -11,9 +11,7 @@ import { useTripStore } from '../store/trip-store';
 export function useStageDetail(index: number): void {
   const tripId = useTripStore((s) => s.tripId);
   const stageId = useTripStore((s) => s.stages[index]?.id);
-  const hasGeometry = useTripStore(
-    (s) => (s.stages[index]?.geometry?.length ?? 0) > 0,
-  );
+  const hasGeometry = useTripStore((s) => (s.stages[index]?.geometry?.length ?? 0) > 0);
   const applyStageDetail = useTripStore((s) => s.applyStageDetail);
 
   useEffect(() => {

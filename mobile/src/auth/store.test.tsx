@@ -10,8 +10,12 @@ jest.mock('./tokens', () => ({
 }));
 jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => {}) }));
-jest.mock('../store/trip-cache', () => ({ clearAllTripCache: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../store/trips-list-cache', () => ({ clearCachedTripList: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../store/trip-cache', () => ({
+  clearAllTripCache: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../store/trips-list-cache', () => ({
+  clearCachedTripList: jest.fn().mockResolvedValue(undefined),
+}));
 // The provider registers / unregisters the push token as a side effect (#1125);
 // stub the push module so this stale-response-guard test never touches the native
 // notifications layer (its own behaviour is covered by store.push.test.tsx).
@@ -73,7 +77,9 @@ describe('AuthProvider stale-response guard (#1117)', () => {
 
     // Authenticated → the email effect fired GET /users/me (still in flight).
     expect(captured.authenticated).toBe(true);
-    expect(mockGet).toHaveBeenCalledWith('/users/me', { headers: { Accept: 'application/ld+json' } });
+    expect(mockGet).toHaveBeenCalledWith('/users/me', {
+      headers: { Accept: 'application/ld+json' },
+    });
     expect(captured.email).toBeNull();
 
     // Log out before the profile response comes back.

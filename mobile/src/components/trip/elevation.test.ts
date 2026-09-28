@@ -133,12 +133,7 @@ describe('buildProfilePoints', () => {
 });
 
 describe('findClosestProfilePoint', () => {
-  const points = [
-    { distanceKm: 0 },
-    { distanceKm: 5 },
-    { distanceKm: 10 },
-    { distanceKm: 20 },
-  ];
+  const points = [{ distanceKm: 0 }, { distanceKm: 5 }, { distanceKm: 10 }, { distanceKm: 20 }];
 
   it('returns undefined for an empty array', () => {
     expect(findClosestProfilePoint([], 3)).toBeUndefined();

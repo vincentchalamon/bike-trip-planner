@@ -49,9 +49,7 @@ describe('TripTitleHeader (#1105)', () => {
 
     // Opens the editor, types a new title, saves.
     press(tree, fr.trip.editTitleA11y);
-    act(() =>
-      tree.root.findByType(TextInput).props.onChangeText('Nouveau titre'),
-    );
+    act(() => tree.root.findByType(TextInput).props.onChangeText('Nouveau titre'));
     press(tree, fr.trip.saveTitleA11y);
 
     expect(mockUpdateTitle).toHaveBeenCalledWith('Nouveau titre');
@@ -62,8 +60,7 @@ describe('TripTitleHeader (#1105)', () => {
     const tree = render(<TripTitleHeader tripId="t1" />);
 
     expect(
-      tree.root.findByProps({ accessibilityLabel: fr.trip.editTitleA11y }).props
-        .disabled,
+      tree.root.findByProps({ accessibilityLabel: fr.trip.editTitleA11y }).props.disabled,
     ).toBe(true);
     expect(tree.root.findAllByType(TextInput)).toHaveLength(0);
   });

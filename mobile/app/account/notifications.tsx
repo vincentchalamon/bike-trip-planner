@@ -19,10 +19,30 @@ import { useNotificationPrefs } from '../../src/store/notification-prefs';
 // Per-category metadata: icon + i18n keys resolving to `notifications.*` entries.
 // `as const` keeps the keys as literals so `t()` accepts them.
 const TRIP_CATEGORIES = [
-  { category: 'weatherSafety', icon: CloudSun, titleKey: 'notifications.weatherSafetyTitle', descKey: 'notifications.weatherSafetyDesc' },
-  { category: 'analysisDone', icon: CheckCircle2, titleKey: 'notifications.analysisDoneTitle', descKey: 'notifications.analysisDoneDesc' },
-  { category: 'offlineNotReady', icon: Download, titleKey: 'notifications.offlineNotReadyTitle', descKey: 'notifications.offlineNotReadyDesc' },
-  { category: 'tripNoDate', icon: Calendar, titleKey: 'notifications.tripNoDateTitle', descKey: 'notifications.tripNoDateDesc' },
+  {
+    category: 'weatherSafety',
+    icon: CloudSun,
+    titleKey: 'notifications.weatherSafetyTitle',
+    descKey: 'notifications.weatherSafetyDesc',
+  },
+  {
+    category: 'analysisDone',
+    icon: CheckCircle2,
+    titleKey: 'notifications.analysisDoneTitle',
+    descKey: 'notifications.analysisDoneDesc',
+  },
+  {
+    category: 'offlineNotReady',
+    icon: Download,
+    titleKey: 'notifications.offlineNotReadyTitle',
+    descKey: 'notifications.offlineNotReadyDesc',
+  },
+  {
+    category: 'tripNoDate',
+    icon: Calendar,
+    titleKey: 'notifications.tripNoDateTitle',
+    descKey: 'notifications.tripNoDateDesc',
+  },
 ] as const;
 
 const COVERAGE_META = {
@@ -70,7 +90,13 @@ function OptInTag({ label }: { label: string }) {
         borderColor: theme.colors.border,
       }}
     >
-      <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sansMedium, fontSize: 11 }}>
+      <Text
+        style={{
+          color: theme.colors.mutedForeground,
+          fontFamily: theme.fonts.sansMedium,
+          fontSize: 11,
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -99,10 +125,23 @@ function CategoryRow({ meta, last, tag }: { meta: CategoryMeta; last?: boolean; 
     >
       <Icon color={theme.colors.mutedIcon} size={22} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansMedium, fontSize: 16 }}>
+        <Text
+          style={{
+            color: theme.colors.foreground,
+            fontFamily: theme.fonts.sansMedium,
+            fontSize: 16,
+          }}
+        >
           {t(meta.titleKey)}
         </Text>
-        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 13,
+            marginTop: 2,
+          }}
+        >
           {t(meta.descKey)}
         </Text>
         {tag ? <OptInTag label={tag} /> : null}
@@ -132,7 +171,8 @@ function PermissionBanner() {
     activeRef.current = true;
     const check = () => {
       void Notifications.getPermissionsAsync().then((res) => {
-        if (activeRef.current) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+        if (activeRef.current)
+          setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
       });
     };
     check();
@@ -173,7 +213,8 @@ function PermissionBanner() {
 
   const request = () => {
     void Notifications.requestPermissionsAsync().then((res) => {
-      if (activeRef.current) setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
+      if (activeRef.current)
+        setState(res.granted ? 'granted' : res.canAskAgain ? 'prompt' : 'denied');
     });
   };
 
@@ -185,7 +226,9 @@ function PermissionBanner() {
           <Text style={{ color: titleColor, fontFamily: theme.fonts.sansSemibold, fontSize: 15 }}>
             {title}
           </Text>
-          <Text style={{ color: hintColor, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}>
+          <Text
+            style={{ color: hintColor, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}
+          >
             {hint}
           </Text>
           {state === 'prompt' ? (

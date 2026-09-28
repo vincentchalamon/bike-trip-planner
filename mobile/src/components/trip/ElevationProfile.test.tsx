@@ -13,7 +13,14 @@ jest.mock('react-native-svg', () => {
   const make = (name: string) => (props: Record<string, unknown>) =>
     React.createElement(name, props, (props as { children?: unknown }).children);
   const Svg = make('Svg');
-  return { __esModule: true, default: Svg, Svg, Path: make('Path'), Line: make('Line'), G: make('G') };
+  return {
+    __esModule: true,
+    default: Svg,
+    Svg,
+    Path: make('Path'),
+    Line: make('Line'),
+    G: make('G'),
+  };
 });
 
 function render(element: ReactElement): any {
@@ -110,7 +117,11 @@ describe('ElevationProfile', () => {
       ele: 100 + (i % 500),
     }));
     const tree = render(
-      <ElevationProfile stages={[stage({ geometry })]} focusedStageIndex={null} onHover={jest.fn()} />,
+      <ElevationProfile
+        stages={[stage({ geometry })]}
+        focusedStageIndex={null}
+        onHover={jest.fn()}
+      />,
     );
     expect(tree.root.findAllByType('Path' as never)).toHaveLength(1);
   });

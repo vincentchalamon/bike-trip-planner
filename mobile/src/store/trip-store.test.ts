@@ -69,18 +69,14 @@ beforeEach(() => {
 
 describe('mobile trip store (thin wrapper composing core reducers, #1014)', () => {
   it('hydrates /detail stages into StageData with client-only defaults', () => {
-    useTripStore
-      .getState()
-      .hydrate('t1', detail([apiStage({ startLabel: 'Paris' })]));
+    useTripStore.getState().hydrate('t1', detail([apiStage({ startLabel: 'Paris' })]));
     const s = useTripStore.getState();
     expect(s.tripId).toBe('t1');
     expect(s.title).toBe('Trip');
     expect(s.loading).toBe(false);
     expect(s.stages).toHaveLength(1);
     expect(s.stages[0]!.startLabel).toBe('Paris');
-    expect(s.stages[0]!.accommodationSearchRadiusKm).toBe(
-      DEFAULT_ACCOMMODATION_RADIUS_KM,
-    );
+    expect(s.stages[0]!.accommodationSearchRadiusKm).toBe(DEFAULT_ACCOMMODATION_RADIUS_KM);
   });
 
   // The server stamps the owning group now (ADR-068); the hydrate used to invent `terrain`
@@ -223,7 +219,10 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
   // "Sunday" alert rode along to a day that no longer is one.
   it.each([
     ['deleteStageOptimistic', () => useTripStore.getState().deleteStageOptimistic(0)],
-    ['insertRestDayOptimistic', () => useTripStore.getState().insertRestDayOptimistic(0, 'pending-rest')],
+    [
+      'insertRestDayOptimistic',
+      () => useTripStore.getState().insertRestDayOptimistic(0, 'pending-rest'),
+    ],
     [
       'insertStageOptimistic',
       () => useTripStore.getState().insertStageOptimistic(0, stageData({ id: 'new' })),

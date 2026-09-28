@@ -20,10 +20,7 @@ const GEO: PlotGeometry = {
   padBottom: 0,
 };
 
-function slot(
-  hour: number,
-  overrides: Partial<HourlyWeatherData> = {},
-): HourlyWeatherData {
+function slot(hour: number, overrides: Partial<HourlyWeatherData> = {}): HourlyWeatherData {
   return {
     hour,
     temp: 15,
@@ -58,16 +55,11 @@ describe('weather-series', () => {
   });
 
   it('projects hours and temperatures across the plot', () => {
-    const series = buildWeatherSeries([
-      slot(8, { temp: 9 }),
-      slot(12, { temp: 21 }),
-    ])!;
+    const series = buildWeatherSeries([slot(8, { temp: 9 }), slot(12, { temp: 21 })])!;
     expect(hourToX(series, 8, GEO)).toBeCloseTo(0);
     expect(hourToX(series, 12, GEO)).toBeCloseTo(100);
     // higher temperature sits higher on screen (smaller y)
-    expect(tempToY(series, series.tempMax, GEO)).toBeLessThan(
-      tempToY(series, series.tempMin, GEO),
-    );
+    expect(tempToY(series, series.tempMax, GEO)).toBeLessThan(tempToY(series, series.tempMin, GEO));
   });
 
   it('builds an SVG path starting with a move command', () => {

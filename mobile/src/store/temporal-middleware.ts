@@ -81,9 +81,7 @@ export function createTemporalStore(
       if (at === -1) return;
       past = [
         ...past.slice(0, at),
-        ...past
-          .slice(at + 1)
-          .map((entry) => ({ ...entry, snapshot: revert(entry.snapshot) })),
+        ...past.slice(at + 1).map((entry) => ({ ...entry, snapshot: revert(entry.snapshot) })),
       ];
       future = future.map(revert);
       set({ canUndo: past.length > 0 });

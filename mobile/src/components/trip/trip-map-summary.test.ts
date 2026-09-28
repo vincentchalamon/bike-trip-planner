@@ -53,7 +53,9 @@ describe('computeProfileSummary', () => {
   it('returns null until the route has at least two profile points', () => {
     expect(computeProfileSummary([])).toBeNull();
     // A single-coord stage yields no profile points (needs >= 2).
-    expect(computeProfileSummary([stage({ geometry: [{ lat: 48, lon: 2, ele: 100 }] })])).toBeNull();
+    expect(
+      computeProfileSummary([stage({ geometry: [{ lat: 48, lon: 2, ele: 100 }] })]),
+    ).toBeNull();
   });
 
   it('derives distance, gain and endpoint/max elevations from the profile', () => {

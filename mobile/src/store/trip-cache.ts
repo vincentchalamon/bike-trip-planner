@@ -71,7 +71,10 @@ const pending = new Map<string, Promise<unknown>>();
 function withLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
   const prior = pending.get(id) ?? Promise.resolve();
   const next = prior.then(fn, fn);
-  pending.set(id, next.catch(() => undefined));
+  pending.set(
+    id,
+    next.catch(() => undefined),
+  );
   return next;
 }
 
@@ -199,8 +202,7 @@ export async function cacheTripDetail(
       const routeHandle = routeFile(id);
       const serialized = JSON.stringify(legacyRoute);
       const previousRoute = routeHandle.exists ? await routeHandle.text() : null;
-      const migrated =
-        previousRoute === serialized || (await writeFile(routeHandle, serialized));
+      const migrated = previousRoute === serialized || (await writeFile(routeHandle, serialized));
       survivingLegacyRoute = migrated ? undefined : legacyRoute;
     }
     await writeFile(

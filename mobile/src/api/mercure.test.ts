@@ -125,7 +125,10 @@ describe('subscribeToTrip message handling', () => {
     });
 
     expect(() =>
-      es.emit('message', { type: 'message', data: JSON.stringify({ type: 'trip_ready', data: {} }) }),
+      es.emit('message', {
+        type: 'message',
+        data: JSON.stringify({ type: 'trip_ready', data: {} }),
+      }),
     ).toThrow('reducer bug');
   });
 });

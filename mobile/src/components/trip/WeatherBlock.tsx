@@ -63,8 +63,7 @@ export function WeatherBlock({ weather }: { weather: WeatherData | null }) {
               direction: weather.windDirection,
             })}
           </Text>
-          {hasHourly &&
-          weather.windGusts >= weather.windSpeed + GUST_HIGHLIGHT_DELTA_KMH ? (
+          {hasHourly && weather.windGusts >= weather.windSpeed + GUST_HIGHLIGHT_DELTA_KMH ? (
             <Text style={muted}>
               {t('trip.blocks.weatherGusts', {
                 speed: Math.round(weather.windGusts),

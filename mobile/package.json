@@ -10,21 +10,21 @@
     "@maplibre/maplibre-react-native": "^11.4.0",
     "@react-native-community/datetimepicker": "^9.1.0",
     "@react-native-community/netinfo": "12.0.1",
-    "expo": "~57.0.12",
-    "expo-clipboard": "~57.0.1",
+    "expo": "~57.0.25",
+    "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.10",
-    "expo-document-picker": "~57.0.1",
+    "expo-document-picker": "~57.0.2",
     "expo-file-system": "~57.0.2",
     "expo-font": "~57.0.1",
-    "expo-linking": "~57.0.5",
-    "expo-localization": "~57.0.1",
-    "expo-location": "~57.0.12",
+    "expo-linking": "~57.0.11",
+    "expo-localization": "~57.0.2",
+    "expo-location": "~57.0.20",
     "expo-navigation-bar": "~57.0.2",
-    "expo-notifications": "~57.0.10",
-    "expo-router": "~57.0.12",
-    "expo-secure-store": "~57.0.1",
-    "expo-sharing": "~57.0.13",
-    "expo-splash-screen": "~57.0.8",
+    "expo-notifications": "~57.0.21",
+    "expo-router": "~57.0.23",
+    "expo-secure-store": "~57.0.4",
+    "expo-sharing": "~57.0.22",
+    "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "i18next": "^26.3.6",
     "lucide-react-native": "^1.47.0",
@@ -45,8 +45,10 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "expo-doctor": "^1.20.4",
     "jest": "^30.5.2",
     "jest-expo": "~57.0.0",
+    "prettier": "^3.9.8",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.1"
   },
@@ -59,7 +61,25 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json}\"",
+    "doctor": "expo-doctor",
+    "bundle": "expo export --platform android"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "react",
+        "jest",
+        "@types/jest",
+        "react-native-view-shot",
+        "@react-native-community/datetimepicker",
+        "react-native-safe-area-context",
+        "react-native-screens",
+        "react-native-svg"
+      ]
+    }
   },
   "private": true
 }

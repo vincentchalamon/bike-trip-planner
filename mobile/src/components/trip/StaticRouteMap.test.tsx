@@ -53,10 +53,7 @@ describe('StaticRouteMap (#1168)', () => {
   it('draws one polyline per drawable stage and shows the offline note', () => {
     const stages = [stage(), stage({ dayNumber: 2 })];
     const tree = render(
-      <StaticRouteMap
-        stageSegments={buildStageLines(stages)}
-        markers={collectMarkers(stages)}
-      />,
+      <StaticRouteMap stageSegments={buildStageLines(stages)} markers={collectMarkers(stages)} />,
     );
     expect(tree.root.findAllByType(Polyline)).toHaveLength(2);
     const texts = tree.root

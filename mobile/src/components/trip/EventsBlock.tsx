@@ -87,11 +87,7 @@ export function EventsBlock({ events }: { events: EventData[] }) {
         );
       })}
       {hidden > 0 ? (
-        <Pressable
-          hitSlop={8}
-          onPress={() => setShowAll(true)}
-          accessibilityRole="button"
-        >
+        <Pressable hitSlop={8} onPress={() => setShowAll(true)} accessibilityRole="button">
           <Text
             style={{
               color: theme.colors.accentBrand,

@@ -152,7 +152,18 @@ describe('collectMarkers', () => {
         foodAtArrival: [],
       },
       accommodations: [
-        { name: 'Gîte', type: 'guest_house', lat: 45.1, lon: 5.1, estimatedPriceMin: 40, estimatedPriceMax: 60, isExactPrice: false, possibleClosed: false, distanceToEndPoint: 0, source: 'osm' },
+        {
+          name: 'Gîte',
+          type: 'guest_house',
+          lat: 45.1,
+          lon: 5.1,
+          estimatedPriceMin: 40,
+          estimatedPriceMax: 60,
+          isExactPrice: false,
+          possibleClosed: false,
+          distanceToEndPoint: 0,
+          source: 'osm',
+        },
       ],
     });
     const markers = collectMarkers([s]);
@@ -172,18 +183,57 @@ describe('collectMarkers', () => {
     const s = stage({
       endPoint: { lat: 45, lon: 5, ele: 0 },
       accommodations: [
-        { name: 'A', type: 'hotel', lat: 45, lon: 5, estimatedPriceMin: 0, estimatedPriceMax: 0, isExactPrice: false, possibleClosed: false, distanceToEndPoint: 0, source: 'osm' },
-        { name: 'B', type: 'hotel', lat: 45, lon: 5, estimatedPriceMin: 0, estimatedPriceMax: 0, isExactPrice: false, possibleClosed: false, distanceToEndPoint: 0, source: 'osm' },
+        {
+          name: 'A',
+          type: 'hotel',
+          lat: 45,
+          lon: 5,
+          estimatedPriceMin: 0,
+          estimatedPriceMax: 0,
+          isExactPrice: false,
+          possibleClosed: false,
+          distanceToEndPoint: 0,
+          source: 'osm',
+        },
+        {
+          name: 'B',
+          type: 'hotel',
+          lat: 45,
+          lon: 5,
+          estimatedPriceMin: 0,
+          estimatedPriceMax: 0,
+          isExactPrice: false,
+          possibleClosed: false,
+          distanceToEndPoint: 0,
+          source: 'osm',
+        },
       ],
-      selectedAccommodation: { name: 'A', type: 'hotel', lat: 45, lon: 5, estimatedPriceMin: 0, estimatedPriceMax: 0, isExactPrice: false, possibleClosed: false, distanceToEndPoint: 0, source: 'osm' },
+      selectedAccommodation: {
+        name: 'A',
+        type: 'hotel',
+        lat: 45,
+        lon: 5,
+        estimatedPriceMin: 0,
+        estimatedPriceMax: 0,
+        isExactPrice: false,
+        possibleClosed: false,
+        distanceToEndPoint: 0,
+        source: 'osm',
+      },
     });
     const accommodations = collectMarkers([s]).filter((m) => m.kind === 'accommodation');
     expect(accommodations).toEqual([{ kind: 'accommodation', lon: 5, lat: 45, name: 'A' }]);
   });
 
   it('emits the start waypoint only for the first stage', () => {
-    const a = stage({ startPoint: { lat: 48, lon: 2, ele: 0 }, endPoint: { lat: 45, lon: 5, ele: 0 } });
-    const b = stage({ startPoint: { lat: 45, lon: 5, ele: 0 }, endPoint: { lat: 44, lon: 6, ele: 0 } });
+    const a = stage({
+      startPoint: { lat: 48, lon: 2, ele: 0 },
+      endPoint: { lat: 45, lon: 5, ele: 0 },
+    });
+    const b = stage({
+      startPoint: { lat: 45, lon: 5, ele: 0 },
+      endPoint: { lat: 44, lon: 6, ele: 0 },
+    });
     const waypoints = collectMarkers([a, b]).filter((m) => m.kind === 'waypoint');
     // start(a) + end(a) + end(b) — start(b) is NOT re-emitted.
     expect(waypoints).toHaveLength(3);

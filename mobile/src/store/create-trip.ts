@@ -64,12 +64,7 @@ export async function runCreateTrip(
 export async function pickGpxFile(): Promise<GpxFile | null> {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        'application/gpx+xml',
-        'application/xml',
-        'text/xml',
-        'application/octet-stream',
-      ],
+      type: ['application/gpx+xml', 'application/xml', 'text/xml', 'application/octet-stream'],
       copyToCacheDirectory: true,
       multiple: false,
     });

@@ -87,9 +87,7 @@ describe('destructive config diff arming', () => {
     try {
       useTripStore.setState({ stages: [stage(), stage({ dayNumber: 2 })] });
       useTripStore.getState().armConfigDiff();
-      useTripStore
-        .getState()
-        .applyTripReady([stage(), stage({ dayNumber: 2, distance: 88 })]);
+      useTripStore.getState().applyTripReady([stage(), stage({ dayNumber: 2, distance: 88 })]);
       const { stageDiffs, diffBaseline } = useTripStore.getState();
       expect(stageDiffs.has(0)).toBe(false);
       expect(stageDiffs.has(1)).toBe(true);
@@ -110,9 +108,7 @@ describe('destructive config diff arming', () => {
 
       // gen1's trip_ready resolves: consumed(1) < token(2) so the baseline is
       // kept, but `stages` now advances to B = [60, 50].
-      useTripStore
-        .getState()
-        .applyTripReady([stage({ distance: 60 }), stage({ dayNumber: 2 })]);
+      useTripStore.getState().applyTripReady([stage({ distance: 60 }), stage({ dayNumber: 2 })]);
       expect(useTripStore.getState().diffBaseline).not.toBeNull();
 
       // A THIRD destructive recompute is armed now that stages == B. It must NOT
@@ -165,9 +161,7 @@ describe('destructive config diff arming', () => {
 
       // First trip_ready must NOT release the baseline (a second generation is
       // still pending), otherwise the second trip_ready would find it null.
-      useTripStore
-        .getState()
-        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
+      useTripStore.getState().applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
       expect(useTripStore.getState().diffBaseline).not.toBeNull();
 
       // Second trip_ready diffs against the still-armed baseline: its highlight
@@ -216,9 +210,7 @@ describe('destructive config diff arming', () => {
       useTripStore.setState({ stages: [stage(), stage({ dayNumber: 2 })] });
       // First destructive recompute: highlights stage 0.
       useTripStore.getState().armConfigDiff();
-      useTripStore
-        .getState()
-        .applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
+      useTripStore.getState().applyTripReady([stage({ distance: 88 }), stage({ dayNumber: 2 })]);
       expect([...useTripStore.getState().stageDiffs]).toEqual([0]);
 
       // A second destructive recompute lands within the TTL: highlights stage 1.

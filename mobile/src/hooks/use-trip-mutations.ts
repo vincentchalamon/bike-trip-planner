@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../store/trip-store';
-import type {
-  ManualAccommodationInput,
-  MutationContext,
-  OnFailure,
-} from '../store/mutations';
+import type { ManualAccommodationInput, MutationContext, OnFailure } from '../store/mutations';
 import { runDeleteStage } from '../store/delete-stage';
 import type { TripConfig } from '../store/trip-store';
 import {
@@ -48,18 +44,13 @@ export function useTripMutations(tripId: string, onFailure: OnFailure) {
     return {
       updateDates: (startDate: string | null, endDate: string | null) =>
         runUpdateDates(tripId, startDate, endDate, ctx(), onFailure),
-      updatePacing: (pacing: Pacing) =>
-        runUpdatePacing(tripId, pacing, ctx(), onFailure),
-      updateTitle: (title: string) =>
-        runUpdateTitle(tripId, title, ctx(), onFailure),
+      updatePacing: (pacing: Pacing) => runUpdatePacing(tripId, pacing, ctx(), onFailure),
+      updateTitle: (title: string) => runUpdateTitle(tripId, title, ctx(), onFailure),
       updateAccommodationTypes: (types: string[]) =>
         runUpdateAccommodationTypes(tripId, types, ctx(), onFailure),
-      addStage: (afterIndex: number) =>
-        runAddStage(tripId, afterIndex, ctx(), onFailure),
-      deleteStage: (index: number) =>
-        runDeleteStage(tripId, index, ctx(), onFailure),
-      insertRestDay: (afterIndex: number) =>
-        runInsertRestDay(tripId, afterIndex, ctx(), onFailure),
+      addStage: (afterIndex: number) => runAddStage(tripId, afterIndex, ctx(), onFailure),
+      deleteStage: (index: number) => runDeleteStage(tripId, index, ctx(), onFailure),
+      insertRestDay: (afterIndex: number) => runInsertRestDay(tripId, afterIndex, ctx(), onFailure),
       moveStage: (fromIndex: number, toIndex: number) =>
         runMoveStage(tripId, fromIndex, toIndex, ctx(), onFailure),
       updateStageDistance: (index: number, distance: number) =>
@@ -78,13 +69,7 @@ export function useTripMutations(tripId: string, onFailure: OnFailure) {
         data: ManualAccommodationInput,
         onFailureOverride?: OnFailure,
       ) =>
-        runAddManualAccommodation(
-          tripId,
-          stageIndex,
-          data,
-          ctx(),
-          onFailureOverride ?? onFailure,
-        ),
+        runAddManualAccommodation(tripId, stageIndex, data, ctx(), onFailureOverride ?? onFailure),
       addPoiWaypoint: (stageIndex: number, lat: number, lon: number) =>
         runAddPoiWaypoint(tripId, stageIndex, lat, lon, ctx(), onFailure),
       applyBatch: () => runApplyBatch(tripId, ctx(), onFailure),

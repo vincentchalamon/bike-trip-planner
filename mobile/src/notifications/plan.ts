@@ -106,10 +106,7 @@ function offlineNotReadyAction(
 ): NotificationAction {
   const departure = trip.startDate ? Date.parse(trip.startDate) : NaN;
   const active =
-    prefs.offlineNotReady &&
-    !trip.offlineReady &&
-    Number.isFinite(departure) &&
-    departure > now;
+    prefs.offlineNotReady && !trip.offlineReady && Number.isFinite(departure) && departure > now;
   return buildAction(
     'offlineNotReady',
     trip.id,

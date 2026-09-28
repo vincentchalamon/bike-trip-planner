@@ -45,10 +45,7 @@ export function ModificationQueue({
 
   if (pending.length === 0) return null;
 
-  const totalSeconds = pending.reduce(
-    (sum, m) => sum + (SECONDS_PER_MODIFICATION[m.type] ?? 5),
-    0,
-  );
+  const totalSeconds = pending.reduce((sum, m) => sum + (SECONDS_PER_MODIFICATION[m.type] ?? 5), 0);
   const estimate =
     totalSeconds > MAX_DISPLAY_SECONDS
       ? t('trip.modificationQueue.estimatedMinute')
@@ -124,9 +121,7 @@ export function ModificationQueue({
         />
         <Button
           label={
-            applying
-              ? t('trip.modificationQueue.applying')
-              : t('trip.modificationQueue.applyAll')
+            applying ? t('trip.modificationQueue.applying') : t('trip.modificationQueue.applyAll')
           }
           size="sm"
           loading={applying}

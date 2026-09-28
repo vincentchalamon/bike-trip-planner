@@ -119,10 +119,7 @@ describe('buildTripText (#1048, re-exported from @btp/core)', () => {
       totalElevation: 400,
       totalElevationLoss: 350,
       sourceUrl: 'https://www.komoot.com/tour/1',
-      stages: [
-        stage({ dayNumber: 1, accommodations: [acc()] }),
-        stage({ dayNumber: 2 }),
-      ],
+      stages: [stage({ dayNumber: 1, accommodations: [acc()] }), stage({ dayNumber: 2 })],
       startDate: '2026-06-01',
       locale: 'fr',
       today: '2026-05-01',

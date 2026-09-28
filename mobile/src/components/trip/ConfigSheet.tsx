@@ -93,7 +93,9 @@ function Slider({
 
   return (
     <View style={{ paddingVertical: theme.spacing.sm }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <View
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
+      >
         <Text
           style={{
             color: theme.colors.foreground,
@@ -169,11 +171,29 @@ function Slider({
           />
         </View>
       </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.xs }}>
-        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono, fontSize: 11 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginTop: theme.spacing.xs,
+        }}
+      >
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.mono,
+            fontSize: 11,
+          }}
+        >
           {minLabel}
         </Text>
-        <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono, fontSize: 11 }}>
+        <Text
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.mono,
+            fontSize: 11,
+          }}
+        >
           {maxLabel}
         </Text>
       </View>
@@ -269,12 +289,7 @@ function SectionTitle({ title, description }: { title: string; description?: str
 // spot (they don't re-split the trip). Pacing and dates are destructive — they
 // regenerate the stage découpage — so committing them goes through a
 // confirmation and arms the post-recompute diff-highlight.
-export function ConfigSheet({
-  tripId,
-  visible,
-  onClose,
-  initialSection,
-}: ConfigSheetProps) {
+export function ConfigSheet({ tripId, visible, onClose, initialSection }: ConfigSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const scrollRef = useRef<ScrollView>(null);
@@ -349,8 +364,7 @@ export function ConfigSheet({
     pacing.departureHour !== departureHour;
 
   const datesChanged =
-    (startDraft || null) !== (startDate ?? null) ||
-    (endDraft || null) !== (endDate ?? null);
+    (startDraft || null) !== (startDate ?? null) || (endDraft || null) !== (endDate ?? null);
 
   function applyPreset(preset: RiderPreset) {
     setPacing((p) => ({
@@ -417,18 +431,12 @@ export function ConfigSheet({
   }
 
   function applyDates() {
-    confirmRecompute(() =>
-      mutations.updateDates(startDraft || null, endDraft || null),
-    );
+    confirmRecompute(() => mutations.updateDates(startDraft || null, endDraft || null));
   }
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('config.title')}>
-      <ScrollView
-        ref={scrollRef}
-        style={{ maxHeight: 460 }}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView ref={scrollRef} style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
         {/* Title */}
         <SectionTitle title={t('config.titleSection')} />
         <Input
@@ -451,10 +459,7 @@ export function ConfigSheet({
         <View style={{ height: theme.spacing.lg }} />
 
         {/* Pacing */}
-        <SectionTitle
-          title={t('config.pacingTitle')}
-          description={t('config.pacingDescription')}
-        />
+        <SectionTitle title={t('config.pacingTitle')} description={t('config.pacingDescription')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
           {PRESETS.map((preset) => (
             <Pressable
@@ -634,7 +639,14 @@ export function ConfigSheet({
         <View style={{ height: theme.spacing.lg }} />
 
         {/* Dates */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.xs,
+            marginBottom: theme.spacing.sm,
+          }}
+        >
           <Calendar size={16} color={theme.colors.accentBrand} />
           <View style={{ flex: 1 }}>
             <SectionTitle

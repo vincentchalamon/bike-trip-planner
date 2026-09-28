@@ -22,9 +22,7 @@ jest.mock('../../hooks/use-trip-mutations', () => ({
 import { RoadbookView } from './RoadbookView';
 
 function queryByLabel(tree: any, label: string): any {
-  const found = tree.root.findAll(
-    (n: any) => n.props.accessibilityLabel === label,
-  );
+  const found = tree.root.findAll((n: any) => n.props.accessibilityLabel === label);
   return found[0] ?? null;
 }
 
@@ -87,8 +85,7 @@ describe('RoadbookView navigation', () => {
     const label = i18n.t('trip.openStageA11y', { day: 2 });
     const summary = tree.root.find(
       (node: any) =>
-        node.props.accessibilityLabel === label &&
-        typeof node.props.onPress === 'function',
+        node.props.accessibilityLabel === label && typeof node.props.onPress === 'function',
     );
 
     act(() => summary.props.onPress());
@@ -131,9 +128,7 @@ describe('RoadbookView edit affordances by lifecycle', () => {
   });
 
   it('hides every edit affordance when the trip is in the past (read-only)', () => {
-    act(() =>
-      useTripStore.setState({ startDate: '2000-01-01', endDate: '2000-01-02' }),
-    );
+    act(() => useTripStore.setState({ startDate: '2000-01-01', endDate: '2000-01-02' }));
     const tree = render(<RoadbookView id="t1" />);
     expect(queryByLabel(tree, addStageA11y)).toBeNull();
     expect(queryByLabel(tree, deleteA11y)).toBeNull();
@@ -158,9 +153,7 @@ describe('RoadbookView edit affordances by lifecycle', () => {
 
   it('makes the no-dates banner open the dates config when pressed', () => {
     const onConfigureDates = jest.fn();
-    const tree = render(
-      <RoadbookView id="t1" onConfigureDates={onConfigureDates} />,
-    );
+    const tree = render(<RoadbookView id="t1" onConfigureDates={onConfigureDates} />);
     const banner = queryByLabel(tree, i18n.t('trip.banners.noDatesA11y'));
     expect(banner).not.toBeNull();
     act(() => banner.props.onPress());

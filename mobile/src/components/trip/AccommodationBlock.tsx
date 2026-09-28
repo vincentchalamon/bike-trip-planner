@@ -28,10 +28,7 @@ const ACCOMMODATION_PAGE_SIZE = 5;
 // (reserved for backend filtering), so it is listed separately here. Mirrors
 // pwa/src/lib/accommodation-types.ts.
 type KnownAccommodationType = FilterableAccommodationType | 'other';
-const KNOWN_ACCOMMODATION_TYPES: readonly string[] = [
-  ...FILTERABLE_ACCOMMODATION_TYPES,
-  'other',
-];
+const KNOWN_ACCOMMODATION_TYPES: readonly string[] = [...FILTERABLE_ACCOMMODATION_TYPES, 'other'];
 function isKnownAccommodationType(type: string): type is KnownAccommodationType {
   return KNOWN_ACCOMMODATION_TYPES.includes(type);
 }
@@ -86,9 +83,7 @@ export function AccommodationBlock({
   const ranked = accommodations
     .map((acc, originalIndex) => ({ acc, originalIndex }))
     .sort(
-      (a, b) =>
-        (a.acc.distanceToEndPoint ?? Infinity) -
-        (b.acc.distanceToEndPoint ?? Infinity),
+      (a, b) => (a.acc.distanceToEndPoint ?? Infinity) - (b.acc.distanceToEndPoint ?? Infinity),
     );
   const [visibleCount, setVisibleCount] = useState(ACCOMMODATION_PAGE_SIZE);
   const items = selectedAccommodation
@@ -126,8 +121,7 @@ export function AccommodationBlock({
   // no add affordance.
   const canAddManual = Boolean(onAddManual) && !selectedAccommodation;
   const isEmpty = items.length === 0 && !canAddManual;
-  const canSubmit =
-    formName.trim() !== '' && formAddress.trim() !== '' && !submitting;
+  const canSubmit = formName.trim() !== '' && formAddress.trim() !== '' && !submitting;
   async function handleSubmit() {
     if (!onAddManual || !canSubmit) return;
     setSubmitting(true);
@@ -135,8 +129,7 @@ export function AccommodationBlock({
     const ok = await onAddManual({
       name: formName.trim(),
       address: formAddress.trim(),
-      priceTotal:
-        Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
+      priceTotal: Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
       url: formUrl.trim() === '' ? null : formUrl.trim(),
     });
     setSubmitting(false);
@@ -183,9 +176,7 @@ export function AccommodationBlock({
           .join(' · ');
         return (
           <View key={i} style={{ gap: theme.spacing.xs }}>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <Text
                 style={{
                   color: theme.colors.foreground,
@@ -266,9 +257,7 @@ export function AccommodationBlock({
           label={t('trip.blocks.accommodationMore', {
             count: ACCOMMODATION_PAGE_SIZE,
           })}
-          onPress={() =>
-            setVisibleCount((n) => n + ACCOMMODATION_PAGE_SIZE)
-          }
+          onPress={() => setVisibleCount((n) => n + ACCOMMODATION_PAGE_SIZE)}
         />
       ) : null}
       {canExpand ? (

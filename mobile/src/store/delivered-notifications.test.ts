@@ -37,10 +37,7 @@ describe('useDeliveredNotifications', () => {
     useDeliveredNotifications.setState({ delivered: new Set(['a', 'b']), hydrated: true });
     useDeliveredNotifications.getState().clearDelivered('a');
     expect(useDeliveredNotifications.getState().delivered.has('a')).toBe(false);
-    expect(setItem).toHaveBeenLastCalledWith(
-      'btp_delivered_notifications',
-      JSON.stringify(['b']),
-    );
+    expect(setItem).toHaveBeenLastCalledWith('btp_delivered_notifications', JSON.stringify(['b']));
   });
 
   it('clearing an absent id is a no-op', () => {

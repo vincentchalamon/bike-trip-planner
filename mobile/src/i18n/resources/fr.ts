@@ -21,8 +21,7 @@ export const fr = {
     sent: 'Un lien de connexion a été envoyé à {{email}}. Ouvrez-le sur cet appareil pour vous connecter.',
     error: "Impossible d'envoyer le lien. Vérifiez l'adresse et réessayez.",
     title: 'Connecte-toi',
-    subtitle:
-      "Entre ton email : on t'envoie un lien de connexion. Pas de mot de passe à retenir.",
+    subtitle: "Entre ton email : on t'envoie un lien de connexion. Pas de mot de passe à retenir.",
     sentTitle: 'Lien envoyé',
     betaTitle: 'Bêta privée · accès anticipé',
     betaBody: "L'app est ouverte sur invitation pendant l'accès anticipé.",
@@ -31,8 +30,7 @@ export const fr = {
   auth: {
     verifying: 'Connexion en cours…',
     expiredTitle: 'Lien expiré ou invalide',
-    expiredBody:
-      "Ce lien de connexion n'est plus valide. Demande-en un nouveau.",
+    expiredBody: "Ce lien de connexion n'est plus valide. Demande-en un nouveau.",
     requestNew: 'Demander un nouveau lien',
   },
   trips: {
@@ -69,8 +67,7 @@ export const fr = {
   },
   create: {
     title: 'Nouveau voyage',
-    subtitle:
-      "Colle un lien d'itinéraire ou importe un fichier GPX pour commencer.",
+    subtitle: "Colle un lien d'itinéraire ou importe un fichier GPX pour commencer.",
     linkSection: 'Depuis un lien',
     linkPlaceholder: 'Lien Komoot, Strava ou RideWithGPS',
     submit: 'Importer',
@@ -234,8 +231,7 @@ export const fr = {
       failed: "L'export a échoué. Réessaie.",
     },
     delete: {
-      warningBefore:
-        'Action irréversible : tes voyages et données seront anonymisés. Tape ',
+      warningBefore: 'Action irréversible : tes voyages et données seront anonymisés. Tape ',
       keyword: 'SUPPRIMER',
       warningAfter: ' pour confirmer.',
       action: 'Supprimer définitivement mon compte',
@@ -252,8 +248,7 @@ export const fr = {
     permissionDenied: 'Bloquées par le système',
     permissionDeniedHint: 'Réactive-les dans les réglages Android.',
     permissionPrompt: 'Active les notifications système',
-    permissionPromptHint:
-      'Sans autorisation, aucune notification ne peut être envoyée.',
+    permissionPromptHint: 'Sans autorisation, aucune notification ne peut être envoyée.',
     permissionAllow: 'Autoriser',
     groupTrips: 'Voyages à venir & en cours',
     groupCoverage: 'Couverture',
@@ -261,22 +256,18 @@ export const fr = {
     footer:
       'Ces notifications sont liées au service — météo, analyse, rappels — jamais du marketing. « Ouverture de zone » est une annonce, désactivée par défaut. Tu peux tout couper ici ou dans les réglages Android.',
     weatherSafetyTitle: "Météo & sécurité d'étape",
-    weatherSafetyDesc:
-      "La veille et le matin : météo de l'étape + nouvelles alertes.",
+    weatherSafetyDesc: "La veille et le matin : météo de l'étape + nouvelles alertes.",
     analysisDoneTitle: 'Analyse terminée ou échouée',
     analysisDoneDesc:
       "Quand le voyage est prêt — ou en cas d'échec — et que tu n'es pas déjà en train de le regarder.",
     offlineNotReadyTitle: 'Synchro hors-ligne non prête',
-    offlineNotReadyDesc:
-      'Avant un départ, si les données ne sont pas encore en cache.',
+    offlineNotReadyDesc: 'Avant un départ, si les données ne sont pas encore en cache.',
     offlineNotReadyNotifTitle: 'Départ proche : données non téléchargées',
-    offlineNotReadyNotifBody:
-      "Mets ton voyage en cache pour l'avoir hors-ligne pendant le trajet.",
+    offlineNotReadyNotifBody: "Mets ton voyage en cache pour l'avoir hors-ligne pendant le trajet.",
     tripNoDateTitle: 'Voyage sans date',
     tripNoDateDesc: 'Rappel de définir les dates, 1-2 jours après la création.',
     tripNoDateNotifTitle: 'Définis les dates de ton voyage',
-    tripNoDateNotifBody:
-      'Ajoute une date de départ pour planifier étapes et météo.',
+    tripNoDateNotifBody: 'Ajoute une date de départ pour planifier étapes et météo.',
     zoneOpeningTitle: "Ouverture d'une nouvelle zone",
     zoneOpeningDesc: 'Quand une région qui te concerne devient couverte.',
   },
@@ -345,11 +336,9 @@ export const fr = {
     offlineTitle: 'Hors connexion',
     offlineMessage: 'Reconnectez-vous pour modifier ce voyage.',
     apiUnavailableTitle: 'Service indisponible',
-    apiUnavailableMessage:
-      'Le service est momentanément indisponible. Réessayez plus tard.',
+    apiUnavailableMessage: 'Le service est momentanément indisponible. Réessayez plus tard.',
     accommodationStaleTitle: 'Liste actualisée',
-    accommodationStaleMessage:
-      'Les hébergements ont été réactualisés. Réessayez votre sélection.',
+    accommodationStaleMessage: 'Les hébergements ont été réactualisés. Réessayez votre sélection.',
     accommodationGeocodeFailedTitle: 'Adresse introuvable',
     accommodationGeocodeFailedMessage:
       "Précisez l'adresse (ajoutez une ville ou un code postal) et réessayez.",
@@ -366,8 +355,7 @@ export const fr = {
       failedTitle: 'Modification impossible',
       reason: {
         locked: 'Ce voyage a démarré : il est en lecture seule.',
-        out_of_zone:
-          'Cette action nécessite un itinéraire dans la zone couverte.',
+        out_of_zone: 'Cette action nécessite un itinéraire dans la zone couverte.',
         offline: 'Vous êtes hors ligne. Reconnectez-vous pour modifier.',
         api_unavailable: 'Service indisponible. Réessayez plus tard.',
         validation: 'Valeur invalide. Vérifiez la distance saisie.',
@@ -475,8 +463,7 @@ export const fr = {
       resupplyWaterMorning: 'Eau matin',
       resupplyWaterAfternoon: 'Eau après-midi',
       resupplyArrival: 'Ravitaillement arrivée',
-      resupplyHelp:
-        'Suggestions indicatives — vérifiez horaires et disponibilité.',
+      resupplyHelp: 'Suggestions indicatives — vérifiez horaires et disponibilité.',
       supply: 'Ravitaillement',
       supplyEmpty: 'Aucun point de ravitaillement.',
       supplyMarkerAt: 'km {{distance}} · {{water}} eau · {{food}} ravito',
@@ -561,8 +548,7 @@ export const fr = {
         found: '{{count}} adresses à proximité.',
         foundTruncated: 'Les {{count}} plus proches sur {{total}} à proximité.',
         none: "Rien d'exploitable à proximité.",
-        capReached:
-          'Aucun résultat exploitable parmi les {{count}} plus proches.',
+        capReached: 'Aucun résultat exploitable parmi les {{count}} plus proches.',
         outOfCoverage: 'Tu es en dehors de la zone couverte.',
       },
       warning: {
@@ -621,8 +607,7 @@ export const fr = {
   share: {
     title: 'Partager le voyage',
     createLink: 'Créer un lien',
-    linkReadOnlyNote:
-      'Toute personne disposant du lien peut consulter ce voyage en lecture seule.',
+    linkReadOnlyNote: 'Toute personne disposant du lien peut consulter ce voyage en lecture seule.',
     copyLink: 'Copier le lien',
     linkCopied: 'Lien copié',
     revokeLink: 'Révoquer',

@@ -40,9 +40,7 @@ import { notificationIdentifier } from '../notifications/plan';
 const mockFetch = fetchTrips as jest.MockedFunction<typeof fetchTrips>;
 const mockDelete = deleteTrip as jest.MockedFunction<typeof deleteTrip>;
 const mockDuplicate = duplicateTrip as jest.MockedFunction<typeof duplicateTrip>;
-const mockCancel = cancelLocalNotification as jest.MockedFunction<
-  typeof cancelLocalNotification
->;
+const mockCancel = cancelLocalNotification as jest.MockedFunction<typeof cancelLocalNotification>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -127,7 +125,9 @@ describe('runDeleteTrip (#1036)', () => {
   it('forgets the deleted trip delivered marks so the persisted set does not leak (#1144)', async () => {
     mockDelete.mockResolvedValue({ ok: true, status: 204 });
     await runDeleteTrip('t1');
-    expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('offlineNotReady', 't1'));
+    expect(mockClearDelivered).toHaveBeenCalledWith(
+      notificationIdentifier('offlineNotReady', 't1'),
+    );
     expect(mockClearDelivered).toHaveBeenCalledWith(notificationIdentifier('tripNoDate', 't1'));
   });
 

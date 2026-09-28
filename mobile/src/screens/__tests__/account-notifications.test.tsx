@@ -5,7 +5,11 @@ import { AppState, StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import i18n from '../../i18n';
 import { lightColors } from '../../theme/tokens';
-import { NOTIFICATION_DEFAULTS, selectActiveCount, useNotificationPrefs } from '../../store/notification-prefs';
+import {
+  NOTIFICATION_DEFAULTS,
+  selectActiveCount,
+  useNotificationPrefs,
+} from '../../store/notification-prefs';
 import AccountNotifications from '../../../app/account/notifications';
 
 jest.mock('expo-secure-store', () => ({
@@ -71,7 +75,9 @@ describe('AccountNotifications screen', () => {
     // Green surface (successSoft) on the banner card.
     const greenCard = tree.root
       .findAllByType(View)
-      .find((n: any) => StyleSheet.flatten(n.props.style)?.backgroundColor === lightColors.successSoft);
+      .find(
+        (n: any) => StyleSheet.flatten(n.props.style)?.backgroundColor === lightColors.successSoft,
+      );
     expect(greenCard).toBeDefined();
 
     // Green ink (successInk) on the banner title.
@@ -92,12 +98,10 @@ describe('AccountNotifications screen', () => {
 
   it('re-checks the permission when the app returns to the foreground', async () => {
     let appStateListener: (s: string) => void = () => {};
-    const addSpy = jest
-      .spyOn(AppState, 'addEventListener')
-      .mockImplementation((_event, cb) => {
-        appStateListener = cb as (s: string) => void;
-        return { remove: jest.fn() } as never;
-      });
+    const addSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, cb) => {
+      appStateListener = cb as (s: string) => void;
+      return { remove: jest.fn() } as never;
+    });
 
     // Mount while permission can still be asked → prompt banner.
     getPerms.mockResolvedValue({ granted: false, canAskAgain: true });

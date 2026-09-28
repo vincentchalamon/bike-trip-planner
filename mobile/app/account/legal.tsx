@@ -22,10 +22,22 @@ export default function AccountLegal() {
       >
         {t('account.legalContent.lastUpdated')}
       </Text>
-      <ContentSection title={t('account.legalContent.publisherTitle')} body={t('account.legalContent.publisherBody')} />
-      <ContentSection title={t('account.legalContent.hostTitle')} body={t('account.legalContent.hostBody')} />
-      <ContentSection title={t('account.legalContent.contactTitle')} body={t('account.legalContent.contactBody')} />
-      <ContentSection title={t('account.legalContent.ipTitle')} body={t('account.legalContent.ipBody')} />
+      <ContentSection
+        title={t('account.legalContent.publisherTitle')}
+        body={t('account.legalContent.publisherBody')}
+      />
+      <ContentSection
+        title={t('account.legalContent.hostTitle')}
+        body={t('account.legalContent.hostBody')}
+      />
+      <ContentSection
+        title={t('account.legalContent.contactTitle')}
+        body={t('account.legalContent.contactBody')}
+      />
+      <ContentSection
+        title={t('account.legalContent.ipTitle')}
+        body={t('account.legalContent.ipBody')}
+      />
     </Screen>
   );
 }

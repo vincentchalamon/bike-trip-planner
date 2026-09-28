@@ -3,9 +3,7 @@ import { resolvePushRoute } from './push-routing';
 
 describe('resolvePushRoute', () => {
   it('routes a stage-scoped payload to the stage screen', () => {
-    expect(resolvePushRoute({ tripId: 't1', stageId: 'abc-123' })).toBe(
-      '/trip/t1/stage/abc-123',
-    );
+    expect(resolvePushRoute({ tripId: 't1', stageId: 'abc-123' })).toBe('/trip/t1/stage/abc-123');
   });
 
   // An identifier the trip no longer holds falls back to the roadbook, where a

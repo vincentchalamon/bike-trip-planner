@@ -59,8 +59,7 @@ export function useLocalNotifications(trips: TripListItem[]): void {
       // effect right after a past-due schedule — the id now looks delivered, the
       // action flips to `cancel`, and the notification is cancelled before the OS ever
       // presents it. getState() takes a one-shot snapshot with no feedback loop.
-      const { delivered, markDelivered, clearDelivered } =
-        useDeliveredNotifications.getState();
+      const { delivered, markDelivered, clearDelivered } = useDeliveredNotifications.getState();
       await reconcileLocalNotifications({
         trips: inputs,
         prefs: {

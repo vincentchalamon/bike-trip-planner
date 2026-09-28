@@ -877,8 +877,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run npm audit
-        # Scope to the web workspaces (mobile's React Native / metro tree carries
-        # advisories out of scope for this web gate) and to production deps only:
+        # Scope to the web workspaces (mobile is audited in the Mobile job, which
+        # runs on mobile-only changes this job skips) and to production deps only:
         # the gate targets what ships to users, not dev tooling. --omit=dev drops
         # the Lighthouse (@lhci/cli) chain, whose transitive extract-zip advisory
         # (GHSA-jmr9-qjv8-65gv) has no fixed release and never reaches the bundle.
@@ -953,7 +953,7 @@ jobs:
         run: npm run test:unit --workspace pwa -- --coverage
 
   mobile-checks:
-    name: Mobile (tsc + jest)
+    name: Mobile
     needs: changes
     if: >-
       !cancelled() &&
@@ -974,5 +974,27 @@ jobs:
         run: npm run typecheck --workspace mobile
       - name: Run ESLint
         run: npm run lint --workspace mobile
+      - name: Run Prettier
+        run: npm run format:check --workspace mobile
       - name: Run jest
         run: npm run test --workspace mobile
+      # tsc and jest never go through Metro or Hermes, so an import Metro cannot
+      # resolve, or a native module off the SDK's version range, only surfaced at
+      # APK build time on a tooled machine. The export stops at the Hermes
+      # bytecode and needs no Android SDK. Both steps read app.config.js, which
+      # fails closed without EXPO_PUBLIC_API_URL; the value only feeds the App
+      # Link host there.
+      # The web gate leaves mobile out (npm-audit job), so its shipped
+      # dependencies are audited here, at the same level and on production deps
+      # only. The moderate advisories in Expo's config-plugin build chain stay
+      # below the bar.
+      - name: Run npm audit
+        run: npm audit --audit-level=high --omit=dev --workspace mobile
+      - name: Check dependencies against the Expo SDK
+        env:
+          EXPO_PUBLIC_API_URL: https://ci.invalid
+        run: npm run doctor --workspace mobile
+      - name: Bundle the Android app
+        env:
+          EXPO_PUBLIC_API_URL: https://ci.invalid
+        run: npm run bundle --workspace mobile -- --output-dir "$RUNNER_TEMP/mobile-bundle"

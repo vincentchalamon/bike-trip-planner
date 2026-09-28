@@ -137,10 +137,7 @@ describe('cacheTripDetail / readTripCache', () => {
 
   it('reads back a legacy single-file entry with an embedded route', async () => {
     // Cache written before the detail/route split embedded the route in <id>.json.
-    mockFiles.set(
-      META_URI('legacy'),
-      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
-    );
+    mockFiles.set(META_URI('legacy'), JSON.stringify({ detail: detail(), route, syncedAt: 7 }));
     const cached = await readTripCache('legacy');
     expect(cached?.route).toEqual(route);
     expect(cached?.syncedAt).toBe(7);
@@ -148,10 +145,7 @@ describe('cacheTripDetail / readTripCache', () => {
 
   it('migrates a legacy embedded route into the split file on a detail-only refresh (no drop)', async () => {
     // Pre-split cache: route embedded in <id>.json, no <id>.route.json yet.
-    mockFiles.set(
-      META_URI('mig'),
-      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
-    );
+    mockFiles.set(META_URI('mig'), JSON.stringify({ detail: detail(), route, syncedAt: 7 }));
     expect(mockFiles.has(ROUTE_URI('mig'))).toBe(false);
     // A detail-only refresh must NOT drop the previously-cached geometry.
     await cacheTripDetail('mig', detail(), 8);
@@ -162,10 +156,7 @@ describe('cacheTripDetail / readTripCache', () => {
   });
 
   it('keeps the legacy route in the meta when the migration write fails (no silent drop)', async () => {
-    mockFiles.set(
-      META_URI('mig2'),
-      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
-    );
+    mockFiles.set(META_URI('mig2'), JSON.stringify({ detail: detail(), route, syncedAt: 7 }));
     // Fail the route-file migration write specifically (disk full / native error).
     // create() still leaves an empty file on disk, so `.exists` would lie —
     // only writeFile's return value can confirm the write actually landed.
@@ -181,10 +172,7 @@ describe('cacheTripDetail / readTripCache', () => {
   });
 
   it('re-attempts a failed migration on the next refresh (empty stub is not "migrated")', async () => {
-    mockFiles.set(
-      META_URI('stub'),
-      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
-    );
+    mockFiles.set(META_URI('stub'), JSON.stringify({ detail: detail(), route, syncedAt: 7 }));
     // 1st refresh: migration write fails → empty stub left on disk, route kept in meta.
     writeMock.mockImplementationOnce((uri: string, content: string) => {
       if (uri === ROUTE_URI('stub')) return Promise.reject(new Error('disk full'));
@@ -242,10 +230,7 @@ describe('cacheTripRoute', () => {
   it('keeps the legacy route in the meta when its own route write fails (no silent drop)', async () => {
     // Pre-split cache (route embedded in the meta), then a map open triggers
     // cacheTripRoute whose split-file write fails: the geometry must survive.
-    mockFiles.set(
-      META_URI('r2'),
-      JSON.stringify({ detail: detail(), route, syncedAt: 7 }),
-    );
+    mockFiles.set(META_URI('r2'), JSON.stringify({ detail: detail(), route, syncedAt: 7 }));
     const other = { stages: [{ dayNumber: 2, geometry: [[3, 4]] }] } as unknown as TripRoute;
     writeMock.mockImplementationOnce((uri: string, content: string) => {
       if (uri === ROUTE_URI('r2')) return Promise.reject(new Error('disk full'));

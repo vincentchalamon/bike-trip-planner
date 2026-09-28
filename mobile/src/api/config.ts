@@ -21,8 +21,7 @@ function resolveApiBaseUrl(): string {
 // link points at the web frontend, NOT the API, so a missing var must fail
 // closed in non-dev builds rather than emit a dead link to the wrong origin.
 // Mirrors API_BASE_URL's fail-closed contract.
-export const WEB_BASE_URL =
-  process.env.EXPO_PUBLIC_WEB_URL ?? getWebDevFallback();
+export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? getWebDevFallback();
 
 function getWebDevFallback(): string {
   if (!__DEV__) {

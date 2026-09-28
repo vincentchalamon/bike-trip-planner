@@ -31,7 +31,16 @@ function makeOk(over: Record<string, unknown> = {}): NearbyPoiSearchResult {
       totalFound: 1,
       capReached: false,
       outOfCoverage: false,
-      pois: [{ name: 'Fontaine', category: 'water', lat: 45, lon: 6, distance_m: 120, deeplink: 'https://m' }],
+      pois: [
+        {
+          name: 'Fontaine',
+          category: 'water',
+          lat: 45,
+          lon: 6,
+          distance_m: 120,
+          deeplink: 'https://m',
+        },
+      ],
       ...over,
     },
   };
@@ -100,7 +109,9 @@ describe('useInRideSearch (#1150)', () => {
   });
 
   it('caps the widened radius at MAX_RADIUS_METERS then abandons (no-op)', async () => {
-    mockSearch.mockResolvedValue(makeOk({ totalFound: 0, radiusMeters: MAX_RADIUS_METERS, pois: [] }));
+    mockSearch.mockResolvedValue(
+      makeOk({ totalFound: 0, radiusMeters: MAX_RADIUS_METERS, pois: [] }),
+    );
     const { result, unmount } = renderHook();
 
     await act(async () => {

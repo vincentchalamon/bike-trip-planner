@@ -30,13 +30,18 @@ describe('design tokens', () => {
     expect(contrastRatio(darkColors.mutedIcon, darkColors.background)).toBeGreaterThanOrEqual(3);
     // Normal text: WCAG 1.4.3 minimum 4.5:1 (destructive is used as text —
     // ListRow danger rows, Input/ErrorState error copy).
-    expect(contrastRatio(lightColors.destructive, lightColors.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(darkColors.destructive, darkColors.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(lightColors.destructive, lightColors.background)).toBeGreaterThanOrEqual(
+      4.5,
+    );
+    expect(contrastRatio(darkColors.destructive, darkColors.background)).toBeGreaterThanOrEqual(
+      4.5,
+    );
     // Button's outlineForest variant text/border (create.tsx GPX import).
-    expect(contrastRatio(lightColors.forestText, lightColors.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(lightColors.forestText, lightColors.background)).toBeGreaterThanOrEqual(
+      4.5,
+    );
     expect(contrastRatio(darkColors.forestText, darkColors.background)).toBeGreaterThanOrEqual(4.5);
   });
-
 
   it('mirrors the web brand + surface hexes in both schemes', () => {
     expect(lightColors.brand).toBe('#a8561a');

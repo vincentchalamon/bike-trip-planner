@@ -6,6 +6,7 @@ process.env.EXPO_PUBLIC_WEB_URL ??= 'https://web.test.invalid';
 
 // Provide safe-area insets in tests (components call useSafeAreaInsets outside a
 // SafeAreaProvider); the library ships an official jest mock returning zeros.
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
+jest.mock(
+  'react-native-safe-area-context',
+  () => require('react-native-safe-area-context/jest/mock').default,
 );

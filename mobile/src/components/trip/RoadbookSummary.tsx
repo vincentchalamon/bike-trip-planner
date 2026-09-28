@@ -16,11 +16,7 @@ interface RoadbookSummaryProps {
 // dark-green gradient. Pure read from the store's stages/dates — the same core
 // budget/totals primitives the share card uses (ADR-055), so a SSE recompute
 // updates it in place with no local state.
-export function RoadbookSummary({
-  stages,
-  startDate,
-  endDate,
-}: RoadbookSummaryProps) {
+export function RoadbookSummary({ stages, startDate, endDate }: RoadbookSummaryProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
 
@@ -30,13 +26,25 @@ export function RoadbookSummary({
   const weather = stages.find((s) => s.weather)?.weather ?? null;
 
   const metrics: { value: string; label: string }[] = [
-    { value: t('trip.summary.km', { value: Math.round(totals.totalDistance) }), label: t('trip.summary.distance') },
-    { value: t('trip.summary.meters', { value: `+${Math.round(totals.totalElevation)}` }), label: t('trip.summary.ascent') },
-    { value: t('trip.summary.meters', { value: `-${Math.round(totals.totalElevationLoss)}` }), label: t('trip.summary.descent') },
+    {
+      value: t('trip.summary.km', { value: Math.round(totals.totalDistance) }),
+      label: t('trip.summary.distance'),
+    },
+    {
+      value: t('trip.summary.meters', { value: `+${Math.round(totals.totalElevation)}` }),
+      label: t('trip.summary.ascent'),
+    },
+    {
+      value: t('trip.summary.meters', { value: `-${Math.round(totals.totalElevationLoss)}` }),
+      label: t('trip.summary.descent'),
+    },
     { value: String(stages.length), label: t('trip.summary.stages') },
   ];
   if (budgetAvg > 0) {
-    metrics.push({ value: t('trip.summary.euro', { value: budgetAvg }), label: t('trip.summary.budget') });
+    metrics.push({
+      value: t('trip.summary.euro', { value: budgetAvg }),
+      label: t('trip.summary.budget'),
+    });
   }
   if (weather) {
     metrics.push({
@@ -64,8 +72,7 @@ export function RoadbookSummary({
             fontSize: 14,
           }}
         >
-          {formatTripDateRange(startDate, endDate, i18n.language) ||
-            t('trip.summary.noDates')}
+          {formatTripDateRange(startDate, endDate, i18n.language) || t('trip.summary.noDates')}
         </Text>
         <View style={styles.grid}>
           {metrics.map((m) => (

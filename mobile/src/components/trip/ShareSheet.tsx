@@ -1,32 +1,14 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
 import { Button, Sheet } from '../ui';
-import {
-  Check,
-  ChevronRight,
-  FileText,
-  ImageIcon,
-  Link2,
-} from '../ui/icons';
+import { Check, ChevronRight, FileText, ImageIcon, Link2 } from '../ui/icons';
 import { useTheme } from '../../theme';
 import type { Theme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import { useTripRoute } from '../../hooks/use-trip-route';
-import {
-  buildShareUrl,
-  createTripShare,
-  getTripShare,
-  revokeTripShare,
-} from '../../api/trips';
+import { buildShareUrl, createTripShare, getTripShare, revokeTripShare } from '../../api/trips';
 import { todayUtc } from '@btp/core';
 import { buildTripText, computeTripTotals } from '../../lib/share';
 import { captureAndShareInfographic } from '../../lib/share-image';
@@ -175,12 +157,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
         <View style={s.linkRow}>
           <View style={s.field}>
             {shareUrl ? (
-              <Text
-                testID="share-link-text"
-                selectable
-                numberOfLines={1}
-                style={s.fieldText}
-              >
+              <Text testID="share-link-text" selectable numberOfLines={1} style={s.fieldText}>
                 {shareUrl}
               </Text>
             ) : (
@@ -226,9 +203,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
           icon={<Link2 size={20} color={theme.colors.brand} />}
           label={t('share.optLinkLabel')}
           description={t('share.optLinkDesc')}
-          onPress={() =>
-            void (shareUrl ? handleCopyLink() : handleCreateLink())
-          }
+          onPress={() => void (shareUrl ? handleCopyLink() : handleCreateLink())}
         />
         <OptionRow
           theme={theme}
@@ -253,11 +228,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
           has actually laid out) so it never races layout and never runs on idle
           SSE updates. */}
       {capturing && (
-        <View
-          style={s.offscreen}
-          pointerEvents="none"
-          onLayout={() => void runCapture()}
-        >
+        <View style={s.offscreen} pointerEvents="none" onLayout={() => void runCapture()}>
           <ShareInfographic
             ref={infographicRef}
             title={title}

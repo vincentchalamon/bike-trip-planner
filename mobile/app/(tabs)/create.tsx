@@ -197,9 +197,7 @@ export default function Create() {
           </Text>
           <SseStatusIndicator computing={follow.computing} />
           {follow.computing && follow.total > 0 ? (
-            <Text
-              style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans }}
-            >
+            <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans }}>
               {t('create.progress', { completed: follow.completed, total: follow.total })}
             </Text>
           ) : null}
@@ -222,9 +220,7 @@ export default function Create() {
           <Button
             label={t('create.openRoadbook')}
             variant="secondary"
-            onPress={() =>
-              router.push({ pathname: '/trip/[id]', params: { id: createdId } })
-            }
+            onPress={() => router.push({ pathname: '/trip/[id]', params: { id: createdId } })}
             fullWidth
           />
           <Button label={t('create.newTrip')} variant="ghost" onPress={reset} fullWidth />

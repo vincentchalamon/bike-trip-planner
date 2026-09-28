@@ -26,11 +26,7 @@ import {
 } from '../ui/icons';
 import { TripMap } from '../TripMap';
 import { PoiWaypointPopover } from './PoiWaypointPopover';
-import {
-  alertSegmentToCoords,
-  collectMarkers,
-  type MapMarker,
-} from '../map/map-utils';
+import { alertSegmentToCoords, collectMarkers, type MapMarker } from '../map/map-utils';
 import { stageColor } from '../map/stage-colors';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
@@ -79,9 +75,9 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
   );
   const [index, setIndex] = useState(Math.max(0, initialIndex));
   // Stretch highlighted by an alert `navigate` action ([lon, lat] for the map).
-  const [highlightedSegment, setHighlightedSegment] = useState<
-    [number, number][] | undefined
-  >(undefined);
+  const [highlightedSegment, setHighlightedSegment] = useState<[number, number][] | undefined>(
+    undefined,
+  );
   const [editingDistance, setEditingDistance] = useState(false);
   const [draft, setDraft] = useState('');
   // POI marker tapped on the stage map → its "add to itinerary" popover (#1179).
@@ -106,18 +102,12 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
     setSelectedPoi(null);
   }, [safeIndex]);
 
-  const onFailure = useCallback(
-    (reason: MutationFailure) => notifyFailure(t, reason),
-    [t],
-  );
+  const onFailure = useCallback((reason: MutationFailure) => notifyFailure(t, reason), [t]);
   const mutations = useTripMutations(tripId ?? '', onFailure);
 
   const stage = stages[safeIndex];
 
-  const coordinates = useMemo(
-    () => (stage ? stageGeometryCoords(stage) : []),
-    [stage],
-  );
+  const coordinates = useMemo(() => (stage ? stageGeometryCoords(stage) : []), [stage]);
   // One colored line for this stage, keyed on its dayNumber, so its color
   // matches the trip map's stage coloring (see stageColor). Built directly
   // (not via buildStageLines, which drops rest days for the multi-stage
@@ -130,17 +120,10 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
     [stage, coordinates],
   );
   const markers = useMemo(() => (stage ? collectMarkers([stage]) : []), [stage]);
-  const profileIndex = useMemo(
-    () => activeStageIndex(stages, safeIndex),
-    [stages, safeIndex],
-  );
+  const profileIndex = useMemo(() => activeStageIndex(stages, safeIndex), [stages, safeIndex]);
 
   if (!stage) {
-    return loading ? (
-      <LoadingState />
-    ) : (
-      <EmptyState title={t('trip.stageDetail.notFound')} />
-    );
+    return loading ? <LoadingState /> : <EmptyState title={t('trip.stageDetail.notFound')} />;
   }
 
   const date = stageDate(startDate, stage.dayNumber ?? safeIndex + 1);
@@ -188,251 +171,235 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
         contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
-      <View
-        style={[
-          styles.topbar,
-          {
-            borderBottomColor: theme.colors.border,
-            paddingHorizontal: theme.spacing.base,
-            paddingVertical: theme.spacing.sm,
-            gap: theme.spacing.xs,
-          },
-        ]}
-      >
-        <IconButton
-          a11yLabel={t('trip.stageDetail.prev')}
-          disabled={!hasPrevStage(safeIndex)}
-          onPress={() => setIndex(safeIndex - 1)}
+        <View
+          style={[
+            styles.topbar,
+            {
+              borderBottomColor: theme.colors.border,
+              paddingHorizontal: theme.spacing.base,
+              paddingVertical: theme.spacing.sm,
+              gap: theme.spacing.xs,
+            },
+          ]}
         >
-          <ArrowLeft
-            color={
-              hasPrevStage(safeIndex)
-                ? theme.colors.foreground
-                : theme.colors.mutedIcon
-            }
-            size={20}
-          />
-        </IconButton>
-        <View style={styles.titleWrap}>
-          <Text
-            numberOfLines={1}
-            style={{
-              color: theme.colors.foreground,
-              fontFamily: theme.fonts.serif,
-              fontSize: 18,
-              textAlign: 'center',
-            }}
+          <IconButton
+            a11yLabel={t('trip.stageDetail.prev')}
+            disabled={!hasPrevStage(safeIndex)}
+            onPress={() => setIndex(safeIndex - 1)}
           >
-            {heading}
-            {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.fonts.sansMedium,
-              fontSize: 12,
-              textAlign: 'center',
-            }}
+            <ArrowLeft
+              color={hasPrevStage(safeIndex) ? theme.colors.foreground : theme.colors.mutedIcon}
+              size={20}
+            />
+          </IconButton>
+          <View style={styles.titleWrap}>
+            <Text
+              numberOfLines={1}
+              style={{
+                color: theme.colors.foreground,
+                fontFamily: theme.fonts.serif,
+                fontSize: 18,
+                textAlign: 'center',
+              }}
+            >
+              {heading}
+              {stage.isRestDay ? ` · ${t('trip.rest')}` : ''}
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 12,
+                textAlign: 'center',
+              }}
+            >
+              {t('trip.stageDetail.position', {
+                current: safeIndex + 1,
+                total: count,
+              })}
+            </Text>
+          </View>
+          <IconButton
+            a11yLabel={t('trip.stageDetail.next')}
+            disabled={!hasNextStage(safeIndex, count)}
+            onPress={() => setIndex(safeIndex + 1)}
           >
-            {t('trip.stageDetail.position', {
-              current: safeIndex + 1,
-              total: count,
-            })}
-          </Text>
-        </View>
-        <IconButton
-          a11yLabel={t('trip.stageDetail.next')}
-          disabled={!hasNextStage(safeIndex, count)}
-          onPress={() => setIndex(safeIndex + 1)}
-        >
-          <ChevronRight
-            color={
-              hasNextStage(safeIndex, count)
-                ? theme.colors.foreground
-                : theme.colors.mutedIcon
-            }
-            size={22}
-          />
-        </IconButton>
-        {tripId ? (
-          <ExportButton
-            tripId={tripId}
-            tripTitle={title ?? t('trip.title')}
-            stage={{ id: stage.id, dayNumber: day }}
-          />
-        ) : null}
-      </View>
-
-      <DayStrip
-        stages={stages}
-        startDate={startDate}
-        activeIndex={safeIndex}
-        onSelect={setIndex}
-      />
-
-      <View style={{ height: 220 }}>
-        {coordinates.length > 0 ? (
-          <>
-            <TripMap
-              stageSegments={stageSegments}
-              markers={markers}
-              highlightedSegment={highlightedSegment}
-              onSelectPoi={canReroute ? setSelectedPoi : undefined}
+            <ChevronRight
+              color={
+                hasNextStage(safeIndex, count) ? theme.colors.foreground : theme.colors.mutedIcon
+              }
+              size={22}
             />
-            {selectedPoi ? (
-              <PoiWaypointPopover
-                poi={selectedPoi}
-                disabled={!canReroute}
-                onAdd={() => {
-                  void mutations.addPoiWaypoint(
-                    safeIndex,
-                    selectedPoi.lat,
-                    selectedPoi.lon,
-                  );
-                  setSelectedPoi(null);
-                }}
-                onClose={() => setSelectedPoi(null)}
-              />
-            ) : null}
-          </>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <EmptyState title={t('trip.mapEmpty')} />
-          </View>
-        )}
-      </View>
-
-      <View style={{ padding: theme.spacing.base }}>
-        {profileIndex === null ? (
-          // A rest day has no geometry/elevation of its own: rendering the
-          // profile with a null focus would draw the WHOLE trip. Show a
-          // placeholder instead (bug #1039).
-          <EmptyState title={t('trip.stageDetail.restNoProfile')} />
-        ) : (
-          <ElevationProfile
-            stages={stages}
-            focusedStageIndex={profileIndex}
-            onHover={() => {}}
-          />
-        )}
-      </View>
-
-      <View
-        style={{
-          paddingHorizontal: theme.spacing.base,
-          gap: theme.spacing.md,
-        }}
-      >
-        <Section title={t('trip.stageDetail.sectionLocations')}>
-          <View style={{ gap: theme.spacing.sm }}>
-            <LocationRow
-              icon={<MapPin color={theme.colors.accentBrand} size={16} />}
-              label={t('trip.stageDetail.departure')}
-              place={stage.startLabel ?? '?'}
+          </IconButton>
+          {tripId ? (
+            <ExportButton
+              tripId={tripId}
+              tripTitle={title ?? t('trip.title')}
+              stage={{ id: stage.id, dayNumber: day }}
             />
-            <LocationRow
-              icon={<Flag color={theme.colors.mutedIcon} size={16} />}
-              label={t('trip.stageDetail.arrival')}
-              place={stage.endLabel ?? stage.label ?? '?'}
-            />
-          </View>
-        </Section>
-
-        <Section title={t('trip.stageDetail.sectionStats')}>
-          <View style={styles.statsRow}>
-            <DistanceStat
-              value={t('trip.stageDetail.distanceValue', {
-                value: stats.distanceKm,
-              })}
-              editable={canReroute}
-              a11yLabel={t('trip.edit.editDistanceA11y', { day })}
-              onEdit={startEditDistance}
-            />
-            <StatCell
-              icon={<Mountain color={theme.colors.mutedIcon} size={16} />}
-              label={t('trip.stageDetail.ascent')}
-              value={t('trip.stageDetail.elevationValue', {
-                value: stats.elevationGain,
-              })}
-            />
-            <StatCell
-              icon={<Mountain color={theme.colors.mutedIcon} size={16} />}
-              label={t('trip.stageDetail.descent')}
-              value={t('trip.stageDetail.elevationValue', {
-                value: stats.elevationLoss,
-              })}
-            />
-          </View>
-          {editingDistance ? (
-            <View style={styles.editRow}>
-              <TextInput
-                accessibilityLabel={t('trip.edit.editDistanceA11y', { day })}
-                value={draft}
-                onChangeText={setDraft}
-                keyboardType="numeric"
-                autoFocus
-                placeholder={t('trip.edit.distancePlaceholder')}
-                placeholderTextColor={theme.colors.mutedForeground}
-                onSubmitEditing={commitDistance}
-                style={{
-                  flex: 1,
-                  height: 40,
-                  borderWidth: 1,
-                  borderColor: theme.colors.input,
-                  borderRadius: theme.radius.md,
-                  paddingHorizontal: theme.spacing.md,
-                  color: theme.colors.foreground,
-                  backgroundColor: theme.colors.surface,
-                  fontFamily: theme.fonts.mono,
-                  fontSize: 15,
-                }}
-              />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('trip.edit.saveA11y')}
-                onPress={commitDistance}
-                hitSlop={6}
-                style={{ padding: theme.spacing.sm }}
-              >
-                <Check color={theme.colors.brandFill} size={22} />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('trip.edit.cancelA11y')}
-                onPress={() => setEditingDistance(false)}
-                hitSlop={6}
-                style={{ padding: theme.spacing.sm }}
-              >
-                <X color={theme.colors.mutedForeground} size={22} />
-              </Pressable>
-            </View>
           ) : null}
-        </Section>
+        </View>
 
-        {!stage.isRestDay ? (
-          <Section title={t('trip.stageDetail.sectionDifficulty')}>
-            <DifficultyPill
-              level={getDifficulty(stage.distance, stage.elevation)}
-            />
-          </Section>
-        ) : null}
-
-        {surfaces.length > 0 ? (
-          <Section title={t('trip.stageDetail.sectionSurfaces')}>
-            <SurfaceBar surfaces={surfaces} />
-          </Section>
-        ) : null}
-
-        <StageDataBlocks
-          stage={stage}
-          stageIndex={safeIndex}
-          onAlertNavigate={(segments) =>
-            setHighlightedSegment(
-              segments.length > 0 ? alertSegmentToCoords(segments[0]) : undefined,
-            )
-          }
+        <DayStrip
+          stages={stages}
+          startDate={startDate}
+          activeIndex={safeIndex}
+          onSelect={setIndex}
         />
-      </View>
+
+        <View style={{ height: 220 }}>
+          {coordinates.length > 0 ? (
+            <>
+              <TripMap
+                stageSegments={stageSegments}
+                markers={markers}
+                highlightedSegment={highlightedSegment}
+                onSelectPoi={canReroute ? setSelectedPoi : undefined}
+              />
+              {selectedPoi ? (
+                <PoiWaypointPopover
+                  poi={selectedPoi}
+                  disabled={!canReroute}
+                  onAdd={() => {
+                    void mutations.addPoiWaypoint(safeIndex, selectedPoi.lat, selectedPoi.lon);
+                    setSelectedPoi(null);
+                  }}
+                  onClose={() => setSelectedPoi(null)}
+                />
+              ) : null}
+            </>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <EmptyState title={t('trip.mapEmpty')} />
+            </View>
+          )}
+        </View>
+
+        <View style={{ padding: theme.spacing.base }}>
+          {profileIndex === null ? (
+            // A rest day has no geometry/elevation of its own: rendering the
+            // profile with a null focus would draw the WHOLE trip. Show a
+            // placeholder instead (bug #1039).
+            <EmptyState title={t('trip.stageDetail.restNoProfile')} />
+          ) : (
+            <ElevationProfile stages={stages} focusedStageIndex={profileIndex} onHover={() => {}} />
+          )}
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: theme.spacing.base,
+            gap: theme.spacing.md,
+          }}
+        >
+          <Section title={t('trip.stageDetail.sectionLocations')}>
+            <View style={{ gap: theme.spacing.sm }}>
+              <LocationRow
+                icon={<MapPin color={theme.colors.accentBrand} size={16} />}
+                label={t('trip.stageDetail.departure')}
+                place={stage.startLabel ?? '?'}
+              />
+              <LocationRow
+                icon={<Flag color={theme.colors.mutedIcon} size={16} />}
+                label={t('trip.stageDetail.arrival')}
+                place={stage.endLabel ?? stage.label ?? '?'}
+              />
+            </View>
+          </Section>
+
+          <Section title={t('trip.stageDetail.sectionStats')}>
+            <View style={styles.statsRow}>
+              <DistanceStat
+                value={t('trip.stageDetail.distanceValue', {
+                  value: stats.distanceKm,
+                })}
+                editable={canReroute}
+                a11yLabel={t('trip.edit.editDistanceA11y', { day })}
+                onEdit={startEditDistance}
+              />
+              <StatCell
+                icon={<Mountain color={theme.colors.mutedIcon} size={16} />}
+                label={t('trip.stageDetail.ascent')}
+                value={t('trip.stageDetail.elevationValue', {
+                  value: stats.elevationGain,
+                })}
+              />
+              <StatCell
+                icon={<Mountain color={theme.colors.mutedIcon} size={16} />}
+                label={t('trip.stageDetail.descent')}
+                value={t('trip.stageDetail.elevationValue', {
+                  value: stats.elevationLoss,
+                })}
+              />
+            </View>
+            {editingDistance ? (
+              <View style={styles.editRow}>
+                <TextInput
+                  accessibilityLabel={t('trip.edit.editDistanceA11y', { day })}
+                  value={draft}
+                  onChangeText={setDraft}
+                  keyboardType="numeric"
+                  autoFocus
+                  placeholder={t('trip.edit.distancePlaceholder')}
+                  placeholderTextColor={theme.colors.mutedForeground}
+                  onSubmitEditing={commitDistance}
+                  style={{
+                    flex: 1,
+                    height: 40,
+                    borderWidth: 1,
+                    borderColor: theme.colors.input,
+                    borderRadius: theme.radius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    color: theme.colors.foreground,
+                    backgroundColor: theme.colors.surface,
+                    fontFamily: theme.fonts.mono,
+                    fontSize: 15,
+                  }}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('trip.edit.saveA11y')}
+                  onPress={commitDistance}
+                  hitSlop={6}
+                  style={{ padding: theme.spacing.sm }}
+                >
+                  <Check color={theme.colors.brandFill} size={22} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('trip.edit.cancelA11y')}
+                  onPress={() => setEditingDistance(false)}
+                  hitSlop={6}
+                  style={{ padding: theme.spacing.sm }}
+                >
+                  <X color={theme.colors.mutedForeground} size={22} />
+                </Pressable>
+              </View>
+            ) : null}
+          </Section>
+
+          {!stage.isRestDay ? (
+            <Section title={t('trip.stageDetail.sectionDifficulty')}>
+              <DifficultyPill level={getDifficulty(stage.distance, stage.elevation)} />
+            </Section>
+          ) : null}
+
+          {surfaces.length > 0 ? (
+            <Section title={t('trip.stageDetail.sectionSurfaces')}>
+              <SurfaceBar surfaces={surfaces} />
+            </Section>
+          ) : null}
+
+          <StageDataBlocks
+            stage={stage}
+            stageIndex={safeIndex}
+            onAlertNavigate={(segments) =>
+              setHighlightedSegment(
+                segments.length > 0 ? alertSegmentToCoords(segments[0]) : undefined,
+              )
+            }
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -496,9 +463,7 @@ function DayStrip({
         const rest = Boolean(s.isRestDay);
         const dayNum = s.dayNumber ?? i + 1;
         const date = stageDate(startDate, dayNum);
-        const label = date
-          ? formatStageDate(date, i18n.language)
-          : t('trip.day', { day: dayNum });
+        const label = date ? formatStageDate(date, i18n.language) : t('trip.day', { day: dayNum });
         return (
           <Pressable
             key={i}
@@ -571,15 +536,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function LocationRow({
-  icon,
-  label,
-  place,
-}: {
-  icon: ReactNode;
-  label: string;
-  place: string;
-}) {
+function LocationRow({ icon, label, place }: { icon: ReactNode; label: string; place: string }) {
   const theme = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
@@ -608,15 +565,7 @@ function LocationRow({
   );
 }
 
-function StatCell({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
+function StatCell({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   const theme = useTheme();
   return (
     <View
@@ -741,11 +690,7 @@ function DifficultyPill({ level }: { level: Difficulty }) {
 // A proportional surface-mix bar + legend. Colours cycle through themed tokens
 // (no green token exists, so the mockup's semantic hues are approximated with
 // the accent / muted palette).
-function SurfaceBar({
-  surfaces,
-}: {
-  surfaces: { surface: string; percent: number }[];
-}) {
+function SurfaceBar({ surfaces }: { surfaces: { surface: string; percent: number }[] }) {
   const theme = useTheme();
   const palette = [
     theme.colors.accentBrand,
@@ -765,10 +710,7 @@ function SurfaceBar({
         }}
       >
         {surfaces.map((s, i) => (
-          <View
-            key={s.surface}
-            style={{ flex: s.percent, backgroundColor: color(i) }}
-          />
+          <View key={s.surface} style={{ flex: s.percent, backgroundColor: color(i) }} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>

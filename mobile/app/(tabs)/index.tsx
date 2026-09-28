@@ -17,13 +17,7 @@ import { confirmDeleteTrip, useTrips } from '../../src/hooks/use-trips';
 import { useAllTrips } from '../../src/hooks/use-all-trips';
 import { useLocalNotifications } from '../../src/hooks/use-local-notifications';
 import type { TripListItem } from '../../src/api/trips';
-import {
-  DateField,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  Screen,
-} from '../../src/components/ui';
+import { DateField, EmptyState, ErrorState, LoadingState, Screen } from '../../src/components/ui';
 import { Copy, Inbox, Search, Trash2 } from '../../src/components/ui/icons';
 import { useTheme, type Theme } from '../../src/theme';
 import { formatTripDateRange } from '../../src/lib/dates';
@@ -61,7 +55,15 @@ function RouteThumbnail({ theme }: { theme: Theme }) {
   );
 }
 
-function StatusBadge({ theme, status, label }: { theme: Theme; status: TripStatus; label: string }) {
+function StatusBadge({
+  theme,
+  status,
+  label,
+}: {
+  theme: Theme;
+  status: TripStatus;
+  label: string;
+}) {
   const c = badgeColors(theme, status);
   return (
     <View
@@ -252,8 +254,7 @@ export default function Trips() {
   // props so a memoized row doesn't re-render just because these closures got
   // recreated.
   const onOpen = useCallback(
-    (item: TripListItem) =>
-      router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } }),
+    (item: TripListItem) => router.push({ pathname: '/trip/[id]', params: { id: item.id ?? '' } }),
     [router],
   );
 

@@ -80,10 +80,9 @@ function buttonByLabel(tree: any, text: string): any {
       n
         .findAllByType(Text)
         .some((txt: any) =>
-          (Array.isArray(txt.props.children)
-            ? txt.props.children
-            : [txt.props.children]
-          ).includes(text),
+          (Array.isArray(txt.props.children) ? txt.props.children : [txt.props.children]).includes(
+            text,
+          ),
         ),
   )[0];
 }
@@ -123,8 +122,7 @@ describe('RoadbookView modification queue wiring (#1179)', () => {
     const tree = render(<RoadbookView id="t1" />);
     expect(
       tree.root.findAll(
-        (n: any) =>
-          n.props.accessibilityLabel === i18n.t('trip.modificationQueue.panelA11y'),
+        (n: any) => n.props.accessibilityLabel === i18n.t('trip.modificationQueue.panelA11y'),
       ),
     ).toHaveLength(0);
   });
@@ -132,17 +130,14 @@ describe('RoadbookView modification queue wiring (#1179)', () => {
   it('lists the pending modifications with a pluralized count', () => {
     const tree = render(<RoadbookView id="t1" />);
     const panel = tree.root.find(
-      (n: any) =>
-        n.props.accessibilityLabel === i18n.t('trip.modificationQueue.panelA11y'),
+      (n: any) => n.props.accessibilityLabel === i18n.t('trip.modificationQueue.panelA11y'),
     );
     const strings = panel
       .findAllByType(Text)
       .flatMap((n: any) =>
         Array.isArray(n.props.children) ? n.props.children : [n.props.children],
       );
-    expect(strings).toContain(
-      i18n.t('trip.modificationQueue.title', { count: 2 }),
-    );
+    expect(strings).toContain(i18n.t('trip.modificationQueue.title', { count: 2 }));
     expect(strings).toContain('Jour 1 · distance');
     expect(strings).toContain('Dates');
   });

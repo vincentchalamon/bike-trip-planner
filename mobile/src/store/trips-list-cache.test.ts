@@ -45,11 +45,7 @@ jest.mock('expo-file-system/legacy', () => ({
   }),
 }));
 
-import {
-  cacheTripList,
-  clearCachedTripList,
-  readCachedTripList,
-} from './trips-list-cache';
+import { cacheTripList, clearCachedTripList, readCachedTripList } from './trips-list-cache';
 
 const URI = 'file:///doc/trips-list-cache/trips-list.json';
 const items = [{ id: 'a', title: 'A' }] as unknown as TripListItem[];

@@ -64,8 +64,7 @@ export function renewDelayMs(token: string): number | null {
   return Math.max(ttl * 1000, MIN_RENEW_DELAY_MS);
 }
 
-const BASE64URL_ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 // Decoded by hand rather than with the global `atob`: nothing guarantees it on
 // every JS engine the app runs on, and a missing one would be swallowed by the

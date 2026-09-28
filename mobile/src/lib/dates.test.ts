@@ -14,9 +14,9 @@ describe('formatTripDateRange', () => {
         startStyle: 'dayMonth',
       }),
     ).toBe('15 août – 20 août 2026');
-    expect(
-      formatTripDateRange('2026-08-15', '2026-08-20', 'fr', { startStyle: 'full' }),
-    ).toBe('15 août 2026 → 20 août 2026');
+    expect(formatTripDateRange('2026-08-15', '2026-08-20', 'fr', { startStyle: 'full' })).toBe(
+      '15 août 2026 → 20 août 2026',
+    );
   });
 
   it('formats a single full date when there is only a start', () => {

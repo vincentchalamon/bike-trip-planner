@@ -30,7 +30,9 @@ describe('fetchTrips (#1036)', () => {
     const res = await fetchTrips(2, { title: 'alps', startDate: '2026-01-01', endDate: '' });
 
     expect(mockGet).toHaveBeenCalledWith('/trips', {
-      params: { query: { page: 2, itemsPerPage: TRIPS_PAGE_SIZE, title: 'alps', startDate: '2026-01-01' } },
+      params: {
+        query: { page: 2, itemsPerPage: TRIPS_PAGE_SIZE, title: 'alps', startDate: '2026-01-01' },
+      },
       headers: { Accept: 'application/ld+json' },
     });
     expect(res).toEqual({ items: [{ id: 't1' }], totalItems: 20 });
@@ -41,7 +43,10 @@ describe('fetchTrips (#1036)', () => {
     const page2 = [{ id: 'x1' }, { id: 'x2' }, { id: 'x3' }];
     mockGet
       .mockResolvedValueOnce({ data: { member: page1, totalItems: 15 }, error: undefined } as never)
-      .mockResolvedValueOnce({ data: { member: page2, totalItems: 15 }, error: undefined } as never);
+      .mockResolvedValueOnce({
+        data: { member: page2, totalItems: 15 },
+        error: undefined,
+      } as never);
 
     const all = await fetchAllTrips();
 
@@ -58,7 +63,10 @@ describe('fetchTrips (#1036)', () => {
   });
 
   it('fetchAllTrips does a single request when everything fits on page 1', async () => {
-    mockGet.mockResolvedValue({ data: { member: [{ id: 't1' }], totalItems: 1 }, error: undefined } as never);
+    mockGet.mockResolvedValue({
+      data: { member: [{ id: 't1' }], totalItems: 1 },
+      error: undefined,
+    } as never);
     const all = await fetchAllTrips();
     expect(mockGet).toHaveBeenCalledTimes(1);
     expect(all).toEqual([{ id: 't1' }]);
@@ -94,10 +102,7 @@ describe('uploadGpx (#1043)', () => {
 
     expect(res).toEqual({ id: 'gpx-1', status: 202 });
     expect(mockPost).toHaveBeenCalledTimes(1);
-    const [path, options] = mockPost.mock.calls[0] as [
-      string,
-      { body: FormData },
-    ];
+    const [path, options] = mockPost.mock.calls[0] as [string, { body: FormData }];
     expect(path).toBe('/trips/gpx-upload');
     expect(options.body).toBeInstanceOf(FormData);
     // The multipart part is keyed `gpxFile` (the backend's expected field name).
@@ -120,9 +125,7 @@ describe('uploadGpx (#1043)', () => {
 
 describe('export filenames (#1047)', () => {
   it('sanitizes the trip title and appends the format', () => {
-    expect(tripExportFileName('Entre Sensée et Escaut', 'gpx')).toBe(
-      'Entre-Sens-e-et-Escaut.gpx',
-    );
+    expect(tripExportFileName('Entre Sensée et Escaut', 'gpx')).toBe('Entre-Sens-e-et-Escaut.gpx');
     expect(tripExportFileName('   ', 'fit')).toBe('trip.fit');
   });
 
@@ -187,7 +190,9 @@ describe('fetchStageExport (#1047)', () => {
       error: { detail: 'boom' },
       response: { ok: false },
     } as never);
-    await expect(fetchStageExport('trip-1', 'stage-2', 'gpx')).rejects.toThrow('Failed to export stage');
+    await expect(fetchStageExport('trip-1', 'stage-2', 'gpx')).rejects.toThrow(
+      'Failed to export stage',
+    );
   });
 });
 
@@ -218,7 +223,11 @@ describe('anonymous share fetches (#1177)', () => {
 
   it('fetchSharedTripExport hits the literal .gpx/.fit path and throws on failure', async () => {
     const bytes = new ArrayBuffer(4);
-    mockGet.mockResolvedValueOnce({ data: bytes, error: undefined, response: { ok: true } } as never);
+    mockGet.mockResolvedValueOnce({
+      data: bytes,
+      error: undefined,
+      response: { ok: true },
+    } as never);
     await expect(fetchSharedTripExport('AB12cd', 'gpx')).resolves.toBe(bytes);
     expect(mockGet).toHaveBeenCalledWith('/s/{shortCode}.gpx', {
       params: { path: { shortCode: 'AB12cd' } },
@@ -231,6 +240,8 @@ describe('anonymous share fetches (#1177)', () => {
       error: { detail: 'boom' },
       response: { ok: false },
     } as never);
-    await expect(fetchSharedTripExport('AB12cd', 'fit')).rejects.toThrow('Failed to export shared trip');
+    await expect(fetchSharedTripExport('AB12cd', 'fit')).rejects.toThrow(
+      'Failed to export shared trip',
+    );
   });
 });

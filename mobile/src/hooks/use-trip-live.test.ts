@@ -13,8 +13,7 @@ import { useOfflineStore } from '../store/offline-store';
 jest.mock('../api/trips', () => ({ fetchTripDetail: jest.fn() }));
 jest.mock('../api/mercure', () => ({ subscribeToTrip: jest.fn() }));
 let mockNetInfoListener:
-  | ((state: { isConnected: boolean; isInternetReachable: boolean }) => void)
-  | undefined;
+  ((state: { isConnected: boolean; isInternetReachable: boolean }) => void) | undefined;
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: {
@@ -33,18 +32,10 @@ import { fetchTripDetail } from '../api/trips';
 import { subscribeToTrip, type SubscribeOptions } from '../api/mercure';
 import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
-const mockDetail = fetchTripDetail as jest.MockedFunction<
-  typeof fetchTripDetail
->;
-const mockSubscribe = subscribeToTrip as jest.MockedFunction<
-  typeof subscribeToTrip
->;
-const mockCache = cacheTripDetail as jest.MockedFunction<
-  typeof cacheTripDetail
->;
-const mockReadCache = readTripCache as jest.MockedFunction<
-  typeof readTripCache
->;
+const mockDetail = fetchTripDetail as jest.MockedFunction<typeof fetchTripDetail>;
+const mockSubscribe = subscribeToTrip as jest.MockedFunction<typeof subscribeToTrip>;
+const mockCache = cacheTripDetail as jest.MockedFunction<typeof cacheTripDetail>;
+const mockReadCache = readTripCache as jest.MockedFunction<typeof readTripCache>;
 
 const A = { lat: 1, lon: 1, ele: 0 };
 const B = { lat: 2, lon: 2, ele: 0 };
@@ -198,10 +189,7 @@ describe('runTripLive orchestration (#1014)', () => {
 
     await runTripLive('t1', store(), notCancelled);
 
-    expect(mockCache).toHaveBeenCalledWith(
-      't1',
-      expect.objectContaining({ title: 'Trip' }),
-    );
+    expect(mockCache).toHaveBeenCalledWith('t1', expect.objectContaining({ title: 'Trip' }));
   });
 
   it('hydrates from cache and skips SSE while offline (#1147)', async () => {
@@ -434,12 +422,10 @@ describe('useTripLive keeps the roadbook live across gaps', () => {
 
   beforeEach(() => {
     appStateListener = () => {};
-    appStateSpy = jest
-      .spyOn(AppState, 'addEventListener')
-      .mockImplementation((_event, cb) => {
-        appStateListener = cb as (state: string) => void;
-        return { remove: removeAppState } as never;
-      });
+    appStateSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, cb) => {
+      appStateListener = cb as (state: string) => void;
+      return { remove: removeAppState } as never;
+    });
     live = fakeSub();
     mockSubscribe.mockImplementation((_id, _cb, options) => {
       onOpen = options?.onOpen;
@@ -589,9 +575,7 @@ describe('applyResync', () => {
   });
 
   it('leaves queued edits alone', () => {
-    useTripStore
-      .getState()
-      .queueModification({ stageIndex: 0, type: 'distance', label: 'x' });
+    useTripStore.getState().queueModification({ stageIndex: 0, type: 'distance', label: 'x' });
 
     applyResync('t1', detail([apiStage({ distance: 80 })]));
 

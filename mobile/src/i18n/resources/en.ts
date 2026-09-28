@@ -23,8 +23,7 @@ export const en: typeof fr = {
     sent: 'A sign-in link was sent to {{email}}. Open it on this device to sign in.',
     error: 'Could not send the link. Check the address and try again.',
     title: 'Sign in',
-    subtitle:
-      "Enter your email and we'll send you a sign-in link. No password to remember.",
+    subtitle: "Enter your email and we'll send you a sign-in link. No password to remember.",
     sentTitle: 'Link sent',
     betaTitle: 'Private beta · early access',
     betaBody: 'The app is invite-only during early access.',
@@ -227,15 +226,13 @@ export const en: typeof fr = {
         'For any question about this privacy policy, write to us at: __CONTACT_EMAIL__.\n\nThis policy may be updated; the last-updated date is shown at the top of this page.',
     },
     export: {
-      description:
-        'Download a JSON archive of your profile and trips (GDPR portability).',
+      description: 'Download a JSON archive of your profile and trips (GDPR portability).',
       action: 'Export my data',
       success: 'Data exported via the share sheet.',
       failed: 'Export failed. Try again.',
     },
     delete: {
-      warningBefore:
-        'Irreversible action: your trips and data will be anonymised. Type ',
+      warningBefore: 'Irreversible action: your trips and data will be anonymised. Type ',
       keyword: 'DELETE',
       warningAfter: ' to confirm.',
       action: 'Permanently delete my account',
@@ -260,16 +257,14 @@ export const en: typeof fr = {
     footer:
       'These notifications are service-related — weather, analysis, reminders — never marketing. "Zone opening" is an announcement, off by default. You can turn everything off here or in Android settings.',
     weatherSafetyTitle: 'Stage weather & safety',
-    weatherSafetyDesc:
-      'The day before and in the morning: stage weather + new alerts.',
+    weatherSafetyDesc: 'The day before and in the morning: stage weather + new alerts.',
     analysisDoneTitle: 'Analysis done or failed',
     analysisDoneDesc:
       "When the trip is ready — or on failure — and you're not already looking at it.",
     offlineNotReadyTitle: 'Offline sync not ready',
     offlineNotReadyDesc: 'Before a departure, if the data is not cached yet.',
     offlineNotReadyNotifTitle: 'Departure soon: data not downloaded',
-    offlineNotReadyNotifBody:
-      'Cache your trip to have it offline during the ride.',
+    offlineNotReadyNotifBody: 'Cache your trip to have it offline during the ride.',
     tripNoDateTitle: 'Trip without dates',
     tripNoDateDesc: 'Reminder to set the dates, 1-2 days after creation.',
     tripNoDateNotifTitle: 'Set your trip dates',
@@ -337,19 +332,15 @@ export const en: typeof fr = {
     editFailedTitle: 'Change failed',
     editFailedMessage: 'The change failed. Try again.',
     outOfZoneTitle: 'Out of area',
-    outOfZoneMessage:
-      'This change needs a recompute that is unavailable outside the covered area.',
+    outOfZoneMessage: 'This change needs a recompute that is unavailable outside the covered area.',
     offlineTitle: 'Offline',
     offlineMessage: 'Reconnect to edit this trip.',
     apiUnavailableTitle: 'Service unavailable',
-    apiUnavailableMessage:
-      'The service is temporarily unavailable. Try again later.',
+    apiUnavailableMessage: 'The service is temporarily unavailable. Try again later.',
     accommodationStaleTitle: 'List refreshed',
-    accommodationStaleMessage:
-      'The accommodations were refreshed. Try your selection again.',
+    accommodationStaleMessage: 'The accommodations were refreshed. Try your selection again.',
     accommodationGeocodeFailedTitle: 'Address not found',
-    accommodationGeocodeFailedMessage:
-      'Refine the address (add a city or postcode) and try again.',
+    accommodationGeocodeFailedMessage: 'Refine the address (add a city or postcode) and try again.',
     edit: {
       addStage: 'Stage',
       addRestDay: 'Rest day',
@@ -369,8 +360,7 @@ export const en: typeof fr = {
         validation: 'Invalid value. Check the distance entered.',
         not_found: 'Stage not found. Reload the trip.',
         conflict: 'The trip changed in the meantime. Try again.',
-        stale:
-          'This trip changed while you were editing it. Reload it and reapply your change.',
+        stale: 'This trip changed while you were editing it. Reload it and reapply your change.',
         network: 'Network error. Try again.',
         error: 'The edit failed. Try again.',
       },
@@ -615,8 +605,7 @@ export const en: typeof fr = {
   share: {
     title: 'Share trip',
     createLink: 'Create a link',
-    linkReadOnlyNote:
-      'Anyone with the link can view this trip in read-only mode.',
+    linkReadOnlyNote: 'Anyone with the link can view this trip in read-only mode.',
     copyLink: 'Copy link',
     linkCopied: 'Link copied',
     revokeLink: 'Revoke',

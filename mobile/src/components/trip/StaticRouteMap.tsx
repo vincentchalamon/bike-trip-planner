@@ -53,7 +53,10 @@ export function StaticRouteMap({ stageSegments, markers }: StaticRouteMapProps) 
         .filter((s) => s.coordinates.length > 1)
         .map((s) => ({
           color: s.color,
-          points: s.coordinates.map(project).map(([x, y]) => `${x},${y}`).join(' '),
+          points: s.coordinates
+            .map(project)
+            .map(([x, y]) => `${x},${y}`)
+            .join(' '),
         })),
       dots: markers.map((m) => {
         const [x, y] = project([m.lon, m.lat]);

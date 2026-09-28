@@ -38,7 +38,9 @@ function toEpochMs(value: unknown): number | null {
  */
 export async function getScheduledFireTimes(): Promise<Map<string, number | null>> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  return new Map(scheduled.map((request) => [request.identifier, dateTriggerFireAt(request.trigger)]));
+  return new Map(
+    scheduled.map((request) => [request.identifier, dateTriggerFireAt(request.trigger)]),
+  );
 }
 
 /** Schedule (or, given the stable identifier, replace) a dated local notification. */

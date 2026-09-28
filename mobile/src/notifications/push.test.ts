@@ -33,7 +33,10 @@ describe('registerDeviceToken', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = (fetch as jest.Mock).mock.calls[0];
     expect(url).toMatch(/\/users\/me\/device-tokens$/);
-    expect(init).toMatchObject({ method: 'POST', headers: expect.objectContaining({ Authorization: 'Bearer jwt' }) });
+    expect(init).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer jwt' }),
+    });
     expect(JSON.parse(init.body)).toEqual({ token: 'fcm-token-abc', platform: expectedPlatform });
   });
 
@@ -73,7 +76,10 @@ describe('unregisterDeviceToken', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = (fetch as jest.Mock).mock.calls[0];
     expect(url).toMatch(/\/users\/me\/device-tokens\/fcm-token-abc$/);
-    expect(init).toMatchObject({ method: 'DELETE', headers: expect.objectContaining({ Authorization: 'Bearer jwt' }) });
+    expect(init).toMatchObject({
+      method: 'DELETE',
+      headers: expect.objectContaining({ Authorization: 'Bearer jwt' }),
+    });
   });
 
   it('is a no-op when nothing was registered', async () => {

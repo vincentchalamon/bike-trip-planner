@@ -14,7 +14,16 @@ const okBody = {
   totalFound: 2,
   capReached: false,
   outOfCoverage: false,
-  pois: [{ name: 'Fontaine', category: 'water', lat: 45, lon: 6, distance_m: 120, deeplink: 'https://maps' }],
+  pois: [
+    {
+      name: 'Fontaine',
+      category: 'water',
+      lat: 45,
+      lon: 6,
+      distance_m: 120,
+      deeplink: 'https://maps',
+    },
+  ],
 };
 
 describe('searchNearbyPois (#1150)', () => {
@@ -30,7 +39,12 @@ describe('searchNearbyPois (#1150)', () => {
     expect(mockPost).toHaveBeenCalledWith('/trips/{id}/nearby-pois', {
       params: { path: { id: 't1' } },
       headers: { Accept: 'application/ld+json', 'Content-Type': 'application/ld+json' },
-      body: { category: 'water', position: { lat: 45, lon: 6 }, radiusMeters: null, stageDay: null },
+      body: {
+        category: 'water',
+        position: { lat: 45, lon: 6 },
+        radiusMeters: null,
+        stageDay: null,
+      },
     });
   });
 

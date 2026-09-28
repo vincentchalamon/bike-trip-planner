@@ -50,9 +50,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
 
 // Walk up from the label Text host to the Button's Pressable (carries `disabled`).
 function findButtonByLabel(root: any, label: string): any {
-  const texts = root.findAll(
-    (n: any) => typeof n.type === 'string' && n.props?.children === label,
-  );
+  const texts = root.findAll((n: any) => typeof n.type === 'string' && n.props?.children === label);
   for (const text of texts) {
     let p: any = text.parent;
     while (p) {

@@ -1,22 +1,10 @@
 import { type ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/context';
 import type { Theme } from '../../theme';
 
 export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'outline'
-  | 'outlineForest'
-  | 'ghost'
-  | 'destructive';
+  'primary' | 'secondary' | 'outline' | 'outlineForest' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {

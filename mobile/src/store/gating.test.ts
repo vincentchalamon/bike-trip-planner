@@ -16,26 +16,19 @@ describe('evaluateGate (transversal mutation gate, #1031)', () => {
 
   it('blocks everything while offline (wins over lock, zone and api health)', () => {
     expect(
-      evaluateGate(
-        { isLocked: true, outOfZone: true, isOnline: false, apiReachable: false },
-        true,
-      ),
+      evaluateGate({ isLocked: true, outOfZone: true, isOnline: false, apiReachable: false }, true),
     ).toBe('offline');
     expect(evaluateGate({ ...open, isOnline: false }, false)).toBe('offline');
   });
 
   it('blocks everything when the API is unreachable while online (#1166)', () => {
     // Online but the API is down: read-only, wins over lock and zone.
-    expect(
-      evaluateGate({ ...open, apiReachable: false, isLocked: true }, true),
-    ).toBe('api_unavailable');
-    expect(evaluateGate({ ...open, apiReachable: false }, false)).toBe(
+    expect(evaluateGate({ ...open, apiReachable: false, isLocked: true }, true)).toBe(
       'api_unavailable',
     );
+    expect(evaluateGate({ ...open, apiReachable: false }, false)).toBe('api_unavailable');
     // Offline still wins over api_unavailable.
-    expect(
-      evaluateGate({ ...open, isOnline: false, apiReachable: false }, false),
-    ).toBe('offline');
+    expect(evaluateGate({ ...open, isOnline: false, apiReachable: false }, false)).toBe('offline');
   });
 
   it('blocks every mutation on a started (423) trip', () => {

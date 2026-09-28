@@ -23,10 +23,7 @@ function stageChanged(a: StageData, b: StageData): boolean {
  * every resulting index changed. Pure and framework-free so the diff-highlight
  * logic is one testable unit shared by the store (#1046).
  */
-export function diffStageIndices(
-  before: StageData[],
-  after: StageData[],
-): Set<number> {
+export function diffStageIndices(before: StageData[], after: StageData[]): Set<number> {
   const changed = new Set<number>();
   if (before.length !== after.length) {
     after.forEach((_, i) => changed.add(i));

@@ -43,10 +43,7 @@ const DEFAULT_CONFIG: TripConfig = DEFAULT_TRIP_SETTINGS;
 // authoritative value arrives over SSE. {} without a start date. It claims the
 // end date: a dates edit still in flight no longer owns it, so its refusal
 // re-derives it too rather than restore a value counted for other stages.
-export function endDatePatch(
-  startDate: string | null,
-  stageCount: number,
-): Partial<TripConfig> {
+export function endDatePatch(startDate: string | null, stageCount: number): Partial<TripConfig> {
   if (!startDate) return {};
   configClaims.claim(['endDate']);
   return { endDate: endDateFor(startDate, stageCount) };
@@ -274,16 +271,12 @@ export const useTripStore = create<TripState>((set, get) => ({
     }),
   applyRoute: (route) =>
     set((state) => {
-      const geometryByDay = new Map(
-        (route.stages ?? []).map((s) => [s.dayNumber, s.geometry]),
-      );
+      const geometryByDay = new Map((route.stages ?? []).map((s) => [s.dayNumber, s.geometry]));
       return {
         geometryLoaded: true,
         stages: state.stages.map((stage) => {
           const geometry = geometryByDay.get(stage.dayNumber);
-          return geometry
-            ? { ...stage, geometry: geometry as StageData['geometry'] }
-            : stage;
+          return geometry ? { ...stage, geometry: geometry as StageData['geometry'] } : stage;
         }),
       };
     }),
@@ -418,9 +411,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   queueModification: (modification) =>
     set((state) => {
       const i = state.pendingModifications.findIndex(
-        (m) =>
-          m.type === modification.type &&
-          m.stageIndex === modification.stageIndex,
+        (m) => m.type === modification.type && m.stageIndex === modification.stageIndex,
       );
       const next = state.pendingModifications.slice();
       if (i !== -1) next[i] = modification;

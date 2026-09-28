@@ -37,19 +37,13 @@ describe('alertDedupKey', () => {
 
 describe('dedupeAlerts', () => {
   it('collapses two alerts of the same code to the first, preserving order', () => {
-    const out = dedupeAlerts([
-      alert({ message: 'A' }),
-      alert({ message: 'B' }),
-    ]);
+    const out = dedupeAlerts([alert({ message: 'A' }), alert({ message: 'B' })]);
     expect(out).toHaveLength(1);
     expect(out[0]!.message).toBe('A');
   });
 
   it('keeps distinct codes', () => {
-    const out = dedupeAlerts([
-      alert({ code: 'a' }),
-      alert({ code: 'b' }),
-    ]);
+    const out = dedupeAlerts([alert({ code: 'a' }), alert({ code: 'b' })]);
     expect(out).toHaveLength(2);
   });
 });

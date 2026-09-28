@@ -58,10 +58,7 @@ describe('AccommodationBlock — localized type label #1170', () => {
   it('shows the localized label ("Camping") instead of the raw enum ("camp_site")', () => {
     const t = texts(
       render(
-        <AccommodationBlock
-          accommodations={[acc({ type: 'camp_site' })]}
-          onSelect={jest.fn()}
-        />,
+        <AccommodationBlock accommodations={[acc({ type: 'camp_site' })]} onSelect={jest.fn()} />,
       ),
     );
     const meta = t.join(' ');

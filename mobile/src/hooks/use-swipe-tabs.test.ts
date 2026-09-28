@@ -13,7 +13,11 @@ function mount() {
   act(() => {
     renderer = TestRenderer.create(createElement(Probe));
   });
-  return { seen, latest: () => seen[seen.length - 1]!, unmount: () => act(() => renderer.unmount()) };
+  return {
+    seen,
+    latest: () => seen[seen.length - 1]!,
+    unmount: () => act(() => renderer.unmount()),
+  };
 }
 
 describe('useSwipeTabs', () => {

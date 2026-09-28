@@ -26,17 +26,26 @@ export default function AccountPrivacy() {
         title={t('account.privacyContent.controllerTitle')}
         body={t('account.privacyContent.controllerBody')}
       />
-      <ContentSection title={t('account.privacyContent.basisTitle')} body={t('account.privacyContent.basisBody')} />
+      <ContentSection
+        title={t('account.privacyContent.basisTitle')}
+        body={t('account.privacyContent.basisBody')}
+      />
       <ContentSection
         title={t('account.privacyContent.purposesTitle')}
         body={t('account.privacyContent.purposesBody')}
       />
-      <ContentSection title={t('account.privacyContent.dataTitle')} body={t('account.privacyContent.dataBody')} />
+      <ContentSection
+        title={t('account.privacyContent.dataTitle')}
+        body={t('account.privacyContent.dataBody')}
+      />
       <ContentSection
         title={t('account.privacyContent.retentionTitle')}
         body={t('account.privacyContent.retentionBody')}
       />
-      <ContentSection title={t('account.privacyContent.rightsTitle')} body={t('account.privacyContent.rightsBody')} />
+      <ContentSection
+        title={t('account.privacyContent.rightsTitle')}
+        body={t('account.privacyContent.rightsBody')}
+      />
       <ContentSection
         title={t('account.privacyContent.processorsTitle')}
         body={t('account.privacyContent.processorsBody')}

@@ -25,10 +25,7 @@ export function tripStateFromDates(
 
 // Whether a stage date is today — only meaningful for the "Aujourd'hui" pastille
 // on an ongoing trip.
-export function isStageToday(
-  stageDate: string | null,
-  today: string,
-): boolean {
+export function isStageToday(stageDate: string | null, today: string): boolean {
   return stageDate !== null && stageDate === today;
 }
 
@@ -36,9 +33,7 @@ export function isStageToday(
 // ongoing is highlighted (brand), past is faded (muted), upcoming/unknown use
 // the default ink. Returning a key keeps the mapping pure and testable without
 // a Theme instance.
-export function summaryColorKey(
-  state: TripLifecycle | null,
-): keyof ThemeColors {
+export function summaryColorKey(state: TripLifecycle | null): keyof ThemeColors {
   switch (state) {
     case 'ongoing':
       return 'accentBrand';

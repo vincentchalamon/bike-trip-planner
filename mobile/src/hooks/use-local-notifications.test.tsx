@@ -80,9 +80,7 @@ describe('useLocalNotifications — no self-cancel loop', () => {
     // has had ample time to re-run the effect and cancel the pending notification.
     await flush();
 
-    expect(schedule).toHaveBeenCalledWith(
-      expect.objectContaining({ identifier: NODATE_ID }),
-    );
+    expect(schedule).toHaveBeenCalledWith(expect.objectContaining({ identifier: NODATE_ID }));
     // The delivered mark must have been recorded (proves reconcile ran fully)...
     expect(useDeliveredNotifications.getState().delivered.has(NODATE_ID)).toBe(true);
     // ...yet the freshly scheduled, still-pending notification must NOT be cancelled.

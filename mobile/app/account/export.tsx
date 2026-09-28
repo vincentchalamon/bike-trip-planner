@@ -55,7 +55,11 @@ export default function AccountExport() {
             }}
           >
             <Text
-              style={{ color: theme.colors.successInk, fontFamily: theme.fonts.sansMedium, fontSize: 14 }}
+              style={{
+                color: theme.colors.successInk,
+                fontFamily: theme.fonts.sansMedium,
+                fontSize: 14,
+              }}
             >
               {t('account.export.success')}
             </Text>

@@ -102,149 +102,147 @@ export const StageCard = memo(function StageCard({
           gap: theme.spacing.sm,
         }}
       >
-      <Pressable
-        disabled={!onPress}
-        onPress={onPress ? () => onPress(index) : undefined}
-        accessibilityRole={onPress ? 'button' : undefined}
-        accessibilityLabel={
-          onPress ? t('trip.openStageA11y', { day }) : undefined
-        }
-        style={{ flex: 1, flexDirection: 'row', gap: theme.spacing.md }}
-      >
-        {/* Date badge */}
-        <View
-          style={{
-            minWidth: 56,
-            alignItems: 'center',
-            // Green day badge, per the 05-trip-roadbook maquette (#1214 palette B).
-            backgroundColor: theme.colors.successSoft,
-            borderRadius: theme.radius.md,
-            paddingHorizontal: theme.spacing.sm,
-            paddingVertical: theme.spacing.xs,
-          }}
+        <Pressable
+          disabled={!onPress}
+          onPress={onPress ? () => onPress(index) : undefined}
+          accessibilityRole={onPress ? 'button' : undefined}
+          accessibilityLabel={onPress ? t('trip.openStageA11y', { day }) : undefined}
+          style={{ flex: 1, flexDirection: 'row', gap: theme.spacing.md }}
         >
-          <Text
+          {/* Date badge */}
+          <View
             style={{
-              color: theme.colors.successInk,
-              fontFamily: theme.fonts.sansSemibold,
-              fontSize: 13,
-              textAlign: 'center',
+              minWidth: 56,
+              alignItems: 'center',
+              // Green day badge, per the 05-trip-roadbook maquette (#1214 palette B).
+              backgroundColor: theme.colors.successSoft,
+              borderRadius: theme.radius.md,
+              paddingHorizontal: theme.spacing.sm,
+              paddingVertical: theme.spacing.xs,
             }}
           >
-            {heading}
-          </Text>
-          {stage.isRestDay ? (
             <Text
               style={{
                 color: theme.colors.successInk,
-                fontFamily: theme.fonts.sansMedium,
-                fontSize: 11,
-                marginTop: 2,
-              }}
-            >
-              {t('trip.rest')}
-            </Text>
-          ) : null}
-        </View>
-        {/* Title + route + KPIs */}
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-            <Text
-              style={{
-                color: theme.colors.foreground,
                 fontFamily: theme.fonts.sansSemibold,
-                fontSize: 16,
-                flexShrink: 1,
+                fontSize: 13,
+                textAlign: 'center',
               }}
             >
-              {routeLabel}
+              {heading}
             </Text>
-            {isToday ? (
+            {stage.isRestDay ? (
               <Text
-                accessibilityLabel={t('trip.today')}
                 style={{
-                  color: theme.colors.accentInk,
-                  backgroundColor: theme.colors.accentSoft,
+                  color: theme.colors.successInk,
                   fontFamily: theme.fonts.sansMedium,
                   fontSize: 11,
-                  overflow: 'hidden',
-                  borderRadius: theme.radius.full,
-                  paddingHorizontal: theme.spacing.sm,
-                  paddingVertical: 2,
+                  marginTop: 2,
                 }}
               >
-                {t('trip.today')}
+                {t('trip.rest')}
               </Text>
             ) : null}
           </View>
-          <Text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontFamily: theme.fonts.mono,
-              fontSize: 13,
-              marginTop: 4,
-            }}
-          >
-            {t('trip.stageMeta', {
-              distance: Math.round(stage.distance ?? 0),
-              elevation: Math.round(stage.elevation ?? 0),
-            })}
-          </Text>
-        </View>
-      </Pressable>
-      {/* Weather + alerts */}
-      <View style={{ alignItems: 'flex-end', gap: theme.spacing.xs }}>
-        {stage.weather ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
-            <CloudSun color={theme.colors.mutedIcon} size={16} />
+          {/* Title + route + KPIs */}
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Text
+                style={{
+                  color: theme.colors.foreground,
+                  fontFamily: theme.fonts.sansSemibold,
+                  fontSize: 16,
+                  flexShrink: 1,
+                }}
+              >
+                {routeLabel}
+              </Text>
+              {isToday ? (
+                <Text
+                  accessibilityLabel={t('trip.today')}
+                  style={{
+                    color: theme.colors.accentInk,
+                    backgroundColor: theme.colors.accentSoft,
+                    fontFamily: theme.fonts.sansMedium,
+                    fontSize: 11,
+                    overflow: 'hidden',
+                    borderRadius: theme.radius.full,
+                    paddingHorizontal: theme.spacing.sm,
+                    paddingVertical: 2,
+                  }}
+                >
+                  {t('trip.today')}
+                </Text>
+              ) : null}
+            </View>
             <Text
               style={{
                 color: theme.colors.mutedForeground,
-                fontFamily: theme.fonts.sansMedium,
+                fontFamily: theme.fonts.mono,
                 fontSize: 13,
+                marginTop: 4,
               }}
             >
-              {t('trip.summary.degrees', {
-                value: Math.round(stage.weather.tempMax),
+              {t('trip.stageMeta', {
+                distance: Math.round(stage.distance ?? 0),
+                elevation: Math.round(stage.elevation ?? 0),
               })}
             </Text>
           </View>
-        ) : null}
-        {alertCount > 0 ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: theme.spacing.xs,
-              backgroundColor: theme.colors.accentSoft,
-              borderRadius: theme.radius.full,
-              paddingHorizontal: theme.spacing.sm,
-              paddingVertical: 2,
-            }}
-          >
-            <AlertTriangle color={theme.colors.accentBrand} size={13} />
-            <Text
+        </Pressable>
+        {/* Weather + alerts */}
+        <View style={{ alignItems: 'flex-end', gap: theme.spacing.xs }}>
+          {stage.weather ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+              <CloudSun color={theme.colors.mutedIcon} size={16} />
+              <Text
+                style={{
+                  color: theme.colors.mutedForeground,
+                  fontFamily: theme.fonts.sansMedium,
+                  fontSize: 13,
+                }}
+              >
+                {t('trip.summary.degrees', {
+                  value: Math.round(stage.weather.tempMax),
+                })}
+              </Text>
+            </View>
+          ) : null}
+          {alertCount > 0 ? (
+            <View
               style={{
-                color: theme.colors.accentInk,
-                fontFamily: theme.fonts.sansMedium,
-                fontSize: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: theme.spacing.xs,
+                backgroundColor: theme.colors.accentSoft,
+                borderRadius: theme.radius.full,
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: 2,
               }}
             >
-              {alertCount}
-            </Text>
-          </View>
+              <AlertTriangle color={theme.colors.accentBrand} size={13} />
+              <Text
+                style={{
+                  color: theme.colors.accentInk,
+                  fontFamily: theme.fonts.sansMedium,
+                  fontSize: 12,
+                }}
+              >
+                {alertCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        {!locked ? (
+          <Pressable
+            accessibilityLabel={t('trip.deleteA11y', { day })}
+            hitSlop={8}
+            onPress={() => onDelete(index)}
+            style={{ padding: theme.spacing.xs }}
+          >
+            <Trash2 color={theme.colors.destructive} size={20} />
+          </Pressable>
         ) : null}
-      </View>
-      {!locked ? (
-        <Pressable
-          accessibilityLabel={t('trip.deleteA11y', { day })}
-          hitSlop={8}
-          onPress={() => onDelete(index)}
-          style={{ padding: theme.spacing.xs }}
-        >
-          <Trash2 color={theme.colors.destructive} size={20} />
-        </Pressable>
-      ) : null}
       </View>
     </View>
   );

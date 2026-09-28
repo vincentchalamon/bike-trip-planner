@@ -5,10 +5,7 @@
 // PanResponder's touch-history internals.
 export type SwipeView = 'roadbook' | 'map';
 
-export function swipeToView(
-  dx: number,
-  threshold = 48,
-): SwipeView | null {
+export function swipeToView(dx: number, threshold = 48): SwipeView | null {
   if (dx <= -threshold) return 'map';
   if (dx >= threshold) return 'roadbook';
   return null;

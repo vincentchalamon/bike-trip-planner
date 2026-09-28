@@ -65,8 +65,7 @@ export function RoadbookView({
   // directly), never the roadbook as a whole: hence the non-routing gate.
   const degradedReason: 'offline' | 'apiUnavailable' | null =
     gate === 'offline' ? 'offline' : gate === 'api_unavailable' ? 'apiUnavailable' : null;
-  const readOnly =
-    forceReadOnly || gate !== null || state === 'ongoing' || state === 'past';
+  const readOnly = forceReadOnly || gate !== null || state === 'ongoing' || state === 'past';
 
   // One failure surface for every inline edit: map the normalized reason to a
   // localized alert (#1044). The runners already handle optimistic apply +
@@ -87,18 +86,15 @@ export function RoadbookView({
   // pre-edit stageKey, cleared when the mutation promise settles.
   const inFlight = useRef<Set<string>>(new Set());
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
-  const runGuarded = useCallback(
-    (key: string, action: () => Promise<unknown> | void) => {
-      if (inFlight.current.has(key)) return;
-      inFlight.current.add(key);
+  const runGuarded = useCallback((key: string, action: () => Promise<unknown> | void) => {
+    if (inFlight.current.has(key)) return;
+    inFlight.current.add(key);
+    setBusyKeys(new Set(inFlight.current));
+    void Promise.resolve(action()).finally(() => {
+      inFlight.current.delete(key);
       setBusyKeys(new Set(inFlight.current));
-      void Promise.resolve(action()).finally(() => {
-        inFlight.current.delete(key);
-        setBusyKeys(new Set(inFlight.current));
-      });
-    },
-    [],
-  );
+    });
+  }, []);
 
   // Stable across renders (perf #1176): passed straight through as `StageCard`'s
   // `onDelete` prop, so a memoized row doesn't re-render just because this
@@ -137,11 +133,7 @@ export function RoadbookView({
       }}
     >
       {stages.length > 0 ? (
-        <RoadbookSummary
-          stages={stages}
-          startDate={startDate}
-          endDate={endDate}
-        />
+        <RoadbookSummary stages={stages} startDate={startDate} endDate={endDate} />
       ) : null}
       {state ? (
         <Text
@@ -155,10 +147,7 @@ export function RoadbookView({
         </Text>
       ) : null}
       {degradedReason ? (
-        <RoadbookBanner
-          variant={degradedReason}
-          message={t(`trip.banners.${degradedReason}`)}
-        />
+        <RoadbookBanner variant={degradedReason} message={t(`trip.banners.${degradedReason}`)} />
       ) : gate === 'locked' ? (
         <RoadbookBanner variant="locked" message={t('trip.banners.locked')} />
       ) : null}
@@ -231,12 +220,8 @@ export function RoadbookView({
                   day={item.dayNumber ?? index + 1}
                   outOfZone={outOfZone}
                   busy={busyKeys.has(key)}
-                  onAddStage={() =>
-                    runGuarded(key, () => mutations.addStage(index))
-                  }
-                  onAddRestDay={() =>
-                    runGuarded(key, () => mutations.insertRestDay(index))
-                  }
+                  onAddStage={() => runGuarded(key, () => mutations.addStage(index))}
+                  onAddRestDay={() => runGuarded(key, () => mutations.insertRestDay(index))}
                 />
               ) : null}
             </Fragment>

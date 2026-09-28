@@ -13,13 +13,7 @@ interface ErrorStateProps {
 }
 
 // Error placeholder with a destructive-toned title and an optional retry CTA.
-export function ErrorState({
-  title,
-  description,
-  icon,
-  onRetry,
-  retryLabel,
-}: ErrorStateProps) {
+export function ErrorState({ title, description, icon, onRetry, retryLabel }: ErrorStateProps) {
   const theme = useTheme();
   const { t } = useTranslation();
   const resolvedTitle = title ?? t('common.error');
