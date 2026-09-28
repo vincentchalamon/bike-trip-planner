@@ -86,6 +86,11 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $duplicate->title = $source->title;
         $duplicate->sourceType = $source->sourceType;
         $duplicate->locale = $source->locale;
+        // Both are set when the stages are stored, and the copy's stages are cloned rather
+        // than stored: left at their defaults, a trip with stages would read as a draft
+        // and an out-of-zone route as reroutable.
+        $duplicate->status = $source->status;
+        $duplicate->outOfZone = $source->outOfZone;
 
         $newTripId = $duplicate->id;
         \assert($newTripId instanceof Uuid);
@@ -185,7 +190,10 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $clone->setEndEle($source->getEndEle());
         $clone->setGeometry($source->getGeometry());
         $clone->setLabel($source->getLabel());
+        $clone->setStartLabel($source->getStartLabel());
+        $clone->setEndLabel($source->getEndLabel());
         $clone->setIsRestDay($source->isRestDay());
+        $clone->setOnCycleNetwork($source->getOnCycleNetwork());
         $clone->setWeather($source->getWeather());
         $clone->setAlertsByGroup($source->getAlertsByGroup());
         $clone->setEvents($source->getEvents());

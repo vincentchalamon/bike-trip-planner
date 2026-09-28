@@ -21,6 +21,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -88,6 +89,9 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
         return new CheckBikeShopsHandler(
             $computationTracker,
             $publisher,
@@ -96,7 +100,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $tripStateManager,
             $bikeShopRepository,
             $haversine,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
             $this->createAlertRenderer(),
         );
     }
@@ -267,17 +271,23 @@ final class CheckBikeShopsHandlerTest extends TestCase
             ->with('trip-1', AlertGroup::BIKE_SHOP, []);
 
         $published = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->method('publish')->willReturnCallback(
             static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
                 $published[] = $payload;
             },
         );
+        // When this check settles last, it is what completes the trip: the short-circuit
+        // must go through the same progress and completion gate as a real scan.
+        $publisher->expects($this->once())->method('publishComputationStepCompleted');
+        $publisher->expects($this->once())->method('publishTripComplete');
 
         $computationTracker = $this->createMock(ComputationTrackerInterface::class);
         $computationTracker->expects($this->once())
             ->method('markDone')
             ->with('trip-1', ComputationName::BIKE_SHOPS);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 1, 'failed' => 0, 'settled' => 1, 'total' => 1]);
+        $computationTracker->method('getStatuses')->willReturn([ComputationName::BIKE_SHOPS->value => 'done']);
 
         $handler = $this->createHandler(
             $tripStateManager,

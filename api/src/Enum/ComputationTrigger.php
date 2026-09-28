@@ -9,7 +9,7 @@ namespace App\Enum;
  *
  * Since ADR-068 an enrichment survives the edit that follows it, so "wrong" no longer fixes
  * itself: whatever a computation read, something has to notice when that input moves. These
- * are the two things that move (ADR-070).
+ * are the things that move (ADR-070).
  *
  * Deliberately not a list of *fields*: `startDate` and a rest-day insertion both shift the
  * dates, by different routes, and a caller should not have to know which computations care.
@@ -21,4 +21,7 @@ enum ComputationTrigger
 
     /** The calendar date a stage falls on, from `startDate` plus its day number. */
     case DATES;
+
+    /** When the rider is where along a stage, from `departureHour` and `averageSpeed`. */
+    case SCHEDULE;
 }

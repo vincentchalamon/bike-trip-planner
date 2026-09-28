@@ -184,6 +184,13 @@ final readonly class HealthController
                 'latency_ms' => $this->elapsedMs($start),
                 'error' => $this->sanitizeError($throwable),
             ];
+        } finally {
+            // This is the application's own connection: under FrankenPHP worker mode it
+            // outlives the request, so a leaked 1s ceiling would cap every later query.
+            try {
+                $this->connection->executeStatement('RESET statement_timeout');
+            } catch (\Throwable) {
+            }
         }
     }
 
@@ -213,6 +220,11 @@ final readonly class HealthController
                 'latency_ms' => $this->elapsedMs($start),
                 'error' => $this->sanitizeError($throwable),
             ];
+        } finally {
+            try {
+                $this->referenceConnection->executeStatement('RESET statement_timeout');
+            } catch (\Throwable) {
+            }
         }
     }
 

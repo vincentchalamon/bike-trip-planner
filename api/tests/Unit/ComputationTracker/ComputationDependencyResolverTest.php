@@ -164,6 +164,9 @@ final class ComputationDependencyResolverTest extends TestCase
         $result = $this->resolver->resolve($old, $new);
 
         $this->assertContains(ComputationName::TERRAIN, $result);
+        $this->assertContains(ComputationName::WEATHER, $result);
+        // The resupply closed-at-passage verdict and the lunch anchor read the passage time.
+        $this->assertContains(ComputationName::POIS, $result);
         $this->assertNotContains(ComputationName::STAGES, $result);
     }
 
@@ -178,6 +181,9 @@ final class ComputationDependencyResolverTest extends TestCase
         $result = $this->resolver->resolve($old, $new);
 
         $this->assertContains(ComputationName::TERRAIN, $result);
+        $this->assertContains(ComputationName::WEATHER, $result);
+        // The resupply closed-at-passage verdict and the lunch anchor read the passage time.
+        $this->assertContains(ComputationName::POIS, $result);
         $this->assertNotContains(ComputationName::STAGES, $result);
     }
 

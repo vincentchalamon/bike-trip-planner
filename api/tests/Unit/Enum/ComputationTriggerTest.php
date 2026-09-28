@@ -98,6 +98,19 @@ final class ComputationTriggerTest extends TestCase
         self::assertNotContains(ComputationName::CULTURAL_POIS, $dates);
     }
 
+    /**
+     * The three that estimate when the rider passes a point. A PATCH on `departureHour` or
+     * `averageSpeed` used to forget the resupply scan, which reads it twice.
+     */
+    #[Test]
+    public function whatReadsAPassageTimeDependsOnTheSchedule(): void
+    {
+        self::assertSame(
+            [ComputationName::POIS, ComputationName::TERRAIN, ComputationName::WEATHER],
+            ComputationName::dependingOn(ComputationTrigger::SCHEDULE),
+        );
+    }
+
     #[Test]
     public function aCalendarCheckReadsADateAndNoGeometry(): void
     {

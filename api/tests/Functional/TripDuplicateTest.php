@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -146,6 +147,54 @@ final class TripDuplicateTest extends ApiTestCase
         $this->assertSame(1, $clonedStage->getDayNumber());
         $this->assertSame(80.0, $clonedStage->getDistance());
         $this->assertSame('Day 1', $clonedStage->getLabel());
+    }
+
+    /**
+     * Fields computed at stage-store time (labels, cycle-network share, coverage) and the
+     * structural status: none of them is recomputed for the copy, so each one has to be carried.
+     */
+    #[Test]
+    public function duplicatedTripCarriesTheStoreTimeFieldsAndTheStatus(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $source = $em->find(TripRequest::class, Uuid::fromString(self::TRIP_ID));
+        \assert($source instanceof TripRequest);
+        $source->outOfZone = true;
+        $source->status = 'ready';
+
+        $sourceStage = $source->stages->first();
+        \assert($sourceStage instanceof Stage);
+        $sourceStage->setStartLabel('Grenoble');
+        $sourceStage->setEndLabel('Chambery');
+        $sourceStage->setOnCycleNetwork(0.42);
+
+        $em->flush();
+        $em->clear();
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/duplicate', self::TRIP_ID),
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-store-time-fields'], $this->authHeader($this->jwtToken))],
+        );
+
+        $this->assertResponseStatusCodeSame(201);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        \assert($em instanceof EntityManagerInterface);
+        $em->clear();
+        $duplicated = $em->find(TripRequest::class, Uuid::fromString($response->toArray(false)['id']));
+        $this->assertInstanceOf(TripRequest::class, $duplicated);
+        $this->assertTrue($duplicated->outOfZone);
+        $this->assertSame('ready', $duplicated->status);
+
+        $clonedStage = $duplicated->stages->first();
+        $this->assertInstanceOf(Stage::class, $clonedStage);
+        $this->assertSame('Grenoble', $clonedStage->getStartLabel());
+        $this->assertSame('Chambery', $clonedStage->getEndLabel());
+        $this->assertSame(0.42, $clonedStage->getOnCycleNetwork());
     }
 
     #[Test]

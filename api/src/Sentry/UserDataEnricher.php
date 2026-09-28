@@ -35,7 +35,9 @@ final readonly class UserDataEnricher
     ) {
     }
 
-    #[AsEventListener(event: KernelEvents::REQUEST, priority: 256)]
+    // After the router (32), which sets the route attributes read below, and the firewall
+    // (8), which authenticates the user; RequestIdListener (512) has long run by then.
+    #[AsEventListener(event: KernelEvents::REQUEST, priority: 7)]
     public function onRequest(RequestEvent $event): void
     {
         if (!$this->hub instanceof HubInterface) {
