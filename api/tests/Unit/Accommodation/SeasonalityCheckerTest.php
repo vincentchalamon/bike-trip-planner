@@ -79,6 +79,10 @@ final class SeasonalityCheckerTest extends TestCase
         yield 'Apr-Oct with time: August is open' => ['Apr-Oct 09:00-20:00', '2024-08-01', true];
         yield 'Apr-Oct with time: January is closed' => ['Apr-Oct 09:00-20:00', '2024-01-01', false];
 
+        // Any spelling of the spans the other readers accept.
+        yield 'Apr-Oct with a single-digit hour: August is open' => ['Apr-Oct 9:00-20:00', '2024-08-01', true];
+        yield 'Apr-Oct with a spaced span: January is closed' => ['Apr-Oct 09:00 - 20:00', '2024-01-01', false];
+
         // Wrap-around range (Oct-Mar: open from October to March)
         yield 'Oct-Mar: November is open' => ['Oct-Mar', '2024-11-15', true];
         yield 'Oct-Mar: January is open' => ['Oct-Mar', '2024-01-10', true];
@@ -129,6 +133,24 @@ final class SeasonalityCheckerTest extends TestCase
         );
 
         $this->assertNull($result);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function seasonFollowedByMoreThanSpans(): iterable
+    {
+        // A second season after a comma: winter is open too, not closed.
+        yield 'two seasons' => ['Apr-Oct 10:00-18:00, Nov-Mar 10:00-12:00'];
+        yield 'spans then off' => ['Apr-Oct 10:00-18:00 off'];
+        yield 'spans then prose' => ['Apr-Oct 10:00-18:00 "call ahead"'];
+    }
+
+    #[DataProvider('seasonFollowedByMoreThanSpans')]
+    #[Test]
+    public function aSeasonFollowedByMoreThanSpansIsUnknown(string $openingHours): void
+    {
+        self::assertNull($this->checker->isLikelyOpen(new \DateTimeImmutable('2024-01-15'), ['opening_hours' => $openingHours]));
     }
 
     #[Test]

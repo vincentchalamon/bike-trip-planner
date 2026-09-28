@@ -42,18 +42,20 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
     }
 
     /**
-     * Parses simplified opening_hours strings of the form "Mmm-Mmm" (optionally followed by time ranges).
+     * Parses simplified opening_hours strings of the form "Mmm-Mmm", optionally
+     * followed by time spans only.
      *
      * Examples handled: "Apr-Oct", "May-Sep", "Apr-Oct 10:00-20:00", "Jun-Sep; Mo off".
-     * Returns null when the pattern is not recognised.
+     * Returns null when the pattern is not recognised — including a season
+     * followed by anything but spans ("Apr-Oct 10:00-18:00, Nov-Mar 10:00-12:00"
+     * says more than one season).
      */
     private function parseOpeningHours(string $openingHours, \DateTimeImmutable $date): ?bool
     {
-        // Normalise: strip time/day-of-week suffixes and take only the first rule
         $rule = trim(explode(';', $openingHours)[0]);
-        $rule = trim(preg_replace('/\s+\d{2}:\d{2}-\d{2}:\d{2}.*/', '', $rule) ?? $rule);
+        $span = '\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}';
 
-        if (!preg_match('/^([A-Za-z]{3})-([A-Za-z]{3})$/', $rule, $matches)) {
+        if (!preg_match('/^([A-Za-z]{3})-([A-Za-z]{3})(?:\s+'.$span.'(?:[\s,]+'.$span.')*)?$/', $rule, $matches)) {
             return null;
         }
 
