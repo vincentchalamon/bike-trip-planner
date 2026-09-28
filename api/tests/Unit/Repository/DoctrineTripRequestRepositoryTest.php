@@ -643,6 +643,25 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         self::assertSame('komoot', $trip->sourceType);
     }
 
+    /**
+     * The creation paths used to follow initializeTrip() with storeLocale(): two flushes for
+     * one row.
+     */
+    #[Test]
+    public function initializeTripWritesTheLocaleInTheSameFlush(): void
+    {
+        $persisted = null;
+        $this->entityManager->method('persist')->willReturnCallback(static function (object $trip) use (&$persisted): void {
+            $persisted = $trip;
+        });
+        $this->entityManager->expects(self::once())->method('flush');
+
+        $this->repository->initializeTrip(Uuid::v7()->toRfc4122(), new TripRequest(), 'fr');
+
+        self::assertInstanceOf(TripRequest::class, $persisted);
+        self::assertSame('fr', $persisted->locale);
+    }
+
     #[Test]
     public function storeLocale(): void
     {

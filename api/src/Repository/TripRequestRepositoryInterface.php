@@ -23,7 +23,11 @@ use App\Enum\AlertGroup;
  */
 interface TripRequestRepositoryInterface
 {
-    public function initializeTrip(string $tripId, TripRequest $request): void;
+    /**
+     * $locale is written in the same flush as the trip. It is not read from $request: the
+     * client never chooses it, the caller passes the authenticated account's.
+     */
+    public function initializeTrip(string $tripId, TripRequest $request, ?string $locale = null): void;
 
     public function getRequest(string $tripId): ?TripRequest;
 

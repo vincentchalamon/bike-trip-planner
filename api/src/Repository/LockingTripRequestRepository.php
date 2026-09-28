@@ -220,9 +220,9 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
 
     // Everything below carries no stage-collection write, so it passes straight through.
 
-    public function initializeTrip(string $tripId, TripRequest $request): void
+    public function initializeTrip(string $tripId, TripRequest $request, ?string $locale = null): void
     {
-        $this->decorated->initializeTrip($tripId, $request);
+        $this->decorated->initializeTrip($tripId, $request, $locale);
     }
 
     public function getRequest(string $tripId): ?TripRequest

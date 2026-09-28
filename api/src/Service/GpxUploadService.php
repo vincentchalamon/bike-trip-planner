@@ -98,8 +98,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         // right after a successful upload (recette #649).
         $tripRequest->user = $user;
 
-        $this->tripStateManager->initializeTrip($tripId, $tripRequest);
-        $this->tripStateManager->storeLocale($tripId, $locale);
+        $this->tripStateManager->initializeTrip($tripId, $tripRequest, $locale);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);

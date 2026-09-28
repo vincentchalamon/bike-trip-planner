@@ -66,20 +66,25 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
      * same method, which is why it is covered by a test too.
      *
      * The owner rides along because both callers set it from the authenticated token just before
-     * calling, never from the body. `locale` and `sourceType` are not copied and are not lost:
-     * `storeLocale()` and `storeSourceType()` own them, and both creation paths call them.
+     * calling, never from the body. `locale` is not copied either: the caller passes the
+     * account's as `$locale`, written in the same flush rather than by a second `storeLocale()`.
+     * `sourceType` is not lost: `storeSourceType()` owns it.
      */
-    public function initializeTrip(string $tripId, TripRequest $request): void
+    public function initializeTrip(string $tripId, TripRequest $request, ?string $locale = null): void
     {
-        $existing = $this->findTripRequest($tripId);
-        if ($existing instanceof TripRequest) {
-            $this->copyModifiableFields($existing, $request);
+        $trip = $this->findTripRequest($tripId);
+        if ($trip instanceof TripRequest) {
+            $this->copyModifiableFields($trip, $request);
         } else {
             $trip = new TripRequest(Uuid::fromString($tripId));
             $this->copyModifiableFields($trip, $request);
             $trip->user = $request->user;
 
             $this->getEntityManager()->persist($trip);
+        }
+
+        if (null !== $locale) {
+            $trip->locale = $locale;
         }
 
         $this->getEntityManager()->flush();
