@@ -6,8 +6,7 @@ export type TripListItem = components['schemas']['Trip.TripListItem.jsonld'];
 export type TripDetail = components['schemas']['TripDetail.jsonld'];
 export type Stage = NonNullable<TripDetail['stages']>[number];
 export type Coordinate = components['schemas']['Coordinate'];
-export type TripConfigPatch =
-  components['schemas']['Trip.TripRequest.jsonMergePatch'];
+export type TripConfigPatch = components['schemas']['Trip.TripRequest.jsonMergePatch'];
 export type TripModification = components['schemas']['TripModification'];
 
 /** Raw HTTP outcome of a mutating call, so callers can normalize per status. */
@@ -71,10 +70,7 @@ export interface TripsPage {
   totalItems: number;
 }
 
-export async function fetchTrips(
-  page = 1,
-  filters: TripFilters = {},
-): Promise<TripsPage> {
+export async function fetchTrips(page = 1, filters: TripFilters = {}): Promise<TripsPage> {
   // The API paginates and filters server-side (title partial match, startDate /
   // endDate range) — see the `api_trips_get_collection` query params. Empty
   // filters are omitted so the backend does not treat "" as a match constraint.
@@ -228,10 +224,7 @@ export async function moveStage(
 }
 
 /** Insert a rest day after `index` (dates shift by one day server-side). */
-export async function insertRestDay(
-  tripId: string,
-  stageId: string,
-): Promise<MutationResult> {
+export async function insertRestDay(tripId: string, stageId: string): Promise<MutationResult> {
   const { response } = await api.POST('/trips/{tripId}/stages/{stageId}/rest-day', {
     params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
     headers: ld,
@@ -249,14 +242,11 @@ export async function setStageAccommodation(
   lat: number | null,
   lon: number | null,
 ): Promise<MutationResult> {
-  const { response } = await api.PATCH(
-    '/trips/{tripId}/stages/{stageId}/accommodation',
-    {
-      params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
-      headers: mergePatch,
-      body: { selectedAccommodationLat: lat, selectedAccommodationLon: lon },
-    },
-  );
+  const { response } = await api.PATCH('/trips/{tripId}/stages/{stageId}/accommodation', {
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
+    headers: mergePatch,
+    body: { selectedAccommodationLat: lat, selectedAccommodationLon: lon },
+  });
   return { ok: response.ok, status: response.status };
 }
 
@@ -276,14 +266,11 @@ export async function addManualAccommodation(
     url: string | null;
   },
 ): Promise<MutationResult> {
-  const { response } = await api.POST(
-    '/trips/{tripId}/stages/{stageId}/accommodations/manual',
-    {
-      params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
-      headers: ldBody,
-      body,
-    },
-  );
+  const { response } = await api.POST('/trips/{tripId}/stages/{stageId}/accommodations/manual', {
+    params: { path: { tripId, stageId }, header: preconditionHeader(tripId) },
+    headers: ldBody,
+    body,
+  });
   return { ok: response.ok, status: response.status };
 }
 
@@ -294,14 +281,11 @@ export async function addPoiWaypoint(
   waypointLat: number,
   waypointLon: number,
 ): Promise<MutationResult> {
-  const { response } = await api.POST(
-    '/trips/{tripId}/stages/{stageId}/poi-waypoint',
-    {
-      params: { path: { tripId, stageId } },
-      headers: ldBody,
-      body: { waypointLat, waypointLon },
-    },
-  );
+  const { response } = await api.POST('/trips/{tripId}/stages/{stageId}/poi-waypoint', {
+    params: { path: { tripId, stageId } },
+    headers: ldBody,
+    body: { waypointLat, waypointLon },
+  });
   return { ok: response.ok, status: response.status };
 }
 
@@ -432,9 +416,7 @@ export interface GpxFile {
  * be classified. openapi-fetch passes a FormData body through untouched and lets
  * fetch set the multipart boundary; the RN file part is `{ uri, name, type }`.
  */
-export async function uploadGpx(
-  file: GpxFile,
-): Promise<{ id: string | null; status: number }> {
+export async function uploadGpx(file: GpxFile): Promise<{ id: string | null; status: number }> {
   const formData = new FormData();
   formData.append('gpxFile', {
     uri: file.uri,
@@ -481,10 +463,7 @@ export function stageExportFileName(
 }
 
 /** Download the full trip as a single GPX/FIT file (all stages merged). */
-export async function fetchTripExport(
-  tripId: string,
-  format: ExportFormat,
-): Promise<ArrayBuffer> {
+export async function fetchTripExport(tripId: string, format: ExportFormat): Promise<ArrayBuffer> {
   const { data, error, response } = await api.GET('/trips/{id}', {
     params: { path: { id: tripId } },
     headers: { Accept: EXPORT_ACCEPT[format] },
@@ -528,9 +507,7 @@ export async function fetchStageExport(
 export type TripShareResponse = components['schemas']['TripShare.jsonld'];
 
 /** Active share link for a trip, or null when none exists (or on error). */
-export async function getTripShare(
-  tripId: string,
-): Promise<TripShareResponse | null> {
+export async function getTripShare(tripId: string): Promise<TripShareResponse | null> {
   const { data, error } = await api.GET('/trips/{tripId}/share', {
     params: { path: { tripId } },
     headers: ld,
@@ -542,9 +519,7 @@ export async function getTripShare(
 }
 
 /** Create a read-only share link for a trip, or null on failure. */
-export async function createTripShare(
-  tripId: string,
-): Promise<TripShareResponse | null> {
+export async function createTripShare(tripId: string): Promise<TripShareResponse | null> {
   const { data, error } = await api.POST('/trips/{tripId}/share', {
     params: { path: { tripId } },
     headers: ldBody,
@@ -586,9 +561,7 @@ export function buildShareUrl(shortCode: string): string {
 export type SharedTripDetail = components['schemas']['TripShare.TripDetail.jsonld'];
 
 /** Fetch a shared trip via its short code. Null when invalid / revoked. */
-export async function fetchSharedTrip(
-  shortCode: string,
-): Promise<SharedTripDetail | null> {
+export async function fetchSharedTrip(shortCode: string): Promise<SharedTripDetail | null> {
   const { data, error } = await api.GET('/s/{shortCode}', {
     params: { path: { shortCode } },
     headers: ld,
@@ -600,9 +573,7 @@ export async function fetchSharedTrip(
 }
 
 /** Fetch a shared trip's all-stages geometry (ADR-057), by short code. */
-export async function fetchSharedTripRoute(
-  shortCode: string,
-): Promise<TripRoute | null> {
+export async function fetchSharedTripRoute(shortCode: string): Promise<TripRoute | null> {
   const { data, error } = await api.GET('/s/{shortCode}/route', {
     params: { path: { shortCode } },
     headers: ld,

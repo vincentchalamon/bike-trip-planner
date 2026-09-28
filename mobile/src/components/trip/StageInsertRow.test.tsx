@@ -14,16 +14,12 @@ function render(element: ReactElement): any {
 }
 
 function byLabel(tree: any, label: string): any {
-  const found = tree.root.findAll(
-    (n: any) => n.props.accessibilityLabel === label,
-  );
+  const found = tree.root.findAll((n: any) => n.props.accessibilityLabel === label);
   return found[0] ?? null;
 }
 
-const addStageA11y = (day: number) =>
-  fr.trip.edit.addStageA11y.replace('{{day}}', String(day));
-const addRestDayA11y = (day: number) =>
-  fr.trip.edit.addRestDayA11y.replace('{{day}}', String(day));
+const addStageA11y = (day: number) => fr.trip.edit.addStageA11y.replace('{{day}}', String(day));
+const addRestDayA11y = (day: number) => fr.trip.edit.addRestDayA11y.replace('{{day}}', String(day));
 
 describe('StageInsertRow', () => {
   beforeAll(async () => {
@@ -34,12 +30,7 @@ describe('StageInsertRow', () => {
     const onAddStage = jest.fn();
     const onAddRestDay = jest.fn();
     const tree = render(
-      <StageInsertRow
-        afterIndex={2}
-        day={3}
-        onAddStage={onAddStage}
-        onAddRestDay={onAddRestDay}
-      />,
+      <StageInsertRow afterIndex={2} day={3} onAddStage={onAddStage} onAddRestDay={onAddRestDay} />,
     );
     act(() => byLabel(tree, addStageA11y(3)).props.onPress());
     act(() => byLabel(tree, addRestDayA11y(3)).props.onPress());

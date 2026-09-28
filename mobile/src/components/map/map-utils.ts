@@ -8,8 +8,7 @@ import { stageColor } from './stage-colors';
 export type MapBase = 'map' | 'satellite';
 
 // Carto Positron — same vector style the web frontend uses.
-export const POSITRON_STYLE_URL =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+export const POSITRON_STYLE_URL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 
 export const SATELLITE_TILE_URL =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -27,9 +26,7 @@ export function buildSatelliteStyle(): StyleSpecification {
         attribution: 'Esri, Maxar, Earthstar Geographics',
       },
     },
-    layers: [
-      { id: 'esri-world-imagery', type: 'raster', source: 'esri-world-imagery' },
-    ],
+    layers: [{ id: 'esri-world-imagery', type: 'raster', source: 'esri-world-imagery' }],
   };
 }
 
@@ -77,9 +74,7 @@ export async function applyZoom(
 // Bounding box of all coordinates as [west, south, east, north] (MapLibre's
 // LngLatBounds), or null when there is nothing to frame. Feeds the Camera so it
 // fits the whole route rather than a fixed center/zoom.
-export function computeBounds(
-  coords: [number, number][],
-): [number, number, number, number] | null {
+export function computeBounds(coords: [number, number][]): [number, number, number, number] | null {
   if (coords.length === 0) return null;
   let west = Infinity;
   let south = Infinity;
@@ -177,9 +172,7 @@ export function collectMarkers(stages: StageData[]): MapMarker[] {
 // addable as a route waypoint (#1179), so accommodation/waypoint taps resolve to
 // null and no popover opens. Kept pure so TripMap's native onPress stays a
 // one-liner and this is unit-testable without a native map.
-export function poiFromPressFeatures(
-  features: GeoJSON.Feature[] | undefined,
-): MapMarker | null {
+export function poiFromPressFeatures(features: GeoJSON.Feature[] | undefined): MapMarker | null {
   const poi = (features ?? []).find(
     (f) => f.properties?.kind === 'poi' && f.geometry?.type === 'Point',
   );
@@ -202,9 +195,7 @@ export function markerCollection(markers: MapMarker[]): FeatureCollection {
 // Convert an alert action `segment` (list of [lat, lon] tuples, core #982) to the
 // [lon, lat] order MapLibre expects. Callers (stage detail / alerts) feed the
 // result to TripMap's `highlightedSegment` prop.
-export function alertSegmentToCoords(
-  segment: [number, number][],
-): [number, number][] {
+export function alertSegmentToCoords(segment: [number, number][]): [number, number][] {
   return segment.map(([lat, lon]) => [lon, lat]);
 }
 

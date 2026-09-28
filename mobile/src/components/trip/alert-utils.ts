@@ -3,11 +3,7 @@ import type { ColorScheme } from '../../theme';
 
 // Severity buckets, rendered top-down (mirrors the web SEVERITY_ORDER).
 export type AlertSeverity = AlertData['type'];
-export const SEVERITY_ORDER: readonly AlertSeverity[] = [
-  'critical',
-  'warning',
-  'nudge',
-] as const;
+export const SEVERITY_ORDER: readonly AlertSeverity[] = ['critical', 'warning', 'nudge'] as const;
 
 /**
  * Stable identity of an alert, built on the backend `code` (`App\Enum\AlertCode`),
@@ -47,10 +43,7 @@ export function dedupeAlerts(alerts: AlertData[]): AlertData[] {
  * stage takes that day. Dedup stays intra-stage on `alertDedupKey`; only the
  * dismissal is scoped per stage.
  */
-export function alertDismissKey(
-  stageKey: string | number,
-  alert: AlertData,
-): string {
+export function alertDismissKey(stageKey: string | number, alert: AlertData): string {
   return `${stageKey}:${alertDedupKey(alert)}`;
 }
 
@@ -65,15 +58,11 @@ export function visibleAlerts(
   dismissed: ReadonlySet<string>,
   stageKey: string | number,
 ): AlertData[] {
-  return dedupeAlerts(alerts).filter(
-    (a) => !dismissed.has(alertDismissKey(stageKey, a)),
-  );
+  return dedupeAlerts(alerts).filter((a) => !dismissed.has(alertDismissKey(stageKey, a)));
 }
 
 /** Group alerts by severity, preserving arrival order within each bucket. */
-export function groupBySeverity(
-  alerts: AlertData[],
-): Record<AlertSeverity, AlertData[]> {
+export function groupBySeverity(alerts: AlertData[]): Record<AlertSeverity, AlertData[]> {
   const groups: Record<AlertSeverity, AlertData[]> = {
     critical: [],
     warning: [],
@@ -104,9 +93,6 @@ const SEVERITY_PALETTE: Record<ColorScheme, Record<AlertSeverity, SeverityStyle>
   },
 };
 
-export function severityStyle(
-  type: AlertSeverity,
-  scheme: ColorScheme,
-): SeverityStyle {
+export function severityStyle(type: AlertSeverity, scheme: ColorScheme): SeverityStyle {
   return SEVERITY_PALETTE[scheme][type];
 }

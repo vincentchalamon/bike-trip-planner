@@ -32,9 +32,7 @@ const grantedAt = {
   position: { latitude: 45, longitude: 6 } as never,
 };
 
-async function render(
-  element: ReactElement,
-): Promise<ReturnType<typeof TestRenderer.create>> {
+async function render(element: ReactElement): Promise<ReturnType<typeof TestRenderer.create>> {
   let out!: ReturnType<typeof TestRenderer.create>;
   await act(async () => {
     out = TestRenderer.create(element);
@@ -314,7 +312,10 @@ describe('InRidePanel (#1150)', () => {
     });
     const tree = await render(<InRidePanel tripId="t1" location={grantedAt} />);
     expect(texts(tree)).toContain(
-      i18n.t('trip.inRide.resultsHeader', { count: 2, category: i18n.t('trip.inRide.search.water') }),
+      i18n.t('trip.inRide.resultsHeader', {
+        count: 2,
+        category: i18n.t('trip.inRide.search.water'),
+      }),
     );
   });
 

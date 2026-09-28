@@ -4,13 +4,11 @@ import type { components } from '@btp/core/schema';
 // The eight guided in-ride intents (ADR-048 §3). Derived from the generated
 // schema so the union stays in lockstep with `App\InRide\InRidePoiCategory` — the
 // backend is unchanged here, this only reads the shared type.
-export type InRidePoiCategory =
-  components['schemas']['PoiSuggestionDto.jsonld']['category'];
+export type InRidePoiCategory = components['schemas']['PoiSuggestionDto.jsonld']['category'];
 
 export type NearbyPoiSuggestion = components['schemas']['PoiSuggestionDto.jsonld'];
 
-export type NearbyPoiSearchResponse =
-  components['schemas']['Trip.NearbyPoiSearchResponse.jsonld'];
+export type NearbyPoiSearchResponse = components['schemas']['Trip.NearbyPoiSearchResponse.jsonld'];
 
 /**
  * Hard ceiling on the search radius (mirrors

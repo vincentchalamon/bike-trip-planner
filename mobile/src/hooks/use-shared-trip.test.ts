@@ -8,9 +8,7 @@ jest.mock('../api/trips', () => ({
 }));
 import { fetchSharedTrip, fetchSharedTripRoute } from '../api/trips';
 const mockShared = fetchSharedTrip as jest.MockedFunction<typeof fetchSharedTrip>;
-const mockRoute = fetchSharedTripRoute as jest.MockedFunction<
-  typeof fetchSharedTripRoute
->;
+const mockRoute = fetchSharedTripRoute as jest.MockedFunction<typeof fetchSharedTripRoute>;
 
 beforeEach(() => {
   jest.clearAllMocks();

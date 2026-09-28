@@ -49,10 +49,7 @@ export function stageGeometryCoords(stage: StageData): [number, number][] {
 // Map an absolute stage index to its position within the rest-day-filtered
 // active stages — the index buildProfilePoints() expects as focusedStageIndex.
 // Returns null when the stage is a rest day (no profile) or out of bounds.
-export function activeStageIndex(
-  stages: StageData[],
-  index: number,
-): number | null {
+export function activeStageIndex(stages: StageData[], index: number): number | null {
   const stage = stages[index];
   if (!stage || stage.isRestDay) return null;
   let active = 0;

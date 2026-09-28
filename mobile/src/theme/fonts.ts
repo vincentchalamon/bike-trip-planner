@@ -1,15 +1,11 @@
 import { useFonts } from 'expo-font';
-import {
-  Fraunces_600SemiBold,
-} from '@expo-google-fonts/fraunces';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import {
   InterTight_400Regular,
   InterTight_500Medium,
   InterTight_600SemiBold,
 } from '@expo-google-fonts/inter-tight';
-import {
-  JetBrainsMono_400Regular,
-} from '@expo-google-fonts/jetbrains-mono';
+import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 
 // Keys here MUST match the `fonts` token family names (tokens.ts). The web
 // pairs Fraunces (serif display), Inter Tight (sans body) and JetBrains Mono.

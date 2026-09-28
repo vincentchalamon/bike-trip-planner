@@ -1,12 +1,6 @@
 import { Redirect, Stack } from 'expo-router';
 import { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -71,10 +65,7 @@ export default function Login() {
           preserveAspectRatio="none"
           style={styles.wave}
         >
-          <Path
-            d="M0,60 L0,30 Q100,0 196,25 T393,20 L393,60 Z"
-            fill={theme.colors.background}
-          />
+          <Path d="M0,60 L0,30 Q100,0 196,25 T393,20 L393,60 Z" fill={theme.colors.background} />
         </Svg>
         <View style={[styles.brand, { top: insets.top + theme.spacing.xl }]}>
           <Bike color={theme.colors.heroForeground} size={40} />

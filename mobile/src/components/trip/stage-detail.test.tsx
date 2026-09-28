@@ -250,10 +250,7 @@ describe('StageDetailView', () => {
   it('shows a placeholder instead of the whole-trip profile on a rest day (#1039)', () => {
     useTripStore.setState({
       tripId: 't1',
-      stages: [
-        stage({ dayNumber: 1, isRestDay: false }),
-        stage({ dayNumber: 2, isRestDay: true }),
-      ],
+      stages: [stage({ dayNumber: 1, isRestDay: false }), stage({ dayNumber: 2, isRestDay: true })],
       startDate: null,
       loading: false,
     });

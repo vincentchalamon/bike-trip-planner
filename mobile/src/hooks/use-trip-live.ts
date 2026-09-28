@@ -1,10 +1,7 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import type { MercureEvent } from '@btp/core/mercure';
-import {
-  enrichedPayloadToStageData,
-  reconcileResync,
-} from '@btp/core/reconciliation';
+import { enrichedPayloadToStageData, reconcileResync } from '@btp/core/reconciliation';
 import { fetchTripDetail, type TripDetail } from '../api/trips';
 import { subscribeToTrip, type TripSubscription } from '../api/mercure';
 import { stageDataFromDetail, tripSettingsFromDetail } from '@btp/core';
@@ -170,10 +167,7 @@ function deferredLive(
 
 // Re-read /detail after a gap in the SSE stream. Failures are silent: the
 // roadbook keeps what it has and the next reopen tries again.
-export async function resyncTrip(
-  id: string,
-  isCancelled: () => boolean,
-): Promise<void> {
+export async function resyncTrip(id: string, isCancelled: () => boolean): Promise<void> {
   let detail;
   try {
     detail = await fetchTripDetail(id);

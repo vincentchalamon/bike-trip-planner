@@ -68,9 +68,7 @@ function render(element: ReactElement): any {
 
 function press(tree: any, label: string): void {
   const node = tree.root.find(
-    (n: any) =>
-      n.props.accessibilityLabel === label &&
-      typeof n.props.onPress === 'function',
+    (n: any) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
   );
   act(() => node.props.onPress());
 }
@@ -141,8 +139,7 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
       (
         tree.root.find(
           (n: any) =>
-            n.props.accessibilityLabel === restDayA11y() &&
-            typeof n.props.onPress === 'function',
+            n.props.accessibilityLabel === restDayA11y() && typeof n.props.onPress === 'function',
         ) as any
       ).props.onPress();
     });
@@ -165,8 +162,7 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
   const insertRows = (tree: any): unknown[] =>
     tree.root.findAll(
       (n: any) =>
-        n.props.accessibilityLabel === restDayA11y() &&
-        typeof n.props.onPress === 'function',
+        n.props.accessibilityLabel === restDayA11y() && typeof n.props.onPress === 'function',
     );
 
   it('goes read-only while offline: hides edit affordances, shows the offline banner (#1166)', () => {
@@ -210,8 +206,7 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     // re-render can disable it — the in-flight ref must swallow the second tap.
     const chip = tree.root.find(
       (n: any) =>
-        n.props.accessibilityLabel === addStageA11y() &&
-        typeof n.props.onPress === 'function',
+        n.props.accessibilityLabel === addStageA11y() && typeof n.props.onPress === 'function',
     );
     act(() => {
       chip.props.onPress();
@@ -221,5 +216,4 @@ describe('RoadbookView inline edit wiring (#1044)', () => {
     await act(async () => {});
     expect(createStage).toHaveBeenCalledTimes(1);
   });
-
 });

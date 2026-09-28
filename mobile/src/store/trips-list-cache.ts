@@ -49,10 +49,7 @@ export async function cacheTripList(
       if (!dir.exists) dir.create({ intermediates: true });
       const file = listFile();
       if (!file.exists) file.create();
-      await writeAsStringAsync(
-        file.uri,
-        JSON.stringify({ items, syncedAt } satisfies CachedList),
-      );
+      await writeAsStringAsync(file.uri, JSON.stringify({ items, syncedAt } satisfies CachedList));
     } catch {
       // ignore: a failed cache write only costs a later offline miss.
     }

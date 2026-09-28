@@ -3,10 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import type { ReactElement } from 'react';
 import { Alert, Text } from 'react-native';
 import i18n from '../../i18n';
-import {
-  fetchAuthorizedApplications,
-  revokeAuthorizedApplication,
-} from '../../api/account';
+import { fetchAuthorizedApplications, revokeAuthorizedApplication } from '../../api/account';
 import AccountApplications from '../../../app/account/applications';
 
 jest.mock('expo-secure-store', () => ({

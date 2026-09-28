@@ -58,11 +58,7 @@ interface ElevationProfileProps {
 // paths under a cumulative distance axis, with a crosshair + gradient/distance
 // tooltip following the finger. Portage of the web SVG profile (#1041), reusing
 // the shared @btp/core elevation maths.
-export function ElevationProfile({
-  stages,
-  focusedStageIndex,
-  onHover,
-}: ElevationProfileProps) {
+export function ElevationProfile({ stages, focusedStageIndex, onHover }: ElevationProfileProps) {
   const theme = useTheme();
   const { t } = useTranslation();
   const [width, setWidth] = useState(0);
@@ -188,12 +184,7 @@ export function ElevationProfile({
         { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
       ]}
     >
-      <Svg
-        width="100%"
-        height={SVG_HEIGHT}
-        viewBox={`0 0 ${VW} ${VH}`}
-        preserveAspectRatio="none"
-      >
+      <Svg width="100%" height={SVG_HEIGHT} viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none">
         {stagePaths.map(({ stageIndex, d }) => {
           const color = colorForStage(stageIndex);
           return (

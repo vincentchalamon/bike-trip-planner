@@ -3,12 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
-import {
-  ShareInfographic,
-  projectRoute,
-  CARD_WIDTH,
-  CARD_HEIGHT,
-} from './ShareInfographic';
+import { ShareInfographic, projectRoute, CARD_WIDTH, CARD_HEIGHT } from './ShareInfographic';
 import { buildStageLines } from '../map/map-utils';
 
 function render(element: ReactElement): any {
@@ -22,11 +17,7 @@ function render(element: ReactElement): any {
 // A decimated stage caps at ~1.5k points; a multi-day trip flattens several
 // thousand. Build a big, valid (lat/lon in range, monotonic) geometry so the
 // bounds maths runs on a realistically large array.
-function bigStage(
-  overrides: Partial<StageData> = {},
-  points = 4000,
-  lonBase = 4,
-): StageData {
+function bigStage(overrides: Partial<StageData> = {}, points = 4000, lonBase = 4): StageData {
   const geometry = Array.from({ length: points }, (_, i) => ({
     lat: 45 + (i / points) * 0.5,
     lon: lonBase + (i / points) * 0.5,
@@ -113,10 +104,7 @@ describe('projectRoute stage colours', () => {
 
 describe('ShareInfographic (#1048)', () => {
   it('renders a multi-day trip with several thousand points without crashing', () => {
-    const stages = [
-      bigStage({ dayNumber: 1 }, 4000, 4),
-      bigStage({ dayNumber: 2 }, 4000, 4.5),
-    ];
+    const stages = [bigStage({ dayNumber: 1 }, 4000, 4), bigStage({ dayNumber: 2 }, 4000, 4.5)];
     let tree: any;
     expect(() => {
       tree = render(

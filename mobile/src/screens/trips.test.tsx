@@ -173,7 +173,9 @@ describe('Trips list — duplication in-flight state is per-row (#1232)', () => 
     // A `duplicatingId`-dependent `useCallback` would churn its identity on every
     // duplication start/stop, defeating each row's `memo()` (#1238); the ref-based
     // re-entrance guard keeps it stable.
-    const onDuplicateBefore = root.findAll((n: any) => typeof n.props?.onDuplicate === 'function')[0].props.onDuplicate;
+    const onDuplicateBefore = root.findAll(
+      (n: any) => typeof n.props?.onDuplicate === 'function',
+    )[0].props.onDuplicate;
 
     await act(async () => {
       findDuplicateButtonFor(root, 'Alpha').props.onPress();
@@ -183,7 +185,8 @@ describe('Trips list — duplication in-flight state is per-row (#1232)', () => 
     expect(findDuplicateButtonFor(root, 'Alpha').props.disabled).toBe(true);
     expect(findDuplicateButtonFor(root, 'Beta').props.disabled).toBe(false);
     // `onDuplicate` identity survived the start-of-duplication state change.
-    const onDuplicateAfter = root.findAll((n: any) => typeof n.props?.onDuplicate === 'function')[0].props.onDuplicate;
+    const onDuplicateAfter = root.findAll((n: any) => typeof n.props?.onDuplicate === 'function')[0]
+      .props.onDuplicate;
     expect(onDuplicateAfter).toBe(onDuplicateBefore);
 
     await act(async () => {

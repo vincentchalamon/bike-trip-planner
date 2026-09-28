@@ -34,9 +34,7 @@ import { useTripStore } from '../store/trip-store';
 import SharedTrip from '../../app/s/[code]';
 
 const mockFetch = fetchSharedTrip as jest.MockedFunction<typeof fetchSharedTrip>;
-const mockFetchRoute = fetchSharedTripRoute as jest.MockedFunction<
-  typeof fetchSharedTripRoute
->;
+const mockFetchRoute = fetchSharedTripRoute as jest.MockedFunction<typeof fetchSharedTripRoute>;
 
 const SHARED_DETAIL = {
   title: 'Tour du Vercors',

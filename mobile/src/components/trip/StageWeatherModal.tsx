@@ -30,11 +30,7 @@ interface StageWeatherModalProps {
  * is the accessible source of truth (one labelled row per hour), so the data is
  * reachable without depending on the touch graph.
  */
-export function StageWeatherModal({
-  visible,
-  hourly,
-  onClose,
-}: StageWeatherModalProps) {
+export function StageWeatherModal({ visible, hourly, onClose }: StageWeatherModalProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const series = buildWeatherSeries(hourly);
@@ -167,8 +163,8 @@ export function StageWeatherModal({
                   fontSize: 13,
                 }}
               >
-                {Math.round(h.temp)}° ({Math.round(h.apparentTemp)}°) ·{' '}
-                {h.precipitationMm}mm · {Math.round(h.windSpeed)}km/h
+                {Math.round(h.temp)}° ({Math.round(h.apparentTemp)}°) · {h.precipitationMm}mm ·{' '}
+                {Math.round(h.windSpeed)}km/h
               </Text>
             </View>
           ))}

@@ -3,11 +3,7 @@ import { AlertTriangle } from '../ui/icons';
 import { useTheme } from '../../theme';
 
 export type RoadbookBannerVariant =
-  | 'locked'
-  | 'outOfZone'
-  | 'noDates'
-  | 'offline'
-  | 'apiUnavailable';
+  'locked' | 'outOfZone' | 'noDates' | 'offline' | 'apiUnavailable';
 
 interface RoadbookBannerProps {
   variant: RoadbookBannerVariant;
@@ -19,8 +15,7 @@ interface RoadbookBannerProps {
 // the accent colour; the copy is passed in so the caller owns i18n.
 export function RoadbookBanner({ variant, message }: RoadbookBannerProps) {
   const theme = useTheme();
-  const accent =
-    variant === 'noDates' ? theme.colors.accentBrand : theme.colors.destructive;
+  const accent = variant === 'noDates' ? theme.colors.accentBrand : theme.colors.destructive;
   return (
     <View
       accessibilityRole="alert"

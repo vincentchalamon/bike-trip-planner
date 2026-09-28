@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, ListRow, Screen, SegmentedControl, Sheet, type Segment } from '../../src/components/ui';
+import {
+  Button,
+  Card,
+  ListRow,
+  Screen,
+  SegmentedControl,
+  Sheet,
+  type Segment,
+} from '../../src/components/ui';
 import {
   Bell,
   ChevronRight,
@@ -51,7 +59,11 @@ function RowRight({ value }: { value?: string }) {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
       {value ? (
         <Text
-          style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 14 }}
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 14,
+          }}
         >
           {value}
         </Text>
@@ -78,7 +90,13 @@ function ProfileHeader({ email }: { email: string | null }) {
             justifyContent: 'center',
           }}
         >
-          <Text style={{ color: theme.colors.heroForeground, fontFamily: theme.fonts.sansSemibold, fontSize: 18 }}>
+          <Text
+            style={{
+              color: theme.colors.heroForeground,
+              fontFamily: theme.fonts.sansSemibold,
+              fontSize: 18,
+            }}
+          >
             {initialsFromEmail(email)}
           </Text>
         </View>
@@ -86,7 +104,11 @@ function ProfileHeader({ email }: { email: string | null }) {
           {email ? (
             <Text
               numberOfLines={1}
-              style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansSemibold, fontSize: 16 }}
+              style={{
+                color: theme.colors.foreground,
+                fontFamily: theme.fonts.sansSemibold,
+                fontSize: 16,
+              }}
             >
               {email}
             </Text>
@@ -103,7 +125,12 @@ function ProfileHeader({ email }: { email: string | null }) {
             />
           )}
           <Text
-            style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}
+            style={{
+              color: theme.colors.mutedForeground,
+              fontFamily: theme.fonts.sans,
+              fontSize: 13,
+              marginTop: 2,
+            }}
           >
             {t('account.betaSubtitle')}
           </Text>
@@ -134,10 +161,12 @@ export default function Account() {
   const loadNotifications = useNotificationPrefs((s) => s.load);
   useEffect(() => void loadNotifications(), [loadNotifications]);
 
-  const themeSegments: readonly Segment<ThemeMode>[] = (['system', 'light', 'dark'] as const).map((m) => ({
-    value: m,
-    label: t(themeModeLabelKey(m)),
-  }));
+  const themeSegments: readonly Segment<ThemeMode>[] = (['system', 'light', 'dark'] as const).map(
+    (m) => ({
+      value: m,
+      label: t(themeModeLabelKey(m)),
+    }),
+  );
 
   return (
     <Screen scroll edges={['top', 'left', 'right']}>
@@ -215,10 +244,18 @@ export default function Account() {
 
       <SectionLabel>{t('account.sectionHelp')}</SectionLabel>
       <Card style={CARD_ROWS}>
-        <ListRow title={t('account.faq')}
-          left={<HelpCircle color={theme.colors.mutedIcon} size={20} />} right={<RowRight />} onPress={() => router.push('/account/faq')} />
-        <ListRow title={t('account.legal')}
-          left={<FileText color={theme.colors.mutedIcon} size={20} />} right={<RowRight />} onPress={() => router.push('/account/legal')} />
+        <ListRow
+          title={t('account.faq')}
+          left={<HelpCircle color={theme.colors.mutedIcon} size={20} />}
+          right={<RowRight />}
+          onPress={() => router.push('/account/faq')}
+        />
+        <ListRow
+          title={t('account.legal')}
+          left={<FileText color={theme.colors.mutedIcon} size={20} />}
+          right={<RowRight />}
+          onPress={() => router.push('/account/legal')}
+        />
         <ListRow
           title={t('account.privacy')}
           left={<Lock color={theme.colors.mutedIcon} size={20} />}
@@ -230,11 +267,19 @@ export default function Account() {
       <View style={{ height: theme.spacing.xl }} />
       <Button label={t('account.logout')} variant="outline" onPress={() => void logout()} />
 
-      <Sheet visible={languageOpen} onClose={() => setLanguageOpen(false)} title={t('account.languageSheetTitle')}>
+      <Sheet
+        visible={languageOpen}
+        onClose={() => setLanguageOpen(false)}
+        title={t('account.languageSheetTitle')}
+      >
         <LocaleSwitcher />
       </Sheet>
 
-      <Sheet visible={themeOpen} onClose={() => setThemeOpen(false)} title={t('account.themeSheetTitle')}>
+      <Sheet
+        visible={themeOpen}
+        onClose={() => setThemeOpen(false)}
+        title={t('account.themeSheetTitle')}
+      >
         <SegmentedControl segments={themeSegments} value={mode} onChange={setMode} />
       </Sheet>
     </Screen>

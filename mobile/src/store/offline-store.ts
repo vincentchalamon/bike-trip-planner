@@ -20,6 +20,5 @@ export const useOfflineStore = create<OfflineState>((set) => ({
   isOnline: true,
   setOnline: (value) => set({ isOnline: value }),
   apiReachable: true,
-  setApiReachable: (value) =>
-    set((s) => (s.apiReachable === value ? s : { apiReachable: value })),
+  setApiReachable: (value) => set((s) => (s.apiReachable === value ? s : { apiReachable: value })),
 }));

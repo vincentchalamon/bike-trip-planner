@@ -42,9 +42,7 @@ describe('useForegroundLocation', () => {
     const states: ForegroundLocation[] = [];
     let tree!: ReturnType<typeof TestRenderer.create>;
     await act(async () => {
-      tree = TestRenderer.create(
-        createElement(Harness, { onRender: (v) => states.push(v) }),
-      );
+      tree = TestRenderer.create(createElement(Harness, { onRender: (v) => states.push(v) }));
     });
     await flush();
 

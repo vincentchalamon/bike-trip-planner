@@ -21,14 +21,14 @@ function renderWith(scheme: 'light' | 'dark') {
 beforeEach(() => setStyle.mockClear());
 
 describe('useSystemNavigationBar (#1222)', () => {
-  it("sets a dark bar on Android in dark theme", () => {
+  it('sets a dark bar on Android in dark theme', () => {
     const os = jest.replaceProperty(Platform, 'OS', 'android');
     renderWith('dark');
     expect(setStyle).toHaveBeenCalledWith('dark');
     os.restore();
   });
 
-  it("sets a light bar on Android in light theme", () => {
+  it('sets a light bar on Android in light theme', () => {
     const os = jest.replaceProperty(Platform, 'OS', 'android');
     renderWith('light');
     expect(setStyle).toHaveBeenCalledWith('light');

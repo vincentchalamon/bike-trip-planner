@@ -144,9 +144,7 @@ describe('TripMapView', () => {
     mockInsets.bottom = 34;
     render(<TripMapView />);
     // No ScrollView anywhere: the axis must never be scrolled out of view.
-    expect(
-      current!.root.findAll((n: any) => n.type === 'ScrollView'),
-    ).toHaveLength(0);
+    expect(current!.root.findAll((n: any) => n.type === 'ScrollView')).toHaveLength(0);
     // The profile panel folds the safe-area bottom inset into its padding so the
     // distance/elevation axis sits above the system navigation bar.
     const flatten = (style: unknown): Record<string, unknown> =>
@@ -183,11 +181,8 @@ describe('TripMapView', () => {
   it('swaps in the static route map with an offline note when connectivity drops (#1168)', () => {
     const label = i18n.t('trip.map.offlineStatic');
     const hasBadge = (root: any): boolean =>
-      root.findAll(
-        (n: any) =>
-          n.type === 'Text' &&
-          [].concat(n.props.children).join('') === label,
-      ).length > 0;
+      root.findAll((n: any) => n.type === 'Text' && [].concat(n.props.children).join('') === label)
+        .length > 0;
 
     const online = render(<TripMapView />);
     expect(hasBadge(online!.root)).toBe(false);

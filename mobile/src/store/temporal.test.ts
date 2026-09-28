@@ -134,9 +134,7 @@ describe('roadbook undo/redo (#1178)', () => {
     const settle: ((status: number) => void)[] = [];
     mock(updateTripConfig).mockImplementation(
       () =>
-        new Promise((resolve) =>
-          settle.push((status) => resolve({ ok: status < 400, status })),
-        ),
+        new Promise((resolve) => settle.push((status) => resolve({ ok: status < 400, status }))),
     );
     useTripStore.setState({ fatigueFactor: 0.8 });
     const pacing = (fatigueFactor: number) => ({
@@ -256,10 +254,7 @@ describe('a refused edit reverts only itself (overlapping edits)', () => {
     expect(state.endDate).toBe('2026-08-03');
     // Undoing the accepted rest day must not bring the refused deletion back.
     temporal().undo();
-    expect(useTripStore.getState().stages.map((s) => s.id)).toEqual([
-      'stage-1',
-      'stage-2',
-    ]);
+    expect(useTripStore.getState().stages.map((s) => s.id)).toEqual(['stage-1', 'stage-2']);
     expect(temporal().canUndo).toBe(false);
   });
 
@@ -362,4 +357,3 @@ describe('a refused dates edit keeps the end date true to the stages', () => {
     });
   });
 });
-

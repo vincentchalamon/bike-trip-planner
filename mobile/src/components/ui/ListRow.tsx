@@ -44,7 +44,12 @@ export function ListRow({ title, subtitle, left, right, danger, onPress }: ListR
         {subtitle ? (
           <Text
             numberOfLines={1}
-            style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13, marginTop: 2 }}
+            style={{
+              color: theme.colors.mutedForeground,
+              fontFamily: theme.fonts.sans,
+              fontSize: 13,
+              marginTop: 2,
+            }}
           >
             {subtitle}
           </Text>

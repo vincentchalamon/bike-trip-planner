@@ -13,11 +13,16 @@ const mockRefresh = refreshTokens as jest.MockedFunction<typeof refreshTokens>;
 
 // The middleware callback params carry many fields openapi-fetch fills in; only
 // `request`/`response` matter here, so cast the partial shapes.
-const onRequest = (request: Request) => (authMiddleware.onRequest as never as (p: { request: Request }) => unknown)({ request });
-const onError = () =>
-  (authMiddleware.onError as never as () => unknown)();
+const onRequest = (request: Request) =>
+  (authMiddleware.onRequest as never as (p: { request: Request }) => unknown)({ request });
+const onError = () => (authMiddleware.onError as never as () => unknown)();
 const onResponse = (request: Request, response: Response) =>
-  (authMiddleware.onResponse as never as (p: { request: Request; response: Response }) => Promise<Response | undefined>)({
+  (
+    authMiddleware.onResponse as never as (p: {
+      request: Request;
+      response: Response;
+    }) => Promise<Response | undefined>
+  )({
     request,
     response,
   });
@@ -127,7 +132,9 @@ describe('authMiddleware 401 retry (#1032)', () => {
   it('rebuilds a JSON retry body from text so accented UTF-8 survives (#1172)', async () => {
     mockGetJwt.mockReturnValue('fresh-jwt');
     mockRefresh.mockResolvedValue(true);
-    const textSpy = jest.fn().mockResolvedValue(JSON.stringify({ title: 'Entre Sensée et Escaut' }));
+    const textSpy = jest
+      .fn()
+      .mockResolvedValue(JSON.stringify({ title: 'Entre Sensée et Escaut' }));
     const arrayBufferSpy = jest.fn();
     (globalThis.fetch as jest.Mock).mockResolvedValue({
       status: 200,

@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, EmptyState, ErrorState, LoadingState, Screen } from '../../src/components/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+} from '../../src/components/ui';
 import { Plug } from '../../src/components/ui/icons';
 import {
   fetchAuthorizedApplications,
@@ -84,7 +91,10 @@ export default function AccountApplications() {
       <Stack.Screen options={{ headerShown: true, title: t('account.applications.title') }} />
 
       {failed ? (
-        <ErrorState description={t('account.applications.loadFailed')} onRetry={() => void load()} />
+        <ErrorState
+          description={t('account.applications.loadFailed')}
+          onRetry={() => void load()}
+        />
       ) : applications === null ? (
         <LoadingState label={t('account.applications.loading')} />
       ) : applications.length === 0 ? (
@@ -108,7 +118,9 @@ export default function AccountApplications() {
 
           {applications.map((application) => (
             <Card key={application.id}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md }}
+              >
                 <Plug color={theme.colors.mutedIcon} size={20} />
                 <View style={{ flex: 1 }}>
                   <Text

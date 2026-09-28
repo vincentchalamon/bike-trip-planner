@@ -29,7 +29,12 @@ export function ContentSection({ title, body }: { title: string; body: string })
         {title}
       </Text>
       <Text
-        style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 14, lineHeight: 21 }}
+        style={{
+          color: theme.colors.mutedForeground,
+          fontFamily: theme.fonts.sans,
+          fontSize: 14,
+          lineHeight: 21,
+        }}
       >
         {withContactEmail(body)}
       </Text>
@@ -43,12 +48,21 @@ export function FaqItem({ question, answer }: { question: string; answer: string
     <Card style={{ marginBottom: theme.spacing.md }}>
       <View style={{ gap: theme.spacing.sm }}>
         <Text
-          style={{ color: theme.colors.foreground, fontFamily: theme.fonts.sansSemibold, fontSize: 15 }}
+          style={{
+            color: theme.colors.foreground,
+            fontFamily: theme.fonts.sansSemibold,
+            fontSize: 15,
+          }}
         >
           {question}
         </Text>
         <Text
-          style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 14, lineHeight: 21 }}
+          style={{
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.fonts.sans,
+            fontSize: 14,
+            lineHeight: 21,
+          }}
         >
           {answer}
         </Text>

@@ -29,9 +29,7 @@ export function TripMapView() {
   const { t } = useTranslation();
   const stages = useTripStore((s) => s.stages);
   const isOnline = useOfflineStore((s) => s.isOnline);
-  const [hover, setHover] = useState<{ coordIndex: number; stageIndex: number } | null>(
-    null,
-  );
+  const [hover, setHover] = useState<{ coordIndex: number; stageIndex: number } | null>(null);
 
   // One colored polyline per stage so each stage is visually distinct on the map.
   const stageSegments = useMemo(() => buildStageLines(stages), [stages]);
@@ -41,10 +39,7 @@ export function TripMapView() {
   const summary = useMemo(() => computeProfileSummary(stages), [stages]);
 
   const highlightedSegment = useMemo(
-    () =>
-      hover
-        ? profileHighlightSegment(stages, hover.stageIndex, hover.coordIndex)
-        : undefined,
+    () => (hover ? profileHighlightSegment(stages, hover.stageIndex, hover.coordIndex) : undefined),
     [hover, stages],
   );
 
@@ -114,25 +109,36 @@ export function TripMapView() {
           stages={stages}
           focusedStageIndex={null}
           onHover={(coordIndex, stageIndex) =>
-            setHover(
-              coordIndex === null || stageIndex === null
-                ? null
-                : { coordIndex, stageIndex },
-            )
+            setHover(coordIndex === null || stageIndex === null ? null : { coordIndex, stageIndex })
           }
         />
         {summary ? (
           <View style={styles.axis}>
-            <Text style={[styles.axisText, { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono }]}>
+            <Text
+              style={[
+                styles.axisText,
+                { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono },
+              ]}
+            >
               {t('trip.map.profileAxisPoint', {
                 distance: 0,
                 ele: groupThousands(summary.startEle),
               })}
             </Text>
-            <Text style={[styles.axisText, { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono }]}>
+            <Text
+              style={[
+                styles.axisText,
+                { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono },
+              ]}
+            >
               {t('trip.map.profileAxisMax', { ele: groupThousands(summary.maxEle) })}
             </Text>
-            <Text style={[styles.axisText, { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono }]}>
+            <Text
+              style={[
+                styles.axisText,
+                { color: theme.colors.mutedForeground, fontFamily: theme.fonts.mono },
+              ]}
+            >
               {t('trip.map.profileAxisPoint', {
                 distance: groupThousands(summary.distanceKm),
                 ele: groupThousands(summary.endEle),

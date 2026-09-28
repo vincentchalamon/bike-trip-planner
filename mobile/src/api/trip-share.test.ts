@@ -5,12 +5,7 @@ jest.mock('./client', () => ({
 jest.mock('./config', () => ({ WEB_BASE_URL: 'https://web.example/' }));
 
 import { api } from './client';
-import {
-  buildShareUrl,
-  createTripShare,
-  getTripShare,
-  revokeTripShare,
-} from './trips';
+import { buildShareUrl, createTripShare, getTripShare, revokeTripShare } from './trips';
 
 const mockGet = api.GET as jest.MockedFunction<typeof api.GET>;
 const mockPost = api.POST as jest.MockedFunction<typeof api.POST>;

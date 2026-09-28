@@ -10,9 +10,7 @@ import { useTheme } from '../../theme';
 export function SupplyBlock({ supplyTimeline }: { supplyTimeline: SupplyMarkerData[] }) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const ordered = [...supplyTimeline].sort(
-    (a, b) => a.distanceFromStart - b.distanceFromStart,
-  );
+  const ordered = [...supplyTimeline].sort((a, b) => a.distanceFromStart - b.distanceFromStart);
   return (
     <DataBlock
       title={t('trip.blocks.supply')}

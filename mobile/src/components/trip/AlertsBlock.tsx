@@ -60,8 +60,7 @@ export function AlertsBlock({ alerts, stageKey, onNavigate }: AlertsBlockProps) 
           const canNavigate =
             action?.kind === 'navigate' &&
             (action.payload.segments?.length ??
-              (action.payload.lat != null && action.payload.lon != null ? 1 : 0)) >
-              0;
+              (action.payload.lat != null && action.payload.lon != null ? 1 : 0)) > 0;
           return (
             <View key={key} style={{ gap: theme.spacing.xs }}>
               <View

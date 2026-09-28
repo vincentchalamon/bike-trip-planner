@@ -123,15 +123,11 @@ export async function run(
     return false;
   }
   const undoToken = opts.undoable
-    ? useTripTemporalStore
-        .getState()
-        ._push(getUndoableSlice(useTripStore.getState()))
+    ? useTripTemporalStore.getState()._push(getUndoableSlice(useTripStore.getState()))
     : null;
   const { settings, inverse } = opts;
   opts.optimistic?.();
-  const claim = settings
-    ? configClaims.claim(Object.keys(settings.next) as ConfigField[])
-    : null;
+  const claim = settings ? configClaims.claim(Object.keys(settings.next) as ConfigField[]) : null;
 
   const revert = () => {
     opts.rollback?.();
@@ -150,10 +146,7 @@ export async function run(
             )
           : {};
       const owned = released.filter(
-        (field) =>
-          field in settings.previous &&
-          field !== 'startDate' &&
-          field !== 'endDate',
+        (field) => field in settings.previous && field !== 'startDate' && field !== 'endDate',
       );
       for (const field of owned) {
         if (field === 'title') ctx.setTitle(settings.previous.title ?? '');
@@ -177,9 +170,7 @@ export async function run(
         slice = {
           ...slice,
           ...(JSON.parse(
-            JSON.stringify(
-              revertSnapshotFields(slice, settings.next, settings.previous),
-            ),
+            JSON.stringify(revertSnapshotFields(slice, settings.next, settings.previous)),
           ) as Partial<UndoableSlice>),
         };
       }
@@ -188,9 +179,7 @@ export async function run(
         slice = {
           ...slice,
           stages,
-          endDate: slice.startDate
-            ? endDateFor(slice.startDate, stages.length)
-            : slice.endDate,
+          endDate: slice.startDate ? endDateFor(slice.startDate, stages.length) : slice.endDate,
         };
       }
       return slice;
@@ -217,10 +206,7 @@ export async function run(
 
 // Assemble a full JSON Merge Patch body from the current config + overrides. The
 // backend PATCH schema requires the whole pacing block, so send it every time.
-function configPatch(
-  ctx: MutationContext,
-  overrides: Partial<TripConfigPatch>,
-): TripConfigPatch {
+function configPatch(ctx: MutationContext, overrides: Partial<TripConfigPatch>): TripConfigPatch {
   return {
     fatigueFactor: ctx.fatigueFactor,
     elevationPenalty: ctx.elevationPenalty,
@@ -254,8 +240,7 @@ export function runUpdateDates(
         previous: { startDate: ctx.startDate, endDate: ctx.endDate },
       },
       optimistic: () => ctx.setConfig({ startDate, endDate }),
-      call: () =>
-        updateTripConfig(tripId, configPatch(ctx, { startDate, endDate })),
+      call: () => updateTripConfig(tripId, configPatch(ctx, { startDate, endDate })),
     },
     onFailure,
   );
@@ -313,11 +298,7 @@ export function runUpdateAccommodationTypes(
         previous: { enabledAccommodationTypes: ctx.enabledAccommodationTypes },
       },
       optimistic: () => ctx.setConfig({ enabledAccommodationTypes: types }),
-      call: () =>
-        updateTripConfig(
-          tripId,
-          configPatch(ctx, { enabledAccommodationTypes: types }),
-        ),
+      call: () => updateTripConfig(tripId, configPatch(ctx, { enabledAccommodationTypes: types })),
     },
     onFailure,
   );
@@ -494,16 +475,14 @@ export function runSelectAccommodation(
     onFailure('error');
     return Promise.resolve(false);
   }
-  const nextStageIndex =
-    stageIndex + 1 < ctx.stages.length ? stageIndex + 1 : null;
+  const nextStageIndex = stageIndex + 1 < ctx.stages.length ? stageIndex + 1 : null;
   const snapshot = ctx.stages;
   return run(
     ctx,
     {
       // Selecting shifts the stage endpoint → the stage is re-routed.
       requiresRouting: true,
-      optimistic: () =>
-        ctx.selectAccommodationOptimistic(stageIndex, accIndex, nextStageIndex),
+      optimistic: () => ctx.selectAccommodationOptimistic(stageIndex, accIndex, nextStageIndex),
       rollback: () => ctx.setStages(snapshot),
       call: () => setStageAccommodation(tripId, stageId, acc.lat, acc.lon),
       // 409 = a concurrent scan invalidated the candidate list. Re-scan this
@@ -511,11 +490,9 @@ export function runSelectAccommodation(
       // (mirrors the web handleSelectAccommodation flow). A failed re-scan is
       // surfaced rather than swallowed (no silent unhandled rejection).
       onConflict: () =>
-        void scanAccommodations(
-          tripId,
-          DEFAULT_ACCOMMODATION_RADIUS_KM,
-          stageId,
-        ).catch(() => onFailure('network')),
+        void scanAccommodations(tripId, DEFAULT_ACCOMMODATION_RADIUS_KM, stageId).catch(() =>
+          onFailure('network'),
+        ),
     },
     onFailure,
   );
@@ -537,11 +514,9 @@ export function runDeselectAccommodation(
       rollback: () => ctx.setStages(snapshot),
       call: () => setStageAccommodation(tripId, stageId, null, null),
       onConflict: () =>
-        void scanAccommodations(
-          tripId,
-          DEFAULT_ACCOMMODATION_RADIUS_KM,
-          stageId,
-        ).catch(() => onFailure('network')),
+        void scanAccommodations(tripId, DEFAULT_ACCOMMODATION_RADIUS_KM, stageId).catch(() =>
+          onFailure('network'),
+        ),
     },
     onFailure,
   );
@@ -628,9 +603,7 @@ export function runApplyBatch(
   const mods = ctx.pendingModifications;
   if (mods.length === 0) return Promise.resolve(false);
   // A distance or accommodation edit reroutes; a pure dates/pacing batch does not.
-  const requiresRouting = mods.some(
-    (m) => m.type === 'distance' || m.type === 'accommodation',
-  );
+  const requiresRouting = mods.some((m) => m.type === 'distance' || m.type === 'accommodation');
   return run(
     ctx,
     {
@@ -658,11 +631,7 @@ export function runAnalyze(
   onFailure: OnFailure,
 ): Promise<boolean> {
   // Re-enrichment (POIs, weather, terrain): no Valhalla reroute.
-  return run(
-    ctx,
-    { requiresRouting: false, call: () => analyzeTrip(tripId) },
-    onFailure,
-  );
+  return run(ctx, { requiresRouting: false, call: () => analyzeTrip(tripId) }, onFailure);
 }
 
 // --- Trip lifecycle -----------------------------------------------------------

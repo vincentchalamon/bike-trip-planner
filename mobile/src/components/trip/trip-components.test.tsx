@@ -60,7 +60,9 @@ beforeAll(async () => {
 
 describe('StageCard', () => {
   it('renders day, labels and distance/elevation meta', () => {
-    const tree = render(<StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />);
+    const tree = render(
+      <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />,
+    );
     const t = texts(tree).join(' ');
     expect(t).toContain('Jour 1');
     expect(t).toContain('Paris');
@@ -131,7 +133,9 @@ describe('StageCard', () => {
   });
 
   it('is not pressable when onPress is absent (disabled)', () => {
-    const tree = render(<StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />);
+    const tree = render(
+      <StageCard stage={stage()} index={0} locked={false} onDelete={jest.fn()} />,
+    );
     // No open-stage button is exposed…
     const openLabel = fr.trip.openStageA11y.replace('{{day}}', '1');
     const triggers = tree.root.findAll(
@@ -176,24 +180,23 @@ describe('SseStatusIndicator', () => {
 });
 
 describe('CycleNetworkBadge (via StageDataBlocks)', () => {
-  const badge = (percent: string) =>
-    fr.trip.blocks.cycleNetwork.replace('{{percent}}', percent);
+  const badge = (percent: string) => fr.trip.blocks.cycleNetwork.replace('{{percent}}', percent);
 
   it('shows the badge at and above the 0.5 threshold', () => {
-    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.5 })} />)).join(' ')).toContain(
-      badge('50'),
-    );
-    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.82 })} />)).join(' ')).toContain(
-      badge('82'),
-    );
+    expect(
+      texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.5 })} />)).join(' '),
+    ).toContain(badge('50'));
+    expect(
+      texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.82 })} />)).join(' '),
+    ).toContain(badge('82'));
   });
 
   it('hides the badge below the threshold (0.49) and at zero', () => {
-    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.49 })} />)).join(' ')).not.toContain(
-      'Voie cyclable',
-    );
-    expect(texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0 })} />)).join(' ')).not.toContain(
-      'Voie cyclable',
-    );
+    expect(
+      texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0.49 })} />)).join(' '),
+    ).not.toContain('Voie cyclable');
+    expect(
+      texts(render(<StageDataBlocks stage={stage({ onCycleNetwork: 0 })} />)).join(' '),
+    ).not.toContain('Voie cyclable');
   });
 });

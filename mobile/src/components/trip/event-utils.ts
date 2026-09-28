@@ -27,11 +27,7 @@ export function eventTypeKey(type: string): string | null {
 }
 
 // Compact day/month range; a single day when start and end fall on the same day.
-export function formatEventDateRange(
-  startDate: string,
-  endDate: string,
-  locale: string,
-): string {
+export function formatEventDateRange(startDate: string, endDate: string, locale: string): string {
   const fmt = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' });
   const start = fmt.format(new Date(startDate));
   const end = fmt.format(new Date(endDate));

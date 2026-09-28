@@ -24,10 +24,7 @@ export interface TripsPageResult {
 // Extracted so the load/error branch is unit-testable without a React renderer
 // (#1031). Never throws: a backend failure resolves to
 // an empty page + an error message the caller surfaces.
-export async function runLoadTrips(
-  page: number,
-  filters: TripFilters,
-): Promise<TripsPageResult> {
+export async function runLoadTrips(page: number, filters: TripFilters): Promise<TripsPageResult> {
   const cacheable = page === 1 && !hasActiveFilter(filters);
   try {
     const { items, totalItems } = await fetchTrips(page, filters);
@@ -200,8 +197,7 @@ export function useTrips(): UseTrips {
     };
   }, [debouncedFilters, nonce]);
 
-  const canLoadMore =
-    !loading && !loadingMore && hasMorePages(trips.length, totalItems);
+  const canLoadMore = !loading && !loadingMore && hasMorePages(trips.length, totalItems);
 
   const loadMore = useCallback(() => {
     if (loading || loadingMore || !hasMorePages(trips.length, totalItems)) return;

@@ -80,10 +80,7 @@ export function TripMap({
     () => mapStyleFor(base, !isOnline, theme.colors.muted),
     [base, isOnline, theme.colors.muted],
   );
-  const lineCoords = useMemo(
-    () => stageSegments.flatMap((s) => s.coordinates),
-    [stageSegments],
-  );
+  const lineCoords = useMemo(() => stageSegments.flatMap((s) => s.coordinates), [stageSegments]);
   // Framing / presence coordinates: the route line when there is one, else the
   // markers as a fallback. A rest day carries a single point (no drawable line,
   // so `stageSegments` is empty) but still has its location marker — without the
@@ -97,10 +94,7 @@ export function TripMap({
   );
   const bounds = useMemo(() => computeBounds(coordinates), [coordinates]);
   const markerData = useMemo(() => markerCollection(markers ?? []), [markers]);
-  const segmentData = useMemo(
-    () => segmentFeature(highlightedSegment ?? []),
-    [highlightedSegment],
-  );
+  const segmentData = useMemo(() => segmentFeature(highlightedSegment ?? []), [highlightedSegment]);
   // One LineString feature per stage, each carrying its color as a data-driven
   // property so a single layer can paint them via ['get', 'color'] (like the web
   // map) instead of one flat single-color line.
@@ -128,9 +122,7 @@ export function TripMap({
   if (coordinates.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={{ color: theme.colors.mutedForeground }}>
-          {t('trip.mapEmpty')}
-        </Text>
+        <Text style={{ color: theme.colors.mutedForeground }}>{t('trip.mapEmpty')}</Text>
       </View>
     );
   }
@@ -253,34 +245,23 @@ export function TripMap({
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={
-                  layer === 'map'
-                    ? t('trip.map.layerMap')
-                    : t('trip.map.layerSatellite')
+                  layer === 'map' ? t('trip.map.layerMap') : t('trip.map.layerSatellite')
                 }
                 onPress={() => setBase(layer)}
                 // ~29pt tall (padding 6 + 13pt text), under the 44pt minimum.
                 // Vertical-only, same reasoning as SegmentedControl: the two
                 // segments are flush horizontally (#1233 a11y).
                 hitSlop={{ top: 8, bottom: 8 }}
-                style={[
-                  styles.layerSegment,
-                  active && { backgroundColor: theme.colors.brand },
-                ]}
+                style={[styles.layerSegment, active && { backgroundColor: theme.colors.brand }]}
               >
                 <Text
                   style={{
-                    color: active
-                      ? theme.colors.primaryForeground
-                      : theme.colors.foreground,
-                    fontFamily: active
-                      ? theme.fonts.sansSemibold
-                      : theme.fonts.sansMedium,
+                    color: active ? theme.colors.primaryForeground : theme.colors.foreground,
+                    fontFamily: active ? theme.fonts.sansSemibold : theme.fonts.sansMedium,
                     fontSize: 13,
                   }}
                 >
-                  {layer === 'map'
-                    ? t('trip.map.layerMap')
-                    : t('trip.map.layerSatellite')}
+                  {layer === 'map' ? t('trip.map.layerMap') : t('trip.map.layerSatellite')}
                 </Text>
               </Pressable>
             );

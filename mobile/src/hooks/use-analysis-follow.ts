@@ -45,9 +45,7 @@ export function reduceAnalysisEvent(
     case 'computation_error':
       // A retryable error means the run is still going; only a terminal one
       // clears the badge and surfaces the failure.
-      return event.data.retryable
-        ? state
-        : { ...state, computing: false, failed: true };
+      return event.data.retryable ? state : { ...state, computing: false, failed: true };
     default:
       return state;
   }
@@ -57,10 +55,7 @@ export function reduceAnalysisEvent(
 // progress state. Re-subscribes when `tripId` changes (a new create) or when
 // `nonce` bumps (an explicit re-launch of the analysis, to reset progress).
 // Returns undefined-safe state; when `tripId` is null nothing is subscribed.
-export function useAnalysisFollow(
-  tripId: string | null,
-  nonce = 0,
-): AnalysisFollowState {
+export function useAnalysisFollow(tripId: string | null, nonce = 0): AnalysisFollowState {
   const [state, dispatch] = useReducer(
     (s: AnalysisFollowState, e: MercureEvent | 'reset') =>
       e === 'reset' ? INITIAL_FOLLOW_STATE : reduceAnalysisEvent(s, e),

@@ -20,12 +20,7 @@ jest.mock('../../lib/share-image', () => ({
 }));
 
 import * as Clipboard from 'expo-clipboard';
-import {
-  getTripShare,
-  createTripShare,
-  revokeTripShare,
-  fetchTripRoute,
-} from '../../api/trips';
+import { getTripShare, createTripShare, revokeTripShare, fetchTripRoute } from '../../api/trips';
 import { captureAndShareInfographic } from '../../lib/share-image';
 import i18n from '../../i18n';
 import { useTripStore } from '../../store/trip-store';
@@ -40,18 +35,14 @@ const mockCapture = captureAndShareInfographic as jest.Mock;
 const mockRoute = fetchTripRoute as jest.Mock;
 
 function textOf(node: any): string[] {
-  const kids = Array.isArray(node.props.children)
-    ? node.props.children
-    : [node.props.children];
+  const kids = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
   return kids.filter((c: unknown): c is string => typeof c === 'string');
 }
 
 function button(tree: any, label: string): any {
   return tree.root
     .findAllByProps({ accessibilityRole: 'button' })
-    .find((b: any) =>
-      b.findAllByType(Text).some((tx: any) => textOf(tx).includes(label)),
-    );
+    .find((b: any) => b.findAllByType(Text).some((tx: any) => textOf(tx).includes(label)));
 }
 
 function linkText(tree: any): string | null {
@@ -133,9 +124,7 @@ describe('ShareSheet (#1048)', () => {
     mockCreate.mockResolvedValue({ shortCode: 'abc123' });
     mockRevoke.mockResolvedValue(true);
 
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
 
     // No active share yet: the create button shows, no link is rendered.
     expect(linkText(tree)).toBeNull();
@@ -154,9 +143,7 @@ describe('ShareSheet (#1048)', () => {
   it('copies the link and shows the transient "copied" label', async () => {
     mockGet.mockResolvedValue({ shortCode: 'xyz789' });
 
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     expect(linkText(tree)).toBe('https://web.example/s/xyz789');
 
     await press(button(tree, 'Copier le lien'));
@@ -167,9 +154,7 @@ describe('ShareSheet (#1048)', () => {
   it('copies the formatted text (with the link) and toggles the copied label', async () => {
     mockGet.mockResolvedValue({ shortCode: 'xyz789' });
 
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
 
     await press(button(tree, 'Texte (roadbook)'));
     const copied = mockClip.mock.calls[0][0] as string;
@@ -180,9 +165,7 @@ describe('ShareSheet (#1048)', () => {
   it('captures + shares the infographic once it has laid out', async () => {
     mockGet.mockResolvedValue(null);
 
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     // Idle: the expensive off-screen infographic is not mounted.
     expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
 
@@ -202,9 +185,7 @@ describe('ShareSheet (#1048)', () => {
   it('fetches the existing share only once across re-renders (hasFetched guard)', async () => {
     mockGet.mockResolvedValue(null);
 
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     expect(mockGet).toHaveBeenCalledTimes(1);
 
     // A re-render with the sheet still open must not refetch.
@@ -251,9 +232,7 @@ describe('ShareSheet (#1048)', () => {
 
     // Opening the sheet must NOT mount the expensive infographic — it only mounts
     // during a capture — so its useMemo pipeline never runs on idle SSE updates.
-    const tree = await render(
-      <ShareSheet visible onClose={jest.fn()} tripId="t1" />,
-    );
+    const tree = await render(<ShareSheet visible onClose={jest.fn()} tripId="t1" />);
     expect(tree.root.findAllByType(ShareInfographic)).toHaveLength(0);
   });
 });

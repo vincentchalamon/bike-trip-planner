@@ -102,9 +102,7 @@ describe('reconcileLocalNotifications', () => {
   it('does not re-schedule a notification that already exists (idempotent)', async () => {
     scheduledWith([NODATE_ID]);
     await run({ startDate: null });
-    expect(schedule).not.toHaveBeenCalledWith(
-      expect.objectContaining({ identifier: NODATE_ID }),
-    );
+    expect(schedule).not.toHaveBeenCalledWith(expect.objectContaining({ identifier: NODATE_ID }));
   });
 
   it('cancels a scheduled notification once its condition is resolved', async () => {
@@ -164,9 +162,7 @@ describe('reconcileLocalNotifications', () => {
       ALL_ON,
       new Set([NODATE_ID]),
     );
-    expect(schedule).not.toHaveBeenCalledWith(
-      expect.objectContaining({ identifier: NODATE_ID }),
-    );
+    expect(schedule).not.toHaveBeenCalledWith(expect.objectContaining({ identifier: NODATE_ID }));
     expect(markDelivered).not.toHaveBeenCalled();
     // Still active, only suppressed by the delivered mark: it must NOT be cleared,
     // else the next pass would re-schedule and re-fire the one-shot.
@@ -181,9 +177,7 @@ describe('reconcileLocalNotifications', () => {
       ALL_ON,
       new Set([OFFLINE_ID]),
     );
-    expect(schedule).toHaveBeenCalledWith(
-      expect.objectContaining({ identifier: OFFLINE_ID }),
-    );
+    expect(schedule).toHaveBeenCalledWith(expect.objectContaining({ identifier: OFFLINE_ID }));
     expect(clearDelivered).toHaveBeenCalledWith(OFFLINE_ID);
     expect(markDelivered).not.toHaveBeenCalled();
   });
@@ -200,11 +194,7 @@ describe('reconcileLocalNotifications', () => {
     // delivered; its condition now resolves. Nothing to cancel, but the delivered
     // entry must be reclaimed so the persisted set does not leak forever.
     scheduledWith([]);
-    await run(
-      { startDate: '2026-09-10T00:00:00Z' },
-      ALL_ON,
-      new Set([NODATE_ID]),
-    );
+    await run({ startDate: '2026-09-10T00:00:00Z' }, ALL_ON, new Set([NODATE_ID]));
     expect(cancel).not.toHaveBeenCalled();
     expect(clearDelivered).toHaveBeenCalledWith(NODATE_ID);
   });

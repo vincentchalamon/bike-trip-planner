@@ -91,9 +91,7 @@ describe('TripMap', () => {
       />,
     );
     expect(findAll(out.root, 'Map')).toHaveLength(1);
-    expect(findAll(out.root, 'Camera')[0].props.bounds).toEqual(
-      computeBounds([[2.5, 48.5]]),
-    );
+    expect(findAll(out.root, 'Camera')[0].props.bounds).toEqual(computeBounds([[2.5, 48.5]]));
   });
 
   it('feeds the memoized Positron style, then the satellite style once toggled', () => {
@@ -201,9 +199,7 @@ describe('TripMap', () => {
   });
 
   it('draws the highlighted segment only once it has at least two points', () => {
-    const out = render(
-      <TripMap stageSegments={segsA} highlightedSegment={[[2, 48]]} />,
-    );
+    const out = render(<TripMap stageSegments={segsA} highlightedSegment={[[2, 48]]} />);
     expect(byId(out.root, 'GeoJSONSource', 'segment-highlight')).toHaveLength(0);
 
     act(() => {

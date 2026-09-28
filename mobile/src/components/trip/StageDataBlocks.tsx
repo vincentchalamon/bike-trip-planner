@@ -29,10 +29,7 @@ export function notifyFailure(t: TFunction, reason: MutationFailure): void {
       Alert.alert(t('trip.outOfZoneTitle'), t('trip.outOfZoneMessage'));
       return;
     case 'conflict':
-      Alert.alert(
-        t('trip.accommodationStaleTitle'),
-        t('trip.accommodationStaleMessage'),
-      );
+      Alert.alert(t('trip.accommodationStaleTitle'), t('trip.accommodationStaleMessage'));
       return;
     case 'offline':
       Alert.alert(t('trip.offlineTitle'), t('trip.offlineMessage'));
@@ -92,11 +89,7 @@ interface StageDataBlocksProps {
 // When a `stageIndex` is given the accommodation and POI blocks become editable
 // (select / deselect / widen radius / insert POI-waypoint), gated on lock,
 // connectivity and — for the POI-waypoint reroute — the trip zone (#1045).
-export function StageDataBlocks({
-  stage,
-  stageIndex,
-  onAlertNavigate,
-}: StageDataBlocksProps) {
+export function StageDataBlocks({ stage, stageIndex, onAlertNavigate }: StageDataBlocksProps) {
   const theme = useTheme();
   const { t } = useTranslation();
   const tripId = useTripStore((s) => s.tripId);
@@ -104,10 +97,7 @@ export function StageDataBlocks({
   // A radius scan does not reroute; selecting, deselecting or adding one does,
   // which AccommodationBlock blocks from `outOfZone` on top of `disabled`.
   const disabled = useEditGate(false) !== null;
-  const onFailure = useCallback(
-    (reason: MutationFailure) => notifyFailure(t, reason),
-    [t],
-  );
+  const onFailure = useCallback((reason: MutationFailure) => notifyFailure(t, reason), [t]);
   const mutations = useTripMutations(tripId ?? '', onFailure);
   const editable = stageIndex !== undefined && tripId !== null;
   // Order mirrors the Spike-UX stage-detail mockup: weather, then alerts,
@@ -117,11 +107,7 @@ export function StageDataBlocks({
     <View style={{ gap: theme.spacing.md }}>
       <CycleNetworkBadge fraction={stage.onCycleNetwork ?? 0} />
       <WeatherBlock weather={stage.weather} />
-      <AlertsBlock
-        alerts={stage.alerts}
-        stageKey={stage.id}
-        onNavigate={onAlertNavigate}
-      />
+      <AlertsBlock alerts={stage.alerts} stageKey={stage.id} onNavigate={onAlertNavigate} />
       <EventsBlock events={stage.events} />
       <AccommodationBlock
         accommodations={stage.accommodations}
@@ -130,8 +116,7 @@ export function StageDataBlocks({
           radiusKm: stage.accommodationSearchRadiusKm,
           disabled,
           outOfZone,
-          onSelect: (accIndex: number) =>
-            void mutations.selectAccommodation(stageIndex, accIndex),
+          onSelect: (accIndex: number) => void mutations.selectAccommodation(stageIndex, accIndex),
           onDeselect: () => void mutations.deselectAccommodation(stageIndex),
           onExpandRadius: () =>
             void mutations.scanAccommodations(

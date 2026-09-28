@@ -12,10 +12,7 @@ import type {
   WeatherData,
 } from '@btp/core';
 import { EMPTY_RESUPPLY } from '@btp/core';
-import {
-  ACCOMMODATION_RADIUS_STEP_KM,
-  MAX_ACCOMMODATION_RADIUS_KM,
-} from '@btp/core/constants';
+import { ACCOMMODATION_RADIUS_STEP_KM, MAX_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { useDismissedAlerts } from '../../store/dismissed-alerts';
@@ -38,9 +35,7 @@ jest.mock('../../hooks/use-trip-mutations', () => ({
 
 function texts(node: any): string[] {
   return node.root.findAllByType(Text).flatMap((t: any) => {
-    const kids = Array.isArray(t.props.children)
-      ? t.props.children
-      : [t.props.children];
+    const kids = Array.isArray(t.props.children) ? t.props.children : [t.props.children];
     return kids.filter((c: unknown): c is string => typeof c === 'string');
   });
 }
@@ -112,11 +107,7 @@ describe('AlertsBlock', () => {
 
   it('hides an alert dismissed on its stage (keyed on code, not wording)', () => {
     useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
-    const t = texts(
-      render(
-        <AlertsBlock alerts={[alert({ message: 'Caché' })]} stageKey={1} />,
-      ),
-    );
+    const t = texts(render(<AlertsBlock alerts={[alert({ message: 'Caché' })]} stageKey={1} />));
     expect(t).not.toContain('Caché');
     expect(t).toContain(fr.trip.blocks.alertsEmpty);
   });
@@ -124,11 +115,7 @@ describe('AlertsBlock', () => {
   it('keeps an alert dismissed on another stage (dismissal is per stage)', () => {
     // Same code 'c1' dismissed on stage 1 must remain visible on stage 2.
     useDismissedAlerts.getState().dismiss(alertDismissKey(1, alert()));
-    const t = texts(
-      render(
-        <AlertsBlock alerts={[alert({ message: 'Visible' })]} stageKey={2} />,
-      ),
-    );
+    const t = texts(render(<AlertsBlock alerts={[alert({ message: 'Visible' })]} stageKey={2} />));
     expect(t).toContain('Visible');
   });
 
@@ -141,16 +128,10 @@ describe('AlertsBlock', () => {
     const tree = render(<AlertsBlock alerts={[a]} stageKey={3} />);
     expect(texts(tree)).toContain('À ignorer');
     act(() => {
-      tree.root
-        .findByProps({ accessibilityLabel: fr.trip.blocks.alertDismiss })
-        .props.onPress();
+      tree.root.findByProps({ accessibilityLabel: fr.trip.blocks.alertDismiss }).props.onPress();
     });
-    expect(
-      useDismissedAlerts.getState().isDismissed(alertDismissKey(3, a)),
-    ).toBe(true);
-    expect(
-      useDismissedAlerts.getState().isDismissed(alertDismissKey(4, a)),
-    ).toBe(false);
+    expect(useDismissedAlerts.getState().isDismissed(alertDismissKey(3, a))).toBe(true);
+    expect(useDismissedAlerts.getState().isDismissed(alertDismissKey(4, a))).toBe(false);
   });
 
   it('routes a navigate action to onNavigate with the segment geometry', () => {
@@ -164,13 +145,9 @@ describe('AlertsBlock', () => {
         payload: { segments: [[[45, 4]]] },
       },
     });
-    const tree = render(
-      <AlertsBlock alerts={[a]} stageKey={1} onNavigate={onNavigate} />,
-    );
+    const tree = render(<AlertsBlock alerts={[a]} stageKey={1} onNavigate={onNavigate} />);
     act(() => {
-      tree.root
-        .findByProps({ accessibilityLabel: fr.trip.blocks.alertNavigate })
-        .props.onPress();
+      tree.root.findByProps({ accessibilityLabel: fr.trip.blocks.alertNavigate }).props.onPress();
     });
     expect(onNavigate).toHaveBeenCalledWith([[[45, 4]]]);
   });
@@ -297,9 +274,7 @@ describe('AccommodationBlock', () => {
   });
 
   it('paginates 5 at a time and reveals the rest via "show more"', () => {
-    const many = Array.from({ length: 7 }, (_, i) =>
-      acc({ name: `H${i}`, distanceToEndPoint: i }),
-    );
+    const many = Array.from({ length: 7 }, (_, i) => acc({ name: `H${i}`, distanceToEndPoint: i }));
     const tree = render(<AccommodationBlock accommodations={many} />);
     // H0..H4 shown; H5/H6 hidden behind the pager.
     expect(texts(tree)).toContain('H4');
@@ -328,31 +303,21 @@ describe('AccommodationBlock', () => {
     );
     // "Proche" renders first (index 0) but is index 1 in the source array.
     act(() =>
-      tree.root
-        .findAllByProps({ label: fr.trip.blocks.accommodationSelect })[0]!
-        .props.onPress(),
+      tree.root.findAllByProps({ label: fr.trip.blocks.accommodationSelect })[0]!.props.onPress(),
     );
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 
   it('renders a zero distance rather than dropping it (accommodation at the endpoint)', () => {
     const meta = texts(
-      render(
-        <AccommodationBlock
-          accommodations={[acc({ distanceToEndPoint: 0 })]}
-        />,
-      ),
+      render(<AccommodationBlock accommodations={[acc({ distanceToEndPoint: 0 })]} />),
     ).join(' ');
-    expect(meta).toContain(
-      fr.trip.blocks.distanceKm.replace('{{distance}}', '0'),
-    );
+    expect(meta).toContain(fr.trip.blocks.distanceKm.replace('{{distance}}', '0'));
   });
 
   it('stays read-only (no select/expand buttons) without editing callbacks', () => {
     const tree = render(<AccommodationBlock accommodations={[acc()]} />);
-    expect(
-      tree.root.findAllByProps({ label: fr.trip.blocks.accommodationSelect }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ label: fr.trip.blocks.accommodationSelect })).toHaveLength(0);
   });
 
   it('selects a candidate by index via the select button', () => {
@@ -384,9 +349,7 @@ describe('AccommodationBlock', () => {
       />,
     );
     act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.accommodationDeselect })
-        .props.onPress(),
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationDeselect }).props.onPress(),
     );
     expect(onDeselect).toHaveBeenCalled();
   });
@@ -450,35 +413,21 @@ describe('AccommodationBlock', () => {
 
   it('disables the select button when locked/offline', () => {
     const tree = render(
-      <AccommodationBlock
-        accommodations={[acc()]}
-        radiusKm={5}
-        disabled
-        onSelect={jest.fn()}
-      />,
+      <AccommodationBlock accommodations={[acc()]} radiusKm={5} disabled onSelect={jest.fn()} />,
     );
     expect(
-      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props
-        .disabled,
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props.disabled,
     ).toBe(true);
   });
 
   it('blocks selection out of zone: buttons disabled + hint shown', () => {
     const tree = render(
-      <AccommodationBlock
-        accommodations={[acc()]}
-        radiusKm={5}
-        outOfZone
-        onSelect={jest.fn()}
-      />,
+      <AccommodationBlock accommodations={[acc()]} radiusKm={5} outOfZone onSelect={jest.fn()} />,
     );
     expect(
-      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props
-        .disabled,
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationSelect }).props.disabled,
     ).toBe(true);
-    expect(texts(tree).join(' ')).toContain(
-      fr.trip.blocks.accommodationOutOfZone,
-    );
+    expect(texts(tree).join(' ')).toContain(fr.trip.blocks.accommodationOutOfZone);
   });
 
   it('disables the deselect button out of zone (deselect reroutes)', () => {
@@ -493,8 +442,7 @@ describe('AccommodationBlock', () => {
       />,
     );
     expect(
-      tree.root.findByProps({ label: fr.trip.blocks.accommodationDeselect })
-        .props.disabled,
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationDeselect }).props.disabled,
     ).toBe(true);
   });
 
@@ -532,9 +480,7 @@ describe('AccommodationBlock', () => {
     );
     // The add button opens the form.
     act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
-        .props.onPress(),
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationAddManual }).props.onPress(),
     );
     // Fill title + address via their placeholders.
     act(() =>
@@ -575,9 +521,7 @@ describe('AccommodationBlock', () => {
       />,
     );
     act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
-        .props.onPress(),
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationAddManual }).props.onPress(),
     );
     act(() =>
       tree.root
@@ -605,9 +549,7 @@ describe('AccommodationBlock', () => {
         .findByProps({ label: fr.trip.blocks.accommodationManualSave })
         .props.onPress();
     });
-    expect(onAddManual).toHaveBeenCalledWith(
-      expect.objectContaining({ priceTotal: null }),
-    );
+    expect(onAddManual).toHaveBeenCalledWith(expect.objectContaining({ priceTotal: null }));
   });
 
   it('keeps the manual save disabled until title and address are set', () => {
@@ -620,13 +562,10 @@ describe('AccommodationBlock', () => {
       />,
     );
     act(() =>
-      tree.root
-        .findByProps({ label: fr.trip.blocks.accommodationAddManual })
-        .props.onPress(),
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationAddManual }).props.onPress(),
     );
     expect(
-      tree.root.findByProps({ label: fr.trip.blocks.accommodationManualSave })
-        .props.disabled,
+      tree.root.findByProps({ label: fr.trip.blocks.accommodationManualSave }).props.disabled,
     ).toBe(true);
   });
 });
@@ -674,18 +613,18 @@ describe('ResupplyBlock', () => {
   });
 
   it('hides a role section that has no POI', () => {
-    const t = texts(
-      render(<ResupplyBlock resupply={{ ...empty, foodAtLunch: [poi()] }} />),
-    ).join(' ');
+    const t = texts(render(<ResupplyBlock resupply={{ ...empty, foodAtLunch: [poi()] }} />)).join(
+      ' ',
+    );
     expect(t).toContain(fr.trip.blocks.resupplyLunch);
     expect(t).not.toContain(fr.trip.blocks.resupplyWaterMorning);
     expect(t).not.toContain(fr.trip.blocks.resupplyArrival);
   });
 
   it('shows the "suggestions only" help when non-empty', () => {
-    const t = texts(
-      render(<ResupplyBlock resupply={{ ...empty, foodAtArrival: [poi()] }} />),
-    ).join(' ');
+    const t = texts(render(<ResupplyBlock resupply={{ ...empty, foodAtArrival: [poi()] }} />)).join(
+      ' ',
+    );
     expect(t).toContain(fr.trip.blocks.resupplyHelp);
   });
 
@@ -746,20 +685,14 @@ describe('EventsBlock', () => {
     const tree = render(<EventsBlock events={events} />);
     expect(texts(tree)).not.toContain('D');
     // The only button in the block is the "see more" toggle.
-    act(() =>
-      tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress(),
-    );
+    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
     expect(texts(tree)).toContain('D');
   });
 
   it('caps the list at the soonest 5, even fully expanded', () => {
-    const events = Array.from({ length: 7 }, (_, i) =>
-      event(`E${i}`, `2026-06-0${i + 1}`),
-    );
+    const events = Array.from({ length: 7 }, (_, i) => event(`E${i}`, `2026-06-0${i + 1}`));
     const tree = render(<EventsBlock events={events} />);
-    act(() =>
-      tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress(),
-    );
+    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
     const t = texts(tree);
     expect(t).toContain('E4'); // 5th soonest is shown
     expect(t).not.toContain('E5'); // 6th and 7th are capped out

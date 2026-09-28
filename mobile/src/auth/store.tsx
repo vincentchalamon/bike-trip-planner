@@ -11,7 +11,11 @@ import {
 import { api } from '../api/client';
 import { LD_JSON } from '../api/config';
 import { applyAccountLocale } from '../i18n';
-import { registerDeviceToken, subscribeTokenRotation, unregisterDeviceToken } from '../notifications/push';
+import {
+  registerDeviceToken,
+  subscribeTokenRotation,
+  unregisterDeviceToken,
+} from '../notifications/push';
 import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';

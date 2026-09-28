@@ -15,10 +15,7 @@ import {
   type SearchPosition,
 } from '../../hooks/use-in-ride-search';
 import type { ForegroundLocation } from '../../hooks/use-foreground-location';
-import type {
-  InRidePoiCategory,
-  NearbyPoiSuggestion,
-} from '../../api/nearby-pois';
+import type { InRidePoiCategory, NearbyPoiSuggestion } from '../../api/nearby-pois';
 import {
   AlertTriangle,
   Clock,
@@ -130,8 +127,10 @@ export function InRidePanel({
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { isSearching, errorKey, recap, activeCategory, canWiden, search, widen } =
-    useInRideSearch(tripId, stageDay);
+  const { isSearching, errorKey, recap, activeCategory, canWiden, search, widen } = useInRideSearch(
+    tripId,
+    stageDay,
+  );
   const { width: windowWidth } = useWindowDimensions();
 
   const position = location.position;
@@ -178,7 +177,10 @@ export function InRidePanel({
                 opacity: disabled ? 0.5 : 1,
               }}
             >
-              <Icon color={selected ? theme.colors.primaryForeground : theme.colors.brand} size={18} />
+              <Icon
+                color={selected ? theme.colors.primaryForeground : theme.colors.brand}
+                size={18}
+              />
               <Text
                 numberOfLines={2}
                 style={{
@@ -373,9 +375,7 @@ function Badge({
       }}
     >
       {icon}
-      <Text style={{ color: fg, fontFamily: theme.fonts.sansMedium, fontSize: 12 }}>
-        {label}
-      </Text>
+      <Text style={{ color: fg, fontFamily: theme.fonts.sansMedium, fontSize: 12 }}>{label}</Text>
     </View>
   );
 }
@@ -385,8 +385,7 @@ function PoiCard({ poi, theme }: { poi: NearbyPoiSuggestion; theme: Theme }) {
   const Icon = CATEGORY_ICON[poi.category] ?? Droplet;
   const closesAt = formatClosingTime(poi.closes_at);
   const alwaysOpen = isAlwaysOpen(poi.opening_hours_today);
-  const hasOpeningHours =
-    !!poi.opening_hours_today && poi.opening_hours_today.trim() !== '';
+  const hasOpeningHours = !!poi.opening_hours_today && poi.opening_hours_today.trim() !== '';
   const detour = poi.detour_m;
 
   const warningText =

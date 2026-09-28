@@ -76,19 +76,14 @@ function buttonByLabel(root: any, text: string): any {
       n
         .findAllByType(Text)
         .some((txt: any) =>
-          (Array.isArray(txt.props.children)
-            ? txt.props.children
-            : [txt.props.children]
-          ).includes(text),
+          (Array.isArray(txt.props.children) ? txt.props.children : [txt.props.children]).includes(
+            text,
+          ),
         ),
   )[0];
 }
 
-const poiFeature = (
-  name: string,
-  lon: number,
-  lat: number,
-): GeoJSON.Feature => ({
+const poiFeature = (name: string, lon: number, lat: number): GeoJSON.Feature => ({
   type: 'Feature',
   properties: { kind: 'poi', name },
   geometry: { type: 'Point', coordinates: [lon, lat] },
@@ -126,9 +121,7 @@ describe('PoiWaypointPopover', () => {
   it('adds and closes via its actions', () => {
     const onAdd = jest.fn();
     const onClose = jest.fn();
-    const tree = render(
-      <PoiWaypointPopover poi={poi} onAdd={onAdd} onClose={onClose} />,
-    );
+    const tree = render(<PoiWaypointPopover poi={poi} onAdd={onAdd} onClose={onClose} />);
 
     act(() => buttonByLabel(tree.root, i18n.t('trip.poiWaypoint.add')).props.onPress());
     expect(onAdd).toHaveBeenCalledTimes(1);
@@ -160,7 +153,15 @@ describe('TripMap POI selection wiring', () => {
   });
 
   const markers = [{ kind: 'poi' as const, lon: 3, lat: 45, name: 'Fontaine' }];
-  const segs = [{ color: 'hsl(25, 72%, 48%)', coordinates: [[2, 48], [3, 49]] as [number, number][] }];
+  const segs = [
+    {
+      color: 'hsl(25, 72%, 48%)',
+      coordinates: [
+        [2, 48],
+        [3, 49],
+      ] as [number, number][],
+    },
+  ];
 
   it('calls onSelectPoi with the tapped POI when the markers source is pressed', () => {
     const onSelectPoi = jest.fn();
@@ -171,9 +172,7 @@ describe('TripMap POI selection wiring', () => {
       (n: any) => n.type === 'GeoJSONSource' && n.props.id === 'markers',
     );
     expect(typeof source.props.onPress).toBe('function');
-    act(() =>
-      source.props.onPress({ nativeEvent: { features: [poiFeature('Fontaine', 3, 45)] } }),
-    );
+    act(() => source.props.onPress({ nativeEvent: { features: [poiFeature('Fontaine', 3, 45)] } }));
     expect(onSelectPoi).toHaveBeenCalledWith({
       kind: 'poi',
       name: 'Fontaine',
@@ -249,9 +248,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
   afterEach(() => alertSpy.mockRestore());
 
   function markersSource(tree: any): any {
-    return tree.root.find(
-      (n: any) => n.type === 'GeoJSONSource' && n.props.id === 'markers',
-    );
+    return tree.root.find((n: any) => n.type === 'GeoJSONSource' && n.props.id === 'markers');
   }
 
   it('opens the popover on a POI tap and reroutes via runAddPoiWaypoint', async () => {
@@ -265,9 +262,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
       }),
     );
     // Confirm from the popover.
-    act(() =>
-      buttonByLabel(tree.root, i18n.t('trip.poiWaypoint.add')).props.onPress(),
-    );
+    act(() => buttonByLabel(tree.root, i18n.t('trip.poiWaypoint.add')).props.onPress());
     await act(async () => {});
 
     // index is String()-ified in the API layer; the runner passed stage 0 + coords.
@@ -286,9 +281,7 @@ describe('StageDetailView add-POI-waypoint wiring (#1179)', () => {
   it('offers no POI affordance on a rest day (no route to reroute) (#1179 review)', () => {
     // A rest day still renders its own point on this map, but has no route to
     // reroute — canAddWaypoint must exclude it, leaving the markers inert.
-    act(() =>
-      useTripStore.setState({ stages: [{ ...stageWithGeometry(), isRestDay: true }] }),
-    );
+    act(() => useTripStore.setState({ stages: [{ ...stageWithGeometry(), isRestDay: true }] }));
     const tree = render(<StageDetailView initialStageId="stage-1" />);
     expect(markersSource(tree).props.onPress).toBeUndefined();
     expect(addPoiWaypoint).not.toHaveBeenCalled();

@@ -34,12 +34,10 @@ function render(el: ReactElement): any {
   return out;
 }
 function texts(tree: any): string[] {
-  return tree.root
-    .findAllByType(Text)
-    .flatMap((n: any) => {
-      const kids = Array.isArray(n.props.children) ? n.props.children : [n.props.children];
-      return kids.filter((c: unknown): c is string => typeof c === 'string');
-    });
+  return tree.root.findAllByType(Text).flatMap((n: any) => {
+    const kids = Array.isArray(n.props.children) ? n.props.children : [n.props.children];
+    return kids.filter((c: unknown): c is string => typeof c === 'string');
+  });
 }
 function button(tree: any, label: string): any {
   return tree.root
@@ -101,9 +99,7 @@ describe('DateField', () => {
 
   it('hides the clear button when disabled (a locked trip cannot clear its date)', () => {
     const onChange = jest.fn();
-    const tree = render(
-      <DateField {...base} value="2026-08-15" onChange={onChange} disabled />,
-    );
+    const tree = render(<DateField {...base} value="2026-08-15" onChange={onChange} disabled />);
     expect(button(tree, 'Effacer')).toBeUndefined();
   });
 
@@ -113,15 +109,11 @@ describe('DateField', () => {
       const tree = render(<DateField {...base} value="" onChange={onChange} />);
       act(() => button(tree, 'Date de début').props.onPress());
       // First scroll tick commits but must NOT close the inline spinner.
-      act(() =>
-        mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 20)),
-      );
+      act(() => mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 20)));
       expect(onChange).toHaveBeenLastCalledWith('2026-08-20');
       // Still open → a further tick still routes through (impossible if it had
       // closed on the first tick, as Android's dialog does).
-      act(() =>
-        mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 21)),
-      );
+      act(() => mockPicker.mock.calls.at(-1)![0].onChange({ type: 'set' }, new Date(2026, 7, 21)));
       expect(onChange).toHaveBeenLastCalledWith('2026-08-21');
       expect(onChange).toHaveBeenCalledTimes(2);
     });

@@ -112,13 +112,7 @@ describe('runUpdateDates (config, non-routing)', () => {
   it('applies optimistically and sends the full pacing patch on success', async () => {
     mock(updateTripConfig).mockResolvedValue({ ok: true, status: 202 });
 
-    const ok = await runUpdateDates(
-      't1',
-      '2026-09-01',
-      '2026-09-10',
-      ctx(),
-      jest.fn(),
-    );
+    const ok = await runUpdateDates('t1', '2026-09-01', '2026-09-10', ctx(), jest.fn());
 
     expect(ok).toBe(true);
     expect(useTripStore.getState().startDate).toBe('2026-09-01');
@@ -159,10 +153,7 @@ describe('runAddStage (routing) — gating', () => {
 
     expect(ok).toBe(true);
     expect(useTripStore.getState().stages).toHaveLength(3);
-    expect(createStage).toHaveBeenCalledWith(
-      't1',
-      expect.objectContaining({ position: 1 }),
-    );
+    expect(createStage).toHaveBeenCalledWith('t1', expect.objectContaining({ position: 1 }));
   });
 });
 
@@ -239,10 +230,7 @@ describe('runUpdateStageDistance (routing) — gating branches', () => {
 describe('runSelectAccommodation', () => {
   beforeEach(() => {
     useTripStore.setState({
-      stages: [
-        stage({ accommodations: [{ name: 'Gite', lat: 9, lon: 9 } as never] }),
-        stage(),
-      ],
+      stages: [stage({ accommodations: [{ name: 'Gite', lat: 9, lon: 9 } as never] }), stage()],
     });
   });
 
@@ -253,9 +241,7 @@ describe('runSelectAccommodation', () => {
 
     expect(ok).toBe(true);
     expect(setStageAccommodation).toHaveBeenCalledWith('t1', 'stage-1', 9, 9);
-    expect(
-      useTripStore.getState().stages[0]!.selectedAccommodation,
-    ).not.toBeNull();
+    expect(useTripStore.getState().stages[0]!.selectedAccommodation).not.toBeNull();
   });
 
   it('rolls back and reports "conflict" on 409 (stale list)', async () => {
@@ -343,16 +329,12 @@ describe('config runners (non-routing) — allowed out of zone + rollback', () =
 
   it('runUpdateAccommodationTypes applies then rolls back on failure', async () => {
     mock(updateTripConfig).mockResolvedValue({ ok: true, status: 202 });
-    expect(
-      await runUpdateAccommodationTypes('t1', ['hotel'], ctx(), jest.fn()),
-    ).toBe(true);
+    expect(await runUpdateAccommodationTypes('t1', ['hotel'], ctx(), jest.fn())).toBe(true);
     expect(useTripStore.getState().enabledAccommodationTypes).toEqual(['hotel']);
 
     const before = useTripStore.getState().enabledAccommodationTypes;
     mock(updateTripConfig).mockResolvedValue({ ok: false, status: 422 });
-    expect(
-      await runUpdateAccommodationTypes('t1', ['rental'], ctx(), jest.fn()),
-    ).toBe(false);
+    expect(await runUpdateAccommodationTypes('t1', ['rental'], ctx(), jest.fn())).toBe(false);
     expect(useTripStore.getState().enabledAccommodationTypes).toEqual(before);
   });
 
@@ -397,19 +379,14 @@ describe('routing runners are refused out of zone (requiresRouting flag)', () =>
 describe('runMoveStage (routing) — optimistic + rollback', () => {
   beforeEach(() => {
     useTripStore.setState({
-      stages: [
-        stage({ dayNumber: 1, distance: 10 }),
-        stage({ dayNumber: 2, distance: 20 }),
-      ],
+      stages: [stage({ dayNumber: 1, distance: 10 }), stage({ dayNumber: 2, distance: 20 })],
     });
   });
 
   it('moves optimistically then calls the API', async () => {
     mock(moveStage).mockResolvedValue({ ok: true, status: 202 });
     expect(await runMoveStage('t1', 1, 0, ctx(), jest.fn())).toBe(true);
-    expect(useTripStore.getState().stages.map((s) => s.distance)).toEqual([
-      20, 10,
-    ]);
+    expect(useTripStore.getState().stages.map((s) => s.distance)).toEqual([20, 10]);
     expect(moveStage).toHaveBeenCalledWith('t1', 'stage-2', 0);
   });
 
@@ -459,9 +436,7 @@ describe('runDeselectAccommodation (routing) — optimistic + rollback', () => {
 describe('runAddPoiWaypoint (routing) — calls the API in zone', () => {
   it('adds the waypoint when allowed', async () => {
     mock(addPoiWaypoint).mockResolvedValue({ ok: true, status: 202 });
-    expect(await runAddPoiWaypoint('t1', 0, 1.5, 2.5, ctx(), jest.fn())).toBe(
-      true,
-    );
+    expect(await runAddPoiWaypoint('t1', 0, 1.5, 2.5, ctx(), jest.fn())).toBe(true);
     expect(addPoiWaypoint).toHaveBeenCalledWith('t1', 'stage-1', 1.5, 2.5);
   });
 });

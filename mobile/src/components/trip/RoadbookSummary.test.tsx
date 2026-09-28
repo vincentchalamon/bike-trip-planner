@@ -8,12 +8,10 @@ import i18n from '../../i18n';
 import { RoadbookSummary } from './RoadbookSummary';
 
 function texts(tree: any): string[] {
-  return tree.root
-    .findAllByType(Text)
-    .flatMap((n: any) => {
-      const kids = Array.isArray(n.props.children) ? n.props.children : [n.props.children];
-      return kids.filter((c: unknown): c is string => typeof c === 'string');
-    });
+  return tree.root.findAllByType(Text).flatMap((n: any) => {
+    const kids = Array.isArray(n.props.children) ? n.props.children : [n.props.children];
+    return kids.filter((c: unknown): c is string => typeof c === 'string');
+  });
 }
 
 function render(element: ReactElement): any {

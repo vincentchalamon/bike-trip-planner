@@ -13,11 +13,7 @@ import { RoadbookView, TripMapView } from '../../src/components/trip';
 import { useTheme } from '../../src/theme';
 import { useSharedTrip } from '../../src/hooks/use-shared-trip';
 import { confirmExportFormat, writeAndShare } from '../../src/hooks/use-export';
-import {
-  fetchSharedTripExport,
-  tripExportFileName,
-  type ExportFormat,
-} from '../../src/api/trips';
+import { fetchSharedTripExport, tripExportFileName, type ExportFormat } from '../../src/api/trips';
 import { useTripStore } from '../../src/store/trip-store';
 import { useSwipeTabs } from '../../src/hooks/use-swipe-tabs';
 
@@ -69,10 +65,7 @@ export default function SharedTrip() {
     return (
       <Screen padded={false} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ title: t('sharePage.title') }} />
-        <ErrorState
-          title={t('sharePage.title')}
-          description={t('sharePage.error')}
-        />
+        <ErrorState title={t('sharePage.title')} description={t('sharePage.error')} />
       </Screen>
     );
   }

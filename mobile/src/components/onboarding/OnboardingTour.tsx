@@ -55,7 +55,13 @@ export function OnboardingTour() {
           ]}
         >
           <View style={styles.header}>
-            <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sans, fontSize: 13 }}>
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontFamily: theme.fonts.sans,
+                fontSize: 13,
+              }}
+            >
               {t('onboarding.progress', { current: step + 1, total: steps.length })}
             </Text>
             <Pressable
@@ -64,7 +70,13 @@ export function OnboardingTour() {
               hitSlop={12}
               onPress={markSeen}
             >
-              <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.fonts.sansMedium, fontSize: 15 }}>
+              <Text
+                style={{
+                  color: theme.colors.mutedForeground,
+                  fontFamily: theme.fonts.sansMedium,
+                  fontSize: 15,
+                }}
+              >
                 {t('onboarding.skip')}
               </Text>
             </Pressable>
