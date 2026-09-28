@@ -16,7 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { NoDatesBanner } from "@/components/no-dates-banner";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
-import { getActivePresetKey } from "@/lib/pacing-presets";
+import { getActivePresetKey } from "@btp/core/pacing-presets";
 import { useUiStore } from "@/store/ui-store";
 import type { WeatherData } from "@btp/core";
 

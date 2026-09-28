@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTripText } from "./text-export";
+import { buildTripText } from "@btp/core";
 import type { StageData } from "@btp/core";
 
 function buildStage(

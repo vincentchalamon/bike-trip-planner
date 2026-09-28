@@ -36,7 +36,6 @@ import {
   CARD_WIDTH,
   CARD_HEIGHT,
 } from "@/lib/infographic";
-import { buildTripText } from "@/lib/text-export";
 import { logger } from "@/lib/logger";
 import {
   buildShareUrl,
@@ -45,7 +44,7 @@ import {
   revokeTripShare,
 } from "@/lib/api/client";
 import { trackEvent } from "@/lib/plausible";
-import { todayUtc, type StageData } from "@btp/core";
+import { buildTripText, todayUtc, type StageData } from "@btp/core";
 
 interface ShareModalProps {
   open: boolean;
