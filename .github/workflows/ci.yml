@@ -888,6 +888,8 @@ jobs:
         run: npm ci
       - name: Run Eslint
         run: npm run lint --workspace pwa
+      - name: Run Prettier
+        run: npm run format:check --workspace pwa
 
   npm-audit:
     name: npm audit
