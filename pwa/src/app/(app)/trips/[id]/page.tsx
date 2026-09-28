@@ -1,8 +1,4 @@
-import dynamic from "next/dynamic";
-
-const TripPage = dynamic(() => import("./trip-page"), {
-  loading: () => null,
-});
+import TripPage from "./trip-page";
 
 export default function Page() {
   return <TripPage />;
