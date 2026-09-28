@@ -18,6 +18,7 @@ use App\ApiResource\TripRequest;
 use App\Mercure\StagePayloadMapper;
 use App\Repository\DoctrineTripRequestRepository;
 use App\State\TripDetailProvider;
+use App\Weather\WeatherForecastSerializer;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,8 +31,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  *
  * They are not the same shape, and some of the differences are deliberate: the stored POI
  * keeps `openingHours` and `website` the two published ones drop, the stored forecast keeps
- * ten scalar fields where the published one rounds the wind and carries the hourly slots,
- * and `/detail` serves the raw stage figures where Mercure rounds them and adds the geometry.
+ * the wind and the gusts unrounded where the published one rounds them, and `/detail` serves the raw stage figures where Mercure rounds them and adds the geometry.
  * Every key and value is asserted so that any drift between them, deliberate or not, has to
  * be written down here.
  */
@@ -82,8 +82,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
 
         $stage = ($this->repository->getStages($tripId) ?? [])[0];
 
-        // What the column does not carry comes back as the constructor default.
-        self::assertEquals(new WeatherForecast('sun', 'Sunny', 12.0, 24.0, 15.46, 'NW', 10, 55, 80, 'headwind'), $stage->weather);
+        self::assertEquals($this->forecast(), $stage->weather);
         self::assertEquals($this->resupply(), $stage->resupply);
         self::assertEquals([$this->accommodation()], $stage->accommodations);
         self::assertEquals($this->accommodation(), $stage->selectedAccommodation);
@@ -116,7 +115,7 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
             'endLabel' => 'Chambery',
             'isRestDay' => false,
             'onCycleNetwork' => 0.0,
-            'weather' => $this->publishedWeatherOfTheStoredForecast(),
+            'weather' => $this->publishedWeather(),
             'weatherAvailability' => null,
             'alerts' => [],
             'events' => [$this->eventArray()],
@@ -156,6 +155,39 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
         ], $mapper->toPayload($stage, 'en'));
     }
 
+    #[Test]
+    public function aForecastWrittenByTheWeatherHandlerReloadsAsItWasPublished(): void
+    {
+        [$tripId, $stageId] = $this->seed();
+        $this->repository->updateStageWeather($tripId, $stageId, $this->forecast());
+
+        /** @var WeatherForecastSerializer $serializer */
+        $serializer = self::getContainer()->get(WeatherForecastSerializer::class);
+        /** @var TripDetailProvider $provider */
+        $provider = self::getContainer()->get(TripDetailProvider::class);
+        $detail = $provider->provide(new Get(), ['id' => $tripId]);
+        self::assertInstanceOf(TripDetail::class, $detail);
+
+        self::assertSame($serializer->toArray($this->forecast()), $detail->stages[0]['weather']);
+    }
+
+    #[Test]
+    public function aForecastStoredWithTheTenDailyScalarsOnlyStillReadsBack(): void
+    {
+        [$tripId, $stageId] = $this->seed();
+
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+        $connection->executeStatement(
+            'UPDATE stage SET weather = CAST(:weather AS jsonb) WHERE id = :id',
+            ['weather' => json_encode($this->legacyStoredWeather(), \JSON_THROW_ON_ERROR), 'id' => $stageId],
+        );
+
+        $stage = ($this->repository->getStages($tripId) ?? [])[0];
+
+        self::assertEquals(new WeatherForecast('sun', 'Sunny', 12.0, 24.0, 15.46, 'NW', 10, 55, 80, 'headwind'), $stage->weather);
+    }
+
     /** @return array{string, string} */
     private function seed(): array
     {
@@ -188,7 +220,18 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
         );
         $stage->startLabel = 'Grenoble';
         $stage->endLabel = 'Chambery';
-        $stage->weather = new WeatherForecast(
+        $stage->weather = $this->forecast();
+        $stage->resupply = $this->resupply();
+        $stage->addAccommodation($this->accommodation());
+        $stage->selectedAccommodation = $this->accommodation();
+        $stage->addEvent($this->event());
+
+        return $stage;
+    }
+
+    private function forecast(): WeatherForecast
+    {
+        return new WeatherForecast(
             'sun',
             'Sunny',
             12.0,
@@ -204,14 +247,8 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
             windGusts: 30.04,
             precipitationMm: 1.5,
             uvIndex: 6,
-            hourly: [new HourlyWeatherSlot(9, 15.0, 14.0, 0.0, 5, 10.0, 20.0, 270, 'headwind', 1)],
+            hourly: [new HourlyWeatherSlot(9, 15.5, 14.0, 0.2, 5, 10.4, 20.0, 270, 'headwind', 1)],
         );
-        $stage->resupply = $this->resupply();
-        $stage->addAccommodation($this->accommodation());
-        $stage->selectedAccommodation = $this->accommodation();
-        $stage->addEvent($this->event());
-
-        return $stage;
     }
 
     private function resupply(): Resupply
@@ -273,9 +310,38 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
     private function storedWeather(): array
     {
         return [
+            ...$this->legacyStoredWeather(),
+            // A whole float loses its fraction in a column the entity writes, and reads back as an int.
+            'apparentTempMin' => 11,
+            'apparentTempMax' => 25,
+            'windGusts' => 30.04,
+            'precipitationMm' => 1.5,
+            'uvIndex' => 6,
+            'hourly' => [[
+                'hour' => 9,
+                'temp' => 15.5,
+                'apparentTemp' => 14,
+                'precipitationMm' => 0.2,
+                'precipitationProbability' => 5,
+                'windSpeed' => 10.4,
+                'windGusts' => 20,
+                'windDirectionDeg' => 270,
+                'relativeWindDirection' => 'headwind',
+                'weatherCode' => 1,
+            ]],
+        ];
+    }
+
+    /**
+     * The shape the column held before it kept the whole forecast.
+     *
+     * @return array<string, mixed>
+     */
+    private function legacyStoredWeather(): array
+    {
+        return [
             'icon' => 'sun',
             'description' => 'Sunny',
-            // A whole float loses its fraction in a column the entity writes, and reads back as an int.
             'tempMin' => 12,
             'tempMax' => 24,
             'windSpeed' => 15.46,
@@ -308,39 +374,16 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
             'uvIndex' => 6,
             'hourly' => [[
                 'hour' => 9,
-                'temp' => 15.0,
+                'temp' => 15.5,
                 'apparentTemp' => 14.0,
-                'precipitationMm' => 0.0,
+                'precipitationMm' => 0.2,
                 'precipitationProbability' => 5,
-                'windSpeed' => 10.0,
+                'windSpeed' => 10.4,
                 'windGusts' => 20.0,
                 'windDirectionDeg' => 270,
                 'relativeWindDirection' => 'headwind',
                 'weatherCode' => 1,
             ]],
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    private function publishedWeatherOfTheStoredForecast(): array
-    {
-        return [
-            'icon' => 'sun',
-            'description' => 'Sunny',
-            'tempMin' => 12.0,
-            'tempMax' => 24.0,
-            'windSpeed' => 15.5,
-            'windDirection' => 'NW',
-            'precipitationProbability' => 10,
-            'humidity' => 55,
-            'comfortIndex' => 80,
-            'relativeWindDirection' => 'headwind',
-            'apparentTempMin' => 0.0,
-            'apparentTempMax' => 0.0,
-            'windGusts' => 0.0,
-            'precipitationMm' => 0.0,
-            'uvIndex' => 0,
-            'hourly' => [],
         ];
     }
 

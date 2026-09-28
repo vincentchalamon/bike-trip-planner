@@ -7,6 +7,7 @@ namespace App\Mapper;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
+use App\ApiResource\Model\HourlyWeatherSlot;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
@@ -22,9 +23,8 @@ use App\Weather\WeatherForecastSerializer;
  * a missing line somewhere else:
  *
  *  - a stored POI keeps `openingHours` and `website`, which the clients are not sent;
- *  - a stored forecast keeps the ten daily scalars as they are, while the clients get
- *    {@see WeatherForecastSerializer}'s shape — rounded wind, apparent temperatures, gusts
- *    and the hourly slots.
+ *  - a stored forecast keeps the wind and the gusts as they are, while the clients get
+ *    {@see WeatherForecastSerializer}'s shape, which rounds them.
  *
  * Accommodations, events and coordinates have one shape everywhere.
  */
@@ -153,8 +153,9 @@ final readonly class StageArrayMapper
     }
 
     /**
-     * The ten daily scalars, as they are. Not {@see self::weatherForClient()}: the column has
-     * never held the rounded wind, the apparent temperatures, the gusts or the hourly slots.
+     * The whole forecast, unrounded. The column used to keep only the ten daily scalars, so a
+     * reload served zeros for the apparent temperatures, the gusts, the precipitation and the
+     * UV index, and no hourly slot, where the live payload had shown them all.
      *
      * @return array<string, mixed>
      */
@@ -171,6 +172,26 @@ final readonly class StageArrayMapper
             'humidity' => $weather->humidity,
             'comfortIndex' => $weather->comfortIndex,
             'relativeWindDirection' => $weather->relativeWindDirection,
+            'apparentTempMin' => $weather->apparentTempMin,
+            'apparentTempMax' => $weather->apparentTempMax,
+            'windGusts' => $weather->windGusts,
+            'precipitationMm' => $weather->precipitationMm,
+            'uvIndex' => $weather->uvIndex,
+            'hourly' => array_map(
+                static fn (HourlyWeatherSlot $slot): array => [
+                    'hour' => $slot->hour,
+                    'temp' => $slot->temp,
+                    'apparentTemp' => $slot->apparentTemp,
+                    'precipitationMm' => $slot->precipitationMm,
+                    'precipitationProbability' => $slot->precipitationProbability,
+                    'windSpeed' => $slot->windSpeed,
+                    'windGusts' => $slot->windGusts,
+                    'windDirectionDeg' => $slot->windDirectionDeg,
+                    'relativeWindDirection' => $slot->relativeWindDirection,
+                    'weatherCode' => $slot->weatherCode,
+                ],
+                $weather->hourly,
+            ),
         ];
     }
 
@@ -183,9 +204,11 @@ final readonly class StageArrayMapper
     /** @param array<string, mixed> $data */
     public function weatherFromStorage(array $data): WeatherForecast
     {
-        /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string} $row */
+        /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string, apparentTempMin?: float, apparentTempMax?: float, windGusts?: float, precipitationMm?: float, uvIndex?: int, hourly?: list<array{hour: int, temp: float, apparentTemp: float, precipitationMm: float, precipitationProbability: int, windSpeed: float, windGusts: float, windDirectionDeg: int, relativeWindDirection: string, weatherCode: int}>} $row */
         $row = $data;
 
+        // A row written before the whole forecast was stored carries the ten daily scalars
+        // only: the rest falls back on the constructor defaults.
         return new WeatherForecast(
             icon: $row['icon'],
             description: $row['description'],
@@ -197,6 +220,26 @@ final readonly class StageArrayMapper
             humidity: $row['humidity'],
             comfortIndex: $row['comfortIndex'],
             relativeWindDirection: $row['relativeWindDirection'],
+            apparentTempMin: $row['apparentTempMin'] ?? 0.0,
+            apparentTempMax: $row['apparentTempMax'] ?? 0.0,
+            windGusts: $row['windGusts'] ?? 0.0,
+            precipitationMm: $row['precipitationMm'] ?? 0.0,
+            uvIndex: $row['uvIndex'] ?? 0,
+            hourly: array_map(
+                static fn (array $slot): HourlyWeatherSlot => new HourlyWeatherSlot(
+                    hour: $slot['hour'],
+                    temp: $slot['temp'],
+                    apparentTemp: $slot['apparentTemp'],
+                    precipitationMm: $slot['precipitationMm'],
+                    precipitationProbability: $slot['precipitationProbability'],
+                    windSpeed: $slot['windSpeed'],
+                    windGusts: $slot['windGusts'],
+                    windDirectionDeg: $slot['windDirectionDeg'],
+                    relativeWindDirection: $slot['relativeWindDirection'],
+                    weatherCode: $slot['weatherCode'],
+                ),
+                $row['hourly'] ?? [],
+            ),
         );
     }
 
