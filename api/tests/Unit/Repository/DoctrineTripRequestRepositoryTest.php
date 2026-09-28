@@ -19,6 +19,8 @@ use App\Enum\AlertGroup;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
 use App\Mapper\EventArrayMapper;
+use App\Mapper\StageArrayMapper;
+use App\Weather\WeatherForecastSerializer;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -66,7 +68,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new EventArrayMapper());
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
     }
 
     /**
@@ -138,7 +140,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
 
-        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new EventArrayMapper());
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
@@ -907,6 +909,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($em);
 
-        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage, new EventArrayMapper());
+        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
     }
 }

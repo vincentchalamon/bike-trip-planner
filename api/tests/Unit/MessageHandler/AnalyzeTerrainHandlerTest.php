@@ -18,6 +18,8 @@ use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
+use App\Mapper\EventArrayMapper;
+use App\Mapper\StageArrayMapper;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Weather\WeatherForecastSerializer;
@@ -89,7 +91,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $analyzerRegistry,
             $waysRepository,
             $distributor,
-            new StagePayloadMapper(new WeatherForecastSerializer(), $this->createAlertRenderer()),
+            new StagePayloadMapper(new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()), $this->createAlertRenderer()),
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
         );

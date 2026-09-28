@@ -8,13 +8,8 @@ use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\PointOfInterest;
-use App\ApiResource\Model\Resupply;
-use App\ApiResource\Model\Event;
-use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
-use App\Weather\WeatherForecastSerializer;
+use App\Mapper\StageArrayMapper;
 
 /**
  * Centralizes the wire-format serialization of {@see Stage} instances for Mercure events.
@@ -26,7 +21,7 @@ use App\Weather\WeatherForecastSerializer;
 final readonly class StagePayloadMapper
 {
     public function __construct(
-        private WeatherForecastSerializer $weatherSerializer,
+        private StageArrayMapper $stageMapper,
         private AlertRenderer $alertRenderer,
     ) {
     }
@@ -47,15 +42,12 @@ final readonly class StagePayloadMapper
             'distance' => round($stage->distance, 1),
             'elevation' => (int) $stage->elevation,
             'elevationLoss' => (int) $stage->elevationLoss,
-            'startPoint' => $this->coordinateToPayload($stage->startPoint),
-            'endPoint' => $this->coordinateToPayload($stage->endPoint),
+            'startPoint' => $this->stageMapper->coordinate($stage->startPoint),
+            'endPoint' => $this->stageMapper->coordinate($stage->endPoint),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
-            'geometry' => array_map(
-                $this->coordinateToPayload(...),
-                $stage->geometry,
-            ),
-            'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherSerializer->toArray($stage->weather) : null,
+            'geometry' => array_map($this->stageMapper->coordinate(...), $stage->geometry),
+            'weather' => $this->stageMapper->weatherForClient($stage->weather),
             // Already in wire shape, each tagged with its group: the producers build it
             // once and hand the same array to the database and to Mercure (ADR-068).
             //
@@ -63,18 +55,12 @@ final readonly class StagePayloadMapper
             // anonymous visitor gets no SSE, so the audience for this payload is the owner
             // whose account locale the trip carries (ADR-069).
             'alerts' => $this->alertRenderer->render($stage->alerts, $stage->dayNumber, $locale),
-            'resupply' => $this->resupplyToPayload($stage->resupply),
-            'accommodations' => array_map(
-                $this->accommodationToPayload(...),
-                $stage->accommodations,
-            ),
+            'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
+            'accommodations' => array_map($this->stageMapper->accommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
-                ? $this->accommodationToPayload($stage->selectedAccommodation)
+                ? $this->stageMapper->accommodation($stage->selectedAccommodation)
                 : null,
-            'events' => array_map(
-                $this->eventToPayload(...),
-                $stage->events,
-            ),
+            'events' => array_map($this->stageMapper->event(...), $stage->events),
         ];
     }
 
@@ -114,79 +100,5 @@ final readonly class StagePayloadMapper
         }
 
         return $payload;
-    }
-
-    /** @return array{lat: float, lon: float, ele: float} */
-    private function coordinateToPayload(Coordinate $coordinate): array
-    {
-        return ['lat' => $coordinate->lat, 'lon' => $coordinate->lon, 'ele' => $coordinate->ele];
-    }
-
-    /** @return array<string, mixed> */
-    private function resupplyToPayload(?Resupply $resupply): array
-    {
-        return ($resupply ?? new Resupply())->map($this->poiToPayload(...));
-    }
-
-    /** @return array<string, mixed> */
-    private function poiToPayload(PointOfInterest $poi): array
-    {
-        return [
-            'name' => $poi->name,
-            'category' => $poi->category,
-            'lat' => $poi->lat,
-            'lon' => $poi->lon,
-            'distanceFromStart' => $poi->distanceFromStart,
-            'osmType' => $poi->osmType,
-            'osmId' => $poi->osmId,
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    private function accommodationToPayload(Accommodation $accommodation): array
-    {
-        return [
-            'name' => $accommodation->name,
-            'type' => $accommodation->type,
-            'lat' => $accommodation->lat,
-            'lon' => $accommodation->lon,
-            'estimatedPriceMin' => $accommodation->estimatedPriceMin,
-            'estimatedPriceMax' => $accommodation->estimatedPriceMax,
-            'isExactPrice' => $accommodation->isExactPrice,
-            'url' => $accommodation->url,
-            'possibleClosed' => $accommodation->possibleClosed,
-            'distanceToEndPoint' => $accommodation->distanceToEndPoint,
-            'source' => $accommodation->source,
-            'description' => $accommodation->description,
-            'imageUrl' => $accommodation->imageUrl,
-            'wikipediaUrl' => $accommodation->wikipediaUrl,
-            'openingHours' => $accommodation->openingHours,
-            'phone' => $accommodation->phone,
-            'address' => $accommodation->address,
-            'osmType' => $accommodation->osmType,
-            'osmId' => $accommodation->osmId,
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    private function eventToPayload(Event $event): array
-    {
-        return [
-            'name' => $event->name,
-            'type' => $event->type,
-            'lat' => $event->lat,
-            'lon' => $event->lon,
-            'startDate' => $event->startDate->format(\DateTimeInterface::ATOM),
-            'endDate' => $event->endDate->format(\DateTimeInterface::ATOM),
-            'url' => $event->url,
-            'description' => $event->description,
-            'priceMin' => $event->priceMin,
-            'distanceToEndPoint' => $event->distanceToEndPoint,
-            'source' => $event->source,
-            'wikidataId' => $event->wikidataId,
-            'imageUrl' => $event->imageUrl,
-            'wikipediaUrl' => $event->wikipediaUrl,
-            'openingHours' => $event->openingHours,
-        ];
     }
 }
