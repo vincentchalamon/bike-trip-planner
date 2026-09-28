@@ -630,7 +630,7 @@ export async function fetchSharedTripExport(
     headers: { Accept: EXPORT_ACCEPT[format] },
     parseAs: 'arrayBuffer',
   });
-  if (error || !response.ok) {
+  if (error || !response.ok || data === undefined) {
     throw new Error('Failed to export shared trip');
   }
   return data;
