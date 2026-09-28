@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { MercureClient } from "@/lib/mercure/client";
 import type { MercureEvent } from "@btp/core/mercure";
 import { useTripStore } from "@/store/trip-store";
@@ -11,7 +12,10 @@ import {
   reduceMercureEvent,
 } from "@btp/core/reconciliation";
 import { resolveMercureHubUrl } from "@/lib/mercure/hub-url";
-import { applySideEffect } from "@/lib/mercure/side-effects";
+import {
+  applySideEffect,
+  type SideEffectContext,
+} from "@/lib/mercure/side-effects";
 
 /**
  * Reduce one server-pushed event into the store, then let the interface react.
@@ -34,6 +38,7 @@ function reduceAndReact(
   // Per-subscription stage-diff timers, keyed by stage identifier. Owned by useMercure and
   // cleared on teardown so a timer from trip A never fires against trip B.
   timers: Map<string, ReturnType<typeof setTimeout>>,
+  t: SideEffectContext["t"],
 ): void {
   const store = useTripStore.getState();
   // Snapshot the pre-mutation stages: the stage_updated diff needs both sides.
@@ -69,6 +74,7 @@ function reduceAndReact(
     currentStages: useTripStore.getState().stages,
     signal,
     timers,
+    t,
   });
 }
 
@@ -86,6 +92,11 @@ function reduceAndReact(
  */
 export function useMercure(tripId: string | null): void {
   const clientRef = useRef<MercureClient | null>(null);
+  const t = useTranslations();
+  // An effect event so a locale switch does not tear the subscription down.
+  const translate = useEffectEvent(
+    (key: string, values?: Record<string, string>) => t(key, values),
+  );
 
   useEffect(() => {
     if (!tripId) return;
@@ -116,7 +127,9 @@ export function useMercure(tripId: string | null): void {
       // whatever is recorded here.
       if (envelope.version !== undefined)
         setTripVersion(tripId, envelope.version);
-      reduceAndReact(envelope, controller.signal, timers);
+      reduceAndReact(envelope, controller.signal, timers, (key, values) =>
+        translate(key, values),
+      );
     });
 
     return () => {

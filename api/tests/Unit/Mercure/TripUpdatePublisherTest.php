@@ -151,7 +151,7 @@ final class TripUpdatePublisherTest extends TestCase
 
         $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper(new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()), $this->createAlertRenderer()), $this->createCorrelationIdProvider(), $this->createVersionSource(), new NullLogger());
         $publisher->publishValidationError(self::TRIP_ID, 'MIN_STAGES', 'Too few stages.');
-        $publisher->publishComputationError(self::TRIP_ID, 'weather', 'API down', retryable: true);
+        $publisher->publishComputationError(self::TRIP_ID, 'weather', retryable: true);
         $publisher->publishTripComplete(self::TRIP_ID, ['terrain' => 'done']);
     }
 

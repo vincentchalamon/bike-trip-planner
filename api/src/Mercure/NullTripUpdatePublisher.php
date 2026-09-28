@@ -21,7 +21,7 @@ final readonly class NullTripUpdatePublisher implements TripUpdatePublisherInter
     {
     }
 
-    public function publishComputationError(string $tripId, string $computation, string $message, bool $retryable = true): void
+    public function publishComputationError(string $tripId, string $computation, bool $retryable = true): void
     {
     }
 

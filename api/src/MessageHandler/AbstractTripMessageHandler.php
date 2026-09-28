@@ -118,11 +118,15 @@ abstract readonly class AbstractTripMessageHandler
             ]);
         } catch (\Throwable $throwable) {
             $duration = (int) ((hrtime(true) - $startTime) / 1_000_000);
-            $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
-            $this->logger->warning('Handler {name} failed after {duration}ms.', [
+            // The exception text (SQL, file paths, third-party responses) stays in the log: the
+            // event reaches the browser, which only needs to know which computation failed.
+            $this->publisher->publishComputationError($tripId, $computation->value);
+            $this->logger->warning('Handler {name} failed after {duration}ms: {message}', [
                 'name' => $computation->value,
                 'duration' => $duration,
                 'tripId' => $tripId,
+                'message' => $throwable->getMessage(),
+                'exception' => $throwable,
             ]);
 
             throw $throwable;

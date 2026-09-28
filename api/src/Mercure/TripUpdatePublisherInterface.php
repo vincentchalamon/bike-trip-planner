@@ -26,7 +26,7 @@ interface TripUpdatePublisherInterface
 
     public function publishValidationError(string $tripId, string $code, string $message): void;
 
-    public function publishComputationError(string $tripId, string $computation, string $message, bool $retryable = true): void;
+    public function publishComputationError(string $tripId, string $computation, bool $retryable = true): void;
 
     /**
      * Announces the computations a generation bump abandoned (ADR-073).

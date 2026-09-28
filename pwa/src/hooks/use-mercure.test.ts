@@ -24,6 +24,11 @@ vi.mock("@/lib/geocode/client", () => ({
   reverseGeocode: vi.fn().mockResolvedValue({ name: "Somewhere" }),
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) =>
+    `${key}:${JSON.stringify(values ?? {})}`,
+}));
+
 vi.mock("@/components/ui/sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
@@ -133,13 +138,15 @@ describe("useMercure — UI side effects (kept out of core)", () => {
     expect(useUiStore.getState().blockStatus.weather).toBe("done");
   });
 
-  it("validation_error toasts and clears the processing overlays", () => {
+  it("validation_error toasts a label translated from its code, not the raw message", () => {
     const dispatch = connect();
     dispatch({
       type: "validation_error",
-      data: { code: "x", message: "bad input" },
+      data: { code: "MIN_STAGES", message: "bad input" },
     });
-    expect(toast.error).toHaveBeenCalledWith("bad input");
+    expect(toast.error).toHaveBeenCalledWith(
+      'mercure.validationError:{"code":"MIN_STAGES"}',
+    );
     expect(useUiStore.getState().isProcessing).toBe(false);
     expect(useUiStore.getState().isAccommodationScanning).toBe(false);
   });
@@ -148,9 +155,11 @@ describe("useMercure — UI side effects (kept out of core)", () => {
     const dispatch = connect();
     dispatch({
       type: "computation_error",
-      data: { computation: "weather", message: "boom", retryable: false },
+      data: { computation: "weather", retryable: false },
     });
-    expect(toast.error).toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(
+      'mercure.computationFailed:{"computation":"weather"}',
+    );
     expect(useUiStore.getState().blockStatus.weather).toBe("failed");
     expect(useUiStore.getState().isProcessing).toBe(false);
   });
@@ -159,7 +168,7 @@ describe("useMercure — UI side effects (kept out of core)", () => {
     const dispatch = connect();
     dispatch({
       type: "computation_error",
-      data: { computation: "weather", message: "transient", retryable: true },
+      data: { computation: "weather", retryable: true },
     });
     expect(useUiStore.getState().isProcessing).toBe(true);
   });

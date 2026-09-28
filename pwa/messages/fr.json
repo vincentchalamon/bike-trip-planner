@@ -1060,5 +1060,9 @@
     "loopbackWarning": "Cette application s'exécute sur votre propre machine. Rien ne permet de vérifier qu'il s'agit bien de celle que vous croyez : n'autorisez que si vous venez de la lancer vous-même.",
     "approve": "Autoriser",
     "deny": "Refuser"
+  },
+  "mercure": {
+    "computationFailed": "{computation, select, route {L'itinéraire n'a pas pu être chargé.} stages {Les étapes n'ont pas pu être calculées.} pois {Les points d'intérêt n'ont pas pu être récupérés.} accommodations {Les hébergements n'ont pas pu être récupérés.} terrain {L'analyse du terrain n'a pas pu aboutir.} weather {La météo n'a pas pu être récupérée.} calendar {La vérification du calendrier n'a pas pu aboutir.} wind {L'analyse du vent n'a pas pu aboutir.} bike_shops {Les magasins de vélo n'ont pas pu être récupérés.} water_points {Les points d'eau n'ont pas pu être récupérés.} route_segment {Le tronçon n'a pas pu être recalculé.} cultural_pois {Les sites culturels n'ont pas pu être récupérés.} railway_stations {Les gares n'ont pas pu être récupérées.} health_services {Les services de santé n'ont pas pu être récupérés.} border_crossing {La vérification des passages de frontière n'a pas pu aboutir.} ferries {Les ferries n'ont pas pu être récupérés.} fords {Les gués n'ont pas pu être récupérés.} events {Les événements n'ont pas pu être récupérés.} other {Une partie de l'analyse n'a pas pu aboutir.}}",
+    "validationError": "{code, select, MIN_STAGES {Il faut au moins 2 étapes.} ROUTE_FETCH_FAILED {L'itinéraire est inaccessible. Vérifiez l'URL et réessayez.} EMPTY_ROUTE {L'itinéraire est vide.} other {Données invalides.}}"
   }
 }

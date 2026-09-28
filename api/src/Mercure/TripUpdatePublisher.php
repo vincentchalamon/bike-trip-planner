@@ -73,11 +73,10 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         ]);
     }
 
-    public function publishComputationError(string $tripId, string $computation, string $message, bool $retryable = true): void
+    public function publishComputationError(string $tripId, string $computation, bool $retryable = true): void
     {
         $this->publish($tripId, MercureEventType::COMPUTATION_ERROR, [
             'computation' => $computation,
-            'message' => $message,
             'retryable' => $retryable,
         ]);
     }

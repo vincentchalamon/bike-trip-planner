@@ -672,8 +672,8 @@ export function validationErrorEvent(): EventOf<"validation_error"> {
   return {
     type: "validation_error",
     data: {
-      code: "INVALID_SOURCE",
-      message: "URL source invalide ou inaccessible.",
+      code: "ROUTE_FETCH_FAILED",
+      message: "Raw server message, never displayed.",
     },
   };
 }
@@ -686,7 +686,6 @@ export function computationErrorEvent(
     type: "computation_error",
     data: {
       computation,
-      message: "Service meteo temporairement indisponible.",
       retryable,
     },
   };
