@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useCallback,
+  useMemo,
+  useState,
+  memo,
+} from "react";
 import { createPortal } from "react-dom";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -265,19 +273,15 @@ export const MapView = memo(function MapView({
     [stages],
   );
 
-  // Refs to avoid stale closures in map event handlers that are registered once
-  const activeStagesRef = useRef(activeStages);
-  const onStageClickRef = useRef(onStageClick);
-  const setHoveredAccommodationRef = useRef(setHoveredAccommodation);
-  useEffect(() => {
-    activeStagesRef.current = activeStages;
+  // Map handlers are registered once, so they read the latest props through
+  // Effect Events rather than the closure they were registered with.
+  const clickStageOfDay = useEffectEvent((dayNumber: number) => {
+    const idx = activeStages.findIndex((s) => s.dayNumber === dayNumber);
+    if (idx !== -1) onStageClick(idx);
   });
-  useEffect(() => {
-    onStageClickRef.current = onStageClick;
-  });
-  useEffect(() => {
-    setHoveredAccommodationRef.current = setHoveredAccommodation;
-  });
+  const currentRouteGeoJSON = useEffectEvent(() =>
+    buildRouteGeoJSON(activeStages),
+  );
 
   const addSourceAndLayers = useCallback(
     (map: maplibregl.Map, data: FeatureCollection) => {
@@ -366,10 +370,7 @@ export const MapView = memo(function MapView({
           const dayNumber = features[0]?.properties?.dayNumber as
             number | undefined;
           if (dayNumber === undefined) return;
-          const idx = activeStagesRef.current.findIndex(
-            (s) => s.dayNumber === dayNumber,
-          );
-          if (idx !== -1) onStageClickRef.current(idx);
+          clickStageOfDay(dayNumber);
         },
       );
 
@@ -404,10 +405,7 @@ export const MapView = memo(function MapView({
     mapRef.current.setStyle(tileStyle);
     mapRef.current.once("style.load", () => {
       if (!mapRef.current) return;
-      addSourceAndLayers(
-        mapRef.current,
-        buildRouteGeoJSON(activeStagesRef.current),
-      );
+      addSourceAndLayers(mapRef.current, currentRouteGeoJSON());
       // Re-add accommodation link source/layer after style change
       if (!mapRef.current.getSource("accommodation-link")) {
         addAccommodationLinkLayer(mapRef.current);
@@ -502,13 +500,13 @@ export const MapView = memo(function MapView({
 
           // Bidirectional hover: map marker → store
           el.addEventListener("mouseenter", () => {
-            setHoveredAccommodationRef.current({
+            setHoveredAccommodation({
               stageIndex: stageIdx,
               accIndex: accIdx,
             });
           });
           el.addEventListener("mouseleave", () => {
-            setHoveredAccommodationRef.current(null);
+            setHoveredAccommodation(null);
           });
 
           markersRef.current.push(
@@ -564,7 +562,7 @@ export const MapView = memo(function MapView({
           .addTo(map),
       );
     });
-  }, [activeStages, mapReady, t]);
+  }, [activeStages, mapReady, t, setHoveredAccommodation]);
 
   // Cultural POI popover — anchor a managed maplibre Popup at the selected
   // POI coords and portal the React tree into its DOM container. The popup
