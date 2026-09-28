@@ -38,15 +38,21 @@ final readonly class PromotionReport
     }
 
     /**
+     * Only the rows promoted since `$since`, the start of the run being reported. The table
+     * keeps one row per (source, zone, table), overwritten by each promotion, so a source that
+     * this run skipped or failed still has the figures of its last successful run there, and
+     * reporting them would present an old promotion as today's.
+     *
      * @return list<array{source: string, table: string, candidates: int, inserted: int}> empty when the report cannot be read
      */
-    public function forZone(string $zoneSlug, string $workDir): array
+    public function forZone(string $zoneSlug, string $workDir, \DateTimeImmutable $since): array
     {
         $path = $workDir.'/promotion-report.tsv';
         $sql = \sprintf(
-            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s ORDER BY source, table_name) TO '%s'",
+            "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s AND promoted_at >= %s::timestamptz ORDER BY source, table_name) TO '%s'",
             ZonePromotion::REPORT_TABLE,
             ZonePromotion::literal($zoneSlug),
+            ZonePromotion::literal($since->format(\DateTimeInterface::RFC3339_EXTENDED)),
             $path,
         );
 

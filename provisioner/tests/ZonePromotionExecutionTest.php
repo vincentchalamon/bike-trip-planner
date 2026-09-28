@@ -6,6 +6,7 @@ namespace Provisioner\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Provisioner\PromotionReport;
 use Provisioner\ZonePromotion;
 use Symfony\Component\Process\Process;
 
@@ -258,6 +259,70 @@ final class ZonePromotionExecutionTest extends TestCase
             ZonePromotion::REPORT_TABLE,
             self::SOURCE,
         )));
+    }
+
+    /**
+     * The report table holds one row per (source, zone, table), overwritten by each promotion
+     * and never cleared. A source this run skipped or failed therefore still has the figures
+     * of its last successful run there, and the zone-opening report used to print them as if
+     * they were today's.
+     */
+    #[Test]
+    public function theZoneOpeningReportLeavesOutWhatAnEarlierRunPromoted(): void
+    {
+        $stale = self::SOURCE.'-stale';
+        $this->exec(\sprintf(
+            "INSERT INTO %s (source, zone, table_name, candidates, inserted, promoted_at) VALUES ('%s', 'bretagne', 'pois', 50, 50, now() - interval '1 day')",
+            ZonePromotion::REPORT_TABLE,
+            $stale,
+        ));
+
+        try {
+            $startedAt = new \DateTimeImmutable($this->scalar('SELECT now()'));
+            $this->stage();
+            $this->promote();
+
+            $workDir = sys_get_temp_dir().'/promotion-report-'.bin2hex(random_bytes(4));
+            mkdir($workDir);
+
+            $rows = new PromotionReport($this->reportThroughThisConnection(...))->forZone('bretagne', $workDir, $startedAt);
+
+            $sources = array_values(array_unique(array_column($rows, 'source')));
+            self::assertContains(self::SOURCE, $sources);
+            self::assertNotContains($stale, $sources);
+        } finally {
+            $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, $stale));
+        }
+    }
+
+    /**
+     * Stands in for psql's `\copy ... TO <file>`, which only the binary understands: the query
+     * inside it runs against the real database, through whichever backend this test has, and
+     * lands in the file as tab-separated rows, which is what \copy writes.
+     *
+     * @param list<string> $command
+     */
+    private function reportThroughThisConnection(array $command): Process
+    {
+        $sql = end($command);
+        \assert(\is_string($sql));
+        self::assertSame(1, preg_match("/^\\\\copy \((.+)\) TO '([^']+)'$/s", $sql, $matches), $sql);
+
+        if ($this->pdo instanceof \PDO) {
+            $statement = $this->pdo->query($matches[1]);
+            \assert(false !== $statement);
+            $lines = array_map(
+                fn (array $row): string => implode("\t", array_map($this->stringify(...), $row)),
+                $statement->fetchAll(\PDO::FETCH_NUM),
+            );
+            $tsv = implode("\n", $lines);
+        } else {
+            $tsv = $this->runPsql(['-t', '-A', '-F', "\t", '-c', $matches[1]]);
+        }
+
+        file_put_contents($matches[2], $tsv);
+
+        return new Process(['true']);
     }
 
     #[Test]

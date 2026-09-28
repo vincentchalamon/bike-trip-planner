@@ -166,6 +166,10 @@ final class ProvisionCommand extends Command
             // server timezone (ADR-051 §4, EventsPromotion).
             $today = DataTourismeImporter::today();
 
+            // What the zone-opening report is scoped to: a source this run skipped or failed
+            // must not show the figures of an earlier promotion.
+            $startedAt = new \DateTimeImmutable();
+
             $curated = $dryRun ? null : $this->resolveDataTourismeImporter($io);
             $curatedTable = null;
             $curatedOutcome = Command::SUCCESS;
@@ -195,7 +199,7 @@ final class ProvisionCommand extends Command
 
             if (!$dryRun) {
                 $outcomes['datatourisme'] = $curatedOutcome;
-                $this->reportPromotion($io, $zone['slug']);
+                $this->reportPromotion($io, $zone['slug'], $startedAt);
             }
 
             $this->summarize($io, $outcomes);
@@ -304,9 +308,9 @@ final class ProvisionCommand extends Command
      * entries" on a re-open is the evidence that the identity anti-join works, so it is
      * stated rather than left to be inferred from silence.
      */
-    private function reportPromotion(SymfonyStyle $io, string $zoneSlug): void
+    private function reportPromotion(SymfonyStyle $io, string $zoneSlug, \DateTimeImmutable $startedAt): void
     {
-        $rows = $this->promotionReport->forZone($zoneSlug, \dirname($this->filteredPbf));
+        $rows = $this->promotionReport->forZone($zoneSlug, \dirname($this->filteredPbf), $startedAt);
         if ([] === $rows) {
             return;
         }
