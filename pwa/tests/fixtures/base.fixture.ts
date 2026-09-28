@@ -79,9 +79,13 @@ interface MockedFixtures {
 }
 
 export const test = base.extend<
-  MockedFixtures & { mockOptions: MockApiOptions }
+  MockedFixtures & {
+    mockOptions: MockApiOptions;
+    tripNavigationTimeout: number;
+  }
 >({
   mockOptions: [{}, { option: true }],
+  tripNavigationTimeout: [5000, { option: true }],
 
   mockedPage: async ({ page, mockOptions }, use) => {
     await mockAllApis(page, mockOptions);
@@ -111,7 +115,7 @@ export const test = base.extend<
     );
   },
 
-  submitUrl: async ({ mockedPage }, use) => {
+  submitUrl: async ({ mockedPage, tripNavigationTimeout }, use) => {
     await use(async (url?: string) => {
       const input = mockedPage.getByTestId("magic-link-input");
       // If the input is not visible (e.g. after clearTrip returned us to the
@@ -127,21 +131,26 @@ export const test = base.extend<
       // in flight). The full trip view — and thus `trip-title` — only mounts
       // once structural stages arrive via injected SSE events. Accept either so
       // callers that pre-load stages before submitting still pass.
-      await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+      await mockedPage.waitForURL(/\/trips\//, {
+        timeout: tripNavigationTimeout,
+      });
       await expect(
         mockedPage
           .getByTestId("trip-loader")
           .or(mockedPage.getByTestId("trip-title")),
-      ).toBeVisible({ timeout: 5000 });
+      ).toBeVisible({ timeout: tripNavigationTimeout });
     });
   },
 
-  createFullTrip: async ({ submitUrl, injectSequence, mockedPage }, use) => {
+  createFullTrip: async (
+    { submitUrl, injectSequence, mockedPage, tripNavigationTimeout },
+    use,
+  ) => {
     await use(async () => {
       await submitUrl();
       await injectSequence(fullTripEventSequence());
       await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible({
-        timeout: 10000,
+        timeout: tripNavigationTimeout * 2,
       });
     });
   },
