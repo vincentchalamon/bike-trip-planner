@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -275,12 +276,16 @@ final class McpOutputSchemaTest extends ApiTestCase
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
+
+        /** @var DoctrineTripStageStore $stageStore */
+        $stageStore = self::getContainer()->get(DoctrineTripStageStore::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
         $repo->storeTitle(self::TRIP_ID, 'Traversée du Vercors');
         $repo->storeStatus(self::TRIP_ID, 'ready');
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
 
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $stageStore->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,
@@ -290,14 +295,14 @@ final class McpOutputSchemaTest extends ApiTestCase
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         )]);
 
-        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
+        $stageId = ($stageStore->getStages(self::TRIP_ID) ?? [])[0]->id ?? null;
         self::assertIsString($stageId);
 
         // A real alert payload, not an empty list. The first version of this test validated
         // get_stage against a stage with no alert, so a schema that declared every alert value a
         // string passed here — and a validating client (the MCP Inspector) refused every real
         // answer: producers publish numbers (`lat`, `lon`) and objects (`parameters`, `action`).
-        $repo->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
+        $stageStore->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::POIS, [[
             'code' => 'cultural_poi_suggestion',
             'type' => 'nudge',
             'messageKey' => 'alert.cultural_poi.suggestion',

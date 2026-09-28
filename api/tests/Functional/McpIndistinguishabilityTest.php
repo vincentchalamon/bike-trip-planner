@@ -10,6 +10,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -210,11 +211,15 @@ final class McpIndistinguishabilityTest extends ApiTestCase
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
+
+        /** @var DoctrineTripStageStore $stageStore */
+        $stageStore = self::getContainer()->get(DoctrineTripStageStore::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
         $repo->storeTitle(self::TRIP_ID, self::TRIP_TITLE);
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
 
-        $repo->storeStages(self::TRIP_ID, [new StageDto(
+        $stageStore->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,

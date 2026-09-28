@@ -13,6 +13,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -266,6 +267,10 @@ final class McpGetTripTest extends ApiTestCase
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
+
+        /** @var DoctrineTripStageStore $stageStore */
+        $stageStore = self::getContainer()->get(DoctrineTripStageStore::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
         $repo->storeTitle(self::TRIP_ID, 'Traversée du Vercors');
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
@@ -291,7 +296,7 @@ final class McpGetTripTest extends ApiTestCase
             isExactPrice: false,
         );
 
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $stageStore->storeStages(self::TRIP_ID, [$stage]);
 
         if ($ready) {
             $repo->storeStatus(self::TRIP_ID, 'ready');

@@ -14,6 +14,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -31,7 +32,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * frozen data — proving the render path reads only PG-app.
  *
  * To see it fail (and prove it is not vacuous): make TripDetailProvider or
- * DoctrineTripRequestRepository::getStages read the reference index (osm/tourism)
+ * DoctrineTripStageStore::getStages read the reference index (osm/tourism)
  * while serializing a stage — the dropped schema then makes the request 500.
  */
 #[ResetDatabase]
@@ -65,6 +66,10 @@ final class StageSnapshotInvariantTest extends ApiTestCase
 
         /** @var DoctrineTripRequestRepository $repo */
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
+
+        /** @var DoctrineTripStageStore $stageStore */
+        $stageStore = self::getContainer()->get(DoctrineTripStageStore::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
         $repo->storeTitle(self::TRIP_ID, 'Snapshot invariant trip');
         $this->associateTripWithUser(self::TRIP_ID, $this->testUser);
@@ -98,7 +103,7 @@ final class StageSnapshotInvariantTest extends ApiTestCase
 
         // Freezes the snapshot onto the Stage entity (this is the store-time step that
         // legitimately reads the reference index, e.g. the on-cycle-network fraction).
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $stageStore->storeStages(self::TRIP_ID, [$stage]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         // Now make the reference index vanish entirely: any render-time query against

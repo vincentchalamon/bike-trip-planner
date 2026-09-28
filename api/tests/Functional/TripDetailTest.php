@@ -16,6 +16,7 @@ use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -74,7 +75,7 @@ final class TripDetailTest extends ApiTestCase
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         );
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$stage]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
@@ -130,11 +131,11 @@ final class TripDetailTest extends ApiTestCase
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         );
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$stage]);
         // Written by the producer, not carried by storeStages(): enrichment columns belong to
         // the computations that fill them (ADR-068). Stored in the shape the producer
         // publishes, so /detail serves exactly what Mercure pushed.
-        $repo->updateStageAlertsForGroup(self::TRIP_ID, $stage->id, AlertGroup::TERRAIN, [
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stage->id, AlertGroup::TERRAIN, [
             [
                 'code' => AlertCode::CONTINUITY_GAP_CRITICAL->value,
                 'type' => 'critical',
@@ -310,7 +311,7 @@ final class TripDetailTest extends ApiTestCase
     public function aStageBeyondTheForecastHorizonSaysWhyItHasNoWeather(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today +20 days'));
-        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$this->stageDto()]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $this->assertSame('beyond_horizon', $this->firstStage()['weatherAvailability']);
@@ -320,7 +321,7 @@ final class TripDetailTest extends ApiTestCase
     public function aStageAlreadyBehindUsSaysSoRatherThanReadingAsMissing(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today -10 days'));
-        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$this->stageDto()]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $this->assertSame('past', $this->firstStage()['weatherAvailability']);
@@ -336,7 +337,7 @@ final class TripDetailTest extends ApiTestCase
     public function aStageWithinTheHorizonWaitsForTheFetchBeforeCallingItUnavailable(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID, new \DateTimeImmutable('today +2 days'));
-        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$this->stageDto()]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
@@ -363,7 +364,7 @@ final class TripDetailTest extends ApiTestCase
     public function anUndatedTripIsNotGivenABorrowedCalendar(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$this->stageDto()]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
@@ -386,7 +387,7 @@ final class TripDetailTest extends ApiTestCase
     public function stateOutlivesTheCacheThatHeldIt(): void
     {
         $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, [$this->stageDto()]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$this->stageDto()]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         // Written straight to the column, never through the tracker: the in-memory cache
@@ -511,7 +512,7 @@ final class TripDetailTest extends ApiTestCase
         // the seeded coverage polygon (2..4 lon, 48..50 lat), so the trip is out of
         // zone. The flag is now computed and persisted at storeStages() time (#775),
         // so the coverage polygon must exist before storing the stages.
-        $repo = $this->seedTrip(self::TRIP_ID);
+        $this->seedTrip(self::TRIP_ID);
 
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');
         \assert($connection instanceof Connection);
@@ -530,7 +531,7 @@ final class TripDetailTest extends ApiTestCase
             startPoint: new Coordinate(48.5, 10.0, 0.0),
             endPoint: new Coordinate(48.6, 10.1, 0.0),
         );
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$stage]);
 
         $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
@@ -547,7 +548,7 @@ final class TripDetailTest extends ApiTestCase
         // storeStages() time and persisted on the stage row, then read back O(1)
         // by the detail provider. Seed a cycle route, store a stage running along
         // it, and assert the persisted fraction surfaces in the detail payload.
-        $repo = $this->seedTrip(self::TRIP_ID);
+        $this->seedTrip(self::TRIP_ID);
 
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');
         \assert($connection instanceof Connection);
@@ -571,7 +572,7 @@ final class TripDetailTest extends ApiTestCase
                 new Coordinate(48.9, 2.0, 0.0),
             ],
         );
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$stage]);
 
         // Verify the value is actually persisted on the row (not recomputed on read).
         $persisted = $connection->fetchOne('SELECT on_cycle_network FROM stage WHERE trip_id = :id', ['id' => self::TRIP_ID]);
@@ -625,7 +626,7 @@ final class TripDetailTest extends ApiTestCase
         $stage->addAccommodation($accommodation);
         $stage->selectedAccommodation = $accommodation;
 
-        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $this->stageStore()->storeStages(self::TRIP_ID, [$stage]);
         $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $stages = $this->fetchDetail()['stages'];
@@ -661,8 +662,8 @@ final class TripDetailTest extends ApiTestCase
     {
         // IDOR-DETAIL regression: a trip owned by someone else must not be readable,
         // and is hidden as 404 (not 403) so its existence is not revealed (ADR-038).
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, []);
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, []);
 
         ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
 
@@ -684,8 +685,8 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function routeReturnsPerStageGeometry(): void
     {
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, [
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, [
             new StageDto(
                 tripId: self::TRIP_ID,
                 dayNumber: 1,
@@ -720,8 +721,8 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function routeOfATripWithNoStagesIsAnEmptyList(): void
     {
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, []);
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, []);
 
         $response = $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
@@ -734,8 +735,8 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function stageDetailReturnsTheFullStageIncludingGeometry(): void
     {
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, [
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, [
             new StageDto(
                 tripId: self::TRIP_ID,
                 dayNumber: 1,
@@ -747,7 +748,7 @@ final class TripDetailTest extends ApiTestCase
             ),
         ]);
 
-        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
         $response = $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, $stageId), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
@@ -764,8 +765,8 @@ final class TripDetailTest extends ApiTestCase
     public function routeOfAnotherUsersTripReturns404(): void
     {
         // IDOR-DETAIL regression: TRIP_VIEW hides another user's trip as a 404.
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, []);
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, []);
 
         ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
 
@@ -779,8 +780,8 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function stageDetailOfAnotherUsersTripReturns404(): void
     {
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, [
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, [
             new StageDto(
                 tripId: self::TRIP_ID,
                 dayNumber: 1,
@@ -793,7 +794,7 @@ final class TripDetailTest extends ApiTestCase
 
         ['token' => $otherToken] = $this->createTestUserWithJwt('intruder2@example.com');
 
-        $stageId = ($repo->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
         $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, $stageId), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
         ]);
@@ -804,13 +805,21 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function stageDetailOfAnUnknownStageReturns404(): void
     {
-        $repo = $this->seedTrip(self::TRIP_ID);
-        $repo->storeStages(self::TRIP_ID, []);
+        $this->seedTrip(self::TRIP_ID);
+        $this->stageStore()->storeStages(self::TRIP_ID, []);
 
         $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, Uuid::v7()->toRfc4122()), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
 
         $this->assertResponseStatusCodeSame(404);
+    }
+
+    private function stageStore(): DoctrineTripStageStore
+    {
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
+        \assert($store instanceof DoctrineTripStageStore);
+
+        return $store;
     }
 }

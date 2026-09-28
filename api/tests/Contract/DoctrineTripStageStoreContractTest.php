@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Contract;
 
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -18,8 +19,8 @@ final class DoctrineTripStageStoreContractTest extends TripStageStoreContractTes
     #[\Override]
     protected function createStore(): TripStageStoreInterface
     {
-        /** @var DoctrineTripRequestRepository $store */
-        $store = self::getContainer()->get(DoctrineTripRequestRepository::class);
+        /** @var DoctrineTripStageStore $store */
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
 
         return $store;
     }

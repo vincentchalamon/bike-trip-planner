@@ -9,6 +9,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -17,7 +18,7 @@ use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
- * {@see DoctrineTripRequestRepository::storeStages()} reconciles the persisted rows
+ * {@see DoctrineTripStageStore::storeStages()} reconciles the persisted rows
  * against the incoming identifiers instead of deleting and re-inserting them, so a stage
  * keeps its identity across every write (ADR-066).
  *
@@ -27,7 +28,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class DoctrineStageReconciliationTest extends KernelTestCase
 {
-    private DoctrineTripRequestRepository $repository;
+    private DoctrineTripStageStore $store;
+
+    private DoctrineTripRequestRepository $trips;
 
     private EntityManagerInterface $entityManager;
 
@@ -38,9 +41,13 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
 
         $container = self::getContainer();
 
-        /** @var DoctrineTripRequestRepository $repository */
-        $repository = $container->get(DoctrineTripRequestRepository::class);
-        $this->repository = $repository;
+        /** @var DoctrineTripStageStore $store */
+        $store = $container->get(DoctrineTripStageStore::class);
+        $this->store = $store;
+
+        /** @var DoctrineTripRequestRepository $trips */
+        $trips = $container->get(DoctrineTripRequestRepository::class);
+        $this->trips = $trips;
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = $container->get(EntityManagerInterface::class);
@@ -53,7 +60,7 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
         $tripId = $this->seedTrip();
         $before = $this->persistedIds($tripId);
 
-        $this->repository->storeStages($tripId, $this->repository->getStages($tripId) ?? []);
+        $this->store->storeStages($tripId, $this->store->getStages($tripId) ?? []);
 
         self::assertSame($before, $this->persistedIds($tripId));
     }
@@ -62,11 +69,11 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function aMoveKeepsIdentifiersAndRenumbersPositions(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         [$first, $second, $third] = $stages;
 
         // Move the third stage to the front, as StageMoveProcessor does.
-        $this->repository->storeStages($tripId, [$third, $first, $second]);
+        $this->store->storeStages($tripId, [$third, $first, $second]);
 
         self::assertSame([$third->id, $first->id, $second->id], $this->persistedIds($tripId));
         self::assertSame([0, 1, 2], $this->persistedPositions($tripId));
@@ -81,14 +88,14 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function theOnCycleNetworkFractionFollowsTheStageNotThePosition(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         [$first, $second, $third] = $stages;
 
         $this->setOnCycleNetwork($first->id, 0.1);
         $this->setOnCycleNetwork($second->id, 0.2);
         $this->setOnCycleNetwork($third->id, 0.3);
 
-        $this->repository->storeStages($tripId, [$third, $first, $second]);
+        $this->store->storeStages($tripId, [$third, $first, $second]);
 
         self::assertSame(0.3, $this->onCycleNetworkOf($third->id));
         self::assertSame(0.1, $this->onCycleNetworkOf($first->id));
@@ -99,10 +106,10 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function aDeletionRemovesOnlyTheMissingStage(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         [$first, , $third] = $stages;
 
-        $this->repository->storeStages($tripId, [$first, $third]);
+        $this->store->storeStages($tripId, [$first, $third]);
 
         self::assertSame([$first->id, $third->id], $this->persistedIds($tripId));
     }
@@ -111,11 +118,11 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function anInsertionKeepsTheSurroundingIdentifiers(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         [$first, $second, $third] = $stages;
         $inserted = $this->stage($tripId, 2);
 
-        $this->repository->storeStages($tripId, [$first, $inserted, $second, $third]);
+        $this->store->storeStages($tripId, [$first, $inserted, $second, $third]);
 
         self::assertSame(
             [$first->id, $inserted->id, $second->id, $third->id],
@@ -134,7 +141,7 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
         $tripId = $this->seedTrip();
         $before = $this->persistedIds($tripId);
 
-        $this->repository->storeStages($tripId, [$this->stage($tripId, 1), $this->stage($tripId, 2)]);
+        $this->store->storeStages($tripId, [$this->stage($tripId, 1), $this->stage($tripId, 2)]);
 
         $after = $this->persistedIds($tripId);
         self::assertCount(2, $after);
@@ -149,10 +156,10 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
         $otherIds = $this->persistedIds($otherTripId);
 
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         $stages[] = $this->stage($tripId, 4);
 
-        $this->repository->storeStages($tripId, $stages);
+        $this->store->storeStages($tripId, $stages);
 
         self::assertCount(4, $this->persistedIds($tripId));
         self::assertSame($otherIds, $this->persistedIds($otherTripId));
@@ -162,12 +169,12 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function duplicateIdentifiersFailWhereTheCauseIsVisible(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessageMatches('/duplicate identifiers/');
 
-        $this->repository->storeStages($tripId, [$stages[0], $stages[0]]);
+        $this->store->storeStages($tripId, [$stages[0], $stages[0]]);
     }
 
     /**
@@ -180,12 +187,12 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function everyWriteOfTheCollectionBumpsTheVersion(): void
     {
         $tripId = $this->seedTrip();
-        $before = $this->repository->getVersion($tripId);
+        $before = $this->store->getVersion($tripId);
         self::assertNotNull($before);
 
-        $this->repository->storeStages($tripId, $this->repository->getStages($tripId) ?? []);
+        $this->store->storeStages($tripId, $this->store->getStages($tripId) ?? []);
 
-        self::assertSame($before + 1, $this->repository->getVersion($tripId));
+        self::assertSame($before + 1, $this->store->getVersion($tripId));
     }
 
     /** A targeted enrichment write is not a structural change and must leave it alone. */
@@ -193,12 +200,12 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     public function aTargetedEnrichmentWriteDoesNotBumpTheVersion(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
-        $before = $this->repository->getVersion($tripId);
+        $stages = $this->store->getStages($tripId) ?? [];
+        $before = $this->store->getVersion($tripId);
 
-        $this->repository->updateStageLabels($tripId, $stages[0]->id, 'Lyon', 'Vienne');
+        $this->store->updateStageLabels($tripId, $stages[0]->id, 'Lyon', 'Vienne');
 
-        self::assertSame($before, $this->repository->getVersion($tripId));
+        self::assertSame($before, $this->store->getVersion($tripId));
     }
 
     /** @return list<string> */
@@ -266,8 +273,8 @@ final class DoctrineStageReconciliationTest extends KernelTestCase
     private function seedTrip(): string
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
-        $this->repository->storeStages($tripId, [
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->store->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),
             $this->stage($tripId, 3),

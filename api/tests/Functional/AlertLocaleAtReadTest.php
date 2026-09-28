@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Repository\DoctrineTripRequestRepository;
+use App\Repository\DoctrineTripStageStore;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
@@ -173,7 +174,7 @@ final class AlertLocaleAtReadTest extends ApiTestCase
         $repository->storeStatus(self::TRIP_ID, 'ready');
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
 
-        $repository->storeStages(self::TRIP_ID, [new StageDto(
+        $this->stageStore()->storeStages(self::TRIP_ID, [new StageDto(
             tripId: self::TRIP_ID,
             dayNumber: 1,
             distance: 85.5,
@@ -183,13 +184,21 @@ final class AlertLocaleAtReadTest extends ApiTestCase
             geometry: [new Coordinate(45.0, 6.0, 1000.0), new Coordinate(45.5, 6.5, 800.0)],
         )]);
 
-        $stageId = ($repository->getStages(self::TRIP_ID) ?? [])[0]->id;
+        $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
         // Stored exactly as a producer stores it: a key and a number, no prose.
-        $repository->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, [[
+        $this->stageStore()->updateStageAlertsForGroup(self::TRIP_ID, $stageId, AlertGroup::TERRAIN, [[
             'code' => 'elevation_gain',
             'type' => 'warning',
             'messageKey' => 'alert.elevation.warning',
             'parameters' => ['%elevation%' => 1500],
         ]]);
+    }
+
+    private function stageStore(): DoctrineTripStageStore
+    {
+        $store = self::getContainer()->get(DoctrineTripStageStore::class);
+        \assert($store instanceof DoctrineTripStageStore);
+
+        return $store;
     }
 }

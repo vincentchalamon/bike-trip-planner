@@ -17,7 +17,7 @@ use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
- * Integration coverage for {@see \App\Repository\DoctrineTripRequestRepository::getStageGeometry}:
+ * Integration coverage for {@see \App\Repository\DoctrineTripStageStore::getStageGeometry}:
  * the in-ride detour input (issue #932). It must read the single `geometry` JSONB column
  * without hydrating the stage aggregate (weather, POIs, accommodations…).
  */
