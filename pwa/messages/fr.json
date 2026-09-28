@@ -92,20 +92,8 @@
     "noAlerts": "Aucune alerte pour cette étape"
   },
   "stageLocations": {
-    "searchDeparture": "Rechercher un départ...",
-    "searchDepartureLabel": "Rechercher le départ de l'étape",
     "departure": "Départ étape {n}",
-    "searchArrival": "Rechercher une arrivée...",
-    "searchArrivalLabel": "Rechercher l'arrivée de l'étape",
-    "arrival": "Arrivée étape {n}",
-    "noResults": "Aucun résultat trouvé"
-  },
-  "timeline": {
-    "loadingStages": "Chargement des étapes",
-    "tripStages": "Étapes du voyage",
-    "cumulativeDistance": "{km} km cumulés",
-    "sidebarLabel": "Sommaire des étapes",
-    "noStageSelected": "Sélectionne une étape"
+    "arrival": "Arrivée étape {n}"
   },
   "calendar": {
     "previousMonth": "Mois précédent",

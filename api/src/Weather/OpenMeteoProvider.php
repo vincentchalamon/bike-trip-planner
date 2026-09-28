@@ -17,6 +17,11 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
     ) {
     }
 
+    /**
+     * Returns null when the provider has no usable forecast for the location (a
+     * failed call after retries, or a response missing the core fields) — never a
+     * fabricated default, so the caller leaves the stage weather genuinely absent.
+     */
     public function fetchForecast(float $lat, float $lon, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): ?RawForecast
     {
         $response = $this->httpClient->request('GET', '/v1/forecast', [

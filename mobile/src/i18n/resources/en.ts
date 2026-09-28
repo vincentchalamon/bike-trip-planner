@@ -122,7 +122,6 @@ export const en: typeof fr = {
     legal: 'Legal notice',
     privacy: 'Privacy',
     logout: 'Sign out',
-    comingSoon: 'Coming soon',
     emailTitle: 'Change my email address',
     notificationsTitle: 'Notifications',
     exportTitle: 'Export my data',
