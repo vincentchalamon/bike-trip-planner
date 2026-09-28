@@ -36,6 +36,7 @@ export default defineConfig({
         __dirname,
         "../core/reconciliation.ts",
       ),
+      "@btp/core/optimistic": path.resolve(__dirname, "../core/optimistic.ts"),
       "@btp/core": path.resolve(__dirname, "../core/index.ts"),
       "@": path.resolve(__dirname, "./src"),
     },

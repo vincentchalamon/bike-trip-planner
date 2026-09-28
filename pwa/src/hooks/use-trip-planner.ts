@@ -144,6 +144,9 @@ export function useTripPlanner() {
       setIsLocked: s.setIsLocked,
       setDepartureHour: s.setDepartureHour,
       startStageRecomputation: s.startStageRecomputation,
+      claimSettings: s.claimSettings,
+      settleSettings: s.settleSettings,
+      revertSettings: s.revertSettings,
       queueModification: s.queueModification,
       cancelAllModifications: s.cancelAllModifications,
       clearPendingModifications: s.clearPendingModifications,
@@ -301,14 +304,18 @@ export function useTripPlanner() {
       useTripStore.getState();
     const undoToken = actions.updateDates(newStart, newEnd);
     if (!tripId) return;
+    const claim = actions.claimSettings(["startDate", "endDate"]);
 
-    // updateDates pushed an undo entry: a refused change must leave no trace in the history.
+    // updateDates pushed an undo entry: a refused change must leave no trace in the
+    // history, and must not undo a date change made while it was in flight.
     const rollback = () => {
-      discardUndoEntry(undoToken, {
-        startDate: previousStart,
-        endDate: previousEnd,
-      });
-      useTripStore.getState().updateDatesInternal(previousStart, previousEnd);
+      const previous = { startDate: previousStart, endDate: previousEnd };
+      discardUndoEntry(
+        undoToken,
+        { startDate: newStart, endDate: newEnd },
+        previous,
+      );
+      actions.revertSettings(claim, previous);
     };
 
     try {
@@ -327,6 +334,7 @@ export function useTripPlanner() {
         rollback();
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         if (data) actions.setIsLocked(data.isLocked === true);
         setProcessing(true);
         setAccommodationScanning(true);
@@ -341,6 +349,15 @@ export function useTripPlanner() {
     const previousTitle = useTripStore.getState().trip?.title;
     actions.updateTitle(newTitle);
     if (!tripId) return;
+    const claim = actions.claimSettings(["title"]);
+
+    // Unless a newer rename has replaced it meanwhile.
+    const revertTitle = () => {
+      if (previousTitle !== undefined) {
+        actions.revertSettings(claim, { title: previousTitle });
+      }
+      actions.settleSettings(claim);
+    };
 
     try {
       const pacing = getPacingState();
@@ -354,12 +371,14 @@ export function useTripPlanner() {
       });
       if (!response.ok) {
         reportApiError(response.status, error);
-        if (previousTitle !== undefined) actions.updateTitle(previousTitle);
+        revertTitle();
+      } else {
+        actions.settleSettings(claim);
       }
     } catch {
       // Title save is best-effort on a network failure: no toast, but never keep a title
       // the server does not have.
-      if (previousTitle !== undefined) actions.updateTitle(previousTitle);
+      revertTitle();
     }
   }
 
@@ -678,6 +697,12 @@ export function useTripPlanner() {
       newMaxDistance,
       newAverageSpeed,
     );
+    const claim = actions.claimSettings([
+      "fatigueFactor",
+      "elevationPenalty",
+      "maxDistancePerDay",
+      "averageSpeed",
+    ]);
     const saved = await patchPacingSettings(
       newFatigue,
       newElevation,
@@ -686,25 +711,32 @@ export function useTripPlanner() {
       getPacingState().ebikeMode,
     );
     if (!saved && tripId) {
-      discardUndoEntry(undoToken, {
+      const previous = {
         fatigueFactor: snapshot.fatigueFactor,
         elevationPenalty: snapshot.elevationPenalty,
         maxDistancePerDay: snapshot.maxDistancePerDay,
         averageSpeed: snapshot.averageSpeed,
-      });
-      actions.updatePacingSettingsInternal(
-        snapshot.fatigueFactor,
-        snapshot.elevationPenalty,
-        snapshot.maxDistancePerDay,
-        snapshot.averageSpeed,
+      };
+      discardUndoEntry(
+        undoToken,
+        {
+          fatigueFactor: newFatigue,
+          elevationPenalty: newElevation,
+          maxDistancePerDay: newMaxDistance,
+          averageSpeed: newAverageSpeed,
+        },
+        previous,
       );
+      actions.revertSettings(claim, previous);
     }
+    actions.settleSettings(claim);
   }
 
   async function handleDepartureHourChange(newDepartureHour: number) {
     const previous = useTripStore.getState().departureHour;
     actions.setDepartureHour(newDepartureHour);
     if (!tripId) return;
+    const claim = actions.claimSettings(["departureHour"]);
 
     try {
       const pacing = getPacingState();
@@ -718,14 +750,15 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        actions.setDepartureHour(previous);
+        actions.revertSettings(claim, { departureHour: previous });
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
-      actions.setDepartureHour(previous);
+      actions.revertSettings(claim, { departureHour: previous });
       toast.error(t("errors.failedUpdatePacing"));
     }
   }
@@ -744,6 +777,7 @@ export function useTripPlanner() {
       }
     }
     actions.setEbikeMode(newEbikeMode);
+    const claim = actions.claimSettings(["ebikeMode"]);
     if (!newEbikeMode) {
       const currentStages = useTripStore.getState().stages;
       currentStages.forEach((_, i) =>
@@ -762,19 +796,26 @@ export function useTripPlanner() {
       newEbikeMode,
       true,
     );
+    // A toggle made while this one was in flight owns the mode and the alerts now.
     if (!saved && tripId) {
-      actions.setEbikeMode(previousEbikeMode);
-      useTripStore.getState().stages.forEach((stage, i) => {
-        const terrain = clearedTerrain.get(stage.id);
-        if (terrain) actions.updateStageAlerts(i, terrain, "terrain");
+      const reverted = actions.revertSettings(claim, {
+        ebikeMode: previousEbikeMode,
       });
+      if (reverted.includes("ebikeMode")) {
+        useTripStore.getState().stages.forEach((stage, i) => {
+          const terrain = clearedTerrain.get(stage.id);
+          if (terrain) actions.updateStageAlerts(i, terrain, "terrain");
+        });
+      }
     }
+    actions.settleSettings(claim);
   }
 
   async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
     const previous = useTripStore.getState().enabledAccommodationTypes;
     actions.setEnabledAccommodationTypes(newTypes);
     if (!tripId) return;
+    const claim = actions.claimSettings(["enabledAccommodationTypes"]);
 
     try {
       const pacing = getPacingState();
@@ -788,14 +829,15 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        actions.setEnabledAccommodationTypes(previous);
+        actions.revertSettings(claim, { enabledAccommodationTypes: previous });
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
-      actions.setEnabledAccommodationTypes(previous);
+      actions.revertSettings(claim, { enabledAccommodationTypes: previous });
       toast.error(t("errors.failedUpdateAccommodationTypes"));
     }
   }

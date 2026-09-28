@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   getUndoableSlice,
-  revertStructuralEdit,
   useTripStore,
   useTripTemporalStore,
 } from "./trip-store";
@@ -507,57 +506,6 @@ describe("rollbackStructuralEdit", () => {
     expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
     expect(useTripStore.getState().endDate).toBe("2026-10-03");
     expect(useTripTemporalStore.getState().canUndo).toBe(false);
-  });
-});
-
-describe("revertStructuralEdit", () => {
-  const stages = [makeStage(1), makeStage(2), makeStage(3)];
-  const back = (result: StageData[]) => result.map((s) => s.id);
-
-  it("puts a deleted first stage back first", () => {
-    expect(
-      back(
-        revertStructuralEdit(stages.slice(1), {
-          kind: "restore",
-          stage: stages[0]!,
-          afterStageId: null,
-          beforeStageId: "stage-2",
-        }),
-      ),
-    ).toEqual(["stage-1", "stage-2", "stage-3"]);
-  });
-
-  it("falls back to the preceding stage, then the end, when neighbours have gone", () => {
-    const middle = {
-      kind: "restore",
-      stage: stages[1]!,
-      afterStageId: "stage-1",
-      beforeStageId: "stage-3",
-    } as const;
-    expect(back(revertStructuralEdit([stages[0]!], middle))).toEqual([
-      "stage-1",
-      "stage-2",
-    ]);
-    expect(back(revertStructuralEdit([makeStage(9)], middle))).toEqual([
-      "stage-9",
-      "stage-2",
-    ]);
-  });
-
-  it("never duplicates a stage that is already there", () => {
-    const result = revertStructuralEdit(stages, {
-      kind: "restore",
-      stage: stages[1]!,
-      afterStageId: "stage-1",
-      beforeStageId: "stage-3",
-    });
-    expect(result).toBe(stages);
-  });
-
-  it("is a no-op for an insertion the server already replaced", () => {
-    expect(
-      revertStructuralEdit(stages, { kind: "remove", stageId: "pending-x" }),
-    ).toBe(stages);
   });
 });
 

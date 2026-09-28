@@ -408,3 +408,92 @@ describe("useTripPlanner — a refused edit reverts only itself", () => {
     expect(state.stages[1]?.alerts).toEqual([terrain]);
   });
 });
+
+describe("useTripPlanner — a refused setting leaves a newer one alone", () => {
+  function deferred() {
+    const settle: ((status: number) => void)[] = [];
+    holder.deferred = settle;
+    return settle;
+  }
+
+  it("keeps dates changed while a refused date change was in flight", async () => {
+    const settle = deferred();
+    useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
+    const { result } = renderHook(() => useTripPlanner());
+
+    let refused!: Promise<void>, accepted!: Promise<void>;
+    act(() => {
+      refused = result.current.handleDatesChange("2026-11-01", "2026-11-03");
+    });
+    act(() => {
+      accepted = result.current.handleDatesChange("2026-12-01", "2026-12-03");
+    });
+    await act(async () => {
+      settle[1]!(200);
+      await accepted;
+      settle[0]!(422);
+      await refused;
+    });
+
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-12-01",
+      endDate: "2026-12-03",
+    });
+    // Undoing the accepted change goes back to before both, not to the refused dates.
+    act(() => useTripTemporalStore.getState().undo());
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+    });
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+
+  it("keeps pacing committed while a refused pacing commit was in flight", async () => {
+    const settle = deferred();
+    useTripStore.setState({ fatigueFactor: 0.8, maxDistancePerDay: 80 });
+    const { result } = renderHook(() => useTripPlanner());
+
+    let refused!: Promise<void>, accepted!: Promise<void>;
+    act(() => {
+      refused = result.current.handlePacingCommit(0.9, 100, 80, 15);
+    });
+    act(() => {
+      accepted = result.current.handlePacingCommit(0.9, 100, 120, 15);
+    });
+    await act(async () => {
+      settle[1]!(200);
+      await accepted;
+      settle[0]!(422);
+      await refused;
+    });
+
+    // The newer commit claimed every pacing field, the fatigue both set included:
+    // reverting that one to 0.8 would leave the client off what the server holds.
+    expect(useTripStore.getState()).toMatchObject({
+      fatigueFactor: 0.9,
+      maxDistancePerDay: 120,
+    });
+  });
+
+  it("keeps a departure hour changed while a refused change was in flight", async () => {
+    const settle = deferred();
+    useTripStore.setState({ departureHour: 8 });
+    const { result } = renderHook(() => useTripPlanner());
+
+    let refused!: Promise<void>, accepted!: Promise<void>;
+    act(() => {
+      refused = result.current.handleDepartureHourChange(6);
+    });
+    act(() => {
+      accepted = result.current.handleDepartureHourChange(9);
+    });
+    await act(async () => {
+      settle[1]!(200);
+      await accepted;
+      settle[0]!(422);
+      await refused;
+    });
+
+    expect(useTripStore.getState().departureHour).toBe(9);
+  });
+});
