@@ -1,0 +1,108 @@
+{
+    "persisted": {
+        "pois": {
+            "stage:1": [
+                {
+                    "code": "resupply_none_on_stage",
+                    "type": "nudge",
+                    "messageKey": "alert.lunch.nudge",
+                    "lat": 48.0,
+                    "lon": 2.0
+                }
+            ],
+            "stage:2": [
+                {
+                    "code": "resupply_closed_at_passage",
+                    "type": "warning",
+                    "messageKey": "alert.resupply.timing_warning",
+                    "lat": 44.0,
+                    "lon": 4.0
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "pois_scanned",
+            "data": {
+                "stageId": "stage:1",
+                "resupply": {
+                    "foodAtLunch": [],
+                    "waterMorning": null,
+                    "waterAfternoon": null,
+                    "foodAtArrival": []
+                },
+                "alerts": [
+                    {
+                        "code": "resupply_none_on_stage",
+                        "type": "nudge",
+                        "messageKey": "alert.lunch.nudge",
+                        "lat": 48.0,
+                        "lon": 2.0,
+                        "message": "No restaurant or food shop detected on this stage. Pack provisions."
+                    }
+                ]
+            }
+        },
+        {
+            "type": "pois_scanned",
+            "data": {
+                "stageId": "stage:2",
+                "resupply": {
+                    "foodAtLunch": [
+                        {
+                            "name": "Le Bistrot",
+                            "category": "restaurant",
+                            "lat": 44.2,
+                            "lon": 4.2,
+                            "distanceFromStart": 34.2,
+                            "osmType": null,
+                            "osmId": null
+                        },
+                        {
+                            "name": "Chez Paul",
+                            "category": "restaurant",
+                            "lat": 44.3,
+                            "lon": 4.3,
+                            "distanceFromStart": 34.2,
+                            "osmType": null,
+                            "osmId": null
+                        }
+                    ],
+                    "waterMorning": null,
+                    "waterAfternoon": null,
+                    "foodAtArrival": [
+                        {
+                            "name": "Le Bistrot",
+                            "category": "restaurant",
+                            "lat": 44.2,
+                            "lon": 4.2,
+                            "distanceFromStart": 34.2,
+                            "osmType": null,
+                            "osmId": null
+                        },
+                        {
+                            "name": "Chez Paul",
+                            "category": "restaurant",
+                            "lat": 44.3,
+                            "lon": 4.3,
+                            "distanceFromStart": 34.2,
+                            "osmType": null,
+                            "osmId": null
+                        }
+                    ]
+                },
+                "alerts": [
+                    {
+                        "code": "resupply_closed_at_passage",
+                        "type": "warning",
+                        "messageKey": "alert.resupply.timing_warning",
+                        "lat": 44.0,
+                        "lon": 4.0,
+                        "message": "Shops exist on stage 2, but you would pass them outside typical opening hours."
+                    }
+                ]
+            }
+        }
+    ]
+}

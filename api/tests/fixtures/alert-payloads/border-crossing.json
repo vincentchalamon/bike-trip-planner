@@ -1,0 +1,63 @@
+{
+    "persisted": {
+        "border_crossing": {
+            "stage:2": [
+                {
+                    "code": "border_crossing",
+                    "type": "nudge",
+                    "messageKey": "alert.border_crossing.nudge",
+                    "parameters": {
+                        "%country%": "BE"
+                    },
+                    "parameterFormats": {
+                        "%country%": "country"
+                    },
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.border_crossing.action",
+                        "payload": {
+                            "lat": 49.0,
+                            "lon": 3.0
+                        }
+                    },
+                    "lat": 49.0,
+                    "lon": 3.0
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "border_crossing_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "border_crossing",
+                        "type": "nudge",
+                        "messageKey": "alert.border_crossing.nudge",
+                        "parameters": {
+                            "%country%": "BE"
+                        },
+                        "parameterFormats": {
+                            "%country%": "country"
+                        },
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.border_crossing.action",
+                            "payload": {
+                                "lat": 49.0,
+                                "lon": 3.0
+                            },
+                            "label": "Show the border crossing"
+                        },
+                        "lat": 49.0,
+                        "lon": 3.0,
+                        "message": "You are entering Belgium. Check phone coverage, payment methods, and local regulations."
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "persisted": {
+        "health_service": {
+            "stage:2": [
+                {
+                    "code": "health_service_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.health_service.nudge",
+                    "parameters": {
+                        "%threshold%": 15000.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "distance"
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "health_service_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "health_service_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.health_service.nudge",
+                        "parameters": {
+                            "%threshold%": 15000.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "distance"
+                        },
+                        "message": "No pharmacy, hospital, or clinic detected within 15 km of stage 2. Carry a first-aid kit and check nearby towns before departure."
+                    }
+                ]
+            }
+        }
+    ]
+}

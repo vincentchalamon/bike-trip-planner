@@ -1,0 +1,63 @@
+{
+    "persisted": {
+        "railway_station": {
+            "stage:2": [
+                {
+                    "code": "railway_station_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.railway_station.nudge",
+                    "parameters": {
+                        "%threshold%": 10000
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "distance"
+                    },
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.railway_station.action",
+                        "payload": {
+                            "lat": 46.0,
+                            "lon": 3.0
+                        }
+                    },
+                    "lat": 46.0,
+                    "lon": 3.0
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "railway_station_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "railway_station_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.railway_station.nudge",
+                        "parameters": {
+                            "%threshold%": 10000
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "distance"
+                        },
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.railway_station.action",
+                            "payload": {
+                                "lat": 46.0,
+                                "lon": 3.0
+                            },
+                            "label": "Nearest train station"
+                        },
+                        "lat": 46.0,
+                        "lon": 3.0,
+                        "message": "No train station within 10 km of stage 2. In case of emergency, the nearest station may be far away."
+                    }
+                ]
+            }
+        }
+    ]
+}

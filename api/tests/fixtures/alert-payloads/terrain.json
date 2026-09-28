@@ -1,0 +1,82 @@
+{
+    "persisted": {
+        "terrain": {
+            "stage:1": [
+                {
+                    "code": "steep_gradient",
+                    "type": "warning",
+                    "messageKey": "alert.steep_gradient.warning",
+                    "parameters": {
+                        "%gradient%": 12.5
+                    },
+                    "parameterFormats": {
+                        "%gradient%": "decimal"
+                    },
+                    "lat": 48.2,
+                    "lon": 2.2,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.steep_gradient.action",
+                        "payload": {
+                            "lat": 48.2,
+                            "lon": 2.2
+                        }
+                    }
+                },
+                {
+                    "code": "continuity_gap_critical",
+                    "type": "critical",
+                    "messageKey": "alert.continuity.critical",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "terrain_alerts",
+            "data": {
+                "alertsByStage": {
+                    "stage:1": [
+                        {
+                            "code": "steep_gradient",
+                            "type": "warning",
+                            "messageKey": "alert.steep_gradient.warning",
+                            "parameters": {
+                                "%gradient%": 12.5
+                            },
+                            "parameterFormats": {
+                                "%gradient%": "decimal"
+                            },
+                            "lat": 48.2,
+                            "lon": 2.2,
+                            "action": {
+                                "kind": "navigate",
+                                "labelKey": "alert.steep_gradient.action",
+                                "payload": {
+                                    "lat": 48.2,
+                                    "lon": 2.2
+                                },
+                                "label": "View the climb on the map"
+                            },
+                            "message": "Steep climb detected: 12.5% gradient over %distance%. Tough with a loaded bike."
+                        },
+                        {
+                            "code": "continuity_gap_critical",
+                            "type": "critical",
+                            "messageKey": "alert.continuity.critical",
+                            "parameters": [],
+                            "parameterFormats": [],
+                            "lat": null,
+                            "lon": null,
+                            "message": "Discontinuity: %distance% between stage 1 and 2."
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

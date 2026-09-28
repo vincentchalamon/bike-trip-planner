@@ -1,0 +1,42 @@
+{
+    "persisted": {
+        "railway_station": {
+            "stage:1": [
+                {
+                    "code": "railway_station_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.railway_station.nudge",
+                    "parameters": {
+                        "%threshold%": 10000
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "distance"
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "railway_station_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "railway_station_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.railway_station.nudge",
+                        "parameters": {
+                            "%threshold%": 10000
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "distance"
+                        },
+                        "message": "No train station within 10 km of stage 1. In case of emergency, the nearest station may be far away."
+                    }
+                ]
+            }
+        }
+    ]
+}

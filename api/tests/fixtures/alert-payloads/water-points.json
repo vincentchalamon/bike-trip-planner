@@ -1,0 +1,119 @@
+{
+    "persisted": {
+        "water_point": {
+            "stage:1": [
+                {
+                    "code": "water_point_gap",
+                    "type": "nudge",
+                    "messageKey": "alert.water.nudge",
+                    "parameters": {
+                        "%threshold%": 30000.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "distance"
+                    },
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.water.action",
+                        "payload": {
+                            "lat": 48.0,
+                            "lon": 2.0
+                        }
+                    }
+                }
+            ],
+            "stage:2": [
+                {
+                    "code": "water_point_gap",
+                    "type": "nudge",
+                    "messageKey": "alert.water.nudge",
+                    "parameters": {
+                        "%threshold%": 30000.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "distance"
+                    },
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.water.action",
+                        "payload": {
+                            "lat": 48.0,
+                            "lon": 2.0
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "water_point_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "water_point_gap",
+                        "type": "nudge",
+                        "messageKey": "alert.water.nudge",
+                        "parameters": {
+                            "%threshold%": 30000.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "distance"
+                        },
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.water.action",
+                            "payload": {
+                                "lat": 48.0,
+                                "lon": 2.0
+                            },
+                            "label": "Nearest water point"
+                        },
+                        "message": "Stretch of over 30 km without a detected drinking-water source on stage 1. Carry enough water."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "water_point_gap",
+                        "type": "nudge",
+                        "messageKey": "alert.water.nudge",
+                        "parameters": {
+                            "%threshold%": 30000.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "distance"
+                        },
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.water.action",
+                            "payload": {
+                                "lat": 48.0,
+                                "lon": 2.0
+                            },
+                            "label": "Nearest water point"
+                        },
+                        "message": "Stretch of over 30 km without a detected drinking-water source on stage 2. Carry enough water."
+                    }
+                ],
+                "waterPointsByStage": [
+                    {
+                        "stageId": "stage:1",
+                        "waterPoints": [
+                            {
+                                "lat": 48.0,
+                                "lon": 2.0,
+                                "distanceFromStart": 0.0
+                            }
+                        ]
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "waterPoints": []
+                    }
+                ]
+            }
+        }
+    ]
+}
