@@ -63,8 +63,9 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         $limiter = $this->tripCreateLimiter->create($user->getId()->toRfc4122());
 
-        if (!$limiter->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $limiter->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         $tripId = Uuid::v7()->toRfc4122();

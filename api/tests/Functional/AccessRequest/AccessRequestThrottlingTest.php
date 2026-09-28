@@ -47,4 +47,28 @@ final class AccessRequestThrottlingTest extends ApiTestCase
             'Fourth request should be rate limited',
         );
     }
+
+    #[Test]
+    public function aThrottledRequestIsToldWhenToRetry(): void
+    {
+        $client = self::createClient();
+        // The limiter's array pool dies with the kernel, which the browser reboots between
+        // requests unless told not to.
+        $client->disableReboot();
+
+        /** @var RateLimiterFactory $factory */
+        $factory = self::getContainer()->get('limiter.access_request_ip');
+        $limiter = $factory->create('127.0.0.1');
+        for ($i = 0; $i < 3; ++$i) {
+            $this->assertTrue($limiter->consume()->isAccepted());
+        }
+
+        $response = $client->request('POST', '/access-requests', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'throttled@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertGreaterThan(0, (int) ($response->getHeaders(false)['retry-after'][0] ?? 0));
+    }
 }

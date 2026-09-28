@@ -8,6 +8,9 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Patch;
+use ApiPlatform\OpenApi\Model\Operation;
+use ApiPlatform\OpenApi\Model\Response;
+use App\OpenApi\RetryAfter;
 use App\State\Account\AccountDeleteProcessor;
 use App\State\Account\AccountExportProvider;
 use App\State\Account\AccountMeProvider;
@@ -56,6 +59,11 @@ use App\State\Account\AccountUpdateProcessor;
         ),
         new Get(
             uriTemplate: '/users/me/export',
+            openapi: new Operation(
+                responses: [
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+            ),
             security: "is_granted('ROLE_USER')",
             provider: AccountExportProvider::class,
         ),

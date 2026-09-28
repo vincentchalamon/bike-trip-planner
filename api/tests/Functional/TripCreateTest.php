@@ -11,6 +11,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use PHPUnit\Framework\Attributes\Test;
 
 final class TripCreateTest extends ApiTestCase
@@ -313,5 +314,30 @@ final class TripCreateTest extends ApiTestCase
             $repo->getLocale($tripId),
             'The trip took the Accept-Language header instead of the account preference.',
         );
+    }
+
+    #[Test]
+    public function aThrottledCreationIsToldWhenToRetry(): void
+    {
+        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt('throttled-creator@test.com');
+        $client = self::createClient();
+        // The limiter's array pool dies with the kernel, which the browser reboots between
+        // requests unless told not to.
+        $client->disableReboot();
+
+        /** @var RateLimiterFactory $factory */
+        $factory = self::getContainer()->get('limiter.trip_create');
+        $limiter = $factory->create($user->getId()->toRfc4122());
+        for ($i = 0; $i < 10; ++$i) {
+            $this->assertTrue($limiter->consume()->isAccepted());
+        }
+
+        $response = $client->request('POST', '/trips', [
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-throttled'], $this->authHeader($token)),
+            'json' => ['sourceUrl' => 'https://www.komoot.com/tour/123456789'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertGreaterThan(0, (int) ($response->getHeaders(false)['retry-after'][0] ?? 0));
     }
 }

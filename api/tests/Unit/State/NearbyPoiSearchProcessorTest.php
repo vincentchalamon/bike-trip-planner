@@ -45,8 +45,12 @@ final class NearbyPoiSearchProcessorTest extends TestCase
 
         $processor = new NearbyPoiSearchProcessor($this->finder([]), $this->security($user), $limiter);
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $processor->process($this->request(InRidePoiCategory::WATER), new Post(), ['id' => 'trip-1']);
+        try {
+            $processor->process($this->request(InRidePoiCategory::WATER), new Post(), ['id' => 'trip-1']);
+            self::fail('The limiter should have refused the call.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertGreaterThan(0, $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? 0);
+        }
     }
 
     #[Test]

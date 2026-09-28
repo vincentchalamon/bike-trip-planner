@@ -57,8 +57,12 @@ final class GeocodeSearchProviderTest extends TestCase
             new NominatimThrottle($security, $limiter),
         );
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $provider->provide(new GetCollection(), [], ['filters' => ['q' => 'paris']]);
+        try {
+            $provider->provide(new GetCollection(), [], ['filters' => ['q' => 'paris']]);
+            self::fail('The limiter should have refused the call.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            self::assertGreaterThan(0, $tooManyRequestsHttpException->getHeaders()['Retry-After'] ?? 0);
+        }
     }
 
     /**

@@ -48,8 +48,9 @@ final readonly class NearbyPoiSearchProcessor implements ProcessorInterface
     {
         $user = $this->security->getUser();
         \assert($user instanceof User);
-        if (!$this->nearbyPoisLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->nearbyPoisLimiter->create($user->getId()->toRfc4122())->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         $tripId = $uriVariables['id'] ?? '';

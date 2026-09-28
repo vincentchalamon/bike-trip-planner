@@ -41,8 +41,9 @@ final readonly class NominatimThrottle
     {
         $key = $this->security->getUser()?->getUserIdentifier() ?? 'anonymous';
 
-        if (!$this->limiter->create($key)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->limiter->create($key)->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
     }
 }

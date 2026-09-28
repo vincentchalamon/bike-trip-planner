@@ -64,8 +64,9 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             return $this->tripFor($already->toRfc4122());
         }
 
-        if (!$this->duplicateLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->duplicateLimiter->create($user->getId()->toRfc4122())->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         $source = $data;

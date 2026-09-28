@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Parameter;
+use App\OpenApi\RetryAfter;
 use App\State\GeocodeSearchProvider;
 use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\ApiResource\Mcp\SearchPlacesInput;
@@ -36,7 +37,7 @@ use App\ApiResource\Mcp\SearchPlacesInput;
             openapi: new Operation(
                 responses: [
                     400 => new Response(description: 'Missing the `q` parameter'),
-                    429 => new Response(description: 'Rate limit reached'),
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                     502 => new Response(description: 'Nominatim is unreachable'),
                 ],
                 summary: 'Search places by name, through Nominatim.',

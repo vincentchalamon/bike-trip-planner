@@ -14,6 +14,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Parameter;
 use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
+use App\OpenApi\RetryAfter;
 use App\ApiResource\Mcp\ShareTripInput;
 use App\ApiResource\Mcp\UnshareTripInput;
 use App\ApiResource\Stage;
@@ -86,7 +87,12 @@ use App\ApiResource\Mcp\ShareLink;
             uriTemplate: '/s/{shortCode}',
             uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
             requirements: ['shortCode' => '[A-Za-z0-9_-]+'],
-            openapi: new Operation(summary: 'View a shared trip via short code (anonymous).'),
+            openapi: new Operation(
+                responses: [
+                    429 => new OpenApiResponse(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+                summary: 'View a shared trip via short code (anonymous).',
+            ),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: TripDetail::class,
             provider: TripShareShortCodeProvider::class,
@@ -95,7 +101,12 @@ use App\ApiResource\Mcp\ShareLink;
             uriTemplate: '/s/{shortCode}.gpx',
             outputFormats: ['gpx' => ['application/gpx+xml']],
             uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
-            openapi: new Operation(summary: 'Download shared trip as GPX via short code.'),
+            openapi: new Operation(
+                responses: [
+                    429 => new OpenApiResponse(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+                summary: 'Download shared trip as GPX via short code.',
+            ),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Trip::class,
             provider: TripShareGpxProvider::class,
@@ -104,7 +115,12 @@ use App\ApiResource\Mcp\ShareLink;
             uriTemplate: '/s/{shortCode}.fit',
             outputFormats: ['fit' => ['application/vnd.ant.fit']],
             uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
-            openapi: new Operation(summary: 'Download shared trip as FIT via short code.'),
+            openapi: new Operation(
+                responses: [
+                    429 => new OpenApiResponse(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+                summary: 'Download shared trip as FIT via short code.',
+            ),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Trip::class,
             provider: TripShareGpxProvider::class, // format-agnostic: also serves .fit
@@ -116,6 +132,7 @@ use App\ApiResource\Mcp\ShareLink;
             openapi: new Operation(
                 responses: [
                     304 => new OpenApiResponse(description: 'The geometry has not changed since the ETag you sent.'),
+                    429 => new OpenApiResponse(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'All-stages geometry for a shared trip (anonymous).',
                 parameters: [
@@ -142,7 +159,12 @@ use App\ApiResource\Mcp\ShareLink;
                 'shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode']),
                 'stageId' => new Link(fromClass: Stage::class),
             ],
-            openapi: new Operation(summary: 'Download shared stage as GPX or FIT via short code.'),
+            openapi: new Operation(
+                responses: [
+                    429 => new OpenApiResponse(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+                summary: 'Download shared stage as GPX or FIT via short code.',
+            ),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Stage::class,
             provider: TripShareStageProvider::class,

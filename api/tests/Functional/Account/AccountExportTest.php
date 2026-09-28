@@ -200,11 +200,13 @@ final class AccountExportTest extends ApiTestCase
             $this->assertTrue($limiter->create($userId)->consume()->isAccepted());
         }
 
-        $client->request('GET', '/users/me/export', [
+        $response = $client->request('GET', '/users/me/export', [
             'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
         ]);
 
         $this->assertResponseStatusCodeSame(429);
+        // Without it a client can only guess, and a retry loop hammers the limiter it hit.
+        $this->assertGreaterThan(0, (int) ($response->getHeaders(false)['retry-after'][0] ?? 0));
     }
 
     #[Test]

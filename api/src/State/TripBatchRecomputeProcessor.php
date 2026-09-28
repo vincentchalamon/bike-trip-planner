@@ -69,8 +69,9 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
 
         // Cap per trip: recompute re-dispatches the full enrichment pipeline onto
         // the shared workers, so it must not be scriptable faster than they drain (SEC-010).
-        if (!$this->recomputeLimiter->create($tripId)->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+        $limit = $this->recomputeLimiter->create($tripId)->consume();
+        if (!$limit->isAccepted()) {
+            throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
         $stages = $this->tripStateManager->getStages($tripId);

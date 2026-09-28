@@ -145,8 +145,9 @@ final readonly class HealthController
         try {
             $limiter = $factory->create($request->getClientIp() ?? 'anonymous');
 
-            if (!$limiter->consume()->isAccepted()) {
-                throw new TooManyRequestsHttpException();
+            $limit = $limiter->consume();
+            if (!$limit->isAccepted()) {
+                throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
             }
         } catch (TooManyRequestsHttpException $e) {
             throw $e;
