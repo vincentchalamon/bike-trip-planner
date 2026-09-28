@@ -263,6 +263,15 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return;
         }
 
+        $this->writeStages($trip, $stages, null);
+    }
+
+    /**
+     * @param list<StageDto> $stages
+     * @param int|null       $calendarDays when set, the trip's end date is moved to span that many days, in the same flush
+     */
+    private function writeStages(TripRequest $trip, array $stages, ?int $calendarDays): void
+    {
         $this->assertDistinctIdentifiers($stages);
 
         $existing = $this->freshStagesById($trip);
@@ -278,7 +287,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ? [$this->persistedCycleNetwork($existing), $trip->outOfZone]
             : $this->computeRouteMetrics($stages);
 
-        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages, $existing, $cycleNetwork, $outOfZone): void {
+        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages, $existing, $cycleNetwork, $outOfZone, $calendarDays): void {
             $incomingIds = array_map(static fn (StageDto $stage): string => $stage->id, $stages);
 
             // Full regeneration (pacing): the identifier sets are disjoint, so nothing
@@ -296,6 +305,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             // does not leave a stale out-of-zone flag on the in-memory entity
             // (correctness review on #787).
             $trip->outOfZone = $outOfZone;
+
+            if (null !== $calendarDays && $trip->startDate instanceof \DateTimeImmutable) {
+                $trip->endDate = $trip->startDate->modify(\sprintf('+%d days', $calendarDays - 1));
+            }
 
             // Any write of the collection is a structural change, whether it comes from a
             // client edit or from a worker regenerating the pacing.
@@ -329,17 +342,28 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     /**
      * @param callable(list<StageDto>): list<StageDto> $mutator
      */
-    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null, bool $resequence = false): ?StageWriteResult
     {
+        $trip = $this->findTripRequest($tripId);
         $stages = $this->getStages($tripId);
-        if (null === $stages) {
+        if (!$trip instanceof TripRequest || null === $stages) {
             return null;
         }
 
         VersionPrecondition::assert($expectedVersion, $this->getVersion($tripId), $tripId);
 
         $mutated = $mutator($stages);
-        $this->storeStages($tripId, $mutated);
+
+        $calendarDays = null;
+        if ($resequence) {
+            foreach ($mutated as $i => $stage) {
+                $stage->dayNumber = $i + 1;
+            }
+
+            $calendarDays = \count($mutated) !== \count($stages) ? \count($mutated) : null;
+        }
+
+        $this->writeStages($trip, $mutated, $calendarDays);
 
         return new StageWriteResult($mutated, $this->getVersion($tripId) ?? 1);
     }

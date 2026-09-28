@@ -18,7 +18,8 @@ use PHPUnit\Framework\MockObject\Stub;
  * the stub through the same two methods keeps every existing `getStages()` return value
  * and `storeStages()` expectation meaningful, and keeps these tests about what the
  * processor computes rather than about how the write is serialised (that is covered by
- * the repository's own tests).
+ * the repository's own tests). The renumbering `$resequence` asks for is replayed too, since the
+ * processors now leave it to the repository; the end date that goes with it is the repository's.
  */
 trait MutateStagesStubTrait
 {
@@ -28,13 +29,19 @@ trait MutateStagesStubTrait
             /**
              * @param callable(list<Stage>): list<Stage> $mutator
              */
-            static function (string $tripId, callable $mutator) use ($repository): ?StageWriteResult {
+            static function (string $tripId, callable $mutator, ?int $expectedVersion = null, bool $resequence = false) use ($repository): ?StageWriteResult {
                 $stages = $repository->getStages($tripId);
                 if (null === $stages) {
                     return null;
                 }
 
                 $mutated = $mutator($stages);
+                if ($resequence) {
+                    foreach ($mutated as $i => $stage) {
+                        $stage->dayNumber = $i + 1;
+                    }
+                }
+
                 $repository->storeStages($tripId, $mutated);
 
                 return new StageWriteResult($mutated, $repository->getVersion($tripId) ?? 1);
