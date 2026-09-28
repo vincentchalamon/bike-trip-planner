@@ -748,7 +748,7 @@ jobs:
         run: >-
           docker run --network host
           -w /app -v .:/app
-          --rm --ipc=host -e E2E_JWT
+          --rm --ipc=host -e CI -e E2E_JWT
           mcr.microsoft.com/playwright:v1.63.0-noble
           /bin/sh -c 'npm ci; cd pwa && npx playwright test'
       - uses: actions/upload-artifact@v7
@@ -851,7 +851,7 @@ jobs:
         run: >-
           docker run --network host
           -w /app -v .:/app
-          --rm --ipc=host -e E2E_JWT
+          --rm --ipc=host -e CI -e E2E_JWT
           mcr.microsoft.com/playwright:v1.63.0-noble
           /bin/sh -c 'cd pwa && npx playwright test --config playwright.bdd.config.ts'
       - uses: actions/upload-artifact@v7
