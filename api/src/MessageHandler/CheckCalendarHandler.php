@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
@@ -123,27 +126,21 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
      *
      * No `date`: it was `startDate + dayNumber - 1`, a rendering of the trip's calendar
      * rather than a fact about the alert. It was persisted and published but dropped on
-     * read — {@see \App\ApiResource\Model\Alert} has no such property — so it was the one
+     * read — {@see Alert} has no such property — so it was the one
      * field in the whole Mercure surface that no GET could return (ADR-065). Every client
      * already has both operands.
      *
-     * @return array{stageId: string, dayNumber: int, code: string, type: string, messageKey: string, parameters: array<string, int|string>, action: array{kind: string, labelKey: string, payload: array<string, mixed>}}
+     * @return array<string, mixed>
      */
     private function buildAlert(Stage $stage, AlertCode $code, string $translationKey, array $parameters): array
     {
-        return [
-            'stageId' => $stage->id,
-            'dayNumber' => $stage->dayNumber,
-            'code' => $code->value,
-            'type' => AlertType::NUDGE->value,
-            'messageKey' => $translationKey,
-            'parameters' => $parameters,
-            'action' => [
-                'kind' => AlertActionKind::DISMISS->value,
-                'labelKey' => 'alert.calendar.action',
-                'payload' => [],
-            ],
-        ];
+        return AlertPayload::forStage($stage, new Alert(
+            code: $code,
+            type: AlertType::NUDGE,
+            messageKey: $translationKey,
+            parameters: $parameters,
+            action: new AlertAction(AlertActionKind::DISMISS, 'alert.calendar.action'),
+        ));
     }
 
     /**

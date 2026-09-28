@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -98,27 +101,18 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                 // Find the nearest station across the entire trip for navigation
                 $nearestStation = $this->findNearestStation($stage->endPoint, $stationLocations);
 
-                $alert = [
-                    'stageId' => $stage->id,
-                    'dayNumber' => $stage->dayNumber,
-                    'code' => AlertCode::RAILWAY_STATION_NONE_NEARBY->value,
-                    'type' => AlertType::NUDGE->value,
-                    'messageKey' => 'alert.railway_station.nudge',
-                    'parameters' => ['%threshold%' => self::STATION_PROXIMITY_METERS],
-                    'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
-                ];
-
-                if (null !== $nearestStation) {
-                    $alert['action'] = [
-                        'kind' => AlertActionKind::NAVIGATE->value,
-                        'labelKey' => 'alert.railway_station.action',
-                        'payload' => ['lat' => $nearestStation['lat'], 'lon' => $nearestStation['lon']],
-                    ];
-                    $alert['lat'] = $nearestStation['lat'];
-                    $alert['lon'] = $nearestStation['lon'];
-                }
-
-                $alerts[] = $alert;
+                $alerts[] = AlertPayload::forStage($stage, new Alert(
+                    code: AlertCode::RAILWAY_STATION_NONE_NEARBY,
+                    type: AlertType::NUDGE,
+                    messageKey: 'alert.railway_station.nudge',
+                    parameters: ['%threshold%' => self::STATION_PROXIMITY_METERS],
+                    parameterFormats: ['%threshold%' => AlertParameterFormat::DISTANCE->value],
+                    lat: $nearestStation['lat'] ?? null,
+                    lon: $nearestStation['lon'] ?? null,
+                    action: null !== $nearestStation
+                        ? new AlertAction(AlertActionKind::NAVIGATE, 'alert.railway_station.action', ['lat' => $nearestStation['lat'], 'lon' => $nearestStation['lon']])
+                        : null,
+                ));
             }
 
             // Same array to the database and to the wire (ADR-068): grouped by the stage

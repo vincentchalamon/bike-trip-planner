@@ -1,0 +1,93 @@
+{
+    "persisted": {
+        "ferry": {
+            "stage:1": [
+                {
+                    "code": "ferry_crossing",
+                    "type": "warning",
+                    "messageKey": "alert.ferry.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.05,
+                    "lon": -2.05,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ferry.action",
+                        "payload": {
+                            "lat": 47.05,
+                            "lon": -2.05
+                        }
+                    }
+                },
+                {
+                    "code": "ferry_crossing",
+                    "type": "warning",
+                    "messageKey": "alert.ferry.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.07,
+                    "lon": -2.07,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ferry.action",
+                        "payload": {
+                            "lat": 47.07,
+                            "lon": -2.07
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "ferry_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "ferry_crossing",
+                        "type": "warning",
+                        "messageKey": "alert.ferry.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.05,
+                        "lon": -2.05,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ferry.action",
+                            "payload": {
+                                "lat": 47.05,
+                                "lon": -2.05
+                            },
+                            "label": "Ferry crossing"
+                        },
+                        "message": "Stage 1 takes a ferry crossing. Check the schedule and whether booking is required."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "ferry_crossing",
+                        "type": "warning",
+                        "messageKey": "alert.ferry.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.07,
+                        "lon": -2.07,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ferry.action",
+                            "payload": {
+                                "lat": 47.07,
+                                "lon": -2.07
+                            },
+                            "label": "Ferry crossing"
+                        },
+                        "message": "Stage 1 takes a ferry crossing. Check the schedule and whether booking is required."
+                    }
+                ]
+            }
+        }
+    ]
+}

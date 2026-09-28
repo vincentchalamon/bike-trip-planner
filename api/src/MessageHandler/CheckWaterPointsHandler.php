@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -97,20 +100,16 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 // Its water points still ship in the payload above (useful where you stay).
                 if (!$stage->isRestDay && $this->hasWaterGap($stage, $waterPointsWithDistance)) {
                     $nearestWp = $this->findNearestWaterPoint($stage, $allWaterPoints);
-                    $alerts[] = [
-                        'stageId' => $stage->id,
-                        'dayNumber' => $stage->dayNumber,
-                        'code' => AlertCode::WATER_POINT_GAP->value,
-                        'type' => AlertType::NUDGE->value,
-                        'messageKey' => 'alert.water.nudge',
-                        'parameters' => ['%threshold%' => self::WATER_GAP_THRESHOLD_KM * 1000],
-                        'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
-                        'action' => null !== $nearestWp ? [
-                            'kind' => AlertActionKind::NAVIGATE->value,
-                            'labelKey' => 'alert.water.action',
-                            'payload' => ['lat' => $nearestWp['lat'], 'lon' => $nearestWp['lon']],
-                        ] : null,
-                    ];
+                    $alerts[] = AlertPayload::forStage($stage, new Alert(
+                        code: AlertCode::WATER_POINT_GAP,
+                        type: AlertType::NUDGE,
+                        messageKey: 'alert.water.nudge',
+                        parameters: ['%threshold%' => self::WATER_GAP_THRESHOLD_KM * 1000],
+                        parameterFormats: ['%threshold%' => AlertParameterFormat::DISTANCE->value],
+                        action: null !== $nearestWp
+                            ? new AlertAction(AlertActionKind::NAVIGATE, 'alert.water.action', ['lat' => $nearestWp['lat'], 'lon' => $nearestWp['lon']])
+                            : null,
+                    ));
                 }
             }
 

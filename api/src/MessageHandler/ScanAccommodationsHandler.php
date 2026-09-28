@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\Accommodation\CandidateRanker;
 use App\Accommodation\SeasonalityCheckerInterface;
@@ -190,13 +192,11 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 $alertsToPublish = [];
                 // Warn if all detected accommodations are likely closed during this period
                 if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => $a['possibleClosed'])) {
-                    $alertsToPublish[] = [
-                        'code' => AlertCode::ACCOMMODATION_SEASONAL_CLOSURE->value,
-                        'type' => AlertType::WARNING->value,
-                        'messageKey' => 'alert.accommodation.seasonal_warning',
-                        'lat' => null,
-                        'lon' => null,
-                    ];
+                    $alertsToPublish[] = AlertPayload::of(new Alert(
+                        code: AlertCode::ACCOMMODATION_SEASONAL_CLOSURE,
+                        type: AlertType::WARNING,
+                        messageKey: 'alert.accommodation.seasonal_warning',
+                    ));
                 }
 
                 // Same array to both consumers (ADR-068), the empty one included: a rerun that

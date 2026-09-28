@@ -1,0 +1,171 @@
+{
+    "persisted": {
+        "ford": {
+            "stage:1": [
+                {
+                    "code": "ford_crossing_dry",
+                    "type": "nudge",
+                    "messageKey": "alert.ford.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.05,
+                    "lon": -2.05,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ford.action",
+                        "payload": {
+                            "lat": 47.05,
+                            "lon": -2.05
+                        }
+                    }
+                },
+                {
+                    "code": "ford_crossing_dry",
+                    "type": "nudge",
+                    "messageKey": "alert.ford.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.06,
+                    "lon": -2.06,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ford.action",
+                        "payload": {
+                            "lat": 47.06,
+                            "lon": -2.06
+                        }
+                    }
+                }
+            ],
+            "stage:2": [
+                {
+                    "code": "ford_crossing_wet",
+                    "type": "warning",
+                    "messageKey": "alert.ford.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.05,
+                    "lon": -2.05,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ford.action",
+                        "payload": {
+                            "lat": 47.05,
+                            "lon": -2.05
+                        }
+                    }
+                },
+                {
+                    "code": "ford_crossing_wet",
+                    "type": "warning",
+                    "messageKey": "alert.ford.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.06,
+                    "lon": -2.06,
+                    "action": {
+                        "kind": "navigate",
+                        "labelKey": "alert.ford.action",
+                        "payload": {
+                            "lat": 47.06,
+                            "lon": -2.06
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "ford_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "ford_crossing_dry",
+                        "type": "nudge",
+                        "messageKey": "alert.ford.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.05,
+                        "lon": -2.05,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ford.action",
+                            "payload": {
+                                "lat": 47.05,
+                                "lon": -2.05
+                            },
+                            "label": "Ford"
+                        },
+                        "message": "Stage 1 crosses a ford. Passable in dry weather; check the water level."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "ford_crossing_dry",
+                        "type": "nudge",
+                        "messageKey": "alert.ford.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.06,
+                        "lon": -2.06,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ford.action",
+                            "payload": {
+                                "lat": 47.06,
+                                "lon": -2.06
+                            },
+                            "label": "Ford"
+                        },
+                        "message": "Stage 1 crosses a ford. Passable in dry weather; check the water level."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "ford_crossing_wet",
+                        "type": "warning",
+                        "messageKey": "alert.ford.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.05,
+                        "lon": -2.05,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ford.action",
+                            "payload": {
+                                "lat": 47.05,
+                                "lon": -2.05
+                            },
+                            "label": "Ford"
+                        },
+                        "message": "Stage 2 crosses a ford and rain is forecast. It may be impassable in high water — take care."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "ford_crossing_wet",
+                        "type": "warning",
+                        "messageKey": "alert.ford.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.06,
+                        "lon": -2.06,
+                        "action": {
+                            "kind": "navigate",
+                            "labelKey": "alert.ford.action",
+                            "payload": {
+                                "lat": 47.06,
+                                "lon": -2.06
+                            },
+                            "label": "Ford"
+                        },
+                        "message": "Stage 2 crosses a ford and rain is forecast. It may be impassable in high water — take care."
+                    }
+                ]
+            }
+        }
+    ]
+}

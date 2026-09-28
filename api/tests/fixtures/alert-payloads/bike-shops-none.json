@@ -1,0 +1,153 @@
+{
+    "persisted": {
+        "bike_shop": {
+            "stage:1": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ],
+            "stage:2": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ],
+            "stage:3": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ],
+            "stage:4": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ],
+            "stage:5": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ],
+            "stage:6": [
+                {
+                    "code": "bike_shop_none_nearby",
+                    "type": "nudge",
+                    "messageKey": "alert.bike_shop.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "bike_shop_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 1. In case of a breakdown, the next town may be far away."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 2. In case of a breakdown, the next town may be far away."
+                    },
+                    {
+                        "stageId": "stage:3",
+                        "dayNumber": 3,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 3. In case of a breakdown, the next town may be far away."
+                    },
+                    {
+                        "stageId": "stage:4",
+                        "dayNumber": 4,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 4. In case of a breakdown, the next town may be far away."
+                    },
+                    {
+                        "stageId": "stage:5",
+                        "dayNumber": 5,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 5. In case of a breakdown, the next town may be far away."
+                    },
+                    {
+                        "stageId": "stage:6",
+                        "dayNumber": 6,
+                        "code": "bike_shop_none_nearby",
+                        "type": "nudge",
+                        "messageKey": "alert.bike_shop.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "message": "No bike shops detected on stage 6. In case of a breakdown, the next town may be far away."
+                    }
+                ]
+            }
+        }
+    ]
+}

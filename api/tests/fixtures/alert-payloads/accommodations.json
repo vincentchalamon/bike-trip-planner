@@ -1,0 +1,34 @@
+{
+    "persisted": {
+        "accommodations": {
+            "stage:1": [
+                {
+                    "code": "accommodation_seasonal_closure",
+                    "type": "warning",
+                    "messageKey": "alert.accommodation.seasonal_warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "accommodations_found",
+            "alerts": [
+                {
+                    "code": "accommodation_seasonal_closure",
+                    "type": "warning",
+                    "messageKey": "alert.accommodation.seasonal_warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
+                    "message": "All detected accommodations on stage 1 may be closed during this period."
+                }
+            ]
+        }
+    ]
+}

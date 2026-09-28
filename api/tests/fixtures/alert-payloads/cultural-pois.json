@@ -1,0 +1,123 @@
+{
+    "persisted": {
+        "cultural_poi": {
+            "stage:1": [
+                {
+                    "code": "cultural_poi_suggestion",
+                    "type": "nudge",
+                    "messageKey": "alert.cultural_poi.suggestion",
+                    "parameters": {
+                        "%type%": "castle",
+                        "%distance%": 1112,
+                        "%name%": "Château de Test"
+                    },
+                    "parameterFormats": {
+                        "%type%": "poi_label"
+                    },
+                    "lat": 48.26,
+                    "lon": 2.25,
+                    "poiName": "Château de Test",
+                    "poiType": "castle",
+                    "poiLat": 48.26,
+                    "poiLon": 2.25,
+                    "distanceFromRoute": 1112,
+                    "openingHours": "Mo-Su 10:00-18:00",
+                    "website": "https://example.org",
+                    "estimatedPrice": 12.5,
+                    "description": "A castle.",
+                    "wikidataId": "Q1",
+                    "source": "osm",
+                    "imageUrl": "https://example.org/c.jpg",
+                    "wikipediaUrl": "https://en.wikipedia.org/wiki/C",
+                    "osmType": "way",
+                    "osmId": 42
+                },
+                {
+                    "code": "cultural_poi_suggestion",
+                    "type": "nudge",
+                    "messageKey": "alert.cultural_poi.suggestion_unnamed",
+                    "parameters": {
+                        "%type%": "museum",
+                        "%distance%": 7115
+                    },
+                    "parameterFormats": {
+                        "%type%": "poi_label"
+                    },
+                    "lat": 48.3,
+                    "lon": 2.31,
+                    "poiName": "Museum",
+                    "poiType": "museum",
+                    "poiLat": 48.3,
+                    "poiLon": 2.31,
+                    "distanceFromRoute": 7115,
+                    "source": "datatourisme"
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "cultural_poi_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "cultural_poi_suggestion",
+                        "type": "nudge",
+                        "messageKey": "alert.cultural_poi.suggestion",
+                        "parameters": {
+                            "%type%": "castle",
+                            "%distance%": 1112,
+                            "%name%": "Château de Test"
+                        },
+                        "parameterFormats": {
+                            "%type%": "poi_label"
+                        },
+                        "lat": 48.26,
+                        "lon": 2.25,
+                        "poiName": "Château de Test",
+                        "poiType": "castle",
+                        "poiLat": 48.26,
+                        "poiLon": 2.25,
+                        "distanceFromRoute": 1112,
+                        "openingHours": "Mo-Su 10:00-18:00",
+                        "website": "https://example.org",
+                        "estimatedPrice": 12.5,
+                        "description": "A castle.",
+                        "wikidataId": "Q1",
+                        "source": "osm",
+                        "imageUrl": "https://example.org/c.jpg",
+                        "wikipediaUrl": "https://en.wikipedia.org/wiki/C",
+                        "osmType": "way",
+                        "osmId": 42,
+                        "message": "Cultural POI nearby on stage 1: Château de Test (castle, 1112m from route). Add it to your itinerary?"
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "cultural_poi_suggestion",
+                        "type": "nudge",
+                        "messageKey": "alert.cultural_poi.suggestion_unnamed",
+                        "parameters": {
+                            "%type%": "museum",
+                            "%distance%": 7115
+                        },
+                        "parameterFormats": {
+                            "%type%": "poi_label"
+                        },
+                        "lat": 48.3,
+                        "lon": 2.31,
+                        "poiName": "Museum",
+                        "poiType": "museum",
+                        "poiLat": 48.3,
+                        "poiLon": 2.31,
+                        "distanceFromRoute": 7115,
+                        "source": "datatourisme",
+                        "message": "Cultural POI nearby on stage 1: museum (7115m from route). Add it to your itinerary?"
+                    }
+                ]
+            }
+        }
+    ]
+}

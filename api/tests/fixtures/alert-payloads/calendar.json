@@ -1,0 +1,87 @@
+{
+    "persisted": {
+        "calendar": {
+            "stage:1": [
+                {
+                    "code": "calendar_public_holiday",
+                    "type": "nudge",
+                    "messageKey": "alert.calendar.nudge",
+                    "parameters": {
+                        "%holiday%": "Bastille Day"
+                    },
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.calendar.action",
+                        "payload": []
+                    }
+                }
+            ],
+            "stage:6": [
+                {
+                    "code": "calendar_sunday",
+                    "type": "nudge",
+                    "messageKey": "alert.calendar.sunday_nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.calendar.action",
+                        "payload": []
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "calendar_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "calendar_public_holiday",
+                        "type": "nudge",
+                        "messageKey": "alert.calendar.nudge",
+                        "parameters": {
+                            "%holiday%": "Bastille Day"
+                        },
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.calendar.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Stage 1 coincides with a public holiday (Bastille Day). Some businesses may be closed."
+                    },
+                    {
+                        "stageId": "stage:6",
+                        "dayNumber": 6,
+                        "code": "calendar_sunday",
+                        "type": "nudge",
+                        "messageKey": "alert.calendar.sunday_nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.calendar.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Stage 6 falls on a Sunday. Some businesses may be closed, especially in the afternoon."
+                    }
+                ]
+            }
+        }
+    ]
+}

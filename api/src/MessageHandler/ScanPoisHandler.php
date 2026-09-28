@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
@@ -152,13 +154,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // is skipped — its POIs are still scanned and published (useful on the spot).
                 $alerts = [];
                 if (!$stage->isRestDay && $stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($fullPois)) {
-                    $alerts[] = [
-                        'code' => AlertCode::RESUPPLY_NONE_ON_STAGE->value,
-                        'type' => AlertType::NUDGE->value,
-                        'messageKey' => 'alert.lunch.nudge',
-                        'lat' => $stage->startPoint->lat,
-                        'lon' => $stage->startPoint->lon,
-                    ];
+                    $alerts[] = AlertPayload::of(new Alert(
+                        code: AlertCode::RESUPPLY_NONE_ON_STAGE,
+                        type: AlertType::NUDGE,
+                        messageKey: 'alert.lunch.nudge',
+                        lat: $stage->startPoint->lat,
+                        lon: $stage->startPoint->lon,
+                    ));
                 }
 
                 // Resupply timing warning: warn when every resupply POI on this stage is
@@ -166,13 +168,13 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
 
                 if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($fullPois, $stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
-                    $alerts[] = [
-                        'code' => AlertCode::RESUPPLY_CLOSED_AT_PASSAGE->value,
-                        'type' => AlertType::WARNING->value,
-                        'messageKey' => 'alert.resupply.timing_warning',
-                        'lat' => $stage->startPoint->lat,
-                        'lon' => $stage->startPoint->lon,
-                    ];
+                    $alerts[] = AlertPayload::of(new Alert(
+                        code: AlertCode::RESUPPLY_CLOSED_AT_PASSAGE,
+                        type: AlertType::WARNING,
+                        messageKey: 'alert.resupply.timing_warning',
+                        lat: $stage->startPoint->lat,
+                        lon: $stage->startPoint->lon,
+                    ));
                 }
 
                 // Position food + water along the route (shared by the resupply

@@ -1,0 +1,323 @@
+{
+    "persisted": {
+        "wind": {
+            "stage:1": [
+                {
+                    "code": "wind_headwind",
+                    "type": "warning",
+                    "messageKey": "alert.wind.stage",
+                    "parameters": {
+                        "%threshold%": 25.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "comfort_poor_conditions",
+                    "type": "warning",
+                    "messageKey": "alert.comfort.stage",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "heat_extreme",
+                    "type": "warning",
+                    "messageKey": "alert.heat.stage",
+                    "parameters": {
+                        "%threshold%": 32.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "cold_extreme",
+                    "type": "warning",
+                    "messageKey": "alert.cold.stage",
+                    "parameters": {
+                        "%threshold%": 2.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "rain_heavy",
+                    "type": "warning",
+                    "messageKey": "alert.rain.stage",
+                    "parameters": {
+                        "%threshold%": 10.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "wind_gusts_strong",
+                    "type": "warning",
+                    "messageKey": "alert.gusts.stage",
+                    "parameters": {
+                        "%threshold%": 50.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                }
+            ],
+            "stage:2": [
+                {
+                    "code": "wind_headwind",
+                    "type": "warning",
+                    "messageKey": "alert.wind.stage",
+                    "parameters": {
+                        "%threshold%": 25.0
+                    },
+                    "parameterFormats": {
+                        "%threshold%": "decimal"
+                    },
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                },
+                {
+                    "code": "comfort_poor_conditions",
+                    "type": "warning",
+                    "messageKey": "alert.comfort.stage",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
+                    "action": {
+                        "kind": "dismiss",
+                        "labelKey": "alert.wind.action",
+                        "payload": []
+                    }
+                }
+            ]
+        }
+    },
+    "published": [
+        {
+            "type": "wind_alerts",
+            "data": {
+                "alerts": [
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "wind_headwind",
+                        "type": "warning",
+                        "messageKey": "alert.wind.stage",
+                        "parameters": {
+                            "%threshold%": 25.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Headwinds expected on this stage (≥25 km/h). Allow extra time."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "wind_headwind",
+                        "type": "warning",
+                        "messageKey": "alert.wind.stage",
+                        "parameters": {
+                            "%threshold%": 25.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Headwinds expected on this stage (≥25 km/h). Allow extra time."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "comfort_poor_conditions",
+                        "type": "warning",
+                        "messageKey": "alert.comfort.stage",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Poor cycling conditions on this stage (comfort index < 40/100). Consider adjusting your schedule."
+                    },
+                    {
+                        "stageId": "stage:2",
+                        "dayNumber": 2,
+                        "code": "comfort_poor_conditions",
+                        "type": "warning",
+                        "messageKey": "alert.comfort.stage",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Poor cycling conditions on this stage (comfort index < 40/100). Consider adjusting your schedule."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "heat_extreme",
+                        "type": "warning",
+                        "messageKey": "alert.heat.stage",
+                        "parameters": {
+                            "%threshold%": 32.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Extreme heat expected on this stage (feels-like ≥32 °C). Carry extra water and avoid the hottest hours."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "cold_extreme",
+                        "type": "warning",
+                        "messageKey": "alert.cold.stage",
+                        "parameters": {
+                            "%threshold%": 2.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Extreme cold expected on this stage (feels-like ≤2 °C). Pack warm layers."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "rain_heavy",
+                        "type": "warning",
+                        "messageKey": "alert.rain.stage",
+                        "parameters": {
+                            "%threshold%": 10.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Heavy rain expected on this stage (≥10 mm). Bring waterproof gear."
+                    },
+                    {
+                        "stageId": "stage:1",
+                        "dayNumber": 1,
+                        "code": "wind_gusts_strong",
+                        "type": "warning",
+                        "messageKey": "alert.gusts.stage",
+                        "parameters": {
+                            "%threshold%": 50.0
+                        },
+                        "parameterFormats": {
+                            "%threshold%": "decimal"
+                        },
+                        "lat": null,
+                        "lon": null,
+                        "action": {
+                            "kind": "dismiss",
+                            "labelKey": "alert.wind.action",
+                            "payload": [],
+                            "label": "Got it"
+                        },
+                        "message": "Strong gusts expected on this stage (≥50 km/h). Take care, especially in the open and on descents."
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -6,7 +6,9 @@ namespace App\MessageHandler;
 
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
-use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Stage;
 use App\ApiResource\Model\WeatherForecast;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -33,7 +35,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * water. Deduplicates per stage by ford name.
  */
 #[AsMessageHandler]
-final readonly class CheckFordsHandler extends AbstractTripMessageHandler
+final readonly class CheckFordsHandler extends AbstractRouteCrossingHandler
 {
     /** Max distance (m) between the stage line and a ford to count the stage as crossing it. */
     private const int FORD_TOLERANCE_METERS = 25;
@@ -57,64 +59,25 @@ final readonly class CheckFordsHandler extends AbstractTripMessageHandler
 
     public function __invoke(CheckFords $message): void
     {
-        $tripId = $message->tripId;
-        $stages = $this->stageStore->getStages($tripId);
-
-        if (null === $stages) {
-            return;
-        }
-
-        $this->executeWithTracking($tripId, ComputationName::FORDS, function () use ($tripId, $stages): void {
-            $alerts = [];
-
-            foreach ($stages as $stage) {
-                if ($stage->isRestDay) {
-                    continue;
-                }
-
-                $stagePoints = array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
-                    $stage->geometry,
-                );
-
+        $this->checkCrossings(
+            $message->tripId,
+            ComputationName::FORDS,
+            AlertGroup::FORD,
+            MercureEventType::FORD_ALERTS,
+            fn (array $stagePoints): array => $this->fordRepository->findNearStage($stagePoints, self::FORD_TOLERANCE_METERS),
+            static function (Stage $stage, array $ford): Alert {
                 $raining = $stage->weather instanceof WeatherForecast
                     && $stage->weather->precipitationProbability >= self::RAIN_THRESHOLD_PERCENT;
 
-                /** @var list<string> $seenNames */
-                $seenNames = [];
-                foreach ($this->fordRepository->findNearStage($stagePoints, self::FORD_TOLERANCE_METERS) as $ford) {
-                    $key = $ford['name'] ?? \sprintf('%.5F,%.5F', $ford['lat'], $ford['lon']);
-                    if (\in_array($key, $seenNames, true)) {
-                        continue;
-                    }
-
-                    $seenNames[] = $key;
-
-                    $alerts[] = [
-                        'stageId' => $stage->id,
-                        'dayNumber' => $stage->dayNumber,
-                        'code' => ($raining ? AlertCode::FORD_CROSSING_WET : AlertCode::FORD_CROSSING_DRY)->value,
-                        'type' => ($raining ? AlertType::WARNING : AlertType::NUDGE)->value,
-                        'messageKey' => $raining ? 'alert.ford.warning' : 'alert.ford.nudge',
-                        'action' => [
-                            'kind' => AlertActionKind::NAVIGATE->value,
-                            'labelKey' => 'alert.ford.action',
-                            'payload' => ['lat' => $ford['lat'], 'lon' => $ford['lon']],
-                        ],
-                        'lat' => $ford['lat'],
-                        'lon' => $ford['lon'],
-                    ];
-                }
-            }
-
-            // Same array to the database and to the wire (ADR-068): grouped by the stage
-            // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
-            // second is renumbered by every structural edit and is derived on read.
-            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::FORD, $this->groupByStage($alerts));
-
-            $this->publisher->publish($tripId, MercureEventType::FORD_ALERTS, [
-                'alerts' => $this->renderForWire($tripId, $alerts),
-            ]);
-        });
+                return new Alert(
+                    code: $raining ? AlertCode::FORD_CROSSING_WET : AlertCode::FORD_CROSSING_DRY,
+                    type: $raining ? AlertType::WARNING : AlertType::NUDGE,
+                    messageKey: $raining ? 'alert.ford.warning' : 'alert.ford.nudge',
+                    lat: $ford['lat'],
+                    lon: $ford['lon'],
+                    action: new AlertAction(AlertActionKind::NAVIGATE, 'alert.ford.action', ['lat' => $ford['lat'], 'lon' => $ford['lon']]),
+                );
+            },
+        );
     }
 }

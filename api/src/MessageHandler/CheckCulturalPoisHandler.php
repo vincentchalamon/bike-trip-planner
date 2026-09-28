@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -148,16 +150,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         $parameters['%name%'] = $rawName;
                     }
 
-                    $alert = [
-                        'stageId' => $stage->id,
-                        'dayNumber' => $stage->dayNumber,
-                        'code' => AlertCode::CULTURAL_POI_SUGGESTION->value,
-                        'type' => AlertType::NUDGE->value,
-                        'messageKey' => null === $rawName ? 'alert.cultural_poi.suggestion_unnamed' : 'alert.cultural_poi.suggestion',
-                        'parameters' => $parameters,
-                        'parameterFormats' => ['%type%' => AlertParameterFormat::POI_LABEL->value],
-                        'lat' => $poi['lat'],
-                        'lon' => $poi['lon'],
+                    $extra = [
                         'poiName' => $name,
                         'poiType' => $poi['type'],
                         'poiLat' => $poi['lat'],
@@ -166,44 +159,52 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     ];
 
                     if (null !== ($poi['openingHours'] ?? null)) {
-                        $alert['openingHours'] = $poi['openingHours'];
+                        $extra['openingHours'] = $poi['openingHours'];
                     }
 
                     if (null !== ($poi['website'] ?? null)) {
-                        $alert['website'] = $poi['website'];
+                        $extra['website'] = $poi['website'];
                     }
 
                     if (null !== ($poi['estimatedPrice'] ?? null)) {
-                        $alert['estimatedPrice'] = $poi['estimatedPrice'];
+                        $extra['estimatedPrice'] = $poi['estimatedPrice'];
                     }
 
                     if (null !== ($poi['description'] ?? null)) {
-                        $alert['description'] = $poi['description'];
+                        $extra['description'] = $poi['description'];
                     }
 
                     if (null !== ($poi['wikidataId'] ?? null)) {
-                        $alert['wikidataId'] = $poi['wikidataId'];
+                        $extra['wikidataId'] = $poi['wikidataId'];
                     }
 
                     if (null !== $poi['source']) {
-                        $alert['source'] = $poi['source'];
+                        $extra['source'] = $poi['source'];
                     }
 
                     if (null !== ($poi['imageUrl'] ?? null)) {
-                        $alert['imageUrl'] = $poi['imageUrl'];
+                        $extra['imageUrl'] = $poi['imageUrl'];
                     }
 
                     if (null !== ($poi['wikipediaUrl'] ?? null)) {
-                        $alert['wikipediaUrl'] = $poi['wikipediaUrl'];
+                        $extra['wikipediaUrl'] = $poi['wikipediaUrl'];
                     }
 
                     // Only an OSM entry has one; a curated DataTourisme POI does not.
                     if (null !== ($poi['osmType'] ?? null) && null !== ($poi['osmId'] ?? null)) {
-                        $alert['osmType'] = $poi['osmType'];
-                        $alert['osmId'] = $poi['osmId'];
+                        $extra['osmType'] = $poi['osmType'];
+                        $extra['osmId'] = $poi['osmId'];
                     }
 
-                    $alerts[] = $alert;
+                    $alerts[] = AlertPayload::forStage($stage, new Alert(
+                        code: AlertCode::CULTURAL_POI_SUGGESTION,
+                        type: AlertType::NUDGE,
+                        messageKey: null === $rawName ? 'alert.cultural_poi.suggestion_unnamed' : 'alert.cultural_poi.suggestion',
+                        parameters: $parameters,
+                        parameterFormats: ['%type%' => AlertParameterFormat::POI_LABEL->value],
+                        lat: $poi['lat'],
+                        lon: $poi['lon'],
+                    ), $extra);
                 }
             }
 
