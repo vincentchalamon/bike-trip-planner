@@ -4,15 +4,19 @@ import { EMPTY_RESUPPLY, type StageData } from "@btp/core";
 
 // Only the HTTP boundary is faked: parseApiError and the rest of the client keep their real
 // behaviour, so the status→"stale" mapping is exercised rather than restated.
-const holder = vi.hoisted(() => ({ status: 200 }));
+const holder = vi.hoisted(() => ({ status: 200, offline: false }));
 
 vi.mock("@/lib/api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/client")>();
-  const respond = async () => ({
-    data: undefined,
-    error: {},
-    response: new Response(null, { status: holder.status }),
-  });
+  const respond = async () => {
+    if (holder.offline) throw new TypeError("Failed to fetch");
+
+    return {
+      data: undefined,
+      error: {},
+      response: new Response(null, { status: holder.status }),
+    };
+  };
 
   return {
     ...actual,
@@ -28,7 +32,7 @@ vi.mock("@/components/ui/sonner", () => ({
 }));
 
 import { useTripPlanner } from "./use-trip-planner";
-import { useTripStore } from "@/store/trip-store";
+import { useTripStore, useTripTemporalStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 
 function stage(dayNumber: number): StageData {
@@ -59,6 +63,7 @@ function stage(dayNumber: number): StageData {
 }
 
 beforeEach(() => {
+  holder.offline = false;
   useTripStore.getState().clearTrip();
   useTripStore.setState({
     trip: { id: "t1", title: "Trip", sourceUrl: "" },
@@ -125,5 +130,73 @@ describe("useTripPlanner — a refused title is rolled back", () => {
 
     expect(useTripStore.getState().trip?.title).toBe("Trip");
     expect(useUiStore.getState().resyncToken).toBe(before + 1);
+  });
+});
+
+describe("useTripPlanner — a refused trip setting is rolled back", () => {
+  it.each([
+    ["refused", () => (holder.status = 422)],
+    ["unreachable", () => (holder.offline = true)],
+  ])("restores the dates and drops the undo entry when %s", async (_, fail) => {
+    fail();
+    useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handleDatesChange("2026-11-01", "2026-11-03");
+    });
+
+    expect(useTripStore.getState().startDate).toBe("2026-10-01");
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+
+  it("restores the departure hour", async () => {
+    holder.status = 422;
+    useTripStore.setState({ departureHour: 8 });
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handleDepartureHourChange(6);
+    });
+
+    expect(useTripStore.getState().departureHour).toBe(8);
+  });
+
+  it("restores the e-bike mode and the terrain alerts it cleared", async () => {
+    holder.status = 422;
+    const terrain = {
+      type: "warning" as const,
+      message: "Steep",
+      lat: 0,
+      lon: 0,
+      group: "terrain",
+    };
+    useTripStore.setState({
+      ebikeMode: true,
+      stages: [{ ...stage(1), alerts: [terrain] }, stage(2)],
+    });
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handleEbikeModeChange(false);
+    });
+
+    expect(useTripStore.getState().ebikeMode).toBe(true);
+    expect(useTripStore.getState().stages[0]?.alerts).toEqual([terrain]);
+  });
+
+  it("restores the pacing and drops the undo entry", async () => {
+    holder.status = 422;
+    useTripStore.setState({ fatigueFactor: 0.8, maxDistancePerDay: 80 });
+    const { result } = renderHook(() => useTripPlanner());
+
+    await act(async () => {
+      await result.current.handlePacingCommit(0.9, 100, 120, 15);
+    });
+
+    expect(useTripStore.getState().fatigueFactor).toBe(0.8);
+    expect(useTripStore.getState().maxDistancePerDay).toBe(80);
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
   });
 });

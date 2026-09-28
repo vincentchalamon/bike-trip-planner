@@ -295,8 +295,16 @@ export function useTripPlanner() {
     newStart: string | null,
     newEnd: string | null,
   ) {
+    const { startDate: previousStart, endDate: previousEnd } =
+      useTripStore.getState();
     actions.updateDates(newStart, newEnd);
     if (!tripId) return;
+
+    // updateDates pushed an undo entry: a refused change must leave no trace in the history.
+    const rollback = () => {
+      useTripTemporalStore.getState()._pop();
+      useTripStore.getState().updateDatesInternal(previousStart, previousEnd);
+    };
 
     try {
       const pacing = getPacingState();
@@ -311,6 +319,7 @@ export function useTripPlanner() {
       });
 
       if (error) {
+        rollback();
         reportApiError(response.status, error);
       } else {
         if (data) actions.setIsLocked(data.isLocked === true);
@@ -318,6 +327,7 @@ export function useTripPlanner() {
         setAccommodationScanning(true);
       }
     } catch {
+      rollback();
       toast.error(t("errors.failedUpdateDates"));
     }
   }
@@ -588,8 +598,8 @@ export function useTripPlanner() {
     // stay mounted with their content instead of waiting for a `stages_computed`
     // SSE that may never come for a purely local optimistic update.
     optimistic = false,
-  ) {
-    if (!tripId) return;
+  ): Promise<boolean> {
+    if (!tripId) return false;
 
     try {
       const { departureHour: dh, enabledAccommodationTypes: eat } =
@@ -610,10 +620,11 @@ export function useTripPlanner() {
 
       if (error) {
         reportApiError(response.status, error);
+        return false;
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
-        if (optimistic) return;
+        if (optimistic) return true;
         // Mark every stage as recomputing so the timeline shows the shimmer
         // skeleton until the `stages_computed` Mercure event lands. The stages
         // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
@@ -623,9 +634,11 @@ export function useTripPlanner() {
         if (allStages.length > 0) {
           actions.startStageRecomputation(allStages.map((stage) => stage.id));
         }
+        return true;
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));
+      return false;
     }
   }
 
@@ -668,16 +681,26 @@ export function useTripPlanner() {
       newMaxDistance,
       newAverageSpeed,
     );
-    await patchPacingSettings(
+    const saved = await patchPacingSettings(
       newFatigue,
       newElevation,
       newMaxDistance,
       newAverageSpeed,
       getPacingState().ebikeMode,
     );
+    if (!saved && tripId) {
+      useTripTemporalStore.getState()._pop();
+      actions.updatePacingSettingsInternal(
+        snapshot.fatigueFactor,
+        snapshot.elevationPenalty,
+        snapshot.maxDistancePerDay,
+        snapshot.averageSpeed,
+      );
+    }
   }
 
   async function handleDepartureHourChange(newDepartureHour: number) {
+    const previous = useTripStore.getState().departureHour;
     actions.setDepartureHour(newDepartureHour);
     if (!tripId) return;
 
@@ -693,17 +716,20 @@ export function useTripPlanner() {
       });
 
       if (error) {
+        actions.setDepartureHour(previous);
         reportApiError(response.status, error);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
+      actions.setDepartureHour(previous);
       toast.error(t("errors.failedUpdatePacing"));
     }
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
+    const previous = useTripStore.getState();
     actions.setEbikeMode(newEbikeMode);
     if (!newEbikeMode) {
       const currentStages = useTripStore.getState().stages;
@@ -715,7 +741,7 @@ export function useTripPlanner() {
     // The toggle is applied optimistically in-place (alerts cleared above,
     // durations re-derived from the stat row): keep the cards mounted rather
     // than swapping them for the recomputing skeleton.
-    await patchPacingSettings(
+    const saved = await patchPacingSettings(
       pacing.fatigueFactor,
       pacing.elevationPenalty,
       pacing.maxDistancePerDay,
@@ -723,6 +749,10 @@ export function useTripPlanner() {
       newEbikeMode,
       true,
     );
+    if (!saved && tripId) {
+      actions.setEbikeMode(previous.ebikeMode);
+      useTripStore.getState().setStages(previous.stages);
+    }
   }
 
   async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
@@ -974,8 +1004,8 @@ export function useTripPlanner() {
     const nextStageIndex =
       stageIndex + 1 < currentStages.length ? stageIndex + 1 : null;
 
-    const stageId = useTripStore.getState().stages[stageIndex]?.id;
-    if (!stageId) return false;
+    const stageId = currentStages[stageIndex]?.id;
+    if (!stageId) return;
 
     // Optimistic update
     actions.selectAccommodation(stageIndex, accIndex, nextStageIndex);
