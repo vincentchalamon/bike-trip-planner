@@ -2,6 +2,7 @@
 
 import { Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { ErrorBoundaryContent } from "@/components/error-boundary-content";
 import { logger } from "@/lib/logger";
 
 interface Props {
@@ -9,17 +10,17 @@ interface Props {
 }
 
 interface State {
-  hasError: boolean;
+  error: Error | null;
 }
 
 export class TripPlannerErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { error: null };
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
@@ -30,24 +31,12 @@ export class TripPlannerErrorBoundary extends Component<Props, State> {
   }
 
   render(): ReactNode {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
-        <div className="flex items-center justify-center px-4 py-16">
-          <div className="text-center space-y-4 max-w-md">
-            <h2 className="text-2xl font-semibold">
-              An unexpected error occurred.
-            </h2>
-            <p className="text-muted-foreground">
-              Something went wrong while loading the trip planner.
-            </p>
-            <button
-              onClick={() => this.setState({ hasError: false })}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
+        <ErrorBoundaryContent
+          error={this.state.error}
+          reset={() => this.setState({ error: null })}
+        />
       );
     }
 

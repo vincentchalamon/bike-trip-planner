@@ -42,6 +42,12 @@
     "illustrationAlt": "Cycliste perdu en montagne",
     "back": "Retour à l'accueil"
   },
+  "sharedTripMetadata": {
+    "fallbackTitle": "Voyage partagé",
+    "defaultTripTitle": "Voyage à vélo",
+    "description": "Itinéraire vélo partagé : {distance} km, {elevation} m D+.",
+    "descriptionNoStages": "Itinéraire vélo partagé."
+  },
   "roadbookEmpty": {
     "title": "Carnet de route vierge",
     "subtitle": "Aucune étape pour ce voyage. Importe un itinéraire ou ajoute ta première étape pour commencer."

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
-
-const SharedTripPage = dynamic(() => import("./shared-trip-page"), {
-  loading: () => null,
-});
+import { getTranslations } from "next-intl/server";
+import SharedTripPage from "./shared-trip-page";
 
 /** Minimal shape of the public shared-trip payload used for metadata. */
 interface SharedTripMeta {
@@ -24,7 +21,10 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  const fallback: Metadata = { title: "Shared trip — Bike Trip Planner" };
+  const t = await getTranslations("sharedTripMetadata");
+  const fallback: Metadata = {
+    title: `${t("fallbackTitle")} — Bike Trip Planner`,
+  };
 
   try {
     const backend = process.env.API_BACKEND_URL ?? "http://php";
@@ -40,7 +40,7 @@ export async function generateMetadata({
     }
 
     const trip = (await res.json()) as SharedTripMeta;
-    const title = `${trip.title?.trim() || "Bike trip"} — Bike Trip Planner`;
+    const title = `${trip.title?.trim() || t("defaultTripTitle")} — Bike Trip Planner`;
     const stages = trip.stages ?? [];
     const km = Math.round(
       stages.reduce((sum, s) => sum + (s.distance ?? 0), 0),
@@ -50,8 +50,8 @@ export async function generateMetadata({
     );
     const description =
       km > 0
-        ? `Shared bike route: ${km} km, ${dPlus} m D+.`
-        : "Shared bike route.";
+        ? t("description", { distance: km, elevation: dPlus })
+        : t("descriptionNoStages");
 
     return {
       title,
