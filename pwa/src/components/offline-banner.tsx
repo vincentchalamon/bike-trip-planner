@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { WifiOff, Wifi } from "lucide-react";
-import { useOfflineStore } from "@/store/offline-store";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 /**
- * Listens to `navigator.onLine` and `online`/`offline` browser events,
- * syncing the result into {@link useOfflineStore}.
- *
  * Displays a banner when offline:
  *   "Hors ligne — consultation des données en cache. Modification désactivée."
  *
@@ -17,32 +14,21 @@ import { useOfflineStore } from "@/store/offline-store";
  */
 export function OfflineBanner() {
   const t = useTranslations("offline");
-  const isOnline = useOfflineStore((s) => s.isOnline);
-  const setOnline = useOfflineStore((s) => s.setOnline);
+  const isOnline = useOnlineStatus();
   const [showReconnected, setShowReconnected] = useState(false);
 
   useEffect(() => {
-    function handleOnline() {
-      setOnline(true);
-      setShowReconnected(true);
-    }
-
-    function handleOffline() {
-      setOnline(false);
-      setShowReconnected(false);
-    }
+    const handleOnline = () => setShowReconnected(true);
+    const handleOffline = () => setShowReconnected(false);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
-    // Sync initial state
-    setOnline(navigator.onLine);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [setOnline]);
+  }, []);
 
   // Auto-dismiss the "reconnected" banner after 3 seconds
   useEffect(() => {

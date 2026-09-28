@@ -25,7 +25,7 @@ import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { useOfflineStore } from "@/store/offline-store";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useSwipe } from "@/hooks/use-swipe";
 import { computeEstimatedBudget } from "@btp/core";
 
@@ -54,7 +54,7 @@ const MapPanel = dynamic(
  */
 export function TripPlanner() {
   const t = useTranslations();
-  const isOnline = useOfflineStore((s) => s.isOnline);
+  const isOnline = useOnlineStatus();
 
   const {
     trip,
