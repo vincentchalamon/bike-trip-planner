@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
-import type { StageData } from "@btp/core";
+import { minMax, type StageData } from "@btp/core";
 import { getStageColor } from "./stage-colors";
 
 /** Haversine distance between two lat/lon points in km. */
@@ -166,8 +166,7 @@ export const ElevationProfile = memo(function ElevationProfile({
   const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
     if (!hasData) return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
 
-    const minEle = Math.min(...points.map((p) => p.ele));
-    const maxEle = Math.max(...points.map((p) => p.ele));
+    const { min: minEle, max: maxEle } = minMax(points.map((p) => p.ele));
     const dist = points[points.length - 1]?.distanceKm ?? 0;
     const elevRange = maxEle - minEle;
 

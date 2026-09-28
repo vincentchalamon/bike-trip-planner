@@ -323,12 +323,13 @@ export function useTripPlanner() {
   }
 
   async function handleTitleChange(newTitle: string) {
+    const previousTitle = useTripStore.getState().trip?.title;
     actions.updateTitle(newTitle);
     if (!tripId) return;
 
     try {
       const pacing = getPacingState();
-      await apiClient.PATCH("/trips/{id}", {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId }, header: preconditionHeader(tripId) },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
@@ -336,8 +337,14 @@ export function useTripPlanner() {
           ...pacing,
         },
       });
+      if (!response.ok) {
+        reportApiError(response.status, error);
+        if (previousTitle !== undefined) actions.updateTitle(previousTitle);
+      }
     } catch {
-      // Title save is best-effort — don't show error toast for this
+      // Title save is best-effort on a network failure: no toast, but never keep a title
+      // the server does not have.
+      if (previousTitle !== undefined) actions.updateTitle(previousTitle);
     }
   }
 
@@ -386,7 +393,7 @@ export function useTripPlanner() {
     actions.insertRestDay(afterIndex);
 
     try {
-      const { response } = await apiClient.POST(
+      const { error, response } = await apiClient.POST(
         "/trips/{tripId}/stages/{stageId}/rest-day",
         {
           params: {
@@ -397,7 +404,7 @@ export function useTripPlanner() {
         },
       );
       if (!response.ok) {
-        toast.error(t("errors.failedInsertRestDay"));
+        reportApiError(response.status, error);
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {

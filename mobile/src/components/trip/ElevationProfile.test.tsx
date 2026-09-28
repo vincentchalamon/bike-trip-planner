@@ -103,6 +103,18 @@ describe('ElevationProfile', () => {
     expect(typeof paths[0]!.props.d).toBe('string');
   });
 
+  it('renders a whole-trip profile too long to spread into Math.min/max', () => {
+    const geometry = Array.from({ length: 200_000 }, (_, i) => ({
+      lat: 45 + i * 1e-6,
+      lon: 4,
+      ele: 100 + (i % 500),
+    }));
+    const tree = render(
+      <ElevationProfile stages={[stage({ geometry })]} focusedStageIndex={null} onHover={jest.fn()} />,
+    );
+    expect(tree.root.findAllByType('Path' as never)).toHaveLength(1);
+  });
+
   it('reports the hovered coord/stage on touch and clears on release', () => {
     const onHover = jest.fn();
     const tree = render(

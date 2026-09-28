@@ -1,4 +1,4 @@
-import { buildProfilePoints } from '@btp/core/elevation';
+import { buildProfilePoints, minMax } from '@btp/core/elevation';
 import type { StageData } from '@btp/core';
 
 // Group an integer into space-separated thousands (fr/en convention, "5 240").
@@ -31,6 +31,6 @@ export function computeProfileSummary(stages: StageData[]): ProfileSummary | nul
     gain,
     startEle: points[0]!.ele,
     endEle: points[points.length - 1]!.ele,
-    maxEle: Math.max(...eles),
+    maxEle: minMax(eles).max,
   };
 }

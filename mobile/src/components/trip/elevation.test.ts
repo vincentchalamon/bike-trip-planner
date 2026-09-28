@@ -5,8 +5,23 @@ import {
   buildProfilePoints,
   findClosestProfilePoint,
   haversineKm,
+  minMax,
   profileHighlightSegment,
 } from '@btp/core/elevation';
+
+describe('minMax (#1048)', () => {
+  it('returns the bounds without overflowing on a very large array', () => {
+    // `Math.min(...arr)` would throw RangeError past the engine's argument limit
+    // (stricter under Hermes); the loop-based helper must not.
+    const values = Array.from({ length: 200_000 }, (_, i) => i);
+    values[123_456] = -7; // a known interior minimum
+    let bounds: { min: number; max: number };
+    expect(() => {
+      bounds = minMax(values);
+    }).not.toThrow();
+    expect(bounds!).toEqual({ min: -7, max: 199_999 });
+  });
+});
 
 function stage(overrides: Partial<StageData> = {}): StageData {
   const zero = { lat: 0, lon: 0, ele: 0 };

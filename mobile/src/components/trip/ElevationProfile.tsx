@@ -9,7 +9,7 @@ import {
 import Svg, { Line, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import type { StageData } from '@btp/core';
-import { buildProfilePoints, findClosestProfilePoint } from '@btp/core/elevation';
+import { buildProfilePoints, findClosestProfilePoint, minMax } from '@btp/core/elevation';
 import { stageColor } from '../map/stage-colors';
 import { useTheme } from '../../theme';
 
@@ -94,8 +94,7 @@ export function ElevationProfile({
 
   const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
     if (!hasData) return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
-    const minEle = Math.min(...points.map((p) => p.ele));
-    const maxEle = Math.max(...points.map((p) => p.ele));
+    const { min: minEle, max: maxEle } = minMax(points.map((p) => p.ele));
     const dist = points[points.length - 1]?.distanceKm ?? 0;
     const elevRange = maxEle - minEle;
     // Small buffer below the baseline, generous headroom above so peaks breathe

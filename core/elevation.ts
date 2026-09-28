@@ -28,6 +28,22 @@ export function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * Min/max of a numeric array in one loop. NOT `Math.min(...arr)`: a multi-day trip
+ * flattens several thousand decimated points into one array, and spreading that many
+ * arguments overflows the engine's argument limit (RangeError: Maximum call stack size
+ * exceeded), stricter under Hermes. Callers guarantee a non-empty array.
+ */
+export function minMax(values: readonly number[]): { min: number; max: number } {
+  let min = values[0]!;
+  let max = values[0]!;
+  for (const v of values) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return { min, max };
+}
+
 /** One sampled point of the cumulative elevation profile. */
 export interface ProfilePoint {
   /** Cumulative distance from the trip (or focused stage) start, in km. */

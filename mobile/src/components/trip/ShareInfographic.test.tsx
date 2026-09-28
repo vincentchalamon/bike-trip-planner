@@ -5,7 +5,6 @@ import type { ReactElement } from 'react';
 import type { StageData } from '@btp/core';
 import {
   ShareInfographic,
-  minMax,
   projectRoute,
   CARD_WIDTH,
   CARD_HEIGHT,
@@ -68,20 +67,6 @@ const labels = {
   difficulty: { label: 'Difficulté', easy: 'Facile', medium: 'Modéré', hard: 'Difficile' },
   powered: 'Bike Trip Planner',
 };
-
-describe('minMax (#1048)', () => {
-  it('returns the bounds without overflowing on a very large array', () => {
-    // `Math.min(...arr)` would throw RangeError past the engine's argument limit
-    // (stricter under Hermes); the reduce-based helper must not.
-    const values = Array.from({ length: 200_000 }, (_, i) => i);
-    values[123_456] = -7; // a known interior minimum
-    let bounds: { min: number; max: number };
-    expect(() => {
-      bounds = minMax(values);
-    }).not.toThrow();
-    expect(bounds!).toEqual({ min: -7, max: 199_999 });
-  });
-});
 
 describe('projectRoute (#1048)', () => {
   it('projects a large multi-day route within the map box without crashing', () => {

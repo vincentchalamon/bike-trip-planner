@@ -15,8 +15,7 @@ import { registerDeviceToken, subscribeTokenRotation, unregisterDeviceToken } fr
 import { verifyMagicToken } from './authApi';
 import { onSessionInvalidated } from './session';
 import { clearTokens, loadTokens } from './tokens';
-import { clearAllTripCache } from '../store/trip-cache';
-import { clearCachedTripList } from '../store/trips-list-cache';
+import { clearLocalAccountData } from '../store/local-account-data';
 
 type AuthContextValue = {
   ready: boolean;
@@ -142,10 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // stops receiving this account's pushes (#1125).
     await dropPushToken();
     await clearTokens();
-    // Purge the offline trip cache so no roadbook / manual accommodation of this
-    // account survives on a shared device (#1174).
-    await clearAllTripCache();
-    await clearCachedTripList();
+    await clearLocalAccountData();
     endSession();
   }, [endSession]);
 

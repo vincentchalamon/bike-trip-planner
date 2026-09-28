@@ -120,7 +120,7 @@ export function StageDataBlocks({
       <WeatherBlock weather={stage.weather} />
       <AlertsBlock
         alerts={stage.alerts}
-        stageKey={stage.dayNumber}
+        stageKey={stage.id}
         onNavigate={onAlertNavigate}
       />
       <EventsBlock events={stage.events} />
