@@ -16,7 +16,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { apiFetch, fetchTripRoute } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
-import { resolveStageLabels } from "@/hooks/use-mercure";
+import { resolveStageLabels } from "@/lib/mercure/stage-labels";
 import { EMPTY_RESUPPLY } from "@btp/core";
 import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
