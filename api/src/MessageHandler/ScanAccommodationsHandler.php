@@ -19,6 +19,7 @@ use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
+use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
@@ -54,6 +55,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private GeometryDistributorInterface $distributor,
         private SeasonalityCheckerInterface $seasonalityChecker,
         private CandidateRanker $ranker,
+        private StageArrayMapper $stageMapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
@@ -131,26 +133,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $existingKeys = [];
                     foreach ($stage->accommodations as $existing) {
                         $existingKeys[\sprintf('%F,%F', $existing->lat, $existing->lon)] = true;
-                        $accommodations[] = [
-                            'name' => $existing->name,
-                            'type' => $existing->type,
-                            'lat' => $existing->lat,
-                            'lon' => $existing->lon,
-                            'estimatedPriceMin' => $existing->estimatedPriceMin,
-                            'estimatedPriceMax' => $existing->estimatedPriceMax,
-                            'isExactPrice' => $existing->isExactPrice,
-                            'url' => $existing->url,
-                            'possibleClosed' => $existing->possibleClosed,
-                            'distanceToEndPoint' => $existing->distanceToEndPoint,
-                            'source' => $existing->source,
-                            'description' => $existing->description,
-                            'imageUrl' => $existing->imageUrl,
-                            'wikipediaUrl' => $existing->wikipediaUrl,
-                            'openingHours' => $existing->openingHours,
-                            'phone' => $existing->phone,
-                            'osmType' => $existing->osmType,
-                            'osmId' => $existing->osmId,
-                        ];
+                        $accommodations[] = $this->stageMapper->accommodation($existing);
                     }
                 } else {
                     // Full scan: reset before populating
@@ -199,26 +182,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     );
 
                     $stage->addAccommodation($accommodation);
-                    $accommodations[] = [
-                        'name' => $accommodation->name,
-                        'type' => $accommodation->type,
-                        'lat' => $accommodation->lat,
-                        'lon' => $accommodation->lon,
-                        'estimatedPriceMin' => $accommodation->estimatedPriceMin,
-                        'estimatedPriceMax' => $accommodation->estimatedPriceMax,
-                        'isExactPrice' => $accommodation->isExactPrice,
-                        'url' => $accommodation->url,
-                        'possibleClosed' => $accommodation->possibleClosed,
-                        'distanceToEndPoint' => $accommodation->distanceToEndPoint,
-                        'source' => $accommodation->source,
-                        'description' => $accommodation->description,
-                        'imageUrl' => $accommodation->imageUrl,
-                        'wikipediaUrl' => $accommodation->wikipediaUrl,
-                        'openingHours' => $accommodation->openingHours,
-                        'phone' => $accommodation->phone,
-                        'osmType' => $accommodation->osmType,
-                        'osmId' => $accommodation->osmId,
-                    ];
+                    $accommodations[] = $this->stageMapper->accommodation($accommodation);
                 }
 
                 $alertsToPublish = [];

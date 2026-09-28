@@ -8,14 +8,13 @@ use App\ComputationTracker\ComputationStatusStore;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
-use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Concurrency\VersionPrecondition;
 use App\Entity\Stage as StageEntity;
-use App\Mapper\EventArrayMapper;
+use App\Mapper\StageArrayMapper;
 use App\Enum\AlertGroup;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
@@ -45,7 +44,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         private readonly CacheItemPoolInterface $tripStateCache,
         private readonly CycleRouteRepositoryInterface $cycleRouteRepository,
         private readonly CoverageRepositoryInterface $coverageRepository,
-        private readonly EventArrayMapper $eventMapper,
+        private readonly StageArrayMapper $stageMapper,
     ) {
         parent::__construct($registry, TripRequest::class);
     }
@@ -763,7 +762,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('stageId', Uuid::fromString($stageId))
-            ->setParameter('value', $weather instanceof WeatherForecast ? $this->weatherToArray($weather) : null, 'jsonb')
+            ->setParameter('value', $weather instanceof WeatherForecast ? $this->stageMapper->weatherForStorage($weather) : null, 'jsonb')
             ->execute();
     }
 
@@ -881,7 +880,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     /** @param list<Event> $events */
     public function updateStageEvents(string $tripId, string $stageId, array $events): void
     {
-        $this->updateStageJsonColumn($tripId, $stageId, 'events', array_map($this->eventMapper->toArray(...), $events));
+        $this->updateStageJsonColumn($tripId, $stageId, 'events', array_map($this->stageMapper->event(...), $events));
     }
 
     /** @param list<array<string, mixed>> $markers */
@@ -919,7 +918,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('stageId', Uuid::fromString($stageId))
-            ->setParameter('value', $this->resupplyToArray($resupply), 'jsonb')
+            ->setParameter('value', $this->stageMapper->resupplyForStorage($resupply), 'jsonb')
             ->execute();
     }
 
@@ -935,7 +934,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('stageId', Uuid::fromString($stageId))
-            ->setParameter('value', array_map($this->accommodationToArray(...), $accommodations), 'jsonb')
+            ->setParameter('value', array_map($this->stageMapper->accommodation(...), $accommodations), 'jsonb')
             ->execute();
     }
 
@@ -1044,16 +1043,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $entity->setEndLabel($dto->endLabel);
         $entity->setIsRestDay($dto->isRestDay);
 
-        // Geometry: list<Coordinate> → list<array{lat, lon, ele}>
-        $geometry = [];
-        foreach ($dto->geometry as $coord) {
-            $geometry[] = ['lat' => $coord->lat, 'lon' => $coord->lon, 'ele' => $coord->ele];
-        }
-
-        $entity->setGeometry($geometry);
-
-        // Weather: WeatherForecast|null → array|null
-        $entity->setWeather($dto->weather instanceof WeatherForecast ? $this->weatherToArray($dto->weather) : null);
+        $entity->setGeometry(array_map($this->stageMapper->coordinate(...), $dto->geometry));
+        $entity->setWeather($dto->weather instanceof WeatherForecast ? $this->stageMapper->weatherForStorage($dto->weather) : null);
 
         // Enrichment columns are deliberately absent here (ADR-068): alerts, events and the
         // supply timeline belong to the producers that compute them, written through the
@@ -1061,19 +1052,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         // structural edit replay whatever snapshot the processor happened to read.
 
         // Resupply → the (repurposed) pois JSONB column.
-        $entity->setPois($this->resupplyToArray($dto->resupply ?? new Resupply()));
-
-        // Accommodations: Accommodation[] → list<array>
-        $accommodations = [];
-        foreach ($dto->accommodations as $accommodation) {
-            $accommodations[] = $this->accommodationToArray($accommodation);
-        }
-
-        $entity->setAccommodations($accommodations);
-
-        // Selected accommodation
+        $entity->setPois($this->stageMapper->resupplyForStorage($dto->resupply ?? new Resupply()));
+        $entity->setAccommodations(array_map($this->stageMapper->accommodation(...), array_values($dto->accommodations)));
         $entity->setSelectedAccommodation(
-            $dto->selectedAccommodation instanceof Accommodation ? $this->accommodationToArray($dto->selectedAccommodation) : null,
+            $dto->selectedAccommodation instanceof Accommodation ? $this->stageMapper->accommodation($dto->selectedAccommodation) : null,
         );
     }
 
@@ -1103,11 +1085,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $dto->startLabel = $entity->getStartLabel();
         $dto->endLabel = $entity->getEndLabel();
 
-        // Weather
-        /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string}|null $weatherData */
         $weatherData = $entity->getWeather();
         if (null !== $weatherData) {
-            $dto->weather = $this->arrayToWeather($weatherData);
+            $dto->weather = $this->stageMapper->weatherFromStorage($weatherData);
         }
 
         // Alerts: handed back exactly as their producer wrote them, group by group. No
@@ -1119,212 +1099,22 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $dto->supplyTimeline = $entity->getSupplyTimeline();
 
         foreach ($entity->getEvents() as $eventData) {
-            $dto->addEvent($this->eventMapper->fromArray($eventData));
+            $dto->addEvent($this->stageMapper->eventFromArray($eventData));
         }
 
         // Resupply (stored in the repurposed pois JSONB column).
-        $dto->resupply = $this->arrayToResupply($entity->getPois());
+        $dto->resupply = $this->stageMapper->resupplyFromStorage($entity->getPois());
 
-        // Accommodations
-        /** @var list<array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float}> $accommodationsData */
-        $accommodationsData = $entity->getAccommodations();
-        foreach ($accommodationsData as $accData) {
-            $dto->addAccommodation($this->arrayToAccommodation($accData));
+        foreach ($entity->getAccommodations() as $accData) {
+            $dto->addAccommodation($this->stageMapper->accommodationFromArray($accData));
         }
 
-        // Selected accommodation
-        /** @var array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float}|null $selectedData */
         $selectedData = $entity->getSelectedAccommodation();
         if (null !== $selectedData) {
-            $dto->selectedAccommodation = $this->arrayToAccommodation($selectedData);
+            $dto->selectedAccommodation = $this->stageMapper->accommodationFromArray($selectedData);
         }
 
         return $dto;
-    }
-
-    // --- Serialization helpers for JSONB columns ---
-
-    /** @return array<string, mixed> */
-    private function weatherToArray(WeatherForecast $weather): array
-    {
-        return [
-            'icon' => $weather->icon,
-            'description' => $weather->description,
-            'tempMin' => $weather->tempMin,
-            'tempMax' => $weather->tempMax,
-            'windSpeed' => $weather->windSpeed,
-            'windDirection' => $weather->windDirection,
-            'precipitationProbability' => $weather->precipitationProbability,
-            'humidity' => $weather->humidity,
-            'comfortIndex' => $weather->comfortIndex,
-            'relativeWindDirection' => $weather->relativeWindDirection,
-        ];
-    }
-
-    /** @param array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string} $data */
-    private function arrayToWeather(array $data): WeatherForecast
-    {
-        return new WeatherForecast(
-            icon: $data['icon'],
-            description: $data['description'],
-            tempMin: $data['tempMin'],
-            tempMax: $data['tempMax'],
-            windSpeed: $data['windSpeed'],
-            windDirection: $data['windDirection'],
-            precipitationProbability: $data['precipitationProbability'],
-            humidity: $data['humidity'],
-            comfortIndex: $data['comfortIndex'],
-            relativeWindDirection: $data['relativeWindDirection'],
-        );
-    }
-
-    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float, osmType: ?string, osmId: ?int, openingHours: ?string, website: ?string} */
-    private function poiToArray(PointOfInterest $poi): array
-    {
-        return [
-            'name' => $poi->name,
-            'category' => $poi->category,
-            'lat' => $poi->lat,
-            'lon' => $poi->lon,
-            'distanceFromStart' => $poi->distanceFromStart,
-            // Without these the OSM link vanishes on reload and in the shared view,
-            // exactly as the accommodation enrichment fields did before issue #870.
-            'osmType' => $poi->osmType,
-            'osmId' => $poi->osmId,
-            'openingHours' => $poi->openingHours,
-            'website' => $poi->website,
-        ];
-    }
-
-    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int, openingHours?: ?string, website?: ?string} $data */
-    private function arrayToPoi(array $data): PointOfInterest
-    {
-        return new PointOfInterest(
-            name: $data['name'],
-            category: $data['category'],
-            lat: $data['lat'],
-            lon: $data['lon'],
-            distanceFromStart: $data['distanceFromStart'] ?? null,
-            osmType: $data['osmType'] ?? null,
-            osmId: $data['osmId'] ?? null,
-            openingHours: $data['openingHours'] ?? null,
-            website: $data['website'] ?? null,
-        );
-    }
-
-    /** @return array<string, mixed> */
-    private function resupplyToArray(Resupply $resupply): array
-    {
-        return $resupply->map($this->poiToArray(...));
-    }
-
-    /** @param array<int|string, mixed> $data */
-    private function arrayToResupply(array $data): Resupply
-    {
-        // Legacy flat POI list (pre-#1099) or empty: nothing to reconstruct until
-        // the trip is re-scanned.
-        if (!isset($data['foodAtLunch'], $data['foodAtArrival'])) {
-            return new Resupply();
-        }
-
-        return new Resupply(
-            foodAtLunch: $this->poiListFromData($data['foodAtLunch']),
-            waterMorning: $this->poiFromData($data['waterMorning'] ?? null),
-            waterAfternoon: $this->poiFromData($data['waterAfternoon'] ?? null),
-            foodAtArrival: $this->poiListFromData($data['foodAtArrival']),
-        );
-    }
-
-    /**
-     * @return list<PointOfInterest>
-     */
-    private function poiListFromData(mixed $items): array
-    {
-        if (!\is_array($items)) {
-            return [];
-        }
-
-        $pois = [];
-        foreach ($items as $item) {
-            $poi = $this->poiFromData($item);
-            if ($poi instanceof PointOfInterest) {
-                $pois[] = $poi;
-            }
-        }
-
-        return $pois;
-    }
-
-    private function poiFromData(mixed $item): ?PointOfInterest
-    {
-        if (!\is_array($item)) {
-            return null;
-        }
-
-        /** @var array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float, osmType?: ?string, osmId?: ?int, openingHours?: ?string, website?: ?string} $poi */
-        $poi = $item;
-
-        return $this->arrayToPoi($poi);
-    }
-
-    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float, source: string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, address: ?string, osmType: ?string, osmId: ?int} */
-    private function accommodationToArray(Accommodation $acc): array
-    {
-        return [
-            'name' => $acc->name,
-            'type' => $acc->type,
-            'lat' => $acc->lat,
-            'lon' => $acc->lon,
-            'estimatedPriceMin' => $acc->estimatedPriceMin,
-            'estimatedPriceMax' => $acc->estimatedPriceMax,
-            'isExactPrice' => $acc->isExactPrice,
-            'url' => $acc->url,
-            'possibleClosed' => $acc->possibleClosed,
-            'distanceToEndPoint' => $acc->distanceToEndPoint,
-            // Provisioning-time enrichment (Wikidata, ADR-041) and the source
-            // attribution badge: dropped before issue #870, which degraded every
-            // reload and the anonymous shared view.
-            'source' => $acc->source,
-            'description' => $acc->description,
-            'imageUrl' => $acc->imageUrl,
-            'wikipediaUrl' => $acc->wikipediaUrl,
-            'openingHours' => $acc->openingHours,
-            // Contact block and OSM identity (issue #873): same trap as the five
-            // keys above — omitting them here drops the tel: link and the "see on
-            // OSM" affordance on every reload and in the shared view.
-            'phone' => $acc->phone,
-            'address' => $acc->address,
-            'osmType' => $acc->osmType,
-            'osmId' => $acc->osmId,
-        ];
-    }
-
-    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float, source?: ?string, description?: ?string, imageUrl?: ?string, wikipediaUrl?: ?string, openingHours?: ?string, phone?: ?string, address?: ?string, osmType?: ?string, osmId?: ?int} $data */
-    private function arrayToAccommodation(array $data): Accommodation
-    {
-        return new Accommodation(
-            name: $data['name'],
-            type: $data['type'],
-            lat: $data['lat'],
-            lon: $data['lon'],
-            estimatedPriceMin: $data['estimatedPriceMin'],
-            estimatedPriceMax: $data['estimatedPriceMax'],
-            isExactPrice: $data['isExactPrice'],
-            url: $data['url'] ?? null,
-            possibleClosed: $data['possibleClosed'] ?? false,
-            distanceToEndPoint: $data['distanceToEndPoint'] ?? 0.0,
-            // Accommodations persisted before issue #870 carry none of the five
-            // enrichment keys: fall back on the constructor defaults.
-            source: $data['source'] ?? 'osm',
-            description: $data['description'] ?? null,
-            imageUrl: $data['imageUrl'] ?? null,
-            wikipediaUrl: $data['wikipediaUrl'] ?? null,
-            openingHours: $data['openingHours'] ?? null,
-            phone: $data['phone'] ?? null,
-            address: $data['address'] ?? null,
-            osmType: $data['osmType'] ?? null,
-            osmId: $data['osmId'] ?? null,
-        );
     }
 
     // --- Redis cache helpers for transient data ---
