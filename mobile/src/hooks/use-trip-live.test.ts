@@ -552,7 +552,7 @@ describe('useTripLive keeps the roadbook live across gaps', () => {
 describe('applyResync', () => {
   beforeEach(() => {
     useTripStore.getState().hydrate('t1', detail([apiStage(), apiStage({ dayNumber: 2 })]));
-    useTripStore.getState().applyStageDetail(0, [A, B]);
+    useTripStore.getState().applyStageDetail('stage-1', [A, B]);
   });
 
   it('refreshes the stages but keeps the geometry already loaded', () => {
@@ -570,6 +570,17 @@ describe('applyResync', () => {
     // A missed trip_ready no longer holds the badge on; the route is fetched again.
     expect(store().computing).toBe(false);
     expect(store().geometryLoaded).toBe(false);
+  });
+
+  it('stores the trip dates as calendar days, like hydrate', () => {
+    applyResync('t1', {
+      ...detail([apiStage()]),
+      startDate: '2026-08-01T00:00:00+02:00',
+      endDate: '2026-08-03T00:00:00+02:00',
+    });
+
+    expect(store().startDate).toBe('2026-08-01');
+    expect(store().endDate).toBe('2026-08-03');
   });
 
   it('keeps the computing badge while a category still runs', () => {

@@ -7,7 +7,8 @@ import {
 } from '@btp/core/reconciliation';
 import { fetchTripDetail, type TripDetail } from '../api/trips';
 import { subscribeToTrip, type TripSubscription } from '../api/mercure';
-import { stageDataFromDetail, useTripStore } from '../store/trip-store';
+import { stageDataFromDetail, tripSettingsFromDetail } from '@btp/core';
+import { useTripStore } from '../store/trip-store';
 import { useDismissedAlerts } from '../store/dismissed-alerts';
 import { useOfflineStore } from '../store/offline-store';
 import { cacheTripDetail, readTripCache } from '../store/trip-cache';
@@ -208,16 +209,7 @@ export function applyResync(id: string, detail: TripDetail): void {
     title: detail.title ?? null,
     isLocked: detail.isLocked ?? false,
     outOfZone: detail.outOfZone ?? false,
-    startDate: detail.startDate ?? null,
-    endDate: detail.endDate ?? null,
-    fatigueFactor: detail.fatigueFactor ?? state.fatigueFactor,
-    elevationPenalty: detail.elevationPenalty ?? state.elevationPenalty,
-    maxDistancePerDay: detail.maxDistancePerDay ?? state.maxDistancePerDay,
-    averageSpeed: detail.averageSpeed ?? state.averageSpeed,
-    ebikeMode: detail.ebikeMode ?? state.ebikeMode,
-    departureHour: detail.departureHour ?? state.departureHour,
-    enabledAccommodationTypes:
-      detail.enabledAccommodationTypes ?? state.enabledAccommodationTypes,
+    ...tripSettingsFromDetail(detail),
     // A trip_ready missed during the gap would otherwise leave the badge on.
     computing: Object.values(detail.categoryStatus ?? {}).includes('running'),
     // The route may have moved during the gap: let useTripRoute fetch it again.
