@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "@/components/ui/sonner";
 import {
   Link as LinkIcon,
@@ -45,7 +45,7 @@ import {
   revokeTripShare,
 } from "@/lib/api/client";
 import { trackEvent } from "@/lib/plausible";
-import type { StageData } from "@btp/core";
+import { todayUtc, type StageData } from "@btp/core";
 
 interface ShareModalProps {
   open: boolean;
@@ -81,6 +81,7 @@ export function ShareModal({
   const t = useTranslations("share");
   const tStage = useTranslations("stage");
   const tTextExport = useTranslations("textExport");
+  const locale = useLocale();
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(false);
@@ -236,6 +237,8 @@ export function ShareModal({
         sourceUrl,
         stages,
         startDate,
+        locale,
+        today: todayUtc(),
         labels: {
           totalDistance: tTextExport("totalDistance"),
           totalElevation: tTextExport("totalElevation"),
@@ -249,6 +252,7 @@ export function ShareModal({
       sourceUrl,
       stages,
       startDate,
+      locale,
       tTextExport,
     ],
   );

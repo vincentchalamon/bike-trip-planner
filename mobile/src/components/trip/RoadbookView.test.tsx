@@ -6,7 +6,7 @@ import type { StageData } from '@btp/core';
 import i18n from '../../i18n';
 import { fr } from '../../i18n/resources/fr';
 import { useTripStore } from '../../store/trip-store';
-import { todayUtc } from './roadbook-dates';
+import { todayUtc } from '@btp/core';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));

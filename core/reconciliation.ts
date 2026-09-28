@@ -4,9 +4,10 @@
 // (dispatch event -> pure reducer -> set). No Zustand/Immer/dayjs dependency.
 //
 // The race/edge behaviour these encode is covered by characterization tests in
-// reconciliation.test.ts and traces back to #840 (concurrency token / stale
-// recomputing indices), #649 (client-only field preservation on a stable
-// endpoint) and #787 (label preservation on a raw resync).
+// pwa/src/store/reconciliation.test.ts (core has no runner of its own) and
+// traces back to #840 (concurrency token / stale recomputing indices), #649
+// (client-only field preservation on a stable endpoint) and #787 (label
+// preservation on a raw resync).
 
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "./accommodation-constants";
 import type {
@@ -65,14 +66,20 @@ export function enrichedPayloadToStageData(
   };
 }
 
-function sameStart(prev: StageData, incoming: StageData): boolean {
+// Structural so the stages_computed merge can compare a wire payload too.
+interface Endpoints {
+  startPoint: { lat: number; lon: number };
+  endPoint: { lat: number; lon: number };
+}
+
+function sameStart(prev: Endpoints, incoming: Endpoints): boolean {
   return (
     prev.startPoint.lat === incoming.startPoint.lat &&
     prev.startPoint.lon === incoming.startPoint.lon
   );
 }
 
-function sameEnd(prev: StageData, incoming: StageData): boolean {
+function sameEnd(prev: Endpoints, incoming: Endpoints): boolean {
   return (
     prev.endPoint.lat === incoming.endPoint.lat &&
     prev.endPoint.lon === incoming.endPoint.lon
@@ -264,10 +271,20 @@ export function pruneStaleRecomputing(
 export function dropStaleDateAlerts(stages: StageData[]): StageData[] {
   return stages.map((stage) => ({
     ...stage,
-    alerts: (stage.alerts as StageAlert[]).filter(
-      (a) => a.group !== "calendar",
-    ),
+    alerts: stage.alerts.filter((a) => a.group !== "calendar"),
   }));
+}
+
+/**
+ * Bookkeeping every optimistic structural edit (delete, rest-day insert, stage
+ * insert, move) owes the stage list: renumber the days 1..n and drop the
+ * calendar nudges that no longer match their day (see
+ * {@link dropStaleDateAlerts}). Shared so neither platform can skip half of it.
+ */
+export function renumberAfterStructuralEdit(stages: StageData[]): StageData[] {
+  return dropStaleDateAlerts(
+    stages.map((stage, i) => ({ ...stage, dayNumber: i + 1 })),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -334,9 +351,7 @@ function replaceStageAlerts(
   group: string,
 ): StageData[] {
   return patchStage(stages, stageId, (stage) => {
-    const kept = (stage.alerts as StageAlert[]).filter(
-      (a) => a.group !== group,
-    );
+    const kept = stage.alerts.filter((a) => a.group !== group);
     // Still tagged here: a live payload carries its own group, but stamping it keeps the
     // reducer correct for one built before the field travelled.
     const tagged: StageAlert[] = alerts.map((a) => ({ ...a, group }));
@@ -431,14 +446,8 @@ function reconcileStagesComputed(
 
   return data.stages.map((s, i) => {
     const prev = existing[i];
-    const endMatch =
-      prev &&
-      prev.endPoint.lat === s.endPoint.lat &&
-      prev.endPoint.lon === s.endPoint.lon;
-    const startMatch =
-      prev &&
-      prev.startPoint.lat === s.startPoint.lat &&
-      prev.startPoint.lon === s.startPoint.lon;
+    const endMatch = prev && sameEnd(prev, s);
+    const startMatch = prev && sameStart(prev, s);
     return {
       ...s,
       id: s.stageId,
@@ -460,9 +469,6 @@ function reconcileStagesComputed(
     };
   });
 }
-
-/** Empty recomputing set (terminal events clear the overlay). */
-const NO_RECOMPUTING: ReadonlySet<string> = new Set<string>();
 
 /**
  * Reconcile one Mercure SSE event into the next {@link ReconciledState}. Pure:
@@ -591,13 +597,11 @@ export function reduceMercureEvent(
       // dropped out of the new set keeps no stale nudge (recette Sunday bug).
       const cleared = state.stages.map((s) => ({
         ...s,
-        alerts: (s.alerts as StageAlert[]).filter(
-          (a) => a.group !== "calendar",
-        ),
+        alerts: s.alerts.filter((a) => a.group !== "calendar"),
       }));
       const grouped = groupAlerts(event.data.alerts, (a) => ({
         code: a.code,
-        type: a.type as AlertData["type"],
+        type: a.type,
         message: a.message,
         lat: null,
         lon: null,
@@ -629,7 +633,7 @@ export function reduceMercureEvent(
     case "bike_shop_alerts": {
       const grouped = groupAlerts(event.data.alerts, (a) => ({
         code: a.code,
-        type: a.type as "nudge",
+        type: a.type,
         message: a.message,
         lat: null,
         lon: null,
@@ -643,7 +647,7 @@ export function reduceMercureEvent(
     case "water_point_alerts": {
       const grouped = groupAlerts(event.data.alerts, (a) => ({
         code: a.code,
-        type: a.type as "nudge",
+        type: a.type,
         message: a.message,
         lat: null,
         lon: null,
@@ -658,7 +662,7 @@ export function reduceMercureEvent(
     case "health_service_alerts": {
       const grouped = groupAlerts(event.data.alerts, (a) => ({
         code: a.code,
-        type: a.type as "nudge",
+        type: a.type,
         message: a.message,
       }));
       return {
@@ -778,14 +782,14 @@ export function reduceMercureEvent(
         [],
         "cultural_poi",
       );
-      return { ...state, stages, recomputingStages: new Set(NO_RECOMPUTING) };
+      return { ...state, stages, recomputingStages: new Set<string>() };
     }
 
     case "trip_complete":
       return {
         ...state,
         computationStatus: event.data.computationStatus,
-        recomputingStages: new Set(NO_RECOMPUTING),
+        recomputingStages: new Set<string>(),
       };
 
     case "computation_step_completed":
@@ -798,7 +802,7 @@ export function reduceMercureEvent(
         ...state,
         stages: reconcileTripReady(state.stages, incoming),
         computationStatus: event.data.computationStatus,
-        recomputingStages: new Set(NO_RECOMPUTING),
+        recomputingStages: new Set<string>(),
       };
     }
 
@@ -816,12 +820,12 @@ export function reduceMercureEvent(
     }
 
     case "validation_error":
-      return { ...state, recomputingStages: new Set(NO_RECOMPUTING) };
+      return { ...state, recomputingStages: new Set<string>() };
 
     case "computation_error":
       return event.data.retryable
         ? state
-        : { ...state, recomputingStages: new Set(NO_RECOMPUTING) };
+        : { ...state, recomputingStages: new Set<string>() };
 
     case "computations_superseded":
       // Record the outcome without touching stage data: the abandoned work produced none,

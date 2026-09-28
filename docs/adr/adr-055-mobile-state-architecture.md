@@ -52,12 +52,16 @@ reducers extracted into `@btp/core`, rather than re-deriving the logic.
 
 - One reconciliation implementation, two thin stores. A race fix or field-
   preservation rule is written once in `@btp/core` and both platforms inherit it;
-  the characterization tests in `core/reconciliation.test.ts` guard the semantics
-  for both.
+  the characterization tests guard the semantics for both. `core` has no test
+  runner of its own: they run under the web's Vitest, which imports `@btp/core`
+  (`pwa/src/store/reconciliation.test.ts`, `pwa/src/store/mercure-reconciliation.test.ts`).
 - The stores differ only in glue (Zustand config, RN vs. web hooks), which is
   where they *should* differ. Neither store re-derives domain behaviour.
 - `@btp/core` is now the shared source not just for types (schemas, Zod) but for
-  runtime domain logic (reconciliation, accommodation constants). It stays free
+  runtime domain logic: reconciliation, the /detail hydrate
+  (`core/trip-detail.ts`), stage dates and structural-edit renumbering
+  (`core/stage-dates.ts`, `renumberAfterStructuralEdit`), accommodation
+  constants. It stays free
   of any framework/runtime dependency so both a Next.js server bundle and a React
   Native bundle can consume it.
 - The mobile store deliberately does **not** persist (no offline cache yet):

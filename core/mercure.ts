@@ -268,7 +268,7 @@ export type MercureEvent =
           stageId: string;
           dayNumber: number;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
         }[];
       };
@@ -285,7 +285,7 @@ export type MercureEvent =
         alerts: {
           stageId: string;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
           dayNumber: number;
         }[];
@@ -297,7 +297,7 @@ export type MercureEvent =
         alerts: {
           stageId: string;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
           dayNumber: number;
         }[];
@@ -325,7 +325,7 @@ export type MercureEvent =
           stageId: string;
           dayNumber: number;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
         }[];
       };
@@ -337,7 +337,7 @@ export type MercureEvent =
           stageId: string;
           dayNumber: number;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
           lat: number;
           lon: number;
@@ -365,7 +365,7 @@ export type MercureEvent =
           stageId: string;
           dayNumber: number;
           code: string;
-          type: string;
+          type: AlertPayload["type"];
           message: string;
           // Absent when no station was found anywhere along the trip.
           action?: {

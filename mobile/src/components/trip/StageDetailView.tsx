@@ -35,7 +35,8 @@ import { stageColor } from '../map/stage-colors';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
 import { StageDataBlocks, notifyFailure } from './StageDataBlocks';
-import { formatStageDate, stageDateFor } from './roadbook-dates';
+import { stageDate } from '@btp/core';
+import { formatStageDate } from './roadbook-dates';
 import {
   activeStageIndex,
   clampIndex,
@@ -145,7 +146,7 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
     );
   }
 
-  const date = stageDateFor(startDate, stage.dayNumber ?? safeIndex + 1);
+  const date = stageDate(startDate, stage.dayNumber ?? safeIndex + 1);
   const heading = date
     ? formatStageDate(date, i18n.language)
     : t('trip.day', { day: stage.dayNumber ?? safeIndex + 1 });
@@ -506,7 +507,7 @@ function DayStrip({
         const active = i === activeIndex;
         const rest = Boolean(s.isRestDay);
         const dayNum = s.dayNumber ?? i + 1;
-        const date = stageDateFor(startDate, dayNum);
+        const date = stageDate(startDate, dayNum);
         const label = date
           ? formatStageDate(date, i18n.language)
           : t('trip.day', { day: dayNum });

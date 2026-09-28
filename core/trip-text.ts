@@ -1,28 +1,22 @@
 import type { StageData } from "./schemas";
 import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "./budget";
+import { stageDate } from "./stage-dates";
 
 // Formatted trip text shared by web and mobile (ADR-055). Framework-free — no
 // React/RN/Next imports. Produces the plain-text summary (title, totals,
 // per-stage line with budget) both platforms copy/share; each platform appends
 // its own share link separately.
 
-function formatDate(startDate: string | null, dayNumber: number): string {
-  const [year = 0, month = 0, day = 0] = (
-    startDate ??
-    (() => {
-      const n = new Date();
-      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
-    })()
-  )
-    .split("-")
-    .map(Number);
-  const base = new Date(year, month - 1, day);
-  const date = new Date(
-    base.getFullYear(),
-    base.getMonth(),
-    base.getDate() + dayNumber - 1,
-  );
-  return date.toLocaleDateString(undefined, {
+function formatDate(
+  startDate: string | null,
+  dayNumber: number,
+  locale: string,
+  today: string,
+): string {
+  // Without a start date the days are counted from today.
+  const day = stageDate(startDate ?? today, dayNumber) ?? today;
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString(locale, {
+    timeZone: "UTC",
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -35,10 +29,12 @@ function formatStageLine(
   startDate: string | null,
   stageIndex: number,
   totalActiveStages: number,
+  locale: string,
+  today: string,
 ): string {
   const isFirst = stageIndex === 0;
   const isLast = stageIndex === totalActiveStages - 1;
-  const date = formatDate(startDate, stage.dayNumber);
+  const date = formatDate(startDate, stage.dayNumber, locale, today);
   const distance = `${Math.round(stage.distance)}km`;
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
   const elevDown = `⬇️ ${Math.round(stage.elevationLoss ?? 0)}m`;
@@ -91,6 +87,10 @@ export interface TextExportParams {
   sourceUrl: string;
   stages: StageData[];
   startDate: string | null;
+  /** BCP 47 locale the stage dates are written in. */
+  locale: string;
+  /** `YYYY-MM-DD` the days are counted from when the trip has no start date. */
+  today: string;
   labels: {
     totalDistance: string;
     totalElevation: string;
@@ -106,6 +106,8 @@ export function buildTripText(params: TextExportParams): string {
     sourceUrl,
     stages,
     startDate,
+    locale,
+    today,
     labels,
   } = params;
 
@@ -133,7 +135,16 @@ export function buildTripText(params: TextExportParams): string {
   if (activeStages.length > 0) {
     lines.push("");
     activeStages.forEach((stage, i) => {
-      lines.push(formatStageLine(stage, startDate, i, activeStages.length));
+      lines.push(
+        formatStageLine(
+          stage,
+          startDate,
+          i,
+          activeStages.length,
+          locale,
+          today,
+        ),
+      );
     });
   }
 

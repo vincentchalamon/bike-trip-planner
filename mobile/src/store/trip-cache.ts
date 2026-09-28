@@ -5,7 +5,8 @@ import { Directory, File, Paths } from 'expo-file-system';
 // UI thread (#1175).
 import { writeAsStringAsync } from 'expo-file-system/legacy';
 import type { TripDetail, TripRoute } from '../api/trips';
-import { todayUtc, tripStateFromDates } from '../components/trip/roadbook-dates';
+import { todayUtc } from '@btp/core';
+import { tripStateFromDates } from '../components/trip/roadbook-dates';
 
 // Persistent offline cache for the trips the rider is likely to open without a
 // connection: the /detail payload plus the static route geometry (#1147). It

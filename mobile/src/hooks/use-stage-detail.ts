@@ -22,7 +22,7 @@ export function useStageDetail(index: number): void {
     void fetchStageDetail(tripId, stageId)
       .then((detail) => {
         if (!cancelled && detail) {
-          applyStageDetail(index, (detail.geometry ?? []) as StageData['geometry']);
+          applyStageDetail(stageId, (detail.geometry ?? []) as StageData['geometry']);
         }
       })
       .catch((error: unknown) => {
@@ -33,5 +33,5 @@ export function useStageDetail(index: number): void {
     return () => {
       cancelled = true;
     };
-  }, [tripId, index, hasGeometry, applyStageDetail]);
+  }, [tripId, stageId, hasGeometry, applyStageDetail]);
 }

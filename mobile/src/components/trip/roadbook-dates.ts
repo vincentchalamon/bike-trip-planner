@@ -1,31 +1,13 @@
 import type { ThemeColors } from '../../theme';
 
-// Pure date/state helpers for the roadbook. All date math is done on
-// `YYYY-MM-DD` strings in UTC (mirrors addDays in trip-store.ts) so the result
-// is timezone-stable: CI runs in Europe/Paris, a dev container in UTC, and a
-// device in the rider's local zone must all agree. The reference "today" is
+// Pure date/state helpers for the roadbook. The day arithmetic itself lives in
+// @btp/core (stageDate / todayUtc, shared with the web); like it, everything
+// here works on `YYYY-MM-DD` strings in UTC so the result is timezone-stable:
+// CI runs in Europe/Paris, a dev container in UTC, and a device in the rider's
+// local zone must all agree. The reference "today" is
 // injected so the functions stay deterministic and testable.
 
 export type TripLifecycle = 'upcoming' | 'ongoing' | 'past';
-
-// The current UTC calendar day as `YYYY-MM-DD`.
-export function todayUtc(now: Date = new Date()): string {
-  return now.toISOString().slice(0, 10);
-}
-
-// The calendar day of a stage: startDate + (dayNumber - 1) days, as
-// `YYYY-MM-DD`. Each stage spans one calendar day, rest days included
-// (recette #649). Null without a start date or on an unparseable one.
-export function stageDateFor(
-  startDate: string | null,
-  dayNumber: number,
-): string | null {
-  if (!startDate) return null;
-  const d = new Date(startDate + 'T00:00:00Z');
-  if (Number.isNaN(d.getTime())) return null;
-  d.setUTCDate(d.getUTCDate() + Math.max(0, dayNumber - 1));
-  return d.toISOString().slice(0, 10);
-}
 
 // The trip lifecycle state from its dates vs today (all `YYYY-MM-DD`, UTC).
 // Null when either bound is missing — the caller shows the "set your dates"

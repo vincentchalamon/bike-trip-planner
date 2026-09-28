@@ -11,13 +11,8 @@ import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
 import { ModificationQueue } from './ModificationQueue';
 import { useOfflineStore } from '../../store/offline-store';
-import {
-  isStageToday,
-  stageDateFor,
-  summaryColorKey,
-  todayUtc,
-  tripStateFromDates,
-} from './roadbook-dates';
+import { stageDate, todayUtc } from '@btp/core';
+import { isStageToday, summaryColorKey, tripStateFromDates } from './roadbook-dates';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import type { MutationFailure } from '../../store/gating';
@@ -219,7 +214,7 @@ export function RoadbookView({
           </View>
         }
         renderItem={({ item, index }) => {
-          const date = stageDateFor(startDate, item.dayNumber ?? index + 1);
+          const date = stageDate(startDate, item.dayNumber ?? index + 1);
           const key = stageKey(item);
           return (
             <Fragment>

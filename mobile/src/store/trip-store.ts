@@ -3,6 +3,7 @@ import type { StageData, TripSettings } from '@btp/core';
 import {
   DEFAULT_TRIP_SETTINGS,
   EMPTY_RESUPPLY,
+  endDateFor,
   stageDataFromDetail,
   tripSettingsFromDetail,
 } from '@btp/core';
@@ -13,6 +14,7 @@ import {
   reduceMercureEvent,
   reconcileStageUpdate,
   reconcileTripReady,
+  renumberAfterStructuralEdit,
 } from '@btp/core/reconciliation';
 import type { TripDetail, TripRoute } from '../api/trips';
 import { DIFF_TTL_MS, diffStageIndices } from './config-diff';
@@ -36,29 +38,22 @@ export type TripConfig = TripSettings;
 
 const DEFAULT_CONFIG: TripConfig = DEFAULT_TRIP_SETTINGS;
 
-// Add `days` to a YYYY-MM-DD / ISO date string, returning YYYY-MM-DD. Used for
-// the optimistic endDate when a structural edit changes the stage count; the
-// authoritative value arrives over SSE. UTC math keeps it timezone-stable.
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-// Renumber dayNumbers 1..n after a structural edit.
-function renumber(stages: StageData[]): StageData[] {
-  return stages.map((stage, i) => ({ ...stage, dayNumber: i + 1 }));
-}
-
-// Recompute endDate from startDate + (stageCount - 1) days when a structural
-// edit changed the count (each stage spans one calendar day, rest days
-// included, recette #649). Returns the patch to apply, or {} without a start.
+// The endDate patch for a structural edit that changed the stage count; the
+// authoritative value arrives over SSE. {} without a start date.
 function endDatePatch(
   startDate: string | null,
   stageCount: number,
 ): Partial<TripConfig> {
-  if (!startDate) return {};
-  return { endDate: addDays(startDate, Math.max(0, stageCount - 1)) };
+  return startDate ? { endDate: endDateFor(startDate, stageCount) } : {};
+}
+
+// The diff-highlight expiry, kept outside the store so reset/hydrate can cancel
+// it rather than let it fire into the next trip.
+let diffExpiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelDiffExpiry(): void {
+  if (diffExpiryTimer !== null) clearTimeout(diffExpiryTimer);
+  diffExpiryTimer = null;
 }
 
 interface TripState extends TripConfig {
@@ -108,9 +103,11 @@ interface TripState extends TripConfig {
   applyMercureEvent: (event: MercureEvent) => void;
   // Merge the on-demand route geometry (GET /route) into the matching stages.
   applyRoute: (route: TripRoute) => void;
-  // Merge one stage's on-demand geometry (GET /stages/{index}/detail) into that
+  // Merge one stage's on-demand geometry (GET /stages/{stageId}/detail) into that
   // stage — the per-stage detail screen only needs ~300 points, not the whole route.
-  applyStageDetail: (index: number, geometry: StageData['geometry']) => void;
+  // Addressed by identity: the fetch resolves after an await, by which time an
+  // optimistic move, insert or delete may have shifted the positions.
+  applyStageDetail: (stageId: string, geometry: StageData['geometry']) => void;
   // Replace the whole stage list (optimistic rollback restores a snapshot).
   setStages: (stages: StageData[]) => void;
   // Patch any subset of the editable config slice.
@@ -174,6 +171,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   hydrate: (tripId, detail) => {
     // A fresh trip has no undoable history (mirrors the web clearTrip).
     useTripTemporalStore.getState().clear();
+    cancelDiffExpiry();
     set({
       tripId,
       title: detail.title ?? null,
@@ -193,20 +191,14 @@ export const useTripStore = create<TripState>((set, get) => ({
       error: null,
     });
   },
-  applyTripReady: (stages) =>
+  applyTripReady: (stages) => {
+    let expiring = null as Set<number> | null;
     set((state) => {
       const reconciled = reconcileTripReady(state.stages, stages);
       // No armed baseline → an ordinary recompute, no diff-highlight.
       if (!state.diffBaseline) return { stages: reconciled };
       const stageDiffs = diffStageIndices(state.diffBaseline, reconciled);
-      if (stageDiffs.size > 0) {
-        // Key the auto-expiry to this exact diff set: a later destructive
-        // recompute within the TTL replaces stageDiffs, and this stale timer
-        // must not wipe the fresher highlights.
-        setTimeout(() => {
-          if (get().stageDiffs === stageDiffs) get().clearStageDiffs();
-        }, DIFF_TTL_MS);
-      }
+      if (stageDiffs.size > 0) expiring = stageDiffs;
       // Release the shared baseline only once every armed generation has been
       // consumed. While earlier generations remain (a second destructive
       // recompute was armed before this trip_ready), keep the baseline so the
@@ -222,7 +214,18 @@ export const useTripStore = create<TripState>((set, get) => ({
         };
       }
       return { stages: reconciled, stageDiffs, diffConsumedToken: consumed };
-    }),
+    });
+    // Scheduled after the updater, which must stay pure. A later destructive
+    // recompute within the TTL replaces the timer along with the highlights.
+    if (expiring) {
+      const stageDiffs = expiring;
+      cancelDiffExpiry();
+      diffExpiryTimer = setTimeout(() => {
+        diffExpiryTimer = null;
+        if (get().stageDiffs === stageDiffs) get().clearStageDiffs();
+      }, DIFF_TTL_MS);
+    }
+  },
   applyStageUpdate: (stageId, position, stage) =>
     set((state) => {
       const { stages, appendedTrailingStage } = reconcileStageUpdate(
@@ -275,12 +278,12 @@ export const useTripStore = create<TripState>((set, get) => ({
         }),
       };
     }),
-  applyStageDetail: (index, geometry) =>
+  applyStageDetail: (stageId, geometry) =>
     set((state) => {
-      const stage = state.stages[index];
-      if (!stage) return {};
+      const index = state.stages.findIndex((stage) => stage.id === stageId);
+      if (index === -1) return {};
       const stages = [...state.stages];
-      stages[index] = { ...stage, geometry };
+      stages[index] = { ...state.stages[index]!, geometry };
       return { stages };
     }),
   setStages: (stages) => set({ stages }),
@@ -291,7 +294,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   setComputing: (computing) => set({ computing }),
   deleteStageOptimistic: (index) =>
     set((state) => {
-      const stages = renumber(state.stages.filter((_, i) => i !== index));
+      const stages = renumberAfterStructuralEdit(state.stages.filter((_, i) => i !== index));
       return { stages, ...endDatePatch(state.startDate, stages.length) };
     }),
   insertRestDayOptimistic: (afterIndex) =>
@@ -323,14 +326,14 @@ export const useTripStore = create<TripState>((set, get) => ({
       };
       const next = state.stages.slice();
       next.splice(afterIndex + 1, 0, restDay);
-      const stages = renumber(next);
+      const stages = renumberAfterStructuralEdit(next);
       return { stages, ...endDatePatch(state.startDate, stages.length) };
     }),
   insertStageOptimistic: (afterIndex, placeholder) =>
     set((state) => {
       const next = state.stages.slice();
       next.splice(afterIndex + 1, 0, placeholder);
-      const stages = renumber(next);
+      const stages = renumberAfterStructuralEdit(next);
       return { stages, ...endDatePatch(state.startDate, stages.length) };
     }),
   moveStageOptimistic: (fromIndex, toIndex) =>
@@ -339,7 +342,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       const [moved] = next.splice(fromIndex, 1);
       if (!moved) return {};
       next.splice(toIndex, 0, moved);
-      return { stages: renumber(next) };
+      return { stages: renumberAfterStructuralEdit(next) };
     }),
   selectAccommodationOptimistic: (stageIndex, accIndex, nextStageIndex) =>
     set((state) => {
@@ -420,6 +423,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   setStatus: (patch) => set(patch),
   reset: () => {
     useTripTemporalStore.getState().clear();
+    cancelDiffExpiry();
     set({
       tripId: null,
       title: null,

@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
-import dayjs from "dayjs";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@btp/core/constants";
 import type {
   StageData,
@@ -14,13 +13,13 @@ import type {
   SupplyMarkerData,
   EventData,
 } from "@btp/core";
-import { EMPTY_RESUPPLY } from "@btp/core";
+import { EMPTY_RESUPPLY, endDateFor } from "@btp/core";
 import {
   reconcileResync,
   reconcileTripReady,
   reconcileStageUpdate,
   pruneStaleRecomputing as corePruneStaleRecomputing,
-  dropStaleDateAlerts as coreDropStaleDateAlerts,
+  renumberAfterStructuralEdit,
   type ReconciledState,
   type StageAlert,
 } from "@btp/core/reconciliation";
@@ -404,11 +403,6 @@ function pruneStaleRecomputing(state: {
   );
 }
 
-/** Reassign the calendar-alert-filtered stages on the draft (see core). */
-function dropStaleDateAlerts(state: { stages: StageData[] }): void {
-  state.stages = coreDropStaleDateAlerts(state.stages);
-}
-
 export const useTripStore = create<TripState>()(
   immer((set) => ({
     ...initialState,
@@ -636,9 +630,8 @@ export const useTripStore = create<TripState>()(
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         state.stages.splice(stageIndex, 1);
-        state.stages.forEach((s, i) => {
-          s.dayNumber = i + 1;
-        });
+        // dayNumbers shifted: stale "Sunday" nudges must not ride along.
+        state.stages = renumberAfterStructuralEdit(state.stages);
         const max = Math.max(0, state.stages.length - 1);
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
@@ -646,14 +639,10 @@ export const useTripStore = create<TripState>()(
         // The array shrank: drop recompute markers that fell out of bounds so a
         // structural edit mid-recompute can't strand the overlay (#840).
         pruneStaleRecomputing(state);
-        // dayNumbers shifted → stale "Sunday" nudges must not ride along.
-        dropStaleDateAlerts(state);
         // Shrink the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
-          state.endDate = dayjs(state.startDate)
-            .add(state.stages.length - 1, "day")
-            .format("YYYY-MM-DD");
+          state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
     },
@@ -692,18 +681,14 @@ export const useTripStore = create<TripState>()(
         };
 
         state.stages.splice(afterIndex + 1, 0, restDay);
-        state.stages.forEach((s, i) => {
-          s.dayNumber = i + 1;
-        });
+        // dayNumbers shifted: stale "Sunday" nudges must not ride along.
+        state.stages = renumberAfterStructuralEdit(state.stages);
         pruneStaleRecomputing(state);
-        dropStaleDateAlerts(state);
         // A trip spans one calendar day per stage (rest days included): extend
         // the end date so the global range and the export reflect the new day
         // immediately (recette #649). The backend mirrors this on persist.
         if (state.startDate) {
-          state.endDate = dayjs(state.startDate)
-            .add(state.stages.length - 1, "day")
-            .format("YYYY-MM-DD");
+          state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
     },
@@ -715,17 +700,13 @@ export const useTripStore = create<TripState>()(
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         state.stages.splice(afterIndex + 1, 0, placeholder);
-        state.stages.forEach((s, i) => {
-          s.dayNumber = i + 1;
-        });
+        // dayNumbers shifted: stale "Sunday" nudges must not ride along.
+        state.stages = renumberAfterStructuralEdit(state.stages);
         pruneStaleRecomputing(state);
-        dropStaleDateAlerts(state);
         // Extend the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
-          state.endDate = dayjs(state.startDate)
-            .add(state.stages.length - 1, "day")
-            .format("YYYY-MM-DD");
+          state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
     },
@@ -766,9 +747,7 @@ export const useTripStore = create<TripState>()(
         // last-stage edit split off a day, mirroring insertRestDay/deleteStage
         // — otherwise endDate is one day short for downstream readers (#649).
         if (appendedTrailingStage && state.startDate) {
-          state.endDate = dayjs(state.startDate)
-            .add(state.stages.length - 1, "day")
-            .format("YYYY-MM-DD");
+          state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       }),
 
