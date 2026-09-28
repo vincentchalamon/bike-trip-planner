@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { TripNotFound } from "@/components/trip-not-found";
@@ -264,9 +263,7 @@ function SharedTripLoader({ code }: { code: string }) {
   );
 }
 
-export default function SharedTripPage() {
-  const { code } = useParams<{ code: string }>();
-
+export default function SharedTripPage({ code }: { code: string }) {
   return (
     <HydrationBoundary>
       <Suspense fallback={null}>

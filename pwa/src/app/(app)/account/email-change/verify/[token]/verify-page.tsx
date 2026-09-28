@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,8 @@ import { verifyEmailChange } from "@/lib/api/client";
  * keep a stale identity — so we clear it and bounce to /login rather than leave
  * the user authenticated under a no-longer-valid email.
  */
-export default function EmailChangeVerifyPage() {
+export default function EmailChangeVerifyPage({ token }: { token: string }) {
   const t = useTranslations("accountSettings.account.verify");
-  const params = useParams<{ token: string }>();
   const router = useRouter();
   const setUserEmail = useAuthStore((s) => s.setUserEmail);
   const silentRefresh = useAuthStore((s) => s.silentRefresh);
@@ -42,7 +41,7 @@ export default function EmailChangeVerifyPage() {
 
     const run = async () => {
       try {
-        const newEmail = await verifyEmailChange(params.token);
+        const newEmail = await verifyEmailChange(token);
         if (!newEmail) {
           setStatus("error");
           return;
@@ -66,7 +65,7 @@ export default function EmailChangeVerifyPage() {
     };
 
     void run();
-  }, [params.token, setUserEmail, silentRefresh, clearAuth, router, t]);
+  }, [token, setUserEmail, silentRefresh, clearAuth, router, t]);
 
   if (status === "verifying") {
     return (

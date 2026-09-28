@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/constants";
@@ -23,19 +23,22 @@ import { API_URL } from "@/lib/constants";
  * The landing page then reads the ?access=confirmed param and shows a
  * confirmation message.
  */
-export default function VerifyPage() {
+export default function VerifyPage({
+  email,
+  expires,
+  signature,
+}: {
+  email?: string;
+  expires?: string;
+  signature?: string;
+}) {
   const t = useTranslations("earlyAccess");
-  const searchParams = useSearchParams();
   const router = useRouter();
   const verifyStarted = useRef(false);
 
   useEffect(() => {
     if (verifyStarted.current) return;
     verifyStarted.current = true;
-
-    const email = searchParams.get("email");
-    const expires = searchParams.get("expires");
-    const signature = searchParams.get("signature");
 
     if (!email || !expires || !signature) {
       router.replace("/");
@@ -60,7 +63,7 @@ export default function VerifyPage() {
     };
 
     void verify();
-  }, [searchParams, router]);
+  }, [email, expires, signature, router]);
 
   return (
     <div

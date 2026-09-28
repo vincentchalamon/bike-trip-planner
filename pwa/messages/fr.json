@@ -521,9 +521,6 @@
     "computing": "Calcul de ton itinéraire en cours…",
     "tripSavedToAccount": "Voyage enregistré dans Mes voyages."
   },
-  "tripPreview": {
-    "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessaie."
-  },
   "chat": {
     "inRide": {
       "openInMaps": "Ouvrir dans Google Maps",
