@@ -67,9 +67,7 @@ the national extracts it was built from live on the workstation that built it.
     container on `btp-shared`:
 
     ```bash
-    cd /opt/bike-trip-planner
-    docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml \
-      exec php curl -sS -X POST http://valhalla:8002/route \
+    btp-compose exec php curl -sS -X POST http://valhalla:8002/route \
       -H 'Content-Type: application/json' \
       -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
     ```

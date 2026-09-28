@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# The ONLY way to run `docker compose` against the prod stack: deploy-prod.sh,
+# GHA deploy-prod, the events-refresh timer and manual provisioning all go
+# through it. The images it runs are derived from the release tag the checkout
+# sits on, so the compose files and the images can never come from two
+# different revisions. Usage: btp-compose <any docker compose arguments>
+set -euo pipefail
+
+cd "{{ app_dir }}"
+
+# Same filter as GHA deploy-prod: only a plain vMAJOR.MINOR.PATCH tag is a
+# release. Listing every tag on HEAD rather than `git describe --exact-match`,
+# which picks one arbitrarily when an -rc tag shares the release commit.
+TAG="$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)"
+if [ -z "${TAG}" ]; then
+  echo "btp-compose: {{ app_dir }} is not on a vX.Y.Z release tag, run deploy-prod.sh <tag>" >&2
+  exit 1
+fi
+
+export PHP_IMAGE="{{ php_image_repo }}:${TAG}"
+export PWA_IMAGE="{{ pwa_image_repo }}:${TAG}"
+export PROVISIONER_IMAGE="{{ provisioner_image_repo }}:${TAG}"
+
+# --env-file: the prod env file lives outside app_dir (a tag checkout would
+# overwrite it) and replaces the repo's versioned `.env`, which only holds dev
+# defaults.
+exec docker compose --env-file "{{ etc_dir }}/app.env" -p prod \
+  -f compose.yaml -f deploy/prod/compose.yaml "$@"

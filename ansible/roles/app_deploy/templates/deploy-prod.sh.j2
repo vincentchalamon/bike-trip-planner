@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Prod deploy hook. Documents (and can perform) what GHA `deploy-prod` runs over
-# SSH at cutover (plan W4 / PR-C). The prod overlay deploy/prod/compose.yaml is
-# delivered by PR-C; this hook assumes it is present in the checkout.
+# Prod deploy hook, and the rollback procedure: `deploy-prod.sh <previous tag>`.
+# Does what GHA `deploy-prod` runs over SSH. Checking out the tag is what selects
+# the release: btp-compose derives the image tags from it.
 set -euo pipefail
 
 cd "{{ app_dir }}"
 TAG="${1:?usage: deploy-prod.sh <tag>}"
 
-git fetch --tags --prune
-git checkout "refs/tags/${TAG}"
+git fetch --tags --prune --force
+git checkout --force "refs/tags/${TAG}"
 
-# --env-file: the prod env file lives outside app_dir (the checkout above would
-# overwrite it) and replaces the repo's versioned `.env`, which only holds dev
-# defaults.
-ENV_FILE="{{ etc_dir }}/app.env"
-
-docker compose --env-file "${ENV_FILE}" -p prod -f compose.yaml -f deploy/prod/compose.yaml pull
-docker compose --env-file "${ENV_FILE}" -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d
+/usr/local/bin/btp-compose pull
+/usr/local/bin/btp-compose up -d

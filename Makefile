@@ -239,7 +239,7 @@ provision-recette: ensure-keypairs-recette ## Open one reference zone on the iso
 # Events are perishable, so unlike reference data they are refreshed on a schedule: this
 # re-imports the feeds (DataTourisme + OpenAgenda) for every open zone and purges events
 # whose end_date has passed (ADR-051 §4). Writes only tourism.events — no schema swap, no
-# Valhalla restart. Runs weekly in prod as a Coolify scheduled task; see
+# Valhalla restart. Runs in prod from the Ansible systemd timer (btp-events-refresh); see
 # docs/runbooks/events-refresh.md. Restrict to one zone with `make events-refresh -- --zone=bretagne`.
 events-refresh: ## Refresh events for every open zone and purge past ones (e.g. make events-refresh)
 	@docker compose --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/events-refresh $(ARGS)

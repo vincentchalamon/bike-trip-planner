@@ -26,10 +26,11 @@ shared_infra_dir: "/opt/shared-infra"
 # --- Repo checkout (app_deploy) ----------------------------------------------
 # Bind mounts in compose.yaml (Caddyfile, conf.d, overlays, valhalla compose)
 # resolve from this checkout. The actual prod stack `up -d` is done by GHA
-# deploy-prod (plan W4 / PR-C); Ansible only guarantees the checkout is present.
+# deploy-prod; Ansible only guarantees the checkout is present.
 app_repo_url: "https://github.com/vincentchalamon/bike-trip-planner.git"
-# Cutover (plan): set this to the deployed tag (e.g. "v1.0.0"). Until the first
-# tag exists, "main" keeps the checkout resolvable for bind mounts.
+# Ref of the FIRST clone only: Ansible never moves an existing checkout
+# (`update: false`), the deploy checks out the release tag. btp-compose refuses
+# to run until that first deploy has put the checkout on a vX.Y.Z tag.
 app_deploy_ref: "main"
 
 # --- Docker ------------------------------------------------------------------
@@ -79,11 +80,23 @@ valhalla_base_uri: "http://valhalla:8002"
 mailer_sender_email: "noreply@bike-trip-planner.com"
 contact_email: "contact@bike-trip-planner.com"
 app_release: ""
+# Android App Links (ADR-053), served by the pwa at /.well-known/assetlinks.json.
+# Public values, not secrets. The fingerprint is the PUBLIC Expo debug keystore's,
+# the one that signs the CI sideload APK: whoever holds that keystore can sign an
+# app that claims these links, but that risk belongs to shipping a debug-signed
+# APK, not to assetlinks. Once a release keystore exists, replace this value (or
+# append to it, comma-separated) with the release fingerprint
+# (`keytool -list -v -keystore <release.keystore> | grep SHA256`, see
+# docs/runbooks/mobile-release-build.md).
+android_app_package: "coop.lestilleuls.biketripplanner"
+android_sha256_cert_fingerprints: "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
 
-# Prod images (arm64) pushed to GHCR by GHA (plan W4). Consumed by the prod
-# compose stack that GHA brings up; kept here so the deploy hook can reference them.
-php_image: "ghcr.io/vincentchalamon/bike-trip-planner-php:latest"
-pwa_image: "ghcr.io/vincentchalamon/bike-trip-planner-pwa:latest"
+# Prod image repositories (arm64) pushed to GHCR by GHA build-images. No tag
+# here: btp-compose appends the release tag the checkout is on, so the images
+# always match the compose files that run them.
+php_image_repo: "ghcr.io/vincentchalamon/bike-trip-planner-php"
+pwa_image_repo: "ghcr.io/vincentchalamon/bike-trip-planner-pwa"
+provisioner_image_repo: "ghcr.io/vincentchalamon/bike-trip-planner-provisioner"
 # GHCR login on the VM (only needed if the packages are private).
 ghcr_login_enabled: false
 
@@ -93,8 +106,10 @@ ghcr_login_enabled: false
 enable_reclaim_heartbeat: false
 reclaim_heartbeat_calendar: "*:0/10"          # every 10 min
 
-# events-refresh timer (plan W5.1). OPTIONAL in beta. Runs the provisioner
-# `events-refresh` entrypoint against the prod stack.
+# events-refresh timer (plan W5.1). OPTIONAL in beta. Runs the provisioner's
+# bin/events-refresh through btp-compose, i.e. with the prod env file and the
+# images of the release tag in service. Empty zone = every open zone.
 enable_events_refresh_timer: false
 events_refresh_zone: ""                        # e.g. "bretagne"
 events_refresh_calendar: "Mon *-*-* 04:00:00"
+events_refresh_timeout_start_sec: "2h"

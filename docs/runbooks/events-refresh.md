@@ -65,15 +65,14 @@ Ansible installs a `btp-events-refresh.service` + `btp-events-refresh.timer` pai
 
 Inspect runs with `journalctl -u btp-events-refresh`.
 
-> **Do not enable the timer yet.** As rendered today the unit cannot work:
->
-> - its `ExecStart` runs `provisioner events-refresh <zone>` through the default entrypoint,
->   which executes `bin/provision` (zone opening), not `bin/events-refresh`; the working form
->   is the one `make events-refresh` uses (`--entrypoint php provisioner -d memory_limit=512M
->   bin/events-refresh`, with `--zone=<slug>` for one zone);
-> - it passes no `--env-file /etc/bike-trip-planner/app.env`;
-> - the provisioner has no route to the shared `pg-reference` and no feed credentials in
->   production (see the production status in [zone-opening.md](zone-opening.md#procedure)).
+The unit runs the same command as `make events-refresh`, through `btp-compose` (the prod env
+file, and the provisioner image of the release tag the checkout is on):
+`--profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M
+bin/events-refresh`, plus `--zone=<slug>` when `events_refresh_zone` is set.
+
+> **Do not enable the timer yet.** The provisioner has no route to the shared `pg-reference`
+> and no feed credentials in production (see the production status in
+> [zone-opening.md](zone-opening.md#procedure)).
 
 Verify a run (against the reference database):
 

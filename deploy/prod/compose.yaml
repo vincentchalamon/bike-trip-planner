@@ -1,7 +1,11 @@
 # Prod overlay on top of compose.yaml (iso-prod base) — W4 of the deploy plan.
 #
-# Layered EXPLICITLY on the VM by the deploy-prod job (never auto-loaded):
-#   docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+# Layered EXPLICITLY on the VM, never auto-loaded: every prod compose call goes
+# through the Ansible-rendered `btp-compose` wrapper, which runs
+#   docker compose --env-file /etc/bike-trip-planner/app.env -p prod \
+#     -f compose.yaml -f deploy/prod/compose.yaml "$@"
+# with PHP_IMAGE / PWA_IMAGE / PROVISIONER_IMAGE pinned to the release tag the
+# checkout is on (e.g. `btp-compose up -d --pull always` in deploy-prod).
 #
 # What prod changes vs the base:
 #  - php no longer publishes 80/443 (ports: !reset []): prod is fronted by Traefik

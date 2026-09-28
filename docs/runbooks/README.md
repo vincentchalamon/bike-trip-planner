@@ -65,15 +65,17 @@ Planned-operation runbooks replace **Symptoms** with **When to use**.
   container, where `bin/console` is available.
 - Unless a step says otherwise, `docker compose ...` in a runbook targets the stack you are
   working on. **In production**, SSH to the VM as the `deploy` user and run every such command
-  from the checkout with the prod env file and overlay (ADR-061):
+  through `btp-compose` (ADR-061), the Ansible-installed wrapper that adds the prod env file,
+  the project name and the overlay, and pins the images to the release tag the checkout is on
+  (see [`ansible/README.md`](../../ansible/README.md#deploy-hook-who-brings-the-app-up)):
 
     ```bash
-    cd /opt/bike-trip-planner
-    alias dc='docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml'
+    alias dc=btp-compose
     dc ps
     ```
 
-    Replace `docker compose` with `dc` in the runbook commands. Shared services live in
+    Replace `docker compose` with `dc` in the runbook commands. A plain `docker compose` there
+    would run the base image names (`bike-trip-planner-php:ci`...), not the deployed release. Shared services live in
     their own compose projects: `valhalla-shared` (`deploy/valhalla/compose.yaml`) and
     `pg-reference` (`/opt/shared-infra/pg-reference/compose.yaml`).
 - There is no `compose.prod.yaml`: `compose.yaml` is the iso-prod base, `deploy/prod/compose.yaml`

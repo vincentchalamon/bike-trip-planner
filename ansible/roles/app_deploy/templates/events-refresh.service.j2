@@ -1,6 +1,7 @@
 # {{ ansible_managed }}
-# events-refresh (plan W5.1 / ADR-051). Runs the provisioner `events-refresh`
-# entrypoint against the prod stack. OPTIONAL in beta.
+# events-refresh (plan W5.1 / ADR-051). Runs the provisioner's bin/events-refresh
+# against the prod stack, through btp-compose (prod env file + the images of the
+# release tag the checkout is on). OPTIONAL in beta.
 [Unit]
 Description=bike-trip-planner events-refresh
 After=docker.service
@@ -8,6 +9,11 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
+# Re-importing the feeds of every open zone can take well over the systemd
+# default (~90s), which would SIGTERM the run mid-zone.
+TimeoutStartSec={{ events_refresh_timeout_start_sec }}
 User={{ deploy_user }}
 WorkingDirectory={{ app_dir }}
-ExecStart=/usr/bin/docker compose -p prod -f compose.yaml -f deploy/prod/compose.yaml --profile provisioning run --rm provisioner events-refresh {{ events_refresh_zone }}
+# `--entrypoint php ... bin/events-refresh`: the default entrypoint runs
+# bin/provision (zone opening), which would read "events-refresh" as a zone.
+ExecStart=/usr/local/bin/btp-compose --profile provisioning run --rm --entrypoint php provisioner -d memory_limit=512M bin/events-refresh{% if events_refresh_zone %} --zone={{ events_refresh_zone }}{% endif %}

@@ -63,7 +63,10 @@ For rotation, see [secrets-rotation.md](secrets-rotation.md).
 | OCI Object Storage keys | Customer Secret Key (S3-compatible) | `vault_oci_access_key_id`, `vault_oci_secret_access_key` (+ endpoint, region) -> `rclone.conf` | `btp-backup.service` (rclone, only if `oci` is in `backup_remotes`) | Yearly + on-compromise | ADR-062 |
 
 Non-secret runtime values (`DOMAIN`, `TRUSTED_PROXIES`, `VALHALLA_BASE_URI`,
-`MAILER_SENDER_EMAIL`, `CONTACT_EMAIL`, image names) live in `ansible/group_vars/all.yml`.
+`MAILER_SENDER_EMAIL`, `CONTACT_EMAIL`, `ANDROID_APP_PACKAGE` /
+`ANDROID_SHA256_CERT_FINGERPRINTS`, the image repositories) live in
+`ansible/group_vars/all.yml`. The image tag is not configured anywhere: `btp-compose` takes
+it from the release tag the checkout is on.
 
 ### Referenced by `compose.yaml` but not rendered by Ansible
 
@@ -75,9 +78,6 @@ production** today:
 | `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` | `provisioner` | DataTourisme step skipped |
 | `OPENAGENDA_DATASET` / `OPENAGENDA_API_KEY` (key optional, public export) | `provisioner` | OpenAgenda step skipped |
 
-`ANDROID_APP_PACKAGE` / `ANDROID_SHA256_CERT_FINGERPRINTS` (`pwa`, served in
-`/.well-known/assetlinks.json`) are in the same situation but are public values, not secrets.
-
 ## CI/CD secrets (consumed by GitHub Actions)
 
 | Name | Type | Consumer (workflow) | Rotation | Reference |
@@ -87,7 +87,6 @@ production** today:
 | `SSH_KEY` | Deploy SSH private key | `deploy.yml` | On-compromise (new pair, public key into `deploy_ssh_public_keys`, re-run the playbook) | ADR-061 |
 | `SSH_KNOWN_HOSTS` | Pinned SSH host key (optional; falls back to `ssh-keyscan`) | `deploy.yml` | On VM host-key change | ADR-061 |
 | `PROD_REPO_DIR` | Checkout path on the VM (optional, default `/opt/bike-trip-planner`) | `deploy.yml` | Static | ADR-061 |
-| `PROD_ENV_FILE` | Prod env file path (optional, default `/etc/bike-trip-planner/app.env`) | `deploy.yml` (`deploy-prod`) | Static | ADR-061 |
 | `PREVIEW_REPO_ROOT` / `PREVIEW_ENV_FILE` | Preview checkout root and preview env file on the VM | `deploy.yml` (`deploy-preview`, `teardown-preview`) | Static | ADR-061 |
 | `PROD_HEALTH_URL` | Smoke-test host (optional, default `https://www.bike-trip-planner.com`) | `deploy.yml` (`smoke-test`) | Static | ADR-061 |
 | `INCIDENT_DISPATCH_TOKEN` | Fine-grained PAT (`Contents: read and write`) | `deploy.yml` (`smoke-test` opens an incident on failure); also configured in the external monitors | **90 days** | [incident-alerting.md](incident-alerting.md) |
@@ -110,6 +109,7 @@ When rebuilding from scratch (VM lost or re-provisioned):
    --ask-vault-pass`, see [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md)). The playbook
    renders `app.env`, both PEM keypairs, the backup config and the tunnel credentials.
 3. Deploy the current tag (GHA `deploy-prod`, or `/opt/bike-trip-planner/deploy-prod.sh <tag>`).
+   Until then `btp-compose` refuses to run: the fresh clone is not on a release tag.
 4. Restore PG-app data: fetch the `age` private key from **Bitwarden vault** (canonical item
    `bike-trip-planner / age private key`; rotation keeps that name for the current key and
    renames the old one `... legacy YYYYMMDD`, see [secrets-rotation.md](secrets-rotation.md)),

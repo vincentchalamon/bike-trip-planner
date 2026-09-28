@@ -60,13 +60,13 @@ ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
 Changed env values recreate the affected containers; a changed PEM file does not, so force it:
 
 ```bash
-cd /opt/bike-trip-planner
 dc up -d                             # env-file change
 dc up -d --force-recreate php worker # PEM change
 ```
 
-Re-running the GHA `deploy-prod` job for the live tag, or `./deploy-prod.sh <live-tag>` on
-the VM, has the same effect as `dc up -d`. Do not push a new tag just to reload secrets:
+Re-running the GHA `deploy-prod` job for the live tag, or
+`/opt/bike-trip-planner/deploy-prod.sh <live-tag>` on the VM, has the same effect as
+`dc up -d` (both go through `btp-compose`, pinned to the tag the checkout is on). Do not push a new tag just to reload secrets:
 `deploy-prod` only accepts plain `vX.Y.Z` tags.
 
 ## Generic procedure (on-compromise)

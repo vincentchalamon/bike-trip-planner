@@ -16,7 +16,7 @@ no public port. The reasoning is in [ADR-061](adr/adr-061-deployment-ansible-gha
 |---------------------|--------------------------------|----------------------------------------------------------------------|
 | `build-images`      | `v*` tag, same-repo pull request | Builds `php`, `pwa` and `provisioner` for `linux/arm64` on a native ARM runner and pushes them to `ghcr.io/vincentchalamon/bike-trip-planner-<service>`, tagged `:<sha>` plus `:<tag>` or `:pr-<n>`. Keeps the 10 most recent versions of each image, never pruning `vX.Y.Z` tags |
 | `upload-sourcemaps` | `v*` tag                       | Builds the web app with the `SENTRY_*` secrets so `withSentryConfig` uploads the source maps, then deletes them. Skipped when those secrets are missing; the deployed image never ships source maps |
-| `deploy-prod`       | `v*` tag                       | SSHes to the VM, checks out the tag and runs `docker compose --env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always` |
+| `deploy-prod`       | `v*` tag                       | SSHes to the VM, checks out the tag and runs `btp-compose up -d --pull always` (images pinned to that tag) |
 | `smoke-test`        | after `deploy-prod`            | Probes `/api/healthz`, then `/api/health` until `status` is `ok`; on failure raises a `repository_dispatch` (`uptime_alert`) that `incident-create.yml` turns into an incident issue |
 | `deploy-preview`    | same-repo pull request         | Deploys the PR to `pr-<n>.${DOMAIN}` from its own checkout, with its own PG-app and Redis |
 | `teardown-preview`  | pull request closed            | `docker compose down -v` on the preview and deletes its checkout     |
@@ -58,11 +58,12 @@ Redeploy the previous tag: re-run the `deploy-prod` job of that tag's run in Git
 VM, the equivalent is:
 
 ```bash
-cd /opt/bike-trip-planner
-git checkout --force v1.3.2
-docker compose --env-file /etc/bike-trip-planner/app.env -p prod \
-  -f compose.yaml -f deploy/prod/compose.yaml up -d --pull always
+/opt/bike-trip-planner/deploy-prod.sh v1.3.2
 ```
+
+Both check out the tag and roll the stack through `btp-compose`, the Ansible-installed wrapper
+every production compose call goes through: it takes the image tag from the tag the checkout is
+on, so the images always match the compose files that run them.
 
 Then check that `/api/healthz` and `/api/health` answer `ok`. Migration caveats and the full
 procedure are in the [rollback runbook](runbooks/release-rollback.md).
@@ -77,7 +78,6 @@ procedure are in the [rollback runbook](runbooks/release-rollback.md).
 | `SSH_HOST`, `SSH_USER`, `SSH_KEY` | prod and previews    | SSH access to the VM as the Ansible-provisioned `deploy` user  |
 | `SSH_KNOWN_HOSTS`         | prod and previews (recommended) | Pinned host key; without it the job trusts a live `ssh-keyscan` |
 | `PROD_REPO_DIR`           | optional                     | Checkout on the VM, default `/opt/bike-trip-planner`           |
-| `PROD_ENV_FILE`           | optional                     | Production env file, default `/etc/bike-trip-planner/app.env`  |
 | `PROD_HEALTH_URL`         | optional                     | Host probed by `smoke-test`, default `https://www.bike-trip-planner.com` |
 | `PREVIEW_REPO_ROOT`       | optional                     | Root of the preview checkouts, default `/opt/bike-trip-planner-previews` |
 | `PREVIEW_ENV_FILE`        | optional                     | Preview env file, default `<PREVIEW_REPO_ROOT>/preview.env`    |
@@ -87,7 +87,7 @@ procedure are in the [rollback runbook](runbooks/release-rollback.md).
 
 The repository versions a root `.env` holding the development defaults. Production never reads it:
 Ansible renders `/etc/bike-trip-planner/app.env` from Vault, outside the checkout that
-`deploy-prod` force-updates, and the deploy passes it with `--env-file`.
+`deploy-prod` force-updates, and `btp-compose` passes it with `--env-file`.
 
 | Variable              | Default                          | Role                                                     |
 |-----------------------|----------------------------------|----------------------------------------------------------|

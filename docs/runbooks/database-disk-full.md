@@ -89,7 +89,7 @@ LIMIT 10;
 3. **Resize the boot volume** on Oracle Cloud (last resort, requires VM reboot):
     - OCI console → Compute → Instances → select VM → Boot volume → "Edit" → raise size (free tier ceiling: 200 GB total block storage across all volumes)
     - Reboot, then check `df -h /`: the Ubuntu image grows the root partition at boot (cloud-init `growpart`). If it did not, grow it by hand (`lsblk` to find the device, then `sudo growpart <disk> <partition>` and `sudo resize2fs <root device>`)
-    - After reboot, the stack comes back up via the Docker `restart: unless-stopped` policy; if not, run `dc up -d` from `/opt/bike-trip-planner`
+    - After reboot, the stack comes back up via the Docker `restart: unless-stopped` policy; if not, run `dc up -d` (the `btp-compose` alias, see [README.md](README.md#conventions))
 
 ## Verification and follow-up
 
