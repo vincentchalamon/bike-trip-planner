@@ -163,13 +163,16 @@ export function ConfigPanel({
     if (!isOpen) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const focusable = panel.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
     function handleTab(e: KeyboardEvent) {
-      if (e.key !== "Tab") return;
+      if (e.key !== "Tab" || !panel) return;
+      // Queried per keystroke: controls get enabled/disabled while the panel is open.
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       if (e.shiftKey) {
         if (document.activeElement === first) {
           e.preventDefault();
@@ -218,6 +221,8 @@ export function ConfigPanel({
         role="dialog"
         aria-modal="true"
         aria-hidden={!isOpen}
+        // aria-hidden alone left the off-screen controls in the tab order.
+        inert={!isOpen}
         aria-label={t("title")}
         className={cn(
           "fixed top-0 right-0 z-50 h-full w-80 bg-background border-l shadow-xl",
