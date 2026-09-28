@@ -37,6 +37,44 @@ beforeEach(() => {
   useTripStore.getState().reset();
 });
 
+describe('diff-highlight expiry timer', () => {
+  function highlight(): void {
+    useTripStore.setState({ stages: [stage()] });
+    useTripStore.getState().armConfigDiff();
+    useTripStore.getState().applyTripReady([stage({ distance: 88 })]);
+  }
+
+  // The timer was scheduled inside the set() updater with no handle kept, so
+  // leaving the trip left it pending.
+  it('is cancelled by reset() and hydrate()', () => {
+    jest.useFakeTimers();
+    try {
+      highlight();
+      expect(jest.getTimerCount()).toBe(1);
+      useTripStore.getState().reset();
+      expect(jest.getTimerCount()).toBe(0);
+
+      highlight();
+      useTripStore.getState().hydrate('t2', { stages: [] } as never);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('still clears the highlight after the TTL', () => {
+    jest.useFakeTimers();
+    try {
+      highlight();
+      expect(useTripStore.getState().stageDiffs.size).toBe(1);
+      jest.advanceTimersByTime(DIFF_TTL_MS);
+      expect(useTripStore.getState().stageDiffs.size).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('destructive config diff arming', () => {
   it('does not highlight when no baseline is armed', () => {
     useTripStore.setState({ stages: [stage()] });

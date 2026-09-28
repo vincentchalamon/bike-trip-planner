@@ -136,7 +136,7 @@ describe('mobile trip store (thin wrapper composing core reducers, #1014)', () =
       stages: [stageData({ dayNumber: 1 }), stageData({ dayNumber: 2 })],
       loading: false,
     });
-    useTripStore.getState().applyStageDetail(1, [{ lat: 48, lon: 2, ele: 100 }]);
+    useTripStore.getState().applyStageDetail('stage-2', [{ lat: 48, lon: 2, ele: 100 }]);
     const { stages } = useTripStore.getState();
     expect(stages[0]!.geometry).toEqual([]);
     expect(stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
@@ -165,7 +165,7 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
     expect(s.enabledAccommodationTypes).toEqual(['hotel']);
   });
 
-  // The API serializes dates as date-times. Stored raw, `stageDateFor` built
+  // The API serializes dates as date-times. Stored raw, the stage date built
   // `2026-08-01T00:00:00+02:00T00:00:00Z` and every roadbook date came out null.
   it('hydrates the trip dates as calendar days', () => {
     useTripStore.getState().hydrate('t1', {
@@ -217,6 +217,32 @@ describe('mobile trip store — config + optimistic structural edits (#1031)', (
     const s = useTripStore.getState();
     expect(s.stages.map((x) => x.distance)).toEqual([30, 10, 20]);
     expect(s.stages.map((x) => x.dayNumber)).toEqual([1, 2, 3]);
+  });
+
+  // Mobile renumbered without dropping the date-bound nudges the web drops, so a
+  // "Sunday" alert rode along to a day that no longer is one.
+  it.each([
+    ['deleteStageOptimistic', () => useTripStore.getState().deleteStageOptimistic(0)],
+    ['insertRestDayOptimistic', () => useTripStore.getState().insertRestDayOptimistic(0)],
+    [
+      'insertStageOptimistic',
+      () => useTripStore.getState().insertStageOptimistic(0, stageData({ id: 'new' })),
+    ],
+    ['moveStageOptimistic', () => useTripStore.getState().moveStageOptimistic(2, 0)],
+  ])('%s drops the calendar alerts and keeps the others', (_name, edit) => {
+    const alerts = [
+      { group: 'calendar', type: 'nudge', message: 'Sunday' },
+      { group: 'terrain', type: 'warning', message: 'Steep' },
+    ] as StageData['alerts'];
+    useTripStore.setState({
+      stages: [1, 2, 3].map((dayNumber) => stageData({ dayNumber, alerts })),
+      loading: false,
+    });
+    edit();
+    for (const stage of useTripStore.getState().stages) {
+      expect(stage.alerts.some((a) => a.group === 'calendar')).toBe(false);
+    }
+    expect(useTripStore.getState().stages.some((s) => s.alerts.length === 1)).toBe(true);
   });
 
   it('selectAccommodationOptimistic pins the acc and shifts endpoints', () => {

@@ -84,6 +84,35 @@ describe('useStageDetail (ADR-057)', () => {
     expect(store().stages[1]!.geometry).toEqual([{ lat: 48, lon: 2, ele: 100 }]);
   });
 
+  // The geometry used to be applied by position after the await, so a move in
+  // between landed stage 2's line on whichever stage then sat at index 1.
+  it('applies the geometry to the stage it was fetched for, not to the position', async () => {
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stageData({ dayNumber: 1 }), stageData({ dayNumber: 2 })],
+      loading: false,
+    });
+    let resolve: (value: unknown) => void = () => undefined;
+    mockDetail
+      .mockReturnValueOnce(
+        new Promise((r) => {
+          resolve = r;
+        }) as never,
+      )
+      .mockReturnValue(new Promise(() => undefined) as never);
+
+    await render(1);
+    expect(mockDetail).toHaveBeenCalledWith('t1', 'stage-2');
+    // Optimistic move: stage-2 goes first, stage-1 now sits at index 1.
+    act(() => store().moveStageOptimistic(1, 0));
+    await act(async () => {
+      resolve({ geometry: [{ lat: 48, lon: 2, ele: 100 }] });
+    });
+
+    const byId = Object.fromEntries(store().stages.map((s) => [s.id, s.geometry]));
+    expect(byId['stage-1']).toEqual([]);
+  });
+
   it('does not fetch when the stage already has geometry', async () => {
     useTripStore.setState({
       tripId: 't1',
