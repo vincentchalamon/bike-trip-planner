@@ -1,6 +1,13 @@
 import type { StageData } from '@btp/core';
-import { EMPTY_RESUPPLY } from '@btp/core';
+import { EMPTY_RESUPPLY, endDateFor } from '@btp/core';
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from '@btp/core/constants';
+import {
+  datesToRestore,
+  neighboursAt,
+  revertSnapshotFields,
+  revertStructuralEdit,
+  type StructuralInverse,
+} from '@btp/core/optimistic';
 import {
   addManualAccommodation,
   addPoiWaypoint,
@@ -30,10 +37,16 @@ import { useOfflineStore } from './offline-store';
 import { deleteTripCache } from './trip-cache';
 import type { Modification, TripConfig, UndoableSlice } from './trip-store';
 import {
+  configClaims,
+  endDatePatch,
   getUndoableSlice,
   useTripStore,
   useTripTemporalStore,
 } from './trip-store';
+
+// A config field an optimistic edit can claim: the trip settings plus the title.
+type ConfigField = keyof TripConfig | 'title';
+type ConfigValues = TripConfig & { title: string };
 
 // The store slice + actions the mutation runners drive. `useTripStore.getState()`
 // satisfies it structurally, so a runner takes a live snapshot (the actions are
@@ -47,7 +60,7 @@ export interface MutationContext extends TripConfig {
   setStages: (stages: StageData[]) => void;
   setConfig: (patch: Partial<TripConfig>) => void;
   setTitle: (title: string) => void;
-  insertRestDayOptimistic: (afterIndex: number) => void;
+  insertRestDayOptimistic: (afterIndex: number, restDayId: string) => void;
   insertStageOptimistic: (afterIndex: number, placeholder: StageData) => void;
   moveStageOptimistic: (fromIndex: number, toIndex: number) => void;
   selectAccommodationOptimistic: (
@@ -95,10 +108,12 @@ export async function run(
     // structural/dates/pacing edits, #1178). Withdrawn on rollback so a failed
     // mutation leaves no phantom undo entry.
     undoable?: boolean;
-    // The undoable fields `rollback` puts back. Written into the undo entries
-    // recorded after this one too: they captured the refused value, and undoing
-    // a later accepted edit must not bring it back.
-    restores?: Partial<UndoableSlice>;
+    // A config edit: the fields `optimistic` writes and their pre-edit values. A
+    // refusal puts back only the fields no newer edit has written since.
+    settings?: { next: Partial<ConfigValues>; previous: Partial<ConfigValues> };
+    // A structural edit: what undoes it, applied by stage identity to the stages
+    // as they are when the refusal lands, so an edit made meanwhile survives.
+    inverse?: StructuralInverse;
   },
   onFailure: OnFailure,
 ): Promise<boolean> {
@@ -112,38 +127,89 @@ export async function run(
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()))
     : null;
-  const restores = opts.restores;
-  // Withdraw this edit's own entry, not the latest: another undoable edit may
-  // have been recorded, and even settled, while this request was in flight.
-  const withdraw = () => {
-    if (undoToken === null) return;
-    useTripTemporalStore
-      .getState()
-      ._discard(
-        undoToken,
-        restores
-          ? (snapshot) => ({
-              ...(snapshot as UndoableSlice),
-              ...(JSON.parse(JSON.stringify(restores)) as Partial<UndoableSlice>),
-            })
-          : undefined,
-      );
-  };
+  const { settings, inverse } = opts;
   opts.optimistic?.();
+  const claim = settings
+    ? configClaims.claim(Object.keys(settings.next) as ConfigField[])
+    : null;
+
+  const revert = () => {
+    opts.rollback?.();
+    if (settings && claim) {
+      const released = configClaims.release(claim);
+      // A dates edit: the end date follows its own rule (see datesToRestore).
+      const patch: Partial<TripConfig> =
+        'startDate' in settings.previous
+          ? datesToRestore(
+              released,
+              {
+                startDate: settings.previous.startDate ?? null,
+                endDate: settings.previous.endDate ?? null,
+              },
+              useTripStore.getState(),
+            )
+          : {};
+      const owned = released.filter(
+        (field) =>
+          field in settings.previous &&
+          field !== 'startDate' &&
+          field !== 'endDate',
+      );
+      for (const field of owned) {
+        if (field === 'title') ctx.setTitle(settings.previous.title ?? '');
+        else Object.assign(patch, { [field]: settings.previous[field] });
+      }
+      if (Object.keys(patch).length > 0) ctx.setConfig(patch);
+    }
+    if (inverse) {
+      const { stages, startDate } = useTripStore.getState();
+      const reverted = revertStructuralEdit(stages, inverse);
+      ctx.setStages(reverted);
+      ctx.setConfig(endDatePatch(startDate, reverted.length));
+    }
+    if (undoToken === null) return;
+    // Withdraw this edit's own entry, not the latest: another undoable edit may
+    // have been recorded, and even settled, while this request was in flight. The
+    // entries recorded after it captured its optimistic value: scrub it there too.
+    useTripTemporalStore.getState()._discard(undoToken, (snapshot) => {
+      let slice = snapshot as UndoableSlice;
+      if (settings) {
+        slice = {
+          ...slice,
+          ...(JSON.parse(
+            JSON.stringify(
+              revertSnapshotFields(slice, settings.next, settings.previous),
+            ),
+          ) as Partial<UndoableSlice>),
+        };
+      }
+      if (inverse) {
+        const stages = revertStructuralEdit(slice.stages, inverse);
+        slice = {
+          ...slice,
+          stages,
+          endDate: slice.startDate
+            ? endDateFor(slice.startDate, stages.length)
+            : slice.endDate,
+        };
+      }
+      return slice;
+    });
+  };
+
   try {
     const { ok, status } = await opts.call();
     if (!ok) {
-      opts.rollback?.();
-      withdraw();
+      revert();
       const reason = normalizeStatus(status);
       if (reason === 'conflict') opts.onConflict?.();
       onFailure(reason);
       return false;
     }
+    if (claim) configClaims.release(claim);
     return true;
   } catch {
-    opts.rollback?.();
-    withdraw();
+    revert();
     onFailure('network');
     return false;
   }
@@ -178,15 +244,16 @@ export function runUpdateDates(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const snapshot = { startDate: ctx.startDate, endDate: ctx.endDate };
   return run(
     ctx,
     {
       requiresRouting: false,
       undoable: true,
-      restores: snapshot,
+      settings: {
+        next: { startDate, endDate },
+        previous: { startDate: ctx.startDate, endDate: ctx.endDate },
+      },
       optimistic: () => ctx.setConfig({ startDate, endDate }),
-      rollback: () => ctx.setConfig(snapshot),
       call: () =>
         updateTripConfig(tripId, configPatch(ctx, { startDate, endDate })),
     },
@@ -208,27 +275,23 @@ export function runUpdatePacing(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const snapshot: Partial<TripConfig> = {
-    fatigueFactor: ctx.fatigueFactor,
-    elevationPenalty: ctx.elevationPenalty,
-    maxDistancePerDay: ctx.maxDistancePerDay,
-    averageSpeed: ctx.averageSpeed,
-    ebikeMode: ctx.ebikeMode,
-    departureHour: ctx.departureHour,
-  };
   return run(
     ctx,
     {
       requiresRouting: false,
       undoable: true,
-      restores: {
-        fatigueFactor: ctx.fatigueFactor,
-        elevationPenalty: ctx.elevationPenalty,
-        maxDistancePerDay: ctx.maxDistancePerDay,
-        averageSpeed: ctx.averageSpeed,
+      settings: {
+        next: pacing,
+        previous: {
+          fatigueFactor: ctx.fatigueFactor,
+          elevationPenalty: ctx.elevationPenalty,
+          maxDistancePerDay: ctx.maxDistancePerDay,
+          averageSpeed: ctx.averageSpeed,
+          ebikeMode: ctx.ebikeMode,
+          departureHour: ctx.departureHour,
+        },
       },
       optimistic: () => ctx.setConfig(pacing),
-      rollback: () => ctx.setConfig(snapshot),
       call: () => updateTripConfig(tripId, configPatch(ctx, pacing)),
     },
     onFailure,
@@ -241,13 +304,15 @@ export function runUpdateAccommodationTypes(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const snapshot = ctx.enabledAccommodationTypes;
   return run(
     ctx,
     {
       requiresRouting: false,
+      settings: {
+        next: { enabledAccommodationTypes: types },
+        previous: { enabledAccommodationTypes: ctx.enabledAccommodationTypes },
+      },
       optimistic: () => ctx.setConfig({ enabledAccommodationTypes: types }),
-      rollback: () => ctx.setConfig({ enabledAccommodationTypes: snapshot }),
       call: () =>
         updateTripConfig(
           tripId,
@@ -264,13 +329,12 @@ export function runUpdateTitle(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const snapshot = ctx.title ?? '';
   return run(
     ctx,
     {
       requiresRouting: false,
+      settings: { next: { title }, previous: { title: ctx.title ?? '' } },
       optimistic: () => ctx.setTitle(title),
-      rollback: () => ctx.setTitle(snapshot),
       call: () => updateTripConfig(tripId, configPatch(ctx, { title })),
     },
     onFailure,
@@ -278,6 +342,15 @@ export function runUpdateTitle(
 }
 
 // --- Stage structural edits ---------------------------------------------------
+
+// A provisional stage identity, unique even for two insertions in the same
+// millisecond: a refusal removes its stage by this id, and a shared one would
+// take the other insertion with it.
+let pendingSequence = 0;
+function pendingStageId(): string {
+  pendingSequence += 1;
+  return `pending-${Date.now()}-${pendingSequence}`;
+}
 // (runDeleteStage lives in delete-stage.ts, its own thin wrapper from #1015; it
 // composes the same `run` shell so gating/rollback stay identical.)
 
@@ -287,15 +360,17 @@ export function runInsertRestDay(
   ctx: MutationContext,
   onFailure: OnFailure,
 ): Promise<boolean> {
-  const snapshot = ctx.stages;
+  // Provisional identity until the server's lands; named here so a refusal can
+  // remove this very stage.
+  const restDayId = pendingStageId();
   return run(
     ctx,
     {
       // Inserting a rest day keeps the next startPoint identical: no reroute.
       requiresRouting: false,
       undoable: true,
-      optimistic: () => ctx.insertRestDayOptimistic(afterIndex),
-      rollback: () => ctx.setStages(snapshot),
+      inverse: { kind: 'remove', stageId: restDayId },
+      optimistic: () => ctx.insertRestDayOptimistic(afterIndex, restDayId),
       call: () => insertRestDay(tripId, ctx.stages[afterIndex]?.id ?? ''),
     },
     onFailure,
@@ -318,7 +393,7 @@ export function runAddStage(
   }
   const placeholder: StageData = {
     // Provisional identity until the server's lands on the next stages_computed.
-    id: `pending-${Date.now()}-${afterIndex}`,
+    id: pendingStageId(),
     dayNumber: afterIndex + 2,
     distance: 0,
     elevation: 0,
@@ -339,7 +414,6 @@ export function runAddStage(
     supplyTimeline: [],
     events: [],
   };
-  const snapshot = ctx.stages;
   const start: Coordinate = { ...startPoint };
   const end: Coordinate = { ...endPoint };
   return run(
@@ -348,8 +422,8 @@ export function runAddStage(
       // A manual stage is routed via Valhalla → blocked out of zone.
       requiresRouting: true,
       undoable: true,
+      inverse: { kind: 'remove', stageId: placeholder.id },
       optimistic: () => ctx.insertStageOptimistic(afterIndex, placeholder),
-      rollback: () => ctx.setStages(snapshot),
       call: () =>
         createStage(tripId, {
           position: afterIndex + 1,
@@ -393,8 +467,12 @@ export function runMoveStage(
     {
       requiresRouting: true,
       undoable: true,
+      inverse: {
+        kind: 'move',
+        stageId: snapshot[fromIndex]?.id ?? '',
+        ...neighboursAt(snapshot, fromIndex),
+      },
       optimistic: () => ctx.moveStageOptimistic(fromIndex, toIndex),
-      rollback: () => ctx.setStages(snapshot),
       call: () => moveStage(tripId, snapshot[fromIndex]?.id ?? '', toIndex),
     },
     onFailure,

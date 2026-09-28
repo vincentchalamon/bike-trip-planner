@@ -504,3 +504,98 @@ describe("useTripPlanner — a refused setting leaves a newer one alone", () => 
     expect(useTripStore.getState().departureHour).toBe(9);
   });
 });
+
+describe("useTripPlanner — a refused dates edit keeps the end date true to the stages", () => {
+  function deferred() {
+    const settle: ((status: number) => void)[] = [];
+    holder.deferred = settle;
+    return settle;
+  }
+
+  beforeEach(() => {
+    useTripStore.setState({ startDate: "2026-10-01", endDate: "2026-10-03" });
+  });
+
+  it("re-derives it when a rest day was accepted after the dates edit", async () => {
+    const settle = deferred();
+    const { result } = renderHook(() => usePlanner());
+
+    let dates!: Promise<void>, restDay!: Promise<void>;
+    act(() => {
+      dates = result.current.handleDatesChange("2026-11-01", "2026-11-03");
+    });
+    act(() => {
+      restDay = result.current.handleInsertRestDay(0);
+    });
+    await act(async () => {
+      settle[1]!(200);
+      await restDay;
+      settle[0]!(422);
+      await dates;
+    });
+
+    // Four stages from the restored start: the pre-edit end date counted three.
+    expect(useTripStore.getState().stages).toHaveLength(4);
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      endDate: "2026-10-04",
+    });
+  });
+
+  it("restores it when the rest day was accepted before the dates edit", async () => {
+    const settle = deferred();
+    const { result } = renderHook(() => usePlanner());
+
+    let dates!: Promise<void>, restDay!: Promise<void>;
+    act(() => {
+      restDay = result.current.handleInsertRestDay(0);
+    });
+    act(() => {
+      dates = result.current.handleDatesChange("2026-11-01", "2026-11-04");
+    });
+    await act(async () => {
+      settle[0]!(200);
+      await restDay;
+      settle[1]!(422);
+      await dates;
+    });
+
+    expect(useTripStore.getState()).toMatchObject({
+      startDate: "2026-10-01",
+      endDate: "2026-10-04",
+    });
+  });
+
+  it("keeps it true in the undo history too", async () => {
+    const settle = deferred();
+    useTripStore.setState({ fatigueFactor: 0.8 });
+    const { result } = renderHook(() => usePlanner());
+
+    let dates!: Promise<void>, restDay!: Promise<void>, pacing!: Promise<void>;
+    act(() => {
+      dates = result.current.handleDatesChange("2026-11-01", "2026-11-03");
+    });
+    act(() => {
+      restDay = result.current.handleInsertRestDay(0);
+    });
+    act(() => {
+      pacing = result.current.handlePacingCommit(0.9, 100, 80, 15);
+    });
+    await act(async () => {
+      settle[1]!(200);
+      settle[2]!(200);
+      await Promise.all([restDay, pacing]);
+      settle[0]!(422);
+      await dates;
+    });
+
+    // Undoing the pacing lands on the state just before it: four stages.
+    act(() => useTripTemporalStore.getState().undo());
+    expect(useTripStore.getState().stages).toHaveLength(4);
+    expect(useTripStore.getState()).toMatchObject({
+      fatigueFactor: 0.8,
+      startDate: "2026-10-01",
+      endDate: "2026-10-04",
+    });
+  });
+});
