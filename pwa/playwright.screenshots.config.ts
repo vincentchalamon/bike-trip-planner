@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+interface ScreenshotOptions {
+  tripNavigationTimeout: number;
+}
+
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 /**
@@ -11,13 +15,19 @@ const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
  * when targeted explicitly, hence this separate config scoped to the screenshots
  * directory with no ignore.
  */
-export default defineConfig({
+export default defineConfig<ScreenshotOptions>({
   testDir: "./tests/screenshots",
+  globalSetup: "./tests/screenshots/global-setup.ts",
   reporter: "line",
+  // Room for the raised navigation budget below.
+  timeout: 90_000,
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
     ignoreHTTPSErrors: true,
     locale: "fr-FR",
+    // The capture runs against the dev server, slower than the E2E build: the
+    // E2E default (5s) is too short there even with the routes pre-compiled.
+    tripNavigationTimeout: 30_000,
   },
   projects: [
     {

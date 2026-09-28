@@ -119,6 +119,8 @@ container intact. This is the intended mechanism for every `ARGS_TARGETS` entry 
 make provision corse -- --allow-unrouted-zone
 ```
 
+A word containing `:` (`make phpunit -- --filter Foo::bar`) breaks the no-op goal stub (`$(eval)`) and Make aborts (`le motif de cible ne contient pas « % »`); join it with `=` (`--filter=Foo::bar`) or pass it as a variable: `make phpunit ARGS='--filter Foo::bar'`.
+
 Calling the container directly still works if you prefer:
 
 ```bash

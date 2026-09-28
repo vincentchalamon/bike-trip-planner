@@ -9,11 +9,29 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
 # Make does not try to build them. Only triggers for targets that read $(ARGS).
-ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots routing-build routing-publish provision provision-recette provision-override events-refresh
+#
+# A word containing `=` (`--filter=Foo`, `--zone=bretagne`) never reaches MAKECMDGOALS:
+# Make reads it as a command-line variable assignment. CLI_FLAGS rebuilds those words from
+# the command-line variables whose name starts with `-`. Positional words stay first so
+# `$(word 1,$(ARGS))` (routing-publish) and the zone of `provision` keep their place.
+ARGS_TARGETS := link-check phpunit test-php php-cs-fixer phpstan rector prettier test-e2e playwright test-recette visual-test visual-update screenshots routing-build routing-publish provision provision-recette provision-override events-refresh
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
-  ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
-  $(eval $(ARGS):;@:)
+  POS_ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
+  CLI_FLAGS := $(foreach v,$(filter -%,$(.VARIABLES)),$(if $(filter command line,$(origin $v)),$v=$(value $v)))
+  ARGS := $(strip $(POS_ARGS) $(CLI_FLAGS))
+  $(eval $(POS_ARGS):;@:)
 endif
+
+# The PHP legs run from api/ and provisioner/: repo-relative paths are rewritten for their
+# stack, and a leg is skipped only when paths were given and none of them targets it.
+API_PATHS := $(patsubst api/%,%,$(filter api/%,$(ARGS)))
+PROV_PATHS := $(patsubst provisioner/%,%,$(filter provisioner/%,$(ARGS)))
+PHP_FLAGS := $(filter-out api/% provisioner/%,$(ARGS))
+RUN_API := $(if $(API_PATHS)$(PROV_PATHS),$(API_PATHS),1)
+RUN_PROV := $(if $(API_PATHS)$(PROV_PATHS),$(PROV_PATHS),1)
+
+# Prettier runs from pwa/, the other workspaces are one level up.
+PRETTIER_ARGS := $(foreach w,$(ARGS),$(if $(filter pwa/%,$w),$(w:pwa/%=%),$(if $(filter core/% mobile/%,$w),../$w,$w)))
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -68,16 +86,16 @@ clean: ## Clean the Docker environment
 
 ## --- 🛡️ Quality Assurance & Linting ---
 php-cs-fixer: ## Run PHP CS Fixer
-	@docker compose run --rm --no-deps php vendor/bin/php-cs-fixer fix --allow-risky=yes
-	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/php-cs-fixer fix --allow-risky=yes
+	$(if $(RUN_API),@docker compose run --rm --no-deps php vendor/bin/php-cs-fixer fix --allow-risky=yes $(PHP_FLAGS) $(API_PATHS))
+	$(if $(RUN_PROV),@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/php-cs-fixer fix --allow-risky=yes $(PHP_FLAGS) $(PROV_PATHS))
 
 rector: ## Run Rector
-	@docker compose run --rm --no-deps php vendor/bin/rector process
-	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/rector process
+	$(if $(RUN_API),@docker compose run --rm --no-deps php vendor/bin/rector process $(PHP_FLAGS) $(API_PATHS))
+	$(if $(RUN_PROV),@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/rector process $(PHP_FLAGS) $(PROV_PATHS))
 
 phpstan: ## Run PHPStan
-	@docker compose run --rm --no-deps php sh -c "bin/console cache:warmup -e dev && vendor/bin/phpstan analyse -c phpstan.dist.neon"
-	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=256M
+	$(if $(RUN_API),@docker compose run --rm --no-deps php sh -c "bin/console cache:warmup -e dev && vendor/bin/phpstan analyse -c phpstan.dist.neon $(PHP_FLAGS) $(API_PATHS)")
+	$(if $(RUN_PROV),@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=256M $(PHP_FLAGS) $(PROV_PATHS))
 
 # The pwa container mounts the npm workspace root at /srv/app (compose.dev), so the
 # QA legs run with -w .../pwa to keep their pwa-scoped behaviour while core/ and the
@@ -89,7 +107,7 @@ i18n-check: ## Run i18n catalog completeness check
 	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run i18n:check
 
 prettier: ## Run Prettier
-	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npx prettier --check .
+	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npx prettier $(or $(PRETTIER_ARGS),--check .)
 
 typescript-check: ## Run TypeScript Check
 	@docker compose run --rm --no-deps -w /srv/app/pwa pwa npm run test:ts
@@ -118,8 +136,8 @@ qa: qa-php qa-pwa qa-doc ## Run all QA tools across both stacks
 
 ## --- 🧪 Testing ---
 test-php: ## Run PHPUnit tests
-	@docker compose exec -e XDEBUG_MODE=off php vendor/bin/phpunit --no-coverage
-	@docker compose --profile provisioning run -e XDEBUG_MODE=off --entrypoint "" provisioner vendor/bin/phpunit --no-coverage
+	$(if $(RUN_API),@docker compose exec -e XDEBUG_MODE=off php vendor/bin/phpunit --no-coverage $(PHP_FLAGS) $(API_PATHS))
+	$(if $(RUN_PROV),@docker compose --profile provisioning run -e XDEBUG_MODE=off --entrypoint "" provisioner vendor/bin/phpunit --no-coverage $(PHP_FLAGS) $(PROV_PATHS))
 
 phpunit: test-php ## Alias for "test-php"
 
