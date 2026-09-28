@@ -71,13 +71,8 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
                 [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
             }
 
-            // Reindex day numbers
-            foreach ($stages as $i => $stage) {
-                $stage->dayNumber = $i + 1;
-            }
-
             return $stages;
-        }, IfMatch::expectedVersion($context));
+        }, IfMatch::expectedVersion($context), resequence: true);
 
         TripVersionEtag::stamp($context, $write?->version);
 
@@ -112,18 +107,6 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
                 : [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES],
             generation: $generation,
         ));
-        // Keep the trip's day window in step with the stage count: a trip spans
-        // exactly one calendar day per stage (rest days included), so removing a
-        // stage shifts the end date back so the global range, the export and a
-        // later re-pacing all stay consistent (recette #649). Mirrors
-        // StageCreateProcessor / RestDayInsertProcessor. Reuse the request
-        // asserted above — storeStages only flushes, never detaches it (review).
-        $startDate = $tripRequest->startDate;
-        if ($startDate instanceof \DateTimeImmutable) {
-            $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
-            $this->tripStateManager->storeRequest($tripId, $tripRequest);
-        }
-
     }
 
     /**

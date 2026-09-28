@@ -72,13 +72,20 @@ interface TripRequestRepositoryInterface
      * inside the critical section, rather than by the caller: checked earlier the comparison
      * would be a TOCTOU as wide as the processor body (see {@see \App\Concurrency\VersionPrecondition}).
      *
+     * $resequence is for the edits that add, remove or reorder stages. The day numbers are
+     * renumbered in travel order after the mutator ran, and when the stage count changed the
+     * trip's end date follows it (one calendar day per stage, rest days included, recette
+     * #649) — in the same write and under the same version bump as the stages. Each of the
+     * four processors used to do both by hand, the end date as a second, unversioned write
+     * after the recomputation had already been dispatched.
+     *
      * @param callable(list<Stage>): list<Stage> $mutator
      *
      * @return StageWriteResult|null null when the trip is unknown
      *
      * @throws PreconditionFailedHttpException when $expectedVersion is stale
      */
-    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null): ?StageWriteResult;
+    public function mutateStages(string $tripId, callable $mutator, ?int $expectedVersion = null, bool $resequence = false): ?StageWriteResult;
 
     /**
      * Returns a single stage's route geometry, in travel order, projected to 2D.

@@ -73,13 +73,8 @@ final readonly class StageMoveProcessor implements ProcessorInterface
             array_splice($stages, $index, 1);
             array_splice($stages, $toIndex, 0, [$stage]);
 
-            // Reindex day numbers
-            foreach ($stages as $i => $s) {
-                $s->dayNumber = $i + 1;
-            }
-
             return $stages;
-        }, IfMatch::expectedVersion($context));
+        }, IfMatch::expectedVersion($context), resequence: true);
 
         TripVersionEtag::stamp($context, $write?->version);
 
@@ -94,7 +89,6 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         // Bump generation: stage moves invalidate in-flight computations
         // Dispatch continuity check for all stages; weather/calendar for all stages
         $this->messageBus->dispatch(new RecalculateStages($tripId, [], triggers: [ComputationTrigger::GEOMETRY, ComputationTrigger::DATES], generation: $generation));
-
 
         return $this->stageResponseMapper->map($stage);
     }
