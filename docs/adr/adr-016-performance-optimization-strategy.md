@@ -256,7 +256,7 @@ overpass:
 
 ### Options Considered but Not Retained
 
-**Progressive per-stage computation:** Dispatch leaf computations per-stage as each stage is individually computed (instead of waiting for all stages). Rejected because stage computation is tightly coupled — pacing depends on total distance and fatigue decay across all stages. Splitting would require a fundamental redesign of `PacingEngineRegistry` with no guarantee of correctness.
+**Progressive per-stage computation:** Dispatch leaf computations per-stage as each stage is individually computed (instead of waiting for all stages). Rejected because stage computation is tightly coupled — pacing depends on total distance and fatigue decay across all stages. Splitting would require a fundamental redesign of `PacingEngine` with no guarantee of correctness.
 
 **WebSocket replacement for SSE:** Replace Mercure SSE with WebSocket for bidirectional streaming. Rejected because the communication is unidirectional (server → client only), Mercure is already configured and working, and WebSocket adds complexity without performance benefit.
 

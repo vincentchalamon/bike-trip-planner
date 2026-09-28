@@ -22,7 +22,7 @@ use App\ApiResource\Stage;
  *
  * @see docs/adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
  */
-final readonly class PacingEngineRegistry implements PacingEngineInterface
+final readonly class PacingEngine implements PacingEngineInterface
 {
     private const float MINIMUM_STAGE_DISTANCE_KM = 30.0;
 

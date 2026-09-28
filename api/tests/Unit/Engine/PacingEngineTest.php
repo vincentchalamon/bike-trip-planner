@@ -7,14 +7,14 @@ namespace App\Tests\Unit\Engine;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
-use App\Engine\PacingEngineRegistry;
+use App\Engine\PacingEngine;
 use App\Engine\RouteSimplifierInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class PacingEngineRegistryTest extends TestCase
+final class PacingEngineTest extends TestCase
 {
-    private PacingEngineRegistry $engine;
+    private PacingEngine $engine;
 
     #[\Override]
     protected function setUp(): void
@@ -31,7 +31,7 @@ final class PacingEngineRegistryTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $this->engine = new PacingEngineRegistry(
+        $this->engine = new PacingEngine(
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
@@ -190,7 +190,7 @@ final class PacingEngineRegistryTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
         $decimatedPoints = $this->createTrack(5);
         $rawPoints = $this->createTrack(10);
@@ -223,7 +223,7 @@ final class PacingEngineRegistryTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
         $decimatedPoints = $this->createTrack(20);
         $rawPoints = $this->createTrack(40);
@@ -264,7 +264,7 @@ final class PacingEngineRegistryTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
         // 3 decimated points → day 1 gets [0,1], day 2 (last) gets [1] → count < 2 → absorbed
         $decimatedPoints = $this->createTrack(3);
