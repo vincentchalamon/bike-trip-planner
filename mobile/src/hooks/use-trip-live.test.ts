@@ -73,10 +73,8 @@ function apiStage(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detail = (stages: unknown[]) => ({ title: 'Trip', stages }) as any;
 // A cached entry wrapping the same /detail shape (#1147).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailCache = (stages: unknown[]) =>
   ({ detail: detail(stages), route: null, syncedAt: 1 }) as any;
 

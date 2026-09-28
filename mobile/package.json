@@ -43,9 +43,12 @@
     "@react-native/jest-preset": "0.86.2",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jest": "^30.5.2",
     "jest-expo": "~57.0.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1"
   },
   "scripts": {
     "start": "expo start",
@@ -55,6 +58,7 @@
     "build:release": "npx --yes eas-cli build --local --platform android --profile release",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint",
     "test": "jest"
   },
   "private": true

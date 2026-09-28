@@ -261,6 +261,9 @@ export default function TripRoadbook() {
             }}
           >
             {t('freshness.synced', {
+              // Read at render on purpose: the age refreshes on every re-render,
+              // and a coarse "synced 5 min ago" tolerates being a render late.
+              // eslint-disable-next-line react-hooks/purity -- see above
               ago: formatFreshness(t, syncedAt, Date.now()),
             })}
           </Text>

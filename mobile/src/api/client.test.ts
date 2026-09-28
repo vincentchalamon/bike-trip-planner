@@ -1,6 +1,5 @@
 /// <reference types="jest" />
-import { api, authMiddleware } from './client';
-import { preconditionHeader } from './trips';
+import { authMiddleware } from './client';
 
 jest.mock('../auth/tokens', () => ({ getJwt: jest.fn() }));
 jest.mock('../auth/authApi', () => ({ refreshTokens: jest.fn() }));
