@@ -21,6 +21,8 @@ vi.mock("@/lib/api/client", async (importOriginal) => {
   return {
     ...actual,
     apiClient: { DELETE: respond, PATCH: respond, POST: respond },
+    // Bound to the real client inside the module, so faked at its own boundary.
+    applyBatchRecompute: async () => (await respond()).response.ok,
   };
 });
 
@@ -198,5 +200,34 @@ describe("useTripPlanner — a refused trip setting is rolled back", () => {
     expect(useTripStore.getState().fatigueFactor).toBe(0.8);
     expect(useTripStore.getState().maxDistancePerDay).toBe(80);
     expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+});
+
+describe("useTripPlanner — batch recompute", () => {
+  it("marks the stages as they are when the batch lands, not as they were rendered", async () => {
+    holder.status = 200;
+    useTripStore.setState({
+      pendingModifications: [
+        { stageId: "stage-2", type: "distance", label: "Day 2" },
+      ],
+    });
+    const { result } = renderHook(() => useTripPlanner());
+    const apply = result.current.handleApplyBatch;
+
+    // A day split off stage 2 between the render and the click.
+    act(() => {
+      useTripStore.setState({
+        stages: [stage(1), stage(2), { ...stage(3), id: "split" }, stage(4)],
+      });
+    });
+    await act(async () => {
+      await apply();
+    });
+
+    expect([...useTripStore.getState().recomputingStages].sort()).toEqual([
+      "split",
+      "stage-2",
+      "stage-4",
+    ]);
   });
 });

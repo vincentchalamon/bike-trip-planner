@@ -1112,6 +1112,7 @@ export function useTripPlanner() {
   }
 
   async function handleApplyBatch() {
+    const { pendingModifications } = useTripStore.getState();
     if (!tripId || pendingModifications.length === 0) return;
 
     setIsBatchApplying(true);
@@ -1125,6 +1126,7 @@ export function useTripPlanner() {
         // The dependency rules are positional ("and every subsequent one"), so the
         // identifier is resolved against the current order and the markers are
         // stored back as identifiers.
+        const stages = useTripStore.getState().stages;
         const affected = new Set<string>();
         for (const mod of pendingModifications) {
           if (mod.stageId !== null) {
@@ -1133,13 +1135,11 @@ export function useTripPlanner() {
             if (mod.type === "distance") {
               // Distance recomputes the modified stage and every subsequent one
               // (mirrors ComputationDependencyResolver.resolve on the backend).
-              for (let i = at; i < stages.length; i++) {
-                affected.add(stages[i]!.id);
-              }
+              for (const stage of stages.slice(at)) affected.add(stage.id);
             } else {
-              affected.add(stages[at]!.id);
-              const next = stages[at + 1];
-              if (next) affected.add(next.id);
+              for (const stage of stages.slice(at, at + 2)) {
+                affected.add(stage.id);
+              }
             }
           } else {
             // Trip-level modifications (dates, pacing) affect all stages
