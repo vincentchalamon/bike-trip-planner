@@ -83,6 +83,9 @@ final class SeasonalityCheckerTest extends TestCase
         yield 'Apr-Oct with a single-digit hour: August is open' => ['Apr-Oct 9:00-20:00', '2024-08-01', true];
         yield 'Apr-Oct with a spaced span: January is closed' => ['Apr-Oct 09:00 - 20:00', '2024-01-01', false];
 
+        // An empty rule before the season is no rule, as for every other reader.
+        yield 'leading empty rule: August is open' => ['; Apr-Oct', '2024-08-01', true];
+
         // Wrap-around range (Oct-Mar: open from October to March)
         yield 'Oct-Mar: November is open' => ['Oct-Mar', '2024-11-15', true];
         yield 'Oct-Mar: January is open' => ['Oct-Mar', '2024-01-10', true];

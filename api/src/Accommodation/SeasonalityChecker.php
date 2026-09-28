@@ -52,7 +52,8 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
      */
     private function parseOpeningHours(string $openingHours, \DateTimeImmutable $date): ?bool
     {
-        $rule = trim(explode(';', $openingHours)[0]);
+        $rules = array_filter(array_map(trim(...), explode(';', $openingHours)), static fn (string $rule): bool => '' !== $rule);
+        $rule = array_first($rules) ?? '';
         $span = '\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}';
 
         if (!preg_match('/^([A-Za-z]{3})-([A-Za-z]{3})(?:\s+'.$span.'(?:[\s,]+'.$span.')*)?$/', $rule, $matches)) {
