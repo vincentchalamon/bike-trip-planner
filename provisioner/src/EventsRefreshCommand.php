@@ -50,11 +50,9 @@ final class EventsRefreshCommand extends Command
 
     private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
 
-    /**
-     * @var resource|null held for the whole command so the flock is released only when the
-     *                    process ends (incl. a crash: the OS drops it)
-     */
-    private $lockHandle;
+    private readonly ProvisionerLog $log;
+
+    private readonly RunLock $lock;
 
     private readonly ProcessRunner $processes;
 
@@ -76,6 +74,9 @@ final class EventsRefreshCommand extends Command
     ) {
         parent::__construct();
 
+        $this->log = new ProvisionerLog($this->logFile);
+        $this->lock = new RunLock($this->lockFile, $this->log);
+
         $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
@@ -93,7 +94,7 @@ final class EventsRefreshCommand extends Command
         $today = $this->today ?? DataTourismeImporter::today();
         $io->writeln(\sprintf('  Purge boundary: events ending before %s are dropped.', $today));
 
-        if (!$this->acquireLock($io)) {
+        if (!$this->lock->acquire($io)) {
             return Command::FAILURE;
         }
 
@@ -106,7 +107,7 @@ final class EventsRefreshCommand extends Command
             $zoneOption = $input->getOption('zone');
             if (\is_string($zoneOption) && '' !== $zoneOption) {
                 if (!\in_array($zoneOption, $zones, true)) {
-                    $this->fail($io, \sprintf('Zone "%s" is not open. Open zones: %s.', $zoneOption, [] === $zones ? 'none' : implode(', ', $zones)));
+                    $this->log->fail($io, \sprintf('Zone "%s" is not open. Open zones: %s.', $zoneOption, [] === $zones ? 'none' : implode(', ', $zones)));
 
                     return Command::FAILURE;
                 }
@@ -139,11 +140,11 @@ final class EventsRefreshCommand extends Command
                 return Command::SUCCESS;
             }
 
-            $this->summarize($io, $outcomes);
+            $this->log->summarize($io, 'Events refresh summary', $outcomes);
 
             return \in_array(Command::FAILURE, $outcomes, true) ? Command::FAILURE : Command::SUCCESS;
         } finally {
-            $this->releaseLock();
+            $this->lock->release();
         }
     }
 
@@ -159,7 +160,7 @@ final class EventsRefreshCommand extends Command
         $io->section(\sprintf('Refreshing %s events', $source->label()));
 
         if (!is_dir($sourceWorkDir) && !mkdir($sourceWorkDir, 0o755, true) && !is_dir($sourceWorkDir)) {
-            $this->fail($io, \sprintf('Cannot create work directory "%s"', $sourceWorkDir));
+            $this->log->fail($io, \sprintf('Cannot create work directory "%s"', $sourceWorkDir));
 
             return Command::FAILURE;
         }
@@ -167,7 +168,7 @@ final class EventsRefreshCommand extends Command
         try {
             $staging = $source->stageEventsForRefresh($sourceWorkDir);
         } catch (ImportFailedException $importFailedException) {
-            $this->fail($io, \sprintf('%s feed download/parse failed: %s', $source->label(), $importFailedException->getMessage()));
+            $this->log->fail($io, \sprintf('%s feed download/parse failed: %s', $source->label(), $importFailedException->getMessage()));
 
             return Command::FAILURE;
         }
@@ -177,10 +178,10 @@ final class EventsRefreshCommand extends Command
             try {
                 $source->promoteEventsForZone($staging, $zone, $today);
                 $io->writeln(\sprintf('  %s %s', "\u{2713}", $zone));
-                $this->logLine('INFO', \sprintf('%s events refreshed for zone %s', $source->label(), $zone));
+                $this->log->line('INFO', \sprintf('%s events refreshed for zone %s', $source->label(), $zone));
             } catch (ImportFailedException $importFailedException) {
                 $outcome = Command::FAILURE;
-                $this->fail($io, \sprintf('%s zone %s failed: %s', $source->label(), $zone, $importFailedException->getMessage()));
+                $this->log->fail($io, \sprintf('%s zone %s failed: %s', $source->label(), $zone, $importFailedException->getMessage()));
             }
         }
 
@@ -258,7 +259,7 @@ final class EventsRefreshCommand extends Command
     private function openZones(SymfonyStyle $io): ?array
     {
         if (!is_dir($this->workDir) && !mkdir($this->workDir, 0o755, true) && !is_dir($this->workDir)) {
-            $this->fail($io, \sprintf('Cannot create work directory "%s"', $this->workDir));
+            $this->log->fail($io, \sprintf('Cannot create work directory "%s"', $this->workDir));
 
             return null;
         }
@@ -272,20 +273,20 @@ final class EventsRefreshCommand extends Command
         try {
             $process->run();
         } catch (ProcessExceptionInterface $processException) {
-            $this->fail($io, \sprintf('Could not read the open zones: %s', $processException->getMessage()));
+            $this->log->fail($io, \sprintf('Could not read the open zones: %s', $processException->getMessage()));
 
             return null;
         }
 
         if (!$process->isSuccessful() || !is_file($path)) {
-            $this->fail($io, \sprintf('Could not read the open zones: %s', $process->getErrorOutput()));
+            $this->log->fail($io, \sprintf('Could not read the open zones: %s', $process->getErrorOutput()));
 
             return null;
         }
 
         $contents = file_get_contents($path);
         if (false === $contents) {
-            $this->fail($io, \sprintf('Could not read the open zones from "%s"', $path));
+            $this->log->fail($io, \sprintf('Could not read the open zones from "%s"', $path));
 
             return null;
         }
@@ -299,61 +300,5 @@ final class EventsRefreshCommand extends Command
         }
 
         return $zones;
-    }
-
-    private function acquireLock(SymfonyStyle $io): bool
-    {
-        $handle = @fopen($this->lockFile, 'c');
-        if (false === $handle) {
-            $io->warning(\sprintf('Cannot open lock file "%s"; proceeding without a concurrency lock.', $this->lockFile));
-
-            return true;
-        }
-
-        if (!flock($handle, \LOCK_EX | \LOCK_NB)) {
-            fclose($handle);
-            $message = 'Another provisioning run is already in progress; aborting.';
-            $io->error($message);
-            $this->logLine('ERROR', $message);
-
-            return false;
-        }
-
-        $this->lockHandle = $handle;
-
-        return true;
-    }
-
-    private function releaseLock(): void
-    {
-        if (\is_resource($this->lockHandle)) {
-            flock($this->lockHandle, \LOCK_UN);
-            fclose($this->lockHandle);
-            $this->lockHandle = null;
-        }
-    }
-
-    /**
-     * @param array<string, int> $outcomes source label => Command exit code
-     */
-    private function summarize(SymfonyStyle $io, array $outcomes): void
-    {
-        $io->section('Events refresh summary');
-        foreach ($outcomes as $source => $code) {
-            $ok = Command::SUCCESS === $code;
-            $io->writeln(\sprintf('  %s %s', $ok ? "\u{2713}" : "\u{2717}", $source));
-        }
-    }
-
-    private function fail(SymfonyStyle $io, string $message): void
-    {
-        $io->error($message);
-        $this->logLine('ERROR', $message);
-    }
-
-    private function logLine(string $level, string $message): void
-    {
-        $line = \sprintf("[%s] [%s] %s\n", new \DateTimeImmutable()->format('Y-m-d H:i:s'), $level, $message);
-        @file_put_contents($this->logFile, $line, \FILE_APPEND);
     }
 }

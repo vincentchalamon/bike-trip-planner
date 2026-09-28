@@ -296,4 +296,21 @@ final class EventsRefreshCommandTest extends TestCase
         self::assertMatchesRegularExpression('/\x{2717}\s*datatourisme/u', $output);
         self::assertMatchesRegularExpression('/\x{2713}\s*openagenda/u', $output);
     }
+
+    /**
+     * The log file is what survives the container (ADR-041), and `provision` writes each
+     * source's outcome to it. The refresh only printed them, so a failed nightly refresh left
+     * a failure line with no summary to place it in.
+     */
+    #[Test]
+    public function theSummaryIsWrittenToTheLogFile(): void
+    {
+        $tester = $this->tester(['bretagne'], $this->dataTourismeImporter(downloadFails: true), $this->openAgendaImporter());
+
+        $tester->execute([], ['interactive' => false]);
+
+        $log = (string) file_get_contents($this->tmpDir.'/provisioner.log');
+        self::assertStringContainsString('[ERROR] source datatourisme -> failed', $log);
+        self::assertStringContainsString('[INFO] source openagenda -> ok', $log);
+    }
 }

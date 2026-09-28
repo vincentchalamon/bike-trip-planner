@@ -58,11 +58,9 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
 
-    /**
-     * @var resource|null held for the whole command so the flock is released only
-     *                    when the process ends (incl. a crash: the OS drops it)
-     */
-    private $lockHandle;
+    private readonly ProvisionerLog $log;
+
+    private readonly RunLock $lock;
 
     private readonly OsmDataDownloader $downloader;
 
@@ -90,6 +88,9 @@ final class ProvisionCommand extends Command
         ?PromotionReport $promotionReport = null,
     ) {
         parent::__construct();
+
+        $this->log = new ProvisionerLog($this->logFile);
+        $this->lock = new RunLock($this->lockFile, $this->log);
 
         $this->downloader = $downloader ?? new OsmDataDownloader(regionsDir: $this->regionsDir);
         $this->postgisImporter = $postgisImporter ?? new PostgisImporter(
@@ -124,7 +125,7 @@ final class ProvisionCommand extends Command
         $zone = \is_string($zoneArgument) ? GeofabrikRegionRegistry::resolve($zoneArgument) : null;
 
         if (null === $zone) {
-            $this->fail($io, \sprintf(
+            $this->log->fail($io, \sprintf(
                 'A zone is required: `make provision <zone>` opens exactly one (e.g. `make provision bretagne`).%s%s',
                 \is_string($zoneArgument) && '' !== trim($zoneArgument) ? \sprintf(' "%s" is not a known zone.', $zoneArgument) : '',
                 \sprintf("\nKnown zones: %s", implode(', ', GeofabrikRegionRegistry::slugs())),
@@ -141,7 +142,7 @@ final class ProvisionCommand extends Command
 
         // Serialise concurrent runs (cron + manual overlap): two provisioners writing the
         // same zone would race on its staging schema (ADR-041).
-        if (!$this->acquireLock($io)) {
+        if (!$this->lock->acquire($io)) {
             return Command::FAILURE;
         }
 
@@ -202,11 +203,11 @@ final class ProvisionCommand extends Command
                 $this->reportPromotion($io, $zone['slug'], $startedAt);
             }
 
-            $this->summarize($io, $outcomes);
+            $this->log->summarize($io, 'Provisioning summary', $outcomes);
 
             return \in_array(Command::FAILURE, $outcomes, true) ? Command::FAILURE : Command::SUCCESS;
         } finally {
-            $this->releaseLock();
+            $this->lock->release();
         }
     }
 
@@ -240,7 +241,7 @@ final class ProvisionCommand extends Command
         }
 
         $built = $this->routingPerimeter->slugs();
-        $this->fail($io, \sprintf(
+        $this->log->fail($io, \sprintf(
             '%s is in "%s", which the routing graph does not cover, so a trip there could not be routed. Build it first with `make routing-build %s`, then provision again. Routing graph currently built from: %s.',
             $zoneName,
             $country,
@@ -249,58 +250,6 @@ final class ProvisionCommand extends Command
         ));
 
         return false;
-    }
-
-    /**
-     * Acquires an exclusive, non-blocking file lock held for the whole run. The
-     * OS releases it when the process ends — including a crash — so a killed run
-     * never leaves a stale lock behind.
-     */
-    private function acquireLock(SymfonyStyle $io): bool
-    {
-        $handle = @fopen($this->lockFile, 'c');
-        if (false === $handle) {
-            // No lock file location (e.g. /data not mounted): proceed rather than
-            // block provisioning on an inability to lock.
-            $io->warning(\sprintf('Cannot open lock file "%s"; proceeding without a concurrency lock.', $this->lockFile));
-
-            return true;
-        }
-
-        if (!flock($handle, \LOCK_EX | \LOCK_NB)) {
-            fclose($handle);
-            $message = 'Another provisioning run is already in progress; aborting.';
-            $io->error($message);
-            $this->logLine('ERROR', $message);
-
-            return false;
-        }
-
-        $this->lockHandle = $handle;
-
-        return true;
-    }
-
-    private function releaseLock(): void
-    {
-        if (\is_resource($this->lockHandle)) {
-            flock($this->lockHandle, \LOCK_UN);
-            fclose($this->lockHandle);
-            $this->lockHandle = null;
-        }
-    }
-
-    /**
-     * @param array<string, int> $outcomes source label => Command exit code
-     */
-    private function summarize(SymfonyStyle $io, array $outcomes): void
-    {
-        $io->section('Provisioning summary');
-        foreach ($outcomes as $source => $code) {
-            $ok = Command::SUCCESS === $code;
-            $io->writeln(\sprintf('  %s %s', $ok ? "\u{2713}" : "\u{2717}", $source));
-            $this->logLine($ok ? 'INFO' : 'ERROR', \sprintf('source %s -> %s', $source, $ok ? 'ok' : 'failed'));
-        }
     }
 
     /**
@@ -334,25 +283,7 @@ final class ProvisionCommand extends Command
         $io->writeln(0 === $added
             ? '  0 new entries: the sources carry nothing this zone did not already hold.'
             : \sprintf('  %d new entries across %d tables.', $added, \count($rows)));
-        $this->logLine('INFO', \sprintf('zone %s -> %d new entries', $zoneSlug, $added));
-    }
-
-    /**
-     * Reports a failure both to the console and to the persistent log file, so
-     * the detailed cause (command + stderr) survives for later diagnosis even
-     * when the container logs are gone (ADR-041).
-     */
-    private function fail(SymfonyStyle $io, string $message): void
-    {
-        $io->error($message);
-        $this->logLine('ERROR', $message);
-    }
-
-    private function logLine(string $level, string $message): void
-    {
-        $line = \sprintf("[%s] [%s] %s\n", new \DateTimeImmutable()->format('Y-m-d H:i:s'), $level, $message);
-        // Best-effort: never let logging failure mask the real outcome.
-        @file_put_contents($this->logFile, $line, \FILE_APPEND);
+        $this->log->line('INFO', \sprintf('zone %s -> %d new entries', $zoneSlug, $added));
     }
 
     /**
@@ -374,7 +305,7 @@ final class ProvisionCommand extends Command
         try {
             $staging = $importer->stage($this->dataTourismeDir, $zoneSlug);
         } catch (ImportFailedException $importFailedException) {
-            $this->fail($io, $importFailedException->getMessage());
+            $this->log->fail($io, $importFailedException->getMessage());
 
             return [Command::FAILURE, null];
         }
@@ -410,7 +341,7 @@ final class ProvisionCommand extends Command
         try {
             $promoted = $importer->finish($this->dataTourismeDir, $zoneSlug, $today, $this->zonesDir);
         } catch (ImportFailedException $importFailedException) {
-            $this->fail($io, $importFailedException->getMessage());
+            $this->log->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
         }
@@ -421,14 +352,14 @@ final class ProvisionCommand extends Command
             // re-downloads it anyway.
             $message = 'DataTourisme promotion skipped: the zone has no registry geometry to clip against, so the OSM step did not complete.';
             $io->warning($message);
-            $this->logLine('INFO', $message);
+            $this->log->line('INFO', $message);
 
             return Command::SUCCESS;
         }
 
         $unmapped = $importer->unmappedAccommodationCount();
         $io->success(\sprintf('DataTourisme import complete (%d accommodations skipped: unmapped subtype).', $unmapped));
-        $this->logLine('INFO', \sprintf('datatourisme accommodations skipped (unmapped subtype) -> %d', $unmapped));
+        $this->log->line('INFO', \sprintf('datatourisme accommodations skipped (unmapped subtype) -> %d', $unmapped));
 
         return Command::SUCCESS;
     }
@@ -456,7 +387,7 @@ final class ProvisionCommand extends Command
         try {
             $promoted = $importer->run($this->openAgendaDir, $zoneSlug, $today);
         } catch (ImportFailedException $importFailedException) {
-            $this->fail($io, $importFailedException->getMessage());
+            $this->log->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
         }
@@ -466,13 +397,13 @@ final class ProvisionCommand extends Command
             // not a failure — the export is national and the next opening re-downloads it.
             $message = 'OpenAgenda import skipped: the zone has no registry geometry to clip against, so the OSM step did not complete.';
             $io->warning($message);
-            $this->logLine('INFO', $message);
+            $this->log->line('INFO', $message);
 
             return Command::SUCCESS;
         }
 
         $io->success('OpenAgenda events imported.');
-        $this->logLine('INFO', \sprintf('openagenda events imported for zone %s', $zoneSlug));
+        $this->log->line('INFO', \sprintf('openagenda events imported for zone %s', $zoneSlug));
 
         return Command::SUCCESS;
     }
@@ -528,7 +459,7 @@ final class ProvisionCommand extends Command
             $this->downloader->download($zone['slug']);
         } catch (DownloadFailedException $downloadFailedException) {
             $io->newLine();
-            $this->fail($io, $downloadFailedException->getMessage());
+            $this->log->fail($io, $downloadFailedException->getMessage());
 
             return Command::FAILURE;
         }
@@ -540,7 +471,7 @@ final class ProvisionCommand extends Command
             $gate = $this->postgisImporter->run($zone['slug'], $zone['name'], $zone['country'], $targetPath, $this->filteredPbf, $curatedTable, $this->zonesDir);
         } catch (ImportFailedException $importFailedException) {
             $io->newLine();
-            $this->fail($io, $importFailedException->getMessage());
+            $this->log->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
         }
@@ -583,7 +514,7 @@ final class ProvisionCommand extends Command
 
         if ($rejected > 0) {
             $io->writeln(\sprintf('  Ranked by distance to the nearest cycle route in %s/%s/rejected.tsv.', $this->zonesDir, $zoneSlug));
-            $this->logLine('INFO', \sprintf('zone %s gate -> %d resolved, %d refused', $zoneSlug, $resolved, $rejected));
+            $this->log->line('INFO', \sprintf('zone %s gate -> %d resolved, %d refused', $zoneSlug, $resolved, $rejected));
         }
 
         if ($rejected > $resolved) {
