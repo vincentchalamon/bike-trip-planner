@@ -30,6 +30,7 @@ use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
 use App\Service\TripBootstrapper;
 use App\State\TripLocker;
+use Symfony\Component\Clock\NativeClock;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
@@ -222,7 +223,7 @@ final class GpxUploadServiceTest extends TestCase
             $tracker,
             $generations,
             new ProgressPublisher($tracker, $publisher),
-            new TripLocker(),
+            new TripLocker(new NativeClock()),
             new TripAnalysisDispatcher($bus, new EnrichmentMessageFactory()),
         );
     }
