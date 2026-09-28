@@ -22,10 +22,7 @@ use Symfony\Component\Process\Process;
  */
 final readonly class PromotionReport
 {
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql process factory; shared with the caller so commands are captured in tests
@@ -34,7 +31,7 @@ final readonly class PromotionReport
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 60.0,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     /**
@@ -56,8 +53,7 @@ final readonly class PromotionReport
             $path,
         );
 
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
+        $process = $this->processes->process(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
 
         try {
             $process->run();

@@ -56,10 +56,7 @@ final class EventsRefreshCommand extends Command
      */
     private $lockHandle;
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private readonly \Closure $processFactory;
+    private readonly ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql factory for zone discovery; defaults to a real {@see Process}
@@ -79,7 +76,7 @@ final class EventsRefreshCommand extends Command
     ) {
         parent::__construct();
 
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     protected function configure(): void
@@ -280,11 +277,10 @@ final class EventsRefreshCommand extends Command
         }
 
         $path = $this->workDir.'/open-zones.tsv';
-        $process = ($this->processFactory)([
+        $process = $this->processes->process([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf("\\copy (SELECT slug FROM osm.zones WHERE geom IS NOT NULL ORDER BY slug) TO '%s'", $path),
         ]);
-        $process->setTimeout($this->timeoutSeconds);
 
         try {
             $process->run();

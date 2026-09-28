@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -41,10 +39,7 @@ final readonly class WikidataEnrichmentPass
 
     private const string CACHE_TABLE = 'provisioner.wikidata_cache';
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql process factory; shared with the calling importer so commands are captured in tests
@@ -56,7 +51,7 @@ final readonly class WikidataEnrichmentPass
         private int $cacheTtlDays = 30,
         private float $timeoutSeconds = 1800.0,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     /**
@@ -80,7 +75,7 @@ final readonly class WikidataEnrichmentPass
         // Ensure the persistent cache (the API migration may not have run here) and
         // fresh per-run scratch tables (drop any leftover from a prior crash; they
         // live in the stable schema, never in the swapped one).
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             'CREATE SCHEMA IF NOT EXISTS %1$s; CREATE TABLE IF NOT EXISTS %2$s (qid text PRIMARY KEY, payload jsonb NOT NULL, fetched_at timestamptz NOT NULL); DROP TABLE IF EXISTS %3$s, %4$s; CREATE TABLE %3$s (qid text); CREATE TABLE %4$s (qid text, payload jsonb);',
             self::CACHE_SCHEMA,
             self::CACHE_TABLE,
@@ -93,11 +88,11 @@ final readonly class WikidataEnrichmentPass
             static fn (string $table): string => \sprintf('SELECT DISTINCT wikidata FROM %s.%s WHERE wikidata IS NOT NULL', $stagingSchema, $table),
             $tables,
         ));
-        $this->psql(\sprintf('INSERT INTO %s (qid) %s;', $candidatesTable, $union), 'psql collect wikidata candidates');
+        $this->processes->psql(\sprintf('INSERT INTO %s (qid) %s;', $candidatesTable, $union), 'psql collect wikidata candidates');
 
         // Export those missing or older than the TTL.
         $missingPath = $workDir.'/wikidata-missing.copy';
-        $this->psql(\sprintf(
+        $this->processes->psql(\sprintf(
             "\\copy (SELECT cand.qid FROM %1\$s cand WHERE NOT EXISTS (SELECT 1 FROM %2\$s c WHERE c.qid = cand.qid AND c.fetched_at > now() - make_interval(days => %3\$d))) TO '%4\$s'",
             $candidatesTable,
             self::CACHE_TABLE,
@@ -124,8 +119,8 @@ final readonly class WikidataEnrichmentPass
                 fclose($handle);
             }
 
-            $this->psql(\sprintf("\\copy %s (qid, payload) FROM '%s'", $fetchTable, $fetchPath), 'psql copy wikidata fetched');
-            $this->psql(\sprintf(
+            $this->processes->psql(\sprintf("\\copy %s (qid, payload) FROM '%s'", $fetchTable, $fetchPath), 'psql copy wikidata fetched');
+            $this->processes->psql(\sprintf(
                 'INSERT INTO %1$s (qid, payload, fetched_at) SELECT qid, payload, now() FROM %2$s ON CONFLICT (qid) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at;',
                 self::CACHE_TABLE,
                 $fetchTable,
@@ -135,7 +130,7 @@ final readonly class WikidataEnrichmentPass
         // Enrich each table from the cache. Source-set fields win when present;
         // image_url / wikipedia_url are Wikidata-only.
         foreach ($tables as $table) {
-            $this->psql(\sprintf(
+            $this->processes->psql(\sprintf(
                 "UPDATE %1\$s.%2\$s t SET description = COALESCE(t.description, c.payload->>'description'), opening_hours = COALESCE(t.opening_hours, c.payload->>'openingHours'), website = COALESCE(t.website, c.payload->>'website'), image_url = c.payload->>'imageUrl', wikipedia_url = c.payload->>'wikipediaUrl' FROM %3\$s c WHERE t.wikidata = c.qid;",
                 $stagingSchema,
                 $table,
@@ -143,7 +138,7 @@ final readonly class WikidataEnrichmentPass
             ), \sprintf('psql enrich %s.%s', $stagingSchema, $table));
         }
 
-        $this->psql(\sprintf('DROP TABLE IF EXISTS %s, %s;', $candidatesTable, $fetchTable), 'psql drop wikidata scratch tables');
+        $this->processes->psql(\sprintf('DROP TABLE IF EXISTS %s, %s;', $candidatesTable, $fetchTable), 'psql drop wikidata scratch tables');
     }
 
     /**
@@ -153,27 +148,6 @@ final readonly class WikidataEnrichmentPass
     private function scratchTable(string $kind, string $stagingSchema): string
     {
         return \sprintf('%s.wikidata_%s_%s', self::CACHE_SCHEMA, $kind, (string) preg_replace('/[^a-z0-9_]/i', '_', $stagingSchema));
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    private function psql(string $sql, string $label): void
-    {
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nStderr: %s", $label, (string) $process->getExitCode(), $process->getErrorOutput()));
-        }
     }
 
     private function copyValue(string $value): string

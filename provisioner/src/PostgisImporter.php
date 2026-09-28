@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -161,10 +159,7 @@ final readonly class PostgisImporter
      */
     private const array COMPLETENESS_BY_CATEGORY = ['accommodations'];
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     private WikidataEnrichmentPass $enrichmentPass;
 
@@ -177,13 +172,13 @@ final readonly class PostgisImporter
         private string $flexStylePath,
         private string $liveSchema = 'osm',
         private int $cacheMb = 800,
-        ?\Closure $processFactory = null,
+        private ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
         WikidataEnricher $enricher = new WikidataEnricher(),
         string $locale = 'fr',
         int $cacheTtlDays = 30,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($this->processFactory, $this->timeoutSeconds);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
         $this->promotion = new ZonePromotion('osm', $this->liveSchema, self::FEATURE_TABLES);
     }
@@ -237,7 +232,7 @@ final readonly class PostgisImporter
      */
     public function filter(string $regionPbf, string $filteredPbf): void
     {
-        $this->runProcess(
+        $this->processes->run(
             array_merge(['osmium', 'tags-filter', '--overwrite', '-o', $filteredPbf, $regionPbf], self::TAGS_FILTER_EXPRESSIONS),
             'osmium tags-filter',
         );
@@ -250,12 +245,12 @@ final readonly class PostgisImporter
     {
         // Fresh staging schema (drop any half-written leftover from a prior crash). Only
         // ever this zone's staging schema: no live schema is named here.
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s;', $stagingSchema),
         ], 'psql create staging schema');
 
-        $this->runProcess([
+        $this->processes->run([
             'osm2pgsql',
             '--create',
             '--slim',
@@ -352,11 +347,11 @@ final readonly class PostgisImporter
             $this->rejectionsExpression($gate),
         );
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
         ], 'psql prepare promotion report');
 
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
             $this->promotion->sql($zoneSlug, $stagingSchema, registryUpsert: $registryUpsert),
         ], \sprintf('psql promote zone %s', $zoneSlug));
@@ -397,36 +392,9 @@ final readonly class PostgisImporter
      */
     public function dropStaging(string $stagingSchema): void
     {
-        $this->runProcess([
+        $this->processes->run([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop staging schema');
-    }
-
-    /**
-     * @param list<string>          $command
-     * @param array<string, string> $env
-     *
-     * @throws ImportFailedException
-     */
-    private function runProcess(array $command, string $label, array $env = []): void
-    {
-        $process = ($this->processFactory)($command);
-        $process->setTimeout($this->timeoutSeconds);
-        if ([] !== $env) {
-            $process->setEnv($env);
-        }
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nCommand: %s\nStderr: %s", $label, (string) $process->getExitCode(), implode(' ', $command), $process->getErrorOutput()));
-        }
     }
 }

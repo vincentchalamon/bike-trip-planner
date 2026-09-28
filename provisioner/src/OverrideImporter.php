@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\Process\Exception\ExceptionInterface as ProcessExceptionInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -46,10 +44,7 @@ final readonly class OverrideImporter
      */
     public const array OPTIONAL_COLUMNS = ['website', 'description', 'opening_hours'];
 
-    /**
-     * @var \Closure(list<string>): Process
-     */
-    private \Closure $processFactory;
+    private ProcessRunner $processes;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory psql process factory; defaults to a real {@see Process}
@@ -58,7 +53,7 @@ final readonly class OverrideImporter
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 300.0,
     ) {
-        $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
     }
 
     /**
@@ -84,7 +79,7 @@ final readonly class OverrideImporter
             throw new ImportFailedException(\sprintf('Override file "%s" holds no data row.', $path));
         }
 
-        $this->psql($this->insertSql($rows, $zoneSlug), \sprintf('psql import override %s', $path));
+        $this->processes->psql($this->insertSql($rows, $zoneSlug), \sprintf('psql import override %s', $path), singleTransaction: true);
 
         return \count($rows);
     }
@@ -264,26 +259,5 @@ final readonly class OverrideImporter
     private function nullable(?string $value): string
     {
         return null === $value ? 'NULL' : ZonePromotion::literal($value);
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    private function psql(string $sql, string $label): void
-    {
-        $process = ($this->processFactory)(['psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c', $sql]);
-        $process->setTimeout($this->timeoutSeconds);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $processTimedOutException) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
-        } catch (ProcessExceptionInterface $processException) {
-            throw new ImportFailedException(\sprintf('%s failed: %s', $label, $processException->getMessage()), 0, $processException);
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nStderr: %s", $label, (string) $process->getExitCode(), $process->getErrorOutput()));
-        }
     }
 }
