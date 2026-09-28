@@ -55,6 +55,37 @@ enum ComputationName: string
     }
 
     /**
+     * The enrichments: everything in {@see self::pipeline()} past the structural computations.
+     * What the analysis step re-arms and re-dispatches.
+     *
+     * @return list<self>
+     */
+    public static function analysisPipeline(): array
+    {
+        return array_values(array_filter(
+            self::pipeline(),
+            static fn (self $c): bool => !\in_array($c, self::structuralPipeline(), true),
+        ));
+    }
+
+    /**
+     * Needs a calendar date to resolve against, so a trip without a start date gets none of
+     * these. Dispatching them anyway would not be merely wasteful: each falls back to today
+     * rather than skipping, so the trip would keep a holiday or a forecast dated from whenever
+     * it happened to be edited (ADR-070).
+     *
+     * Narrower than {@see ComputationTrigger::DATES}: a resupply or accommodation scan reads
+     * the date when there is one and still has a corridor to scan when there is not.
+     */
+    public function requiresStartDate(): bool
+    {
+        return match ($this) {
+            self::WEATHER, self::CALENDAR, self::EVENTS => true,
+            default => false,
+        };
+    }
+
+    /**
      * What has to change for this computation's result to be wrong (ADR-070).
      *
      * The single source of truth behind every re-dispatch decision. It used to be spread over

@@ -27,17 +27,6 @@ use App\Message\ScanAccommodations;
  */
 final readonly class ComputationDependencyResolver
 {
-    /**
-     * Pointless on a trip with no start date: each needs a calendar date to resolve against.
-     *
-     * @var list<ComputationName>
-     */
-    private const array REQUIRES_DATES = [
-        ComputationName::WEATHER,
-        ComputationName::CALENDAR,
-        ComputationName::EVENTS,
-    ];
-
     public function __construct(
         private EnrichmentMessageFactory $messageFactory,
     ) {
@@ -56,7 +45,7 @@ final readonly class ComputationDependencyResolver
     private function add(array $needed, ComputationTrigger $trigger, bool $hasDates): array
     {
         foreach (ComputationName::dependingOn($trigger) as $computation) {
-            if (!$hasDates && \in_array($computation, self::REQUIRES_DATES, true)) {
+            if (!$hasDates && $computation->requiresStartDate()) {
                 continue;
             }
 

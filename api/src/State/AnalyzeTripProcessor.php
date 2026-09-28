@@ -29,32 +29,6 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  */
 final readonly class AnalyzeTripProcessor implements ProcessorInterface
 {
-    /**
-     * Computations considered part of the enrichment pipeline (i.e. triggered by this endpoint).
-     *
-     * ROUTE and STAGES belong to the preview phase and are therefore excluded from both
-     * the "already running" check and the reset/re-dispatch cycle.
-     *
-     * @var list<ComputationName>
-     */
-    private const array ANALYSIS_COMPUTATIONS = [
-        ComputationName::POIS,
-        ComputationName::ACCOMMODATIONS,
-        ComputationName::TERRAIN,
-        ComputationName::WEATHER,
-        ComputationName::CALENDAR,
-        ComputationName::WIND,
-        ComputationName::BIKE_SHOPS,
-        ComputationName::WATER_POINTS,
-        ComputationName::CULTURAL_POIS,
-        ComputationName::RAILWAY_STATIONS,
-        ComputationName::HEALTH_SERVICES,
-        ComputationName::BORDER_CROSSING,
-        ComputationName::FERRIES,
-        ComputationName::FORDS,
-        ComputationName::EVENTS,
-    ];
-
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
@@ -92,7 +66,7 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
 
         // Re-arm every enrichment computation so the tracker reflects the new pipeline
         // without discarding the preview-phase statuses (ROUTE, STAGES).
-        foreach (self::ANALYSIS_COMPUTATIONS as $computation) {
+        foreach (ComputationName::analysisPipeline() as $computation) {
             $this->computationTracker->resetComputation($tripId, $computation);
         }
 
@@ -114,6 +88,6 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
      */
     private function isAnalysisRunning(array $statuses): bool
     {
-        return array_any(self::ANALYSIS_COMPUTATIONS, fn (ComputationName $computation): bool => ($statuses[$computation->value] ?? null) === ComputationStatus::RUNNING->value);
+        return array_any(ComputationName::analysisPipeline(), fn (ComputationName $computation): bool => ($statuses[$computation->value] ?? null) === ComputationStatus::RUNNING->value);
     }
 }
