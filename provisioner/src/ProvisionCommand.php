@@ -395,17 +395,12 @@ final class ProvisionCommand extends Command
             return $this->dataTourismeImporter;
         }
 
-        $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
-        $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
-        if ('' === $fluxId || '' === $appKey) {
+        $importer = EnvImporters::dataTourisme();
+        if (!$importer instanceof DataTourismeImporter) {
             $io->warning('DataTourisme import skipped: DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY are not set.');
-
-            return null;
         }
 
-        return new DataTourismeImporter(
-            \sprintf('https://diffuseur.datatourisme.fr/webservice/%s/%s', $fluxId, $appKey),
-        );
+        return $importer;
     }
 
     private function finishDataTourisme(SymfonyStyle $io, DataTourismeImporter $importer, string $zoneSlug, string $today): int
@@ -483,9 +478,7 @@ final class ProvisionCommand extends Command
     }
 
     /**
-     * The configured importer, or null when OpenAgenda is not set up. Gated on the
-     * dataset (the "flux"): the Opendatasoft public export needs no key, but a private
-     * portal can supply one through OPENAGENDA_API_KEY.
+     * The configured importer, or null when OpenAgenda is not set up.
      */
     private function resolveOpenAgendaImporter(SymfonyStyle $io): ?OpenAgendaImporter
     {
@@ -493,20 +486,12 @@ final class ProvisionCommand extends Command
             return $this->openAgendaImporter;
         }
 
-        $dataset = getenv('OPENAGENDA_DATASET') ?: '';
-        if ('' === $dataset) {
+        $importer = EnvImporters::openAgenda();
+        if (!$importer instanceof OpenAgendaImporter) {
             $io->warning('OpenAgenda import skipped: OPENAGENDA_DATASET is not set.');
-
-            return null;
         }
 
-        $url = \sprintf('https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/%s/exports/jsonl', rawurlencode($dataset));
-        $apiKey = getenv('OPENAGENDA_API_KEY') ?: '';
-        if ('' !== $apiKey) {
-            $url .= '?apikey='.rawurlencode($apiKey);
-        }
-
-        return new OpenAgendaImporter($url);
+        return $importer;
     }
 
     /**

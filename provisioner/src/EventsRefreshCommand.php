@@ -225,17 +225,12 @@ final class EventsRefreshCommand extends Command
             return $this->dataTourismeImporter;
         }
 
-        $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
-        $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
-        if ('' === $fluxId || '' === $appKey) {
+        $importer = EnvImporters::dataTourisme();
+        if (!$importer instanceof DataTourismeImporter) {
             $io->warning('DataTourisme refresh skipped: DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY are not set.');
-
-            return null;
         }
 
-        return new DataTourismeImporter(
-            \sprintf('https://diffuseur.datatourisme.fr/webservice/%s/%s', $fluxId, $appKey),
-        );
+        return $importer;
     }
 
     private function resolveOpenAgendaImporter(SymfonyStyle $io): ?OpenAgendaImporter
@@ -244,20 +239,12 @@ final class EventsRefreshCommand extends Command
             return $this->openAgendaImporter;
         }
 
-        $dataset = getenv('OPENAGENDA_DATASET') ?: '';
-        if ('' === $dataset) {
+        $importer = EnvImporters::openAgenda();
+        if (!$importer instanceof OpenAgendaImporter) {
             $io->warning('OpenAgenda refresh skipped: OPENAGENDA_DATASET is not set.');
-
-            return null;
         }
 
-        $url = \sprintf('https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/%s/exports/jsonl', rawurlencode($dataset));
-        $apiKey = getenv('OPENAGENDA_API_KEY') ?: '';
-        if ('' !== $apiKey) {
-            $url .= '?apikey='.rawurlencode($apiKey);
-        }
-
-        return new OpenAgendaImporter($url);
+        return $importer;
     }
 
     /**
