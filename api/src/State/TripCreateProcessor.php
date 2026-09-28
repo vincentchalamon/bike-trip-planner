@@ -11,11 +11,11 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripBootstrapper;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -32,7 +32,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
-        private TripGenerationTrackerInterface $generationTracker,
+        private TripBootstrapper $bootstrapper,
         private TripLocker $tripLocker,
         private Security $security,
         #[Autowire(service: 'limiter.trip_create')]
@@ -64,17 +64,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
             throw new TooManyRequestsHttpException(max(1, $limit->getRetryAfter()->getTimestamp() - time()));
         }
 
-        $tripId = Uuid::v7()->toRfc4122();
-
-        // Associate trip with current user before persisting
-        $data->user = $user;
-
-        $this->tripStateManager->initializeTrip($tripId, $data, $user->getLocale());
-
-        $computations = ComputationName::pipeline();
-        $this->computationTracker->initializeComputations($tripId, $computations);
-
-        $this->generationTracker->initialize($tripId);
+        $tripId = $this->bootstrapper->create($data, $user, $user->getLocale());
         $generation = 1;
 
         // Two flushes, not one: initializeTrip() commits the trip itself, and this commits the
@@ -104,7 +94,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
 
         return new Trip(
             id: $tripId,
-            computationStatus: $this->buildInitialStatus($computations),
+            computationStatus: $this->buildInitialStatus(ComputationName::pipeline()),
             isLocked: $this->tripLocker->isLocked($data),
         );
     }

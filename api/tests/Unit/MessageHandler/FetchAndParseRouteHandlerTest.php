@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
@@ -11,6 +12,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
+use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
@@ -25,6 +27,8 @@ use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use App\RouteFetcher\RouteFetchResult;
+use App\Service\StructuralComputationService;
+use App\Service\TripBootstrapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -32,6 +36,7 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class FetchAndParseRouteHandlerTest extends TestCase
 {
     use AlertMessageTestTrait;
@@ -75,9 +80,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(TripStageStoreInterface::class),
             $points,
             $registry,
-            $this->createStub(DistanceCalculatorInterface::class),
-            $this->createStub(ElevationCalculatorInterface::class),
-            $this->createStub(RouteSimplifierInterface::class),
+            $this->bootstrapper($tripStateManager, $points, $publisher, $this->createStub(DistanceCalculatorInterface::class), $this->createStub(ElevationCalculatorInterface::class), $this->createStub(RouteSimplifierInterface::class)),
             $messageBus,
             $this->createAlertRenderer(),
         );
@@ -196,9 +199,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(TripStageStoreInterface::class),
             $points,
             $registry,
-            $distance,
-            $elevation,
-            $simplifier,
+            $this->bootstrapper($repository, $points, $publisher, $distance, $elevation, $simplifier),
             $bus,
             $this->createAlertRenderer(),
         );
@@ -213,5 +214,27 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             'sourceType' => 'komoot_tour',
             'title' => 'My Tour',
         ]], $payloads);
+    }
+
+    private function bootstrapper(
+        TripRequestRepositoryInterface $repository,
+        TransientTripPointsStoreInterface $points,
+        TripUpdatePublisherInterface $publisher,
+        DistanceCalculatorInterface $distance,
+        ElevationCalculatorInterface $elevation,
+        RouteSimplifierInterface $simplifier,
+    ): TripBootstrapper {
+        return new TripBootstrapper(
+            $repository,
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripGenerationTrackerInterface::class),
+            $points,
+            $simplifier,
+            $distance,
+            $elevation,
+            $publisher,
+            $this->createStub(TripStageStoreInterface::class),
+            new StructuralComputationService($repository, $points, $distance, $elevation, $simplifier, $this->createStub(PacingEngineInterface::class)),
+        );
     }
 }

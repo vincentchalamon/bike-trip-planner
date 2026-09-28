@@ -6,32 +6,21 @@ namespace App\Service;
 
 use App\State\TripLocker;
 use App\Enum\ComputationStatus;
-use App\ApiResource\Stage;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Engine\DistanceCalculatorInterface;
-use App\Engine\ElevationCalculatorInterface;
-use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Enum\TripStatus;
-use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
+use App\Mercure\ProgressPublisher;
 use App\Entity\User;
 use App\RouteParser\GpxRouteParserInterface;
-use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Symfony\Component\Uid\Uuid;
 
 /**
- * Encapsulates GPX upload business logic: trip initialization, route storage,
- * synchronous structural computation (pacing), computation tracking, Mercure
- * publishing, and the asynchronous enrichment fan-out.
- *
- * Extracted from GpxUploadController to satisfy SRP and reduce coupling.
+ * Creates a trip from an uploaded GPX file: the same bootstrap as a trip created from a URL
+ * ({@see TripBootstrapper}), run to the end of its structural steps inside the request.
  *
  * ADR-043: the pacing is pure local CPU, so it runs synchronously here — the HTTP
  * response already carries the computed stages and the persisted `ready` status.
@@ -41,17 +30,12 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
 {
     public function __construct(
         private GpxRouteParserInterface $gpxParser,
+        private TripBootstrapper $bootstrapper,
         private TripRequestRepositoryInterface $tripStateManager,
-        private TripStageStoreInterface $stageStore,
-        private TransientTripPointsStoreInterface $points,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
+        private ProgressPublisher $progress,
         private TripLocker $tripLocker,
-        private DistanceCalculatorInterface $distanceCalculator,
-        private ElevationCalculatorInterface $elevationCalculator,
-        private RouteSimplifierInterface $routeSimplifier,
-        private TripUpdatePublisherInterface $publisher,
-        private StructuralComputationService $structuralComputation,
         private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
@@ -91,136 +75,39 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
         string $locale,
         User $user,
     ): array {
-        $tripId = Uuid::v7()->toRfc4122();
+        $tripId = $this->bootstrapper->create($tripRequest, $user, $locale);
 
-        // Associate the trip with its uploader so TripVoter grants TRIP_VIEW
-        // (Postgres column), mirroring TripCreateProcessor.
-        // Without this the GPX trip is ownerless: GET /trips/{id}/detail is
-        // denied and hidden as 404 (ADR-038), surfacing as "Voyage introuvable"
-        // right after a successful upload (recette #649).
-        $tripRequest->user = $user;
-
-        $this->tripStateManager->initializeTrip($tripId, $tripRequest, $locale);
-
-        $computations = ComputationName::pipeline();
-        $this->computationTracker->initializeComputations($tripId, $computations);
-
-        $this->storeRouteData($tripId, $points, $title);
-
-        $totalDistance = round($this->distanceCalculator->calculateTotalDistance($points), 1);
-        $totalElevation = (int) $this->elevationCalculator->calculateTotalAscent($points);
-        $totalElevationLoss = (int) $this->elevationCalculator->calculateTotalDescent($points);
-
-        $this->publishRouteEvent($tripId, $totalDistance, $totalElevation, $totalElevationLoss, $title);
+        $this->computationTracker->markRunning($tripId, ComputationName::ROUTE);
+        $totals = $this->bootstrapper->storeRoute($tripId, $points, SourceType::GPX_UPLOAD, $title);
+        $this->computationTracker->markDone($tripId, ComputationName::ROUTE);
 
         // ADR-043: pacing is pure local CPU — compute the stages synchronously so the
-        // structural trip is already available in the HTTP response.
+        // structural trip is already available in the HTTP response. Unlike the worker, no
+        // progress step for the route: the response already says it is done.
         $request = $this->tripStateManager->getRequest($tripId) ?? $tripRequest;
-        $stages = $this->structuralComputation->generateStages($tripId, $request);
-        $status = $this->storeStructuralStages($tripId, $stages);
+        $this->computationTracker->markRunning($tripId, ComputationName::STAGES);
+        $stages = $this->bootstrapper->storeStages($tripId, $request);
+        $this->computationTracker->markDone($tripId, ComputationName::STAGES);
+        $this->progress->publish($tripId, ComputationName::STAGES);
 
         // Hand off the network/LLM enrichments to the workers (unchanged async fan-out).
         //
-        // Stamped with the trip's first generation, as TripCreateProcessor does. Without it
-        // every message of a GPX-imported trip carried `generation: null`, which the staleness
-        // guard reads as "never stale" — so half the product's trips had no guard at all, and
-        // an edit made during their analysis landed on top of workers still writing (ADR-073).
+        // Stamped with the trip's current generation. Without it every message of a
+        // GPX-imported trip carried `generation: null`, which the staleness guard reads as
+        // "never stale" — so half the product's trips had no guard at all, and an edit made
+        // during their analysis landed on top of workers still writing (ADR-073).
         $this->analysisDispatcher->dispatch($tripId, $request, $this->generationTracker->current($tripId));
 
         return [
             'tripId' => $tripId,
-            'computationStatus' => $this->buildComputationStatus($computations),
-            'totalDistance' => $totalDistance,
-            'totalElevation' => $totalElevation,
-            'totalElevationLoss' => $totalElevationLoss,
-            'status' => $status->value,
+            'computationStatus' => $this->buildComputationStatus(ComputationName::pipeline()),
+            ...$totals,
+            'status' => (\count($stages) >= TripStatus::MIN_STAGES ? TripStatus::READY : TripStatus::DRAFT)->value,
             // The hand-built 202 body mirrors the Trip resource, so it carries what the
             // resource carries — this was the one field it omitted (ADR-074).
             'isLocked' => $this->tripLocker->isLocked($request),
-            'stages' => $this->structuralComputation->serializeStagesForEvent($stages),
+            'stages' => $stages,
         ];
-    }
-
-    /**
-     * @param list<Coordinate> $points
-     */
-    private function storeRouteData(string $tripId, array $points, ?string $title): void
-    {
-        $this->points->storeRawPoints($tripId, array_map(
-            static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-            $points,
-        ));
-
-        $this->tripStateManager->storeSourceType($tripId, SourceType::GPX_UPLOAD->value);
-        $this->tripStateManager->storeTitle($tripId, $title);
-
-        $decimated = $this->routeSimplifier->simplify($points);
-        $this->points->storeDecimatedPoints($tripId, array_map(
-            static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-            $decimated,
-        ));
-    }
-
-    private function publishRouteEvent(string $tripId, float $totalDistance, int $totalElevation, int $totalElevationLoss, ?string $title): void
-    {
-        $this->computationTracker->markRunning($tripId, ComputationName::ROUTE);
-        $this->computationTracker->markDone($tripId, ComputationName::ROUTE);
-
-        $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
-            'totalDistance' => $totalDistance,
-            'totalElevation' => $totalElevation,
-            'totalElevationLoss' => $totalElevationLoss,
-            'sourceType' => SourceType::GPX_UPLOAD->value,
-            'title' => $title,
-        ]);
-    }
-
-    /**
-     * Persists the synchronously computed stages, marks the STAGES computation done,
-     * publishes the `stages_computed` event and the progress step, and posts the
-     * structural `ready` status (ADR-043) once at least {@see TripStatus::MIN_STAGES}
-     * stages exist.
-     *
-     * The terminal enrichment gate is intentionally NOT evaluated here — readiness is
-     * structural and must not depend on the asynchronous enrichments settling.
-     *
-     * @param list<Stage> $stages
-     */
-    private function storeStructuralStages(string $tripId, array $stages): TripStatus
-    {
-        $this->computationTracker->markRunning($tripId, ComputationName::STAGES);
-
-        if (\count($stages) < TripStatus::MIN_STAGES) {
-            $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
-        }
-
-        $this->stageStore->storeStages($tripId, $stages);
-        $this->computationTracker->markDone($tripId, ComputationName::STAGES);
-
-        $status = TripStatus::DRAFT;
-        if (\count($stages) >= TripStatus::MIN_STAGES) {
-            $status = TripStatus::READY;
-            $this->tripStateManager->storeStatus($tripId, $status->value);
-        }
-
-        $this->publisher->publish(
-            $tripId,
-            MercureEventType::STAGES_COMPUTED,
-            ['stages' => $this->structuralComputation->serializeStagesForEvent($stages)],
-        );
-
-        $progress = $this->computationTracker->getProgress($tripId);
-        if (0 !== $progress['total']) {
-            $this->publisher->publishComputationStepCompleted(
-                $tripId,
-                ComputationName::STAGES,
-                $progress['completed'],
-                $progress['total'],
-                $progress['failed'],
-            );
-        }
-
-        return $status;
     }
 
     /**

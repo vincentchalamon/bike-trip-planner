@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use App\Service\EnrichmentMessageFactory;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
@@ -27,6 +28,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripBootstrapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -34,6 +36,7 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GenerateStagesHandlerTest extends TestCase
 {
     use AlertMessageTestTrait;
@@ -73,10 +76,30 @@ final class GenerateStagesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $stageStore,
-            $structuralComputation,
+            $this->bootstrapper($tripStateManager, $stageStore, $publisher, $structuralComputation),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             $messageBus,
             $this->createAlertRenderer(),
+        );
+    }
+
+    private function bootstrapper(
+        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
+        TripUpdatePublisherInterface $publisher,
+        StructuralComputationService $structuralComputation,
+    ): TripBootstrapper {
+        return new TripBootstrapper(
+            $tripStateManager,
+            $this->createStub(ComputationTrackerInterface::class),
+            $this->createStub(TripGenerationTrackerInterface::class),
+            $this->createStub(TransientTripPointsStoreInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $this->createStub(DistanceCalculatorInterface::class),
+            $this->createStub(ElevationCalculatorInterface::class),
+            $publisher,
+            $stageStore,
+            $structuralComputation,
         );
     }
 
@@ -405,7 +428,7 @@ final class GenerateStagesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $stageStore,
-            $this->structuralComputation($tripStateManager, $pacingEngine, points: $points),
+            $this->bootstrapper($tripStateManager, $stageStore, $publisher, $this->structuralComputation($tripStateManager, $pacingEngine, points: $points)),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             $messageBus,
             $this->createAlertRenderer(),

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Message\GenerateStages;
+use App\Message\AnalyzeTerrain;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -16,6 +18,7 @@ use App\Engine\RouteSimplifierInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
+use App\Mercure\ProgressPublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -25,6 +28,7 @@ use App\Service\EnrichmentMessageFactory;
 use App\Service\GpxUploadService;
 use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripBootstrapper;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -40,7 +44,7 @@ final class GpxUploadServiceTest extends TestCase
     /** @var list<string> */
     private array $log = [];
 
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string, mixed>}> */
     private array $events = [];
 
     #[Test]
@@ -67,8 +71,8 @@ final class GpxUploadServiceTest extends TestCase
             'publishComputationStepCompleted:stages:3/14/1',
         ], array_values(array_filter($this->log, static fn (string $entry): bool => !str_starts_with($entry, 'dispatch:'))));
 
-        self::assertNotContains('dispatch:'.\App\Message\GenerateStages::class, $this->log);
-        self::assertContains('dispatch:'.\App\Message\AnalyzeTerrain::class, $this->log);
+        self::assertNotContains('dispatch:'.GenerateStages::class, $this->log);
+        self::assertContains('dispatch:'.AnalyzeTerrain::class, $this->log);
         $lastWrite = array_search('publishComputationStepCompleted:stages:3/14/1', $this->log, true);
         $firstDispatch = array_key_first(array_filter($this->log, static fn (string $entry): bool => str_starts_with($entry, 'dispatch:')));
         self::assertGreaterThan($lastWrite, $firstDispatch, 'The enrichments are dispatched after the structural events.');
@@ -80,7 +84,9 @@ final class GpxUploadServiceTest extends TestCase
             'sourceType' => 'gpx_upload',
             'title' => 'My Route',
         ], $this->events[0][1]);
-        self::assertCount(2, $this->events[1][1]['stages']);
+        $publishedStages = $this->events[1][1]['stages'] ?? null;
+        self::assertIsArray($publishedStages);
+        self::assertCount(2, $publishedStages);
 
         self::assertSame($result['tripId'], $this->tripIds()[0]);
         self::assertSame(123.5, $result['totalDistance']);
@@ -88,7 +94,7 @@ final class GpxUploadServiceTest extends TestCase
         self::assertSame(700, $result['totalElevationLoss']);
         self::assertSame('ready', $result['status']);
         self::assertFalse($result['isLocked']);
-        self::assertSame($this->events[1][1]['stages'], $result['stages']);
+        self::assertSame($publishedStages, $result['stages']);
         self::assertSame('done', $result['computationStatus']['route']);
         self::assertSame('done', $result['computationStatus']['stages']);
         self::assertSame('pending', $result['computationStatus']['terrain']);
@@ -211,17 +217,12 @@ final class GpxUploadServiceTest extends TestCase
 
         return new GpxUploadService(
             $this->createStub(GpxRouteParserInterface::class),
+            new TripBootstrapper($repository, $tracker, $generations, $points, $simplifier, $distance, $elevation, $publisher, $stageStore, $structural),
             $repository,
-            $stageStore,
-            $points,
             $tracker,
             $generations,
+            new ProgressPublisher($tracker, $publisher),
             new TripLocker(),
-            $distance,
-            $elevation,
-            $simplifier,
-            $publisher,
-            $structural,
             new TripAnalysisDispatcher($bus, new EnrichmentMessageFactory()),
         );
     }

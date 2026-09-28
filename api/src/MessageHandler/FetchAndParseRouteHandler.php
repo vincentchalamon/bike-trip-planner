@@ -9,11 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Engine\DistanceCalculatorInterface;
-use App\Engine\ElevationCalculatorInterface;
-use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
-use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
@@ -21,6 +17,7 @@ use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
+use App\Service\TripBootstrapper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -37,9 +34,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
-        private DistanceCalculatorInterface $distanceCalculator,
-        private ElevationCalculatorInterface $elevationCalculator,
-        private RouteSimplifierInterface $routeSimplifier,
+        private TripBootstrapper $bootstrapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
@@ -91,32 +86,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 return;
             }
 
-            $this->points->storeRawPoints($tripId, array_map(
-                static fn ($c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-                $allPoints,
-            ));
-
-            $this->tripRequestRepository->storeSourceType($tripId, $result->sourceType->value);
-            $this->tripRequestRepository->storeTitle($tripId, $result->title);
-
-            // Store decimated points (full route for pacing) for single-track sources
-            $decimated = $this->routeSimplifier->simplify($allPoints);
-            $this->points->storeDecimatedPoints($tripId, array_map(
-                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-                $decimated,
-            ));
-
-            $totalDistance = $this->distanceCalculator->calculateTotalDistance($allPoints);
-            $totalElevation = $this->elevationCalculator->calculateTotalAscent($allPoints);
-            $totalElevationLoss = $this->elevationCalculator->calculateTotalDescent($allPoints);
-
-            $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
-                'totalDistance' => round($totalDistance, 1),
-                'totalElevation' => (int) $totalElevation,
-                'totalElevationLoss' => (int) $totalElevationLoss,
-                'sourceType' => $result->sourceType->value,
-                'title' => $result->title,
-            ]);
+            $this->bootstrapper->storeRoute($tripId, $allPoints, $result->sourceType, $result->title);
 
             // Store raw tracks for collection source type (multiple tracks = 1 stage per track)
             if (\count($result->tracks) > 1) {
