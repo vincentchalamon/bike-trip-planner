@@ -507,14 +507,13 @@ export function reduceMercureEvent(
     }
 
     case "weather_fetched": {
+      // A stageId gone since the fetch started (pacing regenerated) matches nothing and is
+      // dropped: the regeneration relaunches WEATHER for the new stages.
       let stages = state.stages;
       for (const w of event.data.stages) {
         const weather = w.weather;
         if (!weather) continue;
-        const stage = stages.find((s) => s.dayNumber === w.dayNumber);
-        if (stage) {
-          stages = patchStage(stages, stage.id, (s) => ({ ...s, weather }));
-        }
+        stages = patchStage(stages, w.stageId, (s) => ({ ...s, weather }));
       }
       return stages === state.stages ? state : { ...state, stages };
     }

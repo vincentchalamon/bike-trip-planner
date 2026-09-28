@@ -340,7 +340,7 @@ describe('computing state machine driven by SSE', () => {
       data: {
         stages: [
           {
-            dayNumber: 1,
+            stageId: 'stage-1',
             weather: {
               icon: 'sun',
               description: 'Clear',

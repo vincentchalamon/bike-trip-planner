@@ -13,6 +13,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimator;
 use App\Message\FetchWeather;
+use App\Mercure\MercureEventType;
 use App\MessageHandler\FetchWeatherHandler;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -84,8 +85,12 @@ final class FetchWeatherHandlerTest extends TestCase
     /**
      * @param list<Stage> $stages
      */
-    private function createHandler(array $stages, WeatherProviderInterface $provider, ArrayAdapter $cache): FetchWeatherHandler
-    {
+    private function createHandler(
+        array $stages,
+        WeatherProviderInterface $provider,
+        ArrayAdapter $cache,
+        ?TripUpdatePublisherInterface $publisher = null,
+    ): FetchWeatherHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
@@ -103,7 +108,7 @@ final class FetchWeatherHandlerTest extends TestCase
 
         return new FetchWeatherHandler(
             $computationTracker,
-            $this->createStub(TripUpdatePublisherInterface::class),
+            $publisher ?? $this->createStub(TripUpdatePublisherInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
@@ -165,5 +170,41 @@ final class FetchWeatherHandlerTest extends TestCase
 
         ($this->createHandler([$stage2], $failing, $cache))(new FetchWeather('trip-1'));
         self::assertInstanceOf(WeatherForecast::class, $stage2->weather, 'weather derived from the cached raw series');
+    }
+
+    #[Test]
+    public function publishesEachForecastAddressedByStageId(): void
+    {
+        // A structural edit renumbers the stages while the forecast is being fetched, so the
+        // payload must name the stage by its stable identifier, never by its day number.
+        $withWeather = $this->stage(1, 48.0, 3.0);
+        $withoutWeather = $this->stage(2, 47.0, -2.0);
+
+        $provider = $this->createStub(WeatherProviderInterface::class);
+        $provider->method('fetchForecasts')->willReturn([$this->rawForToday(), null]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WEATHER_FETCHED,
+                $this->callback(static function (array $data) use ($withWeather, $withoutWeather): bool {
+                    self::assertSame(['stages'], array_keys($data));
+                    self::assertIsArray($data['stages']);
+                    self::assertCount(2, $data['stages']);
+                    [$first, $second] = $data['stages'];
+                    self::assertIsArray($first);
+                    self::assertIsArray($second);
+                    self::assertSame(['stageId', 'weather'], array_keys($first));
+                    self::assertSame($withWeather->id, $first['stageId']);
+                    self::assertIsArray($first['weather']);
+                    self::assertSame(['stageId' => $withoutWeather->id, 'weather' => null], $second);
+
+                    return true;
+                }),
+            );
+
+        ($this->createHandler([$withWeather, $withoutWeather], $provider, new ArrayAdapter(), $publisher))(new FetchWeather('trip-1'));
     }
 }

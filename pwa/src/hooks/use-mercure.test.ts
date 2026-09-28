@@ -89,7 +89,7 @@ describe("useMercure — UI side effects (kept out of core)", () => {
       data: {
         stages: [
           {
-            dayNumber: 1,
+            stageId: "stage-1",
             weather: {
               icon: "sun",
               description: "Clear",

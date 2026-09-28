@@ -43,6 +43,10 @@ export function patchStage<T>(
 /**
  * Patch the nested `weather` object of one entry of a `weather_fetched` payload.
  *
+ * `index` picks the entry, not the stage: the payload addresses stages by `stageId` (ADR-066),
+ * which this helper never touches, so the patched forecast still lands on the stage the
+ * fixture pairs it with.
+ *
  * Its own helper rather than `patchStage(…, (current) => ({ weather: { ...current.weather, … } }))`
  * for a reason worth knowing: through a generic `Partial<T>`, TypeScript loses the contextual
  * type of the NESTED literal, so `relativeWindDirection: "crosswind"` widens to `string` and is

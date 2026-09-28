@@ -164,7 +164,7 @@ export function weatherFetchedEvent(): EventOf<"weather_fetched"> {
     data: {
       stages: [
         {
-          dayNumber: 1,
+          stageId: "stage-1",
           weather: {
             icon: "02d",
             description: "Partly cloudy",
@@ -180,7 +180,7 @@ export function weatherFetchedEvent(): EventOf<"weather_fetched"> {
           },
         },
         {
-          dayNumber: 2,
+          stageId: "stage-2",
           weather: {
             icon: "01d",
             description: "Clear sky",
@@ -196,7 +196,7 @@ export function weatherFetchedEvent(): EventOf<"weather_fetched"> {
           },
         },
         {
-          dayNumber: 3,
+          stageId: "stage-3",
           weather: {
             icon: "03d",
             description: "Overcast",

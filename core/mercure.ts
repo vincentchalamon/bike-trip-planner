@@ -54,7 +54,7 @@ export interface HourlyWeatherSlotPayload {
 }
 
 export interface WeatherPayload {
-  dayNumber: number;
+  stageId: string;
   weather: {
     icon: string;
     description: string;
