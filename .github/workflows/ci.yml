@@ -961,6 +961,8 @@ jobs:
       # unnoticed. It has always had a usable tsconfig; this just runs it (ADR-068).
       - name: Run TypeScript Check (core)
         run: npm run typecheck --workspace core
+      - name: Run Prettier (core)
+        run: npm run format:check --workspace core
 
   unit-tests:
     name: Unit Tests (Vitest)
