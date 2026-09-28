@@ -1,21 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { Loader2 } from "lucide-react";
-import { apiFetch } from "@/lib/api/client";
+import { fetchTrips, type TripListItem } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
-import { API_URL } from "@/lib/constants";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import type { components } from "@btp/core/schema";
-
-type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
-type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
-  member: TripListItem[];
-};
 
 export function RecentTrips() {
   const t = useTranslations();
@@ -24,29 +17,22 @@ export function RecentTrips() {
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchRecentTrips = useCallback(async () => {
-    try {
-      const params = new URLSearchParams({
-        page: "1",
-        itemsPerPage: "5",
-      });
-      const res = await apiFetch(`${API_URL}/trips?${params.toString()}`, {
-        headers: { Accept: "application/ld+json" },
-      });
-      if (!res.ok) return;
-      const data = (await res.json()) as TripCollection;
-      setTrips(data.member ?? []);
-      setTotalItems(data.totalItems ?? 0);
-    } catch {
-      // silently ignore — recent trips is a non-critical widget
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void fetchRecentTrips();
-  }, [fetchRecentTrips]);
+    const controller = new AbortController();
+    fetchTrips({ page: 1, itemsPerPage: 5 }, controller.signal)
+      .then((data) => {
+        if (!data || controller.signal.aborted) return;
+        setTrips(data.member);
+        setTotalItems(data.totalItems);
+      })
+      .catch(() => {
+        // silently ignore: recent trips is a non-critical widget
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
 
   if (isLoading) {
     return (

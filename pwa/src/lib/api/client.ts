@@ -1202,3 +1202,26 @@ export async function decidePendingConsent(
   );
   return res.ok;
 }
+
+export type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
+export type TripListQuery = NonNullable<
+  operations["api_trips_get_collection"]["parameters"]["query"]
+>;
+
+/**
+ * One page of the caller's trips (`GET /trips`). Rejects with an `AbortError` when
+ * `signal` fires, so a superseded request never resolves into stale state.
+ *
+ * @returns null on a non-2xx response.
+ */
+export async function fetchTrips(
+  query: TripListQuery,
+  signal?: AbortSignal,
+): Promise<{ member: TripListItem[]; totalItems: number } | null> {
+  const { data, error } = await apiClient.GET("/trips", {
+    params: { query },
+    signal,
+  });
+  if (error || !data) return null;
+  return { member: data.member ?? [], totalItems: data.totalItems ?? 0 };
+}
