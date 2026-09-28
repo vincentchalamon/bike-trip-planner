@@ -16,7 +16,6 @@ use App\State\TripDuplicateProcessor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -47,7 +46,6 @@ final class TripDuplicateProcessorTest extends TestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             $security,
             new TripLocker(),
-            $this->createStub(CacheItemPoolInterface::class),
             $limiter,
             // Stubbed to answer "never seen before", so the limiter is what refuses: the
             // idempotency check runs first now, and a replay would short-circuit past it.

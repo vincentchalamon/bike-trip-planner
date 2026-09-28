@@ -16,8 +16,6 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\Voter\TripVoter;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -37,8 +35,6 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
         private Security $security,
-        #[Autowire(service: 'cache.trip_state')]
-        private CacheItemPoolInterface $tripStateCache,
         #[Autowire(service: 'limiter.trip_create')]
         private RateLimiterFactory $tripCreateLimiter,
         private Idempotency $idempotency,
@@ -75,13 +71,6 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $this->tripStateManager->initializeTrip($tripId, $data);
 
         $this->tripStateManager->storeLocale($tripId, $user->getLocale());
-
-        // Store userId in Redis for fast ownership checks during computation
-        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
-        $item->set($user->getId()->toRfc4122());
-        $item->expiresAfter(TripVoter::CACHE_TTL);
-
-        $this->tripStateCache->save($item);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);

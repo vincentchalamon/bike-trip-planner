@@ -15,7 +15,12 @@ use App\Message\GenerateStages;
 use App\Message\ScanPois;
 use App\Service\GpxUploadService;
 use PHPUnit\Framework\Attributes\Test;
-use Psr\Cache\CacheItemPoolInterface;
+use App\Entity\User;
+use App\Security\Voter\TripVoter;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Envelope;
@@ -437,12 +442,7 @@ final class GpxUploadTest extends ApiTestCase
     {
         // Regression (recette #649): a GPX upload used to create an *ownerless*
         // trip, so the uploader's GET /detail was denied by TripVoter and hidden
-        // as a 404 ("Voyage introuvable" right after a successful upload). The
-        // uploader is now assigned as owner like the URL flow: TripRequest.user is
-        // set and the trip.{id}.user_id key is written (the Postgres column + the
-        // Redis fallback the voter reads). Asserted at the service layer: right
-        // after upload the trip lives in the Redis-backed state (the voter's Redis
-        // fallback), not yet in Postgres.
+        // as a 404 ("Voyage introuvable" right after a successful upload).
         ['user' => $user] = $this->createTestUserWithJwt(\sprintf('gpx-owner-%s@test.com', bin2hex(random_bytes(4))));
 
         $service = self::getContainer()->get(GpxUploadService::class);
@@ -452,15 +452,48 @@ final class GpxUploadTest extends ApiTestCase
         $tripRequest = new TripRequest();
         $result = $service->createTrip($points, 'Test Route', $tripRequest, 'en', $user);
 
-        // Postgres ownership column.
         self::assertSame($user, $tripRequest->user);
+        self::assertSame(VoterInterface::ACCESS_GRANTED, $this->tripVoter()->vote($this->tokenFor($user), $result['tripId'], [TripVoter::TRIP_VIEW]));
+    }
 
-        // Redis ownership key (the voter's fallback for not-yet-persisted trips).
-        $pool = self::getContainer()->get('cache.trip_state');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $pool);
-        $item = $pool->getItem(\sprintf('trip.%s.user_id', $result['tripId']));
-        self::assertTrue($item->isHit());
-        self::assertSame($user->getId()->toRfc4122(), $item->get());
+    /**
+     * The voter used to fall back on a `trip.{id}.user_id` Redis key, written at creation with a
+     * 30-minute TTL, whenever the database said "not the owner". The row is flushed with its owner
+     * before that key was ever written, so the fallback only ever fired for a trip that no longer
+     * existed, and handed a deleted trip back to its former owner until the key expired.
+     */
+    #[Test]
+    public function aDeletedTripIsNoLongerGrantedToItsFormerOwner(): void
+    {
+        ['user' => $user] = $this->createTestUserWithJwt(\sprintf('gpx-deleted-%s@test.com', bin2hex(random_bytes(4))));
+
+        $service = self::getContainer()->get(GpxUploadService::class);
+        self::assertInstanceOf(GpxUploadService::class, $service);
+
+        $points = $service->parseGpx((string) file_get_contents(self::FIXTURES_DIR.'/multi-stage-route.gpx'));
+        $tripId = $service->createTrip($points, 'Test Route', new TripRequest(), 'en', $user)['tripId'];
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $trip = $entityManager->find(TripRequest::class, Uuid::fromString($tripId));
+        self::assertInstanceOf(TripRequest::class, $trip);
+        $entityManager->remove($trip);
+        $entityManager->flush();
+
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->tripVoter()->vote($this->tokenFor($user), $tripId, [TripVoter::TRIP_VIEW]));
+    }
+
+    private function tripVoter(): TripVoter
+    {
+        $voter = self::getContainer()->get(TripVoter::class);
+        self::assertInstanceOf(TripVoter::class, $voter);
+
+        return $voter;
+    }
+
+    private function tokenFor(User $user): UsernamePasswordToken
+    {
+        return new UsernamePasswordToken($user, 'main', $user->getRoles());
     }
 
     /**

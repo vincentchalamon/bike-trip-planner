@@ -15,9 +15,7 @@ use App\Entity\Stage;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\Voter\TripVoter;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -38,8 +36,6 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private Security $security,
         private TripLocker $tripLocker,
-        #[Autowire(service: 'cache.trip_state')]
-        private CacheItemPoolInterface $tripStateCache,
         #[Autowire(service: 'limiter.trip_duplicate')]
         private RateLimiterFactory $duplicateLimiter,
         private Idempotency $idempotency,
@@ -130,13 +126,6 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         }
 
         $this->generationTracker->initialize($newTripIdString);
-
-        // Store userId in Redis for fast ownership checks during computation
-        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
-        $item->set($user->getId()->toRfc4122());
-        $item->expiresAfter(TripVoter::CACHE_TTL);
-
-        $this->tripStateCache->save($item);
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 
