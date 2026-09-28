@@ -22,7 +22,7 @@ use App\ApiResource\Stage;
  *
  * @see docs/adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
  */
-final readonly class PacingEngineRegistry implements PacingEngineInterface
+final readonly class PacingEngine implements PacingEngineInterface
 {
     private const float MINIMUM_STAGE_DISTANCE_KM = 30.0;
 
@@ -158,25 +158,13 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
                 $remaining = [];
                 $remainingRaw = null;
             } else {
-                [$stagePoints, $remaining] = $this->splitAtDistance($remaining, $targetKm);
+                [$stagePoints, $remaining, $stageKm] = $this->distanceCalculator->splitAtDistance($remaining, 0, $targetKm);
 
                 if (null !== $remainingRaw) {
-                    [$stageRawPoints, $remainingRaw] = $this->splitAtDistance($remainingRaw, $targetKm);
-                } else {
-                    $stageRawPoints = null;
+                    $rawEnd = $this->rawIndexOf($remainingRaw, $stagePoints[\count($stagePoints) - 1], $stageKm);
+                    $stageRawPoints = \array_slice($remainingRaw, 0, $rawEnd + 1);
+                    $remainingRaw = \array_slice($remainingRaw, $rawEnd);
                 }
-            }
-
-            if (\count($stagePoints) < 2) {
-                // Absorb into remaining
-                $remaining = array_merge($stagePoints, $remaining);
-                if (null !== $stageRawPoints) {
-                    $remainingRaw = null !== $remainingRaw
-                        ? array_merge($stageRawPoints, $remainingRaw)
-                        : $stageRawPoints;
-                }
-
-                continue;
             }
 
             $elevationSource = $stageRawPoints ?? $stagePoints;
@@ -215,30 +203,24 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
     }
 
     /**
-     * Splits points array at the point closest to targetKm from the start.
+     * Index, in the raw points, of the decimated stage end.
      *
-     * @param list<Coordinate> $points
+     * The raw track is split where the decimated one was, not at the same accumulated distance:
+     * GPS jitter makes the raw track longer, so an independent split lands earlier and the gap
+     * grows stage after stage, taking each stage's elevation from a shifted stretch of road.
      *
-     * @return array{list<Coordinate>, list<Coordinate>}
+     * The search starts one point before the raw track has covered the decimated stage length.
+     * Decimated points are raw vertices kept by Douglas-Peucker, so the raw path to the stage end
+     * is at least that long; starting there keeps an earlier pass through the same place (a loop,
+     * an out-and-back) from being picked.
+     *
+     * @param list<Coordinate> $rawPoints
      */
-    private function splitAtDistance(array $points, float $targetKm): array
+    private function rawIndexOf(array $rawPoints, Coordinate $stageEnd, float $stageKm): int
     {
-        $accumulated = 0.0;
-        $counter = \count($points);
+        [$reached] = $this->distanceCalculator->splitAtDistance($rawPoints, 0, $stageKm);
+        $from = max(0, \count($reached) - 2);
 
-        for ($i = 1; $i < $counter; ++$i) {
-            $segment = $this->distanceCalculator->calculateTotalDistance([$points[$i - 1], $points[$i]]);
-            $accumulated += $segment;
-
-            if ($accumulated >= $targetKm) {
-                $first = \array_slice($points, 0, $i + 1);
-                $second = \array_slice($points, $i);
-
-                return [$first, $second];
-            }
-        }
-
-        // Target exceeds total: return all points, empty remainder
-        return [$points, []];
+        return $from + $this->distanceCalculator->findClosestIndex(\array_slice($rawPoints, $from), $stageEnd);
     }
 }

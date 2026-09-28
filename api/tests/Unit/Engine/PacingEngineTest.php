@@ -5,24 +5,26 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Engine;
 
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculator;
 use App\Engine\ElevationCalculatorInterface;
-use App\Engine\PacingEngineRegistry;
+use App\Engine\PacingEngine;
 use App\Engine\RouteSimplifierInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class PacingEngineRegistryTest extends TestCase
+#[AllowMockObjectsWithoutExpectations]
+final class PacingEngineTest extends TestCase
 {
-    private PacingEngineRegistry $engine;
+    private PacingEngine $engine;
 
     #[\Override]
     protected function setUp(): void
     {
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
         $elevationCalculator->method('calculateTotalAscent')->willReturn(100.0);
@@ -31,7 +33,7 @@ final class PacingEngineRegistryTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $this->engine = new PacingEngineRegistry(
+        $this->engine = new PacingEngine(
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
@@ -182,15 +184,12 @@ final class PacingEngineRegistryTest extends TestCase
             static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
         );
 
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
         $decimatedPoints = $this->createTrack(5);
         $rawPoints = $this->createTrack(10);
@@ -215,15 +214,12 @@ final class PacingEngineRegistryTest extends TestCase
             static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
         );
 
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
         $decimatedPoints = $this->createTrack(20);
         $rawPoints = $this->createTrack(40);
@@ -254,29 +250,52 @@ final class PacingEngineRegistryTest extends TestCase
             static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
         );
 
-        // Each segment = 60km, so day 1 target (~55km) splits after 1st segment,
-        // leaving 1 decimated point for day 2 (isLastDay) → triggers count < 2 guard
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 60.0,
-        );
+        // Each segment = 60km, so day 1 target (~55km) splits after the 1st segment
+        $distanceCalculator = $this->distanceCalculator(60.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+        $engine = new PacingEngine($distanceCalculator, $elevationCalculator, $routeSimplifier);
 
-        // 3 decimated points → day 1 gets [0,1], day 2 (last) gets [1] → count < 2 → absorbed
+        // 3 decimated points → day 1 gets [0,1], day 2 (last) gets [1,2]
         $decimatedPoints = $this->createTrack(3);
         $rawPoints = $this->createTrack(20);
 
         $stages = $engine->generateStages('trip-1', $decimatedPoints, 2, 120.0, rawPoints: $rawPoints);
 
         $this->assertNotEmpty($stages);
-        // The single last-day point was absorbed into day 1's post-loop block.
         // Elevation must come from raw points (>= 8 → 500.0), not decimated.
         $lastStage = $stages[\count($stages) - 1];
         $this->assertGreaterThanOrEqual(500.0, $lastStage->elevation);
+    }
+
+    /**
+     * @return iterable<string, array{int, int, float}>
+     */
+    public static function tracksShorterThanTheirDays(): iterable
+    {
+        // The track runs out before the last day: the leftover goes to the last stage built.
+        yield 'track ends exactly on a split' => [3, 2, 60.0];
+        yield 'track ends mid-target' => [20, 10, 5.0];
+    }
+
+    #[Test]
+    #[DataProvider('tracksShorterThanTheirDays')]
+    public function lastStageGeometryReachesTheEndOfTheTrackWhenTheLeftoverIsMerged(int $pointCount, int $days, float $kmPerSegment): void
+    {
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+        $engine = new PacingEngine($this->distanceCalculator($kmPerSegment), new ElevationCalculator(), $routeSimplifier);
+        $points = $this->createTrack($pointCount);
+
+        $stages = $engine->generateStages('trip-1', $points, $days, ($pointCount - 1) * $kmPerSegment, rawPoints: $points);
+
+        $this->assertLessThan($days, \count($stages));
+        $lastStage = $stages[\count($stages) - 1];
+        $this->assertSame($points[$pointCount - 1], $lastStage->endPoint);
+        $this->assertSame($lastStage->endPoint, $lastStage->geometry[\count($lastStage->geometry) - 1]);
+        $this->assertEqualsWithDelta(($pointCount - 1) * $kmPerSegment, array_sum(array_map(static fn (Stage $s): float => $s->distance, $stages)), 0.001);
     }
 
     #[Test]
@@ -304,6 +323,39 @@ final class PacingEngineRegistryTest extends TestCase
         if ([] !== $stagesWithoutCap && $stagesWithoutCap[0]->distance > 60.0) {
             $this->assertLessThan($stagesWithoutCap[0]->distance, $stagesWithCap[0]->distance);
         }
+    }
+
+    /**
+     * Every segment between two consecutive points measures $kmPerSegment.
+     */
+    private function distanceCalculator(float $kmPerSegment): DistanceCalculatorInterface
+    {
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => max(0, \count($points) - 1) * $kmPerSegment,
+        );
+        $distanceCalculator->method('splitAtDistance')->willReturnCallback(
+            static function (array $points, int $startIndex, float $targetKm) use ($kmPerSegment): array {
+                $accumulated = 0.0;
+                for ($i = $startIndex + 1, $n = \count($points); $i < $n; ++$i) {
+                    $accumulated += $kmPerSegment;
+                    if ($accumulated >= $targetKm) {
+                        return [\array_slice($points, $startIndex, $i - $startIndex + 1), \array_slice($points, $i), $accumulated];
+                    }
+                }
+
+                return [\array_slice($points, $startIndex), [], $accumulated];
+            },
+        );
+        $distanceCalculator->method('findClosestIndex')->willReturnCallback(
+            static function (array $points, Coordinate $target): int {
+                $distances = array_map(static fn (Coordinate $p): float => hypot($p->lat - $target->lat, $p->lon - $target->lon), $points);
+
+                return (int) array_search(min(\PHP_FLOAT_MAX, ...$distances), $distances, true);
+            },
+        );
+
+        return $distanceCalculator;
     }
 
     /**
