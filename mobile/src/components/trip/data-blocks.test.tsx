@@ -822,6 +822,22 @@ describe('StageDataBlocks disabled gating (#1166)', () => {
     expect(disabledOf()).toBe(true);
   });
 
+  // Out of zone blocks the rerouting edits (select / deselect / manual add), which
+  // AccommodationBlock derives from `outOfZone`; a radius scan does not reroute
+  // and stays available, as the mutation gate allows it.
+  it('hands out-of-zone to the block without disabling the radius scan', () => {
+    useTripStore.setState({ outOfZone: true });
+    const tree = render(<StageDataBlocks stage={stageData()} stageIndex={0} />);
+    const props = tree.root.findByType(AccommodationBlock).props;
+    expect(props.outOfZone).toBe(true);
+    expect(props.disabled).toBe(false);
+  });
+
+  it('disables accommodation edits on a locked trip', () => {
+    useTripStore.setState({ isLocked: true });
+    expect(disabledOf()).toBe(true);
+  });
+
   // A dismissal belongs to the stage, not to its position: after a delete / insert /
   // move, another stage takes day 2 and must not inherit what was dismissed there.
   it('scopes alert dismissal to the stable stage id, not the day number (ADR-066)', () => {

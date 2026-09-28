@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   type GestureResponderEvent,
   type LayoutChangeEvent,
@@ -108,12 +108,17 @@ export function ElevationProfile({
     };
   }, [points, hasData]);
 
-  const toX = (distKm: number) =>
-    PAD_L + (distKm / (maxDist || 1)) * (VW - PAD_L - PAD_R);
-  const toY = (ele: number) => {
-    const range = displayMaxEle - displayMinEle || 1;
-    return PAD_T + (1 - (ele - displayMinEle) / range) * (VH - PAD_T - PAD_B);
-  };
+  const toX = useCallback(
+    (distKm: number) => PAD_L + (distKm / (maxDist || 1)) * (VW - PAD_L - PAD_R),
+    [maxDist],
+  );
+  const toY = useCallback(
+    (ele: number) => {
+      const range = displayMaxEle - displayMinEle || 1;
+      return PAD_T + (1 - (ele - displayMinEle) / range) * (VH - PAD_T - PAD_B);
+    },
+    [displayMinEle, displayMaxEle],
+  );
 
   const stagePaths = useMemo(() => {
     if (!hasData) return [];
@@ -141,8 +146,7 @@ export function ElevationProfile({
       result.push({ stageIndex, d });
     });
     return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, hasData, maxDist, displayMinEle, displayMaxEle]);
+  }, [points, hasData, toX, toY]);
 
   const handleTouch = (e: GestureResponderEvent) => {
     if (!hasData) return;

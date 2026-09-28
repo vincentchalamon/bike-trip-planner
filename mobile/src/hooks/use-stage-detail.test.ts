@@ -113,6 +113,29 @@ describe('useStageDetail (ADR-057)', () => {
     expect(byId['stage-1']).toEqual([]);
   });
 
+  it('fetches again, and drops the stale answer, when another stage takes the index', async () => {
+    useTripStore.setState({
+      tripId: 't1',
+      stages: [stageData({ dayNumber: 1 }), stageData({ dayNumber: 2 })],
+      loading: false,
+    });
+    let release!: (value: unknown) => void;
+    mockDetail.mockReturnValueOnce(new Promise((resolve) => (release = resolve)) as never);
+    mockDetail.mockResolvedValueOnce({ geometry: [B] } as never);
+    await render(0);
+    expect(mockDetail).toHaveBeenLastCalledWith('t1', 'stage-1');
+
+    // Stage 1 deleted: stage 2 is now at index 0, still without geometry.
+    await act(async () => {
+      useTripStore.setState({ stages: [stageData({ dayNumber: 2 })] });
+    });
+    expect(mockDetail).toHaveBeenLastCalledWith('t1', 'stage-2');
+    expect(store().stages[0]!.geometry).toEqual([B]);
+
+    await act(async () => release({ geometry: [A] }));
+    expect(store().stages[0]!.geometry).toEqual([B]);
+  });
+
   it('does not fetch when the stage already has geometry', async () => {
     useTripStore.setState({
       tripId: 't1',

@@ -9,6 +9,7 @@ import {
   CARD_WIDTH,
   CARD_HEIGHT,
 } from './ShareInfographic';
+import { buildStageLines } from '../map/map-utils';
 
 function render(element: ReactElement): any {
   let tree: any;
@@ -90,6 +91,23 @@ describe('projectRoute (#1048)', () => {
       expect(pt!.y).toBeGreaterThanOrEqual(0);
       expect(pt!.y).toBeLessThanOrEqual(h);
     }
+  });
+});
+
+describe('projectRoute stage colours', () => {
+  // A rest day shifts the positions but not the day numbers: the share image
+  // used to colour by position from its own palette, the map by day number.
+  it('paints each stage in the colour the map draws it in', () => {
+    const stages = [
+      bigStage({ dayNumber: 1 }, 10, 4),
+      bigStage({ dayNumber: 2, isRestDay: true }, 10, 4.5),
+      bigStage({ dayNumber: 3 }, 10, 5),
+    ];
+
+    const onImage = projectRoute(stages, CARD_WIDTH, 220).polylines.map((p) => p.color);
+    const onMap = buildStageLines(stages).map((line) => line.color);
+
+    expect(onImage).toEqual(onMap);
   });
 });
 

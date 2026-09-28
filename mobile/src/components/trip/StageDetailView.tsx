@@ -34,6 +34,7 @@ import {
 import { stageColor } from '../map/stage-colors';
 import { ElevationProfile } from './ElevationProfile';
 import { ExportButton } from './ExportButton';
+import { useEditGate } from '../../hooks/use-edit-gate';
 import { StageDataBlocks, notifyFailure } from './StageDataBlocks';
 import { stageDate } from '@btp/core';
 import { formatStageDate } from './roadbook-dates';
@@ -49,7 +50,6 @@ import {
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import { useStageDetail } from '../../hooks/use-stage-detail';
-import { useOfflineStore } from '../../store/offline-store';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
 import type { MutationFailure } from '../../store/gating';
 
@@ -69,10 +69,7 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
   const loading = useTripStore((s) => s.loading);
   const tripId = useTripStore((s) => s.tripId);
   const title = useTripStore((s) => s.title);
-  const isLocked = useTripStore((s) => s.isLocked);
-  const outOfZone = useTripStore((s) => s.outOfZone);
-  const isOnline = useOfflineStore((s) => s.isOnline);
-  const apiReachable = useOfflineStore((s) => s.apiReachable);
+  const routingGate = useEditGate(true);
   // The screen is addressed by identity (a deep link, a notification), but paging
   // through the roadbook is positional, so the identity is resolved once on mount
   // and the cursor stays an index from there. Resolving against the store means a
@@ -154,21 +151,12 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
   const surfaces = surfaceShares(stage);
   const day = stage.dayNumber ?? safeIndex + 1;
 
-  const canEditDistance =
-    tripId !== null &&
-    !isLocked &&
-    isOnline &&
-    apiReachable &&
-    !outOfZone &&
-    !stage.isRestDay;
-
-  // Adding a POI as a route waypoint reroutes the stage via Valhalla, so it needs
-  // the same live-write conditions as a distance edit (and the trip zone). A rest
-  // day has no route to reroute, yet its own point(s) still render on this map
-  // (stageSegments is built directly, not via buildStageLines), so exclude it
-  // explicitly — otherwise a POI tap on a rest day would fire addPoiWaypoint.
-  const canAddWaypoint =
-    tripId !== null && !isLocked && isOnline && apiReachable && !outOfZone && !stage.isRestDay;
+  // A distance edit and a POI added as a route waypoint both reroute the stage
+  // via Valhalla, so they share the routing gate. A rest day has no route to
+  // reroute, yet its own point(s) still render on this map (stageSegments is
+  // built directly, not via buildStageLines), so exclude it explicitly —
+  // otherwise a POI tap on a rest day would fire addPoiWaypoint.
+  const canReroute = tripId !== null && routingGate === null && !stage.isRestDay;
 
   function startEditDistance(): void {
     setDraft(String(stats.distanceKm));
@@ -289,12 +277,12 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
               stageSegments={stageSegments}
               markers={markers}
               highlightedSegment={highlightedSegment}
-              onSelectPoi={canAddWaypoint ? setSelectedPoi : undefined}
+              onSelectPoi={canReroute ? setSelectedPoi : undefined}
             />
             {selectedPoi ? (
               <PoiWaypointPopover
                 poi={selectedPoi}
-                disabled={!canAddWaypoint}
+                disabled={!canReroute}
                 onAdd={() => {
                   void mutations.addPoiWaypoint(
                     safeIndex,
@@ -356,7 +344,7 @@ export function StageDetailView({ initialStageId }: { initialStageId: string }) 
               value={t('trip.stageDetail.distanceValue', {
                 value: stats.distanceKm,
               })}
-              editable={canEditDistance}
+              editable={canReroute}
               a11yLabel={t('trip.edit.editDistanceA11y', { day })}
               onEdit={startEditDistance}
             />

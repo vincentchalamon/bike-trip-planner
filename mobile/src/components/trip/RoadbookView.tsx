@@ -10,13 +10,13 @@ import { StageInsertRow } from './StageInsertRow';
 import { RoadbookSummary } from './RoadbookSummary';
 import { RoadbookBanner } from './RoadbookBanner';
 import { ModificationQueue } from './ModificationQueue';
-import { useOfflineStore } from '../../store/offline-store';
 import { stageDate, todayUtc } from '@btp/core';
 import { isStageToday, summaryColorKey, tripStateFromDates } from './roadbook-dates';
 import { useTheme } from '../../theme';
 import { useTripStore } from '../../store/trip-store';
 import type { MutationFailure } from '../../store/gating';
 import { useTripMutations } from '../../hooks/use-trip-mutations';
+import { useEditGate } from '../../hooks/use-edit-gate';
 
 // Stable in-flight key for the grouped "apply and recompute" action, so a
 // double-tap on it fires a single runApplyBatch (same guard as the insert rows).
@@ -45,10 +45,8 @@ export function RoadbookView({
   const router = useRouter();
   const stages = useTripStore((s) => s.stages);
   const stageDiffs = useTripStore((s) => s.stageDiffs);
-  const isLocked = useTripStore((s) => s.isLocked);
   const outOfZone = useTripStore((s) => s.outOfZone);
-  const isOnline = useOfflineStore((s) => s.isOnline);
-  const apiReachable = useOfflineStore((s) => s.apiReachable);
+  const gate = useEditGate(false);
   const startDate = useTripStore((s) => s.startDate);
   const endDate = useTripStore((s) => s.endDate);
   const cancelAllModifications = useTripStore((s) => s.cancelAllModifications);
@@ -63,17 +61,12 @@ export function RoadbookView({
   // Degraded mode (#1166): the device is offline, or the API is unreachable while
   // online. Either forces read-only with a discreet banner naming the reason, on
   // top of the existing lock/date read-only conditions.
-  const degradedReason: 'offline' | 'apiUnavailable' | null = !isOnline
-    ? 'offline'
-    : !apiReachable
-      ? 'apiUnavailable'
-      : null;
+  // Out-of-zone blocks only the rerouting edits (the insertion rows take it
+  // directly), never the roadbook as a whole: hence the non-routing gate.
+  const degradedReason: 'offline' | 'apiUnavailable' | null =
+    gate === 'offline' ? 'offline' : gate === 'api_unavailable' ? 'apiUnavailable' : null;
   const readOnly =
-    forceReadOnly ||
-    isLocked ||
-    state === 'ongoing' ||
-    state === 'past' ||
-    degradedReason !== null;
+    forceReadOnly || gate !== null || state === 'ongoing' || state === 'past';
 
   // One failure surface for every inline edit: map the normalized reason to a
   // localized alert (#1044). The runners already handle optimistic apply +
@@ -166,7 +159,7 @@ export function RoadbookView({
           variant={degradedReason}
           message={t(`trip.banners.${degradedReason}`)}
         />
-      ) : isLocked ? (
+      ) : gate === 'locked' ? (
         <RoadbookBanner variant="locked" message={t('trip.banners.locked')} />
       ) : null}
       {outOfZone ? (

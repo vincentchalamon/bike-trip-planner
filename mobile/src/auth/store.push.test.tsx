@@ -28,9 +28,9 @@ const register = registerDeviceToken as jest.Mock;
 const unregister = unregisterDeviceToken as jest.Mock;
 const verify = verifyMagicToken as jest.Mock;
 
-let auth: ReturnType<typeof useAuth>;
+const captured = {} as { auth: ReturnType<typeof useAuth> };
 function Capture() {
-  auth = useAuth();
+  captured.auth = useAuth();
   return null;
 }
 
@@ -54,7 +54,7 @@ describe('AuthProvider push wiring', () => {
     expect(register).not.toHaveBeenCalled();
 
     await act(async () => {
-      await auth.verify('magic-token');
+      await captured.auth.verify('magic-token');
     });
 
     expect(register).toHaveBeenCalledTimes(1);
@@ -64,11 +64,11 @@ describe('AuthProvider push wiring', () => {
     verify.mockResolvedValue(true);
     await mount();
     await act(async () => {
-      await auth.verify('magic-token');
+      await captured.auth.verify('magic-token');
     });
 
     await act(async () => {
-      await auth.logout();
+      await captured.auth.logout();
     });
 
     expect(unregister).toHaveBeenCalledTimes(1);
@@ -87,16 +87,16 @@ describe('AuthProvider push wiring', () => {
     verify.mockResolvedValue(true);
     await mount();
     await act(async () => {
-      await auth.verify('magic-token');
+      await captured.auth.verify('magic-token');
     });
-    expect(auth.authenticated).toBe(true);
+    expect(captured.auth.authenticated).toBe(true);
 
     await act(async () => {
       onInvalidated?.();
       await Promise.resolve();
     });
 
-    expect(auth.authenticated).toBe(false);
+    expect(captured.auth.authenticated).toBe(false);
     expect(unregister).not.toHaveBeenCalled();
   });
 });

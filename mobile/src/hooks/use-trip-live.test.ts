@@ -3,15 +3,26 @@ import { createElement } from 'react';
 import { EMPTY_RESUPPLY } from '@btp/core';
 import TestRenderer, { act } from 'react-test-renderer';
 import type { EnrichedStagePayload, MercureEvent } from '@btp/core/mercure';
-import { runTripLive, useTripLive } from './use-trip-live';
+import { AppState } from 'react-native';
+import { applyResync, runTripLive, useTripLive } from './use-trip-live';
 import { useTripStore } from '../store/trip-store';
+import { useConnectivity } from '../store/use-connectivity';
 import { useDismissedAlerts } from '../store/dismissed-alerts';
 import { useOfflineStore } from '../store/offline-store';
 
 jest.mock('../api/trips', () => ({ fetchTripDetail: jest.fn() }));
-jest.mock('../api/mercure', () => ({
-  fetchMercureToken: jest.fn(),
-  subscribeToTrip: jest.fn(),
+jest.mock('../api/mercure', () => ({ subscribeToTrip: jest.fn() }));
+let mockNetInfoListener:
+  | ((state: { isConnected: boolean; isInternetReachable: boolean }) => void)
+  | undefined;
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    addEventListener: jest.fn((listener) => {
+      mockNetInfoListener = listener;
+      return jest.fn();
+    }),
+  },
 }));
 jest.mock('../store/trip-cache', () => ({
   cacheTripDetail: jest.fn(),
@@ -19,14 +30,11 @@ jest.mock('../store/trip-cache', () => ({
 }));
 
 import { fetchTripDetail } from '../api/trips';
-import { fetchMercureToken, subscribeToTrip } from '../api/mercure';
+import { subscribeToTrip, type SubscribeOptions } from '../api/mercure';
 import { cacheTripDetail, readTripCache } from '../store/trip-cache';
 
 const mockDetail = fetchTripDetail as jest.MockedFunction<
   typeof fetchTripDetail
->;
-const mockToken = fetchMercureToken as jest.MockedFunction<
-  typeof fetchMercureToken
 >;
 const mockSubscribe = subscribeToTrip as jest.MockedFunction<
   typeof subscribeToTrip
@@ -65,10 +73,8 @@ function apiStage(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detail = (stages: unknown[]) => ({ title: 'Trip', stages }) as any;
 // A cached entry wrapping the same /detail shape (#1147).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailCache = (stages: unknown[]) =>
   ({ detail: detail(stages), route: null, syncedAt: 1 }) as any;
 
@@ -99,6 +105,10 @@ function enrichedPayload(): EnrichedStagePayload {
 }
 
 const store = () => useTripStore.getState();
+
+function fakeSub() {
+  return { close: jest.fn(), reconnect: jest.fn() };
+}
 const notCancelled = () => false;
 
 beforeEach(() => {
@@ -112,9 +122,8 @@ beforeEach(() => {
 describe('runTripLive orchestration (#1014)', () => {
   it('hydrates the store then subscribes to SSE (happy path)', async () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockResolvedValue('jwt');
-    const close = jest.fn();
-    mockSubscribe.mockReturnValue({ close });
+    const live = fakeSub();
+    mockSubscribe.mockReturnValue(live);
 
     const sub = await runTripLive('t1', store(), notCancelled);
 
@@ -122,10 +131,10 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(store().loading).toBe(false);
     expect(mockSubscribe).toHaveBeenCalledWith(
       't1',
-      'jwt',
       expect.any(Function),
+      expect.objectContaining({ onOpen: expect.any(Function) }),
     );
-    expect(sub).toEqual({ close });
+    expect(sub).toBe(live);
   });
 
   it('clears alert dismissals from a previous trip on hydrate', async () => {
@@ -135,8 +144,7 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(useDismissedAlerts.getState().isDismissed('1:ford_wet')).toBe(true);
 
     mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockResolvedValue('jwt');
-    mockSubscribe.mockReturnValue({ close: jest.fn() });
+    mockSubscribe.mockReturnValue(fakeSub());
 
     await runTripLive('t2', store(), notCancelled);
 
@@ -145,11 +153,10 @@ describe('runTripLive orchestration (#1014)', () => {
 
   it('reconciles a stage_updated SSE event through the core reducers', async () => {
     mockDetail.mockResolvedValue(detail([apiStage({ endLabel: 'Lyon' })]));
-    mockToken.mockResolvedValue('jwt');
     let dispatch: ((event: MercureEvent) => void) | undefined;
-    mockSubscribe.mockImplementation((_id, _token, cb) => {
+    mockSubscribe.mockImplementation((_id, cb) => {
       dispatch = cb;
-      return { close: jest.fn() };
+      return fakeSub();
     });
 
     await runTripLive('t1', store(), notCancelled);
@@ -178,18 +185,6 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(store().error).toBe('trip.notFound');
   });
 
-  it('still renders the hydrated trip when the SSE token fetch fails (swallowed)', async () => {
-    mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockRejectedValue(new Error('no token'));
-
-    const sub = await runTripLive('t1', store(), notCancelled);
-
-    expect(store().stages).toHaveLength(1);
-    expect(store().error).toBeNull();
-    expect(mockSubscribe).not.toHaveBeenCalled();
-    expect(sub).toBeUndefined();
-  });
-
   it('aborts before subscribing when cancelled during the /detail fetch', async () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
     const sub = await runTripLive('t1', store(), () => true);
@@ -199,8 +194,7 @@ describe('runTripLive orchestration (#1014)', () => {
 
   it('caches the /detail payload after a successful online hydrate (#1147)', async () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockResolvedValue('jwt');
-    mockSubscribe.mockReturnValue({ close: jest.fn() });
+    mockSubscribe.mockReturnValue(fakeSub());
 
     await runTripLive('t1', store(), notCancelled);
 
@@ -220,7 +214,7 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(store().error).toBeNull();
     expect(mockDetail).not.toHaveBeenCalled();
     expect(mockSubscribe).not.toHaveBeenCalled();
-    expect(sub).toBeUndefined();
+    expect(sub).toBeDefined();
   });
 
   it('falls back to cache when /detail fails, without surfacing an error (#1147)', async () => {
@@ -232,18 +226,17 @@ describe('runTripLive orchestration (#1014)', () => {
     expect(store().stages).toHaveLength(1);
     expect(store().error).toBeNull();
     expect(mockSubscribe).not.toHaveBeenCalled();
-    expect(sub).toBeUndefined();
+    expect(sub).toBeDefined();
   });
 });
 
 describe('computing state machine driven by SSE', () => {
   async function connect(): Promise<(event: MercureEvent) => void> {
     mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockResolvedValue('jwt');
     let dispatch: ((event: MercureEvent) => void) | undefined;
-    mockSubscribe.mockImplementation((_id, _token, cb) => {
+    mockSubscribe.mockImplementation((_id, cb) => {
       dispatch = cb;
-      return { close: jest.fn() };
+      return fakeSub();
     });
     await runTripLive('t1', store(), notCancelled);
     expect(dispatch).toBeDefined();
@@ -420,8 +413,7 @@ describe('useTripLive enabled gate (#1039)', () => {
 
   it('runs the orchestration and resets on unmount when enabled (default)', async () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
-    mockToken.mockResolvedValue('jwt');
-    mockSubscribe.mockReturnValue({ close: jest.fn() });
+    mockSubscribe.mockReturnValue(fakeSub());
 
     const { unmount } = await renderUseTripLive('t1');
     expect(mockDetail).toHaveBeenCalledWith('t1');
@@ -430,5 +422,185 @@ describe('useTripLive enabled gate (#1039)', () => {
     unmount();
     expect(store().tripId).toBeNull();
     expect(store().stages).toHaveLength(0);
+  });
+});
+
+describe('useTripLive keeps the roadbook live across gaps', () => {
+  let appStateListener: (state: string) => void;
+  const removeAppState = jest.fn();
+  let live: ReturnType<typeof fakeSub>;
+  let onOpen: SubscribeOptions['onOpen'];
+  let appStateSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    appStateListener = () => {};
+    appStateSpy = jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((_event, cb) => {
+        appStateListener = cb as (state: string) => void;
+        return { remove: removeAppState } as never;
+      });
+    live = fakeSub();
+    mockSubscribe.mockImplementation((_id, _cb, options) => {
+      onOpen = options?.onOpen;
+      return live;
+    });
+    mockDetail.mockResolvedValue(detail([apiStage()]));
+  });
+
+  afterEach(() => appStateSpy.mockRestore());
+
+  it('reopens the stream when the app comes back to the foreground', async () => {
+    const { unmount } = await renderUseTripLive('t1');
+
+    act(() => appStateListener('background'));
+    expect(live.reconnect).not.toHaveBeenCalled();
+    act(() => appStateListener('active'));
+    expect(live.reconnect).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+
+  it('does not reopen on foreground while the device is offline', async () => {
+    const { unmount } = await renderUseTripLive('t1');
+    act(() => useOfflineStore.getState().setOnline(false));
+
+    act(() => appStateListener('active'));
+    expect(live.reconnect).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it('reopens the stream when NetInfo reports the network back', async () => {
+    function Probe() {
+      useConnectivity();
+      useTripLive('t1');
+      return null;
+    }
+    let renderer!: ReturnType<typeof TestRenderer.create>;
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(Probe));
+    });
+
+    act(() => mockNetInfoListener!({ isConnected: false, isInternetReachable: false }));
+    expect(live.reconnect).not.toHaveBeenCalled();
+    act(() => mockNetInfoListener!({ isConnected: true, isInternetReachable: true }));
+    expect(live.reconnect).toHaveBeenCalledTimes(1);
+    // Staying online is not a regain.
+    act(() => mockNetInfoListener!({ isConnected: true, isInternetReachable: true }));
+    expect(live.reconnect).toHaveBeenCalledTimes(1);
+
+    act(() => renderer.unmount());
+  });
+
+  it('re-reads /detail when the stream reopens, not on the first open', async () => {
+    const { unmount } = await renderUseTripLive('t1');
+    expect(mockDetail).toHaveBeenCalledTimes(1);
+
+    await act(async () => onOpen!(false));
+    expect(mockDetail).toHaveBeenCalledTimes(1);
+
+    mockDetail.mockResolvedValue(detail([apiStage({ isRestDay: true })]));
+    await act(async () => onOpen!(true));
+    expect(mockDetail).toHaveBeenCalledTimes(2);
+    expect(store().stages[0]!.isRestDay).toBe(true);
+    expect(mockCache).toHaveBeenCalledTimes(2);
+
+    unmount();
+  });
+
+  it('removes every listener and closes the stream on unmount', async () => {
+    const { unmount } = await renderUseTripLive('t1');
+    unmount();
+
+    expect(removeAppState).toHaveBeenCalled();
+    expect(live.close).toHaveBeenCalledTimes(1);
+    // The store subscription is gone too: a network regain after unmount is a no-op.
+    act(() => useOfflineStore.getState().setOnline(false));
+    act(() => useOfflineStore.getState().setOnline(true));
+    expect(live.reconnect).not.toHaveBeenCalled();
+  });
+
+  it('drops a resync that lands after unmount', async () => {
+    const { unmount } = await renderUseTripLive('t1');
+    let release!: (value: unknown) => void;
+    mockDetail.mockReturnValue(new Promise((resolve) => (release = resolve)) as never);
+    onOpen!(true);
+    unmount();
+
+    await act(async () => release(detail([apiStage(), apiStage({ dayNumber: 2 })])));
+    expect(store().stages).toHaveLength(0);
+  });
+
+  it('opens a cache-hydrated roadbook on demand and resyncs on its first open', async () => {
+    useOfflineStore.getState().setOnline(false);
+    mockReadCache.mockResolvedValue(detailCache([apiStage()]));
+    const { unmount } = await renderUseTripLive('t1');
+    expect(mockSubscribe).not.toHaveBeenCalled();
+
+    act(() => useOfflineStore.getState().setOnline(true));
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+
+    await act(async () => onOpen!(false));
+    expect(mockDetail).toHaveBeenCalledWith('t1');
+
+    unmount();
+    expect(live.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('applyResync', () => {
+  beforeEach(() => {
+    useTripStore.getState().hydrate('t1', detail([apiStage(), apiStage({ dayNumber: 2 })]));
+    useTripStore.getState().applyStageDetail('stage-1', [A, B]);
+  });
+
+  it('refreshes the stages but keeps the geometry already loaded', () => {
+    useTripStore.setState({ geometryLoaded: true, computing: true });
+
+    applyResync('t1', {
+      ...detail([apiStage({ distance: 80 }), apiStage({ dayNumber: 2 })]),
+      isLocked: true,
+      categoryStatus: { weather: 'done' },
+    });
+
+    expect(store().stages[0]!.distance).toBe(80);
+    expect(store().stages[0]!.geometry).toEqual([A, B]);
+    expect(store().isLocked).toBe(true);
+    // A missed trip_ready no longer holds the badge on; the route is fetched again.
+    expect(store().computing).toBe(false);
+    expect(store().geometryLoaded).toBe(false);
+  });
+
+  it('stores the trip dates as calendar days, like hydrate', () => {
+    applyResync('t1', {
+      ...detail([apiStage()]),
+      startDate: '2026-08-01T00:00:00+02:00',
+      endDate: '2026-08-03T00:00:00+02:00',
+    });
+
+    expect(store().startDate).toBe('2026-08-01');
+    expect(store().endDate).toBe('2026-08-03');
+  });
+
+  it('keeps the computing badge while a category still runs', () => {
+    applyResync('t1', { ...detail([apiStage()]), categoryStatus: { weather: 'running' } });
+    expect(store().computing).toBe(true);
+  });
+
+  it('leaves queued edits alone', () => {
+    useTripStore
+      .getState()
+      .queueModification({ stageIndex: 0, type: 'distance', label: 'x' });
+
+    applyResync('t1', detail([apiStage({ distance: 80 })]));
+
+    expect(store().stages).toHaveLength(2);
+    expect(store().stages[0]!.distance).toBe(50);
+  });
+
+  it('ignores a /detail for another trip', () => {
+    applyResync('t2', detail([apiStage({ distance: 80 })]));
+    expect(store().stages[0]!.distance).toBe(50);
   });
 });

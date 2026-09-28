@@ -972,5 +972,7 @@ jobs:
         run: npm ci
       - name: Run TypeScript Check
         run: npm run typecheck --workspace mobile
+      - name: Run ESLint
+        run: npm run lint --workspace mobile
       - name: Run jest
         run: npm run test --workspace mobile

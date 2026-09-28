@@ -55,7 +55,7 @@ check on each pull request and is the gate that counts.
 | BDD recette scenarios (Gherkin)    | `make test-recette`                              | recette stack    |
 | OpenAPI lint                       | `make openapi-lint`                              | dev stack        |
 | Security advisories                | `make security-check`                            | dev stack        |
-| Mobile type check and Jest         | `npm run typecheck --workspace mobile` then `npm test --workspace mobile` | `npm install` at the repo root |
+| Mobile type check, ESLint and Jest | `npm run typecheck --workspace mobile`, `npm run lint --workspace mobile`, then `npm test --workspace mobile` | `npm install` at the repo root |
 
 `make test` runs `qa`, PHPUnit, Playwright, the OpenAPI lint and the security check in sequence.
 

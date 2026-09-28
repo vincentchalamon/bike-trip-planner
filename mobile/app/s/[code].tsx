@@ -1,6 +1,5 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, PanResponder, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   ErrorState,
@@ -20,7 +19,7 @@ import {
   type ExportFormat,
 } from '../../src/api/trips';
 import { useTripStore } from '../../src/store/trip-store';
-import { swipeToView } from '../../src/lib/swipe';
+import { useSwipeTabs } from '../../src/hooks/use-swipe-tabs';
 
 type TripView = 'roadbook' | 'map';
 
@@ -32,11 +31,7 @@ export default function SharedTrip() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
-  const [view, setView] = useState<TripView>('roadbook');
-  const [hasViewedMap, setHasViewedMap] = useState(false);
-  useEffect(() => {
-    if (view === 'map') setHasViewedMap(true);
-  }, [view]);
+  const { view, setView, hasViewedMap, panHandlers } = useSwipeTabs();
 
   useSharedTrip(code);
 
@@ -44,19 +39,6 @@ export default function SharedTrip() {
   const loading = useTripStore((s) => s.loading);
   const error = useTripStore((s) => s.error);
   const resolvedTitle = title ?? t('sharePage.title');
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, g) =>
-          Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
-        onPanResponderRelease: (_, g) => {
-          const next = swipeToView(g.dx);
-          if (next) setView(next);
-        },
-      }),
-    [],
-  );
 
   async function download(format: ExportFormat) {
     try {
@@ -160,7 +142,7 @@ export default function SharedTrip() {
         <SegmentedControl segments={segments} value={view} onChange={setView} />
       </View>
 
-      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <View style={{ flex: 1 }} {...panHandlers}>
         {/* Keep both tabs mounted once opened (perf, mirrors trip/[id]); the map
             only mounts after its first open. Geometry is applied from the public
             /route by useSharedTrip, so TripMapView's own /route fetch stays off

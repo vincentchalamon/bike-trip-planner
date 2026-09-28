@@ -1,10 +1,6 @@
 import { useEffect, useReducer } from 'react';
 import type { MercureEvent } from '@btp/core/mercure';
-import {
-  fetchMercureToken,
-  subscribeToTrip,
-  type TripSubscription,
-} from '../api/mercure';
+import { subscribeToTrip } from '../api/mercure';
 
 // Live state of the computation pipeline for a freshly created / re-analyzed
 // trip, driven by the Mercure SSE stream. `computing` gates the progress badge;
@@ -73,24 +69,11 @@ export function useAnalysisFollow(
 
   useEffect(() => {
     if (!tripId) return;
-    let sub: TripSubscription | undefined;
-    let cancelled = false;
     dispatch('reset');
-
-    void fetchMercureToken(tripId)
-      .then((token) => {
-        if (cancelled) return;
-        sub = subscribeToTrip(tripId, token, (event) => dispatch(event));
-      })
-      .catch(() => {
-        // Token fetch failed: leave the badge as-is; the roadbook screen still
-        // re-hydrates from /detail when the rider opens it.
-      });
-
-    return () => {
-      cancelled = true;
-      sub?.close();
-    };
+    // A failed token fetch leaves the badge as-is while the subscription retries;
+    // the roadbook screen re-hydrates from /detail when the rider opens it.
+    const sub = subscribeToTrip(tripId, (event) => dispatch(event));
+    return () => sub.close();
   }, [tripId, nonce]);
 
   return state;

@@ -94,7 +94,7 @@ merged history sees the whole offline engine, not just the contract.
   (`offline` reason) instead of hitting the network and failing — the intended
   Sprint 55 behaviour finally has an input.
 - A new mobile dependency (`@react-native-community/netinfo`, SDK-57 aligned) is
-  added; CI gates mobile on tsc + jest only. The NetInfo → `isOnline` mapping is
+  added; CI gated mobile on tsc + jest only at the time (ESLint joined later, #1354). The NetInfo → `isOnline` mapping is
   covered by `mobile/src/store/use-connectivity.test.ts` (3-state + cleanup).
 - The offline perimeter (non-past trips), the freshness contract (pure helper +
   `freshness.*` i18n keys), and the stable `offline-store` API are now fixed

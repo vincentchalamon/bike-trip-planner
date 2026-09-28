@@ -328,7 +328,10 @@ export function ConfigSheet({
     if (initialSection === 'dates') {
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Keyed on `visible` alone on purpose: re-seeding when the store moves while
+    // the sheet is open (an SSE event, a resync) would overwrite the rider's draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed on open only, see above
+  }, [visible]);
 
   const activePreset = getActivePresetKey(
     pacing.maxDistancePerDay,
