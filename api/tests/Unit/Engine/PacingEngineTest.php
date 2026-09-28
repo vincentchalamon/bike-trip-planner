@@ -19,10 +19,7 @@ final class PacingEngineTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
         $elevationCalculator->method('calculateTotalAscent')->willReturn(100.0);
@@ -182,10 +179,7 @@ final class PacingEngineTest extends TestCase
             static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
         );
 
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
@@ -215,10 +209,7 @@ final class PacingEngineTest extends TestCase
             static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
         );
 
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 5.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(5.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
@@ -256,10 +247,7 @@ final class PacingEngineTest extends TestCase
 
         // Each segment = 60km, so day 1 target (~55km) splits after 1st segment,
         // leaving 1 decimated point for day 2 (isLastDay) → triggers count < 2 guard
-        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
-            static fn (array $points): float => (\count($points) - 1) * 60.0,
-        );
+        $distanceCalculator = $this->distanceCalculator(60.0);
 
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
@@ -304,6 +292,32 @@ final class PacingEngineTest extends TestCase
         if ([] !== $stagesWithoutCap && $stagesWithoutCap[0]->distance > 60.0) {
             $this->assertLessThan($stagesWithoutCap[0]->distance, $stagesWithCap[0]->distance);
         }
+    }
+
+    /**
+     * Every segment between two consecutive points measures $kmPerSegment.
+     */
+    private function distanceCalculator(float $kmPerSegment): DistanceCalculatorInterface
+    {
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => max(0, \count($points) - 1) * $kmPerSegment,
+        );
+        $distanceCalculator->method('splitAtDistance')->willReturnCallback(
+            static function (array $points, int $startIndex, float $targetKm) use ($kmPerSegment): array {
+                $accumulated = 0.0;
+                for ($i = $startIndex + 1, $n = \count($points); $i < $n; ++$i) {
+                    $accumulated += $kmPerSegment;
+                    if ($accumulated >= $targetKm) {
+                        return [\array_slice($points, $startIndex, $i - $startIndex + 1), \array_slice($points, $i), $accumulated];
+                    }
+                }
+
+                return [\array_slice($points, $startIndex), [], $accumulated];
+            },
+        );
+
+        return $distanceCalculator;
     }
 
     /**

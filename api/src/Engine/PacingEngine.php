@@ -158,10 +158,10 @@ final readonly class PacingEngine implements PacingEngineInterface
                 $remaining = [];
                 $remainingRaw = null;
             } else {
-                [$stagePoints, $remaining] = $this->splitAtDistance($remaining, $targetKm);
+                [$stagePoints, $remaining] = $this->distanceCalculator->splitAtDistance($remaining, 0, $targetKm);
 
                 if (null !== $remainingRaw) {
-                    [$stageRawPoints, $remainingRaw] = $this->splitAtDistance($remainingRaw, $targetKm);
+                    [$stageRawPoints, $remainingRaw] = $this->distanceCalculator->splitAtDistance($remainingRaw, 0, $targetKm);
                 } else {
                     $stageRawPoints = null;
                 }
@@ -212,33 +212,5 @@ final readonly class PacingEngine implements PacingEngineInterface
         }
 
         return $stages;
-    }
-
-    /**
-     * Splits points array at the point closest to targetKm from the start.
-     *
-     * @param list<Coordinate> $points
-     *
-     * @return array{list<Coordinate>, list<Coordinate>}
-     */
-    private function splitAtDistance(array $points, float $targetKm): array
-    {
-        $accumulated = 0.0;
-        $counter = \count($points);
-
-        for ($i = 1; $i < $counter; ++$i) {
-            $segment = $this->distanceCalculator->calculateTotalDistance([$points[$i - 1], $points[$i]]);
-            $accumulated += $segment;
-
-            if ($accumulated >= $targetKm) {
-                $first = \array_slice($points, 0, $i + 1);
-                $second = \array_slice($points, $i);
-
-                return [$first, $second];
-            }
-        }
-
-        // Target exceeds total: return all points, empty remainder
-        return [$points, []];
     }
 }
