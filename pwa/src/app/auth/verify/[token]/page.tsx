@@ -1,9 +1,10 @@
-import dynamic from "next/dynamic";
+import VerifyPage from "./verify-page";
 
-const VerifyPage = dynamic(() => import("./verify-page"), {
-  loading: () => null,
-});
-
-export default function Page() {
-  return <VerifyPage />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  return <VerifyPage token={token} />;
 }

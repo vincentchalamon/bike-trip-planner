@@ -1,8 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Neutralize the lazy client component so importing the route module only
-// exercises generateMetadata (next/dynamic is not available outside Next).
-vi.mock("next/dynamic", () => ({ default: () => () => null }));
+import { createTranslator } from "next-intl";
+import en from "../../../messages/en.json";
+import fr from "../../../messages/fr.json";
+
+const catalogs = { en, fr };
+let locale: keyof typeof catalogs = "en";
+
+// Neutralize the client component so importing the route module only
+// exercises generateMetadata.
+vi.mock("./[code]/shared-trip-page", () => ({ default: () => null }));
+vi.mock("next-intl/server", () => ({
+  getTranslations: (namespace: "sharedTripMetadata") =>
+    Promise.resolve(
+      createTranslator({ locale, messages: catalogs[locale], namespace }),
+    ),
+}));
 
 import { generateMetadata } from "@/app/s/[code]/page";
 
@@ -15,7 +28,10 @@ const mockFetch = (impl: (...args: unknown[]) => unknown) => {
 };
 
 describe("generateMetadata (shared trip)", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    locale = "en";
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it("falls back to the generic title when the backend responds non-OK (revoked/unknown code)", async () => {
@@ -75,5 +91,24 @@ describe("generateMetadata (shared trip)", () => {
 
     expect(meta.title).toBe("Bike trip — Bike Trip Planner");
     expect(meta.description).toBe("Shared bike route.");
+  });
+
+  it("renders the metadata in the request locale", async () => {
+    locale = "fr";
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            title: "",
+            stages: [{ distance: 42, elevation: 0 }],
+          }),
+      }),
+    );
+
+    const meta = await generateMetadata(params("fr1"));
+
+    expect(meta.title).toBe("Voyage à vélo — Bike Trip Planner");
+    expect(meta.description).toBe("Itinéraire vélo partagé : 42 km, 0 m D+.");
   });
 });

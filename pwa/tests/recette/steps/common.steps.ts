@@ -500,20 +500,32 @@ Given("I am using the app on a mobile device", async ({ mockedPage }) => {
   await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
+// Flip `navigator.onLine` along with the event: `useOnlineStatus` reads the
+// property, as a real connectivity change would update it.
+async function setConnectivity(page: Page, online: boolean): Promise<void> {
+  await page.evaluate((value) => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => value,
+    });
+    window.dispatchEvent(new Event(value ? "online" : "offline"));
+  }, online);
+}
+
 When("la connexion internet est perdue", async ({ mockedPage }) => {
-  await mockedPage.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await setConnectivity(mockedPage, false);
 });
 
 When("the internet connection is lost", async ({ mockedPage }) => {
-  await mockedPage.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await setConnectivity(mockedPage, false);
 });
 
 When("la connexion est rétablie", async ({ mockedPage }) => {
-  await mockedPage.evaluate(() => window.dispatchEvent(new Event("online")));
+  await setConnectivity(mockedPage, true);
 });
 
 When("the connection is restored", async ({ mockedPage }) => {
-  await mockedPage.evaluate(() => window.dispatchEvent(new Event("online")));
+  await setConnectivity(mockedPage, true);
 });
 
 Then("le bandeau hors ligne n'est pas visible", async ({ mockedPage }) => {

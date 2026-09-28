@@ -16,16 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch } from "@/lib/api/client";
-import { API_URL } from "@/lib/constants";
+import { deleteTrip, fetchTrips, type TripListItem } from "@/lib/api/client";
 import { TripCard } from "@/components/trip-card";
 import { TripsEmptyState } from "@/components/trips-empty-state";
-import type { components } from "@btp/core/schema";
-
-type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
-type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
-  member: TripListItem[];
-};
 
 const ITEMS_PER_PAGE = 12;
 
@@ -68,56 +61,54 @@ export default function TripsPage() {
     setPage(1);
   }, []);
 
-  const fetchTrips = useCallback(async () => {
+  // Bumped to refetch the current page (retry, after a deletion).
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    // Aborting the superseded request keeps a slow older response from
+    // overwriting the result of a newer page or filter.
+    const controller = new AbortController();
     setIsLoading(true);
     setLoadError(false);
 
-    const params = new URLSearchParams({
-      page: String(page),
-      itemsPerPage: String(ITEMS_PER_PAGE),
-    });
-    if (debouncedTitle) params.set("title", debouncedTitle);
-    if (startDateFilter) params.set("startDate", startDateFilter);
-    if (endDateFilter) params.set("endDate", endDateFilter);
-
-    try {
-      const res = await apiFetch(`${API_URL}/trips?${params.toString()}`, {
-        headers: { Accept: "application/ld+json" },
+    fetchTrips(
+      {
+        page,
+        itemsPerPage: ITEMS_PER_PAGE,
+        ...(debouncedTitle && { title: debouncedTitle }),
+        ...(startDateFilter && { startDate: startDateFilter }),
+        ...(endDateFilter && { endDate: endDateFilter }),
+      },
+      controller.signal,
+    )
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (!data) {
+          setLoadError(true);
+          return;
+        }
+        setTrips(data.member);
+        setTotalItems(data.totalItems);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLoadError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
       });
 
-      if (!res.ok) {
-        setLoadError(true);
-        return;
-      }
-
-      const data = (await res.json()) as TripCollection;
-      setTrips(data.member ?? []);
-      setTotalItems(data.totalItems ?? 0);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, debouncedTitle, startDateFilter, endDateFilter]);
-
-  useEffect(() => {
-    void fetchTrips();
-  }, [fetchTrips]);
+    return () => controller.abort();
+  }, [page, debouncedTitle, startDateFilter, endDateFilter, reloadKey]);
 
   async function handleDelete() {
     if (!deleteTarget?.id) return;
 
     setIsDeleting(true);
     try {
-      const res = await apiFetch(
-        `${API_URL}/trips/${encodeURIComponent(deleteTarget.id)}`,
-        { method: "DELETE" },
-      );
-
-      if (res.ok) {
+      if (await deleteTrip(deleteTarget.id)) {
         toast.success(t("deleteSuccess"));
         setDeleteTarget(null);
-        await fetchTrips();
+        setReloadKey((k) => k + 1);
       } else {
         toast.error(t("deleteError"));
       }
@@ -236,7 +227,7 @@ export default function TripsPage() {
       {!isLoading && loadError && (
         <div className="text-center py-16">
           <p className="text-destructive mb-4">{t("loadingError")}</p>
-          <Button variant="outline" onClick={() => void fetchTrips()}>
+          <Button variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
             {t("retry")}
           </Button>
         </div>

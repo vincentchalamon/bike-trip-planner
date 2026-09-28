@@ -37,6 +37,12 @@
     "illustrationAlt": "Lost cyclist in the mountains",
     "back": "Back to home"
   },
+  "sharedTripMetadata": {
+    "fallbackTitle": "Shared trip",
+    "defaultTripTitle": "Bike trip",
+    "description": "Shared bike route: {distance} km, {elevation} m D+.",
+    "descriptionNoStages": "Shared bike route."
+  },
   "roadbookEmpty": {
     "title": "Empty roadbook",
     "subtitle": "No stages for this trip yet. Import a route or add your first stage to get started."

@@ -1,38 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+function subscribe(onChange: () => void): () => void {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
 
 /**
- * Reactive wrapper around `navigator.onLine`.
+ * Reactive `navigator.onLine`, the single source of truth for connectivity.
  *
- * Subscribes to the `online` / `offline` window events so consumers re-render
- * whenever connectivity changes. Defaults to `true` during SSR and before the
- * browser-side effect runs, so the UI is optimistic by default.
+ * Re-renders consumers on the `online` / `offline` window events. The server
+ * snapshot is `true`, so the UI is optimistic during SSR and hydration.
  */
 export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState<boolean>(() => {
-    if (typeof navigator === "undefined") return true;
-    return navigator.onLine !== false;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    // Sync with the current value in case it changed between the initial
-    // render and the effect (e.g. hydration after a navigation while offline).
-    setIsOnline(navigator.onLine !== false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  return isOnline;
+  return useSyncExternalStore(
+    subscribe,
+    () => navigator.onLine !== false,
+    () => true,
+  );
 }

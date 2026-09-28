@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { SiteChrome } from "@/components/site-chrome";
 import { resolveServerSession } from "@/lib/auth/server-session";
 
@@ -12,13 +13,12 @@ import { resolveServerSession } from "@/lib/auth/server-session";
  * On the web, the server validates the session (ADR-047) and redirects an
  * anonymous visitor to /login BEFORE render, so a protected deep-link (e.g.
  * `/trips/{id}`) never flashes protected chrome. `resolveServerSession()`
- * returns `null` on the mobile static build (no server) or a backend blip → the
- * client-side `AuthGuard` stays the gate (fail-open).
+ * returns `null` when there is no cookie or on a backend blip; the client-side
+ * `AuthGuard` then stays the gate (fail-open).
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await resolveServerSession();
   if (session && !session.authenticated) {
-    const { redirect } = await import("next/navigation");
     redirect("/login");
   }
 

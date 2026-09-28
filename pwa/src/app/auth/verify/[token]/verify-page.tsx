@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
@@ -20,9 +20,8 @@ import { LinkExpired } from "@/components/auth/link-expired";
  * component, which lets the user request a fresh magic link without leaving
  * the verification flow.
  */
-export default function VerifyPage() {
+export default function VerifyPage({ token }: { token: string }) {
   const t = useTranslations("auth");
-  const params = useParams<{ token: string }>();
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +41,7 @@ export default function VerifyPage() {
         const res = await fetch(`/api/auth/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/ld+json" },
-          body: JSON.stringify({ token: params.token }),
+          body: JSON.stringify({ token }),
           credentials: "include",
         });
 
@@ -67,7 +66,7 @@ export default function VerifyPage() {
     void verify();
     // No cleanup — the useRef guard prevents double-fire, and we must not
     // cancel the in-flight verify (the token is consumed server-side).
-  }, [params.token, setAuth, router, t]);
+  }, [token, setAuth, router, t]);
 
   if (verifying) {
     return (

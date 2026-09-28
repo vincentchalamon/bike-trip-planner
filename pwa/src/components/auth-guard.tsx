@@ -39,15 +39,17 @@ function isPublicPath(pathname: string): boolean {
  * flashing protected content before the redirect.
  *
  * Since ADR-047 this guard is the JWT bootstrap (its silent refresh mints the
- * in-memory access token on every platform) and the redirect **backstop** for
- * the mobile static build (no server) and the web fail-open path (a backend
- * blip). On the web happy path the server-side `(app)` layout gate resolves auth
- * and redirects anonymous users before render, so step 2 there is a no-op.
+ * in-memory access token) and the redirect **backstop** for the fail-open path
+ * of the server-side `(app)` layout gate (no cookie, or a backend blip). On the
+ * happy path that gate resolves auth and redirects anonymous users before
+ * render, so step 2 there is a no-op.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, silentRefresh } = useAuthStore();
+  // Two selectors, not the whole store: a token refresh must not re-render the app.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const silentRefresh = useAuthStore((s) => s.silentRefresh);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
