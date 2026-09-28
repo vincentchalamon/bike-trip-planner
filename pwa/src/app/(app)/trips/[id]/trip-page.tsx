@@ -258,19 +258,15 @@ function TripLoader({ tripId }: { tripId: string }) {
     // resolve stages that still lack one (e.g. their async resolution hasn't
     // landed yet) — a fully-labelled trip skips the Nominatim round-trips.
     const stages = useTripStore.getState().stages;
-    const pending = stages
-      .map((s, i) => ({ s, i }))
-      .filter(({ s }) => s.startLabel === null || s.endLabel === null);
+    const pending = stages.filter(
+      (s) => s.startLabel === null || s.endLabel === null,
+    );
     if (pending.length === 0) return;
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       if (controller.signal.aborted) return;
-      void resolveStageLabels(
-        pending.map(({ s }) => s),
-        pending.map(({ i }) => i),
-        controller.signal,
-      );
+      void resolveStageLabels(pending, controller.signal);
     }, 0);
 
     return () => {

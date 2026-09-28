@@ -23,6 +23,13 @@ import {
   type ReconciledState,
   type StageAlert,
 } from "@btp/core/reconciliation";
+import {
+  FieldClaims,
+  neighboursAt,
+  revertFields,
+  revertStructuralEdit,
+  type StructuralInverse,
+} from "@btp/core/optimistic";
 
 /**
  * A single user modification accumulated in the batch queue before being applied
@@ -46,7 +53,10 @@ export interface Modification {
 }
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { DEFAULT_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
-import { createTemporalStore } from "@/store/temporal-middleware";
+import {
+  createTemporalStore,
+  type UndoToken,
+} from "@/store/temporal-middleware";
 
 // Required for Immer to allow mutating Set/Map drafts (used by recomputingStages).
 enableMapSet();
@@ -139,6 +149,28 @@ interface TripState {
     }[];
   }) => void;
   setStages: (stages: StageData[]) => void;
+  /**
+   * Undo an optimistic structural edit the server refused: withdraw its undo
+   * entry and apply its inverse to the stages as they are now, so an edit made
+   * while this one was in flight survives.
+   */
+  rollbackStructuralEdit: (edit: StructuralEdit) => void;
+  /**
+   * Record an optimistic edit of these settings; returns its claim. A newer claim
+   * takes a field over (see `FieldClaims`).
+   */
+  claimSettings: (fields: SettingsField[]) => symbol;
+  /** The claimed edit was accepted: it no longer owns anything. */
+  settleSettings: (claim: symbol) => void;
+  /**
+   * Undo a refused settings edit: each field its claim still owns goes back to
+   * `previous`. A field a newer edit wrote since keeps that edit's value.
+   * Returns the fields it reverted.
+   */
+  revertSettings: (
+    claim: symbol,
+    previous: Partial<SettingsValues>,
+  ) => SettingsField[];
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStageResupply: (stageIndex: number, resupply: ResupplyData) => void;
   updateStageSupplyTimeline: (
@@ -157,7 +189,7 @@ interface TripState {
     source: string,
   ) => void;
   updateStageLabel: (
-    stageIndex: number,
+    stageId: string,
     field: "startLabel" | "endLabel",
     value: string,
   ) => void;
@@ -174,7 +206,8 @@ interface TripState {
   ) => void;
   deselectAccommodation: (stageIndex: number) => void;
   updateTitle: (title: string) => void;
-  updateDates: (startDate: string | null, endDate: string | null) => void;
+  /** Undoable: returns the token of the undo entry it pushed. */
+  updateDates: (startDate: string | null, endDate: string | null) => UndoToken;
   /** Internal setter — updates dates WITHOUT pushing to the undo history. */
   updateDatesInternal: (
     startDate: string | null,
@@ -192,10 +225,15 @@ interface TripState {
   setComputationStatus: (status: Record<string, string>) => void;
   setIsLocked: (isLocked: boolean) => void;
   setOutOfZone: (outOfZone: boolean) => void;
-  deleteStage: (stageIndex: number) => void;
-  insertRestDay: (afterIndex: number) => void;
+  /** Undoable: returns what {@link rollbackStructuralEdit} needs to undo it. */
+  deleteStage: (stageIndex: number) => StructuralEdit;
+  /** Undoable: returns what {@link rollbackStructuralEdit} needs to undo it. */
+  insertRestDay: (afterIndex: number) => StructuralEdit;
   /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
-  insertStagePlaceholder: (afterIndex: number, placeholder: StageData) => void;
+  insertStagePlaceholder: (
+    afterIndex: number,
+    placeholder: StageData,
+  ) => StructuralEdit;
   updateStageAfterRouteRecalculation: (
     stageIndex: number,
     data: {
@@ -403,8 +441,35 @@ function pruneStaleRecomputing(state: {
   );
 }
 
+/** The trip-wide settings a refused edit can have to put back. */
+export type TripSettingsSlice = Pick<
+  TripState,
+  | "startDate"
+  | "endDate"
+  | "fatigueFactor"
+  | "elevationPenalty"
+  | "maxDistancePerDay"
+  | "averageSpeed"
+  | "ebikeMode"
+  | "departureHour"
+  | "enabledAccommodationTypes"
+>;
+
+/** A settings field an optimistic edit can claim: the trip-wide ones plus the title. */
+export type SettingsField = keyof TripSettingsSlice | "title";
+export type SettingsValues = TripSettingsSlice & { title: string };
+
+// Module scope, like the undo history: which in-flight edit last wrote each field.
+const settingsClaims = new FieldClaims<SettingsField>();
+
+/** An optimistic structural edit: its undo entry and what reverts it. */
+export interface StructuralEdit {
+  token: UndoToken;
+  inverse: StructuralInverse;
+}
+
 export const useTripStore = create<TripState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     ...initialState,
 
     setTrip: (trip) =>
@@ -455,6 +520,55 @@ export const useTripStore = create<TripState>()(
         // `processing` overlay open forever (#840).
         pruneStaleRecomputing(state);
       }),
+
+    claimSettings: (fields) => settingsClaims.claim(fields),
+
+    settleSettings: (claim) => {
+      settingsClaims.release(claim);
+    },
+
+    revertSettings: (claim, previous) => {
+      const owned = settingsClaims
+        .release(claim)
+        .filter((field) => field in previous);
+      set((state) => {
+        for (const field of owned) {
+          if (field === "title") {
+            if (state.trip && previous.title !== undefined) {
+              state.trip.title = previous.title;
+            }
+          } else {
+            Object.assign(state, { [field]: previous[field] });
+          }
+        }
+      });
+      return owned;
+    },
+
+    rollbackStructuralEdit: ({ token, inverse }) => {
+      useTripTemporalStore.getState()._discard(token, (snapshot) => {
+        const slice = snapshot as UndoableSlice;
+        const stages = revertStructuralEdit(slice.stages, inverse);
+        return {
+          ...slice,
+          stages,
+          endDate: slice.startDate
+            ? endDateFor(slice.startDate, stages.length)
+            : slice.endDate,
+        };
+      });
+      set((state) => {
+        state.stages = revertStructuralEdit(state.stages, inverse);
+        const max = Math.max(0, state.stages.length - 1);
+        if (state.selectedStageIndex > max) {
+          state.selectedStageIndex = max;
+        }
+        pruneStaleRecomputing(state);
+        if (state.startDate) {
+          state.endDate = endDateFor(state.startDate, state.stages.length);
+        }
+      });
+    },
 
     updateStageWeather: (dayNumber, weather) =>
       set((state) => {
@@ -509,11 +623,10 @@ export const useTripStore = create<TripState>()(
         }
       }),
 
-    updateStageLabel: (stageIndex, field, value) =>
+    updateStageLabel: (stageId, field, value) =>
       set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex][field] = value;
-        }
+        const stage = state.stages.find((s) => s.id === stageId);
+        if (stage) stage[field] = value;
       }),
 
     removeLocalAccommodation: (stageIndex, accIndex) =>
@@ -565,13 +678,14 @@ export const useTripStore = create<TripState>()(
 
     updateDates: (startDate, endDate) => {
       // Push snapshot before mutation so the user can undo date changes.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         state.startDate = startDate;
         state.endDate = endDate;
       });
+      return token;
     },
 
     updateDatesInternal: (startDate, endDate) =>
@@ -624,8 +738,10 @@ export const useTripStore = create<TripState>()(
       }),
 
     deleteStage: (stageIndex) => {
+      const { stages } = get();
+      const removed = stages[stageIndex];
       // Push snapshot before deletion so the user can undo accidental removal.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -645,11 +761,24 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return {
+        token,
+        inverse: removed
+          ? {
+              kind: "restore",
+              stage: removed,
+              ...neighboursAt(stages, stageIndex),
+            }
+          : { kind: "remove", stageId: "" },
+      };
     },
 
     insertRestDay: (afterIndex) => {
+      // Provisional identity: replaced by the server's on the next
+      // stages_computed / trip_ready.
+      const restDayId = `pending-${crypto.randomUUID()}`;
       // Push snapshot before insertion so the user can undo rest-day addition.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -657,9 +786,7 @@ export const useTripStore = create<TripState>()(
         if (!afterStage) return;
 
         const restDay: StageData = {
-          // Provisional identity: replaced by the server's on the next
-          // stages_computed / trip_ready.
-          id: `pending-${crypto.randomUUID()}`,
+          id: restDayId,
           dayNumber: afterIndex + 2,
           distance: 0,
           elevation: 0,
@@ -691,11 +818,12 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return { token, inverse: { kind: "remove", stageId: restDayId } };
     },
 
     insertStagePlaceholder: (afterIndex, placeholder) => {
       // Push snapshot before insertion so the user can undo stage addition.
-      useTripTemporalStore
+      const token = useTripTemporalStore
         .getState()
         ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
@@ -709,6 +837,7 @@ export const useTripStore = create<TripState>()(
           state.endDate = endDateFor(state.startDate, state.stages.length);
         }
       });
+      return { token, inverse: { kind: "remove", stageId: placeholder.id } };
     },
 
     updateStageAfterRouteRecalculation: (stageIndex, data) =>
@@ -844,6 +973,8 @@ export const useTripStore = create<TripState>()(
       // Clear undo/redo history when starting a fresh trip — history from a
       // previous trip session is no longer meaningful.
       useTripTemporalStore.getState().clear();
+      // A refusal still in flight for the previous trip must not revert this one.
+      settingsClaims.clear();
       set((state) => {
         // Preserve user-configured pacing settings, accommodation filters,
         // and dates across trip reloads — only reset trip data.
@@ -863,6 +994,28 @@ export const useTripStore = create<TripState>()(
     },
   })),
 );
+
+/**
+ * Withdraw the undo entry of an optimistic edit the server refused.
+ *
+ * Any snapshot taken after the refused edit captured its optimistic value, so each
+ * field it set goes back to `previous` there too — but only where the snapshot
+ * still holds the refused value (see `revertFields`), otherwise undoing a later,
+ * accepted edit would bring the refused value back.
+ */
+export function discardUndoEntry(
+  token: UndoToken,
+  optimistic: Partial<UndoableSlice>,
+  previous: Partial<UndoableSlice>,
+): void {
+  useTripTemporalStore.getState()._discard(token, (snapshot) => {
+    const slice = snapshot as UndoableSlice;
+    return {
+      ...slice,
+      ...structuredClone(revertFields(slice, optimistic, previous)),
+    };
+  });
+}
 
 /**
  * Companion temporal store that provides undo/redo for the trip store.

@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { getUndoableSlice, useTripStore } from "./trip-store";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  getUndoableSlice,
+  useTripStore,
+  useTripTemporalStore,
+} from "./trip-store";
 import {
   DEFAULT_ACCOMMODATION_TYPES,
   FILTERABLE_ACCOMMODATION_TYPES,
@@ -444,6 +448,64 @@ describe("events preservation (recette)", () => {
     const result = useTripStore.getState().stages[0]!;
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.name).toBe("New");
+  });
+});
+
+describe("rollbackStructuralEdit", () => {
+  beforeEach(() => {
+    useTripStore.getState().clearTrip();
+    useTripStore.getState().updateDatesInternal("2026-10-01", "2026-10-03");
+    useTripStore
+      .getState()
+      .setStages([makeStage(1), makeStage(2), makeStage(3)]);
+  });
+
+  const ids = () => useTripStore.getState().stages.map((s) => s.id);
+
+  it("restores a refused deletion and the end date, and drops its undo entry", () => {
+    const edit = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().rollbackStructuralEdit(edit);
+
+    expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
+    expect(useTripStore.getState().stages.map((s) => s.dayNumber)).toEqual([
+      1, 2, 3,
+    ]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
+  });
+
+  it("keeps a rest day inserted while the refused deletion was in flight", () => {
+    const refused = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().insertRestDay(0);
+    const restDayId = useTripStore.getState().stages[1]!.id;
+
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    expect(ids()).toEqual(["stage-1", restDayId, "stage-2", "stage-3"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-04");
+  });
+
+  it("removes only the refused insertion when a deletion landed meanwhile", () => {
+    const refused = useTripStore.getState().insertRestDay(0);
+    useTripStore.getState().deleteStage(3);
+
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    expect(ids()).toEqual(["stage-1", "stage-2"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-02");
+  });
+
+  it("scrubs the refused edit from the later undo entries", () => {
+    const refused = useTripStore.getState().deleteStage(1);
+    useTripStore.getState().insertRestDay(0);
+    useTripStore.getState().rollbackStructuralEdit(refused);
+
+    // Undoing the accepted rest day must not bring the refused deletion back.
+    useTripTemporalStore.getState().undo();
+
+    expect(ids()).toEqual(["stage-1", "stage-2", "stage-3"]);
+    expect(useTripStore.getState().endDate).toBe("2026-10-03");
+    expect(useTripTemporalStore.getState().canUndo).toBe(false);
   });
 });
 

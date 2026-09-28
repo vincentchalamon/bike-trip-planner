@@ -9,6 +9,7 @@ import {
   useTripStore,
   useTripTemporalStore,
   getUndoableSlice,
+  discardUndoEntry,
 } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
@@ -36,6 +37,7 @@ import {
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@btp/core/constants";
 import { EMPTY_RESUPPLY } from "@btp/core";
+import type { StageAlert } from "@btp/core/reconciliation";
 import type { StageData } from "@btp/core";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { ManualAccommodationInput } from "@/components/manual-accommodation-form";
@@ -142,6 +144,9 @@ export function useTripPlanner() {
       setIsLocked: s.setIsLocked,
       setDepartureHour: s.setDepartureHour,
       startStageRecomputation: s.startStageRecomputation,
+      claimSettings: s.claimSettings,
+      settleSettings: s.settleSettings,
+      revertSettings: s.revertSettings,
       queueModification: s.queueModification,
       cancelAllModifications: s.cancelAllModifications,
       clearPendingModifications: s.clearPendingModifications,
@@ -295,8 +300,23 @@ export function useTripPlanner() {
     newStart: string | null,
     newEnd: string | null,
   ) {
-    actions.updateDates(newStart, newEnd);
+    const { startDate: previousStart, endDate: previousEnd } =
+      useTripStore.getState();
+    const undoToken = actions.updateDates(newStart, newEnd);
     if (!tripId) return;
+    const claim = actions.claimSettings(["startDate", "endDate"]);
+
+    // updateDates pushed an undo entry: a refused change must leave no trace in the
+    // history, and must not undo a date change made while it was in flight.
+    const rollback = () => {
+      const previous = { startDate: previousStart, endDate: previousEnd };
+      discardUndoEntry(
+        undoToken,
+        { startDate: newStart, endDate: newEnd },
+        previous,
+      );
+      actions.revertSettings(claim, previous);
+    };
 
     try {
       const pacing = getPacingState();
@@ -311,13 +331,16 @@ export function useTripPlanner() {
       });
 
       if (error) {
+        rollback();
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         if (data) actions.setIsLocked(data.isLocked === true);
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
+      rollback();
       toast.error(t("errors.failedUpdateDates"));
     }
   }
@@ -326,6 +349,15 @@ export function useTripPlanner() {
     const previousTitle = useTripStore.getState().trip?.title;
     actions.updateTitle(newTitle);
     if (!tripId) return;
+    const claim = actions.claimSettings(["title"]);
+
+    // Unless a newer rename has replaced it meanwhile.
+    const revertTitle = () => {
+      if (previousTitle !== undefined) {
+        actions.revertSettings(claim, { title: previousTitle });
+      }
+      actions.settleSettings(claim);
+    };
 
     try {
       const pacing = getPacingState();
@@ -339,12 +371,14 @@ export function useTripPlanner() {
       });
       if (!response.ok) {
         reportApiError(response.status, error);
-        if (previousTitle !== undefined) actions.updateTitle(previousTitle);
+        revertTitle();
+      } else {
+        actions.settleSettings(claim);
       }
     } catch {
       // Title save is best-effort on a network failure: no toast, but never keep a title
       // the server does not have.
-      if (previousTitle !== undefined) actions.updateTitle(previousTitle);
+      revertTitle();
     }
   }
 
@@ -356,8 +390,7 @@ export function useTripPlanner() {
     if (!target) return;
     const stageId = target.id;
     const isRestDay = target.isRestDay ?? false;
-    const snapshot = [...currentStages];
-    actions.deleteStage(index);
+    const edit = actions.deleteStage(index);
 
     try {
       const { error, response } = await apiClient.DELETE(
@@ -371,26 +404,23 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(snapshot);
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
         if (!isRestDay) setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(snapshot);
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
   async function handleInsertRestDay(afterIndex: number) {
     if (!tripId) return;
 
-    const snapshot = [...useTripStore.getState().stages];
     const stageId = useTripStore.getState().stages[afterIndex]?.id;
     if (!stageId) return;
-    actions.insertRestDay(afterIndex);
+    const edit = actions.insertRestDay(afterIndex);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -405,15 +435,13 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(snapshot);
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(snapshot);
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
@@ -463,7 +491,7 @@ export function useTripPlanner() {
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.
-    actions.insertStagePlaceholder(afterIndex, placeholder);
+    const edit = actions.insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -475,16 +503,14 @@ export function useTripPlanner() {
       );
       if (error) {
         reportApiError(response.status, error);
-        useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(currentStages);
+        useTripStore.getState().rollbackStructuralEdit(edit);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
-      useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(currentStages);
+      useTripStore.getState().rollbackStructuralEdit(edit);
     }
   }
 
@@ -588,8 +614,8 @@ export function useTripPlanner() {
     // stay mounted with their content instead of waiting for a `stages_computed`
     // SSE that may never come for a purely local optimistic update.
     optimistic = false,
-  ) {
-    if (!tripId) return;
+  ): Promise<boolean> {
+    if (!tripId) return false;
 
     try {
       const { departureHour: dh, enabledAccommodationTypes: eat } =
@@ -610,10 +636,11 @@ export function useTripPlanner() {
 
       if (error) {
         reportApiError(response.status, error);
+        return false;
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
-        if (optimistic) return;
+        if (optimistic) return true;
         // Mark every stage as recomputing so the timeline shows the shimmer
         // skeleton until the `stages_computed` Mercure event lands. The stages
         // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
@@ -623,9 +650,11 @@ export function useTripPlanner() {
         if (allStages.length > 0) {
           actions.startStageRecomputation(allStages.map((stage) => stage.id));
         }
+        return true;
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));
+      return false;
     }
   }
 
@@ -661,25 +690,53 @@ export function useTripPlanner() {
       preDragPacingSnapshot.current ??
       getUndoableSlice(useTripStore.getState());
     preDragPacingSnapshot.current = null;
-    useTripTemporalStore.getState()._push(snapshot);
+    const undoToken = useTripTemporalStore.getState()._push(snapshot);
     actions.updatePacingSettingsInternal(
       newFatigue,
       newElevation,
       newMaxDistance,
       newAverageSpeed,
     );
-    await patchPacingSettings(
+    const claim = actions.claimSettings([
+      "fatigueFactor",
+      "elevationPenalty",
+      "maxDistancePerDay",
+      "averageSpeed",
+    ]);
+    const saved = await patchPacingSettings(
       newFatigue,
       newElevation,
       newMaxDistance,
       newAverageSpeed,
       getPacingState().ebikeMode,
     );
+    if (!saved && tripId) {
+      const previous = {
+        fatigueFactor: snapshot.fatigueFactor,
+        elevationPenalty: snapshot.elevationPenalty,
+        maxDistancePerDay: snapshot.maxDistancePerDay,
+        averageSpeed: snapshot.averageSpeed,
+      };
+      discardUndoEntry(
+        undoToken,
+        {
+          fatigueFactor: newFatigue,
+          elevationPenalty: newElevation,
+          maxDistancePerDay: newMaxDistance,
+          averageSpeed: newAverageSpeed,
+        },
+        previous,
+      );
+      actions.revertSettings(claim, previous);
+    }
+    actions.settleSettings(claim);
   }
 
   async function handleDepartureHourChange(newDepartureHour: number) {
+    const previous = useTripStore.getState().departureHour;
     actions.setDepartureHour(newDepartureHour);
     if (!tripId) return;
+    const claim = actions.claimSettings(["departureHour"]);
 
     try {
       const pacing = getPacingState();
@@ -693,18 +750,34 @@ export function useTripPlanner() {
       });
 
       if (error) {
+        actions.revertSettings(claim, { departureHour: previous });
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
+      actions.revertSettings(claim, { departureHour: previous });
       toast.error(t("errors.failedUpdatePacing"));
     }
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
+    const previousEbikeMode = useTripStore.getState().ebikeMode;
+    // The terrain alerts cleared below, by stage identity, so a refusal puts back
+    // only those and leaves any stage change made meanwhile alone.
+    const clearedTerrain = new Map<string, StageData["alerts"]>();
+    if (!newEbikeMode) {
+      for (const stage of useTripStore.getState().stages) {
+        const terrain = (stage.alerts as StageAlert[]).filter(
+          (a) => a.group === "terrain",
+        );
+        if (terrain.length > 0) clearedTerrain.set(stage.id, terrain);
+      }
+    }
     actions.setEbikeMode(newEbikeMode);
+    const claim = actions.claimSettings(["ebikeMode"]);
     if (!newEbikeMode) {
       const currentStages = useTripStore.getState().stages;
       currentStages.forEach((_, i) =>
@@ -715,7 +788,7 @@ export function useTripPlanner() {
     // The toggle is applied optimistically in-place (alerts cleared above,
     // durations re-derived from the stat row): keep the cards mounted rather
     // than swapping them for the recomputing skeleton.
-    await patchPacingSettings(
+    const saved = await patchPacingSettings(
       pacing.fatigueFactor,
       pacing.elevationPenalty,
       pacing.maxDistancePerDay,
@@ -723,12 +796,26 @@ export function useTripPlanner() {
       newEbikeMode,
       true,
     );
+    // A toggle made while this one was in flight owns the mode and the alerts now.
+    if (!saved && tripId) {
+      const reverted = actions.revertSettings(claim, {
+        ebikeMode: previousEbikeMode,
+      });
+      if (reverted.includes("ebikeMode")) {
+        useTripStore.getState().stages.forEach((stage, i) => {
+          const terrain = clearedTerrain.get(stage.id);
+          if (terrain) actions.updateStageAlerts(i, terrain, "terrain");
+        });
+      }
+    }
+    actions.settleSettings(claim);
   }
 
   async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
     const previous = useTripStore.getState().enabledAccommodationTypes;
     actions.setEnabledAccommodationTypes(newTypes);
     if (!tripId) return;
+    const claim = actions.claimSettings(["enabledAccommodationTypes"]);
 
     try {
       const pacing = getPacingState();
@@ -742,14 +829,15 @@ export function useTripPlanner() {
       });
 
       if (error) {
-        actions.setEnabledAccommodationTypes(previous);
+        actions.revertSettings(claim, { enabledAccommodationTypes: previous });
         reportApiError(response.status, error);
       } else {
+        actions.settleSettings(claim);
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
-      actions.setEnabledAccommodationTypes(previous);
+      actions.revertSettings(claim, { enabledAccommodationTypes: previous });
       toast.error(t("errors.failedUpdateAccommodationTypes"));
     }
   }
@@ -974,8 +1062,8 @@ export function useTripPlanner() {
     const nextStageIndex =
       stageIndex + 1 < currentStages.length ? stageIndex + 1 : null;
 
-    const stageId = useTripStore.getState().stages[stageIndex]?.id;
-    if (!stageId) return false;
+    const stageId = currentStages[stageIndex]?.id;
+    if (!stageId) return;
 
     // Optimistic update
     actions.selectAccommodation(stageIndex, accIndex, nextStageIndex);
@@ -1082,6 +1170,7 @@ export function useTripPlanner() {
   }
 
   async function handleApplyBatch() {
+    const { pendingModifications } = useTripStore.getState();
     if (!tripId || pendingModifications.length === 0) return;
 
     setIsBatchApplying(true);
@@ -1095,6 +1184,7 @@ export function useTripPlanner() {
         // The dependency rules are positional ("and every subsequent one"), so the
         // identifier is resolved against the current order and the markers are
         // stored back as identifiers.
+        const stages = useTripStore.getState().stages;
         const affected = new Set<string>();
         for (const mod of pendingModifications) {
           if (mod.stageId !== null) {
@@ -1103,13 +1193,11 @@ export function useTripPlanner() {
             if (mod.type === "distance") {
               // Distance recomputes the modified stage and every subsequent one
               // (mirrors ComputationDependencyResolver.resolve on the backend).
-              for (let i = at; i < stages.length; i++) {
-                affected.add(stages[i]!.id);
-              }
+              for (const stage of stages.slice(at)) affected.add(stage.id);
             } else {
-              affected.add(stages[at]!.id);
-              const next = stages[at + 1];
-              if (next) affected.add(next.id);
+              for (const stage of stages.slice(at, at + 2)) {
+                affected.add(stage.id);
+              }
             }
           } else {
             // Trip-level modifications (dates, pacing) affect all stages
