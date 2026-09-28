@@ -6,6 +6,7 @@ namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\GetCollection;
 use App\Entity\User;
+use App\Geo\NominatimPlaces;
 use App\Service\NominatimThrottle;
 use App\State\GeocodeSearchProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,8 +21,8 @@ use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Moved here with the code it tests, when place search left
- * {@see \App\Controller\GeocodeController} to become an API Platform operation.
+ * Moved here with the code it tests, when place search left the geocode controller to become
+ * an API Platform operation.
  *
  * The functional test covers both transports end to end; these two cover what a functional
  * test cannot reach without actually exhausting a limiter or leaving the query out.
@@ -51,11 +52,11 @@ final class GeocodeSearchProviderTest extends TestCase
         $cache = $this->createStub(CacheItemPoolInterface::class);
         $cache->method('getItem')->willReturn($missItem);
 
-        $provider = new GeocodeSearchProvider(
+        $provider = new GeocodeSearchProvider(new NominatimPlaces(
             $this->createStub(HttpClientInterface::class),
             $cache,
             new NominatimThrottle($security, $limiter),
-        );
+        ));
 
         $this->expectException(TooManyRequestsHttpException::class);
         $provider->provide(new GetCollection(), [], ['filters' => ['q' => 'paris']]);
@@ -68,7 +69,7 @@ final class GeocodeSearchProviderTest extends TestCase
     #[Test]
     public function anEmptySearchTermIsRefused(): void
     {
-        $provider = new GeocodeSearchProvider(
+        $provider = new GeocodeSearchProvider(new NominatimPlaces(
             $this->createStub(HttpClientInterface::class),
             $this->createStub(CacheItemPoolInterface::class),
             new NominatimThrottle(
@@ -78,7 +79,7 @@ final class GeocodeSearchProviderTest extends TestCase
                     new InMemoryStorage(),
                 ),
             ),
-        );
+        ));
 
         $this->expectException(BadRequestHttpException::class);
         $provider->provide(new GetCollection(), [], ['filters' => ['q' => '   ']]);

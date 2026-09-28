@@ -4,94 +4,48 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Service\NominatimThrottle;
-use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use App\Geo\NominatimPlaces;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class GeocodeController
 {
-    private const int CACHE_TTL = 86400; // 24 hours
-
     public function __construct(
-        #[Autowire(service: 'nominatim.client')]
-        private HttpClientInterface $nominatimClient,
-        #[Autowire(service: 'cache.osm')]
-        private CacheItemPoolInterface $osmCache,
-        private NominatimThrottle $throttle,
+        private NominatimPlaces $places,
     ) {
     }
 
     #[Route('/geocode/reverse', methods: ['GET'])]
     public function reverse(Request $request): JsonResponse
     {
+        try {
+            return new JsonResponse(['results' => $this->places->reverse(...$this->coordinates($request))]);
+        } catch (HttpExceptionInterface $httpException) {
+            return ProblemResponse::fromException($httpException);
+        }
+    }
+
+    /**
+     * @return array{float, float}
+     */
+    private function coordinates(Request $request): array
+    {
         $lat = $request->query->get('lat');
         $lon = $request->query->get('lon');
 
         if (null === $lat || '' === $lat || null === $lon || '' === $lon) {
-            return new JsonResponse(['error' => 'Missing required parameters: lat, lon'], Response::HTTP_BAD_REQUEST);
+            throw new BadRequestHttpException('Missing required parameters: lat, lon');
         }
 
-        $latFloat = (float) $lat;
-        $lonFloat = (float) $lon;
-
-        $cacheKey = \sprintf('geocode.reverse.%s.%s', round($latFloat, 4), round($lonFloat, 4));
-        $item = $this->osmCache->getItem($cacheKey);
-
-        if ($item->isHit()) {
-            /** @var list<array{name: string, lat: float, lon: float, displayName: string, type: string}> $cached */
-            $cached = $item->get();
-
-            return new JsonResponse(['results' => $cached]);
+        // `(float) 'abc'` is 0.0: without this, garbage became a lookup of the Gulf of Guinea.
+        if (!\is_numeric($lat) || !\is_numeric($lon) || \abs((float) $lat) > 90 || \abs((float) $lon) > 180) {
+            throw new UnprocessableEntityHttpException('lat must be a number within [-90, 90] and lon within [-180, 180]');
         }
 
-        $this->throttle->throttle();
-
-        try {
-            $response = $this->nominatimClient->request('GET', '/reverse', [
-                'query' => [
-                    'lat' => $latFloat,
-                    'lon' => $lonFloat,
-                    'format' => 'jsonv2',
-                    'addressdetails' => 1,
-                ],
-            ]);
-
-            /** @var array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string, address?: array{city?: string, town?: string, village?: string, hamlet?: string, municipality?: string}, error?: string} $data */
-            $data = $response->toArray();
-        } catch (\Throwable) {
-            return new JsonResponse(['error' => 'Geocoding service unavailable'], Response::HTTP_BAD_GATEWAY);
-        }
-
-        if (isset($data['error'])) {
-            return new JsonResponse(['results' => []]);
-        }
-
-        // Prefer city/town/village name over the raw POI name
-        $address = $data['address'] ?? [];
-        $name = $data['name'] ?? '';
-        $cityName = $address['city'] ?? $address['town'] ?? $address['village'] ?? $address['hamlet'] ?? $address['municipality'] ?? null;
-        if (null !== $cityName && '' !== $cityName) {
-            $name = $cityName;
-        }
-
-        $results = [[
-            'name' => $name,
-            'lat' => (float) ($data['lat'] ?? $latFloat),
-            'lon' => (float) ($data['lon'] ?? $lonFloat),
-            'displayName' => $data['display_name'] ?? '',
-            'type' => $data['addresstype'] ?? $data['type'] ?? 'place',
-        ]];
-
-        $item->set($results);
-        $item->expiresAfter(self::CACHE_TTL);
-
-        $this->osmCache->save($item);
-
-        return new JsonResponse(['results' => $results]);
+        return [(float) $lat, (float) $lon];
     }
 }

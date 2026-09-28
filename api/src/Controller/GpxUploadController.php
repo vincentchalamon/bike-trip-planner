@@ -42,30 +42,30 @@ final readonly class GpxUploadController
         $file = $request->files->get('gpxFile');
 
         if (!$file instanceof UploadedFile) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'Missing required file: gpxFile');
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'Missing required file: gpxFile');
         }
 
         if (!$file->isValid()) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'File upload failed: '.$file->getErrorMessage());
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'File upload failed: '.$file->getErrorMessage());
         }
 
         if ($file->getSize() > self::MAX_FILE_SIZE) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'File exceeds maximum size of 30 MB.');
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'File exceeds maximum size of 30 MB.');
         }
 
         $extension = strtolower($file->getClientOriginalExtension());
         if ('gpx' !== $extension) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
         }
 
         $mimeType = $file->getMimeType();
         if (null !== $mimeType && !in_array($mimeType, ['application/gpx+xml', 'application/xml', 'text/xml', 'text/plain'], true)) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'Only .gpx files are accepted.');
         }
 
         $content = file_get_contents($file->getPathname());
         if (false === $content || '' === $content) {
-            return $this->problem(Response::HTTP_BAD_REQUEST, 'Failed to read uploaded file.');
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'Failed to read uploaded file.');
         }
 
         try {
@@ -75,11 +75,11 @@ final readonly class GpxUploadController
             // from a parser regression in the logs, because there were no logs.
             $this->logger->warning('GPX upload could not be parsed.', ['exception' => $runtimeException]);
 
-            return $this->problem(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid GPX file: could not parse XML content.');
+            return ProblemResponse::create(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid GPX file: could not parse XML content.');
         }
 
         if ([] === $points) {
-            return $this->problem(Response::HTTP_UNPROCESSABLE_ENTITY, 'GPX file contains no track points.');
+            return ProblemResponse::create(Response::HTTP_UNPROCESSABLE_ENTITY, 'GPX file contains no track points.');
         }
 
         $title = $this->gpxUploadService->extractTitle($content);
@@ -95,7 +95,7 @@ final readonly class GpxUploadController
         // to exhaust storage/workers (SEC-006). Cheap early validation 4xx are not
         // throttled (and need no authenticated user).
         if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            return $this->problem(Response::HTTP_TOO_MANY_REQUESTS, 'Too many GPX uploads. Try again later.');
+            return ProblemResponse::create(Response::HTTP_TOO_MANY_REQUESTS, 'Too many GPX uploads. Try again later.');
         }
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $user->getLocale(), $user);
@@ -121,29 +121,6 @@ final readonly class GpxUploadController
         }
 
         return new JsonResponse($response, Response::HTTP_ACCEPTED);
-    }
-
-    /**
-     * The error shape every other operation already answers with.
-     *
-     * `rfc_7807_compliant_errors` is on globally, but API Platform's ErrorListener only
-     * covers its own operations: this is a plain Symfony route with no `_api_operation`,
-     * and a multipart POST without an `Accept` header negotiates `html`, so the listener
-     * bows out entirely. Hence the hand-built body — matching the eight keys of
-     * tests/Functional/error-schema.json exactly, which is `additionalProperties: false`.
-     */
-    private function problem(int $status, string $detail): JsonResponse
-    {
-        return new JsonResponse([
-            '@context' => '/contexts/Error',
-            '@id' => '/errors/'.$status,
-            '@type' => 'Error',
-            'type' => '/errors/'.$status,
-            'title' => 'An error occurred',
-            'status' => $status,
-            'detail' => $detail,
-            'description' => $detail,
-        ], $status, ['Content-Type' => 'application/problem+json; charset=utf-8']);
     }
 
     private function applyOptionalParameters(TripRequest $tripRequest, Request $request): void
