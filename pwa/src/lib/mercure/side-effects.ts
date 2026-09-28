@@ -32,27 +32,21 @@ type SideEffect<K extends MercureEvent["type"]> = (
   context: SideEffectContext,
 ) => void;
 
-/** Geocode every stage still missing a label, keeping each one's index in the store. */
+/** Geocode every stage still missing a label. */
 function labelStagesMissingOne(
   stages: StageData[],
   signal: AbortSignal,
   only?: ReadonlySet<string>,
 ): void {
-  const pending = stages
-    .map((stage, index) => ({ stage, index }))
-    .filter(({ stage }) =>
-      only
-        ? only.has(stage.id)
-        : stage.startLabel === null || stage.endLabel === null,
-    );
+  const pending = stages.filter((stage) =>
+    only
+      ? only.has(stage.id)
+      : stage.startLabel === null || stage.endLabel === null,
+  );
 
   if (pending.length === 0) return;
 
-  void resolveStageLabels(
-    pending.map(({ stage }) => stage),
-    pending.map(({ index }) => index),
-    signal,
-  );
+  void resolveStageLabels(pending, signal);
 }
 
 /**
@@ -163,13 +157,8 @@ const SIDE_EFFECTS: {
     }
 
     // Labels may have been wiped if endpoints moved — refresh if needed.
-    const index = currentStages.findIndex((stage) => stage.id === stageId);
-    if (
-      current &&
-      index !== -1 &&
-      (current.startLabel === null || current.endLabel === null)
-    ) {
-      void resolveStageLabels([current], [index], signal);
+    if (current && (current.startLabel === null || current.endLabel === null)) {
+      void resolveStageLabels([current], signal);
     }
   },
 

@@ -157,7 +157,7 @@ interface TripState {
     source: string,
   ) => void;
   updateStageLabel: (
-    stageIndex: number,
+    stageId: string,
     field: "startLabel" | "endLabel",
     value: string,
   ) => void;
@@ -509,11 +509,10 @@ export const useTripStore = create<TripState>()(
         }
       }),
 
-    updateStageLabel: (stageIndex, field, value) =>
+    updateStageLabel: (stageId, field, value) =>
       set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex][field] = value;
-        }
+        const stage = state.stages.find((s) => s.id === stageId);
+        if (stage) stage[field] = value;
       }),
 
     removeLocalAccommodation: (stageIndex, accIndex) =>
