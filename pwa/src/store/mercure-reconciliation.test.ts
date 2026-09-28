@@ -202,16 +202,42 @@ describe("reduceMercureEvent — trip-level events", () => {
 });
 
 describe("reduceMercureEvent — per-stage enrichment", () => {
-  it("weather_fetched sets weather on the stage matching dayNumber", () => {
+  it("weather_fetched sets weather on the stage matching stageId", () => {
     const state = baseState({
       stages: [stage({ dayNumber: 1 }), stage({ dayNumber: 2 })],
     });
     const next = reduceMercureEvent(state, {
       type: "weather_fetched",
-      data: { stages: [{ dayNumber: 2, weather }] },
+      data: { stages: [{ stageId: "stage-2", weather }] },
     });
     expect(next.stages[0]!.weather).toBeNull();
     expect(next.stages[1]!.weather).toEqual(weather);
+  });
+
+  it("weather_fetched follows a stage moved before the forecast arrives", () => {
+    // Forecast fetched for stage-1 while it was day 1; the rider then moved it to day 2,
+    // renumbering stage-2 to day 1. The forecast belongs to stage-1, wherever it sits now.
+    const state = baseState({
+      stages: [
+        stage({ id: "stage-2", dayNumber: 1 }),
+        stage({ id: "stage-1", dayNumber: 2 }),
+      ],
+    });
+    const next = reduceMercureEvent(state, {
+      type: "weather_fetched",
+      data: { stages: [{ stageId: "stage-1", weather }] },
+    });
+    expect(next.stages[0]!.weather).toBeNull();
+    expect(next.stages[1]!.weather).toEqual(weather);
+  });
+
+  it("weather_fetched ignores a stageId that no longer exists", () => {
+    const state = baseState({ stages: [stage({ dayNumber: 1 })] });
+    const next = reduceMercureEvent(state, {
+      type: "weather_fetched",
+      data: { stages: [{ stageId: "stage-gone", weather }] },
+    });
+    expect(next).toBe(state);
   });
 
   it("pois_scanned sets resupply and tags optional alerts with the pois group", () => {

@@ -121,6 +121,11 @@ concurrency token go stale on its own while enrichments land.
 - The addressing of the HTTP operations and the Mercure payloads is unchanged by this
   decision's first implementation step: the identifier is emitted but not yet consumed, so
   the identities can be observed to be stable before anything is hung off them.
+- The Mercure side is now done: `weather_fetched`, the last payload that named a stage by
+  `dayNumber`, carries `stageId` like every other per-stage event. A structural edit that
+  lands while the forecast is being fetched used to move the forecast onto whichever stage
+  took the old day number; the client now applies it to the stage it was computed for, and
+  drops it if that stage no longer exists (a pacing regeneration relaunches the fetch).
 
 ## Notes for whoever implements the rest
 

@@ -177,13 +177,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             }
 
             $this->publisher->publish($tripId, MercureEventType::WEATHER_FETCHED, [
-                'stagesWithWeather' => \count(array_filter(
-                    $stages,
-                    static fn (Stage $s): bool => $s->weather instanceof WeatherForecast
-                )),
                 'stages' => array_map(
                     fn (Stage $s): array => [
-                        'dayNumber' => $s->dayNumber,
+                        'stageId' => $s->id,
                         'weather' => $s->weather instanceof WeatherForecast ? $this->serializer->toArray($s->weather) : null,
                     ],
                     $stages
