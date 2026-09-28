@@ -12,4 +12,14 @@ final readonly class Coordinate
         public float $ele = 0.0,
     ) {
     }
+
+    /**
+     * The two-key shape the spatial queries and the geometry payloads take.
+     *
+     * @return array{lat: float, lon: float}
+     */
+    public function toLatLon(): array
+    {
+        return ['lat' => $this->lat, 'lon' => $this->lon];
+    }
 }

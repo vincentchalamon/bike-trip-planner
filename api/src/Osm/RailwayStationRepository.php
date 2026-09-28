@@ -26,37 +26,6 @@ final readonly class RailwayStationRepository implements RailwayStationRepositor
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
-        if ([] === $route) {
-            return [];
-        }
-
-        /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->referenceConnection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
-                FROM osm.railway_stations
-                WHERE ST_DWithin(
-                    geom::geography,
-                    ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                    :radius
-                )
-                SQL,
-            [
-                'wkt' => WktGeometry::lineStringOrPoint($route),
-                'radius' => $radiusMeters,
-            ],
-        );
-
-        $stations = [];
-        foreach ($rows as $row) {
-            $stations[] = [
-                'name' => null !== $row['name'] ? (string) $row['name'] : null,
-                'category' => (string) $row['category'],
-                'lat' => (float) $row['lat'],
-                'lon' => (float) $row['lon'],
-            ];
-        }
-
-        return $stations;
+        return new CorridorPointQuery($this->referenceConnection, CorridorPointTable::RAILWAY_STATIONS)->find($route, $radiusMeters);
     }
 }

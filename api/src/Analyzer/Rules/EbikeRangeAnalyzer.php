@@ -106,7 +106,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
     private function findNearestCharger(Stage $stage): ?array
     {
         $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-        $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $geometry);
+        $route = array_map(static fn (Coordinate $point): array => $point->toLatLon(), $geometry);
 
         return $this->chargingStationRepository->findNearestInCorridor($route, self::CORRIDOR_RADIUS_METERS);
     }

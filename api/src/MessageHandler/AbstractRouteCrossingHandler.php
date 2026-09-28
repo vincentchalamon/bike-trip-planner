@@ -49,7 +49,7 @@ abstract readonly class AbstractRouteCrossingHandler extends AbstractTripMessage
                 }
 
                 $stagePoints = array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    static fn (Coordinate $c): array => $c->toLatLon(),
                     $stage->geometry,
                 );
 

@@ -47,7 +47,7 @@ final readonly class Geocoder implements GeocoderInterface
             return null; // transient network error - do not cache
         }
 
-        $item->set($coordinate instanceof Coordinate ? ['lat' => $coordinate->lat, 'lon' => $coordinate->lon] : null);
+        $item->set($coordinate instanceof Coordinate ? $coordinate->toLatLon() : null);
         $item->expiresAfter(self::CACHE_TTL);
 
         $this->osmCache->save($item);

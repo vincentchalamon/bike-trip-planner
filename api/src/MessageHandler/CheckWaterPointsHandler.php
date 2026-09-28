@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
@@ -66,15 +67,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         }
 
         $this->executeWithTracking($tripId, ComputationName::WATER_POINTS, function () use ($tripId, $stages): void {
-            $decimatedData = $this->points->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_merge(...array_map(
-                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                    $stages,
-                ));
-
-            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
+            $route = $this->routeCorridor($this->points, $tripId, $stages);
 
             // Read drinking-water points from the local-first index along the route corridor (ADR-040).
             $allWaterPoints = [];
@@ -99,7 +92,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 // A rest day is not ridden: no on-route hydration gap to warn about.
                 // Its water points still ship in the payload above (useful where you stay).
                 if (!$stage->isRestDay && $this->hasWaterGap($stage, $waterPointsWithDistance)) {
-                    $nearestWp = $this->findNearestWaterPoint($stage, $allWaterPoints);
+                    $nearestWp = Nearest::to($this->haversine, $stage->midpoint(), $allWaterPoints);
                     $alerts[] = AlertPayload::forStage($stage, new Alert(
                         code: AlertCode::WATER_POINT_GAP,
                         type: AlertType::NUDGE,
@@ -143,7 +136,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
 
         $result = [];
         foreach ($waterPoints as $wp) {
-            $nearestIndex = $this->findNearestGeometryIndex($geometry, $wp['lat'], $wp['lon']);
+            $nearestIndex = Nearest::vertexIndex($this->haversine, $geometry, $wp['lat'], $wp['lon']);
             $result[] = [
                 'lat' => $wp['lat'],
                 'lon' => $wp['lon'],
@@ -205,56 +198,5 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         }
 
         return $cumulative;
-    }
-
-    /**
-     * Finds the index of the closest geometry point to the given coordinates.
-     *
-     * @param list<Coordinate> $geometry
-     */
-    private function findNearestGeometryIndex(array $geometry, float $lat, float $lon): int
-    {
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = 0;
-
-        foreach ($geometry as $i => $point) {
-            $dist = $this->haversine->inMeters($point->lat, $point->lon, $lat, $lon);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearest = $i;
-            }
-        }
-
-        return $nearest;
-    }
-
-    /**
-     * Finds the nearest water point to the stage midpoint.
-     *
-     * @param list<array{lat: float, lon: float}> $allWaterPoints
-     *
-     * @return array{lat: float, lon: float}|null
-     */
-    private function findNearestWaterPoint(Stage $stage, array $allWaterPoints): ?array
-    {
-        if ([] === $allWaterPoints) {
-            return null;
-        }
-
-        $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-        $midpoint = $geometry[(int) (\count($geometry) / 2)];
-
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = null;
-
-        foreach ($allWaterPoints as $wp) {
-            $dist = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $wp['lat'], $wp['lon']);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearest = $wp;
-            }
-        }
-
-        return $nearest;
     }
 }

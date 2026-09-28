@@ -31,7 +31,7 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
         // stage end points, where the rider sleeps (ADR-040). description /
         // imageUrl / wikipediaUrl are enriched from Wikidata at provision time.
         $points = array_map(
-            static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
+            static fn (Coordinate $point): array => $point->toLatLon(),
             array_values($endPoints),
         );
 

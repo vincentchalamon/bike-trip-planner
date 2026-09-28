@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
@@ -72,15 +71,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
 
         $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages): void {
             // Read health services from the local-first index along the route corridor (ADR-040).
-            $decimatedData = $this->points->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_merge(...array_map(
-                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                    $stages,
-                ));
-
-            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
+            $route = $this->routeCorridor($this->points, $tripId, $stages);
 
             /** @var list<array{lat: float, lon: float}> $healthServiceLocations */
             $healthServiceLocations = [];
@@ -91,19 +82,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             // Check each stage for nearby health services
             $alerts = [];
             foreach ($stages as $stage) {
-                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-                $midpoint = $geometry[(int) (\count($geometry) / 2)];
-
-                $hasNearby = false;
-                foreach ($healthServiceLocations as $service) {
-                    $distance = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $service['lat'], $service['lon']);
-                    if ($distance < self::HEALTH_SERVICE_PROXIMITY_METERS) {
-                        $hasNearby = true;
-                        break;
-                    }
-                }
-
-                if ($hasNearby) {
+                if (Nearest::anyWithin($this->haversine, $stage->midpoint(), $healthServiceLocations, self::HEALTH_SERVICE_PROXIMITY_METERS)) {
                     continue;
                 }
 

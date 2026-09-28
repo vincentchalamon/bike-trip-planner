@@ -222,7 +222,7 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         $fractions = $this->cycleRouteRepository->onNetworkFractions(
             array_map(
                 static fn (StageDto $stage): array => array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    static fn (Coordinate $c): array => $c->toLatLon(),
                     $stage->geometry,
                 ),
                 $stages,
@@ -678,7 +678,7 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         $points = [];
         foreach ($stages as $stage) {
             foreach ($stage->geometry as $coord) {
-                $points[] = ['lat' => $coord->lat, 'lon' => $coord->lon];
+                $points[] = $coord->toLatLon();
             }
         }
 

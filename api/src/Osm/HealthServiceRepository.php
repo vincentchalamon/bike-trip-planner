@@ -26,37 +26,6 @@ final readonly class HealthServiceRepository implements HealthServiceRepositoryI
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
-        if ([] === $route) {
-            return [];
-        }
-
-        /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->referenceConnection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
-                FROM osm.health_services
-                WHERE ST_DWithin(
-                    geom::geography,
-                    ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
-                    :radius
-                )
-                SQL,
-            [
-                'wkt' => WktGeometry::lineStringOrPoint($route),
-                'radius' => $radiusMeters,
-            ],
-        );
-
-        $healthServices = [];
-        foreach ($rows as $row) {
-            $healthServices[] = [
-                'name' => null !== $row['name'] ? (string) $row['name'] : null,
-                'category' => (string) $row['category'],
-                'lat' => (float) $row['lat'],
-                'lon' => (float) $row['lon'],
-            ];
-        }
-
-        return $healthServices;
+        return new CorridorPointQuery($this->referenceConnection, CorridorPointTable::HEALTH_SERVICES)->find($route, $radiusMeters);
     }
 }

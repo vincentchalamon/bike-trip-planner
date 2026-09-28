@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Geo\Nearest;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
@@ -96,7 +97,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 $activeStages[] = $stage;
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $stageGeometries[] = array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    static fn (Coordinate $c): array => $c->toLatLon(),
                     $geometry,
                 );
             }
@@ -127,7 +128,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
                 $stagePois = [];
                 foreach ($poisByActiveStage[$activeIdx] ?? [] as $poi) {
-                    $distanceFromRoute = $this->findMinDistanceToRoute($geometry, $poi['lat'], $poi['lon']);
+                    $distanceFromRoute = (int) round(Nearest::distanceToLine($this->haversine, $geometry, $poi['lat'], $poi['lon']));
 
                     $stagePois[] = array_merge($poi, ['distanceFromRoute' => $distanceFromRoute]);
                 }
@@ -217,25 +218,5 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 'alerts' => $this->renderForWire($tripId, $alerts),
             ]);
         });
-    }
-
-    /**
-     * Returns the minimum Haversine distance (in metres) from the given
-     * point to any geometry point along the route.
-     *
-     * @param list<Coordinate> $geometry
-     */
-    private function findMinDistanceToRoute(array $geometry, float $lat, float $lon): int
-    {
-        $minDist = PHP_FLOAT_MAX;
-
-        foreach ($geometry as $point) {
-            $dist = $this->haversine->inMeters($point->lat, $point->lon, $lat, $lon);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-            }
-        }
-
-        return (int) round($minDist);
     }
 }
