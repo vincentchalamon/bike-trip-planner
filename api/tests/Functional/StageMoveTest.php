@@ -16,6 +16,7 @@ use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -50,6 +51,10 @@ final class StageMoveTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('today +1 year');
@@ -74,7 +79,7 @@ final class StageMoveTest extends ApiTestCase
             );
         }
 
-        $repo->storeStages($tripId, $stages);
+        $stageStore->storeStages($tripId, $stages);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -100,8 +105,8 @@ final class StageMoveTest extends ApiTestCase
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
         // todo check response content
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);
@@ -131,8 +136,8 @@ final class StageMoveTest extends ApiTestCase
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
         // todo check response content
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\ComputationTracker;
 
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * The generation a message is stamped with is the trip's structural version.
@@ -24,7 +24,7 @@ use App\Repository\TripRequestRepositoryInterface;
 final readonly class TripGenerationTracker implements TripGenerationTrackerInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
     ) {
     }
 
@@ -38,11 +38,11 @@ final readonly class TripGenerationTracker implements TripGenerationTrackerInter
 
     public function increment(string $tripId, ?int $expectedVersion = null): int
     {
-        return $this->tripStateManager->bumpVersion($tripId, $expectedVersion);
+        return $this->stageStore->bumpVersion($tripId, $expectedVersion);
     }
 
     public function current(string $tripId): ?int
     {
-        return $this->tripStateManager->getVersion($tripId);
+        return $this->stageStore->getVersion($tripId);
     }
 }

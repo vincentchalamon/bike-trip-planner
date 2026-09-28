@@ -11,6 +11,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -40,6 +41,9 @@ final class TripDownloadTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
 
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
@@ -56,7 +60,7 @@ final class TripDownloadTest extends ApiTestCase
             endPoint: new Coordinate(45.5, 6.5, 800.0),
             geometry: [new Coordinate(45.0, 6.0, 1000.0), new Coordinate(45.5, 6.5, 800.0)],
         );
-        $repo->storeStages($tripId, [$stage]);
+        $stageStore->storeStages($tripId, [$stage]);
     }
 
     #[Test]

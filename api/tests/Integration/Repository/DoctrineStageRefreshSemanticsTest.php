@@ -9,7 +9,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Repository\DoctrineTripRequestRepository;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use PHPUnit\Framework\Attributes\Test;
@@ -31,7 +31,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * the unit of work exactly as a Messenger worker in another container would.
  *
  * The Doctrine implementation is resolved explicitly rather than through
- * {@see TripRequestRepositoryInterface}: what is under test is this class's SQL, not whatever
+ * {@see TripStageStoreInterface}: what is under test is this class's SQL, not whatever
  * the interface happens to resolve to.
  */
 #[ResetDatabase]

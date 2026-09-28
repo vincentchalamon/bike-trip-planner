@@ -10,6 +10,7 @@ use App\Geo\GeoPoint;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * AI-free in-ride orchestrator: reads the nearest POIs of one intent category
@@ -50,6 +51,7 @@ final readonly class NearbyPoiFinder
         private CoverageRepositoryInterface $coverageRepository,
         private PoiLabelResolver $labelResolver,
         private TripRequestRepositoryInterface $tripRepository,
+        private TripStageStoreInterface $stageStore,
     ) {
     }
 
@@ -211,12 +213,12 @@ final readonly class NearbyPoiFinder
 
         // `stageDay` is part of the public request body, so it stays a day number here
         // and is resolved to the stage identity the storage layer now addresses by.
-        $stageId = $this->tripRepository->getStageIdByDayNumber($tripId, $stageDay);
+        $stageId = $this->stageStore->getStageIdByDayNumber($tripId, $stageDay);
         if (null === $stageId) {
             return $candidates;
         }
 
-        $geometry = $this->tripRepository->getStageGeometry($tripId, $stageId);
+        $geometry = $this->stageStore->getStageGeometry($tripId, $stageId);
         if (null === $geometry || [] === $geometry) {
             return $candidates;
         }

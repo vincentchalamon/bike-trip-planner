@@ -9,7 +9,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Repository\DoctrineTripRequestRepository;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -22,7 +22,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * keeps its identity across every write (ADR-066).
  *
  * The Doctrine implementation is resolved explicitly rather than through
- * {@see TripRequestRepositoryInterface}: what is under test is this class's SQL path.
+ * {@see TripStageStoreInterface}: what is under test is this class's SQL path.
  */
 #[ResetDatabase]
 final class DoctrineStageReconciliationTest extends KernelTestCase

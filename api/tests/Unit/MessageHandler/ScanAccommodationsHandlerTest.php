@@ -24,6 +24,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Weather\WeatherForecastSerializer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -49,6 +50,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         AccommodationSourceRegistry $registry,
         GeoDistanceInterface $haversine,
@@ -73,6 +75,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $registry,
             $haversine,
             $distributor,
@@ -90,7 +93,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -158,7 +162,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-1'));
     }
 
@@ -168,7 +172,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -216,7 +221,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-1'));
     }
 
@@ -228,7 +233,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', $endLat, $endLon);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -273,7 +279,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-1'));
     }
 
@@ -283,7 +289,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -305,7 +312,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-1'));
     }
 
@@ -315,7 +322,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-2', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -342,7 +350,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 $this->callback(static fn (array $d): bool => 1 === \count($d['accommodations']))
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-2'));
         $handler(new ScanAccommodations('trip-2'));
 
@@ -367,7 +375,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage->accommodations = [$existing];
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -404,7 +413,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-3', isExpandScan: true));
 
         $this->assertCount(2, $stage->accommodations);
@@ -430,7 +439,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         )];
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -446,7 +456,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $published = $data;
         });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->createStub(GeoDistanceInterface::class), $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $this->createStub(GeoDistanceInterface::class), $distributor);
         $handler(new ScanAccommodations('trip-3', isExpandScan: true));
 
         $this->assertIsArray($published);
@@ -465,7 +475,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-no-scrape', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -502,7 +513,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-no-scrape'));
 
         $this->assertCount(1, $stage->accommodations);
@@ -515,7 +526,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-wilderness', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -562,7 +574,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-wilderness'));
     }
 
@@ -572,7 +584,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-backpack', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -619,7 +632,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-backpack'));
     }
 
@@ -629,7 +642,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage('trip-source', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -673,7 +687,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-source'));
     }
 
@@ -777,7 +791,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $candidates[] = $this->candidate('Camping Municipal', 'camp_site', priceMin: 12.0);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage, $restDay]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage, $restDay]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -799,6 +814,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $haversine = new HaversineDistance();
         $handler = $this->createHandler(
             $tripStateManager,
+            $stageStore,
             $publisher,
             $registry,
             $haversine,
@@ -862,7 +878,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $stage = $this->createStage($tripId, 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
 
@@ -885,7 +902,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             },
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $stageStore, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations($tripId));
 
         return $published;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * Reads back the identifier of the stage sitting at a given position.
@@ -18,8 +18,8 @@ trait AddressesStagesByIdTrait
 {
     private function stageIdAt(string $tripId, int $position): string
     {
-        /** @var TripRequestRepositoryInterface $repository */
-        $repository = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repository */
+        $repository = self::getContainer()->get(TripStageStoreInterface::class);
 
         $stages = $repository->getStages($tripId) ?? [];
         self::assertArrayHasKey($position, $stages, \sprintf('No stage seeded at position %d.', $position));

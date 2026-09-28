@@ -14,6 +14,7 @@ use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\TripAnalysisDispatcher;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -28,12 +29,13 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
         private TripAnalysisDispatcher $analysisDispatcher,
         private ComputationSupersession $supersession,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(RecalculateStages $message): void
@@ -41,7 +43,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $generation = $message->generation;
 
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;

@@ -20,16 +20,16 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 /**
  * `PATCH /trips/{id}` over the repository production actually runs on.
  *
- * The rest of the update suite runs against the transient repository, which deserialises a
- * fresh copy per read. Doctrine does the opposite: it serves the managed entity from the
+ * The update suite used to run against a transient repository, which deserialised a fresh
+ * copy per read. Doctrine does the opposite: it serves the managed entity from the
  * identity map, and API Platform deserialises the PATCH body into that very instance
  * (ReadProvider hands the operation provider's result to DeserializeProvider as
  * OBJECT_TO_POPULATE). Any comparison made against a second `getRequest()` therefore compared
  * the new settings with themselves and answered "nothing changed" — for every PATCH, in
  * production, invisibly, since no functional test ever took this path.
  *
- * This is the only test that takes it. It stands until the alias is gone, and afterwards it
- * remains the one that names the reason.
+ * The alias is gone, so every functional test takes this path now; this one remains the test
+ * that names the reason.
  */
 #[ResetDatabase]
 final class TripUpdateThroughDoctrineTest extends ApiTestCase
@@ -51,14 +51,6 @@ final class TripUpdateThroughDoctrineTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-
-        // Before anything else touches the container: TestContainer refuses to replace a
-        // service once it has been instantiated, and creating the test user is enough to
-        // instantiate this one.
-        $container = self::getContainer();
-        $repository = $container->get(DoctrineTripRequestRepository::class);
-        \assert($repository instanceof DoctrineTripRequestRepository);
-        $container->set(TripRequestRepositoryInterface::class, $repository);
 
         ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('doctrine-patch@example.com');
     }
@@ -93,9 +85,7 @@ final class TripUpdateThroughDoctrineTest extends ApiTestCase
     }
 
     /**
-     * Seeds through the Doctrine repository, which setUp() has already made the one the
-     * processor resolves. Seeding alone would not do: the processor reads the interface, which
-     * the test environment aliases elsewhere.
+     * Seeds through the interface the processor reads, which resolves to the Doctrine repository.
      */
     private function seedTripThroughDoctrine(): void
     {

@@ -13,7 +13,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Service\TripAnalysisDispatcher;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -30,7 +30,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 final readonly class AnalyzeTripProcessor implements ProcessorInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
@@ -52,7 +52,7 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
         }
 
         // 422: the trip must have pre-computed stages before analysis can be requested.
-        $stages = $this->tripStateManager->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
         if (null === $stages || [] === $stages) {
             throw new UnprocessableEntityHttpException('Trip has no stages to analyze.');
         }

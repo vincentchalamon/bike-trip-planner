@@ -20,6 +20,7 @@ use App\Mapper\StageArrayMapper;
 use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -35,6 +36,7 @@ final readonly class TripDetailProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private TripLocker $tripLocker,
         private ComputationTrackerInterface $computationTracker,
         private StageArrayMapper $stageMapper,
@@ -59,7 +61,7 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         \assert($request->id instanceof Uuid);
 
-        $stages = $this->tripStateManager->getStages($id) ?? [];
+        $stages = $this->stageStore->getStages($id) ?? [];
 
         // The version the body is built from, advertised as the ETag the client pins with
         // If-Match on its next edit. Read here rather than in the response listener, which

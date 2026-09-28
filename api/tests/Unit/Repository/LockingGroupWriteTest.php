@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Repository;
 
 use App\Enum\AlertGroup;
-use App\Repository\LockingTripRequestRepository;
+use App\Repository\LockingTripStageStore;
 use App\Repository\MergesGroupWritesAtomically;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Lock\LockFactory;
@@ -43,14 +43,14 @@ final class LockingGroupWriteTest extends TestCase
     #[Test]
     public function aBlobBackedImplementationKeepsTheLock(): void
     {
-        $decorated = $this->createStub(TripRequestRepositoryInterface::class);
+        $decorated = $this->createStub(TripStageStoreInterface::class);
         $decorated->method('updateStageAlertsForGroup')->willReturnCallback(
             function (): void {
                 $this->observed = $this->probe();
             },
         );
 
-        $this->repository($decorated)->updateStageAlertsForGroup(
+        $this->store($decorated)->updateStageAlertsForGroup(
             self::TRIP_ID,
             self::STAGE_ID,
             AlertGroup::FERRY,
@@ -64,16 +64,16 @@ final class LockingGroupWriteTest extends TestCase
     public function anImplementationThatMergesInPlaceGoesStraightThrough(): void
     {
         $decorated = $this->createStubForIntersectionOfInterfaces(
-            [TripRequestRepositoryInterface::class, MergesGroupWritesAtomically::class],
+            [TripStageStoreInterface::class, MergesGroupWritesAtomically::class],
         );
         $decorated->method('updateTripAlertsForGroup')->willReturnCallback(
             function (): void {
                 $this->observed = $this->probe();
             },
         );
-        \assert($decorated instanceof TripRequestRepositoryInterface);
+        \assert($decorated instanceof TripStageStoreInterface);
 
-        $this->repository($decorated)->updateTripAlertsForGroup(self::TRIP_ID, AlertGroup::CALENDAR, []);
+        $this->store($decorated)->updateTripAlertsForGroup(self::TRIP_ID, AlertGroup::CALENDAR, []);
 
         self::assertTrue($this->observed, 'The lock was taken anyway, serialising handlers that run in parallel by design.');
     }
@@ -86,8 +86,8 @@ final class LockingGroupWriteTest extends TestCase
             ->acquire();
     }
 
-    private function repository(TripRequestRepositoryInterface $decorated): LockingTripRequestRepository
+    private function store(TripStageStoreInterface $decorated): LockingTripStageStore
     {
-        return new LockingTripRequestRepository($decorated, $this->lockFactory);
+        return new LockingTripStageStore($decorated, $this->lockFactory);
     }
 }

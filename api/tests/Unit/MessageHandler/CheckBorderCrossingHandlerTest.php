@@ -15,6 +15,7 @@ use App\Message\CheckBorderCrossing;
 use App\MessageHandler\CheckBorderCrossingHandler;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -26,9 +27,10 @@ final class CheckBorderCrossingHandlerTest extends TestCase
     use AlertMessageTestTrait;
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         AdminBoundaryRepositoryInterface $adminBoundaryRepository,
+        string $locale = 'en',
     ): CheckBorderCrossingHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -43,12 +45,16 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckBorderCrossingHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $adminBoundaryRepository,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -75,11 +81,10 @@ final class CheckBorderCrossingHandlerTest extends TestCase
     }
 
     /** @param list<Stage>|null $stages */
-    private function createTripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
+    private function createStageStore(?array $stages): TripStageStoreInterface
     {
-        $manager = $this->createStub(TripRequestRepositoryInterface::class);
+        $manager = $this->createStub(TripStageStoreInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn($locale);
 
         return $manager;
     }
@@ -107,7 +112,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ),
         ];
 
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         // Checkpoints: Lille (France), Courtrai (Belgium), Renaix (Belgium)
         $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE', 'BE']);
@@ -130,7 +135,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -157,7 +162,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ),
         ];
 
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         // All checkpoints resolve to France
         $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'FR', 'FR']);
@@ -171,7 +176,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -208,7 +213,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ),
         ];
 
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         // Checkpoints: France → Belgium → France → Belgium
         $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE', 'FR', 'BE']);
@@ -229,21 +234,21 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
     #[Test]
     public function nullStagesYieldsNoPublish(): void
     {
-        $tripStateManager = $this->createTripStateManager(null);
+        $stageStore = $this->createStageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $adminBoundaryRepository = $this->createStub(AdminBoundaryRepositoryInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -261,7 +266,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ),
         ];
 
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         // One point resolves to France, the other lies outside every stored boundary
         $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', null]);
@@ -275,7 +280,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -293,7 +298,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             ),
         ];
 
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         $adminBoundaryRepository = $this->adminBoundaryRepository(['FR', 'BE']);
 
@@ -318,7 +323,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 }

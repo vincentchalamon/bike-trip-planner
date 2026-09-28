@@ -16,6 +16,7 @@ use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -50,6 +51,10 @@ final class StageDeleteTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('today +1 year');
@@ -74,7 +79,7 @@ final class StageDeleteTest extends ApiTestCase
             );
         }
 
-        $repo->storeStages($tripId, $stages);
+        $stageStore->storeStages($tripId, $stages);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -96,8 +101,8 @@ final class StageDeleteTest extends ApiTestCase
         // todo check json schema
         // todo check response content
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);
@@ -114,8 +119,8 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stagesBefore = $repo->getStages(self::TRIP_ID);
         $this->assertNotNull($stagesBefore);
         $lastStageEndPoint = $stagesBefore[3]->endPoint;
@@ -143,8 +148,8 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stagesBefore = $repo->getStages(self::TRIP_ID);
         $this->assertNotNull($stagesBefore);
         $firstStageStartPoint = $stagesBefore[0]->startPoint;
@@ -172,8 +177,8 @@ final class StageDeleteTest extends ApiTestCase
     {
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_COLLECTION->value);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stagesBefore = $repo->getStages(self::TRIP_ID);
         $this->assertNotNull($stagesBefore);
         $secondStageLabel = $stagesBefore[1]->label;
@@ -265,8 +270,8 @@ final class StageDeleteTest extends ApiTestCase
         // todo check json schema
         // todo check response content
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);

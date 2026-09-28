@@ -10,42 +10,44 @@ use App\ApiResource\Stage;
 use App\Enum\AlertGroup;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * The behaviour every {@see TripRequestRepositoryInterface} implementation owes its
- * callers, run against each of them.
+ * The behaviour every {@see TripStageStoreInterface} implementation owes its callers.
  *
- * There are two implementations and they are not interchangeable by accident: the Doctrine
- * one backs dev and prod, the Redis one is aliased in for the `test` environment
- * (`config/services.php`), so the whole functional suite exercises Redis and never the SQL
- * path. Without a shared contract the two drift silently, and a green functional suite says
- * nothing about production — the gap the #56 TODO has been naming for a while.
+ * The trips are seeded through {@see TripRequestRepositoryInterface::initializeTrip()}: a
+ * stage store holds the stages of a trip that already exists.
  *
  * Identity is what this pins: a stage keeps its identifier across every write, which is
  * what makes it addressable and what the per-stage enrichment writes target (ADR-066).
  */
-abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
+abstract class TripStageStoreContractTestCase extends KernelTestCase
 {
-    protected TripRequestRepositoryInterface $repository;
+    protected TripStageStoreInterface $store;
 
-    abstract protected function createRepository(): TripRequestRepositoryInterface;
+    protected TripRequestRepositoryInterface $trips;
+
+    abstract protected function createStore(): TripStageStoreInterface;
+
+    abstract protected function createTripRepository(): TripRequestRepositoryInterface;
 
     #[\Override]
     protected function setUp(): void
     {
         self::bootKernel();
 
-        $this->repository = $this->createRepository();
+        $this->store = $this->createStore();
+        $this->trips = $this->createTripRepository();
     }
 
     #[Test]
     public function storedStagesReadBackWithTheirIdentifiers(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
         self::assertCount(3, $stages);
         self::assertSame(
@@ -64,7 +66,7 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         $tripId = $this->seedTrip();
         $before = $this->idsOf($tripId);
 
-        $this->repository->storeStages($tripId, $this->repository->getStages($tripId) ?? []);
+        $this->store->storeStages($tripId, $this->store->getStages($tripId) ?? []);
 
         self::assertSame($before, $this->idsOf($tripId));
     }
@@ -73,10 +75,10 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function identifiersSurviveAReorder(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         [$first, $second, $third] = $stages;
 
-        $this->repository->storeStages($tripId, [$third, $first, $second]);
+        $this->store->storeStages($tripId, [$third, $first, $second]);
 
         self::assertSame([$third->id, $first->id, $second->id], $this->idsOf($tripId));
     }
@@ -85,9 +87,9 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function aRemovedStageDisappearsAndTheOthersKeepTheirIdentifiers(): void
     {
         $tripId = $this->seedTrip();
-        [$first, , $third] = $this->repository->getStages($tripId) ?? [];
+        [$first, , $third] = $this->store->getStages($tripId) ?? [];
 
-        $this->repository->storeStages($tripId, [$first, $third]);
+        $this->store->storeStages($tripId, [$first, $third]);
 
         self::assertSame([$first->id, $third->id], $this->idsOf($tripId));
     }
@@ -99,7 +101,7 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         $tripId = $this->seedTrip();
         $before = $this->idsOf($tripId);
 
-        $this->repository->storeStages($tripId, [$this->stage($tripId, 1), $this->stage($tripId, 2)]);
+        $this->store->storeStages($tripId, [$this->stage($tripId, 1), $this->stage($tripId, 2)]);
 
         self::assertSame([], array_intersect($before, $this->idsOf($tripId)));
     }
@@ -108,11 +110,11 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function aTargetedWriteLandsOnTheAddressedStageOnly(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
-        $this->repository->updateStageLabels($tripId, $stages[1]->id, 'Lyon', 'Vienne');
+        $this->store->updateStageLabels($tripId, $stages[1]->id, 'Lyon', 'Vienne');
 
-        $after = $this->repository->getStages($tripId) ?? [];
+        $after = $this->store->getStages($tripId) ?? [];
         self::assertSame('Lyon', $after[1]->startLabel);
         self::assertNull($after[0]->startLabel);
         self::assertNull($after[2]->startLabel);
@@ -127,13 +129,13 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function aTargetedWriteFollowsTheStageAcrossAReorder(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         $target = $stages[0];
 
-        $this->repository->storeStages($tripId, [$stages[2], $stages[1], $target]);
-        $this->repository->updateStageWeather($tripId, $target->id, $this->weather());
+        $this->store->storeStages($tripId, [$stages[2], $stages[1], $target]);
+        $this->store->updateStageWeather($tripId, $target->id, $this->weather());
 
-        $after = $this->repository->getStages($tripId) ?? [];
+        $after = $this->store->getStages($tripId) ?? [];
         self::assertNull($after[0]->weather);
         self::assertNull($after[1]->weather);
         self::assertInstanceOf(WeatherForecast::class, $after[2]->weather);
@@ -144,9 +146,9 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         $tripId = $this->seedTrip();
 
-        $this->repository->updateStageLabels($tripId, Uuid::v7()->toRfc4122(), 'Lyon', 'Vienne');
+        $this->store->updateStageLabels($tripId, Uuid::v7()->toRfc4122(), 'Lyon', 'Vienne');
 
-        foreach ($this->repository->getStages($tripId) ?? [] as $stage) {
+        foreach ($this->store->getStages($tripId) ?? [] as $stage) {
             self::assertNull($stage->startLabel);
         }
     }
@@ -156,7 +158,7 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         $tripId = $this->seedTrip();
 
-        $written = $this->repository->mutateStages($tripId, static function (array $stages): array {
+        $written = $this->store->mutateStages($tripId, static function (array $stages): array {
             $stages[0]->label = 'edited';
 
             return $stages;
@@ -164,7 +166,7 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
 
         self::assertNotNull($written);
         self::assertSame('edited', $written->stages[0]->label);
-        self::assertSame('edited', ($this->repository->getStages($tripId) ?? [])[0]->label);
+        self::assertSame('edited', ($this->store->getStages($tripId) ?? [])[0]->label);
     }
 
     /**
@@ -181,24 +183,24 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function theVersionHandedBackIsTheOneThisWriteProduced(): void
     {
         $tripId = $this->seedTrip();
-        $before = $this->repository->getVersion($tripId);
+        $before = $this->store->getVersion($tripId);
         self::assertNotNull($before);
 
-        $written = $this->repository->mutateStages($tripId, static fn (array $stages): array => $stages);
+        $written = $this->store->mutateStages($tripId, static fn (array $stages): array => $stages);
         self::assertNotNull($written);
         self::assertSame($before + 1, $written->version);
 
         // Somebody else writes right after. The value already handed out must not move.
-        $this->repository->bumpVersion($tripId);
+        $this->store->bumpVersion($tripId);
 
         self::assertSame($before + 1, $written->version);
-        self::assertSame($before + 2, $this->repository->getVersion($tripId));
+        self::assertSame($before + 2, $this->store->getVersion($tripId));
     }
 
     #[Test]
     public function mutatingAnUnknownTripYieldsNull(): void
     {
-        self::assertNull($this->repository->mutateStages(
+        self::assertNull($this->store->mutateStages(
             Uuid::v7()->toRfc4122(),
             static fn (array $stages): array => $stages,
         ));
@@ -212,10 +214,10 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function aResequencedInsertionRenumbersAndMovesTheEndDateInTheSameWrite(): void
     {
         $tripId = $this->seedTripStarting('2026-07-01', '2026-07-03');
-        $before = $this->repository->getVersion($tripId);
+        $before = $this->store->getVersion($tripId);
         self::assertNotNull($before);
 
-        $written = $this->repository->mutateStages($tripId, function (array $stages) use ($tripId): array {
+        $written = $this->store->mutateStages($tripId, function (array $stages) use ($tripId): array {
             array_splice($stages, 1, 0, [$this->stage($tripId, 99)]);
 
             return $stages;
@@ -223,9 +225,9 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
 
         self::assertNotNull($written);
         self::assertSame($before + 1, $written->version);
-        self::assertSame([1, 2, 3, 4], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->repository->getStages($tripId) ?? []));
-        self::assertSame('2026-07-04', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
-        self::assertSame($before + 1, $this->repository->getVersion($tripId));
+        self::assertSame([1, 2, 3, 4], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->store->getStages($tripId) ?? []));
+        self::assertSame('2026-07-04', $this->trips->getRequest($tripId)?->endDate?->format('Y-m-d'));
+        self::assertSame($before + 1, $this->store->getVersion($tripId));
     }
 
     /**
@@ -237,12 +239,12 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         $tripId = $this->seedTripStarting('2026-07-01', '2026-07-10');
 
-        $this->repository->mutateStages($tripId, static fn (array $stages): array => array_reverse($stages), resequence: true);
+        $this->store->mutateStages($tripId, static fn (array $stages): array => array_reverse($stages), resequence: true);
 
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         self::assertSame([1, 2, 3], array_map(static fn (Stage $stage): int => $stage->dayNumber, $stages));
         self::assertSame([43.0, 42.0, 41.0], array_map(static fn (Stage $stage): float => $stage->distance, $stages));
-        self::assertSame('2026-07-10', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
+        self::assertSame('2026-07-10', $this->trips->getRequest($tripId)?->endDate?->format('Y-m-d'));
     }
 
     #[Test]
@@ -250,27 +252,27 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         $tripId = $this->seedTripStarting('2026-07-01', '2026-07-03');
 
-        $this->repository->mutateStages($tripId, static fn (array $stages): array => \array_slice($stages, 0, 2));
+        $this->store->mutateStages($tripId, static fn (array $stages): array => \array_slice($stages, 0, 2));
 
-        self::assertSame([1, 2], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->repository->getStages($tripId) ?? []));
-        self::assertSame('2026-07-03', $this->repository->getRequest($tripId)?->endDate?->format('Y-m-d'));
+        self::assertSame([1, 2], array_map(static fn (Stage $stage): int => $stage->dayNumber, $this->store->getStages($tripId) ?? []));
+        self::assertSame('2026-07-03', $this->trips->getRequest($tripId)?->endDate?->format('Y-m-d'));
     }
 
     #[Test]
     public function writingTheCollectionBumpsTheVersionAndATargetedWriteDoesNot(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
-        $afterSeed = $this->repository->getVersion($tripId);
+        $afterSeed = $this->store->getVersion($tripId);
         self::assertNotNull($afterSeed);
 
-        $this->repository->storeStages($tripId, $stages);
-        $afterWrite = $this->repository->getVersion($tripId);
+        $this->store->storeStages($tripId, $stages);
+        $afterWrite = $this->store->getVersion($tripId);
         self::assertSame($afterSeed + 1, $afterWrite);
 
-        $this->repository->updateStageLabels($tripId, $stages[0]->id, 'Lyon', null);
-        self::assertSame($afterWrite, $this->repository->getVersion($tripId));
+        $this->store->updateStageLabels($tripId, $stages[0]->id, 'Lyon', null);
+        self::assertSame($afterWrite, $this->store->getVersion($tripId));
     }
 
     /**
@@ -284,16 +286,16 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function oneGroupWriteLeavesTheOtherGroupsAlone(): void
     {
         $tripId = $this->seedTrip();
-        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+        $stageId = ($this->store->getStages($tripId) ?? [])[0]->id;
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FERRY, [
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FERRY, [
             ['code' => 'ferry_crossing', 'type' => 'warning', 'message' => 'Ferry'],
         ]);
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CALENDAR, [
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CALENDAR, [
             ['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday'],
         ]);
 
-        $groups = array_column(($this->repository->getStages($tripId) ?? [])[0]->alerts, 'group');
+        $groups = array_column(($this->store->getStages($tripId) ?? [])[0]->alerts, 'group');
         sort($groups);
         self::assertSame(['calendar', 'ferry'], $groups);
     }
@@ -303,16 +305,16 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function reRunningAProducerReplacesItsOwnGroup(): void
     {
         $tripId = $this->seedTrip();
-        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+        $stageId = ($this->store->getStages($tripId) ?? [])[0]->id;
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
             ['code' => 'ford_crossing_wet', 'type' => 'warning', 'message' => 'Wet ford'],
         ]);
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::FORD, [
             ['code' => 'ford_crossing_dry', 'type' => 'nudge', 'message' => 'Dry ford'],
         ]);
 
-        $alerts = ($this->repository->getStages($tripId) ?? [])[0]->alerts;
+        $alerts = ($this->store->getStages($tripId) ?? [])[0]->alerts;
         self::assertCount(1, $alerts);
         self::assertSame('ford_crossing_dry', $alerts[0]['code']);
     }
@@ -330,15 +332,15 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         $tripId = $this->seedTrip();
         $ids = $this->idsOf($tripId);
 
-        $this->repository->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
+        $this->store->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
             $ids[0] => [['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday']],
             $ids[1] => [['code' => 'calendar_sunday', 'type' => 'nudge', 'message' => 'Sunday']],
         ]);
-        $this->repository->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
+        $this->store->updateTripAlertsForGroup($tripId, AlertGroup::CALENDAR, [
             $ids[1] => [['code' => 'calendar_public_holiday', 'type' => 'nudge', 'message' => 'Holiday']],
         ]);
 
-        $after = $this->repository->getStages($tripId) ?? [];
+        $after = $this->store->getStages($tripId) ?? [];
         self::assertSame([], $after[0]->alerts, 'A stage outside the new set keeps no stale nudge.');
         self::assertCount(1, $after[1]->alerts);
         self::assertSame('calendar_public_holiday', $after[1]->alerts[0]['code']);
@@ -354,9 +356,9 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function producerSpecificFieldsSurviveTheRoundTrip(): void
     {
         $tripId = $this->seedTrip();
-        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+        $stageId = ($this->store->getStages($tripId) ?? [])[0]->id;
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CULTURAL_POI, [[
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::CULTURAL_POI, [[
             'code' => 'cultural_poi_suggestion',
             'type' => 'nudge',
             'message' => 'Abbey',
@@ -366,7 +368,7 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
             'wikidataId' => 'Q1145',
         ]]);
 
-        $alert = ($this->repository->getStages($tripId) ?? [])[0]->alerts[0];
+        $alert = ($this->store->getStages($tripId) ?? [])[0]->alerts[0];
         self::assertSame('Abbaye de Fontenay', $alert['poiName']);
         self::assertSame('Mo-Su 10:00-18:00', $alert['openingHours']);
         self::assertSame(12.5, $alert['estimatedPrice']);
@@ -379,14 +381,14 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function anEmptyResultClearsTheGroup(): void
     {
         $tripId = $this->seedTrip();
-        $stageId = ($this->repository->getStages($tripId) ?? [])[0]->id;
+        $stageId = ($this->store->getStages($tripId) ?? [])[0]->id;
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, [
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, [
             ['code' => 'bike_shop_none_nearby', 'type' => 'nudge', 'message' => 'No shop'],
         ]);
-        $this->repository->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, []);
+        $this->store->updateStageAlertsForGroup($tripId, $stageId, AlertGroup::BIKE_SHOP, []);
 
-        $stage = ($this->repository->getStages($tripId) ?? [])[0];
+        $stage = ($this->store->getStages($tripId) ?? [])[0];
         self::assertSame([], $stage->alerts);
         // The key stays: "ran and found nothing" is not "never ran", and nothing else in the
         // model carries that distinction. Asserting only on the flat view would let an
@@ -405,41 +407,41 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     public function storingTheCollectionDoesNotTouchTheAlerts(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
-        $this->repository->updateStageAlertsForGroup($tripId, $stages[0]->id, AlertGroup::FERRY, [
+        $this->store->updateStageAlertsForGroup($tripId, $stages[0]->id, AlertGroup::FERRY, [
             ['code' => 'ferry_crossing', 'type' => 'warning', 'message' => 'Ferry'],
         ]);
 
         // A stale snapshot on purpose: these DTOs were read before the alert was written.
-        $this->repository->storeStages($tripId, $stages);
+        $this->store->storeStages($tripId, $stages);
 
-        self::assertCount(1, ($this->repository->getStages($tripId) ?? [])[0]->alerts);
+        self::assertCount(1, ($this->store->getStages($tripId) ?? [])[0]->alerts);
     }
 
     #[Test]
     public function theStageGeometryIsReadByIdentifier(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
         // Loose comparison: JSONB round-trips a whole number back as an int, where the
         // in-memory implementation keeps the float it was given.
         self::assertEquals(
             [['lat' => 48.0, 'lon' => 2.0], ['lat' => 48.2, 'lon' => 2.2]],
-            $this->repository->getStageGeometry($tripId, $stages[0]->id),
+            $this->store->getStageGeometry($tripId, $stages[0]->id),
         );
-        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
+        self::assertNull($this->store->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
     public function aDayNumberResolvesToItsStageIdentifier(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
 
-        self::assertSame($stages[1]->id, $this->repository->getStageIdByDayNumber($tripId, 2));
-        self::assertNull($this->repository->getStageIdByDayNumber($tripId, 99));
+        self::assertSame($stages[1]->id, $this->store->getStageIdByDayNumber($tripId, 2));
+        self::assertNull($this->store->getStageIdByDayNumber($tripId, 99));
     }
 
     /** @return list<string> */
@@ -447,15 +449,15 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
     {
         return array_map(
             static fn (Stage $stage): string => $stage->id,
-            $this->repository->getStages($tripId) ?? [],
+            $this->store->getStages($tripId) ?? [],
         );
     }
 
     protected function seedTrip(): string
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
-        $this->repository->storeStages($tripId, [
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->store->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),
             $this->stage($tripId, 3),
@@ -471,8 +473,8 @@ abstract class TripRequestRepositoryContractTestCase extends KernelTestCase
         $request->startDate = new \DateTimeImmutable($startDate);
         $request->endDate = new \DateTimeImmutable($endDate);
 
-        $this->repository->initializeTrip($tripId, $request);
-        $this->repository->storeStages($tripId, [
+        $this->trips->initializeTrip($tripId, $request);
+        $this->store->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),
             $this->stage($tripId, 3),

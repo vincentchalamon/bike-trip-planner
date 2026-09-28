@@ -15,6 +15,7 @@ use App\Geo\GeocoderInterface;
 use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\State\StageAddManualAccommodationProcessor;
 use App\State\StageLocator;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -55,6 +56,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
 
     private function processor(
         TripRequestRepositoryInterface $repo,
+        TripStageStoreInterface $store,
         GeocoderInterface $geocoder,
         ?MessageBusInterface $bus = null,
     ): StageAddManualAccommodationProcessor {
@@ -66,6 +68,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
 
         return new StageAddManualAccommodationProcessor(
             $repo,
+            $store,
             $bus,
             new StageResponseMapper(
                 $this->createStub(ComputationTrackerInterface::class),
@@ -84,12 +87,13 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $stages = $this->twoStages();
         $stored = null;
 
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $store = $this->createMock(TripStageStoreInterface::class);
 
-        $this->stubMutateStages($repo);
+        $this->stubMutateStages($store);
         $repo->method('getRequest')->willReturn(new TripRequest());
-        $repo->method('getStages')->willReturn($stages);
-        $repo->expects(self::once())->method('storeStages')
+        $store->method('getStages')->willReturn($stages);
+        $store->expects(self::once())->method('storeStages')
             ->willReturnCallback(function (string $tripId, array $s) use (&$stored): void {
                 $stored = $s;
             });
@@ -101,7 +105,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         $req->priceTotal = 90.0;
         $req->url = 'https://booking.example/abc';
 
-        $response = $this->processor($repo, $geocoder)->process($req, new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
+        $response = $this->processor($repo, $store, $geocoder)->process($req, new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($stored);
         $stage = $stored[0];
@@ -128,20 +132,21 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     #[Test]
     public function omittedPriceProducesNoExactPrice(): void
     {
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $this->stubMutateStages($repo);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $store = $this->createMock(TripStageStoreInterface::class);
+        $this->stubMutateStages($store);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $stages = $this->twoStages();
-        $repo->method('getStages')->willReturn($stages);
+        $store->method('getStages')->willReturn($stages);
         $stored = null;
-        $repo->method('storeStages')->willReturnCallback(function (string $t, array $s) use (&$stored): void {
+        $store->method('storeStages')->willReturnCallback(function (string $t, array $s) use (&$stored): void {
             $stored = $s;
         });
 
         $geocoder = $this->createStub(GeocoderInterface::class);
         $geocoder->method('geocode')->willReturn(new Coordinate(48.0, 2.0));
 
-        $this->processor($repo, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
+        $this->processor($repo, $store, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
 
         self::assertNotNull($stored);
         $acc = $stored[0]->selectedAccommodation;
@@ -159,9 +164,10 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
         [$stage0, $stage1] = $stages;
 
         $repo = $this->createStub(TripRequestRepositoryInterface::class);
-        $this->stubMutateStages($repo);
+        $store = $this->createStub(TripStageStoreInterface::class);
+        $this->stubMutateStages($store);
         $repo->method('getRequest')->willReturn(new TripRequest());
-        $repo->method('getStages')->willReturn($stages);
+        $store->method('getStages')->willReturn($stages);
 
         $geocoder = $this->createStub(GeocoderInterface::class);
         $geocoder->method('geocode')->willReturn(new Coordinate(48.0, 2.0));
@@ -176,7 +182,7 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
             return new Envelope($m);
         });
 
-        $this->processor($repo, $geocoder, $bus)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
+        $this->processor($repo, $store, $geocoder, $bus)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
 
         self::assertInstanceOf(RecalculateStages::class, $recalc);
         self::assertSame([$stage0->id, $stage1->id], $recalc->affectedStageIds);
@@ -186,17 +192,18 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     #[Test]
     public function unresolvableAddressThrows422AndPersistsNothing(): void
     {
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $this->stubMutateStages($repo);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $store = $this->createMock(TripStageStoreInterface::class);
+        $this->stubMutateStages($store);
         $repo->method('getRequest')->willReturn(new TripRequest());
         $stages = $this->twoStages();
-        $repo->method('getStages')->willReturn($stages);
-        $repo->expects(self::never())->method('storeStages');
+        $store->method('getStages')->willReturn($stages);
+        $store->expects(self::never())->method('storeStages');
 
         $geocoder = $this->createStub(GeocoderInterface::class);
         $geocoder->method('geocode')->willReturn(null);
 
         $this->expectException(UnprocessableEntityHttpException::class);
-        $this->processor($repo, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
+        $this->processor($repo, $store, $geocoder)->process($this->request(), new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
     }
 }

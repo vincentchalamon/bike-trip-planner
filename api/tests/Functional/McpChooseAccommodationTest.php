@@ -11,6 +11,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -127,8 +128,8 @@ final class McpChooseAccommodationTest extends ApiTestCase
     {
         $this->entityManager()->clear();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
 
         $stages = $repo->getStages(self::TRIP_ID);
         self::assertIsArray($stages);
@@ -140,8 +141,8 @@ final class McpChooseAccommodationTest extends ApiTestCase
     {
         $this->entityManager()->clear();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
 
         $version = $repo->getVersion(self::TRIP_ID);
         self::assertIsInt($version);
@@ -165,6 +166,11 @@ final class McpChooseAccommodationTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
         $repo->initializeTrip(self::TRIP_ID, $request);
 
         $first = new StageDto(
@@ -196,7 +202,7 @@ final class McpChooseAccommodationTest extends ApiTestCase
             geometry: [new Coordinate(45.5, 6.5, 0.0)],
         );
 
-        $repo->storeStages(self::TRIP_ID, [$first, $second]);
+        $stageStore->storeStages(self::TRIP_ID, [$first, $second]);
 
         $owner = $this->entityManager()->find(User::class, $this->owner->getId());
         self::assertInstanceOf(User::class, $owner);

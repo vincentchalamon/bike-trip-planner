@@ -16,6 +16,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -38,19 +39,20 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         TripRequestRepositoryInterface $tripRequestRepository,
+        TripStageStoreInterface $stageStore,
         private EventSourceRegistry $eventSources,
         private EventArrayMapper $eventMapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $messageBus, $alertRenderer);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
     }
 
     public function __invoke(ScanEvents $message): void
     {
         $tripId = $message->tripId;
 
-        $stages = $this->tripRequestRepository->getStages($tripId);
+        $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
@@ -82,7 +84,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 // Written and published unconditionally, the empty list included (ADR-068).
                 // Events were the last enrichment delivered over SSE and persisted nowhere,
                 // so the anonymous share page and a reload lost them entirely.
-                $this->tripRequestRepository->updateStageEvents($tripId, $stage->id, $events);
+                $this->stageStore->updateStageEvents($tripId, $stage->id, $events);
                 $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
                     'stageId' => $stage->id,
                     'events' => array_map($this->eventMapper->toArray(...), $events),

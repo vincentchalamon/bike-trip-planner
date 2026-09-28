@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\State\TripGpxProvider;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -101,11 +102,12 @@ final class TripGpxProviderTest extends TestCase
 
         $stage = $this->aStage();
 
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getRequest')->willReturn($request);
-        $repository->expects($this->once())->method('getStages')->willReturn([$stage]);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->expects($this->once())->method('getStages')->willReturn([$stage]);
 
-        $provider = new TripGpxProvider($repository, $this->createStub(ComputationTrackerInterface::class), new TripLocker());
+        $provider = new TripGpxProvider($repository, $stageStore, $this->createStub(ComputationTrackerInterface::class), new TripLocker());
         $export = $provider->provide(new Get(), ['id' => self::TRIP_ID], $this->contextFor('fit'))->export();
 
         self::assertNotNull($export);
@@ -131,6 +133,7 @@ final class TripGpxProviderTest extends TestCase
 
         $provider = new TripGpxProvider(
             $repository,
+            $this->createStub(TripStageStoreInterface::class),
             $this->createStub(ComputationTrackerInterface::class),
             new TripLocker(),
         );
@@ -152,9 +155,10 @@ final class TripGpxProviderTest extends TestCase
         // An actual stage, not `[]`: the export refuses an empty list exactly as it refuses a
         // missing one, and modelling "has stages" as `[]` only passed while the rule looked at
         // `null` alone.
-        $repository->method('getStages')->willReturn($withStages ? [$this->aStage()] : null);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($withStages ? [$this->aStage()] : null);
 
-        return new TripGpxProvider($repository, $tracker, new TripLocker());
+        return new TripGpxProvider($repository, $stageStore, $tracker, new TripLocker());
     }
 
     private function aStage(): Stage

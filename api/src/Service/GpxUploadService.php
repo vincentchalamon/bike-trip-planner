@@ -23,6 +23,7 @@ use App\Entity\User;
 use App\RouteParser\GpxRouteParserInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -41,6 +42,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
     public function __construct(
         private GpxRouteParserInterface $gpxParser,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
         private TransientTripPointsStoreInterface $points,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
@@ -192,7 +194,7 @@ final readonly class GpxUploadService implements GpxUploadServiceInterface
             $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
         }
 
-        $this->tripStateManager->storeStages($tripId, $stages);
+        $this->stageStore->storeStages($tripId, $stages);
         $this->computationTracker->markDone($tripId, ComputationName::STAGES);
 
         $status = TripStatus::DRAFT;

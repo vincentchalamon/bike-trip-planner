@@ -10,6 +10,7 @@ use App\Message\ResolveStageLabels;
 use App\MessageHandler\ResolveStageLabelsHandler;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -29,10 +30,11 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             endPoint: new Coordinate(45.90, 4.90),
         );
 
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->method('getStages')->willReturn([$stage]);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $repo->method('getLocale')->willReturn('fr');
-        $repo->expects(self::once())
+        $stageStore->expects(self::once())
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, $stage->id, 'Lyon', 'Villefranche-sur-Saône');
 
@@ -46,7 +48,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             ]);
 
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
+        $handler = new ResolveStageLabelsHandler($repo, $stageStore, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
     }
 
@@ -62,10 +64,11 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             endPoint: new Coordinate(0.0, 0.0),
         );
 
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->method('getStages')->willReturn([$stage]);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $repo->method('getLocale')->willReturn(null);
-        $repo->expects(self::once())
+        $stageStore->expects(self::once())
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, $stage->id, 'Lyon', null);
 
@@ -77,7 +80,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         ]);
 
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
+        $handler = new ResolveStageLabelsHandler($repo, $stageStore, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
     }
 
@@ -94,10 +97,11 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             isRestDay: true,
         );
 
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->method('getStages')->willReturn([$restDay]);
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([$restDay]);
         $repo->method('getLocale')->willReturn('fr');
-        $repo->expects(self::once())
+        $stageStore->expects(self::once())
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, $restDay->id, 'Lyon', 'Lyon');
 
@@ -107,22 +111,23 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
         $boundaries->expects(self::once())->method('findLocalityAt')->willReturn('Lyon');
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
+        $handler = new ResolveStageLabelsHandler($repo, $stageStore, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
     }
 
     #[Test]
     public function doesNothingWhenNoStagesAreFound(): void
     {
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->method('getStages')->willReturn(null);
-        $repo->expects(self::never())->method('updateStageLabels');
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
+        $stageStore->expects(self::never())->method('updateStageLabels');
 
 
         $boundaries = $this->createMock(AdminBoundaryRepositoryInterface::class);
         $boundaries->expects(self::never())->method('findLocalityAt');
 
-        $handler = new ResolveStageLabelsHandler($repo, $boundaries);
+        $handler = new ResolveStageLabelsHandler($repo, $stageStore, $boundaries);
         $handler(new ResolveStageLabels(self::TRIP_ID));
     }
 }

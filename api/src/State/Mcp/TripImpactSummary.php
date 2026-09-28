@@ -7,6 +7,7 @@ namespace App\State\Mcp;
 use App\Entity\TripShare;
 use App\ApiResource\Mcp\TripImpact;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Repository\TripShareRepositoryInterface;
 
 /**
@@ -22,6 +23,7 @@ final readonly class TripImpactSummary
 {
     public function __construct(
         private TripRequestRepositoryInterface $trips,
+        private TripStageStoreInterface $stageStore,
         private TripShareRepositoryInterface $shares,
     ) {
     }
@@ -36,7 +38,7 @@ final readonly class TripImpactSummary
             // its control characters like every other string; this call adds what only a
             // field-aware caller can decide — that it is a label, so it is capped.
             title: ThirdPartyText::clean($request?->title),
-            stageCount: \count($this->trips->getStages($tripId) ?? []),
+            stageCount: \count($this->stageStore->getStages($tripId) ?? []),
             startDate: $request?->startDate,
             endDate: $request?->endDate,
             hasActiveShareLink: $this->shares->findActiveByTrip($tripId) instanceof TripShare,

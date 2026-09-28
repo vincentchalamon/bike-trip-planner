@@ -9,6 +9,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -24,9 +25,11 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
  * implementation the environment resolves to.
  */
 #[ResetDatabase]
-final class LockingTripRequestRepositoryTest extends KernelTestCase
+final class LockingTripStageStoreTest extends KernelTestCase
 {
-    private TripRequestRepositoryInterface $repository;
+    private TripStageStoreInterface $store;
+
+    private TripRequestRepositoryInterface $trips;
 
     private LockFactory $lockFactory;
 
@@ -37,9 +40,13 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
 
         $container = self::getContainer();
 
-        /** @var TripRequestRepositoryInterface $repository */
-        $repository = $container->get(TripRequestRepositoryInterface::class);
-        $this->repository = $repository;
+        /** @var TripStageStoreInterface $store */
+        $store = $container->get(TripStageStoreInterface::class);
+        $this->store = $store;
+
+        /** @var TripRequestRepositoryInterface $trips */
+        $trips = $container->get(TripRequestRepositoryInterface::class);
+        $this->trips = $trips;
 
         /** @var LockFactory $lockFactory */
         $lockFactory = $container->get(LockFactory::class);
@@ -57,7 +64,7 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
         $tripId = $this->seedTrip();
         $observed = null;
 
-        $this->repository->mutateStages($tripId, function (array $stages) use ($tripId, &$observed): array {
+        $this->store->mutateStages($tripId, function (array $stages) use ($tripId, &$observed): array {
             $observed = $this->lockFactory
                 ->createLock(\sprintf('trip.%s.stages.update', $tripId), 5)
                 ->acquire();
@@ -74,7 +81,7 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
     {
         $tripId = $this->seedTrip();
 
-        $this->repository->mutateStages($tripId, static fn (array $stages): array => $stages);
+        $this->store->mutateStages($tripId, static fn (array $stages): array => $stages);
 
         $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), 5);
         self::assertTrue($lock->acquire());
@@ -88,7 +95,7 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
         $tripId = $this->seedTrip();
 
         try {
-            $this->repository->mutateStages($tripId, static function (array $stages): array {
+            $this->store->mutateStages($tripId, static function (array $stages): array {
                 throw new \RuntimeException('rejected');
             });
             self::fail('The mutation should have propagated its exception.');
@@ -111,13 +118,13 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
     {
         $tripId = $this->seedTrip();
 
-        $this->repository->mutateStages($tripId, function (array $stages) use ($tripId): array {
-            $this->repository->updateStageWeather($tripId, $stages[0]->id, null);
+        $this->store->mutateStages($tripId, function (array $stages) use ($tripId): array {
+            $this->store->updateStageWeather($tripId, $stages[0]->id, null);
 
             return $stages;
         });
 
-        self::assertNotNull($this->repository->getStages($tripId));
+        self::assertNotNull($this->store->getStages($tripId));
     }
 
     /** A writer that cannot get in is refused, not left hanging on a PHP-FPM worker. */
@@ -131,7 +138,7 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
 
         try {
             $this->expectException(ConflictHttpException::class);
-            $this->repository->mutateStages($tripId, static fn (array $stages): array => $stages);
+            $this->store->mutateStages($tripId, static fn (array $stages): array => $stages);
         } finally {
             $holder->release();
         }
@@ -146,20 +153,20 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
     public function aConcurrentEnrichmentWriteIsNotRevertedByTheEditThatFollows(): void
     {
         $tripId = $this->seedTrip();
-        $stages = $this->repository->getStages($tripId) ?? [];
+        $stages = $this->store->getStages($tripId) ?? [];
         $weather = $this->weather();
 
         // The worker writes weather on stage 1 *before* the edit commits.
-        $this->repository->updateStageWeather($tripId, $stages[0]->id, $weather);
+        $this->store->updateStageWeather($tripId, $stages[0]->id, $weather);
 
         // The edit renames stage 2, from a snapshot taken before that weather existed.
-        $this->repository->mutateStages($tripId, static function (array $stages): array {
+        $this->store->mutateStages($tripId, static function (array $stages): array {
             $stages[1]->label = 'edited';
 
             return $stages;
         });
 
-        $after = $this->repository->getStages($tripId) ?? [];
+        $after = $this->store->getStages($tripId) ?? [];
         self::assertSame('edited', $after[1]->label);
         self::assertInstanceOf(WeatherForecast::class, $after[0]->weather, 'The concurrent weather write was reverted by the edit.');
     }
@@ -167,8 +174,8 @@ final class LockingTripRequestRepositoryTest extends KernelTestCase
     private function seedTrip(): string
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
-        $this->repository->storeStages($tripId, [
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->store->storeStages($tripId, [
             $this->stage($tripId, 1),
             $this->stage($tripId, 2),
         ]);

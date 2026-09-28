@@ -6,11 +6,11 @@ namespace App\Tests\Unit\State;
 
 use App\ApiResource\Stage;
 use App\Repository\StageWriteResult;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\MockObject\Stub;
 
 /**
- * Wires a mocked repository so `mutateStages()` behaves as its implementations do: read,
+ * Wires a mocked stage store so `mutateStages()` behaves as its implementations do: read,
  * apply, write.
  *
  * The processors no longer call `getStages()` and `storeStages()` themselves — the pair
@@ -23,7 +23,7 @@ use PHPUnit\Framework\MockObject\Stub;
  */
 trait MutateStagesStubTrait
 {
-    private function stubMutateStages(TripRequestRepositoryInterface&Stub $repository): void
+    private function stubMutateStages(TripStageStoreInterface&Stub $repository): void
     {
         $repository->method('mutateStages')->willReturnCallback(
             /**

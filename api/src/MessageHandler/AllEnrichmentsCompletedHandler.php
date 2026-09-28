@@ -9,7 +9,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
 use App\Notification\AnalysisNotifier;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -29,7 +29,7 @@ final readonly class AllEnrichmentsCompletedHandler
     public function __construct(
         private ComputationTrackerInterface $computationTracker,
         private TripUpdatePublisherInterface $publisher,
-        private TripRequestRepositoryInterface $tripRequestRepository,
+        private TripStageStoreInterface $stageStore,
         private AnalysisNotifier $analysisNotifier,
         private LoggerInterface $logger,
     ) {
@@ -62,7 +62,7 @@ final readonly class AllEnrichmentsCompletedHandler
             'total' => \count($statuses),
         ]);
 
-        $stages = $this->tripRequestRepository->getStages($tripId) ?? [];
+        $stages = $this->stageStore->getStages($tripId) ?? [];
 
         $this->publisher->publishTripReady($tripId, $stages, [
             'status' => $statuses,

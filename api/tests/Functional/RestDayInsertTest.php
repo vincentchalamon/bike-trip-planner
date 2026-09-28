@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -47,6 +48,10 @@ final class RestDayInsertTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('today +1 year');
@@ -70,7 +75,7 @@ final class RestDayInsertTest extends ApiTestCase
             );
         }
 
-        $repo->storeStages($tripId, $stages);
+        $stageStore->storeStages($tripId, $stages);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -90,8 +95,8 @@ final class RestDayInsertTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);

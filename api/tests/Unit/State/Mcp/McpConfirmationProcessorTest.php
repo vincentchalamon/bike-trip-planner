@@ -11,6 +11,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Mcp\ConfirmationChallenge;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Repository\TripShareRepositoryInterface;
 use App\State\Mcp\ConfirmationStore;
 use App\State\Mcp\McpConfirmationProcessor;
@@ -201,8 +202,9 @@ final class McpConfirmationProcessorTest extends TestCase
     private function processor(): McpConfirmationProcessor
     {
         $trips = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $trips->method('getRequest')->willReturn(null);
-        $trips->method('getStages')->willReturn([]);
+        $stageStore->method('getStages')->willReturn([]);
 
         $shares = $this->createStub(TripShareRepositoryInterface::class);
         $shares->method('findActiveByTrip')->willReturn(null);
@@ -213,7 +215,7 @@ final class McpConfirmationProcessorTest extends TestCase
         return new McpConfirmationProcessor(
             $this->decorated(),
             new ConfirmationStore(new ArrayAdapter(), new LockFactory(new InMemoryStore())),
-            new TripImpactSummary($trips, $shares),
+            new TripImpactSummary($trips, $stageStore, $shares),
             $storage,
         );
     }

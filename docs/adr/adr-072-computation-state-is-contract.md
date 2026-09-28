@@ -41,8 +41,13 @@ column on `trip` mirrors the tracked map; Redis stays the hot path.
 ### A decorator, not a change to the tracker
 
 `App\ComputationTracker\PersistingComputationTracker` decorates `ComputationTrackerInterface`,
-the same shape as `LockingTripRequestRepository`. On write it delegates, then mirrors; on read
+the same shape as `LockingTripStageStore`. On write it delegates, then mirrors; on read
 it delegates, and falls back to the column when the cache returns `null`.
+
+> **Note (2026-09).** That lock decorator was `LockingTripRequestRepository` when this was
+> written. Since the repository was split by role, it is `LockingTripStageStore` and decorates
+> only `TripStageStoreInterface`: the trip's own fields (`TripRequestRepositoryInterface`) carry
+> no stage-collection write and reach the repository undecorated.
 
 The point of that shape is that **neither provider changes to gain durability**. They ask the
 interface; the fallback is underneath. Three Mercure payloads, two DTOs and the frontend read
@@ -94,9 +99,8 @@ already put there. About eighteen small `UPDATE`s per generation.
 
 ### It stores through a narrow interface of its own
 
-`ComputationStatusStore`, not `TripRequestRepositoryInterface`. That one is aliased to the
-transient implementation in the `test` environment, so depending on it would mean nothing ever
-reached Postgres and the durability this exists for would go untested.
+`ComputationStatusStore`, not `TripRequestRepositoryInterface`. That one expresses none of
+these operations, and the merge is a server-side jsonb `||` rather than a read-modify-write.
 
 ### What the two read paths now say
 

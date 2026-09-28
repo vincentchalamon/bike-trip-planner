@@ -29,7 +29,8 @@ use Symfony\Component\Uid\Uuid;
  * @extends ServiceEntityRepository<TripRequest>
  */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, ComputationStatusStore, OwnedTripFinderInterface, MergesGroupWritesAtomically
+#[AsAlias(TripStageStoreInterface::class)]
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface, TripStageStoreInterface, ComputationStatusStore, OwnedTripFinderInterface, MergesGroupWritesAtomically
 {
     /** Tolerance (m) between the stage line and a cycle route to count as "on network". */
     private const int CYCLE_NETWORK_TOLERANCE_METERS = 30;
@@ -777,7 +778,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
      * Under READ COMMITTED a blocked UPDATE re-evaluates against the row version the winner
      * committed, which is exactly what makes that true.
      *
-     * Deliberately outside {@see LockingTripRequestRepository}'s per-trip lock — which is what
+     * Deliberately outside {@see LockingTripStageStore}'s per-trip lock — which is what
      * {@see MergesGroupWritesAtomically} on this class buys: those handlers run in parallel by
      * design, and serialising them behind a lock with a 3-second bounded acquire would turn a
      * burst into failed computations. The lock exists for read-modify-write sequences; this is

@@ -10,6 +10,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\OAuth\IssuesOAuthTokensTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -278,8 +279,8 @@ final class McpEditStagesTest extends ApiTestCase
     {
         $this->entityManager()->clear();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
 
         $stages = $repo->getStages($tripId);
         self::assertIsArray($stages);
@@ -291,8 +292,8 @@ final class McpEditStagesTest extends ApiTestCase
     {
         $this->entityManager()->clear();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
 
         $version = $repo->getVersion(self::TRIP_ID);
         self::assertIsInt($version);
@@ -316,6 +317,11 @@ final class McpEditStagesTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
         $repo->initializeTrip($tripId, $request);
 
         $stages = [];
@@ -332,7 +338,7 @@ final class McpEditStagesTest extends ApiTestCase
             );
         }
 
-        $repo->storeStages($tripId, $stages);
+        $stageStore->storeStages($tripId, $stages);
 
         $owner = $this->entityManager()->find(User::class, $this->owner->getId());
         self::assertInstanceOf(User::class, $owner);

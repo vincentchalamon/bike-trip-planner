@@ -18,6 +18,7 @@ use App\InRide\RouteTail;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -412,11 +413,12 @@ final class NearbyPoiFinderTest extends TestCase
         $coverage->method('isRouteOutOfZone')->willReturn($outOfZone);
 
         $trip = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $trip->method('getLocale')->willReturn($locale);
         // `stageDay` stays a day number in the public request body, so the finder
         // resolves it to the stage identity the storage layer addresses by.
-        $trip->method('getStageIdByDayNumber')->willReturn(null === $geometry ? null : Uuid::v7()->toRfc4122());
-        $trip->method('getStageGeometry')->willReturn($geometry);
+        $stageStore->method('getStageIdByDayNumber')->willReturn(null === $geometry ? null : Uuid::v7()->toRfc4122());
+        $stageStore->method('getStageGeometry')->willReturn($geometry);
 
         return new NearbyPoiFinder(
             $repo,
@@ -428,6 +430,7 @@ final class NearbyPoiFinderTest extends TestCase
             $coverage,
             new PoiLabelResolver($this->createAlertTranslator()),
             $trip,
+            $stageStore,
         );
     }
 }

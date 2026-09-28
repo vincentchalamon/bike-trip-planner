@@ -15,6 +15,7 @@ use App\Message\CheckRailwayStations;
 use App\MessageHandler\CheckRailwayStationsHandler;
 use App\Osm\RailwayStationRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -39,7 +40,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     #[Test]
     public function nudgeMessageDerivesItsThresholdFromTheConstant(string $locale, string $expected): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 1), $locale);
+        $stageStore = $this->stageStore($this->createStages('trip-1', 1));
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -55,10 +56,11 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             );
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->railwayStationRepository([]),
             $this->createStub(GeoDistanceInterface::class),
+            locale: $locale,
         );
         $handler(new CheckRailwayStations('trip-1'));
     }
@@ -103,32 +105,36 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function tripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
+    private function stageStore(?array $stages): TripStageStoreInterface
     {
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn($locale);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($stages);
 
-        return $tripStateManager;
+        return $stageStore;
     }
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         RailwayStationRepositoryInterface $railwayStationRepository,
         GeoDistanceInterface $haversine,
+        string $locale = 'en',
     ): CheckRailwayStationsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckRailwayStationsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $railwayStationRepository,
             $haversine,
             $this->createStub(MessageBusInterface::class),
@@ -139,7 +145,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     #[Test]
     public function stationNearbyEmitsNoAlert(): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1'));
+        $stageStore = $this->stageStore($this->createStages('trip-1'));
         $railwayStationRepository = $this->railwayStationRepository([
             ['name' => 'Gare de Lyon', 'category' => 'station', 'lat' => 48.5, 'lon' => 2.5],
         ]);
@@ -157,14 +163,14 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $railwayStationRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $railwayStationRepository, $haversine);
         $handler(new CheckRailwayStations('trip-1'));
     }
 
     #[Test]
     public function noStationNearbyEmitsNudgeForEveryStage(): void
     {
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1'));
+        $stageStore = $this->stageStore($this->createStages('trip-1'));
         $railwayStationRepository = $this->railwayStationRepository([]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -185,7 +191,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $railwayStationRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $railwayStationRepository, $haversine);
         $handler(new CheckRailwayStations('trip-1'));
     }
 
@@ -194,7 +200,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     {
         // Stage 1: start(48.0,2.0) end(48.5,2.5) — station at start, within range
         // Stage 2: start(48.5,2.5) end(49.0,3.0) — both endpoints far from station
-        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 2));
+        $stageStore = $this->stageStore($this->createStages('trip-1', 2));
         $railwayStationRepository = $this->railwayStationRepository([
             ['name' => 'Gare de Lyon', 'category' => 'station', 'lat' => 48.0, 'lon' => 2.0],
         ]);
@@ -228,7 +234,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $railwayStationRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $railwayStationRepository, $haversine);
         $handler(new CheckRailwayStations('trip-1'));
     }
 
@@ -247,7 +253,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             isRestDay: true,
         );
 
-        $tripStateManager = $this->tripStateManager($stages);
+        $stageStore = $this->stageStore($stages);
 
         // No stations found — without the rest-day guard, both stages would produce alerts
         $railwayStationRepository = $this->railwayStationRepository([]);
@@ -264,20 +270,20 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $railwayStationRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $railwayStationRepository, $haversine);
         $handler(new CheckRailwayStations('trip-1'));
     }
 
     #[Test]
     public function nullStagesReturnsEarly(): void
     {
-        $tripStateManager = $this->tripStateManager(null);
+        $stageStore = $this->stageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->railwayStationRepository([]),
             $this->createStub(GeoDistanceInterface::class),

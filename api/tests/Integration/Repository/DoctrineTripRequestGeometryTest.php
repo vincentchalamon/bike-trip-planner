@@ -9,6 +9,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -23,7 +24,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class DoctrineTripRequestGeometryTest extends KernelTestCase
 {
-    private TripRequestRepositoryInterface $repository;
+    private TripStageStoreInterface $store;
+
+    private TripRequestRepositoryInterface $trips;
 
     private EntityManagerInterface $entityManager;
 
@@ -34,9 +37,13 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
 
         $container = self::getContainer();
 
-        /** @var TripRequestRepositoryInterface $repository */
-        $repository = $container->get(TripRequestRepositoryInterface::class);
-        $this->repository = $repository;
+        /** @var TripStageStoreInterface $store */
+        $store = $container->get(TripStageStoreInterface::class);
+        $this->store = $store;
+
+        /** @var TripRequestRepositoryInterface $trips */
+        $trips = $container->get(TripRequestRepositoryInterface::class);
+        $this->trips = $trips;
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = $container->get(EntityManagerInterface::class);
@@ -61,7 +68,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
                 ['lat' => 48.1, 'lon' => 2.1],
                 ['lat' => 48.2, 'lon' => 2.2],
             ],
-            $this->repository->getStageGeometry($tripId, $stageId),
+            $this->store->getStageGeometry($tripId, $stageId),
         );
     }
 
@@ -75,7 +82,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
         // Stage entity into the unit of work (unlike getStages(), which hydrates them).
         $this->entityManager->clear();
 
-        $this->repository->getStageGeometry($tripId, $stageId);
+        $this->store->getStageGeometry($tripId, $stageId);
 
         $identityMap = $this->entityManager->getUnitOfWork()->getIdentityMap();
         self::assertArrayNotHasKey(StageEntity::class, $identityMap);
@@ -84,13 +91,13 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
     #[Test]
     public function returnsNullForUnknownTrip(): void
     {
-        self::assertNull($this->repository->getStageGeometry(Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122()));
+        self::assertNull($this->store->getStageGeometry(Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
     public function returnsNullForInvalidTripId(): void
     {
-        self::assertNull($this->repository->getStageGeometry('not-a-uuid', Uuid::v7()->toRfc4122()));
+        self::assertNull($this->store->getStageGeometry('not-a-uuid', Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
@@ -101,14 +108,14 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
 
         $this->entityManager->clear();
 
-        self::assertNull($this->repository->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
+        self::assertNull($this->store->getStageGeometry($tripId, Uuid::v7()->toRfc4122()));
     }
 
     #[Test]
     public function returnsNullForEmptyGeometry(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
         // Day 1 has no geometry (StageDto default is []).
         $stage = new StageDto(
             tripId: $tripId,
@@ -118,16 +125,16 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
             startPoint: new Coordinate(48.0, 2.0),
             endPoint: new Coordinate(48.1, 2.1),
         );
-        $this->repository->storeStages($tripId, [$stage]);
+        $this->store->storeStages($tripId, [$stage]);
 
         $this->entityManager->clear();
 
-        self::assertNull($this->repository->getStageGeometry($tripId, $stage->id));
+        self::assertNull($this->store->getStageGeometry($tripId, $stage->id));
     }
 
     private function seedTrip(string $tripId): string
     {
-        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
         $stage = new StageDto(
             tripId: $tripId,
             dayNumber: 2,
@@ -141,7 +148,7 @@ final class DoctrineTripRequestGeometryTest extends KernelTestCase
                 new Coordinate(48.2, 2.2, 120.0),
             ],
         );
-        $this->repository->storeStages($tripId, [$stage]);
+        $this->store->storeStages($tripId, [$stage]);
 
         return $stage->id;
     }

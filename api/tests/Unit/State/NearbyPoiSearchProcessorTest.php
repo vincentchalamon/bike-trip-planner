@@ -19,6 +19,7 @@ use App\InRide\RouteTail;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\State\NearbyPoiSearchProcessor;
 use App\Tests\Unit\AlertMessageTestTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -131,8 +132,9 @@ final class NearbyPoiSearchProcessorTest extends TestCase
         $coverage->method('isRouteOutOfZone')->willReturn(false);
 
         $trip = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $trip->method('getLocale')->willReturn('en');
-        $trip->method('getStageGeometry')->willReturn(null);
+        $stageStore->method('getStageGeometry')->willReturn(null);
 
         return new NearbyPoiFinder(
             $repo,
@@ -144,6 +146,7 @@ final class NearbyPoiSearchProcessorTest extends TestCase
             $coverage,
             new PoiLabelResolver($this->createAlertTranslator()),
             $trip,
+            $stageStore,
         );
     }
 }

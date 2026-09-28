@@ -34,6 +34,7 @@ use App\Poi\SupplyTimelineBuilder;
 use App\Tourism\FoodPoiRepository;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -190,16 +191,17 @@ final class ScanPoisCorridorTest extends KernelTestCase
         // The handler persists its alerts instead of mutating the stage it was handed
         // (ADR-068), so what it wrote is captured here rather than read off the DTO.
         $this->writtenAlerts = [];
-        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn($decimated);
-        $tripStateManager->method('updateStageAlertsForGroup')->willReturnCallback(
+        $stageStore->method('updateStageAlertsForGroup')->willReturnCallback(
             /** @param list<array<string, mixed>> $alerts */
             function (string $tripId, string $stageId, AlertGroup $group, array $alerts): void {
                 $this->writtenAlerts = array_values([...$this->writtenAlerts, ...$alerts]);
             },
         );
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $stageStore->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
@@ -219,6 +221,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
+            $stageStore,
             $points,
             new PoiSourceRegistry(
                 [

@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -49,12 +50,17 @@ final class AccommodationScanTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
-        $repo->storeStages($tripId, [
+
+        $stageStore->storeStages($tripId, [
             new Stage(
                 tripId: $tripId,
                 dayNumber: 1,

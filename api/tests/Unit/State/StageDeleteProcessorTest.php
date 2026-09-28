@@ -12,6 +12,7 @@ use App\Enum\ComputationTrigger;
 use App\Message\RecalculateStages;
 use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use App\State\StageDeleteProcessor;
 use App\State\StageLocator;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -29,6 +30,8 @@ final class StageDeleteProcessorTest extends TestCase
 
     private MockObject&TripRequestRepositoryInterface $tripStateManager;
 
+    private MockObject&TripStageStoreInterface $stageStore;
+
     private MockObject&MessageBusInterface $messageBus;
 
     /**
@@ -42,7 +45,8 @@ final class StageDeleteProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
-        $this->stubMutateStages($this->tripStateManager);
+        $this->stageStore = $this->createMock(TripStageStoreInterface::class);
+        $this->stubMutateStages($this->stageStore);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
 
@@ -54,6 +58,7 @@ final class StageDeleteProcessorTest extends TestCase
 
         $this->processor = new StageDeleteProcessor(
             $this->tripStateManager,
+            $this->stageStore,
             $this->messageBus,
             $this->distanceCalculator,
             new StageLocator(),
@@ -70,9 +75,9 @@ final class StageDeleteProcessorTest extends TestCase
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
 
         $capturedStages = null;
-        $this->tripStateManager->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
+        $this->stageStore->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
         $this->tripStateManager->method('getSourceType')->willReturn(null);
-        $this->tripStateManager->expects($this->once())
+        $this->stageStore->expects($this->once())
             ->method('storeStages')
             ->with('trip-1', $this->callback(static function (array $stages) use (&$capturedStages): bool {
                 $capturedStages = $stages;
@@ -100,7 +105,7 @@ final class StageDeleteProcessorTest extends TestCase
         $restDay = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 0.0, elevation: 0.0, startPoint: $coord, endPoint: $coord, isRestDay: true);
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
 
-        $this->tripStateManager->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
+        $this->stageStore->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
         $this->tripStateManager->method('getSourceType')->willReturn(null);
 
         $dispatchedMessages = [];
@@ -130,7 +135,7 @@ final class StageDeleteProcessorTest extends TestCase
         $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 70.0, elevation: 400.0, startPoint: $coord, endPoint: $coord);
 
-        $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
+        $this->stageStore->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
         $this->tripStateManager->method('getSourceType')->willReturn(null);
 
         $dispatchedMessages = [];
@@ -164,7 +169,7 @@ final class StageDeleteProcessorTest extends TestCase
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
         $stage3 = new Stage(tripId: 'trip-1', dayNumber: 4, distance: 60.0, elevation: 300.0, startPoint: $coord, endPoint: $coord);
 
-        $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2, $stage3]);
+        $this->stageStore->method('getStages')->willReturn([$stage0, $stage1, $stage2, $stage3]);
         $this->tripStateManager->method('getSourceType')->willReturn(null);
 
         $dispatchedMessages = [];
@@ -196,7 +201,7 @@ final class StageDeleteProcessorTest extends TestCase
 
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
 
-        $this->tripStateManager->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
+        $this->stageStore->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
         $this->tripStateManager->method('getSourceType')->willReturn(null);
 
         $dispatchedMessages = [];

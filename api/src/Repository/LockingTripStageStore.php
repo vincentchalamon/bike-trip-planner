@@ -9,7 +9,6 @@ use App\ApiResource\Model\Event;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
-use App\ApiResource\TripRequest;
 use App\Enum\AlertGroup;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -26,12 +25,10 @@ use Symfony\Component\Lock\SharedLockInterface;
  * targeted writes only narrowed rather than closed.
  *
  * Both shapes take the same per-trip lock here, so they interleave instead of overlapping.
- * Decorating the interface rather than one implementation means the Redis-backed
- * implementation used by the functional suite is covered by the same logic as the Doctrine
- * one used in production.
+ * Only the stage store is decorated: the trip's own fields carry no stage-collection write.
  */
-#[AsDecorator(decorates: TripRequestRepositoryInterface::class)]
-final class LockingTripRequestRepository implements TripRequestRepositoryInterface
+#[AsDecorator(decorates: TripStageStoreInterface::class)]
+final class LockingTripStageStore implements TripStageStoreInterface
 {
     /**
      * Long enough to cover a storeStages() that recomputes the two PostGIS scans, which
@@ -58,7 +55,7 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
     private array $held = [];
 
     public function __construct(
-        private readonly TripRequestRepositoryInterface $decorated,
+        private readonly TripStageStoreInterface $decorated,
         private readonly LockFactory $lockFactory,
     ) {
     }
@@ -92,10 +89,9 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
      * A group write is not inherently a read-modify-write sequence: against Postgres it is a
      * single `jsonb_set` UPDATE, so two producers finishing at once cannot lose each other's
      * work and the lock would only serialise a dozen handlers that run in parallel by design
-     * (ADR-068). But that property belongs to the storage engine, not to this decorator —
-     * the transient implementation stores the collection as one blob and does read, modify
-     * and write it back. {@see MergesGroupWritesAtomically} is how an implementation says
-     * which of the two it is.
+     * (ADR-068). That property belongs to the storage engine, not to this decorator:
+     * {@see MergesGroupWritesAtomically} is how an implementation says it merges the group
+     * itself, and one that does not is serialised like the other writes.
      *
      * @param list<array<string, mixed>> $alerts
      */
@@ -220,31 +216,6 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
 
     // Everything below carries no stage-collection write, so it passes straight through.
 
-    public function initializeTrip(string $tripId, TripRequest $request, ?string $locale = null): void
-    {
-        $this->decorated->initializeTrip($tripId, $request, $locale);
-    }
-
-    public function getRequest(string $tripId): ?TripRequest
-    {
-        return $this->decorated->getRequest($tripId);
-    }
-
-    public function storeRequest(string $tripId, TripRequest $request): void
-    {
-        $this->decorated->storeRequest($tripId, $request);
-    }
-
-    public function getTitle(string $tripId): ?string
-    {
-        return $this->decorated->getTitle($tripId);
-    }
-
-    public function storeTitle(string $tripId, ?string $title): void
-    {
-        $this->decorated->storeTitle($tripId, $title);
-    }
-
     /** @return list<Stage>|null */
     public function getStages(string $tripId): ?array
     {
@@ -287,35 +258,5 @@ final class LockingTripRequestRepository implements TripRequestRepositoryInterfa
     public function bumpVersion(string $tripId, ?int $expectedVersion = null): int
     {
         return $this->withStagesLock($tripId, fn (): int => $this->decorated->bumpVersion($tripId, $expectedVersion));
-    }
-
-    public function storeSourceType(string $tripId, string $sourceType): void
-    {
-        $this->decorated->storeSourceType($tripId, $sourceType);
-    }
-
-    public function getSourceType(string $tripId): ?string
-    {
-        return $this->decorated->getSourceType($tripId);
-    }
-
-    public function storeStatus(string $tripId, string $status): void
-    {
-        $this->decorated->storeStatus($tripId, $status);
-    }
-
-    public function storeLocale(string $tripId, string $locale): void
-    {
-        $this->decorated->storeLocale($tripId, $locale);
-    }
-
-    public function getLocale(string $tripId): ?string
-    {
-        return $this->decorated->getLocale($tripId);
-    }
-
-    public function getOwnerId(string $tripId): ?string
-    {
-        return $this->decorated->getOwnerId($tripId);
     }
 }

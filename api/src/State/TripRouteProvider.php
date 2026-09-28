@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRoute;
 use App\Concurrency\TripVersionEtag;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -34,7 +34,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 readonly class TripRouteProvider implements ProviderInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private TripStageStoreInterface $stageStore,
     ) {
     }
 
@@ -45,7 +45,7 @@ readonly class TripRouteProvider implements ProviderInterface
         // The 404 used to come from getStages() answering null. It answers null for exactly
         // one reason — the trip row is missing — which is the same reason getVersion() does,
         // and that one costs a single column instead of the whole stage collection.
-        $version = $this->tripStateManager->getVersion($id);
+        $version = $this->stageStore->getVersion($id);
         if (null === $version) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $id));
         }
@@ -71,7 +71,7 @@ readonly class TripRouteProvider implements ProviderInterface
 
         TripVersionEtag::stampValidator($context, $version);
 
-        return new TripRoute(id: $id, stages: $this->tripStateManager->getRouteGeometry($id));
+        return new TripRoute(id: $id, stages: $this->stageStore->getRouteGeometry($id));
     }
 
     /**

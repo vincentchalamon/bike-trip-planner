@@ -15,6 +15,7 @@ use App\Message\CheckFerries;
 use App\MessageHandler\CheckFerriesHandler;
 use App\Osm\FerryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -26,9 +27,10 @@ final class CheckFerriesHandlerTest extends TestCase
     use AlertMessageTestTrait;
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         FerryRepositoryInterface $ferryRepository,
+        string $locale = 'en',
     ): CheckFerriesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
@@ -41,12 +43,16 @@ final class CheckFerriesHandlerTest extends TestCase
             },
         );
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckFerriesHandler(
             $computationTracker,
             $publisher,
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $ferryRepository,
             $this->createStub(MessageBusInterface::class),
             $this->createAlertRenderer(),
@@ -54,11 +60,10 @@ final class CheckFerriesHandlerTest extends TestCase
     }
 
     /** @param list<Stage>|null $stages */
-    private function createTripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function createStageStore(?array $stages): TripStageStoreInterface
     {
-        $manager = $this->createStub(TripRequestRepositoryInterface::class);
+        $manager = $this->createStub(TripStageStoreInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn('en');
 
         return $manager;
     }
@@ -97,7 +102,7 @@ final class CheckFerriesHandlerTest extends TestCase
     public function emitsWarningForAStageTakingAFerry(): void
     {
         $stages = [$this->stage(1), $this->stage(2)];
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
         // Stage 0: a ferry; stage 1: none.
         $ferryRepository = $this->ferryRepository([
             [['name' => 'Le Passage du Gois', 'lat' => 47.05, 'lon' => -2.05]],
@@ -124,7 +129,7 @@ final class CheckFerriesHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $ferryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $ferryRepository);
         $handler(new CheckFerries('trip-1'));
     }
 
@@ -132,7 +137,7 @@ final class CheckFerriesHandlerTest extends TestCase
     public function deduplicatesTheSameFerryWithinAStage(): void
     {
         $stages = [$this->stage(1)];
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
         $ferryRepository = $this->ferryRepository([
             [
                 ['name' => 'Bac de X', 'lat' => 47.05, 'lon' => -2.05],
@@ -149,7 +154,7 @@ final class CheckFerriesHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $ferryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $ferryRepository);
         $handler(new CheckFerries('trip-1'));
     }
 
@@ -157,7 +162,7 @@ final class CheckFerriesHandlerTest extends TestCase
     public function skipsRestDaysAndEmitsNoAlertWhenNoFerry(): void
     {
         $stages = [$this->stage(1, isRestDay: true)];
-        $tripStateManager = $this->createTripStateManager($stages);
+        $stageStore = $this->createStageStore($stages);
 
         $ferryRepository = $this->createMock(FerryRepositoryInterface::class);
         $ferryRepository->expects($this->never())->method('findNearStage');
@@ -171,19 +176,19 @@ final class CheckFerriesHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $ferryRepository);
+        $handler = $this->createHandler($stageStore, $publisher, $ferryRepository);
         $handler(new CheckFerries('trip-1'));
     }
 
     #[Test]
     public function nullStagesYieldsNoPublish(): void
     {
-        $tripStateManager = $this->createTripStateManager(null);
+        $stageStore = $this->createStageStore(null);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(FerryRepositoryInterface::class));
+        $handler = $this->createHandler($stageStore, $publisher, $this->createStub(FerryRepositoryInterface::class));
         $handler(new CheckFerries('trip-1'));
     }
 }

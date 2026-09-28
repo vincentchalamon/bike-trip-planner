@@ -13,6 +13,7 @@ use App\Concurrency\IfMatch;
 use App\Entity\User;
 use App\Enum\SourceType;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -125,7 +126,7 @@ final class TripPreconditionTest extends ApiTestCase
 
         // Someone else's write lands in between — a worker regenerating the pacing moves the
         // version with no HTTP response to tell this client about it.
-        $this->repository()->bumpVersion(self::TRIP_ID);
+        $this->stageStore()->bumpVersion(self::TRIP_ID);
 
         $this->client->request('DELETE', $url, $this->asOwner(['If-Match' => \sprintf('"%d"', $stale)]));
 
@@ -150,7 +151,7 @@ final class TripPreconditionTest extends ApiTestCase
         $this->seedTrip();
         $stale = $this->currentVersion();
         $before = $this->repository()->getRequest(self::TRIP_ID)?->fatigueFactor;
-        $this->repository()->bumpVersion(self::TRIP_ID);
+        $this->stageStore()->bumpVersion(self::TRIP_ID);
 
         $this->client->request('PATCH', \sprintf('/trips/%s', self::TRIP_ID), $this->asOwner([
             'If-Match' => \sprintf('"%d"', $stale),
@@ -183,7 +184,7 @@ final class TripPreconditionTest extends ApiTestCase
         $this->seedTrip();
         $stale = $this->currentVersion();
         $stageId = $this->stageIdAt(self::TRIP_ID, 0);
-        $this->repository()->bumpVersion(self::TRIP_ID);
+        $this->stageStore()->bumpVersion(self::TRIP_ID);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
@@ -248,7 +249,7 @@ final class TripPreconditionTest extends ApiTestCase
 
     private function currentVersion(): int
     {
-        return $this->repository()->getVersion(self::TRIP_ID) ?? 0;
+        return $this->stageStore()->getVersion(self::TRIP_ID) ?? 0;
     }
 
     private function repository(): TripRequestRepositoryInterface
@@ -259,18 +260,29 @@ final class TripPreconditionTest extends ApiTestCase
         return $repository;
     }
 
+    private function stageStore(): TripStageStoreInterface
+    {
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
+
+        return $stageStore;
+    }
+
     /**
      * @return list<Stage>
      */
     private function stages(): array
     {
-        return $this->repository()->getStages(self::TRIP_ID) ?? [];
+        return $this->stageStore()->getStages(self::TRIP_ID) ?? [];
     }
 
     private function seedTrip(int $stageCount = 4): void
     {
         /** @var TripRequestRepositoryInterface $repository */
         $repository = self::getContainer()->get(TripRequestRepositoryInterface::class);
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = self::getContainer()->get(TripStageStoreInterface::class);
 
         $request = new TripRequest(Uuid::fromString(self::TRIP_ID));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
@@ -296,7 +308,7 @@ final class TripPreconditionTest extends ApiTestCase
             );
         }
 
-        $repository->storeStages(self::TRIP_ID, $stages);
+        $stageStore->storeStages(self::TRIP_ID, $stages);
         $this->associateTripWithUser(self::TRIP_ID, $this->owner);
     }
 }

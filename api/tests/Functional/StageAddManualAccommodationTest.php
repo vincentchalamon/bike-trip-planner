@@ -15,6 +15,7 @@ use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -64,6 +65,10 @@ final class StageAddManualAccommodationTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
         $request->startDate = new \DateTimeImmutable('today +1 year');
@@ -88,7 +93,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
             endPoint: new Coordinate(46.0, 6.0),
         );
 
-        $repo->storeStages($tripId, [$stage0, $stage1]);
+        $stageStore->storeStages($tripId, [$stage0, $stage1]);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -117,8 +122,8 @@ final class StageAddManualAccommodationTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertSame('Stage', $data['@type']);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
 
         $this->assertNotNull($stages);
@@ -164,8 +169,8 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
         $acc = $stages[0]->selectedAccommodation ?? null;
         $this->assertNotNull($acc);
@@ -192,8 +197,8 @@ final class StageAddManualAccommodationTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(422);
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
         $stages = $repo->getStages(self::TRIP_ID);
         $this->assertNotNull($stages);
         // Nothing persisted: endPoint untouched, no accommodation added.

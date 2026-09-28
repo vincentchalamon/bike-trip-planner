@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -52,13 +53,18 @@ final class TripDuplicateTest extends ApiTestCase
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
+
+
+        /** @var TripStageStoreInterface $stageStore */
+        $stageStore = $container->get(TripStageStoreInterface::class);
+
         $repo->initializeTrip($tripId, $request);
 
         // A stage, so cloneStage() is exercised during duplication. Written through the
         // repository rather than attached to the TripRequest before it is created: the stage
         // collection has one writer (ADR-066), and initializeTrip() no longer persists whatever
         // object it is handed — it applies the settings, which is all any caller passes it.
-        $repo->storeStages($tripId, [new StageDto(
+        $stageStore->storeStages($tripId, [new StageDto(
             tripId: $tripId,
             dayNumber: 1,
             distance: 80.0,

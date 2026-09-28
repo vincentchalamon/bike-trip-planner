@@ -19,6 +19,7 @@ use App\MessageHandler\CheckBikeShopsHandler;
 use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -68,12 +69,13 @@ final class CheckBikeShopsHandlerTest extends TestCase
     }
 
     private function createHandler(
-        TripRequestRepositoryInterface $tripStateManager,
+        TripStageStoreInterface $stageStore,
         TripUpdatePublisherInterface $publisher,
         BikeShopRepositoryInterface $bikeShopRepository,
         GeoDistanceInterface $haversine,
         ?ComputationTrackerInterface $computationTracker = null,
         ?TransientTripPointsStoreInterface $points = null,
+        string $locale = 'en',
     ): CheckBikeShopsHandler {
         if (!$computationTracker instanceof ComputationTrackerInterface) {
             $stub = $this->createStub(ComputationTrackerInterface::class);
@@ -94,12 +96,16 @@ final class CheckBikeShopsHandlerTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
+        $tripRequestRepository = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripRequestRepository->method('getLocale')->willReturn($locale);
+
         return new CheckBikeShopsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
-            $tripStateManager,
+            $tripRequestRepository,
+            $stageStore,
             $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $bikeShopRepository,
             $haversine,
@@ -108,19 +114,18 @@ final class CheckBikeShopsHandlerTest extends TestCase
         );
     }
 
-    private function tripStateManager(string $tripId, int $stageCount = 6): TripRequestRepositoryInterface
+    private function stageStore(string $tripId, int $stageCount = 6): TripStageStoreInterface
     {
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($this->createStages($tripId, $stageCount));
-        $tripStateManager->method('getLocale')->willReturn('en');
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($this->createStages($tripId, $stageCount));
 
-        return $tripStateManager;
+        return $stageStore;
     }
 
     #[Test]
     public function repairShopNearbyEmitsNoAlert(): void
     {
-        $tripStateManager = $this->tripStateManager('trip-1');
+        $stageStore = $this->stageStore('trip-1');
         $bikeShopRepository = $this->bikeShopRepository([
             ['name' => 'Cycles Repair', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => true],
         ]);
@@ -138,14 +143,14 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
     #[Test]
     public function saleOnlyShopNearbyEmitsStandardNudge(): void
     {
-        $tripStateManager = $this->tripStateManager('trip-1');
+        $stageStore = $this->stageStore('trip-1');
         $bikeShopRepository = $this->bikeShopRepository([
             ['name' => 'Cycles Sale', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => false],
         ]);
@@ -181,14 +186,14 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
     #[Test]
     public function noShopNearbyEmitsStandardNudge(): void
     {
-        $tripStateManager = $this->tripStateManager('trip-1');
+        $stageStore = $this->stageStore('trip-1');
         $bikeShopRepository = $this->bikeShopRepository([]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -209,7 +214,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
+        $handler = $this->createHandler($stageStore, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
@@ -227,11 +232,10 @@ final class CheckBikeShopsHandlerTest extends TestCase
             isRestDay: true,
         );
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn(null);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
+        $stageStore->method('getStages')->willReturn($stages);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -250,7 +254,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
             );
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->bikeShopRepository([]),
             $this->createStub(GeoDistanceInterface::class),
@@ -268,9 +272,9 @@ final class CheckBikeShopsHandlerTest extends TestCase
         // And they must clear the group rather than merely skip (ADR-068): a longer trip
         // shortened to five days re-dispatches this check, and this branch keeps firing on
         // every later edit — so an alert left standing here is left standing for good.
-        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($this->createStages('trip-1', 5));
-        $tripStateManager->expects($this->once())
+        $stageStore = $this->createMock(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn($this->createStages('trip-1', 5));
+        $stageStore->expects($this->once())
             ->method('updateTripAlertsForGroup')
             ->with('trip-1', AlertGroup::BIKE_SHOP, []);
 
@@ -294,7 +298,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
         $computationTracker->method('getStatuses')->willReturn([ComputationName::BIKE_SHOPS->value => 'done']);
 
         $handler = $this->createHandler(
-            $tripStateManager,
+            $stageStore,
             $publisher,
             $this->bikeShopRepository([['name' => 'Cycles Repair', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => true]]),
             $this->createStub(GeoDistanceInterface::class),
