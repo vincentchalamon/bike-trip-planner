@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Model\Coordinate;
@@ -14,7 +15,6 @@ use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Osm\WaysRepositoryInterface;
@@ -48,7 +48,6 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         private AnalyzerRegistryInterface $analyzerRegistry,
         private WaysRepositoryInterface $waysRepository,
         private GeometryDistributorInterface $distributor,
-        private StagePayloadMapper $stagePayloadMapper,
         MessageBusInterface $messageBus,
         AlertRenderer $alertRenderer,
     ) {
@@ -98,7 +97,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 //
                 // Keyed by stage identity, like every stage-scoped event since ADR-066.
                 $alertsData[$stage->id] = array_map(
-                    $this->stagePayloadMapper->alertToPayload(...),
+                    AlertPayload::of(...),
                     $this->analyzerRegistry->analyze($stage, $context),
                 );
                 // The wire copy is the same array read in the trip's language (ADR-069).

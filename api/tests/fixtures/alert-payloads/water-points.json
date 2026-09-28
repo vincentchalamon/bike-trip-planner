@@ -12,6 +12,8 @@
                     "parameterFormats": {
                         "%threshold%": "distance"
                     },
+                    "lat": null,
+                    "lon": null,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.water.action",
@@ -33,6 +35,8 @@
                     "parameterFormats": {
                         "%threshold%": "distance"
                     },
+                    "lat": null,
+                    "lon": null,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.water.action",
@@ -62,6 +66,8 @@
                         "parameterFormats": {
                             "%threshold%": "distance"
                         },
+                        "lat": null,
+                        "lon": null,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.water.action",
@@ -85,6 +91,8 @@
                         "parameterFormats": {
                             "%threshold%": "distance"
                         },
+                        "lat": null,
+                        "lon": null,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.water.action",

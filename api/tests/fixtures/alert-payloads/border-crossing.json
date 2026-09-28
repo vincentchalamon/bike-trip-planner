@@ -12,6 +12,8 @@
                     "parameterFormats": {
                         "%country%": "country"
                     },
+                    "lat": 49.0,
+                    "lon": 3.0,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.border_crossing.action",
@@ -19,9 +21,7 @@
                             "lat": 49.0,
                             "lon": 3.0
                         }
-                    },
-                    "lat": 49.0,
-                    "lon": 3.0
+                    }
                 }
             ]
         }
@@ -43,6 +43,8 @@
                         "parameterFormats": {
                             "%country%": "country"
                         },
+                        "lat": 49.0,
+                        "lon": 3.0,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.border_crossing.action",
@@ -52,8 +54,6 @@
                             },
                             "label": "Show the border crossing"
                         },
-                        "lat": 49.0,
-                        "lon": 3.0,
                         "message": "You are entering Belgium. Check phone coverage, payment methods, and local regulations."
                     }
                 ]

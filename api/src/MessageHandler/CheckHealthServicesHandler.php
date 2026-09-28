@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -105,15 +107,13 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                     continue;
                 }
 
-                $alerts[] = [
-                    'stageId' => $stage->id,
-                    'dayNumber' => $stage->dayNumber,
-                    'code' => AlertCode::HEALTH_SERVICE_NONE_NEARBY->value,
-                    'type' => AlertType::NUDGE->value,
-                    'messageKey' => 'alert.health_service.nudge',
-                    'parameters' => ['%threshold%' => self::HEALTH_SERVICE_PROXIMITY_METERS],
-                    'parameterFormats' => ['%threshold%' => AlertParameterFormat::DISTANCE->value],
-                ];
+                $alerts[] = AlertPayload::forStage($stage, new Alert(
+                    code: AlertCode::HEALTH_SERVICE_NONE_NEARBY,
+                    type: AlertType::NUDGE,
+                    messageKey: 'alert.health_service.nudge',
+                    parameters: ['%threshold%' => self::HEALTH_SERVICE_PROXIMITY_METERS],
+                    parameterFormats: ['%threshold%' => AlertParameterFormat::DISTANCE->value],
+                ));
             }
 
             // Same array to the database and to the wire (ADR-068): grouped by the stage

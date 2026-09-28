@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Repository;
 
 use ApiPlatform\Metadata\Get;
+use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
@@ -15,6 +16,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
+use App\Mapper\StageArrayMapper;
 use App\Mercure\StagePayloadMapper;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\DoctrineTripStageStore;
@@ -138,8 +140,12 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        /** @var StagePayloadMapper $mapper */
-        $mapper = self::getContainer()->get(StagePayloadMapper::class);
+        // Built from its collaborators rather than fetched: in the test environment the
+        // publisher is the null one, so nothing wires the mapper and the container drops it.
+        $stageMapper = self::getContainer()->get(StageArrayMapper::class);
+        $alertRenderer = self::getContainer()->get(AlertRenderer::class);
+        \assert($stageMapper instanceof StageArrayMapper && $alertRenderer instanceof AlertRenderer);
+        $mapper = new StagePayloadMapper($stageMapper, $alertRenderer);
         $stage = $this->stage($tripId);
 
         self::assertSame([

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Mercure;
 
 use App\Alert\AlertRenderer;
-use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Accommodation;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Mapper\StageArrayMapper;
 
@@ -77,31 +75,5 @@ final readonly class StagePayloadMapper
     public function toPayloadList(array $stages, string $locale): array
     {
         return array_map(fn (Stage $stage): array => $this->toPayload($stage, $locale), $stages);
-    }
-
-    /**
-     * Serialises a single alert, including its contextual action when the kind is
-     * actually wired in the frontend (see {@see AlertAction::toDeliverablePayload()}).
-     *
-     * @return array<string, mixed>
-     */
-    public function alertToPayload(Alert $alert): array
-    {
-        $payload = [
-            'code' => $alert->code?->value,
-            'type' => $alert->type->value,
-            'messageKey' => $alert->messageKey,
-            'parameters' => $alert->parameters,
-            'parameterFormats' => $alert->parameterFormats,
-            'lat' => $alert->lat,
-            'lon' => $alert->lon,
-        ];
-
-        $action = $alert->action?->toDeliverablePayload();
-        if (null !== $action) {
-            $payload['action'] = $action;
-        }
-
-        return $payload;
     }
 }

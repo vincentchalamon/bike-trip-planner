@@ -6,6 +6,8 @@
                     "code": "resupply_none_on_stage",
                     "type": "nudge",
                     "messageKey": "alert.lunch.nudge",
+                    "parameters": [],
+                    "parameterFormats": [],
                     "lat": 48.0,
                     "lon": 2.0
                 }
@@ -15,6 +17,8 @@
                     "code": "resupply_closed_at_passage",
                     "type": "warning",
                     "messageKey": "alert.resupply.timing_warning",
+                    "parameters": [],
+                    "parameterFormats": [],
                     "lat": 44.0,
                     "lon": 4.0
                 }
@@ -37,6 +41,8 @@
                         "code": "resupply_none_on_stage",
                         "type": "nudge",
                         "messageKey": "alert.lunch.nudge",
+                        "parameters": [],
+                        "parameterFormats": [],
                         "lat": 48.0,
                         "lon": 2.0,
                         "message": "No restaurant or food shop detected on this stage. Pack provisions."
@@ -97,6 +103,8 @@
                         "code": "resupply_closed_at_passage",
                         "type": "warning",
                         "messageKey": "alert.resupply.timing_warning",
+                        "parameters": [],
+                        "parameterFormats": [],
                         "lat": 44.0,
                         "lon": 4.0,
                         "message": "Shops exist on stage 2, but you would pass them outside typical opening hours."

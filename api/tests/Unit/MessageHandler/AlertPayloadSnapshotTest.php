@@ -30,7 +30,6 @@ use App\Geo\HaversineDistance;
 use App\Geo\NearbyNameDeduplicator;
 use App\Mapper\EventArrayMapper;
 use App\Mapper\StageArrayMapper;
-use App\Mercure\StagePayloadMapper;
 use App\Message\AnalyzeTerrain;
 use App\Message\AnalyzeWind;
 use App\Message\CheckBikeShops;
@@ -280,7 +279,7 @@ final class AlertPayloadSnapshotTest extends TestCase
     public function culturalPois(): void
     {
         $stages = [$this->stage(1, 48.0, 2.0, 48.5, 2.5)];
-        $source = new readonly class implements CulturalPoiSourceInterface {
+        $source = new readonly class () implements CulturalPoiSourceInterface {
             public function fetchForStages(array $stageGeometries, int $radiusMeters): array
             {
                 return [
@@ -370,6 +369,7 @@ final class AlertPayloadSnapshotTest extends TestCase
 
         $request = new TripRequest();
         $request->startDate = new \DateTimeImmutable('2026-07-14');
+
         $boundaries = $this->createStub(AdminBoundaryRepositoryInterface::class);
         $boundaries->method('findCountryCodeAt')->willReturn('FR');
 
@@ -483,7 +483,7 @@ final class AlertPayloadSnapshotTest extends TestCase
     public function accommodations(): void
     {
         $stages = [$this->stage(1, 48.0, 2.0, 48.5, 2.5)];
-        $source = new readonly class implements AccommodationSourceInterface {
+        $source = new readonly class () implements AccommodationSourceInterface {
             public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes): array
             {
                 return [[
@@ -582,7 +582,6 @@ final class AlertPayloadSnapshotTest extends TestCase
             $registry,
             $ways,
             new GeometryBasedDistributor(new HaversineDistance()),
-            new StagePayloadMapper(new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()), $renderer),
             $this->createStub(MessageBusInterface::class),
             $renderer,
         );
@@ -592,7 +591,7 @@ final class AlertPayloadSnapshotTest extends TestCase
     }
 
     /**
-     * @param list<Stage>                                                                  $stages
+     * @param list<Stage>                                                          $stages
      * @param list<array{name: ?string, category: string, lat: float, lon: float}> $stations
      *
      * @return array{0: array<string, mixed>, 1: list<array{type: string, data: array<string, mixed>}>}

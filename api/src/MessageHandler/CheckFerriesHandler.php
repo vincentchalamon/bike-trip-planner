@@ -6,7 +6,9 @@ namespace App\MessageHandler;
 
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
-use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
@@ -32,7 +34,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * Deduplicates per stage by ferry name.
  */
 #[AsMessageHandler]
-final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
+final readonly class CheckFerriesHandler extends AbstractRouteCrossingHandler
 {
     /** Max distance (m) between the stage line and a ferry line to count the stage as taking it. */
     private const int FERRY_TOLERANCE_METERS = 100;
@@ -53,61 +55,20 @@ final readonly class CheckFerriesHandler extends AbstractTripMessageHandler
 
     public function __invoke(CheckFerries $message): void
     {
-        $tripId = $message->tripId;
-        $stages = $this->stageStore->getStages($tripId);
-
-        if (null === $stages) {
-            return;
-        }
-
-        $this->executeWithTracking($tripId, ComputationName::FERRIES, function () use ($tripId, $stages): void {
-            $alerts = [];
-
-            foreach ($stages as $stage) {
-                if ($stage->isRestDay) {
-                    continue;
-                }
-
-                $stagePoints = array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
-                    $stage->geometry,
-                );
-
-                /** @var list<string> $seenNames */
-                $seenNames = [];
-                foreach ($this->ferryRepository->findNearStage($stagePoints, self::FERRY_TOLERANCE_METERS) as $ferry) {
-                    $key = $ferry['name'] ?? \sprintf('%.5F,%.5F', $ferry['lat'], $ferry['lon']);
-                    if (\in_array($key, $seenNames, true)) {
-                        continue;
-                    }
-
-                    $seenNames[] = $key;
-
-                    $alerts[] = [
-                        'stageId' => $stage->id,
-                        'dayNumber' => $stage->dayNumber,
-                        'code' => AlertCode::FERRY_CROSSING->value,
-                        'type' => AlertType::WARNING->value,
-                        'messageKey' => 'alert.ferry.warning',
-                        'action' => [
-                            'kind' => AlertActionKind::NAVIGATE->value,
-                            'labelKey' => 'alert.ferry.action',
-                            'payload' => ['lat' => $ferry['lat'], 'lon' => $ferry['lon']],
-                        ],
-                        'lat' => $ferry['lat'],
-                        'lon' => $ferry['lon'],
-                    ];
-                }
-            }
-
-            // Same array to the database and to the wire (ADR-068): grouped by the stage
-            // it addresses, and without `stageId`/`dayNumber` — the first is the key, the
-            // second is renumbered by every structural edit and is derived on read.
-            $this->stageStore->updateTripAlertsForGroup($tripId, AlertGroup::FERRY, $this->groupByStage($alerts));
-
-            $this->publisher->publish($tripId, MercureEventType::FERRY_ALERTS, [
-                'alerts' => $this->renderForWire($tripId, $alerts),
-            ]);
-        });
+        $this->checkCrossings(
+            $message->tripId,
+            ComputationName::FERRIES,
+            AlertGroup::FERRY,
+            MercureEventType::FERRY_ALERTS,
+            fn (array $stagePoints): array => $this->ferryRepository->findNearStage($stagePoints, self::FERRY_TOLERANCE_METERS),
+            static fn (Stage $stage, array $ferry): Alert => new Alert(
+                code: AlertCode::FERRY_CROSSING,
+                type: AlertType::WARNING,
+                messageKey: 'alert.ferry.warning',
+                lat: $ferry['lat'],
+                lon: $ferry['lon'],
+                action: new AlertAction(AlertActionKind::NAVIGATE, 'alert.ferry.action', ['lat' => $ferry['lat'], 'lon' => $ferry['lon']]),
+            ),
+        );
     }
 }

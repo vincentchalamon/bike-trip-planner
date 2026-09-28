@@ -11,7 +11,9 @@
                     },
                     "parameterFormats": {
                         "%threshold%": "distance"
-                    }
+                    },
+                    "lat": null,
+                    "lon": null
                 }
             ]
         }
@@ -33,6 +35,8 @@
                         "parameterFormats": {
                             "%threshold%": "distance"
                         },
+                        "lat": null,
+                        "lon": null,
                         "message": "No train station within 10 km of stage 1. In case of emergency, the nearest station may be far away."
                     }
                 ]

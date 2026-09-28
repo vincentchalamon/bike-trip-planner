@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -108,22 +111,16 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                 $stageIndex = min($i - 1, \count($stages) - 1);
                 $stage = $stages[$stageIndex];
 
-                $alerts[] = [
-                    'stageId' => $stage->id,
-                    'dayNumber' => $stage->dayNumber,
-                    'code' => AlertCode::BORDER_CROSSING->value,
-                    'type' => AlertType::NUDGE->value,
-                    'messageKey' => 'alert.border_crossing.nudge',
-                    'parameters' => ['%country%' => $currentCountry],
-                    'parameterFormats' => ['%country%' => AlertParameterFormat::COUNTRY->value],
-                    'action' => [
-                        'kind' => AlertActionKind::NAVIGATE->value,
-                        'labelKey' => 'alert.border_crossing.action',
-                        'payload' => ['lat' => $crossingPoint->lat, 'lon' => $crossingPoint->lon],
-                    ],
-                    'lat' => $crossingPoint->lat,
-                    'lon' => $crossingPoint->lon,
-                ];
+                $alerts[] = AlertPayload::forStage($stage, new Alert(
+                    code: AlertCode::BORDER_CROSSING,
+                    type: AlertType::NUDGE,
+                    messageKey: 'alert.border_crossing.nudge',
+                    parameters: ['%country%' => $currentCountry],
+                    parameterFormats: ['%country%' => AlertParameterFormat::COUNTRY->value],
+                    lat: $crossingPoint->lat,
+                    lon: $crossingPoint->lon,
+                    action: new AlertAction(AlertActionKind::NAVIGATE, 'alert.border_crossing.action', ['lat' => $crossingPoint->lat, 'lon' => $crossingPoint->lon]),
+                ));
             }
 
             // Same array to the database and to the wire (ADR-068): grouped by the stage

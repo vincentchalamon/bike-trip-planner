@@ -6,6 +6,10 @@
                     "code": "ferry_crossing",
                     "type": "warning",
                     "messageKey": "alert.ferry.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.05,
+                    "lon": -2.05,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.ferry.action",
@@ -13,14 +17,16 @@
                             "lat": 47.05,
                             "lon": -2.05
                         }
-                    },
-                    "lat": 47.05,
-                    "lon": -2.05
+                    }
                 },
                 {
                     "code": "ferry_crossing",
                     "type": "warning",
                     "messageKey": "alert.ferry.warning",
+                    "parameters": [],
+                    "parameterFormats": [],
+                    "lat": 47.07,
+                    "lon": -2.07,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.ferry.action",
@@ -28,9 +34,7 @@
                             "lat": 47.07,
                             "lon": -2.07
                         }
-                    },
-                    "lat": 47.07,
-                    "lon": -2.07
+                    }
                 }
             ]
         }
@@ -46,6 +50,10 @@
                         "code": "ferry_crossing",
                         "type": "warning",
                         "messageKey": "alert.ferry.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.05,
+                        "lon": -2.05,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.ferry.action",
@@ -55,8 +63,6 @@
                             },
                             "label": "Ferry crossing"
                         },
-                        "lat": 47.05,
-                        "lon": -2.05,
                         "message": "Stage 1 takes a ferry crossing. Check the schedule and whether booking is required."
                     },
                     {
@@ -65,6 +71,10 @@
                         "code": "ferry_crossing",
                         "type": "warning",
                         "messageKey": "alert.ferry.warning",
+                        "parameters": [],
+                        "parameterFormats": [],
+                        "lat": 47.07,
+                        "lon": -2.07,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.ferry.action",
@@ -74,8 +84,6 @@
                             },
                             "label": "Ferry crossing"
                         },
-                        "lat": 47.07,
-                        "lon": -2.07,
                         "message": "Stage 1 takes a ferry crossing. Check the schedule and whether booking is required."
                     }
                 ]

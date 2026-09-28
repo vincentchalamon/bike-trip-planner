@@ -12,6 +12,8 @@
                     "parameterFormats": {
                         "%threshold%": "distance"
                     },
+                    "lat": 46.0,
+                    "lon": 3.0,
                     "action": {
                         "kind": "navigate",
                         "labelKey": "alert.railway_station.action",
@@ -19,9 +21,7 @@
                             "lat": 46.0,
                             "lon": 3.0
                         }
-                    },
-                    "lat": 46.0,
-                    "lon": 3.0
+                    }
                 }
             ]
         }
@@ -43,6 +43,8 @@
                         "parameterFormats": {
                             "%threshold%": "distance"
                         },
+                        "lat": 46.0,
+                        "lon": 3.0,
                         "action": {
                             "kind": "navigate",
                             "labelKey": "alert.railway_station.action",
@@ -52,8 +54,6 @@
                             },
                             "label": "Nearest train station"
                         },
-                        "lat": 46.0,
-                        "lon": 3.0,
                         "message": "No train station within 10 km of stage 2. In case of emergency, the nearest station may be far away."
                     }
                 ]

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -118,18 +121,14 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 
                 $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
                 $nearestShop = $this->findNearestShop($midpoint, $allShops);
-                $stagesWithoutBikeShop[] = [
-                    'stageId' => $stage->id,
-                    'dayNumber' => $stage->dayNumber,
-                    'code' => AlertCode::BIKE_SHOP_NONE_NEARBY->value,
-                    'type' => AlertType::NUDGE->value,
-                    'messageKey' => 'alert.bike_shop.nudge',
-                    'action' => null !== $nearestShop ? [
-                        'kind' => AlertActionKind::NAVIGATE->value,
-                        'labelKey' => 'alert.bike_shop.action',
-                        'payload' => ['lat' => $nearestShop['lat'], 'lon' => $nearestShop['lon']],
-                    ] : null,
-                ];
+                $stagesWithoutBikeShop[] = AlertPayload::forStage($stage, new Alert(
+                    code: AlertCode::BIKE_SHOP_NONE_NEARBY,
+                    type: AlertType::NUDGE,
+                    messageKey: 'alert.bike_shop.nudge',
+                    action: null !== $nearestShop
+                        ? new AlertAction(AlertActionKind::NAVIGATE, 'alert.bike_shop.action', ['lat' => $nearestShop['lat'], 'lon' => $nearestShop['lon']])
+                        : null,
+                ));
             }
 
             // Same array to the database and to the wire (ADR-068): grouped by the stage

@@ -9,6 +9,9 @@
                     "parameters": {
                         "%holiday%": "Bastille Day"
                     },
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
                     "action": {
                         "kind": "dismiss",
                         "labelKey": "alert.calendar.action",
@@ -22,6 +25,9 @@
                     "type": "nudge",
                     "messageKey": "alert.calendar.sunday_nudge",
                     "parameters": [],
+                    "parameterFormats": [],
+                    "lat": null,
+                    "lon": null,
                     "action": {
                         "kind": "dismiss",
                         "labelKey": "alert.calendar.action",
@@ -45,6 +51,9 @@
                         "parameters": {
                             "%holiday%": "Bastille Day"
                         },
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
                         "action": {
                             "kind": "dismiss",
                             "labelKey": "alert.calendar.action",
@@ -60,6 +69,9 @@
                         "type": "nudge",
                         "messageKey": "alert.calendar.sunday_nudge",
                         "parameters": [],
+                        "parameterFormats": [],
+                        "lat": null,
+                        "lon": null,
                         "action": {
                             "kind": "dismiss",
                             "labelKey": "alert.calendar.action",

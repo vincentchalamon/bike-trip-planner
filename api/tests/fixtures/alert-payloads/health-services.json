@@ -11,7 +11,9 @@
                     },
                     "parameterFormats": {
                         "%threshold%": "distance"
-                    }
+                    },
+                    "lat": null,
+                    "lon": null
                 }
             ]
         }
@@ -33,6 +35,8 @@
                         "parameterFormats": {
                             "%threshold%": "distance"
                         },
+                        "lat": null,
+                        "lon": null,
                         "message": "No pharmacy, hospital, or clinic detected within 15 km of stage 2. Carry a first-aid kit and check nearby towns before departure."
                     }
                 ]

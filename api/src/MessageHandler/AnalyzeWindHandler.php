@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
+use App\Alert\AlertPayload;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\WeatherForecast;
@@ -196,22 +198,16 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
      */
     private function stageAlert(Stage $stage, AlertCode $code, string $key, array $parameters, AlertAction $action): array
     {
-        return [
-            'stageId' => $stage->id,
-            'dayNumber' => $stage->dayNumber,
-            'code' => $code->value,
-            'type' => AlertType::WARNING->value,
-            'messageKey' => $key,
-            'parameters' => $parameters,
-            'parameterFormats' => array_map(
+        return AlertPayload::forStage($stage, new Alert(
+            code: $code,
+            type: AlertType::WARNING,
+            messageKey: $key,
+            parameters: $parameters,
+            parameterFormats: array_map(
                 static fn (): string => AlertParameterFormat::DECIMAL->value,
                 $parameters,
             ),
-            'action' => [
-                'kind' => $action->kind->value,
-                'labelKey' => $action->labelKey,
-                'payload' => $action->payload,
-            ],
-        ];
+            action: $action,
+        ));
     }
 }
