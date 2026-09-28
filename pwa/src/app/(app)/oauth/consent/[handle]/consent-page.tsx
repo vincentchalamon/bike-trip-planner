@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,8 @@ import {
  * could trigger, and it only completes because a decision is already on file — recorded with
  * a credential that lives in this tab's memory and that no third-party page can produce.
  */
-export default function OAuthConsentPage() {
+export default function OAuthConsentPage({ handle }: { handle: string }) {
   const t = useTranslations("oauthConsent");
-  const params = useParams<{ handle: string }>();
   const [consent, setConsent] = useState<PendingConsent | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "gone" | "working">(
     "loading",
@@ -39,7 +37,7 @@ export default function OAuthConsentPage() {
     loaded.current = true;
 
     void (async () => {
-      const pending = await fetchPendingConsent(params.handle);
+      const pending = await fetchPendingConsent(handle);
       if (!pending) {
         setState("gone");
         return;
@@ -47,13 +45,13 @@ export default function OAuthConsentPage() {
       setConsent(pending);
       setState("ready");
     })();
-  }, [params.handle]);
+  }, [handle]);
 
   const decide = async (decision: "approve" | "deny") => {
     if (!consent?.continueUrl) return;
     setState("working");
 
-    if (!(await decidePendingConsent(params.handle, decision))) {
+    if (!(await decidePendingConsent(handle, decision))) {
       setState("gone");
       return;
     }

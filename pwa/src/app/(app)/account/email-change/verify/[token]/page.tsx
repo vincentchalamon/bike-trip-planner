@@ -1,9 +1,10 @@
-import dynamic from "next/dynamic";
+import EmailChangeVerifyPage from "./verify-page";
 
-const EmailChangeVerifyPage = dynamic(() => import("./verify-page"), {
-  loading: () => null,
-});
-
-export default function Page() {
-  return <EmailChangeVerifyPage />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  return <EmailChangeVerifyPage token={token} />;
 }

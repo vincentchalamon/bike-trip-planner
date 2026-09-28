@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { TripPlanner } from "@/components/trip-planner";
@@ -318,9 +317,7 @@ function TripLoader({ tripId }: { tripId: string }) {
   );
 }
 
-export default function TripDetailPage() {
-  const { id } = useParams<{ id: string }>();
-
+export default function TripDetailPage({ id }: { id: string }) {
   return (
     <HydrationBoundary>
       <TripLoader tripId={id} />

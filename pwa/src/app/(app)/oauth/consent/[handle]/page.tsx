@@ -1,9 +1,10 @@
-import dynamic from "next/dynamic";
+import OAuthConsentPage from "./consent-page";
 
-const OAuthConsentPage = dynamic(() => import("./consent-page"), {
-  loading: () => null,
-});
-
-export default function Page() {
-  return <OAuthConsentPage />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ handle: string }>;
+}) {
+  const { handle } = await params;
+  return <OAuthConsentPage handle={handle} />;
 }

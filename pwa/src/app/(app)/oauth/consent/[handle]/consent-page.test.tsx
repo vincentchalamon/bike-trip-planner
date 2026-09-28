@@ -6,10 +6,6 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ handle: "a-handle" }),
-}));
-
 const fetchPendingConsent = vi.fn();
 const decidePendingConsent = vi.fn();
 
@@ -52,7 +48,7 @@ describe("OAuthConsentPage", () => {
       pending({ clientName: "<img src=x onerror=alert(1)>Totally Safe" }),
     );
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     const name = await screen.findByTestId("oauth-consent-client");
     expect(name).toHaveTextContent("<img src=x onerror=alert(1)>Totally Safe");
@@ -70,7 +66,7 @@ describe("OAuthConsentPage", () => {
       pending({ redirectHost: "127.0.0.1", redirectsToLoopback: true }),
     );
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     expect(
       await screen.findByTestId("oauth-consent-loopback-warning"),
@@ -81,7 +77,7 @@ describe("OAuthConsentPage", () => {
   });
 
   it("does not warn when the client returns to a real host", async () => {
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     await screen.findByTestId("oauth-consent");
     expect(
@@ -94,7 +90,7 @@ describe("OAuthConsentPage", () => {
       pending({ scopes: ["trips:read", "trips:write"] }),
     );
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     const list = await screen.findByTestId("oauth-consent-scopes");
     expect(list.querySelectorAll("li")).toHaveLength(2);
@@ -116,7 +112,7 @@ describe("OAuthConsentPage", () => {
       writable: true,
     });
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     fireEvent.click(await screen.findByTestId("oauth-consent-approve"));
 
@@ -131,7 +127,7 @@ describe("OAuthConsentPage", () => {
   it("does not navigate when the decision could not be recorded", async () => {
     decidePendingConsent.mockResolvedValue(false);
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     fireEvent.click(await screen.findByTestId("oauth-consent-approve"));
 
@@ -143,7 +139,7 @@ describe("OAuthConsentPage", () => {
   it("says so when there is no pending authorization", async () => {
     fetchPendingConsent.mockResolvedValue(null);
 
-    render(<OAuthConsentPage />);
+    render(<OAuthConsentPage handle="a-handle" />);
 
     expect(
       await screen.findByTestId("oauth-consent-expired"),

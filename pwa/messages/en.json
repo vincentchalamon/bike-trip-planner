@@ -521,9 +521,6 @@
     "computing": "Computing your route…",
     "tripSavedToAccount": "Trip saved to My trips."
   },
-  "tripPreview": {
-    "analysisLaunchFailed": "Failed to launch analysis. Please retry."
-  },
   "chat": {
     "inRide": {
       "openInMaps": "Open in Google Maps",

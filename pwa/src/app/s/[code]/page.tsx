@@ -70,6 +70,11 @@ export async function generateMetadata({
   }
 }
 
-export default function Page() {
-  return <SharedTripPage />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const { code } = await params;
+  return <SharedTripPage code={code} />;
 }
