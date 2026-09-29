@@ -22,15 +22,20 @@ use Symfony\Component\Validator\Exception\ValidationFailedException;
  *     payload and should not page anyone.
  *
  * Everything else — including 5xx HttpException and any unhandled throwable —
- * is forwarded untouched.
+ * is forwarded, through {@see EventScrubber}.
  */
-final class ExceptionFilter
+final readonly class ExceptionFilter
 {
+    public function __construct(
+        private EventScrubber $scrubber = new EventScrubber(),
+    ) {
+    }
+
     public function __invoke(Event $event, ?EventHint $hint = null): ?Event
     {
         $exception = $hint?->exception;
         if (!$exception instanceof \Throwable) {
-            return $event;
+            return ($this->scrubber)($event);
         }
 
         if ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() < 500) {
@@ -41,6 +46,6 @@ final class ExceptionFilter
             return null;
         }
 
-        return $event;
+        return ($this->scrubber)($event);
     }
 }
