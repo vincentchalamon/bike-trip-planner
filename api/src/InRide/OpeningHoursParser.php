@@ -271,14 +271,9 @@ final readonly class OpeningHoursParser
      * The selector, spans and modifier in-ride reads from a rule, or null when it
      * reads nothing.
      *
-     * This is the tokenisation in-ride has always had, pinned by the
-     * characterisation matrix. It only reads compact spans (`09:00-12:00`, no
-     * whitespace around the dash), it never looks for a keyword or for spans
-     * across a line break, and text it cannot read as spans or keyword stays in the
-     * selector: the selector item it lands in turns unreadable, so only the items
-     * before it can still match. A rule without selector whose spans follow
-     * whitespace (`09:00-12:00, 14:00-18:00`) thus reads its first spans as a
-     * selector, hence nothing.
+     * In-ride never looks for a keyword or for spans across a line break: text it
+     * does not split off stays in the selector, and the selector item it lands in
+     * turns unreadable, so only the items before it can still match.
      *
      * @return array{list<SelectorItem>|null, list<TimeSpan>, Modifier|null}|null
      */
@@ -302,46 +297,7 @@ final readonly class OpeningHoursParser
             return [$this->lastItemUnreadable($selector), [], $modifier];
         }
 
-        $compact = array_all($spans, static fn (TimeSpan $span): bool => $span->isCompact());
-
-        if (null === $selector) {
-            return $compact && null === $this->splitIndex($spans, false) ? [null, $spans, $modifier] : null;
-        }
-
-        if ($compact) {
-            return [$selector, $spans, $modifier];
-        }
-
-        $split = $this->splitIndex($spans, true);
-
-        return [$this->lastItemUnreadable($selector), null === $split ? [] : \array_slice($spans, $split), $modifier];
-    }
-
-    /**
-     * The first span after which in-ride would cut the rule: it follows
-     * whitespace, no line break precedes that whitespace, and, when asked, it
-     * starts a compact tail.
-     *
-     * @param list<TimeSpan> $spans
-     */
-    private function splitIndex(array $spans, bool $compactTail): ?int
-    {
-        $lineBroken = false;
-
-        foreach ($spans as $index => $span) {
-            if (0 !== $index
-                && !$lineBroken
-                && $span->followsWhitespace()
-                && !$span->breaksLineBeforeTrailingWhitespace()
-                && (!$compactTail || array_all(\array_slice($spans, $index), static fn (TimeSpan $tail): bool => $tail->isCompact()))
-            ) {
-                return $index;
-            }
-
-            $lineBroken = $lineBroken || $span->breaksLine();
-        }
-
-        return null;
+        return [$selector, $spans, $modifier];
     }
 
     /**

@@ -25,33 +25,15 @@ final readonly class TimeSpan
     ) {
     }
 
-    /** Written without whitespace around the dash (`09:00-12:00`, not `09:00 - 12:00`). */
-    public function isCompact(): bool
-    {
-        return '' === $this->dashWhitespace;
-    }
-
     /** A line break inside the span or before it. */
     public function breaksLine(): bool
     {
         return str_contains($this->separator.$this->dashWhitespace, "\n");
     }
 
-    /** A line break in its separator before the separator's trailing whitespace (`\n, ` but not `,\n`). */
-    public function breaksLineBeforeTrailingWhitespace(): bool
-    {
-        return str_contains(rtrim($this->separator), "\n");
-    }
-
     /** Separated from the previous span by exactly one comma, whitespace aside. */
     public function followsSingleComma(): bool
     {
         return 1 === substr_count($this->separator, ',');
-    }
-
-    /** Separated from the previous span by a separator ending in whitespace (`, ` or ` `). */
-    public function followsWhitespace(): bool
-    {
-        return 1 === preg_match('/\s$/', $this->separator);
     }
 }

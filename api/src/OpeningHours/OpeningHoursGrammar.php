@@ -9,14 +9,16 @@ namespace App\OpeningHours;
  *
  * It structures a value into {@see Rule}s (selector items, time spans, modifier)
  * and judges nothing: it never says open, closed or unknown, and never rejects.
- * Planning ({@see \App\Engine\OpeningHours}) and in-ride
- * ({@see \App\InRide\OpeningHoursParser}) each apply their own policy to the
- * same model; their verdicts differ on purpose (ADR-048 §4), their grammar
- * does not.
+ * Planning ({@see \App\Engine\OpeningHours}), in-ride
+ * ({@see \App\InRide\OpeningHoursParser}) and accommodation seasonality
+ * ({@see \App\Accommodation\SeasonalityChecker}) each apply their own policy
+ * to the same model; their verdicts differ on purpose (ADR-048 §4), their
+ * grammar does not.
  *
  * Modelled: `24/7`; `;`-separated rules; a selector made of weekdays (`Mo`,
- * `Mo-Fr`, `Fr-Mo`, lists), `PH`, `SH`, or a single date (`dec 25`); time spans
- * (`09:00-12:00`, several separated by `,` or whitespace); a trailing
+ * `Mo-Fr`, `Fr-Mo`, lists), `PH`, `SH`, month ranges (`Apr-Oct`), or a single
+ * date (`dec 25`); time spans (`09:00-12:00`, several separated by `,` or
+ * whitespace); a trailing
  * `off`/`closed`/`open`. Any other selector token becomes an UNKNOWN item, and a
  * rule whose time part does not read as spans keeps it inside its selector.
  */
@@ -126,6 +128,13 @@ final class OpeningHoursGrammar
             $kind = 'PH' === strtoupper($item) ? SelectorKind::PUBLIC_HOLIDAY : SelectorKind::SCHOOL_HOLIDAY;
 
             return SelectorItem::holiday($kind, strtoupper($item) === $item);
+        }
+
+        if (1 === preg_match('/^([A-Za-z]{3})-([A-Za-z]{3})$/', $item, $months)) {
+            $from = self::MONTHS[strtolower($months[1])] ?? null;
+            $to = self::MONTHS[strtolower($months[2])] ?? null;
+
+            return null === $from || null === $to ? SelectorItem::unknown() : SelectorItem::monthRange($from, $to);
         }
 
         if (1 === preg_match('/^([A-Za-z]{2})(\s*)-(\s*)([A-Za-z]{2})$/', $item, $range)) {

@@ -46,7 +46,7 @@ final class OpeningHoursGrammarTest extends TestCase
         self::assertNotNull($rule->selector);
         self::assertSame(SelectorKind::WEEKDAYS, $rule->selector[0]->kind);
         self::assertFalse($rule->selector[0]->canonical);
-        self::assertFalse($rule->spans[0]->isCompact());
+        self::assertSame('  ', $rule->spans[0]->dashWhitespace);
         self::assertSame(Modifier::OPEN, $rule->modifier);
     }
 
@@ -75,6 +75,20 @@ final class OpeningHoursGrammarTest extends TestCase
 
         self::assertSame(SelectorKind::UNKNOWN, $nth->selector[0]->kind ?? null);
         self::assertCount(1, $nth->spans);
+    }
+
+    #[Test]
+    public function readsAMonthRange(): void
+    {
+        $selector = OpeningHoursGrammar::parse('oct-Mar 10:00-12:00')->rules[0]->selector;
+
+        self::assertNotNull($selector);
+        self::assertSame(SelectorKind::MONTH_RANGE, $selector[0]->kind);
+        self::assertSame([10, 3], [$selector[0]->from, $selector[0]->to]);
+
+        $unknownMonth = OpeningHoursGrammar::parse('Apr-Foo')->rules[0]->selector;
+        self::assertNotNull($unknownMonth);
+        self::assertSame(SelectorKind::UNKNOWN, $unknownMonth[0]->kind);
     }
 
     #[Test]

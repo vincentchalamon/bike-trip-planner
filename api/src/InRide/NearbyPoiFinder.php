@@ -7,6 +7,7 @@ namespace App\InRide;
 use App\Format\OsmContactTags;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeoPoint;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
@@ -52,6 +53,7 @@ final readonly class NearbyPoiFinder
         private PoiLabelResolver $labelResolver,
         private TripRequestRepositoryInterface $tripRepository,
         private TripStageStoreInterface $stageStore,
+        private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
     ) {
     }
 
@@ -81,7 +83,7 @@ final readonly class NearbyPoiFinder
         );
         $capReached = \count($rows) === $category->candidateLimit();
 
-        $candidates = $this->retain($rows, $category, $position, $locale, $now);
+        $candidates = $this->retain($rows, $category, $position, $locale, $now, $this->holidayCountriesAt($position));
         $totalFound = \count($candidates);
 
         usort($candidates, static fn (array $a, array $b): int => $a['distanceMeters'] <=> $b['distanceMeters']);
@@ -100,14 +102,29 @@ final readonly class NearbyPoiFinder
     }
 
     /**
+     * The countries whose public holidays a `PH` rule refers to: the country the
+     * rider stands in, since every candidate lies within a few kilometres of
+     * them. Outside every stored boundary, the France + Belgium default.
+     *
+     * @return list<string>
+     */
+    private function holidayCountriesAt(GeoPoint $position): array
+    {
+        $countryCode = $this->adminBoundaryRepository->findCountryCodeAt($position->lat, $position->lon);
+
+        return null === $countryCode ? OpeningHoursParser::DEFAULT_HOLIDAY_COUNTRIES : [$countryCode];
+    }
+
+    /**
      * Steps 3-5: de-duplicate on (osmType, osmId), label nameless rows and drop
      * only the rows certainly closed now.
      *
      * @param list<array{osmType: string, osmId: int, name: ?string, category: string, lat: float, lon: float, openingHours: ?string, tags: array<string, string>}> $rows
+     * @param list<string>                                                                                                                                          $holidayCountries
      *
      * @return list<Candidate>
      */
-    private function retain(array $rows, InRidePoiCategory $category, GeoPoint $position, string $locale, \DateTimeImmutable $now): array
+    private function retain(array $rows, InRidePoiCategory $category, GeoPoint $position, string $locale, \DateTimeImmutable $now, array $holidayCountries): array
     {
         $candidates = [];
         $seen = [];
@@ -129,7 +146,7 @@ final readonly class NearbyPoiFinder
             }
 
             $tag = $row['openingHours'];
-            $status = null === $tag ? OpeningStatus::UNKNOWN : $this->openingHoursParser->status($tag, $now);
+            $status = null === $tag ? OpeningStatus::UNKNOWN : $this->openingHoursParser->status($tag, $now, $holidayCountries);
             if (OpeningStatus::CLOSED === $status) {
                 continue;
             }
@@ -141,7 +158,7 @@ final readonly class NearbyPoiFinder
             if (OpeningStatus::UNKNOWN === $status) {
                 $warning = PoiWarning::HOURS_UNVERIFIED;
             } elseif (null !== $tag) {
-                $closesAt = $this->openingHoursParser->closesAt($tag, $now);
+                $closesAt = $this->openingHoursParser->closesAt($tag, $now, $holidayCountries);
                 if ($closesAt instanceof \DateTimeImmutable) {
                     $minutes = (int) floor(($closesAt->getTimestamp() - $now->getTimestamp()) / 60);
                     if ($minutes <= self::CLOSES_SOON_MINUTES) {

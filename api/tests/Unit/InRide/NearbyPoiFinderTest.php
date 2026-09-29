@@ -15,6 +15,7 @@ use App\InRide\OpeningHoursParser;
 use App\InRide\PoiSuggestion;
 use App\InRide\PoiWarning;
 use App\InRide\RouteTail;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Osm\CoverageRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Repository\TripRequestRepositoryInterface;
@@ -124,6 +125,30 @@ final class NearbyPoiFinderTest extends TestCase
         self::assertSame(PoiWarning::HOURS_UNVERIFIED, $byName['No tag']->warning);
         self::assertSame(PoiWarning::HOURS_UNVERIFIED, $byName['Garbage tag']->warning);
         self::assertArrayNotHasKey('Closed today', $byName);
+    }
+
+    /**
+     * @return iterable<string, array{?string, bool}>
+     */
+    public static function belgianNationalDay(): iterable
+    {
+        yield 'rider in Belgium: the shop observes it' => ['BE', false];
+        yield 'rider in France: not a French holiday' => ['FR', true];
+        yield 'country unknown: France + Belgium fallback' => [null, false];
+    }
+
+    #[DataProvider('belgianNationalDay')]
+    #[Test]
+    public function publicHolidaysAreTheRiderCountrys(?string $riderCountry, bool $kept): void
+    {
+        $finder = $this->finder($this->poiRepo([
+            $this->row(['osmId' => 1, 'name' => 'Bakery', 'openingHours' => 'Mo-Su 07:00-19:00; PH off']),
+        ]), riderCountry: $riderCountry);
+
+        // 21 July 2025: Belgian National Day, a Monday, a working day in France.
+        $result = $finder->find(InRidePoiCategory::WATER, $this->rider(), now: new \DateTimeImmutable('2025-07-21 12:00:00'));
+
+        self::assertSame($kept, \array_key_exists('Bakery', $this->byName($result['pois'])));
     }
 
     #[Test]
@@ -406,6 +431,7 @@ final class NearbyPoiFinderTest extends TestCase
         bool $outOfZone = false,
         ?array $geometry = null,
         ?string $locale = 'en',
+        ?string $riderCountry = null,
     ): NearbyPoiFinder {
         $distance = new HaversineDistance();
 
@@ -419,6 +445,8 @@ final class NearbyPoiFinderTest extends TestCase
         // resolves it to the stage identity the storage layer addresses by.
         $stageStore->method('getStageIdByDayNumber')->willReturn(null === $geometry ? null : Uuid::v7()->toRfc4122());
         $stageStore->method('getStageGeometry')->willReturn($geometry);
+        $boundaries = $this->createStub(AdminBoundaryRepositoryInterface::class);
+        $boundaries->method('findCountryCodeAt')->willReturn($riderCountry);
 
         return new NearbyPoiFinder(
             $repo,
@@ -431,6 +459,7 @@ final class NearbyPoiFinderTest extends TestCase
             new PoiLabelResolver($this->createAlertTranslator()),
             $trip,
             $stageStore,
+            $boundaries,
         );
     }
 }
