@@ -22,7 +22,7 @@ async function mockAuthenticated(page: import("@playwright/test").Page) {
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 }
 
-const VERIFY_URL = "/account/email-change/verify/test-token";
+const VERIFY_URL = "/account/email-change/verify#test-token";
 
 test.describe("Email change verification (#777)", () => {
   test("valid token shows the success card and updates the session", async ({
@@ -31,9 +31,11 @@ test.describe("Email change verification (#777)", () => {
     await mockAuthenticated(page);
 
     let verifyCalled = false;
+    let postedToken: unknown;
     await page.route("**/users/me/email-change/verify", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       verifyCalled = true;
+      postedToken = (request.postDataJSON() as { token?: unknown }).token;
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -45,6 +47,9 @@ test.describe("Email change verification (#777)", () => {
     await page.waitForLoadState("networkidle");
 
     await expect.poll(() => verifyCalled).toBe(true);
+    // Read from the fragment, then erased from the address bar.
+    expect(postedToken).toBe("test-token");
+    expect(new URL(page.url()).hash).toBe("");
     await expect(page.getByTestId("email-change-success")).toBeVisible();
     await expect(
       page

@@ -5,12 +5,14 @@ import { Text } from 'react-native';
 import i18n from '../i18n';
 
 const mockReplace = jest.fn();
-let mockParams: { token?: string } = { token: 'tok-123' };
+let mockParams: { '#'?: string } = { '#': 'tok-123' };
+let mockLinkingUrl: string | null = null;
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ replace: mockReplace }),
   Stack: { Screen: () => null },
 }));
+jest.mock('expo-linking', () => ({ useLinkingURL: () => mockLinkingUrl }));
 
 jest.mock('../hooks/use-email-change', () => ({ verifyEmailChange: jest.fn() }));
 import { verifyEmailChange } from '../hooks/use-email-change';
@@ -19,7 +21,7 @@ const mockVerify = verifyEmailChange as jest.MockedFunction<typeof verifyEmailCh
 const mockRefreshEmail = jest.fn();
 jest.mock('../auth/store', () => ({ useAuth: () => ({ refreshEmail: mockRefreshEmail }) }));
 
-import VerifyEmailChangeScreen from '../../app/account/email-change/verify/[token]';
+import VerifyEmailChangeScreen from '../../app/account/email-change/verify';
 
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
@@ -27,7 +29,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockParams = { token: 'tok-123' };
+  mockParams = { '#': 'tok-123' };
+  mockLinkingUrl = null;
 });
 
 function textInTree(tree: ReturnType<typeof TestRenderer.create>, value: string): boolean {
@@ -54,6 +57,25 @@ describe('VerifyEmailChangeScreen (#1117)', () => {
     expect(mockVerify).toHaveBeenCalledWith('tok-123');
     expect(mockRefreshEmail).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/account');
+  });
+
+  it('reads the token from the fragment of a custom-scheme link', async () => {
+    mockVerify.mockResolvedValue(true);
+    mockParams = {};
+    mockLinkingUrl = 'biketripplanner://account/email-change/verify#tok-456';
+
+    await render();
+
+    expect(mockVerify).toHaveBeenCalledWith('tok-456');
+  });
+
+  it('shows the error state without calling the API when the link has no token', async () => {
+    mockParams = {};
+
+    const tree = await render();
+
+    expect(mockVerify).not.toHaveBeenCalled();
+    expect(textInTree(tree, i18n.t('account.emailChange.verifyFailedTitle'))).toBe(true);
   });
 
   it('shows the error state and does not redirect when the token is rejected', async () => {

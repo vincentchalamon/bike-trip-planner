@@ -8,7 +8,7 @@ import path from "node:path";
  * Golden path:
  *   1. Magic-link login through the real UI: /login -> POST /auth/request-link
  *      -> the backend mails a verify link to Mailcatcher -> read the token from
- *      Mailcatcher's HTTP API -> /auth/verify/{token} sets the BFF session.
+ *      Mailcatcher's HTTP API -> /auth/verify#{token} sets the BFF session.
  *   2. Import a route via GPX upload (structural pacing runs synchronously,
  *      ADR-043 — no Valhalla / reference data / outbound network required).
  *   3. The trip reaches READY with >= 2 structural stages, rendered as stage cards.
@@ -29,7 +29,7 @@ const MAILCATCHER_URL = process.env.MAILCATCHER_URL ?? "http://localhost:1080";
 const GPX_FIXTURE = path.resolve(__dirname, "../fixtures/smoke-route.gpx");
 
 /**
- * Pull the newest `/auth/verify/{token}` token addressed to `email` from
+ * Pull the newest `/auth/verify#{token}` token addressed to `email` from
  * Mailcatcher, or "" if none is available yet (so `expect.poll` can retry).
  */
 async function readMagicLinkToken(
@@ -55,7 +55,7 @@ async function readMagicLinkToken(
   if (!body.ok()) return "";
 
   const html = await body.text();
-  return html.match(/auth\/verify\/([A-Za-z0-9_-]+)/)?.[1] ?? "";
+  return html.match(/auth\/verify#([A-Za-z0-9_-]+)/)?.[1] ?? "";
 }
 
 test.describe("Integration smoke test", () => {
@@ -100,7 +100,7 @@ test.describe("Integration smoke test", () => {
       .not.toBe("");
 
     // 3. Consume the token -> BFF stores the session cookie and redirects home.
-    await page.goto(`/auth/verify/${token}`);
+    await page.goto(`/auth/verify#${token}`);
     await page.waitForURL("/", { timeout: 15000 });
 
     // 4. Import a route via GPX upload (synchronous structural pacing).

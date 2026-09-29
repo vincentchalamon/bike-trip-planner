@@ -6,12 +6,14 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
 import { LinkExpired } from "@/components/auth/link-expired";
+import { takeUrlFragment } from "@/lib/url-fragment";
 
 /**
  * Magic link verification page.
  *
- * When the user clicks the magic link in their email, they land here.
- * This page POSTs the token to the BFF `/api/auth/verify` route handler
+ * When the user clicks the magic link in their email, they land here, with the
+ * token in the fragment (`/auth/verify#<token>`) so no server log ever sees it.
+ * This page takes it out of the address bar and POSTs it to the BFF `/api/auth/verify` route handler
  * (ADR-053). On success the BFF stores the refresh_token in an httpOnly cookie
  * and returns only the JWT access token; the frontend stores the JWT and
  * redirects to the home page. The refresh token never reaches the browser JS.
@@ -20,7 +22,7 @@ import { LinkExpired } from "@/components/auth/link-expired";
  * component, which lets the user request a fresh magic link without leaving
  * the verification flow.
  */
-export default function VerifyPage({ token }: { token: string }) {
+export default function VerifyPage() {
   const t = useTranslations("auth");
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -36,7 +38,13 @@ export default function VerifyPage({ token }: { token: string }) {
     if (verifyStarted.current) return;
     verifyStarted.current = true;
 
+    const token = takeUrlFragment();
     const verify = async () => {
+      if (token === "") {
+        setError(t("verifyFailed"));
+        setVerifying(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/auth/verify`, {
           method: "POST",
@@ -66,7 +74,7 @@ export default function VerifyPage({ token }: { token: string }) {
     void verify();
     // No cleanup — the useRef guard prevents double-fire, and we must not
     // cancel the in-flight verify (the token is consumed server-side).
-  }, [token, setAuth, router, t]);
+  }, [setAuth, router, t]);
 
   if (verifying) {
     return (

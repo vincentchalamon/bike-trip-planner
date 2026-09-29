@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useAuthStore } from "@/store/auth-store";
 import { verifyEmailChange } from "@/lib/api/client";
+import { takeUrlFragment } from "@/lib/url-fragment";
 
 /**
  * Email-change verification page (#777).
  *
- * The user lands here from the confirmation link sent to their NEW address.
+ * The user lands here from the confirmation link sent to their NEW address, with
+ * the token in the fragment (`/account/email-change/verify#<token>`) so no server
+ * log ever sees it; the page takes it out of the address bar before using it.
  * The page POSTs the token to `/users/me/email-change/verify`; on success the
  * backend commits the new email. It then runs a silent refresh so the JWT (and
  * the in-memory session) carry the updated address, and optimistically updates
@@ -23,7 +26,7 @@ import { verifyEmailChange } from "@/lib/api/client";
  * keep a stale identity — so we clear it and bounce to /login rather than leave
  * the user authenticated under a no-longer-valid email.
  */
-export default function EmailChangeVerifyPage({ token }: { token: string }) {
+export default function EmailChangeVerifyPage() {
   const t = useTranslations("accountSettings.account.verify");
   const router = useRouter();
   const setUserEmail = useAuthStore((s) => s.setUserEmail);
@@ -39,7 +42,12 @@ export default function EmailChangeVerifyPage({ token }: { token: string }) {
     if (started.current) return;
     started.current = true;
 
+    const token = takeUrlFragment();
     const run = async () => {
+      if (token === "") {
+        setStatus("error");
+        return;
+      }
       try {
         const newEmail = await verifyEmailChange(token);
         if (!newEmail) {
@@ -65,7 +73,7 @@ export default function EmailChangeVerifyPage({ token }: { token: string }) {
     };
 
     void run();
-  }, [token, setUserEmail, silentRefresh, clearAuth, router, t]);
+  }, [setUserEmail, silentRefresh, clearAuth, router, t]);
 
   if (status === "verifying") {
     return (

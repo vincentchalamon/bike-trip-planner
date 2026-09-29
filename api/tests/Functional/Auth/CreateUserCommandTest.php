@@ -14,6 +14,8 @@ use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Mailer\EventListener\MessageLoggerListener;
+use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
@@ -90,6 +92,20 @@ final class CreateUserCommandTest extends ApiTestCase
         $magicLinkRepo = self::getContainer()->get(MagicLinkRepository::class);
         $magicLinks = $magicLinkRepo->findAll();
         $this->assertNotEmpty($magicLinks, 'A magic link should be created for the new user');
+    }
+
+    #[Test]
+    public function invitationCarriesTheTokenInTheFragment(): void
+    {
+        $tester = $this->createCommandTester();
+        $tester->execute(['email' => 'fragment@example.com']);
+
+        /** @var MessageLoggerListener $logger */
+        $logger = self::getContainer()->get('mailer.message_logger_listener');
+        $message = $logger->getEvents()->getMessages()[0] ?? null;
+        $this->assertInstanceOf(Email::class, $message);
+        $this->assertStringContainsString('/auth/verify#', (string) $message->getHtmlBody());
+        $this->assertStringNotContainsString('/auth/verify/', (string) $message->getHtmlBody());
     }
 
     #[Test]

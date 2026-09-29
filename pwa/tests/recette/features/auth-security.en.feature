@@ -27,7 +27,7 @@ Feature: Authentication and security
   @desktop @critical
   Scenario: Redirect to home after token verification
     Given I am not logged in
-    When I navigate to /auth/verify/valid-token
+    When I navigate to /auth/verify#valid-token
     Then I am redirected to the home page
 
   @desktop

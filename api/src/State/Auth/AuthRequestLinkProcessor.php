@@ -91,7 +91,9 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
+        // The token rides in the fragment, which a browser never sends: it stays out of
+        // the access logs and the Referer. The page reads it and POSTs it.
+        $verifyUrl = \sprintf('%s/auth/verify#%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
 
         $locale = $user->getLocale();
 

@@ -28,7 +28,7 @@ Fonctionnalité: Authentification et sécurité
   @desktop @critique
   Scénario: Redirection vers l'accueil après vérification du token
     Étant donné que je ne suis pas connecté
-    Quand je navigue vers /auth/verify/token-valide
+    Quand je navigue vers /auth/verify#token-valide
     Alors je suis redirigé vers la page d'accueil
 
   @desktop

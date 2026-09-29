@@ -177,6 +177,14 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 > read yields neither a usable token nor its plaintext. Rotating the encryption key
 > invalidates stored refresh tokens (users transparently re-login).
 
+> **The link carries the token in its fragment (2026-09 log audit).** The emailed links
+> are `{FRONTEND_URL}/auth/verify#<token>` and `{FRONTEND_URL}/account/email-change/verify#<token>`,
+> not `/verify/<token>`. A path segment reaches the Caddy and Traefik access logs on the
+> way in and rides as `Referer` on every request the landing page makes; a browser never
+> sends the fragment. The page (web) or the deep-link screen (mobile) reads it, erases it
+> from the address bar, and POSTs it exactly as before, so the verify endpoints did not
+> change. Those pages also send `Referrer-Policy: no-referrer`.
+
 ### Uniform Response Policy
 
 All requests to the magic link generation endpoint return the same `202 Accepted` response with a neutral message ("If this email is registered, a login link has been sent"), regardless of:

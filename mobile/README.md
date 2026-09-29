@@ -118,9 +118,9 @@ client-agnostic: auth tokens travel in the JSON body and calls negotiate on
 
 1. **Login** (`app/login.tsx`) posts the email to `POST /auth/request-link`.
 2. The email link opens the app via one of:
-   - custom scheme: `biketripplanner://auth/verify/<token>`
-   - Android App Link: `https://epidermis-sandlot-headrest.ngrok-free.dev/auth/verify/<token>`
-3. The file route `app/auth/verify/[token].tsx` extracts the token and calls
+   - custom scheme: `biketripplanner://auth/verify#<token>`
+   - Android App Link: `https://epidermis-sandlot-headrest.ngrok-free.dev/auth/verify#<token>`
+3. The file route `app/auth/verify.tsx` reads the token from the fragment and calls
    `POST /auth/verify`, which returns the JWT and refresh token. Both are stored
    in `expo-secure-store`.
 4. `POST /auth/refresh` rotates the JWT when it expires.
@@ -131,14 +131,14 @@ Custom scheme (works without domain verification):
 
 ```bash
 adb shell am start -a android.intent.action.VIEW \
-  -d "biketripplanner://auth/verify/TEST_TOKEN"
+  -d "biketripplanner://auth/verify#TEST_TOKEN"
 ```
 
 App Link (verified https link):
 
 ```bash
 adb shell am start -a android.intent.action.VIEW \
-  -d "https://epidermis-sandlot-headrest.ngrok-free.dev/auth/verify/TEST_TOKEN"
+  -d "https://epidermis-sandlot-headrest.ngrok-free.dev/auth/verify#TEST_TOKEN"
 ```
 
 ### assetlinks (App Link verification)
