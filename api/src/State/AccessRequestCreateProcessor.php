@@ -26,6 +26,7 @@ use Twig\Environment;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use App\Logger\EmailFingerprint;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
@@ -81,7 +82,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // Silently ignore if user already exists
         $existingUser = $this->userRepository->findByEmail($email);
         if ($existingUser instanceof User) {
-            $this->logger->debug('Access request for existing user — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request for existing user — silently ignored', ['user' => $existingUser->getId()->toRfc4122()]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -89,7 +90,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // Silently ignore if access request already exists
         $existingRequest = $this->accessRequestRepository->findByEmail($email);
         if ($existingRequest instanceof AccessRequest) {
-            $this->logger->debug('Access request already exists — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request already exists — silently ignored', ['emailHash' => EmailFingerprint::of($email)]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -100,7 +101,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         try {
             $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
-            $this->logger->debug('Access request race condition — silently ignored', ['email' => $email]);
+            $this->logger->debug('Access request race condition — silently ignored', ['emailHash' => EmailFingerprint::of($email)]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -133,7 +134,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
             $this->mailer->send($emailMessage);
         } catch (\Throwable $throwable) {
             $this->logger->error('Failed to send access request verification email — removing record to allow retry', [
-                'email' => $email,
+                'emailHash' => EmailFingerprint::of($email),
                 'error' => $throwable->getMessage(),
             ]);
             $this->entityManager->remove($accessRequest);
@@ -141,7 +142,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
             throw $throwable;
         }
 
-        $this->logger->debug('Access request created and verification email sent', ['email' => $email]);
+        $this->logger->debug('Access request created and verification email sent', ['emailHash' => EmailFingerprint::of($email)]);
 
         return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
     }

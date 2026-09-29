@@ -11,6 +11,7 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
+use App\Logger\EmailFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -70,7 +71,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $neutralMessage = $this->translator->trans('auth.neutral_message', [], 'auth');
 
         if (!$ipAccepted || !$emailAccepted) {
-            $this->logger->debug('Auth request-link rate limited', ['email' => $email, 'ip' => $clientIp]);
+            $this->logger->debug('Auth request-link rate limited', ['emailHash' => EmailFingerprint::of($email), 'ip' => $clientIp]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -78,7 +79,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
         if (!$user instanceof User) {
-            $this->logger->debug('Auth request-link user not found', ['email' => $email]);
+            $this->logger->debug('Auth request-link user not found', ['emailHash' => EmailFingerprint::of($email)]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -86,7 +87,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $magicLink = $this->magicLinkRepository->create($user);
 
         if (!$magicLink instanceof MagicLink) {
-            $this->logger->debug('Auth request-link active link already exists', ['email' => $email]);
+            $this->logger->debug('Auth request-link active link already exists', ['user' => $user->getId()->toRfc4122()]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
@@ -117,7 +118,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $this->logger->debug('Auth request-link magic link created and sent', ['email' => $email]);
+        $this->logger->debug('Auth request-link magic link created and sent', ['user' => $user->getId()->toRfc4122()]);
 
         return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
     }
