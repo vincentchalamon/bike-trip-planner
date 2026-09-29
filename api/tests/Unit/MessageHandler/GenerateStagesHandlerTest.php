@@ -21,6 +21,7 @@ use App\Enum\SourceType;
 use App\Enum\TripStatus;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\BelongsToATripGeneration;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TransientTripPointsStoreInterface;
@@ -437,5 +438,52 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler(new GenerateStages('trip-1'));
 
         self::assertSame($expected, $log);
+    }
+
+    /**
+     * Writing the stages bumps the trip version, so the enrichments handed off afterwards carry
+     * the version that write produced. Stamped with the message's own generation they would be
+     * one below it, and the staleness guard would drop every one (ADR-073).
+     */
+    #[Test]
+    public function theEnrichmentsCarryTheGenerationTheStageWriteProduced(): void
+    {
+        $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
+        $stage = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 40.0, elevation: 100.0, startPoint: $coordinate, endPoint: $coordinate);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0]]);
+
+        $pacingEngine = $this->createStub(PacingEngineInterface::class);
+        $pacingEngine->method('generateStages')->willReturn([$stage, $stage]);
+
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('storeStages')->willReturn(5);
+
+        $generations = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(static function (object $message) use (&$generations): Envelope {
+            if ($message instanceof BelongsToATripGeneration) {
+                $generations[] = $message->generation;
+            }
+
+            return new Envelope($message);
+        });
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $stageStore,
+            $this->createStub(TripUpdatePublisherInterface::class),
+            $this->structuralComputation($tripStateManager, $pacingEngine, points: $points),
+            $messageBus,
+        );
+
+        $handler(new GenerateStages('trip-1', 4));
+
+        self::assertNotEmpty($generations);
+        self::assertSame([5], array_values(array_unique($generations)));
     }
 }
