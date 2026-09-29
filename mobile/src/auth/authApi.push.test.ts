@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 
 // Regression (#1125): on a definitively failed refresh, doRefresh must unregister
-// the push token BEFORE clearing the tokens — the DELETE /users/me/device-tokens
+// the push token BEFORE clearing the tokens — the POST /users/me/device-tokens/unregister
 // needs a valid JWT (Authorization), so clearing first would 401 and leave the
 // token alive server-side. The order is asserted via a shared call-order array.
 const order: string[] = [];

@@ -29,11 +29,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * cannot tell a foreign token from a missing one, and a foreign token is never
  * touched.
  *
- * The token rides in the URL path as the resource identifier. It is a
- * semi-sensitive per-device value, so it lands in access logs — an accepted
- * trade-off (there is no exposure without an attacker already holding the token);
- * the alternative, a body-carrying unregister action, is not worth the divergence
- * from REST identity here.
+ * The token comes in the body, never in the URL: a path segment lands in every
+ * access log on the way, and an FCM token is what a push is addressed to.
  *
  * @implements ProcessorInterface<DeviceTokenResource, JsonResponse>
  */
@@ -55,8 +52,7 @@ final readonly class DeviceTokenDeleteProcessor implements ProcessorInterface
         $user = $this->security->getUser();
         \assert($user instanceof User);
 
-        $token = $uriVariables['token'] ?? '';
-        \assert(\is_string($token));
+        $token = $data->token;
 
         // Scoped to the caller's own tokens: unknown or foreign both resolve to null
         // -> 404, without the processor ever comparing owners.

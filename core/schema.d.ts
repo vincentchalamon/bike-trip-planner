@@ -256,7 +256,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/me/device-tokens/{token}": {
+    "/users/me/device-tokens/unregister": {
         parameters: {
             query?: never;
             header?: never;
@@ -265,12 +265,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
         /**
-         * Removes the DeviceToken resource.
-         * @description Removes the DeviceToken resource.
+         * Unregisters a device token of the current user.
+         * @description Unregisters a device token of the current user. The token is sent in the body, never in the URL.
          */
-        delete: operations["api_usersmedevice-tokens_token_delete"];
+        post: operations["api_usersmedevice-tokensunregister_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1258,14 +1258,14 @@ export interface components {
          *     - POST   /users/me/device-tokens         idempotent upsert of an FCM token bound
          *       to the current user (re-registering the same token does not duplicate; a token
          *       held by another account is reassigned). 201 on create, 200 on update.
-         *     - DELETE /users/me/device-tokens/{token}  unregister a token owned by the current
-         *       user. The lookup is scoped to the caller's own tokens, so an unknown or foreign
-         *       token is simply "not found" -> 404 (no object-level authorization to mask).
+         *     - POST   /users/me/device-tokens/unregister  unregister a token owned by the
+         *       current user, named in the body. The lookup is scoped to the caller's own tokens,
+         *       so an unknown or foreign token is simply "not found" -> 404 (no object-level
+         *       authorization to mask).
          *
          *     The current user is always resolved from the security token, never from a URL
-         *     identifier (no IDOR surface). The delete carries the token in the URL path as the
-         *     resource identifier — a semi-sensitive value that lands in access logs, an
-         *     accepted trade-off (see DeviceTokenDeleteProcessor).
+         *     identifier (no IDOR surface). The token never rides in a URL: a path segment lands
+         *     in every access log on the way, and an FCM token is what a push is addressed to.
          */
         DeviceToken: {
             token: string;
@@ -3526,24 +3526,37 @@ export interface operations {
             };
         };
     };
-    "api_usersmedevice-tokens_token_delete": {
+    "api_usersmedevice-tokensunregister_post": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description DeviceToken identifier */
-                token: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description The new DeviceToken resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["DeviceToken"];
+            };
+        };
         responses: {
-            /** @description DeviceToken resource deleted */
+            /** @description Device token unregistered */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             /** @description Forbidden */
             403: {
@@ -3556,15 +3569,22 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not found */
+            /** @description Not among the current user's tokens */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
+                content?: never;
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
                 };
             };
         };

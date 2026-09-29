@@ -90,14 +90,16 @@ export async function registerDeviceToken(): Promise<void> {
 
 // Remove this device's token on logout so a shared device stops receiving the
 // previous user's pushes. Must run while the JWT is still valid (before
-// clearTokens). No-op when nothing was registered this session.
+// clearTokens). No-op when nothing was registered this session. The token goes in
+// the body: in the path it would land in every access log on the way.
 export async function unregisterDeviceToken(): Promise<void> {
   const token = registeredToken;
   if (!token) return;
   registeredToken = null;
-  await fetch(`${API_BASE_URL}/users/me/device-tokens/${encodeURIComponent(token)}`, {
-    method: 'DELETE',
-    headers: { Accept: LD_JSON, ...authHeader() },
+  await fetch(`${API_BASE_URL}/users/me/device-tokens/unregister`, {
+    method: 'POST',
+    headers: { 'Content-Type': LD_JSON, Accept: LD_JSON, ...authHeader() },
+    body: JSON.stringify({ token }),
   });
 }
 

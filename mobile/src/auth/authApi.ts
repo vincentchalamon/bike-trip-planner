@@ -74,10 +74,10 @@ async function doRefresh(): Promise<boolean> {
     }
   }
   // Definitive failure (no refresh token, rejected, or malformed body): unregister
-  // the push token while the JWT is still valid (the DELETE needs Authorization),
+  // the push token while the JWT is still valid (the unregister call needs Authorization),
   // then wipe the dead session and signal AuthProvider so the UI redirects to
   // /login. Order matters: clearTokens() first would strip the Bearer and the
-  // DELETE would 401, leaving the token alive server-side (#1125).
+  // unregister call would 401, leaving the token alive server-side (#1125).
   await unregisterDeviceToken().catch(() => undefined);
   await clearTokens();
   await clearLocalAccountData();
