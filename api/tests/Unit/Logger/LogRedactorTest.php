@@ -29,6 +29,8 @@ final class LogRedactorTest extends TestCase
         yield 'fcm token in a path' => ['/users/me/device-tokens/fcm:APA91b-x_y', '/users/me/device-tokens/[redacted]'];
         yield 'signature query' => ['/verify?expires=1&signature=abcdef', '/verify?expires=1&signature=[redacted]'];
         yield 'api key query' => ['https://api.example/events?apikey=s3cr3t&size=20', 'https://api.example/events?apikey=[redacted]&size=20'];
+        yield 'outbound call coordinates' => ['Request: "GET https://api.open-meteo.com/v1/forecast?latitude=45.18,45.2&longitude=5.72&hourly=wind"', 'Request: "GET https://api.open-meteo.com/v1/forecast?latitude=[redacted]&longitude=[redacted]&hourly=wind"'];
+        yield 'reverse geocode' => ['/geocode/reverse?lat=45.1&lon=5.7', '/geocode/reverse?lat=[redacted]&lon=[redacted]'];
         yield 'oauth code' => ['/callback?code=xyz&state=abc', '/callback?code=[redacted]&state=[redacted]'];
     }
 

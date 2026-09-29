@@ -59,6 +59,7 @@ final class AccessLogRedactionTest extends TestCase
         yield 'old email-change link' => ['/account/email-change/verify/0123abcd', '/account/email-change/verify/[redacted]'];
         yield 'old access-request link' => ['/access-requests/verify?email=a%40b.co&expires=1&signature=dead', '/access-requests/verify?email=[redacted]&expires=1&signature=[redacted]'];
         yield 'old fcm delete' => ['/users/me/device-tokens/fcm:APA91b-x', '/users/me/device-tokens/[redacted]'];
+        yield 'reverse geocode position' => ['/geocode/reverse?lat=45.1&lon=5.7', '/geocode/reverse?lat=[redacted]&lon=[redacted]'];
         yield 'unregister stays readable' => ['/users/me/device-tokens/unregister', '/users/me/device-tokens/unregister'];
         yield 'trip id stays readable' => ['/trips/0199a1b2-0000-7000-8000-000000000001', '/trips/0199a1b2-0000-7000-8000-000000000001'];
     }
