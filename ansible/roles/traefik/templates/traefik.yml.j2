@@ -28,4 +28,13 @@ api:
 log:
   level: INFO
 
-accessLog: {}
+# No query string and no path: a URL can carry a credential (a share code is a
+# path segment; an old emailed link had its token there). The app's Caddy, right
+# behind, logs the same request with those parts redacted and the X-Request-Id
+# that ties it to the application logs. Headers are dropped by default already.
+accessLog:
+  fields:
+    names:
+      RequestPath: drop
+    queryParameters:
+      defaultMode: drop
