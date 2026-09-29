@@ -10,6 +10,7 @@ use App\Enum\AccessRequestStatus;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
@@ -23,169 +24,136 @@ final class AccessRequestVerifyTest extends ApiTestCase
         return self::getContainer()->get('doctrine.orm.entity_manager');
     }
 
-    private function getHmacService(): AccessRequestHmacService
+    /** @param non-empty-string $email */
+    private function persistRequest(string $email, bool $verified = false): AccessRequest
     {
-        return self::getContainer()->get(AccessRequestHmacService::class);
-    }
+        $accessRequest = new AccessRequest($email, '127.0.0.1');
+        if ($verified) {
+            $accessRequest->verify();
+        }
 
-    private function buildVerifyUrl(string $email): string
-    {
-        $payload = $this->getHmacService()->generatePayload($email);
-
-        return \sprintf(
-            '/access-requests/verify?email=%s&expires=%d&signature=%s',
-            urlencode($payload['email']),
-            $payload['expires'],
-            $payload['signature'],
-        );
-    }
-
-    #[Test]
-    public function verifyValidSignatureRedirects(): void
-    {
         $em = $this->getEntityManager();
-        $accessRequest = new AccessRequest('verify@example.com', '127.0.0.1');
         $em->persist($accessRequest);
         $em->flush();
 
-        $url = $this->buildVerifyUrl('verify@example.com');
-
-        $response = self::createClient(['followRedirects' => false])->request('GET', $url);
-
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
+        return $accessRequest;
     }
 
-    #[Test]
-    public function verifyValidSignatureUpdatesStatus(): void
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function verify(array $body): void
+    {
+        self::createClient()->request('POST', '/access-requests/verify', ['json' => $body]);
+    }
+
+    private function statusOf(string $email): AccessRequestStatus
     {
         $em = $this->getEntityManager();
-        $accessRequest = new AccessRequest('toverify@example.com', '127.0.0.1');
-        $em->persist($accessRequest);
-        $em->flush();
-
-        $url = $this->buildVerifyUrl('toverify@example.com');
-
-        self::createClient()->request('GET', $url);
-
         $em->clear();
-        $updated = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'toverify@example.com']);
-        $this->assertInstanceOf(AccessRequest::class, $updated);
-        $this->assertSame(AccessRequestStatus::VERIFIED, $updated->getStatus());
-        $this->assertNotNull($updated->getVerifiedAt());
+
+        $accessRequest = $em->getRepository(AccessRequest::class)->findOneBy(['email' => $email]);
+        $this->assertInstanceOf(AccessRequest::class, $accessRequest);
+
+        return $accessRequest->getStatus();
+    }
+
+    /** @return array{id: string, expires: int, signature: string} */
+    private function payloadFor(AccessRequest $accessRequest): array
+    {
+        /** @var AccessRequestHmacService $hmac */
+        $hmac = self::getContainer()->get(AccessRequestHmacService::class);
+
+        return $hmac->generatePayload($accessRequest->getId()->toRfc4122());
     }
 
     #[Test]
-    public function verifyInvalidSignatureRedirectsWithGenericMessage(): void
+    public function aValidSignatureVerifiesTheRequest(): void
     {
-        $em = $this->getEntityManager();
-        $accessRequest = new AccessRequest('invalid@example.com', '127.0.0.1');
-        $em->persist($accessRequest);
-        $em->flush();
+        $accessRequest = $this->persistRequest('toverify@example.com');
 
-        $response = self::createClient(['followRedirects' => false])->request(
-            'GET',
-            '/access-requests/verify?email=invalid@example.com&expires=9999999999&signature=badsignature',
-        );
+        $this->verify($this->payloadFor($accessRequest));
 
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
-
-        // Status must not have changed
-        $em->clear();
-        $unchanged = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'invalid@example.com']);
-        $this->assertInstanceOf(AccessRequest::class, $unchanged);
-        $this->assertSame(AccessRequestStatus::PENDING_VERIFICATION, $unchanged->getStatus());
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame(AccessRequestStatus::VERIFIED, $this->statusOf('toverify@example.com'));
     }
 
     #[Test]
-    public function verifyExpiredSignatureRedirectsWithGenericMessage(): void
+    public function anInvalidSignatureChangesNothing(): void
     {
-        $em = $this->getEntityManager();
-        $accessRequest = new AccessRequest('expired@example.com', '127.0.0.1');
-        $em->persist($accessRequest);
-        $em->flush();
+        $accessRequest = $this->persistRequest('invalid@example.com');
 
-        // Build an expired signature manually
+        $this->verify(['id' => $accessRequest->getId()->toRfc4122(), 'expires' => 9999999999, 'signature' => 'badsignature']);
+
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame(AccessRequestStatus::PENDING_VERIFICATION, $this->statusOf('invalid@example.com'));
+    }
+
+    #[Test]
+    public function anExpiredSignatureChangesNothing(): void
+    {
+        $accessRequest = $this->persistRequest('expired@example.com');
+        $id = $accessRequest->getId()->toRfc4122();
         $expiredTs = new \DateTimeImmutable('-1 day')->getTimestamp();
         $secret = (string) getenv('ACCESS_REQUEST_HMAC_SECRET');
         \assert('' !== $secret);
-        $expiredSignature = hash_hmac('sha256', 'expired@example.com|'.$expiredTs, $secret);
 
-        $response = self::createClient(['followRedirects' => false])->request(
-            'GET',
-            \sprintf(
-                '/access-requests/verify?email=%s&expires=%d&signature=%s',
-                urlencode('expired@example.com'),
-                $expiredTs,
-                $expiredSignature,
-            ),
-        );
+        $this->verify(['id' => $id, 'expires' => $expiredTs, 'signature' => hash_hmac('sha256', $id.'|'.$expiredTs, $secret)]);
 
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame(AccessRequestStatus::PENDING_VERIFICATION, $this->statusOf('expired@example.com'));
+    }
 
-        // Status must not have changed
-        $em->clear();
-        $unchanged = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'expired@example.com']);
-        $this->assertInstanceOf(AccessRequest::class, $unchanged);
-        $this->assertSame(AccessRequestStatus::PENDING_VERIFICATION, $unchanged->getStatus());
+    /**
+     * The id is what the signature covers: a valid signature for one request
+     * cannot verify another.
+     */
+    #[Test]
+    public function aSignatureForAnotherRequestChangesNothing(): void
+    {
+        $signed = $this->persistRequest('signed@example.com');
+        $other = $this->persistRequest('other@example.com');
+
+        $this->verify(['id' => $other->getId()->toRfc4122()] + $this->payloadFor($signed));
+
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame(AccessRequestStatus::PENDING_VERIFICATION, $this->statusOf('other@example.com'));
     }
 
     #[Test]
-    public function verifyAlreadyVerifiedRedirectsSilently(): void
+    public function anAlreadyVerifiedRequestAnswersTheSame(): void
     {
-        $em = $this->getEntityManager();
-        $accessRequest = new AccessRequest('alreadyverified@example.com', '127.0.0.1');
-        $accessRequest->verify();
+        $accessRequest = $this->persistRequest('alreadyverified@example.com', verified: true);
 
-        $em->persist($accessRequest);
-        $em->flush();
+        $this->verify($this->payloadFor($accessRequest));
 
-        $url = $this->buildVerifyUrl('alreadyverified@example.com');
-
-        $response = self::createClient(['followRedirects' => false])->request('GET', $url);
-
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
+        $this->assertResponseStatusCodeSame(204);
     }
 
     #[Test]
-    public function verifyMissingParametersRedirectsWithGenericMessage(): void
+    public function aSignedIdNoLongerInTheTableAnswersTheSame(): void
     {
-        $response = self::createClient(['followRedirects' => false])->request(
-            'GET',
-            '/access-requests/verify',
-        );
+        /** @var AccessRequestHmacService $hmac */
+        $hmac = self::getContainer()->get(AccessRequestHmacService::class);
 
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
+        $this->verify($hmac->generatePayload(Uuid::v7()->toRfc4122()));
+
+        $this->assertResponseStatusCodeSame(204);
     }
 
     #[Test]
-    public function verifyValidSignatureWithNoExistingRecordCreatesAndVerifies(): void
+    public function missingParametersAnswerTheSame(): void
     {
-        $em = $this->getEntityManager();
+        $this->verify([]);
 
-        // No AccessRequest record in DB before verification (edge case: email sent but persist failed)
-        $url = $this->buildVerifyUrl('noexist@example.com');
+        $this->assertResponseStatusCodeSame(204);
+    }
 
-        $response = self::createClient(['followRedirects' => false])->request('GET', $url);
+    #[Test]
+    public function theOldQueryStringLinkIsGone(): void
+    {
+        self::createClient()->request('GET', '/access-requests/verify?email=a@example.com&expires=1&signature=x');
 
-        $this->assertResponseStatusCodeSame(302);
-        $location = $response->getHeaders(false)['location'][0] ?? '';
-        $this->assertStringContainsString('access=confirmed', $location);
-
-        // A new verified AccessRequest should have been created
-        $em->clear();
-        $created = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'noexist@example.com']);
-        $this->assertInstanceOf(AccessRequest::class, $created);
-        $this->assertSame(AccessRequestStatus::VERIFIED, $created->getStatus());
-        $this->assertNotNull($created->getVerifiedAt());
+        $this->assertResponseStatusCodeSame(405);
     }
 }

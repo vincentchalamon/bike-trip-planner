@@ -93,7 +93,7 @@ unlock the phone and accept the prompt, then re-run `adb devices`.
 
     ```bash
     adb shell am start -a android.intent.action.VIEW \
-      -d "biketripplanner://auth/verify/TEST_TOKEN"
+      -d "biketripplanner://auth/verify#TEST_TOKEN"
     ```
 
 - If you only needed a build to hand off or sideload without keeping Metro

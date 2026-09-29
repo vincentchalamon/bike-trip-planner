@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import VerifyPage from "./verify-page";
 
-// The signed payload is in the fragment (see verify-page); no Referer leaves this page.
+// The token is in the fragment, which no Referer carries anyway; this keeps even
+// the page path out of the requests the page triggers.
 export const metadata: Metadata = { referrer: "no-referrer" };
 
 export default function Page() {

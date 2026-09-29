@@ -91,6 +91,25 @@ final class EmailChangeTest extends ApiTestCase
     }
 
     #[Test]
+    public function confirmationLinkCarriesTheTokenInTheFragment(): void
+    {
+        $fixtures = $this->createUser('fragment@example.com');
+
+        self::createClient()->request('POST', '/users/me/email-change', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['newEmail' => 'fragment-new@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        /** @var MessageLoggerListener $logger */
+        $logger = self::getContainer()->get('mailer.message_logger_listener');
+        $message = $logger->getEvents()->getMessages()[0] ?? null;
+        $this->assertInstanceOf(Email::class, $message);
+        $this->assertStringContainsString('/account/email-change/verify#', (string) $message->getHtmlBody());
+        $this->assertStringNotContainsString('/account/email-change/verify/', (string) $message->getHtmlBody());
+    }
+
+    #[Test]
     public function requestRequiresAuthentication(): void
     {
         self::createClient()->request('POST', '/users/me/email-change', [

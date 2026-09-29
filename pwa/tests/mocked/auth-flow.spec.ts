@@ -99,8 +99,10 @@ test.describe("Auth flow", () => {
 
   test("verify page redirects to home on valid token", async ({ page }) => {
     // Mock POST /auth/verify -> 200 with JWT
+    let postedToken: unknown;
     await page.route("**/api/auth/verify", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
+      postedToken = (request.postDataJSON() as { token?: unknown }).token;
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -142,9 +144,11 @@ test.describe("Auth flow", () => {
     // Abort Mercure SSE
     await page.route("**/.well-known/mercure*", (route) => route.abort());
 
-    await page.goto("/auth/verify/test-token");
+    // The token rides in the fragment, never sent to the server.
+    await page.goto("/auth/verify#test-token");
     await page.waitForURL("/", { timeout: 5000 });
 
     await expect(page).toHaveURL("/");
+    expect(postedToken).toBe("test-token");
   });
 });

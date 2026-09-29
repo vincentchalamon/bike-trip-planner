@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Logger\RedactingJsonFormatter;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -78,7 +79,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'type' => 'stream',
                     'path' => 'php://stderr',
                     'level' => 'debug',
-                    'formatter' => 'monolog.formatter.json',
+                    'formatter' => RedactingJsonFormatter::class,
                 ],
                 // Everything the application deliberately logs below `error` was buffered
                 // by `main` and dropped unless an error happened to land in the same
@@ -99,7 +100,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'channels' => [
                         'app',
                     ],
-                    'formatter' => 'monolog.formatter.json',
+                    'formatter' => RedactingJsonFormatter::class,
                 ],
                 'console' => [
                     'type' => 'console',
@@ -115,7 +116,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'deprecation',
                     ],
                     'path' => 'php://stderr',
-                    'formatter' => 'monolog.formatter.json',
+                    'formatter' => RedactingJsonFormatter::class,
                 ],
             ],
         ]);

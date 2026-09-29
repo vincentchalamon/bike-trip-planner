@@ -40,7 +40,7 @@ function RootNavigator() {
       <Stack.Screen name="trip/[id]/stage/[stageId]" />
       {/* Anonymous shared-trip consultation, opened via the /s/<code> App Link. */}
       <Stack.Screen name="s/[code]" />
-      <Stack.Screen name="auth/verify/[token]" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/verify" options={{ headerShown: false }} />
     </Stack>
   );
 }

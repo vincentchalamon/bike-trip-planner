@@ -65,7 +65,7 @@ Then("I see the email confirmation message", async ({ page }) => {
   await expect(page.getByTestId("magic-link-sent")).toBeVisible();
 });
 
-When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
+When(/^je navigue vers \/auth\/verify#token-valide$/, async ({ page }) => {
   await page.route("**/api/auth/verify", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
@@ -102,10 +102,10 @@ When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
     },
   );
   await page.route("**/.well-known/mercure*", (route) => route.abort());
-  await page.goto("/auth/verify/token-valide");
+  await page.goto("/auth/verify#token-valide");
 });
 
-When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
+When(/^I navigate to \/auth\/verify#valid-token$/, async ({ page }) => {
   await page.route("**/api/auth/verify", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
@@ -142,7 +142,7 @@ When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
     },
   );
   await page.route("**/.well-known/mercure*", (route) => route.abort());
-  await page.goto("/auth/verify/valid-token");
+  await page.goto("/auth/verify#valid-token");
 });
 
 When("je tente d'accéder à mes voyages", async ({ page }) => {

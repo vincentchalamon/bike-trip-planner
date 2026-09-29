@@ -69,17 +69,19 @@ describe('registerDeviceToken', () => {
 });
 
 describe('unregisterDeviceToken', () => {
-  it('DELETEs the token registered this session', async () => {
+  it('unregisters the token of this session, in the body and never in the URL', async () => {
     await registerDeviceToken();
     (fetch as jest.Mock).mockClear();
     await unregisterDeviceToken();
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = (fetch as jest.Mock).mock.calls[0];
-    expect(url).toMatch(/\/users\/me\/device-tokens\/fcm-token-abc$/);
+    expect(url).toMatch(/\/users\/me\/device-tokens\/unregister$/);
+    expect(url).not.toContain('fcm-token-abc');
     expect(init).toMatchObject({
-      method: 'DELETE',
+      method: 'POST',
       headers: expect.objectContaining({ Authorization: 'Bearer jwt' }),
     });
+    expect(JSON.parse(init.body)).toEqual({ token: 'fcm-token-abc' });
   });
 
   it('is a no-op when nothing was registered', async () => {

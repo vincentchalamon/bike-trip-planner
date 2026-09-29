@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Sentry\EventScrubber;
 use App\Sentry\ExceptionFilter;
 use App\Sentry\UserDataEnricher;
 use Sentry\State\HubInterface;
@@ -18,7 +19,13 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
  *
  * - `traces_sample_rate: 0.05` and `profiles_sample_rate: 0` keep ingestion
  *   well below GlitchTip's free quota.
- * - `before_send` is wired to {@see ExceptionFilter} which drops 4xx noise.
+ * - `before_send` is wired to {@see ExceptionFilter} which drops 4xx noise, then
+ *   hands the rest to {@see EventScrubber}; `before_send_transaction` goes straight
+ *   to the scrubber.
+ * - `max_request_body_size: none`: `send_default_pii: false` does not stop the SDK
+ *   from attaching the decoded request body to every event, and the body of the
+ *   verify endpoints is the token. The scrubber drops `request.data` anyway; this
+ *   stops the SDK from reading it in the first place.
  */
 return static function (ContainerConfigurator $containerConfigurator): void {
     $services = $containerConfigurator->services();
@@ -40,7 +47,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'profiles_sample_rate' => 0.0,
                 'send_default_pii' => false,
                 'attach_stacktrace' => true,
+                'max_request_body_size' => 'none',
                 'before_send' => ExceptionFilter::class,
+                'before_send_transaction' => EventScrubber::class,
             ],
         ]);
 

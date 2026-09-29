@@ -67,6 +67,28 @@ final class AuthRequestLinkTest extends ApiTestCase
         self::assertEmailHeaderSame($email, 'From', 'Bike Trip Planner <noreply@phpunit.example>');
     }
 
+    /**
+     * A token in the path reaches every access log on the way and the Referer of
+     * the page's own requests; in the fragment, the browser never sends it.
+     */
+    #[Test]
+    public function magicLinkCarriesTheTokenInTheFragment(): void
+    {
+        $em = $this->getEntityManager();
+        $em->persist(new User('fragment@example.com'));
+        $em->flush();
+
+        self::createClient()->request('POST', '/auth/request-link', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'fragment@example.com'],
+        ]);
+
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailHtmlBodyContains($email, '/auth/verify#');
+        self::assertEmailHtmlBodyNotContains($email, '/auth/verify/');
+    }
+
     #[Test]
     public function requestLinkWithExistingUserReturnsNeutralMessage(): void
     {

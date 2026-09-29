@@ -1,18 +1,20 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle } from '../../../src/components/ui/icons';
-import { ErrorState, LoadingState, Screen } from '../../../src/components/ui';
-import { useTheme } from '../../../src/theme';
-import { useAuth } from '../../../src/auth/store';
+import { AlertTriangle } from '../../src/components/ui/icons';
+import { ErrorState, LoadingState, Screen } from '../../src/components/ui';
+import { useTheme } from '../../src/theme';
+import { useAuth } from '../../src/auth/store';
+import { useLinkFragment } from '../../src/auth/link-fragment';
 
 // Handles the magic-link verification deep link, for both forms:
-//   App Link      : https://<host>/auth/verify/<token>
-//   custom scheme : biketripplanner://auth/verify/<token>
-// Expo Router maps both onto this file route (path /auth/verify/:token), so the
-// token exchange runs here instead of racing the router from a Linking hook.
+//   App Link      : https://<host>/auth/verify#<token>
+//   custom scheme : biketripplanner://auth/verify#<token>
+// Expo Router maps both onto this file route (path /auth/verify), so the token
+// exchange runs here instead of racing the router from a Linking hook. The token
+// is in the fragment, which no server log sees (useLinkFragment).
 export default function VerifyScreen() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const token = useLinkFragment();
   const { verify } = useAuth();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -21,7 +23,7 @@ export default function VerifyScreen() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (handled.current || typeof token !== 'string' || token.length === 0) {
+    if (handled.current || token.length === 0) {
       return;
     }
     handled.current = true;
@@ -39,7 +41,8 @@ export default function VerifyScreen() {
     })();
   }, [token, verify, router]);
 
-  if (failed) {
+  // A link without a token cannot be verified: same screen as a rejected one.
+  if (failed || token.length === 0) {
     return (
       <Screen>
         <ErrorState

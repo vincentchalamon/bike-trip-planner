@@ -33,7 +33,7 @@ function isPublicPath(pathname: string): boolean {
  * 2. If the user is not authenticated and the current path is protected,
  *    redirects to `/login`.
  * 3. Public pages (`/`, `/faq`, `/legal`, `/privacy`, `/access-requests/verify`,
- *    `/login`, `/auth/verify/*`, `/s/*`) are always accessible without authentication.
+ *    `/login`, `/auth/verify`, `/s/*`) are always accessible without authentication.
  *
  * Renders a blank screen during the initial auth check to prevent
  * flashing protected content before the redirect.

@@ -106,8 +106,9 @@ final readonly class CreateUserCommand
         }
 
         // getPlainToken() (not getToken(), which is the hash stored at rest): the
-        // magic link must carry the plaintext the verify endpoint will hash (SEC-003).
-        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
+        // magic link must carry the plaintext the verify endpoint will hash (SEC-003). It rides
+        // in the fragment, which a browser never sends, so no access log sees it.
+        $verifyUrl = \sprintf('%s/auth/verify#%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
 
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,

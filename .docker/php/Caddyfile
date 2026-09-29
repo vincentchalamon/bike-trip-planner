@@ -15,13 +15,28 @@
 {$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
-    # Access logging. This used to carry a filter redacting the `authorization`
-    # query parameter, which Mercure 0.x accepted; the 1.0 hub rejects that
-    # parameter outright (RFC 9700 forbids access tokens in URLs), so there is
-    # nothing left to redact — but the directive itself has to stay, since
-    # dropping it turns access logging off and takes the X-Request-Id
-    # correlation trail below with it.
-    log
+    # Access logging. The directive has to stay: dropping it turns access logging
+    # off and takes the X-Request-Id correlation trail below with it.
+    #
+    # The filter is defence in depth. No emailed link puts a credential where the
+    # server sees it any more (the verify tokens ride in the fragment), but a share
+    # code is still a path segment, an old link may still be clicked, and the same
+    # values would ride as Referer. Mirrors App\Logger\LogRedactor; RE2 has no
+    # lookahead, hence one pattern per shape. The output stays JSON.
+    log {
+        format filter {
+            wrap json
+            request>uri multi_regexp {
+                regexp "(/(?:auth/verify|account/email-change/verify|s)/)[^/?#.{]+" "${1}[redacted]"
+                regexp "(/users/me/device-tokens/)[^/?#]*:[^/?#]*" "${1}[redacted]"
+                regexp "(?i)([?&](?:email|signature|token|access_token|refresh_token|code|state|apikey|api_key|key|password)=)[^&#]*" "${1}[redacted]"
+            }
+            request>headers>Referer multi_regexp {
+                regexp "(/(?:auth/verify|account/email-change/verify|s)/)[^/?#.{]+" "${1}[redacted]"
+                regexp "(?i)([?&](?:email|signature|token|access_token|refresh_token|code|state|apikey|api_key|key|password)=)[^&#]*" "${1}[redacted]"
+            }
+        }
+    }
 
     root /app/public
 
@@ -127,7 +142,11 @@
     header ?Strict-Transport-Security "max-age=31536000; includeSubDomains"
     header ?X-Frame-Options "DENY"
     header ?X-Content-Type-Options "nosniff"
-    header ?Referrer-Policy "strict-origin-when-cross-origin"
+    # strict-origin, not strict-origin-when-cross-origin: nothing here reads a
+    # same-origin Referer, and a full one would carry the page path (a share code)
+    # into the access log of every request the page makes. Cross-origin (map
+    # tiles, whose usage policies ask for a Referer) still get the origin.
+    header ?Referrer-Policy "strict-origin"
     header ?X-Robots-Tag "noindex, nofollow"
 
     route {

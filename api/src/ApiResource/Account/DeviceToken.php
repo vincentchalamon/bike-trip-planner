@@ -6,7 +6,6 @@ namespace App\ApiResource\Account;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Response;
@@ -21,14 +20,14 @@ use Symfony\Component\Validator\Constraints as Assert;
  * - POST   /users/me/device-tokens         idempotent upsert of an FCM token bound
  *   to the current user (re-registering the same token does not duplicate; a token
  *   held by another account is reassigned). 201 on create, 200 on update.
- * - DELETE /users/me/device-tokens/{token}  unregister a token owned by the current
- *   user. The lookup is scoped to the caller's own tokens, so an unknown or foreign
- *   token is simply "not found" -> 404 (no object-level authorization to mask).
+ * - POST   /users/me/device-tokens/unregister  unregister a token owned by the
+ *   current user, named in the body. The lookup is scoped to the caller's own tokens,
+ *   so an unknown or foreign token is simply "not found" -> 404 (no object-level
+ *   authorization to mask).
  *
  * The current user is always resolved from the security token, never from a URL
- * identifier (no IDOR surface). The delete carries the token in the URL path as the
- * resource identifier — a semi-sensitive value that lands in access logs, an
- * accepted trade-off (see DeviceTokenDeleteProcessor).
+ * identifier (no IDOR surface). The token never rides in a URL: a path segment lands
+ * in every access log on the way, and an FCM token is what a push is addressed to.
  */
 #[ApiResource(
     shortName: 'DeviceToken',
@@ -81,10 +80,19 @@ use Symfony\Component\Validator\Constraints as Assert;
             read: false,
             processor: DeviceTokenRegisterProcessor::class,
         ),
-        new Delete(
-            uriTemplate: '/users/me/device-tokens/{token}',
+        new Post(
+            uriTemplate: '/users/me/device-tokens/unregister',
             status: 204,
+            openapi: new Operation(
+                responses: [
+                    '204' => new Response(description: 'Device token unregistered'),
+                    '404' => new Response(description: "Not among the current user's tokens"),
+                ],
+                summary: 'Unregisters a device token of the current user.',
+                description: 'Unregisters a device token of the current user. The token is sent in the body, never in the URL.',
+            ),
             security: "is_granted('ROLE_USER')",
+            validationContext: ['groups' => ['device-token:unregister']],
             output: false,
             read: false,
             processor: DeviceTokenDeleteProcessor::class,
@@ -95,8 +103,8 @@ final class DeviceToken
 {
     public function __construct(
         #[ApiProperty(identifier: true)]
-        #[Assert\NotBlank]
-        #[Assert\Length(max: 255)]
+        #[Assert\NotBlank(groups: ['Default', 'device-token:unregister'])]
+        #[Assert\Length(max: 255, groups: ['Default', 'device-token:unregister'])]
         public string $token = '',
         #[Assert\NotNull]
         public ?DevicePlatform $platform = null,

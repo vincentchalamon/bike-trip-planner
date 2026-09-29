@@ -158,8 +158,9 @@ final class DeviceTokenTest extends ApiTestCase
         $fixtures = $this->createUser('unregister@example.com');
         $this->persistToken($fixtures['user'], 'fcm-to-delete', DevicePlatform::IOS);
 
-        self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-to-delete', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'fcm-to-delete'],
         ]);
 
         $this->assertResponseStatusCodeSame(204);
@@ -176,8 +177,9 @@ final class DeviceTokenTest extends ApiTestCase
         $attacker = $this->createUser('token-attacker@example.com');
         $this->persistToken($owner['user'], 'fcm-not-yours', DevicePlatform::ANDROID);
 
-        self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-not-yours', [
-            'headers' => ['Authorization' => 'Bearer '.$attacker['jwt']],
+        self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$attacker['jwt']],
+            'json' => ['token' => 'fcm-not-yours'],
         ]);
 
         $this->assertResponseStatusCodeSame(404);
@@ -193,17 +195,48 @@ final class DeviceTokenTest extends ApiTestCase
     {
         $fixtures = $this->createUser('delete-unknown@example.com');
 
-        self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-does-not-exist', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'fcm-does-not-exist'],
         ]);
 
         $this->assertResponseStatusCodeSame(404);
     }
 
     #[Test]
+    public function unregisterWithoutATokenReturns422(): void
+    {
+        $fixtures = $this->createUser('unregister-blank@example.com');
+
+        self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => ''],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+    }
+
+    /** The token is what a push is addressed to: it never rides in a URL. */
+    #[Test]
+    public function theTokenIsNoLongerAcceptedInThePath(): void
+    {
+        $fixtures = $this->createUser('unregister-path@example.com');
+        $this->persistToken($fixtures['user'], 'fcm-in-path', DevicePlatform::IOS);
+
+        self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-in-path', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+
+        $this->assertSame(1, $this->countTokens());
+    }
+
+    #[Test]
     public function deleteRequiresAuthentication(): void
     {
-        self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-anon');
+        self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => 'fcm-anon'],
+        ]);
 
         $this->assertResponseStatusCodeSame(401);
     }
