@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -109,7 +110,22 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             ->subject($this->translator->trans('auth.email.magic_link.subject', [], 'auth', $locale))
             ->html($html);
 
-        $this->mailer->send($emailMessage);
+        try {
+            $this->mailer->send($emailMessage);
+        } catch (TransportExceptionInterface $transportException) {
+            // Only an existing account reaches the send, so a 500 here would tell the
+            // caller the address is registered: answer neutrally like every other
+            // branch. The link is never stored, so the next request makes a fresh one.
+            // The class and code only: an SMTP rejection quotes the recipient.
+            $this->logger->error('Auth request-link email could not be sent', [
+                'user' => $user->getId()->toRfc4122(),
+                'error' => $transportException::class,
+                'code' => $transportException->getCode(),
+            ]);
+            $this->entityManager->detach($magicLink);
+
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
+        }
 
         try {
             $this->entityManager->flush();

@@ -17,8 +17,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -110,7 +112,20 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
             ->subject($this->translator->trans('email_change.email.subject', [], 'account', $locale))
             ->html($html);
 
-        $this->mailer->send($message);
+        try {
+            $this->mailer->send($message);
+        } catch (TransportExceptionInterface $transportException) {
+            // Logged by class and code, and answered without the SMTP text: a rejection
+            // quotes the recipient. The token stays unsent, and the next request expires
+            // it (EmailChangeTokenRepository::create()), so retrying is enough.
+            $this->logger->error('Email change confirmation could not be sent', [
+                'user' => $user->getId()->toRfc4122(),
+                'error' => $transportException::class,
+                'code' => $transportException->getCode(),
+            ]);
+
+            throw new ServiceUnavailableHttpException(message: $this->translator->trans('email_change.error.mail_failed', [], 'account', $locale), previous: $transportException, code: $transportException->getCode());
+        }
 
         $this->logger->debug('Email change requested', ['user' => $user->getId()->toRfc4122()]);
 

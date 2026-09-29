@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Account;
 
 use App\Tests\ApiTestCase;
+use App\Tests\Functional\FailingMailerTrait;
 use App\Entity\EmailChangeToken;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class EmailChangeTest extends ApiTestCase
 {
+    use FailingMailerTrait;
+
     #[\Override]
     protected static ?bool $alwaysBootKernel = false;
 
@@ -337,5 +340,22 @@ final class EmailChangeTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(422);
         $this->assertSame([], $this->getSentRecipients());
+    }
+
+    /** Answered without the SMTP text, which quotes the recipient. */
+    #[Test]
+    public function aMailFailureAnswers503WithoutTheSmtpMessage(): void
+    {
+        $fixtures = $this->createUser('mailfail@example.com');
+
+        $client = self::createClient();
+        $this->failTheMailer();
+        $response = $client->request('POST', '/users/me/email-change', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['newEmail' => 'rider@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertStringNotContainsString('550', $response->getContent(false));
     }
 }

@@ -7,3 +7,5 @@ access_request:
       expires: "Ce lien expire dans 24 heures."
       ignore: "Si tu n'as pas demandé l'accès à Bike Trip Planner, tu peux ignorer cet email."
   neutral_message: "Si ton adresse est valide, tu recevras un email de confirmation."
+  error:
+    mail_failed: "L'email de confirmation n'a pas pu être envoyé. Réessaie dans un moment."

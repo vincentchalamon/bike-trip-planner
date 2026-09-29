@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\AccessRequest;
 
 use App\Tests\ApiTestCase;
+use App\Tests\Functional\FailingMailerTrait;
 use App\Entity\AccessRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,6 +16,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class AccessRequestCreateTest extends ApiTestCase
 {
+    use FailingMailerTrait;
     use MailerAssertionsTrait;
 
     #[\Override]
@@ -175,5 +177,24 @@ final class AccessRequestCreateTest extends ApiTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * The record is removed so the requester can try again, and told to (503),
+     * without the SMTP text, which quotes the recipient.
+     */
+    #[Test]
+    public function aMailFailureRemovesTheRecordAndAnswers503WithoutTheSmtpMessage(): void
+    {
+        $client = self::createClient();
+        $this->failTheMailer();
+        $response = $client->request('POST', '/access-requests', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'rider@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertStringNotContainsString('550', $response->getContent(false));
+        $this->assertNull($this->getEntityManager()->getRepository(AccessRequest::class)->findOneBy(['email' => 'rider@example.com']));
     }
 }
