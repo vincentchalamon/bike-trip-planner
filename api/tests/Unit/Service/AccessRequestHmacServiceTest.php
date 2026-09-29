@@ -21,12 +21,12 @@ final class AccessRequestHmacServiceTest extends TestCase
     #[Test]
     public function generatePayloadReturnsExpectedStructure(): void
     {
-        $payload = $this->service->generatePayload('test@example.com');
+        $payload = $this->service->generatePayload('0199a1b2-0000-7000-8000-000000000001');
 
-        $this->assertArrayHasKey('email', $payload);
+        $this->assertArrayHasKey('id', $payload);
         $this->assertArrayHasKey('expires', $payload);
         $this->assertArrayHasKey('signature', $payload);
-        $this->assertSame('test@example.com', $payload['email']);
+        $this->assertSame('0199a1b2-0000-7000-8000-000000000001', $payload['id']);
         $this->assertIsInt($payload['expires']);
         $this->assertIsString($payload['signature']);
         $this->assertNotEmpty($payload['signature']);
@@ -35,7 +35,7 @@ final class AccessRequestHmacServiceTest extends TestCase
     #[Test]
     public function generatePayloadExpiresInFuture(): void
     {
-        $payload = $this->service->generatePayload('test@example.com');
+        $payload = $this->service->generatePayload('0199a1b2-0000-7000-8000-000000000001');
 
         $this->assertGreaterThan(time(), $payload['expires']);
         // Should be approximately 24 hours in the future
@@ -46,7 +46,7 @@ final class AccessRequestHmacServiceTest extends TestCase
     #[Test]
     public function verifyReturnsTrueForValidPayload(): void
     {
-        $payload = $this->service->generatePayload('alice@example.com');
+        $payload = $this->service->generatePayload('0199a1b2-0000-7000-8000-00000000000a');
 
         $result = $this->service->verify($payload);
 
@@ -56,7 +56,7 @@ final class AccessRequestHmacServiceTest extends TestCase
     #[Test]
     public function verifyReturnsFalseForInvalidSignature(): void
     {
-        $payload = $this->service->generatePayload('alice@example.com');
+        $payload = $this->service->generatePayload('0199a1b2-0000-7000-8000-00000000000a');
         $payload['signature'] = 'invalidsignature';
 
         $result = $this->service->verify($payload);
@@ -68,10 +68,10 @@ final class AccessRequestHmacServiceTest extends TestCase
     public function verifyReturnsFalseForExpiredPayload(): void
     {
         $expires = new \DateTimeImmutable('-1 day')->getTimestamp();
-        $signature = hash_hmac('sha256', 'alice@example.com|'.$expires, 'test-secret-key');
+        $signature = hash_hmac('sha256', '0199a1b2-0000-7000-8000-00000000000a|'.$expires, 'test-secret-key');
 
         $result = $this->service->verify([
-            'email' => 'alice@example.com',
+            'id' => '0199a1b2-0000-7000-8000-00000000000a',
             'expires' => (string) $expires,
             'signature' => $signature,
         ]);
@@ -80,10 +80,10 @@ final class AccessRequestHmacServiceTest extends TestCase
     }
 
     #[Test]
-    public function verifyReturnsFalseForTamperedEmail(): void
+    public function verifyReturnsFalseForTamperedId(): void
     {
-        $payload = $this->service->generatePayload('alice@example.com');
-        $payload['email'] = 'evil@example.com';
+        $payload = $this->service->generatePayload('0199a1b2-0000-7000-8000-00000000000a');
+        $payload['id'] = '0199a1b2-0000-7000-8000-00000000000e';
 
         $result = $this->service->verify($payload);
 
@@ -94,8 +94,8 @@ final class AccessRequestHmacServiceTest extends TestCase
     public function verifyReturnsFalseForMissingParams(): void
     {
         $this->assertFalse($this->service->verify([]));
-        $this->assertFalse($this->service->verify(['email' => 'test@example.com']));
-        $this->assertFalse($this->service->verify(['email' => 'test@example.com', 'expires' => time() + 3600]));
+        $this->assertFalse($this->service->verify(['id' => '0199a1b2-0000-7000-8000-000000000001']));
+        $this->assertFalse($this->service->verify(['id' => '0199a1b2-0000-7000-8000-000000000001', 'expires' => time() + 3600]));
     }
 
     #[Test]
@@ -104,9 +104,9 @@ final class AccessRequestHmacServiceTest extends TestCase
         $expires = time() + 3600;
         $service = new AccessRequestHmacService('test-secret-key');
 
-        $service->generatePayload('same@example.com');
+        $service->generatePayload('0199a1b2-0000-7000-8000-00000000000b');
         // Signatures differ because expires changes each call — test consistency via verify()
-        $payload = ['email' => 'same@example.com', 'expires' => $expires, 'signature' => hash_hmac('sha256', 'same@example.com|'.$expires, 'test-secret-key')];
+        $payload = ['id' => '0199a1b2-0000-7000-8000-00000000000b', 'expires' => $expires, 'signature' => hash_hmac('sha256', '0199a1b2-0000-7000-8000-00000000000b|'.$expires, 'test-secret-key')];
 
         $this->assertTrue($service->verify($payload));
     }
@@ -117,7 +117,7 @@ final class AccessRequestHmacServiceTest extends TestCase
         $service1 = new AccessRequestHmacService('secret-one');
         $service2 = new AccessRequestHmacService('secret-two');
 
-        $payload = $service1->generatePayload('test@example.com');
+        $payload = $service1->generatePayload('0199a1b2-0000-7000-8000-000000000001');
 
         $this->assertFalse($service2->verify($payload));
     }

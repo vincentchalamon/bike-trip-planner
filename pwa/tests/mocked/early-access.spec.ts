@@ -231,31 +231,30 @@ test.describe("Login page early access banner", () => {
 });
 
 test.describe("Access request verification", () => {
-  test("verify page redirects to backend verify endpoint", async ({ page }) => {
+  test("verify page posts the fragment payload to the backend", async ({
+    page,
+  }) => {
     await mockUnauthenticated(page);
 
-    // Intercept any GET to /access-requests/verify?... and redirect back to
-    // the landing page with ?access=confirmed. A relative Location avoids
-    // dangling absolute URLs that are unreachable in CI.
-    let backendVerifyCalled = false;
-    await page.route(
-      /\/access-requests\/verify\?.*signature=/,
-      (route, request) => {
-        if (request.method() !== "GET") return route.fallback();
-        backendVerifyCalled = true;
-        return route.fulfill({
-          status: 302,
-          headers: { Location: "/?access=confirmed" },
-        });
-      },
-    );
+    // The signed payload rides in the fragment, which the browser never sends:
+    // the page POSTs it, then lands on the confirmation.
+    let posted: unknown;
+    await page.route("**/access-requests/verify", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      posted = request.postDataJSON();
+      return route.fulfill({ status: 204 });
+    });
 
     await page.goto(
-      "/access-requests/verify?email=test@example.com&expires=9999999999&signature=abc123",
+      "/access-requests/verify#id=0199a1b2-0000-7000-8000-000000000001&expires=9999999999&signature=abc123",
     );
-    await page.waitForLoadState("networkidle");
+    await page.waitForURL("/?access=confirmed", { timeout: 5000 });
 
-    expect(backendVerifyCalled).toBe(true);
+    expect(posted).toEqual({
+      id: "0199a1b2-0000-7000-8000-000000000001",
+      expires: "9999999999",
+      signature: "abc123",
+    });
   });
 
   test("landing page shows access confirmed message when ?access=confirmed", async ({

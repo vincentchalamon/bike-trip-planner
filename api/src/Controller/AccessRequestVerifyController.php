@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use App\Entity\AccessRequest;
 use App\Repository\AccessRequestRepository;
 use App\Repository\UserRepository;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Handles HMAC-signed email verification for access requests.
  *
- * On valid signature: creates or updates AccessRequest to verified status, then redirects.
- * On invalid/expired/already-verified: silently redirects with a generic confirmation.
+ * The emailed link is `/access-requests/verify#id=…&expires=…&signature=…`: the
+ * fragment never reaches a server, so the page POSTs those three values here and
+ * nothing of the link lands in an access log. The link names the access request
+ * by its id, never by its address.
+ *
+ * Every outcome answers 204, so the response tells nothing about the request.
  */
 final readonly class AccessRequestVerifyController
 {
@@ -30,70 +33,56 @@ final readonly class AccessRequestVerifyController
         private UserRepository $userRepository,
         private AccessRequestHmacService $hmacService,
         private LoggerInterface $logger,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
     ) {
     }
 
-    #[Route('/access-requests/verify', methods: ['GET'])]
-    public function __invoke(Request $request): RedirectResponse
+    #[Route('/access-requests/verify', methods: ['POST'])]
+    public function __invoke(Request $request): Response
     {
-        $landingUrl = rtrim($this->frontendUrl, '/');
+        $done = new Response(null, Response::HTTP_NO_CONTENT);
 
-        /** @var array{email?: mixed, expires?: mixed, signature?: mixed} $params */
-        $params = $request->query->all();
+        try {
+            $params = $request->toArray();
+        } catch (\Throwable) {
+            return $done;
+        }
 
+        /** @var array{id?: mixed, expires?: mixed, signature?: mixed} $params */
         if (!$this->hmacService->verify($params)) {
             $this->logger->debug('Access request verify: invalid or expired HMAC', ['params' => array_keys($params)]);
 
-            return new RedirectResponse($landingUrl.'?access=confirmed');
+            return $done;
         }
 
-        $email = $params['email'] ?? '';
-        if (!\is_string($email) || '' === $email) {
-            return new RedirectResponse($landingUrl.'?access=confirmed');
-        }
-
-        // Log a truncated hash rather than the email itself (no PII in logs); at
-        // this stage there is no User to key on except the already-exists branch.
-        $emailHash = substr(hash('sha256', $email), 0, 12);
-
-        // Silently ignore if user already exists
-        $existingUser = $this->userRepository->findOneBy(['email' => $email]);
-        if (null !== $existingUser) {
-            $this->logger->debug('Access request verify: user already exists — silently ignored', ['user' => $existingUser->getId()->toRfc4122()]);
-
-            return new RedirectResponse($landingUrl.'?access=confirmed');
-        }
-
-        $accessRequest = $this->accessRequestRepository->findByEmail($email);
-
-        // Silently ignore if already verified
-        if ($accessRequest instanceof AccessRequest && $accessRequest->isVerified()) {
-            $this->logger->debug('Access request verify: already verified — silently ignored', ['emailHash' => $emailHash]);
-
-            return new RedirectResponse($landingUrl.'?access=confirmed');
-        }
-
+        $id = $params['id'] ?? '';
+        $accessRequest = \is_string($id) && Uuid::isValid($id) ? $this->accessRequestRepository->find($id) : null;
         if (!$accessRequest instanceof AccessRequest) {
-            // Edge case: link was sent but the request record was not created yet
-            // (e.g., email was sent but persist failed). Create a verified record directly.
-            $clientIp = $request->getClientIp() ?? 'unknown';
-            $accessRequest = new AccessRequest($email, $clientIp);
-            $this->entityManager->persist($accessRequest);
+            // A signed id the table no longer holds: the record was removed after a
+            // failed send, so there is nothing to verify.
+            $this->logger->debug('Access request verify: unknown request — silently ignored');
+
+            return $done;
+        }
+
+        $context = ['accessRequest' => $accessRequest->getId()->toRfc4122()];
+
+        if (null !== $this->userRepository->findOneBy(['email' => $accessRequest->getEmail()])) {
+            $this->logger->debug('Access request verify: user already exists — silently ignored', $context);
+
+            return $done;
+        }
+
+        if ($accessRequest->isVerified()) {
+            $this->logger->debug('Access request verify: already verified — silently ignored', $context);
+
+            return $done;
         }
 
         $accessRequest->verify();
-        try {
-            $this->entityManager->flush();
-        } catch (UniqueConstraintViolationException) {
-            $this->logger->debug('Access request verify: race condition — silently ignored', ['emailHash' => $emailHash]);
+        $this->entityManager->flush();
 
-            return new RedirectResponse($landingUrl.'?access=confirmed');
-        }
+        $this->logger->debug('Access request verified', $context);
 
-        $this->logger->debug('Access request verified', ['emailHash' => $emailHash]);
-
-        return new RedirectResponse($landingUrl.'?access=confirmed');
+        return $done;
     }
 }

@@ -9,11 +9,14 @@ use App\Entity\AccessRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
 final class AccessRequestCreateTest extends ApiTestCase
 {
+    use MailerAssertionsTrait;
+
     #[\Override]
     protected static ?bool $alwaysBootKernel = false;
 
@@ -50,6 +53,28 @@ final class AccessRequestCreateTest extends ApiTestCase
         $accessRequest = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'persisted@example.com']);
         $this->assertInstanceOf(AccessRequest::class, $accessRequest);
         $this->assertSame('pending_verification', $accessRequest->getStatus()->value);
+    }
+
+    /**
+     * The link names the request by id, in the fragment: the address never
+     * appears in a URL, and nothing of the link reaches an access log.
+     */
+    #[Test]
+    public function verificationLinkCarriesNoAddressAndNothingTheServerSees(): void
+    {
+        self::createClient()->request('POST', '/access-requests', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'linked@example.com'],
+        ]);
+
+        $accessRequest = $this->getEntityManager()->getRepository(AccessRequest::class)->findOneBy(['email' => 'linked@example.com']);
+        $this->assertInstanceOf(AccessRequest::class, $accessRequest);
+
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailHtmlBodyContains($email, '/access-requests/verify#id='.$accessRequest->getId()->toRfc4122().'&amp;expires=');
+        self::assertEmailHtmlBodyNotContains($email, 'linked%40example.com');
+        self::assertEmailHtmlBodyNotContains($email, 'verify?');
     }
 
     #[Test]

@@ -107,16 +107,16 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
 
         // Generate HMAC-signed verification URL. It points at the FRONTEND route
         // (like the magic-link and email-change emails): the /access-requests/verify
-        // page then calls the backend via fetch. Using FRONTEND_URL means the link
-        // uses the public origin (e.g. the ngrok host in mobile testing) instead of
-        // the internal https://localhost.
-        $payload = $this->hmacService->generatePayload($email);
+        // page then POSTs to the backend. Using FRONTEND_URL means the link uses the
+        // public origin (e.g. the ngrok host in mobile testing) instead of the
+        // internal https://localhost. It names the request by id, never by address,
+        // and carries it in the fragment, which a browser never sends: nothing of it
+        // reaches an access log or a Referer.
+        $payload = $this->hmacService->generatePayload($accessRequest->getId()->toRfc4122());
         $verifyUrl = \sprintf(
-            '%s/access-requests/verify?email=%s&expires=%d&signature=%s',
+            '%s/access-requests/verify#%s',
             rtrim($this->frontendUrl, '/'),
-            urlencode($payload['email']),
-            $payload['expires'],
-            $payload['signature'],
+            http_build_query($payload),
         );
 
         $html = $this->twig->render('email/access_request_verify.html.twig', [

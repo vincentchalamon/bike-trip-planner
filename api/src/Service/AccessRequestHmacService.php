@@ -7,10 +7,13 @@ namespace App\Service;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Stateless HMAC-based signed URL service for access request email verification.
+ * Stateless HMAC-based signed link service for access request email verification.
  *
- * The signature is computed as: hash_hmac('sha256', email + '|' + expires, ACCESS_REQUEST_HMAC_SECRET)
- * The '|' separator prevents ambiguity (e.g. "a@b.com" + "1234" vs "a@b.com1" + "234").
+ * The signature is computed as: hash_hmac('sha256', id + '|' + expires, ACCESS_REQUEST_HMAC_SECRET),
+ * where id is the access request's UUID. It signs the id rather than the address so the
+ * link never carries the address: links end up in logs, histories and error reports, and
+ * an address is personal data where the id means nothing without the database.
+ * The '|' separator prevents ambiguity between the id and the expiry.
  * No token is stored in the database — the signature IS the proof of authenticity.
  */
 final readonly class AccessRequestHmacService
@@ -27,17 +30,17 @@ final readonly class AccessRequestHmacService
     }
 
     /**
-     * Generates a signed verification URL payload (query parameters).
+     * Generates the signed payload the verification link carries.
      *
-     * @return array{email: string, expires: int, signature: string}
+     * @return array{id: string, expires: int, signature: string}
      */
-    public function generatePayload(string $email): array
+    public function generatePayload(string $id): array
     {
         $expires = new \DateTimeImmutable(\sprintf('+%d hours', self::TTL_HOURS))->getTimestamp();
-        $signature = $this->computeSignature($email, $expires);
+        $signature = $this->computeSignature($id, $expires);
 
         return [
-            'email' => $email,
+            'id' => $id,
             'expires' => $expires,
             'signature' => $signature,
         ];
@@ -46,15 +49,15 @@ final readonly class AccessRequestHmacService
     /**
      * Verifies the HMAC signature and expiration.
      *
-     * @param array{email?: mixed, expires?: mixed, signature?: mixed} $params
+     * @param array{id?: mixed, expires?: mixed, signature?: mixed} $params
      */
     public function verify(array $params): bool
     {
-        $email = $params['email'] ?? null;
+        $id = $params['id'] ?? null;
         $expires = $params['expires'] ?? null;
         $signature = $params['signature'] ?? null;
 
-        if (!\is_string($email) || !\is_string($signature) || !\is_numeric($expires)) {
+        if (!\is_string($id) || !\is_string($signature) || !\is_numeric($expires)) {
             return false;
         }
 
@@ -64,13 +67,13 @@ final readonly class AccessRequestHmacService
             return false;
         }
 
-        $expected = $this->computeSignature($email, $expiresInt);
+        $expected = $this->computeSignature($id, $expiresInt);
 
         return hash_equals($expected, $signature);
     }
 
-    private function computeSignature(string $email, int $expires): string
+    private function computeSignature(string $id, int $expires): string
     {
-        return hash_hmac('sha256', $email.'|'.$expires, $this->secret);
+        return hash_hmac('sha256', $id.'|'.$expires, $this->secret);
     }
 }

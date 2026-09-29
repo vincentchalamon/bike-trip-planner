@@ -242,6 +242,23 @@ This applies to:
 | Brute-force on HMAC | HMAC-SHA256 with full `APP_ACCESS_REQUEST_HMAC_SECRET` entropy; no feasible brute-force |
 | Duplicate requests | Silent ignore; no information leak, no DB pollution |
 
+### Addendum (2026-09): the link names the request, not the address
+
+The verification link shipped as `/access-requests/verify?email=…&expires=…&signature=…`,
+signing `email|expires`. That put a plain address in a URL, which then sat in the Caddy and
+Traefik access logs of every hop, in the `Referer` of the page's requests and in the browser
+history. The link is now `{FRONTEND_URL}/access-requests/verify#id=…&expires=…&signature=…`:
+
+- The HMAC covers `id|expires`, where `id` is the `access_request` UUID. The id means nothing
+  without the database, so the link carries no personal data, and the signature still proves
+  the link came from us. There is still no token column.
+- The payload is in the fragment, which a browser never sends. The page reads it, erases it
+  from the address bar and `POST`s it as JSON to `/access-requests/verify`, which answers
+  `204` for every outcome (no enumeration). `GET` is gone.
+- The edge case where a signed link outlived its row ("create a verified record directly")
+  disappears: without the address there is nothing to create, and the row is only ever
+  removed when the email could not be sent, so no such link was delivered.
+
 ---
 
 ## Consequences
