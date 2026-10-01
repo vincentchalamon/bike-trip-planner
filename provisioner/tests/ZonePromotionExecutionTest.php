@@ -7,6 +7,7 @@ namespace Provisioner\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\PromotionReport;
+use Provisioner\PromotionReportTable;
 use Provisioner\ZonePromotion;
 use Symfony\Component\Process\Process;
 
@@ -108,8 +109,8 @@ final class ZonePromotionExecutionTest extends TestCase
             self::STAGING,
         ));
 
-        $this->exec($this->promotion()->reportDdl());
-        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, self::SOURCE));
+        $this->exec(PromotionReportTable::ddl());
+        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", PromotionReportTable::NAME, self::SOURCE));
     }
 
     protected function tearDown(): void
@@ -119,7 +120,7 @@ final class ZonePromotionExecutionTest extends TestCase
         }
 
         $this->exec(\sprintf('DROP SCHEMA IF EXISTS %s, %s CASCADE', self::LIVE, self::STAGING));
-        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, self::SOURCE));
+        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", PromotionReportTable::NAME, self::SOURCE));
     }
 
     private function psqlBinary(): ?string
@@ -256,7 +257,7 @@ final class ZonePromotionExecutionTest extends TestCase
 
         self::assertSame('2', $this->scalar(\sprintf(
             "SELECT inserted FROM %s WHERE source = '%s' AND zone = 'bretagne' AND table_name = 'pois'",
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             self::SOURCE,
         )));
     }
@@ -273,7 +274,7 @@ final class ZonePromotionExecutionTest extends TestCase
         $stale = self::SOURCE.'-stale';
         $this->exec(\sprintf(
             "INSERT INTO %s (source, zone, table_name, candidates, inserted, promoted_at) VALUES ('%s', 'bretagne', 'pois', 50, 50, now() - interval '1 day')",
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             $stale,
         ));
 
@@ -291,7 +292,7 @@ final class ZonePromotionExecutionTest extends TestCase
             self::assertContains(self::SOURCE, $sources);
             self::assertNotContains($stale, $sources);
         } finally {
-            $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, $stale));
+            $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", PromotionReportTable::NAME, $stale));
         }
     }
 
@@ -337,12 +338,12 @@ final class ZonePromotionExecutionTest extends TestCase
         self::assertSame('2', $this->scalar(\sprintf('SELECT count(*) FROM %s.pois', self::LIVE)));
         self::assertSame('0', $this->scalar(\sprintf(
             "SELECT inserted FROM %s WHERE source = '%s' AND table_name = 'pois'",
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             self::SOURCE,
         )));
         self::assertSame('2', $this->scalar(\sprintf(
             "SELECT candidates FROM %s WHERE source = '%s' AND table_name = 'pois'",
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             self::SOURCE,
         )), 'the rows were offered, and skipped because they were already held');
     }
@@ -385,7 +386,7 @@ final class ZonePromotionExecutionTest extends TestCase
         self::assertSame('picardie', $this->scalar(\sprintf('SELECT zone FROM %s.pois WHERE osm_id = 3', self::LIVE)));
         self::assertSame('1', $this->scalar(\sprintf(
             "SELECT inserted FROM %s WHERE source = '%s' AND zone = 'picardie' AND table_name = 'pois'",
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             self::SOURCE,
         )));
         self::assertSame('2', $this->scalar(\sprintf(

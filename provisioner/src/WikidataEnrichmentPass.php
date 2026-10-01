@@ -113,7 +113,7 @@ final readonly class WikidataEnrichmentPass
             try {
                 foreach ($this->enricher->enrich($missing, $this->locale) as $row) {
                     $payload = json_encode((object) ($row['enrichment'] ?? []), \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
-                    fwrite($handle, $this->copyValue($row['qid'])."\t".$this->copyValue($payload)."\n");
+                    fwrite($handle, CopyWriter::line([$row['qid'], $payload]));
                 }
             } finally {
                 fclose($handle);
@@ -148,11 +148,6 @@ final readonly class WikidataEnrichmentPass
     private function scratchTable(string $kind, string $stagingSchema): string
     {
         return \sprintf('%s.wikidata_%s_%s', self::CACHE_SCHEMA, $kind, (string) preg_replace('/[^a-z0-9_]/i', '_', $stagingSchema));
-    }
-
-    private function copyValue(string $value): string
-    {
-        return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $value);
     }
 
     /**

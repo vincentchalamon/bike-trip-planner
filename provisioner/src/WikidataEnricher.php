@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Provisioner;
 
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -48,14 +46,10 @@ final readonly class WikidataEnricher
         // (the generic Symfony default), and enrichment failures are tolerated as
         // best-effort, so a block would silently disable enrichment: send a
         // descriptive User-Agent per Wikidata's bot policy.
-        $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
-            HttpClient::create([
-                'max_redirects' => 2,
-                'timeout' => $this->timeoutSeconds,
-                'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
-            ]),
-            'https://query.wikidata.org/',
-        );
+        $this->httpClient = $httpClient ?? ScopedHttpClient::create('https://query.wikidata.org/', [
+            'timeout' => $this->timeoutSeconds,
+            'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
+        ]);
     }
 
     /**

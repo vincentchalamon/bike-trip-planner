@@ -9,7 +9,7 @@ use Symfony\Component\Process\Process;
 
 /**
  * Reads back the per-table promotion counts both importers write to
- * {@see ZonePromotion::REPORT_TABLE}, so opening a zone reports what it actually did:
+ * {@see PromotionReportTable}, so opening a zone reports what it actually did:
  * how many rows the source offered and how many of them were new.
  *
  * That report is not decoration. ADR-049 names it as the cure for the model's one blind
@@ -47,9 +47,9 @@ final readonly class PromotionReport
         $path = $workDir.'/promotion-report.tsv';
         $sql = \sprintf(
             "\\copy (SELECT source, table_name, candidates, inserted FROM %s WHERE zone = %s AND promoted_at >= %s::timestamptz ORDER BY source, table_name) TO '%s'",
-            ZonePromotion::REPORT_TABLE,
-            ZonePromotion::literal($zoneSlug),
-            ZonePromotion::literal($since->format(\DateTimeInterface::RFC3339_EXTENDED)),
+            PromotionReportTable::NAME,
+            Sql::literal($zoneSlug),
+            Sql::literal($since->format(\DateTimeInterface::RFC3339_EXTENDED)),
             $path,
         );
 

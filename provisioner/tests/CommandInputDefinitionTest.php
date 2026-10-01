@@ -8,7 +8,15 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\EventsRefreshCommand;
 use Provisioner\ImportOverrideCommand;
+use Provisioner\OsmDataDownloader;
+use Provisioner\PostgisImporter;
+use Provisioner\PromotionReport;
 use Provisioner\ProvisionCommand;
+use Provisioner\ProvisionerLog;
+use Provisioner\RoutingPerimeter;
+use Provisioner\RunLock;
+use Provisioner\ZoneOpening;
+use Provisioner\ZoneOpeningReport;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -36,7 +44,7 @@ final class CommandInputDefinitionTest extends TestCase
                 'dry-run' => [null, 'none', false, 'Show what would be downloaded and imported without executing'],
                 'allow-unrouted-zone' => [null, 'none', false, 'Open the zone even if the routing graph does not cover it (local development; trips there cannot be routed)'],
             ],
-        ], $this->definitionOf(new ProvisionCommand(lockFile: $log.'.lock', logFile: $log), 'provision'));
+        ], $this->definitionOf($this->provisionCommand($log), 'provision'));
     }
 
     #[Test]
@@ -96,5 +104,31 @@ final class CommandInputDefinitionTest extends TestCase
                 $option->getDescription(),
             ], $definition->getOptions()),
         ];
+    }
+
+    private function provisionCommand(string $logFile): ProvisionCommand
+    {
+        $log = new ProvisionerLog($logFile);
+        $workDir = \dirname($logFile);
+        $routingPerimeter = new RoutingPerimeter();
+
+        return new ProvisionCommand(
+            new ZoneOpening(
+                downloader: new OsmDataDownloader($workDir),
+                postgisImporter: new PostgisImporter('tier1.lua'),
+                routingPerimeter: $routingPerimeter,
+                dataTourismeImporter: null,
+                openAgendaImporter: null,
+                report: new ZoneOpeningReport($log, new PromotionReport(), $workDir, $workDir),
+                log: $log,
+                filteredPbf: $workDir.'/tier1-filtered.osm.pbf',
+                dataTourismeDir: $workDir,
+                openAgendaDir: $workDir,
+                zonesDir: $workDir,
+            ),
+            $routingPerimeter,
+            $log,
+            new RunLock($logFile.'.lock', $log),
+        );
     }
 }

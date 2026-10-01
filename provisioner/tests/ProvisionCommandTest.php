@@ -12,7 +12,11 @@ use Provisioner\OsmDataDownloader;
 use Provisioner\PostgisImporter;
 use Provisioner\PromotionReport;
 use Provisioner\ProvisionCommand;
+use Provisioner\ProvisionerLog;
 use Provisioner\RoutingPerimeter;
+use Provisioner\RunLock;
+use Provisioner\ZoneOpening;
+use Provisioner\ZoneOpeningReport;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -27,8 +31,6 @@ final class ProvisionCommandTest extends TestCase
 
     private string $routingDir;
 
-    private string|false $previousOpenAgendaDataset;
-
     protected function setUp(): void
     {
         $this->tmpDir = sys_get_temp_dir().'/provision-cmd-'.uniqid('', true);
@@ -40,19 +42,10 @@ final class ProvisionCommandTest extends TestCase
         // Default fixture: a routing graph covering France, so the containment check
         // passes unless a test deliberately empties it.
         file_put_contents($this->routingDir.'/france-latest.osm.pbf', 'graph');
-
-        // Keep the OpenAgenda step deterministic: unless a test injects an importer, it
-        // must resolve to "skipped", never to a live export driven by an ambient env var.
-        $this->previousOpenAgendaDataset = getenv('OPENAGENDA_DATASET');
-        putenv('OPENAGENDA_DATASET');
     }
 
     protected function tearDown(): void
     {
-        false === $this->previousOpenAgendaDataset
-            ? putenv('OPENAGENDA_DATASET')
-            : putenv('OPENAGENDA_DATASET='.$this->previousOpenAgendaDataset);
-
         $this->removeDir($this->tmpDir);
     }
 
@@ -73,6 +66,10 @@ final class ProvisionCommandTest extends TestCase
         rmdir($dir);
     }
 
+    /**
+     * A source left null is unconfigured, the way bin/provision wires it when its
+     * credentials are not set.
+     */
     private function buildTester(
         ?MockHttpClient $httpClient = null,
         ?PostgisImporter $postgisImporter = null,
@@ -80,26 +77,40 @@ final class ProvisionCommandTest extends TestCase
         ?string $lockFile = null,
         ?string $routingDir = null,
         ?OpenAgendaImporter $openAgendaImporter = null,
+        ?RoutingPerimeter $routingPerimeter = null,
+        ?PromotionReport $promotionReport = null,
     ): CommandTester {
+        $log = new ProvisionerLog($this->tmpDir.'/provisioner.log');
+        $routingPerimeter ??= new RoutingPerimeter(
+            $routingDir ?? $this->routingDir,
+            static fn (array $command): Process => new Process(['true']),
+        );
+
         $command = new ProvisionCommand(
-            regionsDir: $this->regionsDir,
-            downloader: new OsmDataDownloader(
-                regionsDir: $this->regionsDir,
-                httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+            new ZoneOpening(
+                downloader: new OsmDataDownloader(
+                    regionsDir: $this->regionsDir,
+                    httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+                ),
+                postgisImporter: $postgisImporter ?? $this->capturingImporter(),
+                routingPerimeter: $routingPerimeter,
+                dataTourismeImporter: $dataTourismeImporter,
+                openAgendaImporter: $openAgendaImporter,
+                report: new ZoneOpeningReport(
+                    $log,
+                    $promotionReport ?? new PromotionReport(static fn (array $command): Process => new Process(['true'])),
+                    $this->tmpDir.'/zones',
+                    $this->tmpDir,
+                ),
+                log: $log,
+                filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
+                dataTourismeDir: $this->tmpDir.'/datatourisme',
+                openAgendaDir: $this->tmpDir.'/openagenda',
+                zonesDir: $this->tmpDir.'/zones',
             ),
-            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
-            postgisImporter: $postgisImporter,
-            dataTourismeDir: $this->tmpDir.'/datatourisme',
-            dataTourismeImporter: $dataTourismeImporter,
-            openAgendaDir: $this->tmpDir.'/openagenda',
-            openAgendaImporter: $openAgendaImporter,
-            lockFile: $lockFile ?? $this->tmpDir.'/provision.lock',
-            logFile: $this->tmpDir.'/provisioner.log',
-            routingPerimeter: new RoutingPerimeter(
-                $routingDir ?? $this->routingDir,
-                static fn (array $command): Process => new Process(['true']),
-            ),
-            promotionReport: new PromotionReport(static fn (array $command): Process => new Process(['true'])),
+            $routingPerimeter,
+            $log,
+            new RunLock($lockFile ?? $this->tmpDir.'/provision.lock', $log),
         );
 
         $app = new Application();
@@ -265,17 +276,8 @@ final class ProvisionCommandTest extends TestCase
     {
         /** @var list<list<string>> $captured */
         $captured = [];
-        $command = new ProvisionCommand(
-            regionsDir: $this->regionsDir,
-            downloader: new OsmDataDownloader(
-                regionsDir: $this->regionsDir,
-                httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
-            ),
-            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
+        $tester = $this->buildTester(
             postgisImporter: $this->capturingImporter(),
-            dataTourismeDir: $this->tmpDir.'/datatourisme',
-            lockFile: $this->tmpDir.'/provision.lock',
-            logFile: $this->tmpDir.'/provisioner.log',
             routingPerimeter: new RoutingPerimeter($this->routingDir, function (array $cmd) use (&$captured): Process {
                 /** @var list<string> $command */
                 $command = $cmd;
@@ -283,13 +285,7 @@ final class ProvisionCommandTest extends TestCase
 
                 return new Process(['true']);
             }),
-            promotionReport: new PromotionReport(static fn (array $command): Process => new Process(['true'])),
         );
-
-        $app = new Application();
-        $app->addCommand($command);
-
-        $tester = new CommandTester($app->find('provision'));
 
         self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
 
@@ -332,25 +328,7 @@ final class ProvisionCommandTest extends TestCase
             return new Process(['true']);
         });
 
-        $command = new ProvisionCommand(
-            regionsDir: $this->regionsDir,
-            downloader: new OsmDataDownloader(
-                regionsDir: $this->regionsDir,
-                httpClient: new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
-            ),
-            filteredPbf: $this->tmpDir.'/tier1-filtered.osm.pbf',
-            postgisImporter: $this->capturingImporter(),
-            dataTourismeDir: $this->tmpDir.'/datatourisme',
-            lockFile: $this->tmpDir.'/provision.lock',
-            logFile: $this->tmpDir.'/provisioner.log',
-            routingPerimeter: new RoutingPerimeter($this->routingDir, static fn (array $c): Process => new Process(['true'])),
-            promotionReport: $report,
-        );
-
-        $app = new Application();
-        $app->addCommand($command);
-
-        $tester = new CommandTester($app->find('provision'));
+        $tester = $this->buildTester(postgisImporter: $this->capturingImporter(), promotionReport: $report);
 
         self::assertSame(0, $tester->execute(['zone' => 'bretagne'], ['interactive' => false]), $tester->getDisplay());
 
@@ -510,11 +488,6 @@ final class ProvisionCommandTest extends TestCase
     {
         // DataTourisme is optional (ADR-041 continue-on-error): OSM must still provision, with
         // one fewer resolver step rather than a broken query.
-        $previousFluxId = getenv('DATATOURISME_FLUX_ID');
-        $previousAppKey = getenv('DATATOURISME_APP_KEY');
-        putenv('DATATOURISME_FLUX_ID');
-        putenv('DATATOURISME_APP_KEY');
-
         /** @var list<string> $osmCommands */
         $osmCommands = [];
         $osm = new PostgisImporter(
@@ -526,13 +499,8 @@ final class ProvisionCommandTest extends TestCase
             },
         );
 
-        try {
-            $tester = $this->buildTester(postgisImporter: $osm);
-            $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
-        } finally {
-            false === $previousFluxId ? putenv('DATATOURISME_FLUX_ID') : putenv('DATATOURISME_FLUX_ID='.$previousFluxId);
-            false === $previousAppKey ? putenv('DATATOURISME_APP_KEY') : putenv('DATATOURISME_APP_KEY='.$previousAppKey);
-        }
+        $tester = $this->buildTester(postgisImporter: $osm);
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
         $export = array_values(array_filter($osmCommands, static fn (string $c): bool => str_contains($c, 'place-candidates.tsv')));
@@ -720,22 +688,13 @@ final class ProvisionCommandTest extends TestCase
     #[Test]
     public function missingDataTourismeCredentialsSkipsGracefullyWithoutFailingOsm(): void
     {
-        // No DataTourisme importer injected and no DATATOURISME_* env: the step is
-        // skipped with a warning and reported as a success, so a deployment without
-        // DataTourisme credentials still provisions OSM (ADR-041 continue-on-error).
-        $previousFluxId = getenv('DATATOURISME_FLUX_ID');
-        $previousAppKey = getenv('DATATOURISME_APP_KEY');
-        putenv('DATATOURISME_FLUX_ID');
-        putenv('DATATOURISME_APP_KEY');
+        // No DataTourisme importer (bin/provision passes null when DATATOURISME_* is not
+        // set): the step is skipped with a warning and reported as a success, so a
+        // deployment without DataTourisme credentials still provisions OSM (ADR-041
+        // continue-on-error).
+        $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
 
-        try {
-            $tester = $this->buildTester(postgisImporter: $this->capturingImporter());
-
-            $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
-        } finally {
-            false === $previousFluxId ? putenv('DATATOURISME_FLUX_ID') : putenv('DATATOURISME_FLUX_ID='.$previousFluxId);
-            false === $previousAppKey ? putenv('DATATOURISME_APP_KEY') : putenv('DATATOURISME_APP_KEY='.$previousAppKey);
-        }
+        $exitCode = $tester->execute(['zone' => 'bretagne'], ['interactive' => false]);
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
         $output = $tester->getDisplay();

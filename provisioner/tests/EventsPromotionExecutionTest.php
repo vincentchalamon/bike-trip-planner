@@ -7,7 +7,9 @@ namespace Provisioner\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\EventsPromotion;
-use Provisioner\ZonePromotion;
+use Provisioner\EventsStaging;
+use Provisioner\ProcessRunner;
+use Provisioner\PromotionReportTable;
 use Symfony\Component\Process\Process;
 
 /**
@@ -63,7 +65,7 @@ final class EventsPromotionExecutionTest extends TestCase
 
         if (\extension_loaded('pdo_pgsql')) {
             try {
-                $this->pdo = new \PDO(\sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, $port, $database), $user, $password);
+                $this->pdo = \PDO::connect(\sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, $port, $database), $user, $password);
                 $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             } catch (\PDOException $pdoException) {
                 $this->skipUnlessRequired(\sprintf('no reachable PostgreSQL: %s', $pdoException->getMessage()));
@@ -95,16 +97,12 @@ final class EventsPromotionExecutionTest extends TestCase
                     zone text, last_seen_at timestamptz, source text NOT NULL DEFAULT 'datatourisme'
                 );
                 CREATE TABLE %2$s.zones (slug text PRIMARY KEY, geom geometry);
-                CREATE TABLE %3$s.events (
-                    id text NOT NULL PRIMARY KEY, name text, category text NOT NULL,
-                    start_date date, end_date date, url text, description text,
-                    price_min numeric(10, 2), source text NOT NULL DEFAULT 'datatourisme',
-                    tags jsonb, geom geometry(Point, 4326) NOT NULL
-                );
+                CREATE TABLE %3$s.events (%4$s);
                 SQL,
             self::LIVE,
             self::OSM,
             self::STAGING,
+            $this->staging()->ddl(),
         ));
 
         // A Brittany-ish envelope; the staged points below sit inside it, the out-of-zone
@@ -114,8 +112,8 @@ final class EventsPromotionExecutionTest extends TestCase
             self::OSM,
         ));
 
-        $this->exec($this->promotion()->reportDdl());
-        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, self::SOURCE));
+        $this->exec(PromotionReportTable::ddl());
+        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", PromotionReportTable::NAME, self::SOURCE));
     }
 
     protected function tearDown(): void
@@ -125,7 +123,7 @@ final class EventsPromotionExecutionTest extends TestCase
         }
 
         $this->exec(\sprintf('DROP SCHEMA IF EXISTS %s, %s, %s CASCADE', self::LIVE, self::OSM, self::STAGING));
-        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", ZonePromotion::REPORT_TABLE, self::SOURCE));
+        $this->exec(\sprintf("DELETE FROM %s WHERE source = '%s'", PromotionReportTable::NAME, self::SOURCE));
     }
 
     #[Test]
@@ -208,6 +206,66 @@ final class EventsPromotionExecutionTest extends TestCase
         self::assertSame('0', $this->reportField('inserted'), 'and both were updates, not inserts');
     }
 
+    #[Test]
+    public function aStagedCopyLineLandsInTheColumnsItNames(): void
+    {
+        // The COPY file, the \copy column list and the promotion all read one column list
+        // (EventsPromotion::COLUMNS); a positional shift between them would put the url in
+        // the description or the source in the tags, which only a real COPY can show.
+        $this->copyIntoStaging($this->staging()->line([
+            'id' => 'e1',
+            'name' => "Fest\tA",
+            'category' => 'festival',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-09-01',
+            'url' => 'https://a.test',
+            'description' => 'Open air',
+            'price_min' => 12.5,
+            'tags' => ['city' => 'Rennes'],
+            'lat' => 48.11,
+            'lon' => -1.68,
+        ]));
+        $this->promote();
+
+        $live = \sprintf("FROM %s.events WHERE id = 'e1'", self::LIVE);
+        self::assertSame("Fest\tA", $this->scalar('SELECT name '.$live), 'an escaped tab comes back as a tab');
+        self::assertSame('https://a.test', $this->scalar('SELECT url '.$live));
+        self::assertSame('Open air', $this->scalar('SELECT description '.$live));
+        self::assertSame('12.50', $this->scalar('SELECT price_min '.$live));
+        self::assertSame(self::SOURCE, $this->scalar('SELECT source '.$live), 'the source is stamped by the staging, not left to the DDL default');
+        self::assertSame('Rennes', $this->scalar("SELECT tags->>'city' ".$live));
+        self::assertSame('POINT(-1.68 48.11)', $this->scalar('SELECT ST_AsText(geom) '.$live));
+    }
+
+    private function staging(): EventsStaging
+    {
+        return new EventsStaging(self::SOURCE, new ProcessRunner());
+    }
+
+    /**
+     * Loads one COPY text line into the staging table, the way `\copy ... FROM` does.
+     */
+    private function copyIntoStaging(string $line): void
+    {
+        $table = self::STAGING.'.events';
+        $columns = implode(', ', EventsPromotion::COLUMNS);
+
+        if ($this->pdo instanceof \Pdo\Pgsql) {
+            self::assertTrue($this->pdo->copyFromArray($table, [$line], "\t", '\\N', $columns));
+
+            return;
+        }
+
+        $path = (string) tempnam(sys_get_temp_dir(), 'events-copy');
+        file_put_contents($path, $line);
+
+        try {
+            $this->runPsql(['-v', 'ON_ERROR_STOP=1', '-c', \sprintf("\\copy %s (%s) FROM '%s'", $table, $columns, $path)]);
+        } finally {
+            unlink($path);
+        }
+    }
+
     private function promotion(): EventsPromotion
     {
         return new EventsPromotion(self::SOURCE, self::LIVE, self::OSM.'.zones');
@@ -241,7 +299,7 @@ final class EventsPromotionExecutionTest extends TestCase
         return $this->scalar(\sprintf(
             "SELECT %s FROM %s WHERE source = '%s' AND zone = 'bretagne' AND table_name = 'events'",
             $field,
-            ZonePromotion::REPORT_TABLE,
+            PromotionReportTable::NAME,
             self::SOURCE,
         ));
     }

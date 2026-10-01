@@ -27,7 +27,7 @@ namespace Provisioner;
  * clips a national flux to one zone. The purge is global on purpose: a passed event is
  * dead weight everywhere, not only in the zone being refreshed.
  *
- * Per-run counts are written to {@see ZonePromotion::REPORT_TABLE} (candidates = staged
+ * Per-run counts are written to {@see PromotionReportTable} (candidates = staged
  * rows in the zone, inserted = genuinely new rows, told apart from updates by the `xmax`
  * system column) so a refresh reports what it did, like every other promotion.
  */
@@ -42,11 +42,12 @@ final readonly class EventsPromotion
     private const array MUTABLE = ['name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'];
 
     /**
-     * Insert/select column order, matching the staging `events` table both importers load.
+     * Insert/select column order, and the COPY column order of the staging `events` table
+     * both feeds load ({@see EventsStaging}): the single events column list.
      *
      * @var list<string>
      */
-    private const array COLUMNS = ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'];
+    public const array COLUMNS = ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'];
 
     /**
      * @param string $source     provenance stamped in the promotion report ('datatourisme' / 'openagenda')
@@ -60,17 +61,6 @@ final readonly class EventsPromotion
         private string $liveSchema = 'tourism',
         private string $zonesTable = 'osm.zones',
     ) {
-    }
-
-    /**
-     * DDL for the shared promotion report table; safe to run on every pass.
-     */
-    public function reportDdl(): string
-    {
-        return \sprintf(
-            'CREATE SCHEMA IF NOT EXISTS provisioner; CREATE TABLE IF NOT EXISTS %s (source text NOT NULL, zone text NOT NULL, table_name text NOT NULL, candidates bigint NOT NULL, inserted bigint NOT NULL, promoted_at timestamptz NOT NULL, PRIMARY KEY (source, zone, table_name));',
-            ZonePromotion::REPORT_TABLE,
-        );
     }
 
     /**
@@ -118,10 +108,10 @@ final readonly class EventsPromotion
             ':set' => $set,
             ':staging' => $stagingSchema,
             ':zones' => $this->zonesTable,
-            ':zone' => ZonePromotion::literal($zone),
-            ':report' => ZonePromotion::REPORT_TABLE,
-            ':source' => ZonePromotion::literal($this->source),
-            ':today' => ZonePromotion::literal($today).'::date',
+            ':zone' => Sql::literal($zone),
+            ':report' => PromotionReportTable::NAME,
+            ':source' => Sql::literal($this->source),
+            ':today' => Sql::literal($today).'::date',
         ]);
     }
 }

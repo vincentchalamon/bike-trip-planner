@@ -189,7 +189,7 @@ final readonly class PostgisImporter
      */
     public static function stagingSchema(string $zoneSlug): string
     {
-        return 'osm_staging_'.preg_replace('/[^a-z0-9]+/', '_', strtolower($zoneSlug));
+        return Sql::zoneSchema('osm_staging', $zoneSlug);
     }
 
     /**
@@ -278,6 +278,7 @@ final readonly class PostgisImporter
         return new PlaceEnrichmentPass(
             source: 'osm',
             identity: "a.osm_type || '/' || a.osm_id",
+            liveIdentity: 'l.osm_type = a.osm_type AND l.osm_id = a.osm_id',
             exemptCategories: self::GATE_EXEMPT_CATEGORIES,
             liveSchema: $this->liveSchema,
             processFactory: $this->processFactory,
@@ -337,9 +338,9 @@ final readonly class PostgisImporter
                 SELECT now(), jsonb_build_object(%7$s), %8$s, %9$s;
                 SQL,
             $this->liveSchema,
-            ZonePromotion::literal($zoneSlug),
-            ZonePromotion::literal($zoneName),
-            ZonePromotion::literal($countrySlug),
+            Sql::literal($zoneSlug),
+            Sql::literal($zoneName),
+            Sql::literal($countrySlug),
             ZonePromotion::PIPELINE_VERSION,
             $stagingSchema,
             $counts,
@@ -348,7 +349,7 @@ final readonly class PostgisImporter
         );
 
         $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c', PromotionReportTable::ddl(),
         ], 'psql prepare promotion report');
 
         $this->processes->run([
@@ -383,7 +384,7 @@ final readonly class PostgisImporter
 
         return \sprintf(
             '%s::jsonb',
-            ZonePromotion::literal(json_encode($payload, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}'),
+            Sql::literal(json_encode($payload, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}'),
         );
     }
 
