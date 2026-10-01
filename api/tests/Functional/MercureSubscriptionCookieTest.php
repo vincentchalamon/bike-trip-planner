@@ -33,7 +33,7 @@ final class MercureSubscriptionCookieTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('mercure-cookie-%s@test.com', bin2hex(random_bytes(4))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('mercure-cookie-%s@test.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]
