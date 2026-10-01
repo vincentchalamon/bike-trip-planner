@@ -9,8 +9,8 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertGroup;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
+use App\Message\TracksComputation;
 
 /**
  * Flags the stages whose line crosses a mapped feature: a ferry, a ford.
@@ -27,20 +27,20 @@ abstract readonly class AbstractRouteCrossingHandler extends AbstractTripMessage
      * @param \Closure(Stage, array{name: ?string, lat: float, lon: float}): Alert                              $alertFor
      */
     protected function checkCrossings(
-        string $tripId,
-        ComputationName $computation,
+        TracksComputation $message,
         AlertGroup $group,
         MercureEventType $event,
         \Closure $findNearStage,
         \Closure $alertFor,
     ): void {
+        $tripId = $message->tripId;
         $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
             return;
         }
 
-        $this->executeWithTracking($tripId, $computation, function () use ($tripId, $stages, $group, $event, $findNearStage, $alertFor): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $group, $event, $findNearStage, $alertFor): void {
             $alerts = [];
 
             foreach ($stages as $stage) {

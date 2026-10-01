@@ -10,9 +10,9 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
-use App\Enum\ComputationName;
 use App\Mercure\ProgressPublisher;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\TracksComputation;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -22,27 +22,44 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 abstract readonly class AbstractTripMessageHandler
 {
+    protected ComputationTrackerInterface $computationTracker;
+
+    protected TripUpdatePublisherInterface $publisher;
+
+    protected TripGenerationTrackerInterface $generationTracker;
+
+    protected LoggerInterface $logger;
+
+    protected TripRequestRepositoryInterface $tripRequestRepository;
+
+    protected TripStageStoreInterface $stageStore;
+
+    protected MessageBusInterface $messageBus;
+
+    protected AlertRenderer $alertRenderer;
+
     private TripCompletionGate $completionGate;
 
     private ProgressPublisher $progress;
 
-    public function __construct(
-        protected ComputationTrackerInterface $computationTracker,
-        protected TripUpdatePublisherInterface $publisher,
-        protected TripGenerationTrackerInterface $generationTracker,
-        protected LoggerInterface $logger,
-        protected TripRequestRepositoryInterface $tripRequestRepository,
-        protected TripStageStoreInterface $stageStore,
-        protected MessageBusInterface $messageBus,
-        protected AlertRenderer $alertRenderer,
-    ) {
+    public function __construct(TripHandlerContext $context)
+    {
+        $this->computationTracker = $context->computationTracker;
+        $this->publisher = $context->publisher;
+        $this->generationTracker = $context->generationTracker;
+        $this->logger = $context->logger;
+        $this->tripRequestRepository = $context->tripRequestRepository;
+        $this->stageStore = $context->stageStore;
+        $this->messageBus = $context->messageBus;
+        $this->alertRenderer = $context->alertRenderer;
+
         // The gate and the progress publisher are stateless collaborators built from
         // dependencies the handler already receives, so we construct them here rather
-        // than threading them through the ~20 child constructors or relying on a
-        // #[Required] setter (which manual instantiations — e.g. integration tests —
-        // skip, leaving the readonly property uninitialized). The terminal-gate logic
-        // stays single-sourced in TripCompletionGate, the progress event in
-        // ProgressPublisher, which the GPX upload uses too.
+        // than adding them to the context or relying on a #[Required] setter (which
+        // manual instantiations — e.g. integration tests — skip, leaving the readonly
+        // property uninitialized). The terminal-gate logic stays single-sourced in
+        // TripCompletionGate, the progress event in ProgressPublisher, which the GPX
+        // upload uses too.
         $this->completionGate = new TripCompletionGate($this->computationTracker, $this->publisher, $this->messageBus, $this->generationTracker);
         $this->progress = new ProgressPublisher($this->computationTracker, $this->publisher);
     }
@@ -115,7 +132,7 @@ abstract readonly class AbstractTripMessageHandler
 
     /**
      * Executes the handler body with computation tracking.
-     * Marks computation as running, executes callback, then marks done.
+     * Marks the computation the message declares as running, executes callback, then marks done.
      *
      * No staleness check: a message the trip has moved past never reaches a handler at all
      * since {@see \App\Messenger\StaleMessageMiddleware} (ADR-073). The check used to live
@@ -130,11 +147,10 @@ abstract readonly class AbstractTripMessageHandler
      *
      * @throws \Throwable
      */
-    protected function executeWithTracking(
-        string $tripId,
-        ComputationName $computation,
-        callable $callback,
-    ): void {
+    protected function executeWithTracking(TracksComputation $message, callable $callback): void
+    {
+        $tripId = $message->tripId;
+        $computation = $message::computation();
         $this->computationTracker->markRunning($tripId, $computation);
 
         $startTime = hrtime(true);

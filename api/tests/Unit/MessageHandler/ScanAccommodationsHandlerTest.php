@@ -23,6 +23,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Weather\WeatherForecastSerializer;
@@ -70,20 +71,13 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new ScanAccommodationsHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $registry,
             $haversine,
             $distributor,
             $seasonalityChecker,
             new CandidateRanker(),
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

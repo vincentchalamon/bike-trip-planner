@@ -44,6 +44,7 @@ use App\Message\CheckWaterPoints;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
 use App\MessageHandler\AnalyzeTerrainHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\MessageHandler\AnalyzeWindHandler;
 use App\MessageHandler\CheckBikeShopsHandler;
 use App\MessageHandler\CheckBorderCrossingHandler;
@@ -110,15 +111,8 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckFerriesHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $repository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckFerries(self::TRIP));
 
@@ -139,15 +133,8 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckFordsHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $repository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckFords(self::TRIP));
 
@@ -190,17 +177,10 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckHealthServicesHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $this->createStub(TransientTripPointsStoreInterface::class),
             $repository,
             new HaversineDistance(),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckHealthServices(self::TRIP));
 
@@ -257,18 +237,11 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckWaterPointsHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $this->createStub(TransientTripPointsStoreInterface::class),
             $repository,
             new GeometryBasedDistributor(new HaversineDistance()),
             new HaversineDistance(),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckWaterPoints(self::TRIP));
 
@@ -313,18 +286,11 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckCulturalPoisHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             new CulturalPoiSourceRegistry([$source], new NearbyNameDeduplicator(new HaversineDistance())),
             new GeometryBasedDistributor(new HaversineDistance()),
             new HaversineDistance(),
             new PoiLabelResolver($this->createAlertTranslator()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckCulturalPois(self::TRIP));
 
@@ -343,15 +309,8 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckBorderCrossingHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $boundaries,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckBorderCrossing(self::TRIP));
 
@@ -376,15 +335,8 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckCalendarHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests($request),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests($request), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $boundaries,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckCalendar(self::TRIP));
 
@@ -412,14 +364,7 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new AnalyzeWindHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
         );
         $handler(new AnalyzeWind(self::TRIP));
 
@@ -461,12 +406,7 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new ScanPoisHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(new TripRequest()),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(new TripRequest()), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $this->createStub(TransientTripPointsStoreInterface::class),
             new PoiSourceRegistry([$source], new NearbyNameDeduplicator(new HaversineDistance())),
             $this->createStub(WaterPointRepositoryInterface::class),
@@ -476,8 +416,6 @@ final class AlertPayloadSnapshotTest extends TestCase
             new PoiLabelResolver($translator),
             $estimator,
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new ScanPois(self::TRIP));
 
@@ -519,20 +457,13 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new ScanAccommodationsHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests($request),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests($request), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             new AccommodationSourceRegistry([$source], new NearbyNameDeduplicator(new HaversineDistance())),
             new HaversineDistance(),
             new GeometryBasedDistributor(new HaversineDistance()),
             $seasonality,
             new CandidateRanker(),
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new ScanAccommodations(self::TRIP));
 
@@ -577,18 +508,11 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new AnalyzeTerrainHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(new TripRequest()),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(new TripRequest()), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $renderer),
             $this->createStub(TransientTripPointsStoreInterface::class),
             $registry,
             $ways,
             new GeometryBasedDistributor(new HaversineDistance()),
-            $this->createStub(MessageBusInterface::class),
-            $renderer,
         );
         $handler(new AnalyzeTerrain(self::TRIP));
 
@@ -609,16 +533,9 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckRailwayStationsHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $repository,
             new HaversineDistance(),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckRailwayStations(self::TRIP));
 
@@ -635,17 +552,10 @@ final class AlertPayloadSnapshotTest extends TestCase
         $persisted = [];
         $published = [];
         $handler = new CheckBikeShopsHandler(
-            $this->tracker(),
-            $this->recordingPublisher($published),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $this->requests(),
-            $this->recordingStageStore($stages, $persisted),
+            new TripHandlerContext($this->tracker(), $this->recordingPublisher($published), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $this->requests(), $this->recordingStageStore($stages, $persisted), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $this->createStub(TransientTripPointsStoreInterface::class),
             $repository,
             new HaversineDistance(),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
         $handler(new CheckBikeShops(self::TRIP));
 

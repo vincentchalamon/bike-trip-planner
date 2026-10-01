@@ -6,14 +6,16 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Enum\ComputationName;
 use App\Logger\CorrelationContext;
 use App\Mapper\EventArrayMapper;
 use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisher;
+use App\Message\FetchWeather;
+use App\Message\TracksComputation;
 use App\MessageHandler\AbstractTripMessageHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
@@ -55,15 +57,15 @@ final class AbstractTripMessageHandlerTest extends TestCase
             $warnings[] = $context;
         });
 
-        $handler = new readonly class ($this->createStub(ComputationTrackerInterface::class), $this->createPublisher($hub), $this->createStub(TripGenerationTrackerInterface::class), $logger, $this->createStub(TripRequestRepositoryInterface::class), $this->createStub(TripStageStoreInterface::class), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()) extends AbstractTripMessageHandler {
-            public function run(string $tripId, ComputationName $computation, callable $callback): void
+        $handler = new readonly class (new TripHandlerContext($this->createStub(ComputationTrackerInterface::class), $this->createPublisher($hub), $this->createStub(TripGenerationTrackerInterface::class), $logger, $this->createStub(TripRequestRepositoryInterface::class), $this->createStub(TripStageStoreInterface::class), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer())) extends AbstractTripMessageHandler {
+            public function run(TracksComputation $message, callable $callback): void
             {
-                $this->executeWithTracking($tripId, $computation, $callback);
+                $this->executeWithTracking($message, $callback);
             }
         };
 
         try {
-            $handler->run(self::TRIP_ID, ComputationName::WEATHER, static function () use ($failure): never {
+            $handler->run(new FetchWeather(self::TRIP_ID), static function () use ($failure): never {
                 throw $failure;
             });
             self::fail('The failure must be rethrown for Messenger to retry.');

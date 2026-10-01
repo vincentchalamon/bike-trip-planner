@@ -13,6 +13,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBorderCrossing;
 use App\MessageHandler\CheckBorderCrossingHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -49,15 +50,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $tripRequestRepository->method('getLocale')->willReturn($locale);
 
         return new CheckBorderCrossingHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripRequestRepository,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripRequestRepository, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $adminBoundaryRepository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

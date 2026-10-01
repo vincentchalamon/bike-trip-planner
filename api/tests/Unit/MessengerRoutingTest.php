@@ -6,6 +6,7 @@ namespace App\Tests\Unit;
 
 use App\Enum\ComputationName;
 use App\Message\BelongsToATripGeneration;
+use App\Message\TracksComputation;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -124,6 +125,35 @@ final class MessengerRoutingTest extends TestCase
             implode(', ', $missing),
             BelongsToATripGeneration::class,
         ));
+    }
+
+    /**
+     * Every pipeline computation is declared by exactly one message, and no two messages claim
+     * the same computation.
+     *
+     * The declaration is the only mapping: the handler tracks, the failure subscriber fails,
+     * the dispatch middleware re-arms and the enrichment factory builds through it. A pipeline
+     * computation no message declares would stay `pending` once its retries ran out and the
+     * completion gate could never close.
+     */
+    #[Test]
+    public function everyPipelineComputationIsTrackedByExactlyOneMessage(): void
+    {
+        $trackers = [];
+        foreach ($this->declaredMessageClasses() as $class) {
+            if (is_subclass_of($class, TracksComputation::class)) {
+                $trackers[$class::computation()->value][] = new \ReflectionClass($class)->getShortName();
+            }
+        }
+
+        $shared = array_filter($trackers, static fn (array $classes): bool => \count($classes) > 1);
+        self::assertSame([], $shared, 'These computations are declared by more than one message.');
+
+        $missing = array_values(array_filter(
+            array_map(static fn (ComputationName $c): string => $c->value, ComputationName::pipeline()),
+            static fn (string $computation): bool => !isset($trackers[$computation]),
+        ));
+        self::assertSame([], $missing, \sprintf('No message implementing %s declares these pipeline computations.', TracksComputation::class));
     }
 
     /**

@@ -24,6 +24,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\BelongsToATripGeneration;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -71,16 +72,9 @@ final class GenerateStagesHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new GenerateStagesHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $messageBus, $this->createAlertRenderer()),
             $this->bootstrapper($tripStateManager, $stageStore, $publisher, $structuralComputation),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
-            $messageBus,
-            $this->createAlertRenderer(),
         );
     }
 
@@ -423,16 +417,9 @@ final class GenerateStagesHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 2, 'failed' => 0, 'settled' => 2, 'total' => 14]);
 
         $handler = new GenerateStagesHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $messageBus, $this->createAlertRenderer()),
             $this->bootstrapper($tripStateManager, $stageStore, $publisher, $this->structuralComputation($tripStateManager, $pacingEngine, points: $points)),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
-            $messageBus,
-            $this->createAlertRenderer(),
         );
 
         $handler(new GenerateStages('trip-1'));

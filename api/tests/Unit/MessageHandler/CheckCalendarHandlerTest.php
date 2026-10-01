@@ -14,6 +14,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\MessageHandler\CheckCalendarHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -151,15 +152,8 @@ final class CheckCalendarHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new CheckCalendarHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $adminBoundaryRepository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

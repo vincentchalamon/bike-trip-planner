@@ -13,6 +13,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckFerries;
 use App\MessageHandler\CheckFerriesHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\FerryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -47,15 +48,8 @@ final class CheckFerriesHandlerTest extends TestCase
         $tripRequestRepository->method('getLocale')->willReturn($locale);
 
         return new CheckFerriesHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripRequestRepository,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripRequestRepository, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $ferryRepository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

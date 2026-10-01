@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Enum\ComputationName;
+
 /**
  * Recomputes one stage's geometry around an inserted waypoint.
  *
@@ -11,7 +13,7 @@ namespace App\Message;
  * number of intervening edits, and a stale index would rewrite the geometry of a
  * different stage — a silent corruption rather than a lost write (ADR-066).
  */
-final readonly class RecalculateRouteSegment implements BelongsToATripGeneration
+final readonly class RecalculateRouteSegment implements TracksComputation
 {
     public function __construct(
         public string $tripId,
@@ -21,5 +23,11 @@ final readonly class RecalculateRouteSegment implements BelongsToATripGeneration
         public string $reason,
         public ?int $generation = null,
     ) {
+    }
+
+    #[\Override]
+    public static function computation(): ComputationName
+    {
+        return ComputationName::ROUTE_SEGMENT;
     }
 }

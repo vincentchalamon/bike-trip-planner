@@ -13,6 +13,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateRouteSegment;
 use App\MessageHandler\RecalculateRouteSegmentHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Routing\RoutingProviderInterface;
@@ -75,15 +76,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         $handler = new RecalculateRouteSegmentHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $routingProvider,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -111,15 +105,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         $handler = new RecalculateRouteSegmentHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $routingProvider,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -156,15 +143,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         $handler = new RecalculateRouteSegmentHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $routingProvider,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
 
         $handler(new RecalculateRouteSegment(

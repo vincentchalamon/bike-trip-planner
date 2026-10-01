@@ -6,13 +6,10 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\FixedSchedule;
 use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
@@ -20,11 +17,9 @@ use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
 use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
@@ -32,11 +27,7 @@ use App\Poi\PoiSourceRegistry;
 use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TransientTripPointsStoreInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
@@ -54,12 +45,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     ];
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private TransientTripPointsStoreInterface $points,
         private PoiSourceRegistry $poiSourceRegistry,
         private WaterPointRepositoryInterface $waterPointRepository,
@@ -69,10 +55,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private StageArrayMapper $stageMapper,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(ScanPois $message): void
@@ -91,7 +75,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         // Needed to evaluate weekday-dependent opening_hours rules ("Mo-Sa 08:00-19:00").
         $startDate = $request instanceof TripRequest ? $request->startDate : null;
 
-        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed, $startDate): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed, $startDate): void {
             // Decode the route corridor from the decimated points (fallback: stage geometry).
             $route = $this->routeCorridor($this->points, $tripId, $stages);
 

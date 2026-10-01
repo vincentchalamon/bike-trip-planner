@@ -7,26 +7,17 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBorderCrossing;
 use App\Osm\AdminBoundaryRepositoryInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Detects international border crossings along the route.
@@ -40,17 +31,10 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandler
 {
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckBorderCrossing $message): void
@@ -62,7 +46,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::BORDER_CROSSING, function () use ($tripId, $stages): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages): void {
             // Collect unique points to query: start of first stage + end of each stage
             $checkPoints = $this->buildCheckPoints($stages);
 

@@ -15,6 +15,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\MessageHandler\AnalyzeWindHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use App\Tests\Unit\AlertMessageTestTrait;
@@ -125,14 +126,7 @@ final class AnalyzeWindHandlerTest extends TestCase
         );
 
         return new AnalyzeWindHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
         );
     }
 

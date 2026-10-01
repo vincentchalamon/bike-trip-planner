@@ -8,28 +8,19 @@ use App\Entity\User;
 use App\Geo\Nearest;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\Poi\PoiLabelResolver;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Detects cultural POIs (museums, monuments, castles, churches, viewpoints)
@@ -54,20 +45,13 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
     private const int MAX_SUGGESTIONS_PER_STAGE = 3;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private CulturalPoiSourceRegistry $registry,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private PoiLabelResolver $poiLabels,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckCulturalPois $message): void
@@ -81,7 +65,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
-        $this->executeWithTracking($tripId, ComputationName::CULTURAL_POIS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $locale): void {
             // Collect geometries for non-rest-day stages
             /** @var list<list<array{lat: float, lon: float}>> $stageGeometries */
             $stageGeometries = [];

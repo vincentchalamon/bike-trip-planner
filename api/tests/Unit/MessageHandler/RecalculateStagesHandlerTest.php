@@ -31,6 +31,7 @@ use App\Message\AnalyzeTerrain;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -54,14 +55,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
 
         return new RecalculateStagesHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
-            $messageBus,
-            $this->createAlertRenderer(),
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $messageBus, $this->createAlertRenderer()),
             new TripAnalysisDispatcher($messageBus, new EnrichmentMessageFactory()),
             // A real one, inert: it is `final readonly` so it cannot be doubled, and with a
             // tracker that knows no statuses it settles nothing. What it does is covered by

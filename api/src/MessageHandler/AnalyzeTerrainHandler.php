@@ -5,25 +5,16 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Enum\AlertGroup;
-use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Osm\WaysRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
@@ -38,20 +29,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
     private const int WAYS_CORRIDOR_RADIUS_METERS = 20;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private TransientTripPointsStoreInterface $points,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private WaysRepositoryInterface $waysRepository,
         private GeometryDistributorInterface $distributor,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(AnalyzeTerrain $message): void
@@ -70,7 +54,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         $departureHour = $request?->departureHour ?? 8; // @phpstan-ignore nullsafe.neverNull
         $averageSpeed = $request?->averageSpeed ?? 15.0; // @phpstan-ignore nullsafe.neverNull
 
-        $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);
             $stageCount = \count($stages);
             $alertsData = [];

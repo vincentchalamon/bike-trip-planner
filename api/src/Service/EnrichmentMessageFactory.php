@@ -18,6 +18,7 @@ use App\Message\FetchWeather;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
+use App\Message\TracksComputation;
 
 /**
  * The message a computation is carried by.
@@ -28,6 +29,28 @@ use App\Message\ScanPois;
  */
 final readonly class EnrichmentMessageFactory
 {
+    /**
+     * The messages an enrichment is dispatched by. Each declares its own computation, so this
+     * lists them without mapping them a second time.
+     *
+     * @var list<class-string<TracksComputation>>
+     */
+    private const array MESSAGES = [
+        ScanPois::class,
+        ScanAccommodations::class,
+        AnalyzeTerrain::class,
+        FetchWeather::class,
+        CheckCalendar::class,
+        CheckBikeShops::class,
+        CheckWaterPoints::class,
+        CheckHealthServices::class,
+        CheckCulturalPois::class,
+        CheckRailwayStations::class,
+        CheckBorderCrossing::class,
+        CheckFerries::class,
+        ScanEvents::class,
+    ];
+
     /**
      * @param list<string> $enabledAccommodationTypes
      *
@@ -40,26 +63,17 @@ final readonly class EnrichmentMessageFactory
         string $tripId,
         ?int $generation = null,
         array $enabledAccommodationTypes = [],
-    ): object {
-        return match ($computation) {
-            ComputationName::POIS => new ScanPois($tripId, $generation),
-            ComputationName::ACCOMMODATIONS => new ScanAccommodations(
-                $tripId,
-                enabledAccommodationTypes: $enabledAccommodationTypes,
-                generation: $generation,
-            ),
-            ComputationName::TERRAIN => new AnalyzeTerrain($tripId, $generation),
-            ComputationName::WEATHER => new FetchWeather($tripId, $generation),
-            ComputationName::CALENDAR => new CheckCalendar($tripId, $generation),
-            ComputationName::BIKE_SHOPS => new CheckBikeShops($tripId, $generation),
-            ComputationName::WATER_POINTS => new CheckWaterPoints($tripId, $generation),
-            ComputationName::HEALTH_SERVICES => new CheckHealthServices($tripId, $generation),
-            ComputationName::CULTURAL_POIS => new CheckCulturalPois($tripId, $generation),
-            ComputationName::RAILWAY_STATIONS => new CheckRailwayStations($tripId, $generation),
-            ComputationName::BORDER_CROSSING => new CheckBorderCrossing($tripId, $generation),
-            ComputationName::FERRIES => new CheckFerries($tripId, $generation),
-            ComputationName::EVENTS => new ScanEvents($tripId, $generation),
-            default => throw new \LogicException(\sprintf('No enrichment message registered for computation "%s". WIND and FORDS are cascaded by FetchWeatherHandler once the forecast lands; ROUTE, STAGES and ROUTE_SEGMENT are not enrichments.', $computation->value)),
-        };
+    ): TracksComputation {
+        foreach (self::MESSAGES as $class) {
+            if ($class::computation() !== $computation) {
+                continue;
+            }
+
+            return ScanAccommodations::class === $class
+                ? new ScanAccommodations($tripId, enabledAccommodationTypes: $enabledAccommodationTypes, generation: $generation)
+                : new $class($tripId, $generation);
+        }
+
+        throw new \LogicException(\sprintf('No enrichment message registered for computation "%s". WIND and FORDS are cascaded by FetchWeatherHandler once the forecast lands; ROUTE, STAGES and ROUTE_SEGMENT are not enrichments.', $computation->value));
     }
 }

@@ -21,6 +21,7 @@ use App\Weather\WeatherForecastSerializer;
 use App\Mapper\StageArrayMapper;
 use App\Mapper\EventArrayMapper;
 use App\MessageHandler\ScanPoisHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceInterface;
@@ -166,12 +167,7 @@ final class ScanPoisHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new ScanPoisHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $points ?? $this->decimatedPoints(),
             $poiSourceRegistry,
             $waterPointRepository,
@@ -181,8 +177,6 @@ final class ScanPoisHandlerTest extends TestCase
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 
