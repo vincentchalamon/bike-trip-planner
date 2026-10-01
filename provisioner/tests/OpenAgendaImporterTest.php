@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\Exception\ImportFailedException;
 use Provisioner\OpenAgendaImporter;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Process\Process;
@@ -222,5 +223,23 @@ final class OpenAgendaImporterTest extends TestCase
 
         $this->expectException(ImportFailedException::class);
         $importer->run($this->workDir, 'bretagne', '2026-07-15');
+    }
+
+    #[Test]
+    public function aTransportErrorDoesNotQuoteTheApiKey(): void
+    {
+        $importer = new OpenAgendaImporter(
+            exportUrl: 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/evenements/exports/jsonl?apikey=s3cr3t%2Bkey',
+            httpClient: new MockHttpClient(static fn (string $method, string $url): never => throw new TransportException(\sprintf('Idle timeout reached for "%s".', $url))),
+            processFactory: $this->capturingFactory(),
+        );
+
+        try {
+            $importer->run($this->workDir, 'bretagne', '2026-07-15');
+            self::fail('The download should have failed.');
+        } catch (ImportFailedException $importFailedException) {
+            self::assertStringContainsString('apikey=[redacted]', $importFailedException->getMessage());
+            self::assertStringNotContainsString('s3cr3t', $importFailedException->getMessage());
+        }
     }
 }

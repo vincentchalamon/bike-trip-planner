@@ -154,3 +154,34 @@ PG-reference is not backed up: it is rebuilt from the sources. Times are in the 
   ([uptime monitoring](runbooks/uptime-monitoring.md)).
 - **Incidents:** alerts become issues through `incident-create.yml`; the playbooks are in the
   [runbooks](runbooks/README.md).
+
+## Logs: what they hold and how long they stay
+
+Every container writes to stdout/stderr, kept by Docker's `json-file` driver. The `docker`
+Ansible role writes `/etc/docker/daemon.json` with `max-size: 20m` and `max-file: 5`
+(`docker_log_max_size` / `docker_log_max_file` in `group_vars/all.yml`). Each container
+therefore keeps at most 100 MB of logs on disk, and the oldest file goes first. Retention is
+bounded by size, not by time: on a quiet stack that is weeks, under load a few days. The options
+only apply to containers created after the daemon read them. The first playbook run after this
+change restarts Docker, and the containers that already existed keep unbounded logs until they
+are recreated (`docker compose up -d --force-recreate`, or the next deploy that changes them).
+
+What reaches those logs is kept free of personal data and credentials, at the source:
+
+- **Application (Monolog):** every record goes through `App\Logger\RedactionProcessor`, and the
+  prod JSON lines through `RedactingJsonFormatter`. Email addresses, verify tokens, share codes,
+  FCM tokens, signed or keyed query values and positions are redacted. Users are logged by id,
+  addresses without a user by `EmailFingerprint`, client IPs not at all.
+- **Edge:** Caddy's access log redacts the same URL parts (URI and Referer). Traefik's logs no
+  path and no query.
+- **PostgreSQL:** slow statements are logged without their bound values
+  (`log_parameter_max_length=0`).
+- **Errors (Sentry):** request bodies are never read, and query strings, cookies, URL secrets
+  and addresses are scrubbed before an event leaves (backend `EventScrubber`, PWA
+  `sentry-scrub.ts`). How long the tracker keeps events is set in the tracker, not here.
+
+One store holds personal data by design: the Messenger `failed` transport (a Redis stream). A
+message that exhausted its retries is kept there whole, so it can be retried. That includes the
+waypoint coordinates of a `RecalculateRouteSegment`, and the title, body and FCM tokens of a
+`SendPushNotification`. Nothing expires it. Triage it with
+[worker-stuck](runbooks/worker-stuck.md), then retry or remove it.

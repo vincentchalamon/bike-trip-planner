@@ -399,7 +399,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         } catch (HttpClientExceptionInterface $httpClientException) {
             fclose($handle);
 
-            throw new ImportFailedException(\sprintf('DataTourisme flux download failed: %s', $httpClientException->getMessage()), 0, $httpClientException);
+            throw new ImportFailedException(\sprintf('DataTourisme flux download failed: %s', $this->withoutAppKey($httpClientException->getMessage())), 0, $httpClientException);
         } finally {
             if (\is_resource($handle)) {
                 fclose($handle);
@@ -654,5 +654,17 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop tourism staging schema');
+    }
+
+    /**
+     * A transport error quotes the URL it failed on, and the flux URL's last segment
+     * is the app key (EnvImporters): the message lands in provisioner.log and on the
+     * console.
+     */
+    private function withoutAppKey(string $message): string
+    {
+        $appKey = basename((string) parse_url($this->fluxUrl, \PHP_URL_PATH));
+
+        return '' === $appKey ? $message : str_replace([$appKey, rawurlencode($appKey)], '[redacted]', $message);
     }
 }

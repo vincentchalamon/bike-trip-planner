@@ -37,6 +37,11 @@ app_deploy_ref: "main"
 docker_networks:
   - edge          # Traefik <-> app php containers, and cloudflared -> Traefik
   - btp-shared    # Valhalla + PG-reference, shared by prod + previews
+# Container log rotation (daemon.json, json-file driver): each container's
+# stdout/stderr is capped at max_file x max_size on disk, oldest file dropped
+# first. Without it docker logs grow, and are kept, forever.
+docker_log_max_size: "20m"
+docker_log_max_file: 5
 
 # --- Traefik (single reverse proxy; Docker provider; HTTP; NO ACME) ----------
 traefik_image: "traefik:v3.7.13"
