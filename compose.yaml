@@ -483,6 +483,15 @@ services:
       - pg_stat_statements.track=all
       - -c
       - log_min_duration_statement=100
+      # The slow-statement lines above print the statement only, not its bound
+      # values: by default they would print them in full (`parameters: $1 =
+      # 'rider@example.com'`), the address, the token hash or the position of
+      # whatever query happened to be slow. The `_on_error` one is already 0 by
+      # default; pinned so it cannot drift.
+      - -c
+      - log_parameter_max_length=0
+      - -c
+      - log_parameter_max_length_on_error=0
     deploy:
       resources:
         limits:
