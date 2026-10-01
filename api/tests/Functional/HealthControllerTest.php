@@ -109,6 +109,7 @@ final class HealthControllerTest extends ApiTestCase
         foreach (['postgres', 'postgres_reference', 'redis', 'mercure', 'valhalla'] as $dep) {
             $this->assertSame(['status', 'latency_ms'], array_keys($data['deps'][$dep]), $dep);
         }
+
         $this->assertSame(
             ['status', 'latency_ms', 'workers_alive', 'queue_depth', 'failed_depth'],
             array_keys($data['deps']['messenger']),
@@ -286,7 +287,7 @@ final class HealthControllerTest extends ApiTestCase
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
-        // checkPostgres() runs `SET statement_timeout` (executeStatement) before
+        // PostgresCheck runs `SET statement_timeout` (executeStatement) before
         // `SELECT 1` (executeQuery); when Postgres is unreachable the former
         // throws first, so both must fail to mirror the real failure mode.
         $brokenConnection = $this->createMock(Connection::class);
