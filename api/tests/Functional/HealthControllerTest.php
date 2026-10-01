@@ -87,6 +87,62 @@ final class HealthControllerTest extends ApiTestCase
         }
     }
 
+    /**
+     * The payload an operator and the uptime probes read: the order of the dependencies and
+     * the fields each one carries.
+     */
+    #[Test]
+    public function readinessKeepsItsShapeAndItsOrder(): void
+    {
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $data = $this->client->request('GET', '/api/health')->toArray();
+
+        $this->assertSame(['status', 'deps'], array_keys($data));
+        $this->assertSame(
+            ['postgres', 'postgres_reference', 'redis', 'reference_data', 'messenger', 'mercure', 'valhalla'],
+            array_keys($data['deps']),
+        );
+        foreach (['postgres', 'postgres_reference', 'redis', 'mercure', 'valhalla'] as $dep) {
+            $this->assertSame(['status', 'latency_ms'], array_keys($data['deps'][$dep]), $dep);
+        }
+        $this->assertSame(
+            ['status', 'latency_ms', 'workers_alive', 'queue_depth', 'failed_depth'],
+            array_keys($data['deps']['messenger']),
+        );
+        $this->assertSame(
+            ['status', 'latency_ms', 'osm', 'tourism', 'zones'],
+            array_keys($data['deps']['reference_data']),
+        );
+        $this->assertSame(
+            ['open', 'routing_perimeter', 'routing_containment'],
+            array_keys($data['deps']['reference_data']['zones']),
+        );
+    }
+
+    #[Test]
+    public function readinessReportsHttpDependenciesDownWithTheirErrorAndKeepsTheOthers(): void
+    {
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('', ['error' => 'host unreachable']),
+            mercure: new MockResponse('', ['http_code' => 502]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(503);
+        $data = $response->toArray(false);
+        $this->assertSame('degraded', $data['status']);
+        $this->assertSame('down', $data['deps']['valhalla']['status']);
+        $this->assertSame('TransportException', $data['deps']['valhalla']['error']);
+        $this->assertSame(['status', 'latency_ms'], array_keys($data['deps']['mercure']));
+        $this->assertSame('down', $data['deps']['mercure']['status']);
+        $this->assertSame('ok', $data['deps']['postgres']['status']);
+    }
+
     #[Test]
     public function readinessReportsTheQueueDepthAndTheDeadLetterCountWithoutJudgingThem(): void
     {
