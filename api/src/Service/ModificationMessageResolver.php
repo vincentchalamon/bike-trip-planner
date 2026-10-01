@@ -7,6 +7,7 @@ namespace App\Service;
 use App\ApiResource\TripModification;
 use App\Enum\ComputationName;
 use App\Enum\ComputationTrigger;
+use App\Enum\TripModificationType;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 
@@ -102,7 +103,7 @@ final readonly class ModificationMessageResolver
 
         foreach ($modifications as $modification) {
             switch ($modification->type) {
-                case 'accommodation':
+                case TripModificationType::ACCOMMODATION:
                     $position = $this->positionOf($stageIds, $modification->stageId);
                     if (null !== $position) {
                         $recalcIndices[] = $position;
@@ -116,7 +117,7 @@ final readonly class ModificationMessageResolver
 
                     break;
 
-                case 'distance':
+                case TripModificationType::DISTANCE:
                     $position = $this->positionOf($stageIds, $modification->stageId);
                     if (null !== $position) {
                         // Distance change affects the modified stage and all subsequent
@@ -135,7 +136,7 @@ final readonly class ModificationMessageResolver
                     // Listing it again is what dispatched the overlap twice.
                     break;
 
-                case 'dates':
+                case TripModificationType::DATES:
                     // Recorded, not built: if this batch also moves a line there will be a
                     // RecalculateStages to carry both triggers, and building the date set
                     // here as well would dispatch the five computations common to the two
@@ -143,7 +144,7 @@ final readonly class ModificationMessageResolver
                     $datesAlsoShift = true;
                     break;
 
-                case 'pacing':
+                case TripModificationType::PACING:
                     // Pacing changes affect all stages (fatigue factor, elevation penalty, etc.)
                     array_push($recalcIndices, ...array_keys($stageIds));
                     // Re-pacing redraws every stage and moves every stage onto a new date.

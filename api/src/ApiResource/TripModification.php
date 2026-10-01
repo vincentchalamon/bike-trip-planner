@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use App\Enum\TripModificationType;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -25,19 +26,16 @@ final class TripModification
          */
         #[Assert\Uuid]
         #[Assert\When(
-            expression: "this.type in ['accommodation', 'distance']",
+            expression: 'this.type.targetsStage()',
             constraints: [new Assert\NotNull(message: 'stageId is required for accommodation and distance modifications.')],
         )]
         public ?string $stageId = null,
 
         /**
          * Type of modification — determines which handlers are re-dispatched.
-         *
-         * Valid values: 'accommodation', 'distance', 'dates', 'pacing'.
          */
         #[Assert\NotBlank]
-        #[Assert\Choice(choices: ['accommodation', 'distance', 'dates', 'pacing'])]
-        public string $type = 'accommodation',
+        public TripModificationType $type = TripModificationType::ACCOMMODATION,
 
         /**
          * Human-readable description for display in the frontend queue panel.
