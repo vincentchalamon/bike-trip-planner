@@ -506,4 +506,17 @@ final class Stage
 
         return $geometry[(int) (\count($geometry) / 2)];
     }
+
+    /**
+     * The calendar day this stage is ridden on, for a trip starting on $tripStart.
+     *
+     * Read off the day number, which the stage carries wherever it goes, rather than off its
+     * position in whatever list the caller holds. The two agree because every structural edit
+     * renumbers (`TripStageStoreInterface::mutateStages(resequence: true)`); a rest day is a
+     * stage, so it takes its calendar day like any other.
+     */
+    public function dateFrom(\DateTimeImmutable $tripStart): \DateTimeImmutable
+    {
+        return $tripStart->modify(\sprintf('+%d days', max(0, $this->dayNumber - 1)));
+    }
 }

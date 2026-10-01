@@ -54,12 +54,12 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         $this->executeWithTracking($message, function () use ($tripId, $stages, $startDate): void {
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 // A rest day is not scanned, and carries no events: the empty write below
                 // clears whatever a previous run left on a stage that has since become one.
                 $events = $stage->isRestDay
                     ? []
-                    : $this->fetchEventsForStage($stage, $startDate->modify(\sprintf('+%d days', $i)));
+                    : $this->fetchEventsForStage($stage, $stage->dateFrom($startDate));
 
                 foreach ($events as $event) {
                     $stage->addEvent($event);

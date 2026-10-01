@@ -71,7 +71,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             foreach ($stages as $i => $stage) {
                 $lat = $stage->startPoint->lat;
                 $lon = $stage->startPoint->lon;
-                $stageDate = $baseDate->modify(\sprintf('+%d days', $stage->dayNumber - 1));
+                $stageDate = $stage->dateFrom($baseDate);
                 $localDate = $stageDate->format('Y-m-d');
 
                 $contexts[$i] = [

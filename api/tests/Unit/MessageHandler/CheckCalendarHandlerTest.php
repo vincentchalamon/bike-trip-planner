@@ -76,6 +76,38 @@ final class CheckCalendarHandlerTest extends TestCase
         $handler(new CheckCalendar('trip-1'));
     }
 
+    /**
+     * The stage is dated by its day number, not by where it sits in the list handed over: the
+     * two used to be mixed across handlers, and only agree while the list is the whole trip in
+     * order.
+     */
+    #[Test]
+    public function datesAStageByItsDayNumberRatherThanItsPositionInTheList(): void
+    {
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::CALENDAR_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    self::assertCount(1, $data['alerts']);
+                    self::assertSame('Stage 2 coincides with a public holiday (Bastille Day). Some businesses may be closed.', $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        // Day 2 of a trip starting on Monday 2026-07-13 is Bastille Day; position 0 would be the 13th.
+        $handler = $this->createHandler(
+            $this->tripStateManager(new \DateTimeImmutable('2026-07-13')),
+            $this->stageStore([$this->createStage('trip-1', 2)]),
+            $publisher,
+            $this->adminBoundaryRepository(['FR']),
+        );
+        $handler(new CheckCalendar('trip-1'));
+    }
+
     private function createStage(string $tripId, int $dayNumber, float $lat = 48.0, float $lon = 2.0): Stage
     {
         return new Stage(

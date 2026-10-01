@@ -72,8 +72,8 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
 
             $alerts = [];
 
-            foreach ($stages as $i => $stage) {
-                $stageDate = $startDate->modify(\sprintf('+%d days', $i));
+            foreach ($stages as $stage) {
+                $stageDate = $stage->dateFrom($startDate);
                 $holiday = $this->findHoliday($providers, $stageDate);
 
                 if ($holiday instanceof Holiday) {

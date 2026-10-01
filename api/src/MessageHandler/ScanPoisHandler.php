@@ -141,7 +141,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 // Resupply timing warning: warn when every resupply POI on this stage is
                 // *known* to be closed at the estimated rider passage time.
-                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
+                $stageDate = $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null;
 
                 if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($fullPois, $stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
                     $alerts[] = AlertPayload::of(new Alert(

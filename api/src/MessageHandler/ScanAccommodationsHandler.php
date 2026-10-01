@@ -130,7 +130,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $existingKeys = [];
                 }
 
-                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
+                $stageDate = $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null;
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $key = \sprintf('%F,%F', $raw['lat'], $raw['lon']);
                     if (isset($existingKeys[$key])) {
