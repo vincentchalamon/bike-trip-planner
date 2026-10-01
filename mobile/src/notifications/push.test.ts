@@ -20,11 +20,13 @@ const getToken = Notifications.getDevicePushTokenAsync as jest.Mock;
 const expectedPlatform =
   Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : null;
 
-beforeEach(() => {
+beforeEach(async () => {
+  globalThis.fetch = jest.fn().mockResolvedValue(new Response(null, { status: 200 }));
+  // The registered token is module state: drop the one a previous test left behind.
+  await unregisterDeviceToken();
   jest.clearAllMocks();
   getPerms.mockResolvedValue({ granted: true });
   getToken.mockResolvedValue({ type: 'android', data: 'fcm-token-abc' });
-  globalThis.fetch = jest.fn().mockResolvedValue(new Response(null, { status: 200 }));
 });
 
 describe('registerDeviceToken', () => {
@@ -85,7 +87,6 @@ describe('unregisterDeviceToken', () => {
   });
 
   it('is a no-op when nothing was registered', async () => {
-    // Fresh module state guaranteed by clearing the registered token first.
     await unregisterDeviceToken();
     await unregisterDeviceToken();
     expect(fetch).not.toHaveBeenCalled();

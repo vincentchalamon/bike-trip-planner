@@ -98,7 +98,10 @@ describe('AccountNotifications screen', () => {
 
   it('re-checks the permission when the app returns to the foreground', async () => {
     let appStateListener: (s: string) => void = () => {};
-    const addSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, cb) => {
+    // AppState.addEventListener is already a jest.fn in the react-native preset, so
+    // spyOn returns that same mock and mockRestore would strip its default
+    // implementation (returning a subscription) for every later test: override once.
+    jest.spyOn(AppState, 'addEventListener').mockImplementationOnce((_event, cb) => {
       appStateListener = cb as (s: string) => void;
       return { remove: jest.fn() } as never;
     });
@@ -115,8 +118,6 @@ describe('AccountNotifications screen', () => {
       await Promise.resolve();
     });
     expect(texts(tree)).toContain('Autorisées par le système');
-
-    addSpy.mockRestore();
   });
 
   it('renders the denied banner when permission is refused and not re-askable', async () => {
