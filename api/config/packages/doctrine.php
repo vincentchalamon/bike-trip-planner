@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Doctrine\Jsonb;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
-use MartinGeorgiev\Doctrine\DBAL\Types\Jsonb;
 use MartinGeorgiev\Doctrine\DBAL\Types\TextArray;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 

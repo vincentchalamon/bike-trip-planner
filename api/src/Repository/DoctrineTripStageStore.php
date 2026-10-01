@@ -295,10 +295,11 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
     /**
      * Endpoints + geometry coordinates of a persisted stage entity.
      *
-     * The geometry is cast: the JSONB column is encoded without JSON_PRESERVE_ZERO_FRACTION, so
-     * a coordinate written as `2.0` reads back as the int `2`, and the strict comparison in
-     * {@see self::geometryUnchanged()} took every route with one integral coordinate for a
-     * moved one. Any other value round-trips exactly, so the cast is all the tolerance needed.
+     * The geometry is cast: a row written before {@see \App\Doctrine\Jsonb} encoded floats
+     * without JSON_PRESERVE_ZERO_FRACTION holds `2` for `2.0`, which decodes as an int, and the
+     * strict comparison in {@see self::geometryUnchanged()} took every such route with one
+     * integral coordinate for a moved one. Any other value round-trips exactly, so the cast is
+     * all the tolerance needed.
      *
      * @return list<array{float, float}>
      */
