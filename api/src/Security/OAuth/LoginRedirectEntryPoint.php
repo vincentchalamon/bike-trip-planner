@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security\OAuth;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use App\Service\FrontendUrl;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
@@ -36,13 +36,12 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
 final readonly class LoginRedirectEntryPoint implements AuthenticationEntryPointInterface
 {
     public function __construct(
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl,
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
     public function start(Request $request, ?AuthenticationException $authException = null): RedirectResponse
     {
-        return new RedirectResponse(rtrim($this->frontendUrl, '/').'/login');
+        return new RedirectResponse($this->frontendUrl->to('/login'));
     }
 }

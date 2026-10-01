@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Account;
 
+use App\Service\FrontendUrl;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Account\EmailChange;
@@ -12,7 +13,6 @@ use App\Repository\EmailChangeTokenRepository;
 use App\Repository\UserRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -55,8 +55,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         #[Target('email_change_ip')]
         private RateLimiterFactoryInterface $emailChangeIpLimiter,
         private ClockInterface $clock,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
@@ -94,7 +93,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         $token = $this->emailChangeTokenRepository->create($user, $newEmail);
 
         // In the fragment, which a browser never sends (see AuthRequestLinkProcessor).
-        $verifyUrl = \sprintf('%s/account/email-change/verify#%s', rtrim($this->frontendUrl, '/'), (string) $token->getPlainToken());
+        $verifyUrl = $this->frontendUrl->to('/account/email-change/verify#'.(string) $token->getPlainToken());
         $locale = $user->getLocale();
 
         $html = $this->twig->render('email/email_change.html.twig', [

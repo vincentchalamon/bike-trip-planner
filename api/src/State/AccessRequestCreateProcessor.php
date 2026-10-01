@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Service\FrontendUrl;
 use App\Entity\User;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Metadata\Operation;
@@ -15,7 +16,6 @@ use App\Repository\UserRepository;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -54,8 +54,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         #[Target('access_request_ip')]
         private RateLimiterFactoryInterface $accessRequestIpLimiter,
         private ClockInterface $clock,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
@@ -118,11 +117,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // and carries it in the fragment, which a browser never sends: nothing of it
         // reaches an access log or a Referer.
         $payload = $this->hmacService->generatePayload($accessRequest->getId()->toRfc4122());
-        $verifyUrl = \sprintf(
-            '%s/access-requests/verify#%s',
-            rtrim($this->frontendUrl, '/'),
-            http_build_query($payload),
-        );
+        $verifyUrl = $this->frontendUrl->to('/access-requests/verify#'.http_build_query($payload));
 
         $html = $this->twig->render('email/access_request_verify.html.twig', [
             'verifyUrl' => $verifyUrl,

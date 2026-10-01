@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Service\FrontendUrl;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -27,8 +27,7 @@ final readonly class MagicLinkMailer
         private MailerInterface $mailer,
         private Environment $twig,
         private TranslatorInterface $translator,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl,
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
@@ -53,7 +52,7 @@ final readonly class MagicLinkMailer
         // getPlainToken() (not getToken(), which is the hash stored at rest): the link must carry
         // the plaintext the verify endpoint will hash (SEC-003). It rides in the fragment, which
         // a browser never sends, so it stays out of the access logs and the Referer.
-        $verifyUrl = \sprintf('%s/auth/verify#%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
+        $verifyUrl = $this->frontendUrl->to('/auth/verify#'.(string) $magicLink->getPlainToken());
         $locale = $user->getLocale();
 
         $html = $this->twig->render($template, [

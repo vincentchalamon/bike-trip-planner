@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Service\FrontendUrl;
 use App\Security\OAuth\ConsentRecord;
 use App\Security\OAuth\ConsentStore;
 use League\Bundle\OAuth2ServerBundle\Event\AuthorizationRequestResolveEvent;
 use League\Bundle\OAuth2ServerBundle\OAuth2Events;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -41,8 +41,7 @@ final readonly class OAuthConsentListener
     public function __construct(
         private ConsentStore $consents,
         private RequestStack $requestStack,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl,
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
@@ -112,7 +111,7 @@ final readonly class OAuthConsentListener
         ));
 
         $event->setResponse(new RedirectResponse(
-            rtrim($this->frontendUrl, '/').'/oauth/consent/'.$handle,
+            $this->frontendUrl->to('/oauth/consent/'.$handle),
         ));
     }
 }
