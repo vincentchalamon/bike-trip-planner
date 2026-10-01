@@ -55,23 +55,27 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
      */
     public function markRunning(string $tripId, ComputationName $computation): void
     {
+        $this->rehydrate($tripId);
         $this->inner->markRunning($tripId, $computation);
     }
 
     public function markDone(string $tripId, ComputationName $computation): void
     {
+        $this->rehydrate($tripId);
         $this->inner->markDone($tripId, $computation);
         $this->mirror($tripId, $computation);
     }
 
     public function markFailed(string $tripId, ComputationName $computation): void
     {
+        $this->rehydrate($tripId);
         $this->inner->markFailed($tripId, $computation);
         $this->mirror($tripId, $computation);
     }
 
     public function markSupersededUnlessSettled(string $tripId, ComputationName $computation): bool
     {
+        $this->rehydrate($tripId);
         $written = $this->inner->markSupersededUnlessSettled($tripId, $computation);
         if ($written) {
             $this->mirror($tripId, $computation);
@@ -82,6 +86,7 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
 
     public function rearmIfSettled(string $tripId, ComputationName $computation): bool
     {
+        $this->rehydrate($tripId);
         $written = $this->inner->rearmIfSettled($tripId, $computation);
         if ($written) {
             $this->mirror($tripId, $computation);
@@ -96,8 +101,14 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
      */
     public function resetComputation(string $tripId, ComputationName $computation): void
     {
+        $this->rehydrate($tripId);
         $this->inner->resetComputation($tripId, $computation);
         $this->mirror($tripId, $computation);
+    }
+
+    public function restoreStatuses(string $tripId, array $statuses): void
+    {
+        $this->inner->restoreStatuses($tripId, $statuses);
     }
 
     public function claimReadyPublication(string $tripId, ?int $generation = null): bool
@@ -107,6 +118,8 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
 
     public function getProgress(string $tripId): array
     {
+        $this->rehydrate($tripId);
+
         return $this->inner->getProgress($tripId);
     }
 
@@ -144,6 +157,34 @@ final readonly class PersistingComputationTracker implements ComputationTrackerI
         }
 
         return $statuses;
+    }
+
+    /**
+     * Puts the durable map back into the cache before anything reads or writes one entry of it.
+     *
+     * The cache's own writes are read-modify-write on whatever it holds, and once the TTL has
+     * passed it holds nothing: a single write then leaves a map of one entry. Any edit landing
+     * half an hour after the trip's last computation settled did exactly that, and every
+     * reader of the progress took it for the whole pipeline. `resetComputation(STAGES)` left `{stages: pending}`, the
+     * stage generation settling it closed the completion gate while every enrichment it had
+     * just dispatched was still queued, and {@see rearmIfSettled()} could not arm an entry
+     * that no longer existed. Each enrichment then added itself as one more settled entry and
+     * closed the gate again: one `trip_complete` per enrichment, the first `trip_ready` and
+     * its notification ahead of the work.
+     *
+     * Here rather than in each caller, because they all go through the interface and none of
+     * them can tell an expired map from a trip that tracks nothing.
+     */
+    private function rehydrate(string $tripId): void
+    {
+        if (null !== $this->inner->getStatuses($tripId)) {
+            return;
+        }
+
+        $mirrored = $this->trips->getComputationStatus($tripId);
+        if (null !== $mirrored && [] !== $mirrored) {
+            $this->inner->restoreStatuses($tripId, $mirrored);
+        }
     }
 
     /**

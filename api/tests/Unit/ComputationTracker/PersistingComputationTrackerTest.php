@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ComputationTracker;
 
+use App\ComputationTracker\ComputationTracker;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\PersistingComputationTracker;
 use App\Enum\ComputationName;
 use App\ComputationTracker\ComputationStatusStore;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 /**
  * The state has to outlive the cache that holds it (ADR-072).
@@ -171,5 +175,56 @@ final class PersistingComputationTrackerTest extends TestCase
 
         self::assertSame(['route' => 'running'], $statuses['hot']);
         self::assertSame(['route' => 'failed'], $statuses['cold']);
+    }
+
+    /**
+     * A write on an expired map used to leave a map of one entry, which every reader of the
+     * progress took for the whole pipeline: `{stages: pending}` after a re-pacing, closed by
+     * the stage generation alone while every enrichment it dispatched was still queued.
+     */
+    #[Test]
+    public function aWriteAfterTheCacheExpiredStartsFromTheDurableMap(): void
+    {
+        $trips = $this->createStub(ComputationStatusStore::class);
+        $trips->method('getComputationStatus')->willReturn(['route' => 'done', 'stages' => 'done', 'pois' => 'done']);
+
+        $tracker = new PersistingComputationTracker(new ComputationTracker(new ArrayAdapter(), new LockFactory(new InMemoryStore())), $trips);
+
+        $tracker->resetComputation('trip-1', ComputationName::STAGES);
+
+        self::assertSame(['route' => 'done', 'stages' => 'pending', 'pois' => 'done'], $tracker->getStatuses('trip-1'));
+        self::assertSame(['completed' => 2, 'failed' => 0, 'settled' => 2, 'total' => 3], $tracker->getProgress('trip-1'));
+    }
+
+    /**
+     * The send-side rearm only touches an entry that exists. On an expired map there was none,
+     * so a dispatched enrichment stayed out of the map until it settled, and closed the gate
+     * on its own.
+     */
+    #[Test]
+    public function aDispatchAfterTheCacheExpiredRearmsTheDurableEntry(): void
+    {
+        $trips = $this->createStub(ComputationStatusStore::class);
+        $trips->method('getComputationStatus')->willReturn(['stages' => 'done', 'pois' => 'done']);
+
+        $tracker = new PersistingComputationTracker(new ComputationTracker(new ArrayAdapter(), new LockFactory(new InMemoryStore())), $trips);
+
+        self::assertTrue($tracker->rearmIfSettled('trip-1', ComputationName::POIS));
+        self::assertSame(['stages' => 'done', 'pois' => 'pending'], $tracker->getStatuses('trip-1'));
+    }
+
+    #[Test]
+    public function aWriteOnALiveCacheDoesNotReadTheDurableMap(): void
+    {
+        $inner = $this->createStub(ComputationTrackerInterface::class);
+        $inner->method('getStatuses')->willReturn(['stages' => 'done']);
+
+        $trips = $this->createMock(ComputationStatusStore::class);
+        $trips->expects($this->never())->method('getComputationStatus');
+
+        $tracker = new PersistingComputationTracker($inner, $trips);
+        $tracker->resetComputation('trip-1', ComputationName::STAGES);
+        $tracker->rearmIfSettled('trip-1', ComputationName::POIS);
+        $tracker->getProgress('trip-1');
     }
 }
