@@ -75,9 +75,8 @@ final class CorrelationIdProcessorTest extends TestCase
     {
         $stack = new RequestStack();
 
-        $user = $this->createMock(User::class);
         $userId = Uuid::v7();
-        $user->method('getId')->willReturn($userId);
+        $user = new User('rider@example.com', $userId);
 
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn($user);

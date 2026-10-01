@@ -50,8 +50,6 @@ parameters:
     ignoreErrors:
         - identifier: argument.type
           path: tests/Functional/Auth/*
-        - identifier: missingType.iterableValue
-          path: tests/Functional/Auth/*
         # `.env.local.php` is produced by `composer dump-env prod` (prod image
         # build only) and is gitignored, so it is legitimately absent in dev, in
         # CI and in a fresh worktree. The `@include` in the Symfony skeleton's

@@ -33,7 +33,7 @@ final class TripShareLifecycleTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('share@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('share@example.com');
     }
 
     private function seedTripWithStages(string $tripId): void

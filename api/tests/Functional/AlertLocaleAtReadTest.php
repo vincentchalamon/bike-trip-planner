@@ -44,7 +44,7 @@ final class AlertLocaleAtReadTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('locale-at-read@example.com');
+        ['user' => $this->owner, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('locale-at-read@example.com');
     }
 
     #[Test]

@@ -40,7 +40,7 @@ final class AccommodationScanTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     private function seedTrip(string $tripId): void
@@ -100,7 +100,7 @@ final class AccommodationScanTest extends ApiTestCase
         // and is hidden as 404 (not 403) so its existence is not revealed (ADR-038).
         $this->seedTrip(self::TRIP_ID);
 
-        ['token' => $intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $intruderToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('POST', \sprintf('/trips/%s/accommodations/scan', self::TRIP_ID), [
             'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($intruderToken)),

@@ -67,7 +67,7 @@ final class McpIndistinguishabilityTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /**
@@ -97,7 +97,7 @@ final class McpIndistinguishabilityTest extends ApiTestCase
     public function aRefusalAndAnAbsenceAreTheSameAnswer(string $tool, array $someoneElses, array $nothing): void
     {
         $this->seedTrip();
-        $intruder = $this->createTestUserWithJwt('intruder@example.com')['user'];
+        $intruder = $this->createAuthenticatedUser('intruder@example.com')['user'];
         $token = $this->issueAccessTokenFor($intruder);
 
         $denied = $this->call($tool, $someoneElses, $token);

@@ -50,7 +50,7 @@ final class McpListTripsTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     #[Test]
@@ -108,7 +108,7 @@ final class McpListTripsTest extends ApiTestCase
     public function anotherUsersTripsAreNotListed(): void
     {
         $this->seedTrips(2);
-        $intruder = $this->createTestUserWithJwt('intruder@example.com')['user'];
+        $intruder = $this->createAuthenticatedUser('intruder@example.com')['user'];
 
         self::assertSame([], $this->titlesFrom($this->list([], $this->issueAccessTokenFor($intruder))));
     }

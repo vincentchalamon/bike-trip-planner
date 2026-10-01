@@ -26,7 +26,7 @@ final class GeocodeTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('geocode-%s@test.com', bin2hex(random_bytes(4))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('geocode-%s@test.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]

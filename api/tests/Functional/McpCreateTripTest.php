@@ -53,7 +53,7 @@ final class McpCreateTripTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt(\sprintf('creator-%s@example.com', bin2hex(random_bytes(4))));
+        ['user' => $this->owner] = $this->createAuthenticatedUser(\sprintf('creator-%s@example.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]

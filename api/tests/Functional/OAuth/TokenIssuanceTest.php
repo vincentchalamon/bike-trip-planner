@@ -9,7 +9,6 @@ use Lcobucci\JWT\Token\DataSet;
 use ApiPlatform\Test\Client;
 use App\Entity\OAuthClient;
 use App\Entity\RefreshToken;
-use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use App\Tests\ApiTestCase;
 use Lcobucci\JWT\Encoding\JoseEncoder;
@@ -53,9 +52,9 @@ final class TokenIssuanceTest extends ApiTestCase
     {
         self::getContainer()->get('cache.oauth_consent')->clear();
 
+        ['user' => $user, 'jwt' => $this->jwt] = $this->createAuthenticatedUser('agent-owner@example.com');
+
         $em = self::getContainer()->get('doctrine.orm.entity_manager');
-        $user = new User('agent-owner@example.com');
-        $em->persist($user);
         $em->persist(RefreshToken::issue(
             $user,
             self::getContainer()->get(RefreshTokenEncryptor::class),
@@ -63,8 +62,6 @@ final class TokenIssuanceTest extends ApiTestCase
             new \DateTimeImmutable('+30 days'),
         ));
         $em->flush();
-
-        $this->jwt = self::getContainer()->get('lexik_jwt_authentication.jwt_manager')->create($user);
 
         $client = new OAuthClient('Example Agent', self::CLIENT_ID, null);
         $client->setRedirectUris(new RedirectUri(self::REDIRECT_URI));

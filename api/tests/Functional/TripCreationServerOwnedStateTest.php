@@ -39,7 +39,7 @@ final class TripCreationServerOwnedStateTest extends ApiTestCase
     #[\Override]
     protected function setUp(): void
     {
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('owned-%s@test.com', bin2hex(random_bytes(8))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('owned-%s@test.com', bin2hex(random_bytes(8))));
     }
 
     /**

@@ -51,7 +51,7 @@ final class McpDeleteTripTest extends ApiTestCase
         self::getContainer()->get('cache.mcp_confirmation')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     #[Test]
@@ -129,7 +129,7 @@ final class McpDeleteTripTest extends ApiTestCase
     {
         $this->seedTrip();
 
-        ['user' => $stranger] = $this->createTestUserWithJwt('stranger@example.com');
+        ['user' => $stranger] = $this->createAuthenticatedUser('stranger@example.com');
         $strangerToken = $this->issueAccessTokenFor($stranger, ['trips:write']);
 
         $someoneElses = $this->tool('delete_trip', ['id' => self::TRIP_ID], $strangerToken)->toArray(false);

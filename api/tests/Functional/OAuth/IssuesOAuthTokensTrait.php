@@ -62,7 +62,7 @@ trait IssuesOAuthTokensTrait
         ));
         $em->flush();
 
-        $sessionJwt = self::getContainer()->get('lexik_jwt_authentication.jwt_manager')->create($user);
+        $sessionJwt = self::createJwt($user);
 
         $clients = self::getContainer()->get(ClientManagerInterface::class);
         if (null === $clients->find(self::OAUTH_CLIENT_ID)) {

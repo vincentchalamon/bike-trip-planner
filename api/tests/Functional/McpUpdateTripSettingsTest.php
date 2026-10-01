@@ -63,7 +63,7 @@ final class McpUpdateTripSettingsTest extends ApiTestCase
         self::getContainer()->get('cache.mcp_confirmation')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt(\sprintf('settings-%s@example.com', bin2hex(random_bytes(4))));
+        ['user' => $this->owner] = $this->createAuthenticatedUser(\sprintf('settings-%s@example.com', bin2hex(random_bytes(4))));
 
         // Issued here and not lazily: reading the stored trip back clears the entity manager,
         // which detaches this user, and minting a token afterwards would persist a refresh token

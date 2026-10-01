@@ -7,41 +7,16 @@ namespace App\Tests\Functional;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Provides JWT-based authentication helpers for functional tests.
+ * Trip-ownership helpers for functional tests.
  *
- * Tests that exercise endpoints protected by is_granted('ROLE_USER') or trip
- * ownership voters must use this trait to obtain a valid JWT and, when needed,
- * associate the seeded trip with the test user so the voter grants access.
+ * The user and its JWT come from {@see \App\Tests\ApiTestCase::createAuthenticatedUser()};
+ * this trait associates the seeded trip with that user so the voter grants access.
  */
 trait JwtAuthTestTrait
 {
-    /**
-     * Creates a User in the database and returns it together with a signed JWT.
-     *
-     * @param non-empty-string $email
-     *
-     * @return array{user: User, token: string}
-     */
-    private function createTestUserWithJwt(string $email = 'test@example.com'): array
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get('doctrine.orm.entity_manager');
-
-        $user = new User($email);
-        $em->persist($user);
-        $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-        $token = $jwtManager->create($user);
-
-        return ['user' => $user, 'token' => $token];
-    }
-
     /**
      * Gives a seeded trip an owner, so TripVoter grants access to it.
      *

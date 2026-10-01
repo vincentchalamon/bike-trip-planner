@@ -47,7 +47,7 @@ final class TripSharePersistedAlertsTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('share-alerts@example.com');
+        ['user' => $this->owner, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('share-alerts@example.com');
     }
 
     #[Test]

@@ -63,7 +63,7 @@ final class McpUntrustedTextTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->sessionJwt] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner, 'jwt' => $this->sessionJwt] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /**

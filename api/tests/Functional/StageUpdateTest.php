@@ -41,7 +41,7 @@ final class StageUpdateTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createEditingClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTripWithStages(string $tripId, int $stageCount = 3): void

@@ -43,7 +43,7 @@ final class StageAddManualAccommodationTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createEditingClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('manual-acc@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('manual-acc@example.com');
     }
 
     /**

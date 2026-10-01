@@ -44,7 +44,7 @@ final class GpxUploadTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('gpx-%s@test.com', bin2hex(random_bytes(4))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('gpx-%s@test.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]
@@ -391,7 +391,7 @@ final class GpxUploadTest extends ApiTestCase
     #[Test]
     public function aThrottledUploadIsToldWhenToRetry(): void
     {
-        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt(\sprintf('throttled-gpx-%s@test.com', bin2hex(random_bytes(4))));
+        ['user' => $user, 'jwt' => $token] = $this->createAuthenticatedUser(\sprintf('throttled-gpx-%s@test.com', bin2hex(random_bytes(4))));
         $client = self::createClient();
         // The limiter's array pool dies with the kernel, which the browser reboots between
         // requests unless told not to.
@@ -468,7 +468,7 @@ final class GpxUploadTest extends ApiTestCase
         // Regression (recette #649): a GPX upload used to create an *ownerless*
         // trip, so the uploader's GET /detail was denied by TripVoter and hidden
         // as a 404 ("Voyage introuvable" right after a successful upload).
-        ['user' => $user] = $this->createTestUserWithJwt(\sprintf('gpx-owner-%s@test.com', bin2hex(random_bytes(4))));
+        ['user' => $user] = $this->createAuthenticatedUser(\sprintf('gpx-owner-%s@test.com', bin2hex(random_bytes(4))));
 
         $service = self::getContainer()->get(GpxUploadService::class);
         self::assertInstanceOf(GpxUploadService::class, $service);
@@ -490,7 +490,7 @@ final class GpxUploadTest extends ApiTestCase
     #[Test]
     public function aDeletedTripIsNoLongerGrantedToItsFormerOwner(): void
     {
-        ['user' => $user] = $this->createTestUserWithJwt(\sprintf('gpx-deleted-%s@test.com', bin2hex(random_bytes(4))));
+        ['user' => $user] = $this->createAuthenticatedUser(\sprintf('gpx-deleted-%s@test.com', bin2hex(random_bytes(4))));
 
         $service = self::getContainer()->get(GpxUploadService::class);
         self::assertInstanceOf(GpxUploadService::class, $service);

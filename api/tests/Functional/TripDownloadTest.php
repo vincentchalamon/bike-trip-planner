@@ -33,7 +33,7 @@ final class TripDownloadTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTripWithStages(string $tripId): void
@@ -94,7 +94,7 @@ final class TripDownloadTest extends ApiTestCase
         // Object-level authz denial is surfaced as 404 (ADR-038), not 403.
         $this->seedTripWithStages(self::TRIP_ID);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('GET', \sprintf('/trips/%s.gpx', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/gpx+xml'], $this->authHeader($otherToken)),

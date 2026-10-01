@@ -54,7 +54,7 @@ final class McpGetTripTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /** Without this, nothing in PR2 or PR3 can be called. */

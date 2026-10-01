@@ -29,7 +29,7 @@ final class TripDeleteTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTrip(string $tripId): void
@@ -94,7 +94,7 @@ final class TripDeleteTest extends ApiTestCase
         // not revealed by enumeration (ADR-038).
         $this->seedTrip(self::TRIP_ID);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID), [
             'headers' => $this->authHeader($otherToken),
@@ -111,7 +111,7 @@ final class TripDeleteTest extends ApiTestCase
     public function missingAndForeignTripsAnswerTheSame404(): void
     {
         $this->seedTrip(self::TRIP_ID);
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $response = $this->client->request('DELETE', '/trips/00000000-0000-0000-0000-000000000000', [
             'headers' => $this->authHeader($otherToken),

@@ -49,7 +49,7 @@ final class McpRateLimitTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('budget@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('budget@example.com');
     }
 
     #[Test]

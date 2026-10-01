@@ -41,7 +41,7 @@ final class TripUpdateTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createEditingClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTrip(
@@ -139,7 +139,7 @@ final class TripUpdateTest extends ApiTestCase
         // not revealed by enumeration (ADR-038). The body matches the missing-trip 404.
         $this->seedTrip(self::TRIP_ID);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
             'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($otherToken)),
