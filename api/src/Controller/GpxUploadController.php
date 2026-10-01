@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\ApiResource\TripRequest;
 use App\Entity\User;
+use App\Mercure\TripSubscription;
 use App\Service\GpxUploadServiceInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -127,6 +128,8 @@ final readonly class GpxUploadController
         if (null !== $title) {
             $response['title'] = $title;
         }
+
+        $request->attributes->set(TripSubscription::ATTRIBUTE, $result['tripId']);
 
         return new JsonResponse($response, Response::HTTP_ACCEPTED);
     }

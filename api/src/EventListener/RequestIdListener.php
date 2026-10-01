@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
  *
  * The chosen identifier is stored on the Request attributes under
  * `_correlation_id` so the rest of the application can read it back through
- * `RequestStack` (see {@see \App\Logger\CorrelationIdProcessor},
+ * `RequestStack` (see {@see \App\Logger\CorrelationContext},
  * {@see \App\Messenger\SendCorrelationIdMiddleware},
  * {@see \App\Mercure\TripUpdatePublisher}).
  */

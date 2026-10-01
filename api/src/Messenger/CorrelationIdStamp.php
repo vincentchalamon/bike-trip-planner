@@ -12,9 +12,9 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
  *
  * Stamped onto the envelope by {@see SendCorrelationIdMiddleware} when a
  * message is dispatched from a request context. Read back by
- * {@see HandleCorrelationIdMiddleware} on the worker side so the
- * {@see \App\Logger\CorrelationIdProcessor} can enrich worker logs with the
- * originating `request_id`. See issue #485.
+ * {@see HandleCorrelationIdMiddleware} on the worker side and pushed onto the
+ * {@see \App\Logger\CorrelationContext}, so worker logs and Mercure payloads carry
+ * the originating `request_id`. See issue #485.
  */
 final readonly class CorrelationIdStamp implements StampInterface
 {

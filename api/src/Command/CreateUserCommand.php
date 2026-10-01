@@ -9,17 +9,13 @@ use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\AccessRequestRepository;
 use App\Repository\MagicLinkRepository;
+use App\Security\MagicLinkMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
-use Symfony\Contracts\Translation\TranslatorInterface;
-use Twig\Environment;
 
 /**
  * Creates a new user (invite-only registration) and sends an invitation email
@@ -35,11 +31,7 @@ final readonly class CreateUserCommand
         private EntityManagerInterface $entityManager,
         private MagicLinkRepository $magicLinkRepository,
         private AccessRequestRepository $accessRequestRepository,
-        private MailerInterface $mailer,
-        private Environment $twig,
-        private TranslatorInterface $translator,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
+        private MagicLinkMailer $magicLinkMailer,
     ) {
     }
 
@@ -84,7 +76,7 @@ final readonly class CreateUserCommand
         }
 
         // --no-invite: create the account only. An invitation magic link stays active
-        // for 30 min and short-circuits AuthRequestLinkProcessor (hasActiveLinkForUser),
+        // for MagicLinkRepository::TTL_MINUTES and short-circuits AuthRequestLinkProcessor (hasActiveLinkForUser),
         // so a caller wanting to exercise /auth/request-link itself must skip it here.
         if ($noInvite) {
             $this->entityManager->flush();
@@ -105,23 +97,7 @@ final readonly class CreateUserCommand
             return Command::SUCCESS;
         }
 
-        // getPlainToken() (not getToken(), which is the hash stored at rest): the
-        // magic link must carry the plaintext the verify endpoint will hash (SEC-003). It rides
-        // in the fragment, which a browser never sends, so no access log sees it.
-        $verifyUrl = \sprintf('%s/auth/verify#%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
-
-        $html = $this->twig->render('email/invitation.html.twig', [
-            'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => 30,
-            'locale' => $locale,
-        ]);
-
-        $emailMessage = new Email()
-            ->to($email)
-            ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
-            ->html($html);
-
-        $this->mailer->send($emailMessage);
+        $this->magicLinkMailer->sendInvitation($user, $magicLink);
         $this->entityManager->flush();
 
         $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));

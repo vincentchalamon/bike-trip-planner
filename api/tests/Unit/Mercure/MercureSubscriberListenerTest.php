@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Mercure;
 
 use App\Mercure\MercureSubscriberListener;
 use App\Mercure\MercureTokenIssuer;
-use PHPUnit\Framework\Attributes\DataProvider;
+use App\Mercure\TripSubscription;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -30,25 +30,15 @@ final class MercureSubscriberListenerTest extends TestCase
         );
     }
 
-    /**
-     * @return iterable<string, array{string, string}>
-     */
-    public static function tripEndpointProvider(): iterable
-    {
-        yield 'GET /trips/{id}/detail' => ['GET', '/trips/'.self::TRIP_UUID.'/detail'];
-        yield 'PATCH /trips/{id}' => ['PATCH', '/trips/'.self::TRIP_UUID];
-        yield 'POST /trips/{id}/duplicate' => ['POST', '/trips/'.self::TRIP_UUID.'/duplicate'];
-    }
-
     #[Test]
-    #[DataProvider('tripEndpointProvider')]
-    public function setsCookieForTripEndpoints(string $method, string $path): void
+    public function setsCookieForTheStampedTrip(): void
     {
-        $request = Request::create($path, $method);
-        $response = new Response('ok');
-        $event = $this->createResponseEvent($request, $response);
+        $request = Request::create('/trips/'.self::TRIP_UUID.'/detail');
+        $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
 
-        $this->listener->__invoke($event);
+        $response = new Response('ok');
+
+        $this->listener->__invoke($this->createResponseEvent($request, $response));
 
         $cookies = $response->headers->getCookies();
         self::assertCount(1, $cookies);
@@ -57,41 +47,25 @@ final class MercureSubscriberListenerTest extends TestCase
     }
 
     #[Test]
-    public function setsCookieForPostTripsFromResponseBody(): void
+    public function ignoresTripUrlsAndBodiesWhenNothingIsStamped(): void
     {
-        $request = Request::create('/trips', 'POST');
-        $response = new JsonResponse(['id' => self::TRIP_UUID, 'computationStatus' => []]);
-        $event = $this->createResponseEvent($request, $response);
-
-        $this->listener->__invoke($event);
-
-        $cookies = $response->headers->getCookies();
-        self::assertCount(1, $cookies);
-        self::assertSame('__Secure-mercure_access_token', $cookies[0]->getName());
-    }
-
-    #[Test]
-    public function setsCookieForGpxUpload(): void
-    {
-        $request = Request::create('/trips/gpx-upload', 'POST');
+        $request = Request::create('/trips/'.self::TRIP_UUID.'/detail');
         $response = new JsonResponse(['id' => self::TRIP_UUID]);
-        $event = $this->createResponseEvent($request, $response);
 
-        $this->listener->__invoke($event);
+        $this->listener->__invoke($this->createResponseEvent($request, $response));
 
-        $cookies = $response->headers->getCookies();
-        self::assertCount(1, $cookies);
-        self::assertSame('__Secure-mercure_access_token', $cookies[0]->getName());
+        self::assertEmpty($response->headers->getCookies());
     }
 
     #[Test]
-    public function doesNotSetCookieForUnmatchedEndpoints(): void
+    public function doesNotSetCookieOnAFailedResponse(): void
     {
-        $request = Request::create('/trips', 'GET');
-        $response = new Response('ok');
-        $event = $this->createResponseEvent($request, $response);
+        $request = Request::create('/trips/'.self::TRIP_UUID, 'PATCH');
+        $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
 
-        $this->listener->__invoke($event);
+        $response = new Response('', Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->listener->__invoke($this->createResponseEvent($request, $response));
 
         self::assertEmpty($response->headers->getCookies());
     }
@@ -99,22 +73,12 @@ final class MercureSubscriberListenerTest extends TestCase
     #[Test]
     public function doesNotSetCookieForSubRequests(): void
     {
-        $request = Request::create('/trips/'.self::TRIP_UUID.'/detail', 'GET');
+        $request = Request::create('/trips/'.self::TRIP_UUID.'/detail');
+        $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
+
         $response = new Response('ok');
         $kernel = $this->createStub(KernelInterface::class);
         $event = new ResponseEvent($kernel, $request, HttpKernelInterface::SUB_REQUEST, $response);
-
-        $this->listener->__invoke($event);
-
-        self::assertEmpty($response->headers->getCookies());
-    }
-
-    #[Test]
-    public function doesNotSetCookieWhenResponseBodyHasNoId(): void
-    {
-        $request = Request::create('/trips', 'POST');
-        $response = new JsonResponse(['error' => 'bad request']);
-        $event = $this->createResponseEvent($request, $response);
 
         $this->listener->__invoke($event);
 

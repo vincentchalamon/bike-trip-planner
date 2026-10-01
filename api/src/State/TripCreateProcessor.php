@@ -14,6 +14,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
+use App\Mercure\TripSubscription;
 use App\RateLimiter\RetryAfter;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripBootstrapper;
@@ -57,6 +58,8 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         // must cost nothing and answer with the trip it made, not with a second one (ADR-077).
         $already = $this->idempotency->alreadyCreated($user, $operation, $context);
         if ($already instanceof Uuid) {
+            TripSubscription::stamp($operation, $context, $already->toRfc4122(), self::class);
+
             return $this->tripFor($already->toRfc4122());
         }
 
@@ -90,10 +93,13 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         // see two identifiers. The trip committed a few lines up stays behind unreachable, which
         // is the same price the crash window charges; its pipeline is at least never dispatched.
         if ($winner->toRfc4122() !== $tripId) {
+            TripSubscription::stamp($operation, $context, $winner->toRfc4122(), self::class);
+
             return $this->tripFor($winner->toRfc4122());
         }
 
         $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
+        TripSubscription::stamp($operation, $context, $tripId, self::class);
 
         return new Trip(
             id: $tripId,

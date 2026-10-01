@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Messenger;
 
-use App\Logger\CorrelationIdProcessor;
+use App\Logger\CorrelationContext;
 use App\Messenger\CorrelationIdStamp;
 use App\Messenger\HandleCorrelationIdMiddleware;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
@@ -98,12 +97,9 @@ final class HandleCorrelationIdMiddlewareTest extends TestCase
         self::assertSame('pre-existing', $processor->getOverrideRequestId());
     }
 
-    private function processor(): CorrelationIdProcessor
+    private function processor(): CorrelationContext
     {
-        return new CorrelationIdProcessor(
-            new RequestStack(),
-            $this->createStub(Security::class),
-        );
+        return new CorrelationContext(new RequestStack());
     }
 
     private function stackOf(\Closure $handler): StackInterface

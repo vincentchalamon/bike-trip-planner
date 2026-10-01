@@ -7,6 +7,7 @@ namespace App\Mercure;
 use App\ApiResource\Stage;
 use App\Entity\User;
 use App\Enum\ComputationName;
+use App\Logger\CorrelationContext;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
 use Psr\Log\LoggerInterface;
@@ -18,7 +19,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     public function __construct(
         private HubInterface $hub,
         private StagePayloadMapper $stagePayloadMapper,
-        private CurrentCorrelationIdProvider $correlationIdProvider,
+        private CorrelationContext $correlation,
         private TripRequestRepositoryInterface $tripStateManager,
         private TripStageStoreInterface $stageStore,
         private LoggerInterface $logger,
@@ -41,7 +42,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
             $payload['version'] = $version;
         }
 
-        $correlationId = $this->correlationIdProvider->current();
+        $correlationId = $this->correlation->requestId();
         if (null !== $correlationId) {
             $payload['correlationId'] = $correlationId;
         }

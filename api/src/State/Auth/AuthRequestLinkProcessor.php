@@ -11,18 +11,15 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
+use App\Security\MagicLinkMailer;
 use App\Logger\EmailFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Twig\Environment;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 
@@ -38,8 +35,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MagicLinkRepository $magicLinkRepository,
-        private MailerInterface $mailer,
-        private Environment $twig,
+        private MagicLinkMailer $magicLinkMailer,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
@@ -47,8 +43,6 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         private RateLimiterFactoryInterface $magicLinkEmailLimiter,
         #[Target('magic_link_ip')]
         private RateLimiterFactoryInterface $magicLinkIpLimiter,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
     ) {
     }
 
@@ -93,25 +87,8 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        // The token rides in the fragment, which a browser never sends: it stays out of
-        // the access logs and the Referer. The page reads it and POSTs it.
-        $verifyUrl = \sprintf('%s/auth/verify#%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
-
-        $locale = $user->getLocale();
-
-        $html = $this->twig->render('email/magic_link.html.twig', [
-            'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => 30,
-            'locale' => $locale,
-        ]);
-
-        $emailMessage = new Email()
-            ->to($user->getEmail())
-            ->subject($this->translator->trans('auth.email.magic_link.subject', [], 'auth', $locale))
-            ->html($html);
-
         try {
-            $this->mailer->send($emailMessage);
+            $this->magicLinkMailer->sendSignInLink($user, $magicLink);
         } catch (TransportExceptionInterface $transportException) {
             // Only an existing account reaches the send, so a 500 here would tell the
             // caller the address is registered: answer neutrally like every other

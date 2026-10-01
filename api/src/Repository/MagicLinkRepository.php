@@ -16,7 +16,7 @@ use Psr\Log\LoggerInterface;
  */
 final class MagicLinkRepository extends ServiceEntityRepository
 {
-    private const int TTL_MINUTES = 30;
+    public const int TTL_MINUTES = 30;
 
     public function __construct(
         ManagerRegistry $registry,

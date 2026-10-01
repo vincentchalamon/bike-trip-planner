@@ -14,6 +14,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
 use App\Entity\User;
 use App\Enum\ComputationName;
+use App\Mercure\TripSubscription;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -57,6 +58,10 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         // Cap per user: duplication clones DB rows + Redis blobs (SEC-009).
         $user = $this->security->getUser();
         \assert($user instanceof User);
+
+        // The trip being duplicated, which the client is still on; the copy gets its own
+        // subscription when its page loads the detail.
+        TripSubscription::stamp($operation, $context, $uriVariables['id'] ?? '', self::class);
 
         // Before the limiter and before the clone: a retried duplication must answer with the
         // copy it already made, not make a second one (ADR-077).

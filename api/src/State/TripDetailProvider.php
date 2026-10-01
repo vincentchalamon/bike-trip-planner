@@ -9,6 +9,7 @@ use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Concurrency\TripVersionEtag;
+use App\Mercure\TripSubscription;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
@@ -68,6 +69,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         // If-Match on its next edit. Read here rather than in the response listener, which
         // would tag the body with whatever version won a race after it was assembled.
         TripVersionEtag::stamp($context, $request->version);
+        TripSubscription::stamp($operation, $context, $id, self::class);
 
         $statuses = $this->computationTracker->getStatuses($id);
 
