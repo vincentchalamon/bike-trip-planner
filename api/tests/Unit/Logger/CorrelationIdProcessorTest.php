@@ -157,6 +157,7 @@ final class CorrelationIdProcessorTest extends TestCase
 
         $correlation = new CorrelationContext($stack);
         $correlation->setOverrideRequestId('worker-correlation-id');
+
         $processor = new CorrelationIdProcessor($correlation, $security);
 
         $record = $processor($this->buildRecord());
@@ -194,6 +195,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $correlation = new CorrelationContext($stack);
         $correlation->setOverrideRequestId('worker-value');
         $correlation->setOverrideRequestId(null);
+
         $processor = new CorrelationIdProcessor($correlation, $security);
 
         $record = $processor($this->buildRecord());

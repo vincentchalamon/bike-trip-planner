@@ -35,6 +35,7 @@ final class MercureSubscriberListenerTest extends TestCase
     {
         $request = Request::create('/trips/'.self::TRIP_UUID.'/detail');
         $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
+
         $response = new Response('ok');
 
         $this->listener->__invoke($this->createResponseEvent($request, $response));
@@ -61,6 +62,7 @@ final class MercureSubscriberListenerTest extends TestCase
     {
         $request = Request::create('/trips/'.self::TRIP_UUID, 'PATCH');
         $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
+
         $response = new Response('', Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->listener->__invoke($this->createResponseEvent($request, $response));
@@ -73,6 +75,7 @@ final class MercureSubscriberListenerTest extends TestCase
     {
         $request = Request::create('/trips/'.self::TRIP_UUID.'/detail');
         $request->attributes->set(TripSubscription::ATTRIBUTE, self::TRIP_UUID);
+
         $response = new Response('ok');
         $kernel = $this->createStub(KernelInterface::class);
         $event = new ResponseEvent($kernel, $request, HttpKernelInterface::SUB_REQUEST, $response);

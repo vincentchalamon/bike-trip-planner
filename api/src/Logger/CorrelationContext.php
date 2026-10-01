@@ -56,8 +56,8 @@ final class CorrelationContext
             return null;
         }
 
-        return self::string($request->attributes->get(RequestIdListener::ATTRIBUTE))
-            ?? self::string($request->headers->get(RequestIdListener::HEADER));
+        return $this->string($request->attributes->get(RequestIdListener::ATTRIBUTE))
+            ?? $this->string($request->headers->get(RequestIdListener::HEADER));
     }
 
     public function tripId(): ?string
@@ -68,7 +68,7 @@ final class CorrelationContext
         }
 
         foreach (self::TRIP_ATTRIBUTES as $key) {
-            $value = self::string($request->attributes->get($key));
+            $value = $this->string($request->attributes->get($key));
             if (null !== $value) {
                 return $value;
             }
@@ -78,13 +78,13 @@ final class CorrelationContext
         // `/trips/{id}/duplicate`, ...). Elsewhere `id` names a user or a stage, which must
         // never be labelled `trip_id`.
         if (str_starts_with($request->getPathInfo(), '/trips/')) {
-            return self::string($request->attributes->get('id'));
+            return $this->string($request->attributes->get('id'));
         }
 
         return null;
     }
 
-    private static function string(mixed $value): ?string
+    private function string(mixed $value): ?string
     {
         if ($value instanceof \Stringable) {
             $value = (string) $value;

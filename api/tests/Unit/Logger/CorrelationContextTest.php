@@ -75,6 +75,7 @@ final class CorrelationContextTest extends TestCase
         $main = new Request();
         $main->attributes->set(RequestIdListener::ATTRIBUTE, 'main-value');
         $main->attributes->set('tripId', 'main-trip');
+
         $sub = new Request();
         $sub->attributes->set(RequestIdListener::ATTRIBUTE, 'sub-value');
         $sub->attributes->set('tripId', 'sub-trip');
@@ -101,6 +102,7 @@ final class CorrelationContextTest extends TestCase
     {
         $onTrip = Request::create('/trips/22222222-2222-7000-9000-000000000002');
         $onTrip->attributes->set('id', Uuid::fromString('22222222-2222-7000-9000-000000000002'));
+
         $onUser = Request::create('/users/33333333-3333-7000-9000-000000000003');
         $onUser->attributes->set('id', '33333333-3333-7000-9000-000000000003');
 
