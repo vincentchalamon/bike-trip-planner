@@ -16,6 +16,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\FixedSchedule;
 use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
@@ -83,7 +84,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
         $request = $this->tripRequestRepository->getRequest($tripId);
         $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
@@ -201,7 +202,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
                     'stageId' => $stage->id,
                     'resupply' => $this->stageMapper->resupplyForClient($stage->resupply),
-                    'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? 'en'),
+                    'alerts' => $this->alertRenderer->render($alerts, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE),
                 ]);
 
                 $clusteredMarkers = $this->supplyTimelineBuilder->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);

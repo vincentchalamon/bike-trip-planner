@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\InRide;
 
+use App\Entity\User;
 use App\Format\OsmContactTags;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeoPoint;
@@ -73,7 +74,7 @@ final readonly class NearbyPoiFinder
         }
 
         $now ??= new \DateTimeImmutable('now');
-        $locale = (null !== $tripId ? $this->tripRepository->getLocale($tripId) : null) ?? 'en';
+        $locale = (null !== $tripId ? $this->tripRepository->getLocale($tripId) : null) ?? User::FALLBACK_LOCALE;
 
         $rows = $this->poiRepository->findNearby(
             $position->lat,

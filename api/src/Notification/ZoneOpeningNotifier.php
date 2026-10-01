@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notification;
 
+use App\Entity\User;
 use App\Enum\NotificationCategory;
 use App\Repository\NotificationPreferenceRepositoryInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -35,7 +36,7 @@ final readonly class ZoneOpeningNotifier
         $dispatched = 0;
 
         foreach ($this->preferences->findEnabledUsers(NotificationCategory::ZONE_OPENING) as $user) {
-            $locale = '' !== $user['locale'] ? $user['locale'] : 'en';
+            $locale = '' !== $user['locale'] ? $user['locale'] : User::FALLBACK_LOCALE;
 
             $dispatched += $this->dispatcher->dispatch(
                 $user['id'],

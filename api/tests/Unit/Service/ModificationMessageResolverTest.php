@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Service;
 use App\Enum\ComputationTrigger;
 use App\Service\EnrichmentMessageFactory;
 use App\ApiResource\TripModification;
+use App\Enum\TripModificationType;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
@@ -39,7 +40,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function accommodationModificationTriggersRecalculateAndScanForAffectedStages(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: 'accommodation', label: 'Hébergement étape 2');
+        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: TripModificationType::ACCOMMODATION, label: 'Hébergement étape 2');
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
@@ -63,7 +64,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function accommodationModificationIncludesNextStageInRecalculate(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'accommodation', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: TripModificationType::ACCOMMODATION, label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
@@ -76,7 +77,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function distanceModificationTriggersEnrichmentPipeline(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: 'distance', label: 'Distance étape 2');
+        $modification = new TripModification(stageId: self::STAGE_IDS[1], type: TripModificationType::DISTANCE, label: 'Distance étape 2');
         $messages = $this->resolver->resolve(
             'trip-1',
             [$modification],
@@ -112,7 +113,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function distanceModificationMarksTheEditAsGeometryOnly(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: TripModificationType::DISTANCE, label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), true, [], generation: null);
 
         $recalculate = $this->recalculateOf($messages);
@@ -127,7 +128,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function distanceModificationWithoutDatesDoesNotTriggerWeather(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: TripModificationType::DISTANCE, label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -139,7 +140,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function datesModificationTriggersWeatherCalendarAndEvents(): void
     {
-        $modification = new TripModification(type: 'dates', label: 'Dates');
+        $modification = new TripModification(type: TripModificationType::DATES, label: 'Dates');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -167,7 +168,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function pacingModificationTriggersRecalculateForAllStages(): void
     {
-        $modification = new TripModification(type: 'pacing', label: 'Pacing');
+        $modification = new TripModification(type: TripModificationType::PACING, label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
@@ -178,7 +179,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function pacingModificationInvalidatesBothTheLineAndTheDates(): void
     {
-        $modification = new TripModification(type: 'pacing', label: 'Pacing');
+        $modification = new TripModification(type: TripModificationType::PACING, label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], self::STAGE_IDS, true, [], generation: null);
 
         // Re-pacing redraws every stage and moves every stage onto a different date, so the
@@ -193,9 +194,9 @@ final class ModificationMessageResolverTest extends TestCase
     public function batchFusesDependenciesAcrossModifications(): void
     {
         $modifications = [
-            new TripModification(stageId: self::STAGE_IDS[0], type: 'accommodation', label: 'acc 0'),
-            new TripModification(stageId: self::STAGE_IDS[2], type: 'distance', label: 'dist 2'),
-            new TripModification(type: 'dates', label: 'dates'),
+            new TripModification(stageId: self::STAGE_IDS[0], type: TripModificationType::ACCOMMODATION, label: 'acc 0'),
+            new TripModification(stageId: self::STAGE_IDS[2], type: TripModificationType::DISTANCE, label: 'dist 2'),
+            new TripModification(type: TripModificationType::DATES, label: 'dates'),
         ];
 
         $messages = $this->resolver->resolve('trip-1', $modifications, self::STAGE_IDS, true, ['hotel'], generation: 1);
@@ -224,7 +225,7 @@ final class ModificationMessageResolverTest extends TestCase
     #[Test]
     public function generationIsPropagatedToAllMessages(): void
     {
-        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: 'distance', label: 'test');
+        $modification = new TripModification(stageId: self::STAGE_IDS[0], type: TripModificationType::DISTANCE, label: 'test');
         $messages = $this->resolver->resolve('trip-1', [$modification], \array_slice(self::STAGE_IDS, 0, 2), false, ['hotel'], generation: 7);
 
         foreach ($messages as $message) {

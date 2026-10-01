@@ -15,6 +15,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
@@ -207,7 +208,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     'stageId' => $stage->id,
                     'accommodations' => $accommodations,
                     'searchRadiusKm' => (int) round($radiusMeters / 1000),
-                    'alerts' => $this->alertRenderer->render($alertsToPublish, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? 'en'),
+                    'alerts' => $this->alertRenderer->render($alertsToPublish, $stage->dayNumber, $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE),
                 ]);
             }
 

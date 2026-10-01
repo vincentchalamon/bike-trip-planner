@@ -63,6 +63,10 @@ readonly class EventSourceRegistry
     {
         $all = [];
         foreach ($this->sources as $source) {
+            if (!$source->isEnabled()) {
+                continue;
+            }
+
             foreach ($source->findActiveNear($lat, $lon, $radiusMeters, $date) as $event) {
                 if ('' === $event['url'] || !\in_array($event['category'], self::RELEVANT_CATEGORIES, true)) {
                     continue;

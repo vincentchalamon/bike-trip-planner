@@ -11,6 +11,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ApiResource\Trip;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Repository\TripRequestRepositoryInterface;
 
 /**
@@ -62,7 +63,7 @@ final readonly class StageResponseMapper
         $response->alerts = $this->alertRenderer->render(
             $stage->alerts,
             $stage->dayNumber,
-            $this->readerLocale->or($this->trips->getLocale($stage->tripId) ?? 'en'),
+            $this->readerLocale->or($this->trips->getLocale($stage->tripId) ?? User::FALLBACK_LOCALE),
         );
         // Always serialize a resupply object (skip_null_values would omit a null
         // one, breaking the response schema — it is a required field like the old

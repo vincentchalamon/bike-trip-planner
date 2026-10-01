@@ -204,6 +204,42 @@ final class TripPreconditionTest extends ApiTestCase
     }
 
     /**
+     * The modification type is a backed enum: a value outside it fails denormalization, which
+     * API Platform reports as a 422 violation, the same answer the former `Choice` gave.
+     */
+    #[Test]
+    public function anUnknownModificationTypeIsRefusedWith422(): void
+    {
+        $this->seedTrip();
+
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $transport->reset();
+
+        $this->client->request('POST', \sprintf('/trips/%s/recompute', self::TRIP_ID), $this->asOwner([
+            'If-Match' => \sprintf('"%d"', $this->currentVersion()),
+            'Content-Type' => 'application/ld+json',
+        ]) + ['json' => ['modifications' => [['type' => 'elevation']]]]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame([], $transport->getSent());
+    }
+
+    #[Test]
+    public function aStageModificationWithoutAStageIsRefusedWith422(): void
+    {
+        $this->seedTrip();
+
+        $this->client->request('POST', \sprintf('/trips/%s/recompute', self::TRIP_ID), $this->asOwner([
+            'If-Match' => \sprintf('"%d"', $this->currentVersion()),
+            'Content-Type' => 'application/ld+json',
+        ]) + ['json' => ['modifications' => [['type' => 'distance']]]]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertJsonContains(['violations' => [['propertyPath' => 'modifications[0].stageId']]]);
+    }
+
+    /**
      * The precondition runs past the provider chain, so it cannot answer before authorization
      * has. If it ran earlier — in a `kernel.request` listener, say — the 412/428 pair would
      * tell a stranger whether a given version of someone else's trip exists.

@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Mercure\ProgressPublisher;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -109,7 +110,7 @@ abstract readonly class AbstractTripMessageHandler
      */
     protected function renderForWire(string $tripId, array $alerts): array
     {
-        return $this->alertRenderer->renderFlat($alerts, $this->tripRequestRepository->getLocale($tripId) ?? 'en');
+        return $this->alertRenderer->renderFlat($alerts, $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE);
     }
 
     /**

@@ -11,6 +11,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripBatchRecomputeRequest;
 use App\ApiResource\TripModification;
+use App\Enum\TripModificationType;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -64,7 +65,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
 
         try {
             $processor->process(
-                new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
+                new TripBatchRecomputeRequest([new TripModification(type: TripModificationType::PACING)]),
                 new Post(),
                 ['id' => 't'],
             );
@@ -125,7 +126,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         );
 
         $request = new TripBatchRecomputeRequest([
-            new TripModification(type: 'pacing'),
+            new TripModification(type: TripModificationType::PACING),
         ]);
 
         $processor->process($request, new Post(), ['id' => 't']);
@@ -192,7 +193,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $request->headers->set(IfMatch::HEADER, '"7"');
 
         $this->recomputeProcessor($generationTracker)->process(
-            new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
+            new TripBatchRecomputeRequest([new TripModification(type: TripModificationType::PACING)]),
             new Post(),
             ['id' => 't'],
             ['request' => $request],
