@@ -11,7 +11,7 @@ namespace App\State;
  * three different processors, and the flag belongs to none of them in particular.
  *
  * @see Idempotency
- * @see \App\Metadata\IdempotencyMetadataFactory
+ * @see \App\Metadata\OperationContractMetadataFactory
  * @see \App\Tests\Unit\State\IdempotencyCoverageTest
  */
 final class TripCreation

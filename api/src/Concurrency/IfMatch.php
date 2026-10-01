@@ -31,6 +31,12 @@ final readonly class IfMatch
 {
     public const string HEADER = 'If-Match';
 
+    /**
+     * A quoted trip version or `*`, as published in the OpenAPI document. Also the shape of the
+     * `If-None-Match` the route reads accept, since both carry the tag the ETag served.
+     */
+    public const string PATTERN = '^(\*|"\d+")$';
+
     private function __construct(
         /** null when the caller sent `*`, i.e. "whatever the current state is". */
         public ?int $expectedVersion,
