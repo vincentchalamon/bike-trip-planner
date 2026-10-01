@@ -14,6 +14,9 @@ use Sentry\EventHint;
 use Sentry\EventId;
 use Sentry\ExceptionDataBag;
 use Sentry\SentryBundle\DependencyInjection\SentryExtension;
+use Sentry\State\Hub;
+use Sentry\Tracing\SpanContext;
+use Sentry\Tracing\TransactionContext;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
@@ -78,6 +81,27 @@ final class EventScrubberTest extends TestCase
 
         self::assertSame('GET https://example.test/s/[redacted]', $event->getTransaction());
         self::assertSame(['trace_id' => 't', 'span_id' => 's', 'data' => ['http.url' => 'https://example.test/auth/verify/[redacted]']], $event->getContexts()['trace']);
+    }
+
+    /** What sentry-symfony's traceable http client records for an outbound call. */
+    #[Test]
+    public function anOutboundSpanKeepsItsHostAndPathButNotItsQuery(): void
+    {
+        $span = new Hub()->startTransaction(TransactionContext::make())->startChild(SpanContext::make()
+            ->setOp('http.client')
+            ->setDescription('GET https://api.open-meteo.com/v1/forecast')
+            ->setData(['http.url' => 'https://api.open-meteo.com/v1/forecast', 'http.query' => 'latitude=45.18&longitude=5.72', 'http.request.method' => 'GET']));
+        $event = Event::createTransaction(EventId::generate());
+        $event->setSpans([$span]);
+
+        new EventScrubber()($event);
+
+        self::assertSame([
+            'http.url' => 'https://api.open-meteo.com/v1/forecast',
+            'http.query' => '[redacted]',
+            'http.request.method' => 'GET',
+        ], $span->getData());
+        self::assertSame('GET https://api.open-meteo.com/v1/forecast', $span->getDescription());
     }
 
     #[Test]

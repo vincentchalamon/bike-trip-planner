@@ -65,6 +65,23 @@ final class EventScrubber
             $event->setContext('trace', LogRedactor::array($trace));
         }
 
+        // The http_client spans of a transaction keep the outbound query apart
+        // (`http.query`): trip coordinates for Open-Meteo and Nominatim, an API key
+        // elsewhere. A span's data can only be merged into, not unset.
+        foreach ($event->getSpans() as $span) {
+            $data = $span->getData();
+            $redacted = array_intersect_key(['http.query' => LogRedactor::REDACTED, 'http.fragment' => LogRedactor::REDACTED], $data);
+            if (isset($data['http.url']) && \is_string($data['http.url'])) {
+                $redacted['http.url'] = LogRedactor::url($data['http.url']);
+            }
+
+            $span->setData($redacted);
+            $description = $span->getDescription();
+            if (null !== $description) {
+                $span->setDescription(LogRedactor::url($description));
+            }
+        }
+
         return $event;
     }
 
