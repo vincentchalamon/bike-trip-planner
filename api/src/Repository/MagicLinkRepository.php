@@ -35,7 +35,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
     public function create(User $user): ?MagicLink
     {
         if ($this->hasActiveLinkForUser($user)) {
-            $this->logger->debug('Magic link already active for user', ['email' => $user->getEmail()]);
+            $this->logger->debug('Magic link already active for user', ['user' => $user->getId()->toRfc4122()]);
 
             return null;
         }
@@ -48,7 +48,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
         $magicLink = new MagicLink($user, hash('sha256', $plainToken), $expiresAt, plainToken: $plainToken);
         $this->getEntityManager()->persist($magicLink);
 
-        $this->logger->debug('Magic link created', ['email' => $user->getEmail(), 'expires_at' => $expiresAt->format('c')]);
+        $this->logger->debug('Magic link created', ['user' => $user->getId()->toRfc4122(), 'expires_at' => $expiresAt->format('c')]);
 
         return $magicLink;
     }
@@ -83,7 +83,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
 
         $magicLink = $this->findOneBy(['token' => $tokenHash]);
 
-        $this->logger->debug('Magic link consumed', ['email' => $magicLink?->getUser()->getEmail()]);
+        $this->logger->debug('Magic link consumed', ['user' => $magicLink?->getUser()->getId()->toRfc4122()]);
 
         return $magicLink?->getUser();
     }

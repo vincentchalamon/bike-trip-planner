@@ -81,7 +81,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         $plainToken = $refreshToken->getPlainToken();
         \assert(null !== $plainToken);
 
-        $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
+        $this->logger->debug('Auth verify token verified', ['user' => $user->getId()->toRfc4122()]);
 
         return new JsonResponse(['token' => $jwt, 'refresh_token' => $plainToken]);
     }

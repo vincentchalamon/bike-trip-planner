@@ -42,7 +42,7 @@ final readonly class AuthLogoutProcessor implements ProcessorInterface
         if ($user instanceof User) {
             $this->refreshTokenRepository->removeAllForUser($user);
             $this->entityManager->flush();
-            $this->logger->debug('Auth logout user logged out', ['user' => $user->getEmail()]);
+            $this->logger->debug('Auth logout user logged out', ['user' => $user->getId()->toRfc4122()]);
         }
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
