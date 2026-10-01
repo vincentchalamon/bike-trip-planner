@@ -25,9 +25,7 @@ final class AccessRequestRepository extends ServiceEntityRepository
     }
 
     /**
-     * Marks every access request for the given email for removal.
-     *
-     * Does NOT flush — the caller is responsible for flushing. Used by GDPR
+     * Deletes every access request for the given email, in one statement. Used by GDPR
      * erasure: the table holds the email + IP as plain PII with no user FK, so
      * it must be purged explicitly on account deletion.
      */

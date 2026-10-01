@@ -34,7 +34,6 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
      *
      * Invalidates any pending (unconsumed, unexpired) token for the same user
      * first, so the latest request always wins and stale links stop working.
-     * Persists the entity but does NOT flush — the caller flushes.
      */
     public function create(User $user, string $newEmail): EmailChangeToken
     {
@@ -47,6 +46,7 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
         // confirmation link and never touches the database.
         $emailChangeToken = new EmailChangeToken($user, hash('sha256', $plainToken), $newEmail, $expiresAt, plainToken: $plainToken);
         $this->getEntityManager()->persist($emailChangeToken);
+        $this->getEntityManager()->flush();
 
         $this->logger->debug('Email change token created', ['user' => $user->getId()->toRfc4122(), 'expires_at' => $expiresAt->format('c')]);
 

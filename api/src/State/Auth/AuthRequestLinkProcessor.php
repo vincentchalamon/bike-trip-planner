@@ -79,7 +79,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $magicLink = $this->magicLinkRepository->create($user);
+        $magicLink = $this->magicLinkRepository->issue($user);
 
         if (!$magicLink instanceof MagicLink) {
             $this->logger->debug('Auth request-link active link already exists', ['user' => $user->getId()->toRfc4122()]);
@@ -99,13 +99,12 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
                 'error' => $transportException::class,
                 'code' => $transportException->getCode(),
             ]);
-            $this->entityManager->detach($magicLink);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
         try {
-            $this->entityManager->flush();
+            $this->magicLinkRepository->save($magicLink);
         } catch (UniqueConstraintViolationException) {
             // Concurrent request already created a link — return neutral response
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);

@@ -27,12 +27,13 @@ final class MagicLinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Creates a magic link for the given user, if no active link already exists.
+     * Builds a magic link for the given user, if no active link already exists.
      *
-     * Persists the entity but does NOT flush — the caller is responsible for flushing.
+     * Writes nothing: the link is only stored by {@see self::save()}, once it has been sent, so a
+     * link whose email never left does not block the next request for its whole lifetime.
      * Returns null if an active link is already pending (prevents link flooding).
      */
-    public function create(User $user): ?MagicLink
+    public function issue(User $user): ?MagicLink
     {
         if ($this->hasActiveLinkForUser($user)) {
             $this->logger->debug('Magic link already active for user', ['user' => $user->getId()->toRfc4122()]);
@@ -46,11 +47,16 @@ final class MagicLinkRepository extends ServiceEntityRepository
         // Store only the hash at rest (SEC-003): the plaintext travels in the
         // magic link and never touches the database.
         $magicLink = new MagicLink($user, hash('sha256', $plainToken), $expiresAt, plainToken: $plainToken);
-        $this->getEntityManager()->persist($magicLink);
 
         $this->logger->debug('Magic link created', ['user' => $user->getId()->toRfc4122(), 'expires_at' => $expiresAt->format('c')]);
 
         return $magicLink;
+    }
+
+    public function save(MagicLink $magicLink): void
+    {
+        $this->getEntityManager()->persist($magicLink);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -89,9 +95,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Marks all magic links for the given user for removal.
-     *
-     * Does NOT flush — the caller is responsible for flushing. Used by GDPR
+     * Deletes every magic link of the given user, in one statement. Used by GDPR
      * erasure: the soft-delete (anonymise) does not trigger the FK ON DELETE
      * CASCADE, so lingering links would otherwise survive and could still be
      * consumed.

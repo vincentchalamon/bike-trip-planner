@@ -87,7 +87,7 @@ final readonly class CreateUserCommand
         }
 
         // Create magic link for invitation
-        $magicLink = $this->magicLinkRepository->create($user);
+        $magicLink = $this->magicLinkRepository->issue($user);
 
         if (!$magicLink instanceof MagicLink) {
             $this->entityManager->flush();
@@ -98,7 +98,8 @@ final readonly class CreateUserCommand
         }
 
         $this->magicLinkMailer->sendInvitation($user, $magicLink);
-        $this->entityManager->flush();
+        // The same flush commits the user and the access-request removal above.
+        $this->magicLinkRepository->save($magicLink);
 
         $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
         $io->success('Invitation email sent.');

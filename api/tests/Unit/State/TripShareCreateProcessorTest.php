@@ -8,10 +8,10 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
+use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripShareRepositoryInterface;
 use App\State\TripShareCreateProcessor;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -23,7 +23,7 @@ use Symfony\Component\Uid\Uuid;
 #[AllowMockObjectsWithoutExpectations]
 final class TripShareCreateProcessorTest extends TestCase
 {
-    private MockObject&EntityManagerInterface $entityManager;
+    private MockObject&TripRequestRepositoryInterface $trips;
 
     private MockObject&TripShareRepositoryInterface $tripShareRepository;
 
@@ -35,7 +35,7 @@ final class TripShareCreateProcessorTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->trips = $this->createMock(TripRequestRepositoryInterface::class);
         $this->tripShareRepository = $this->createMock(TripShareRepositoryInterface::class);
         /** @var MockObject&ProcessorInterface<TripShare, TripShare> $persistProcessor */
         $persistProcessor = $this->createMock(ProcessorInterface::class);
@@ -43,7 +43,7 @@ final class TripShareCreateProcessorTest extends TestCase
 
         $this->processor = new TripShareCreateProcessor(
             $this->persistProcessor,
-            $this->entityManager,
+            $this->trips,
             $this->tripShareRepository,
         );
     }
@@ -54,10 +54,8 @@ final class TripShareCreateProcessorTest extends TestCase
         $tripId = Uuid::v7();
         $trip = new TripRequest();
 
-        $this->entityManager->expects($this->once())->method('find')
-            ->with(TripRequest::class, $this->callback(
-                static fn (mixed $id): bool => $id instanceof Uuid && (string) $id === (string) $tripId,
-            ))
+        $this->trips->expects($this->once())->method('getRequest')
+            ->with((string) $tripId)
             ->willReturn($trip);
 
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
@@ -81,8 +79,8 @@ final class TripShareCreateProcessorTest extends TestCase
         $tripId = Uuid::v7();
         $trip = new TripRequest();
 
-        $this->entityManager->expects($this->once())->method('find')
-            ->with(TripRequest::class, $tripId)
+        $this->trips->expects($this->once())->method('getRequest')
+            ->with($tripId->toRfc4122())
             ->willReturn($trip);
 
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
@@ -103,7 +101,7 @@ final class TripShareCreateProcessorTest extends TestCase
     {
         $trip = new TripRequest();
 
-        $this->entityManager->expects($this->never())->method('find');
+        $this->trips->expects($this->never())->method('getRequest');
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
         $this->persistProcessor->expects($this->once())->method('process')
@@ -144,7 +142,7 @@ final class TripShareCreateProcessorTest extends TestCase
         $tripId = Uuid::v7();
         $trip = new TripRequest();
 
-        $this->entityManager->expects($this->once())->method('find')->willReturn($trip);
+        $this->trips->expects($this->once())->method('getRequest')->willReturn($trip);
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(new TripShare());
         $this->persistProcessor->expects($this->never())->method('process');
 
@@ -157,7 +155,7 @@ final class TripShareCreateProcessorTest extends TestCase
     {
         $tripId = Uuid::v7();
 
-        $this->entityManager->expects($this->once())->method('find')->willReturn(null);
+        $this->trips->expects($this->once())->method('getRequest')->willReturn(null);
         $this->persistProcessor->expects($this->never())->method('process');
 
         $this->expectException(NotFoundHttpException::class);
@@ -167,7 +165,7 @@ final class TripShareCreateProcessorTest extends TestCase
     #[Test]
     public function itThrowsNotFoundWhenTripIdIsNotAValidUuid(): void
     {
-        $this->entityManager->expects($this->never())->method('find');
+        $this->trips->expects($this->once())->method('getRequest')->with('not-a-uuid')->willReturn(null);
         $this->persistProcessor->expects($this->never())->method('process');
 
         $this->expectException(NotFoundHttpException::class);
@@ -180,7 +178,7 @@ final class TripShareCreateProcessorTest extends TestCase
         $tripId = Uuid::v7();
         $trip = new TripRequest();
 
-        $this->entityManager->expects($this->once())->method('find')->willReturn($trip);
+        $this->trips->expects($this->once())->method('getRequest')->willReturn($trip);
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
         $uniqueException = $this->createStub(UniqueConstraintViolationException::class);

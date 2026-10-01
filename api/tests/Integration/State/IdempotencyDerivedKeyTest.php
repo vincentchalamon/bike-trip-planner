@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\McpTool;
 use App\Entity\User;
 use App\Repository\IdempotencyKeyRepository;
 use App\State\Idempotency;
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -190,11 +189,9 @@ final class IdempotencyDerivedKeyTest extends KernelTestCase
 
         $keys = $container->get(IdempotencyKeyRepository::class);
         \assert($keys instanceof IdempotencyKeyRepository);
-        $connection = $container->get('doctrine.dbal.default_connection');
-        \assert($connection instanceof Connection);
         $stack = $container->get('request_stack');
         \assert($stack instanceof RequestStack);
 
-        return [new Idempotency($keys, $connection, $stack, $clock ?? new MockClock()), $user];
+        return [new Idempotency($keys, $stack, $clock ?? new MockClock()), $user];
     }
 }

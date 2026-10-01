@@ -8,9 +8,7 @@ use PHPUnit\Framework\MockObject\Stub;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Security\Voter\TripVoter;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Query;
-use Doctrine\ORM\QueryBuilder;
+use App\Repository\OwnedTripFinderInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -19,16 +17,16 @@ use Symfony\Component\Uid\Uuid;
 
 final class TripVoterTest extends TestCase
 {
-    /** @var EntityManagerInterface&Stub */
-    private EntityManagerInterface $entityManager;
+    /** @var OwnedTripFinderInterface&Stub */
+    private OwnedTripFinderInterface $trips;
 
     private TripVoter $voter;
 
     #[\Override]
     protected function setUp(): void
     {
-        $this->entityManager = $this->createStub(EntityManagerInterface::class);
-        $this->voter = new TripVoter($this->entityManager);
+        $this->trips = $this->createStub(OwnedTripFinderInterface::class);
+        $this->voter = new TripVoter($this->trips);
     }
 
     #[Test]
@@ -80,7 +78,7 @@ final class TripVoterTest extends TestCase
         $subject = new TripRequest();
         $subject->id = Uuid::fromString($tripId);
 
-        $this->mockDatabaseOwnershipCheck(1);
+        $this->mockDatabaseOwnershipCheck(true);
 
         $result = $this->voter->vote($token, $subject, [TripVoter::TRIP_EDIT]);
 
@@ -97,7 +95,7 @@ final class TripVoterTest extends TestCase
         $subject = new TripRequest();
         $subject->id = Uuid::fromString('01936f6e-0000-7000-8000-000000000003');
 
-        $this->mockDatabaseOwnershipCheck(0);
+        $this->mockDatabaseOwnershipCheck(false);
 
         $result = $this->voter->vote($token, $subject, [TripVoter::TRIP_VIEW]);
 
@@ -114,7 +112,7 @@ final class TripVoterTest extends TestCase
 
         $tripId = '01936f6e-0000-7000-8000-000000000004';
 
-        $this->mockDatabaseOwnershipCheck(1);
+        $this->mockDatabaseOwnershipCheck(true);
 
         // Stage operations pass the tripId as a plain string, not a TripRequest
         $result = $this->voter->vote($token, $tripId, [TripVoter::TRIP_VIEW]);
@@ -122,19 +120,8 @@ final class TripVoterTest extends TestCase
         $this->assertSame(VoterInterface::ACCESS_GRANTED, $result);
     }
 
-    private function mockDatabaseOwnershipCheck(int $count): void
+    private function mockDatabaseOwnershipCheck(bool $owned): void
     {
-        $query = $this->createStub(Query::class);
-        $query->method('getSingleScalarResult')->willReturn($count);
-
-        $qb = $this->createStub(QueryBuilder::class);
-        $qb->method('select')->willReturnSelf();
-        $qb->method('from')->willReturnSelf();
-        $qb->method('where')->willReturnSelf();
-        $qb->method('andWhere')->willReturnSelf();
-        $qb->method('setParameter')->willReturnSelf();
-        $qb->method('getQuery')->willReturn($query);
-
-        $this->entityManager->method('createQueryBuilder')->willReturn($qb);
+        $this->trips->method('isOwnedBy')->willReturn($owned);
     }
 }

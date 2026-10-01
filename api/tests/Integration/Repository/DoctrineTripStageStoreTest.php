@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Repository;
+namespace App\Tests\Integration\Repository;
 
 use PHPUnit\Framework\MockObject\MockObject;
-use Doctrine\ORM\Query;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
@@ -19,57 +18,61 @@ use App\Osm\CycleRouteRepositoryInterface;
 use App\Mapper\EventArrayMapper;
 use App\Mapper\StageArrayMapper;
 use App\Weather\WeatherForecastSerializer;
+use App\Entity\Stage as StageEntity;
+use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\DoctrineTripStageStore;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * Round trips through a real database: the JSONB columns, the reconciling re-read and the
+ * flush are the database's, not a harness answering from the in-memory collection.
+ */
 #[CoversClass(DoctrineTripStageStore::class)]
 #[AllowMockObjectsWithoutExpectations]
-final class DoctrineTripStageStoreTest extends TestCase
+#[ResetDatabase]
+final class DoctrineTripStageStoreTest extends KernelTestCase
 {
-    private EntityManagerInterface&MockObject $entityManager;
+    private EntityManagerInterface $entityManager;
 
-
-    private CycleRouteRepositoryInterface&MockObject $cycleRouteRepository;
-
-    private CoverageRepositoryInterface&MockObject $coverageRepository;
+    private DoctrineTripRequestRepository $trips;
 
     private DoctrineTripStageStore $store;
 
     #[\Override]
     protected function setUp(): void
     {
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->entityManager->method('wrapInTransaction')
-            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        self::bootKernel();
+        $container = self::getContainer();
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = $container->get(EntityManagerInterface::class);
+        $this->entityManager = $entityManager;
+
+        /** @var DoctrineTripRequestRepository $trips */
+        $trips = $container->get(DoctrineTripRequestRepository::class);
+        $this->trips = $trips;
 
         // The PostGIS metrics are computed at storeStages() time (#775); stub them
         // with neutral defaults so the persistence round-trips stay deterministic.
-        $this->cycleRouteRepository = $this->createMock(CycleRouteRepositoryInterface::class);
-        $this->cycleRouteRepository->method('onNetworkFractions')->willReturn([]);
-        $this->coverageRepository = $this->createMock(CoverageRepositoryInterface::class);
-        $this->coverageRepository->method('isRouteOutOfZone')->willReturn(false);
+        $cycleRouteRepository = $this->createMock(CycleRouteRepositoryInterface::class);
+        $cycleRouteRepository->method('onNetworkFractions')->willReturn([]);
+        $coverageRepository = $this->createMock(CoverageRepositoryInterface::class);
+        $coverageRepository->method('isRouteOutOfZone')->willReturn(false);
 
-        $this->store = new DoctrineTripStageStore($this->entityManager, $this->cycleRouteRepository, $this->coverageRepository, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
+        $this->store = $this->storeWithOsm($cycleRouteRepository, $coverageRepository);
     }
 
     #[Test]
     public function storeAndGetStagesWithAllData(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')
-            ->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        $this->entityManager->expects(self::once())
-            ->method('flush');
+        $this->trip($tripId);
 
         $weather = new WeatherForecast(
             icon: 'sun',
@@ -235,10 +238,7 @@ final class DoctrineTripStageStoreTest extends TestCase
         // list, without the foodAtLunch/foodAtArrival resupply keys. It must round-
         // trip to an empty Resupply, not throw or return garbage, until re-scanned.
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-        $this->entityManager->method('find')->willReturn($trip);
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
+        $trip = $this->trip($tripId);
 
         $stageDto = new StageDto(
             tripId: $tripId,
@@ -250,11 +250,13 @@ final class DoctrineTripStageStoreTest extends TestCase
         );
         $this->store->storeStages($tripId, [$stageDto]);
 
-        $stageEntity = $trip->stages->first();
-        self::assertNotFalse($stageEntity);
+        $stageEntity = $this->entityManager->getRepository(StageEntity::class)->findOneBy(['trip' => $trip]);
+        self::assertInstanceOf(StageEntity::class, $stageEntity);
         $stageEntity->setPois([
             ['name' => 'Old shop', 'category' => 'bakery', 'lat' => 1.0, 'lon' => 2.0],
         ]);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $stages = $this->store->getStages($tripId);
 
@@ -269,12 +271,7 @@ final class DoctrineTripStageStoreTest extends TestCase
         // #870: the five enrichment fields (source + Wikidata payload) were dropped
         // at write time, so a reload downgraded every card to a bare OSM entry.
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
+        $this->trip($tripId);
 
         $enriched = new Accommodation(
             name: 'Gîte du Morvan',
@@ -334,12 +331,7 @@ final class DoctrineTripStageStoreTest extends TestCase
         // accommodationToArray() drops the tel: link and the "see on OSM" link on
         // every reload and in the anonymous shared view, while the live SSE shows them.
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
+        $this->trip($tripId);
 
         $osmEntry = new Accommodation(
             name: 'Camping du Pont',
@@ -387,7 +379,7 @@ final class DoctrineTripStageStoreTest extends TestCase
         // Accommodations persisted before #870 carry only the ten legacy keys; they
         // must rehydrate on the constructor defaults instead of raising.
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
+        $trip = $this->trip($tripId);
 
         $legacy = [
             'name' => 'Camping Les Oliviers',
@@ -402,7 +394,7 @@ final class DoctrineTripStageStoreTest extends TestCase
             'distanceToEndPoint' => 0.8,
         ];
 
-        $stageEntity = new \App\Entity\Stage($trip);
+        $stageEntity = new StageEntity($trip);
         $stageEntity->setPosition(0);
         $stageEntity->setDayNumber(1);
         $stageEntity->setDistance(10.0);
@@ -415,10 +407,9 @@ final class DoctrineTripStageStoreTest extends TestCase
         $stageEntity->setSelectedAccommodation($legacy);
 
         $trip->addStage($stageEntity);
-
-        $this->entityManager->method('find')->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+        $this->entityManager->persist($stageEntity);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $stages = $this->store->getStages($tripId);
 
@@ -443,9 +434,6 @@ final class DoctrineTripStageStoreTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->method('find')
-            ->willReturn(null);
-
         $result = $this->store->getStages($tripId);
 
         self::assertNull($result);
@@ -455,12 +443,7 @@ final class DoctrineTripStageStoreTest extends TestCase
     public function getStagesReturnsEmptyArrayForTripWithNoStages(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-
-        $this->entityManager->method('find')
-            ->willReturn($trip);
-
-        $this->entityManager->method('createQuery')->willReturn($this->stageQueryFor($trip));
+        $this->trip($tripId);
 
         $result = $this->store->getStages($tripId);
 
@@ -472,12 +455,9 @@ final class DoctrineTripStageStoreTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->method('find')
-            ->willReturn(null);
-        $this->entityManager->expects(self::never())
-            ->method('flush');
-
         $this->store->storeStages($tripId, []);
+
+        self::assertNull($this->store->getStages($tripId));
     }
 
     #[Test]
@@ -487,14 +467,14 @@ final class DoctrineTripStageStoreTest extends TestCase
         // of the identical route (an enrichment/edit pass that leaves geometry
         // untouched) must reuse the persisted values instead of re-scanning.
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $cycleRoute = $this->createMock(CycleRouteRepositoryInterface::class);
         $cycleRoute->expects(self::once())->method('onNetworkFractions')->willReturn([0.42]);
         $coverage = $this->createMock(CoverageRepositoryInterface::class);
         $coverage->expects(self::once())->method('isRouteOutOfZone')->willReturn(false);
 
-        $store = $this->storeWithOsm($trip, $cycleRoute, $coverage);
+        $this->trip($tripId);
+        $store = $this->storeWithOsm($cycleRoute, $coverage);
 
         $stage = $this->stageWithGeometry($tripId);
         $store->storeStages($tripId, [$stage]);
@@ -511,14 +491,14 @@ final class DoctrineTripStageStoreTest extends TestCase
     public function storeStagesRecomputesPostGisScansWhenGeometryChanges(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $cycleRoute = $this->createMock(CycleRouteRepositoryInterface::class);
         $cycleRoute->expects(self::exactly(2))->method('onNetworkFractions')->willReturn([0.1]);
         $coverage = $this->createMock(CoverageRepositoryInterface::class);
         $coverage->expects(self::exactly(2))->method('isRouteOutOfZone')->willReturn(false);
 
-        $store = $this->storeWithOsm($trip, $cycleRoute, $coverage);
+        $this->trip($tripId);
+        $store = $this->storeWithOsm($cycleRoute, $coverage);
 
         $stage = $this->stageWithGeometry($tripId);
         $store->storeStages($tripId, [$stage]);
@@ -528,24 +508,19 @@ final class DoctrineTripStageStoreTest extends TestCase
         $store->storeStages($tripId, [$stage]);
     }
 
-    /**
-     * Stands in for every DQL the repository runs against `stage`, chiefly the refreshing
-     * re-read {@see DoctrineTripStageStore::storeStages()} reconciles against. It
-     * answers from the trip's in-memory collection, which is what this harness persists
-     * into — so a second store sees what the first one wrote, as it would against a real
-     * database.
-     */
-    private function stageQueryFor(TripRequest $trip): Query&MockObject
+    private function trip(string $tripId): TripRequest
     {
-        $query = $this->createMock(Query::class);
-        $query->method('setParameter')->willReturnSelf();
-        $query->method('setHint')->willReturnSelf();
-        $query->method('setMaxResults')->willReturnSelf();
-        $query->method('getResult')->willReturnCallback(static fn (): array => $trip->stages->getValues());
+        $this->trips->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $trip = $this->trips->getRequest($tripId);
+        self::assertInstanceOf(TripRequest::class, $trip);
 
-        return $query;
+        return $trip;
     }
 
+    /**
+     * No integral coordinate: the geometry column is JSONB and reads `2.0` back as the int 2,
+     * which the strict signature comparison would take for a moved route.
+     */
     private function stageWithGeometry(string $tripId): StageDto
     {
         return new StageDto(
@@ -553,26 +528,20 @@ final class DoctrineTripStageStoreTest extends TestCase
             dayNumber: 1,
             distance: 55.0,
             elevation: 100.0,
-            startPoint: new Coordinate(48.1, 2.0, 0.0),
-            endPoint: new Coordinate(48.9, 2.0, 0.0),
+            startPoint: new Coordinate(48.1, 2.05, 0.0),
+            endPoint: new Coordinate(48.9, 2.05, 0.0),
             geometry: [
-                new Coordinate(48.1, 2.0, 0.0),
-                new Coordinate(48.5, 2.0, 0.0),
-                new Coordinate(48.9, 2.0, 0.0),
+                new Coordinate(48.1, 2.05, 0.0),
+                new Coordinate(48.5, 2.05, 0.0),
+                new Coordinate(48.9, 2.05, 0.0),
             ],
         );
     }
 
     private function storeWithOsm(
-        TripRequest $trip,
         CycleRouteRepositoryInterface&MockObject $cycleRoute,
         CoverageRepositoryInterface&MockObject $coverage,
     ): DoctrineTripStageStore {
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('wrapInTransaction')->willReturnCallback(static fn (callable $cb): mixed => $cb());
-        $em->method('find')->willReturn($trip);
-        $em->method('createQuery')->willReturn($this->stageQueryFor($trip));
-
-        return new DoctrineTripStageStore($em, $cycleRoute, $coverage, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
+        return new DoctrineTripStageStore($this->entityManager, $cycleRoute, $coverage, new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()));
     }
 }
