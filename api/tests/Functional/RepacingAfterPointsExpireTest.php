@@ -124,7 +124,7 @@ final class RepacingAfterPointsExpireTest extends ApiTestCase
         };
         self::getContainer()->set('cache.trip_state', new TraceableAdapter($this->tripStateCache));
 
-        ['token' => $this->token] = $this->createTestUserWithJwt(\sprintf('repacing-%s@test.com', bin2hex(random_bytes(6))));
+        ['jwt' => $this->token] = $this->createAuthenticatedUser(\sprintf('repacing-%s@test.com', bin2hex(random_bytes(6))));
     }
 
     private function assertRepacedOnceThePointsHaveExpired(string $tripId): void
