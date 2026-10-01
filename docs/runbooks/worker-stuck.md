@@ -68,7 +68,7 @@ docker compose logs --tail=200 worker
     docker compose restart worker
     ```
 
-3. **Drop poison messages** — only after copying the payload to the incident issue:
+3. **Drop poison messages** — only after copying the message class, id and error to the incident issue. Not the payload: it can hold waypoint coordinates, push notification text and FCM tokens, and an issue is no place for them (see [logs](../deployment.md#logs-what-they-hold-and-how-long-they-stay)):
 
     ```bash
     docker compose exec php bin/console messenger:failed:remove <id>

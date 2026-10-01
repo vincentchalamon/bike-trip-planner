@@ -34,11 +34,32 @@
     state: present
     update_cache: true
 
+- name: Rotate container logs (json-file, size-capped)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "{{ docker_log_max_size }}",
+          "max-file": "{{ docker_log_max_file }}"
+        }
+      }
+  notify: Restart Docker
+
 - name: Enable and start Docker
   ansible.builtin.service:
     name: docker
     enabled: true
     state: started
+
+# Restart now, before a later role starts a container: log-opts only apply to
+# containers created after the daemon picked them up.
+- name: Apply the daemon configuration
+  ansible.builtin.meta: flush_handlers
 
 - name: Add the deploy user to the docker group
   ansible.builtin.user:
