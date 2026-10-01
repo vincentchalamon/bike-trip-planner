@@ -50,6 +50,11 @@ final class PoiSourceRegistryTest extends TestCase
                     $this->pois,
                 );
             }
+
+            public function isEnabled(): bool
+            {
+                return true;
+            }
         };
     }
 
@@ -74,6 +79,23 @@ final class PoiSourceRegistryTest extends TestCase
         $result = $this->registry([$osm, $datatourisme])->fetchAllInCorridor($this->route(), 2000);
 
         self::assertCount(2, $result);
+    }
+
+    #[Test]
+    public function disabledSourceIsSkipped(): void
+    {
+        $enabled = $this->source([
+            ['name' => 'Boulangerie A', 'category' => 'bakery', 'lat' => 48.10, 'lon' => 2.10, 'wikidataId' => null, 'source' => 'osm'],
+        ]);
+
+        $disabled = $this->createMock(PoiSourceInterface::class);
+        $disabled->method('isEnabled')->willReturn(false);
+        $disabled->expects($this->never())->method('fetchInCorridor');
+
+        $result = $this->registry([$enabled, $disabled])->fetchAllInCorridor($this->route(), 2000);
+
+        self::assertCount(1, $result);
+        self::assertSame('Boulangerie A', $result[0]['name']);
     }
 
     #[Test]

@@ -24,7 +24,7 @@ readonly class PoiSourceRegistry
     }
 
     /**
-     * Reads every POI source along the corridor and collapses the OSM/DataTourisme
+     * Reads every enabled POI source along the corridor and collapses the OSM/DataTourisme
      * overlap by proximity + name (the DataTourisme entry is preferred on a tie).
      *
      * @param list<array{lat: float, lon: float}> $route
@@ -35,6 +35,10 @@ readonly class PoiSourceRegistry
     {
         $all = [];
         foreach ($this->sources as $source) {
+            if (!$source->isEnabled()) {
+                continue;
+            }
+
             foreach ($source->fetchInCorridor($route, $radiusMeters) as $poi) {
                 $all[] = $poi;
             }

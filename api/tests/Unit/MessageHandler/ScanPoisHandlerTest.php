@@ -274,6 +274,11 @@ final class ScanPoisHandlerTest extends TestCase
                     'source' => 'osm',
                 ], $this->pois);
             }
+
+            public function isEnabled(): bool
+            {
+                return true;
+            }
         };
 
         return new PoiSourceRegistry([$source], new NearbyNameDeduplicator(new HaversineDistance()));

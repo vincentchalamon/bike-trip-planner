@@ -24,4 +24,6 @@ interface EventSourceInterface
      * @return list<array{name: ?string, category: string, lat: float, lon: float, startDate: string, endDate: string, url: string, description: ?string, priceMin: ?float, source: string}>
      */
     public function findActiveNear(float $lat, float $lon, int $radiusMeters, string $date): array;
+
+    public function isEnabled(): bool;
 }

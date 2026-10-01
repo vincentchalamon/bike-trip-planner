@@ -446,6 +446,11 @@ final class AlertPayloadSnapshotTest extends TestCase
             {
                 return array_map(static fn (array $p): array => $p + ['osmType' => null, 'osmId' => null, 'wikidataId' => null, 'source' => 'osm'], $this->pois);
             }
+
+            public function isEnabled(): bool
+            {
+                return true;
+            }
         };
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([1 => $pois], []);

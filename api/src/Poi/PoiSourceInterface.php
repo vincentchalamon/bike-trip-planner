@@ -25,4 +25,6 @@ interface PoiSourceInterface
      * @return list<array{name: string|null, category: string, lat: float, lon: float, osmType: string|null, osmId: int|null, openingHours: string|null, website: string|null, wikidataId: string|null, source: string}>
      */
     public function fetchInCorridor(array $route, int $radiusMeters): array;
+
+    public function isEnabled(): bool;
 }

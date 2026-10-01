@@ -23,4 +23,9 @@ final readonly class DataTourismeEventSource implements EventSourceInterface
     {
         return $this->eventRepository->findActiveNear($lat, $lon, $radiusMeters, $date);
     }
+
+    public function isEnabled(): bool
+    {
+        return true;
+    }
 }

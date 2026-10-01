@@ -51,6 +51,11 @@ final class EventSourceRegistryTest extends TestCase
 
                 return $events;
             }
+
+            public function isEnabled(): bool
+            {
+                return true;
+            }
         };
     }
 
@@ -71,6 +76,21 @@ final class EventSourceRegistryTest extends TestCase
         $result = $this->registry([$a, $b])->findAllActiveNear(48.0, 2.0, 20_000, '2026-07-10');
 
         self::assertCount(2, $result);
+    }
+
+    #[Test]
+    public function disabledSourceIsSkipped(): void
+    {
+        $enabled = $this->source([['name' => 'Festival A', 'lat' => 48.10, 'lon' => 2.10]]);
+
+        $disabled = $this->createMock(EventSourceInterface::class);
+        $disabled->method('isEnabled')->willReturn(false);
+        $disabled->expects($this->never())->method('findActiveNear');
+
+        $result = $this->registry([$enabled, $disabled])->findAllActiveNear(48.0, 2.0, 20_000, '2026-07-10');
+
+        self::assertCount(1, $result);
+        self::assertSame('Festival A', $result[0]['name']);
     }
 
     #[Test]

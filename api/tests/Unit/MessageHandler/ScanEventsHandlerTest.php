@@ -134,6 +134,7 @@ final class ScanEventsHandlerTest extends TestCase
     public function aRestDayIsNotScannedButIsStillCleared(): void
     {
         $eventSource = $this->createMock(EventSourceInterface::class);
+        $eventSource->method('isEnabled')->willReturn(true);
         $eventSource->expects($this->never())->method('findActiveNear');
 
         $stage = $this->createStage(1, true);
@@ -161,6 +162,7 @@ final class ScanEventsHandlerTest extends TestCase
         $stages = [$this->createStage(1), $this->createStage(2), $this->createStage(3)];
 
         $eventSource = $this->createStub(EventSourceInterface::class);
+        $eventSource->method('isEnabled')->willReturn(true);
         // Stage 0 → 2026-07-10, stage 1 → 2026-07-11, stage 2 → 2026-07-12.
         $eventSource->method('findActiveNear')->willReturnCallback(
             fn (float $lat, float $lon, int $radius, string $date): array => match ($date) {
@@ -214,6 +216,7 @@ final class ScanEventsHandlerTest extends TestCase
         $stages = [$this->createStage(1), $this->createStage(2)];
 
         $eventSource = $this->createStub(EventSourceInterface::class);
+        $eventSource->method('isEnabled')->willReturn(true);
         $eventSource->method('findActiveNear')->willReturnCallback(
             fn (float $lat, float $lon, int $radius, string $date): array => '2026-07-10' === $date
                 ? [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14')]

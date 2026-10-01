@@ -41,4 +41,9 @@ final readonly class DataTourismeFoodPoiSource implements PoiSourceInterface
 
         return $pois;
     }
+
+    public function isEnabled(): bool
+    {
+        return true;
+    }
 }
