@@ -46,8 +46,8 @@ final class TripPreconditionTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->ownerToken] = $this->createTestUserWithJwt('owner@example.com');
-        ['token' => $this->intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['user' => $this->owner, 'jwt' => $this->ownerToken] = $this->createAuthenticatedUser('owner@example.com');
+        ['jwt' => $this->intruderToken] = $this->createAuthenticatedUser('intruder@example.com');
     }
 
     #[Test]

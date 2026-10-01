@@ -55,7 +55,7 @@ final class McpToolCallTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->ownerSessionJwt] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner, 'jwt' => $this->ownerSessionJwt] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     #[Test]
@@ -167,7 +167,7 @@ final class McpToolCallTest extends ApiTestCase
     public function anotherUsersTripIsIndistinguishableFromNoTripAtAll(): void
     {
         $this->seedTrip();
-        $intruder = $this->createTestUserWithJwt('intruder@example.com')['user'];
+        $intruder = $this->createAuthenticatedUser('intruder@example.com')['user'];
         $accessToken = $this->issueAccessTokenFor($intruder);
 
         $denied = $this->body($this->call(
@@ -197,7 +197,7 @@ final class McpToolCallTest extends ApiTestCase
     public function theToolRefusesANonOwner(): void
     {
         $this->seedTrip();
-        $intruder = $this->createTestUserWithJwt('intruder@example.com')['user'];
+        $intruder = $this->createAuthenticatedUser('intruder@example.com')['user'];
         $accessToken = $this->issueAccessTokenFor($intruder);
 
         $response = $this->call(

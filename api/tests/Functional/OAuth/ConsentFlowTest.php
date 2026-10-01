@@ -8,7 +8,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use ApiPlatform\Test\Client;
 use App\Entity\OAuthClient;
 use App\Entity\RefreshToken;
-use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\JwtAuthTestTrait;
@@ -51,8 +50,6 @@ final class ConsentFlowTest extends ApiTestCase
     // S256 of 'a-verifier-of-at-least-43-characters-for-pkce-ok'.
     private const string CODE_CHALLENGE = 'lsmMqplmuEP5Qsegofd3pZlGReS7RX_Y4y8NFq6kGhQ';
 
-    private User $user;
-
     private string $jwt;
 
     private Client $browser;
@@ -65,19 +62,16 @@ final class ConsentFlowTest extends ApiTestCase
         // by one test completes the first leg of the next.
         self::getContainer()->get('cache.oauth_consent')->clear();
 
-        $em = $this->entityManager();
+        ['user' => $user, 'jwt' => $this->jwt] = $this->createAuthenticatedUser('agent-owner@example.com');
 
-        $this->user = new User('agent-owner@example.com');
-        $em->persist($this->user);
+        $em = $this->entityManager();
         $em->persist(RefreshToken::issue(
-            $this->user,
+            $user,
             self::getContainer()->get(RefreshTokenEncryptor::class),
             self::COOKIE,
             new \DateTimeImmutable('+30 days'),
         ));
         $em->flush();
-
-        $this->jwt = self::getContainer()->get('lexik_jwt_authentication.jwt_manager')->create($this->user);
 
         $oauthClient = new OAuthClient('Example Agent', self::CLIENT_ID, null);
         $oauthClient->setRedirectUris(new RedirectUri(self::REDIRECT_URI), new RedirectUri(self::OTHER_REDIRECT_URI));
@@ -139,7 +133,7 @@ final class ConsentFlowTest extends ApiTestCase
     {
         $handle = $this->handleFrom($this->authorize());
 
-        ['token' => $otherJwt] = $this->createTestUserWithJwt('someone-else@example.com');
+        ['jwt' => $otherJwt] = $this->createAuthenticatedUser('someone-else@example.com');
         $this->read($handle, $otherJwt);
 
         // The same answer as a handle that does not exist: telling them apart would confirm

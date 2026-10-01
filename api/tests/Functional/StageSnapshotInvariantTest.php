@@ -55,7 +55,7 @@ final class StageSnapshotInvariantTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('snapshot@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('snapshot@example.com');
     }
 
     #[Test]

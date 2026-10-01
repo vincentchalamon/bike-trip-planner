@@ -10,7 +10,6 @@ use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -25,32 +24,32 @@ final class AuthLogoutTest extends ApiTestCase
         return self::getContainer()->get('doctrine.orm.entity_manager');
     }
 
-    private function createAuthenticatedUser(string $email = 'test@example.com'): array
+    /**
+     * @param non-empty-string $email
+     *
+     * @return array{user: User, jwt: string, refreshToken: RefreshToken}
+     */
+    private function createUserWithRefreshToken(string $email): array
     {
-        $em = $this->getEntityManager();
-        $user = new User($email);
-        $em->persist($user);
+        $auth = $this->createAuthenticatedUser($email);
 
         $refreshToken = RefreshToken::issue(
-            $user,
+            $auth['user'],
             self::getContainer()->get(RefreshTokenEncryptor::class),
             bin2hex(random_bytes(32)),
             new \DateTimeImmutable('+30 days'),
         );
+        $em = $this->getEntityManager();
         $em->persist($refreshToken);
         $em->flush();
 
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-        $jwt = $jwtManager->create($user);
-
-        return ['user' => $user, 'jwt' => $jwt, 'refreshToken' => $refreshToken];
+        return $auth + ['refreshToken' => $refreshToken];
     }
 
     #[Test]
     public function logoutAuthenticatedUserReturns204(): void
     {
-        $auth = $this->createAuthenticatedUser('logout@example.com');
+        $auth = $this->createUserWithRefreshToken('logout@example.com');
 
         self::createClient()->request('POST', '/auth/logout', [
             'headers' => [
@@ -65,7 +64,7 @@ final class AuthLogoutTest extends ApiTestCase
     #[Test]
     public function logoutRevokesAllRefreshTokens(): void
     {
-        $auth = $this->createAuthenticatedUser('revoke@example.com');
+        $auth = $this->createUserWithRefreshToken('revoke@example.com');
 
         self::createClient()->request('POST', '/auth/logout', [
             'headers' => [

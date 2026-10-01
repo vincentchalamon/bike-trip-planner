@@ -56,7 +56,7 @@ final class McpChooseAccommodationTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt(\sprintf('sleep-%s@example.com', bin2hex(random_bytes(4))));
+        ['user' => $this->owner] = $this->createAuthenticatedUser(\sprintf('sleep-%s@example.com', bin2hex(random_bytes(4))));
         $this->ownerToken = $this->issueAccessTokenFor($this->owner, ['trips:write']);
     }
 

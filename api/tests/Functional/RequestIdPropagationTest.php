@@ -31,7 +31,7 @@ final class RequestIdPropagationTest extends ApiTestCase
     #[\Override]
     protected function setUp(): void
     {
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('%s@test.com', bin2hex(random_bytes(8))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('%s@test.com', bin2hex(random_bytes(8))));
     }
 
     #[Test]

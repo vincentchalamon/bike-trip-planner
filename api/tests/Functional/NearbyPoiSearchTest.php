@@ -37,7 +37,7 @@ final class NearbyPoiSearchTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('nearby@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('nearby@example.com');
     }
 
     private function seedTrip(string $tripId, User $owner): void

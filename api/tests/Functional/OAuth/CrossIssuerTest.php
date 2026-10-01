@@ -57,7 +57,7 @@ final class CrossIssuerTest extends ApiTestCase
     {
         self::getContainer()->get('cache.oauth_consent')->clear();
 
-        ['user' => $user, 'token' => $sessionJwt] = $this->createTestUserWithJwt('both-ways@example.com');
+        ['user' => $user, 'jwt' => $sessionJwt] = $this->createAuthenticatedUser('both-ways@example.com');
         $accessToken = $this->issueAccessTokenFor($user, ['trips:read', 'trips:write']);
 
         // The control: the session token this account really holds does open the REST API. It
@@ -84,7 +84,7 @@ final class CrossIssuerTest extends ApiTestCase
     {
         self::getContainer()->get('cache.oauth_consent')->clear();
 
-        ['user' => $user] = $this->createTestUserWithJwt('still-valid@example.com');
+        ['user' => $user] = $this->createAuthenticatedUser('still-valid@example.com');
         $accessToken = $this->issueAccessTokenFor($user, ['trips:read']);
 
         // Shaped like McpToolCallTest builds one: the 2026-07-28 revision mirrors the

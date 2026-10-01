@@ -9,7 +9,6 @@ use App\Tests\Functional\FailingMailerTrait;
 use App\Entity\EmailChangeToken;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Mailer\EventListener\MessageLoggerListener;
 use Symfony\Component\Mime\Email;
@@ -26,25 +25,6 @@ final class EmailChangeTest extends ApiTestCase
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');
-    }
-
-    /**
-     * @param non-empty-string $email
-     *
-     * @return array{user: User, jwt: string}
-     */
-    private function createUser(string $email): array
-    {
-        $em = $this->getEntityManager();
-
-        $user = new User($email);
-        $em->persist($user);
-        $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-
-        return ['user' => $user, 'jwt' => $jwtManager->create($user)];
     }
 
     /**
@@ -76,7 +56,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function requestSendsConfirmationToNewAddressAndCreatesToken(): void
     {
-        $fixtures = $this->createUser('alice@example.com');
+        $fixtures = $this->createAuthenticatedUser('alice@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -96,7 +76,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function confirmationLinkCarriesTheTokenInTheFragment(): void
     {
-        $fixtures = $this->createUser('fragment@example.com');
+        $fixtures = $this->createAuthenticatedUser('fragment@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -126,7 +106,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function requestWithInvalidEmailReturns422(): void
     {
-        $fixtures = $this->createUser('invalid-fmt@example.com');
+        $fixtures = $this->createAuthenticatedUser('invalid-fmt@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -139,7 +119,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function requestWithSameEmailReturns422(): void
     {
-        $fixtures = $this->createUser('same@example.com');
+        $fixtures = $this->createAuthenticatedUser('same@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -152,8 +132,8 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function requestWithAlreadyUsedEmailReturns422(): void
     {
-        $this->createUser('taken@example.com');
-        $fixtures = $this->createUser('requester@example.com');
+        $this->createAuthenticatedUser('taken@example.com');
+        $fixtures = $this->createAuthenticatedUser('requester@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -186,7 +166,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function verifyValidTokenUpdatesEmail(): void
     {
-        $fixtures = $this->createUser('verify-old@example.com');
+        $fixtures = $this->createAuthenticatedUser('verify-old@example.com');
         $this->createTokenForUser($fixtures['user'], 'verify-new@example.com', 'valid-change-token');
 
         $response = self::createClient()->request('POST', '/users/me/email-change/verify', [
@@ -210,7 +190,7 @@ final class EmailChangeTest extends ApiTestCase
     {
         // An authenticated user submitting an expired token is a 422
         // (unprocessable), not a 401 — the caller IS authenticated.
-        $fixtures = $this->createUser('expired-old@example.com');
+        $fixtures = $this->createAuthenticatedUser('expired-old@example.com');
         $this->createTokenForUser(
             $fixtures['user'],
             'expired-new@example.com',
@@ -229,7 +209,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function verifyUnknownTokenReturns422(): void
     {
-        $fixtures = $this->createUser('unknown-token@example.com');
+        $fixtures = $this->createAuthenticatedUser('unknown-token@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -246,7 +226,7 @@ final class EmailChangeTest extends ApiTestCase
         // token is pre-consumed so the user's email (and thus their JWT) stays
         // valid — verifying single-use independently of the post-change JWT
         // rotation, which is exercised separately.
-        $fixtures = $this->createUser('reuse-old@example.com');
+        $fixtures = $this->createAuthenticatedUser('reuse-old@example.com');
         $token = $this->createTokenForUser($fixtures['user'], 'reuse-new@example.com', 'reuse-change-token');
 
         $em = $this->getEntityManager();
@@ -263,8 +243,8 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function verifyTokenBelongingToAnotherUserReturns403AndDoesNotConsumeIt(): void
     {
-        $owner = $this->createUser('owner@example.com');
-        $attacker = $this->createUser('attacker@example.com');
+        $owner = $this->createAuthenticatedUser('owner@example.com');
+        $attacker = $this->createAuthenticatedUser('attacker@example.com');
         $this->createTokenForUser($owner['user'], 'owner-new@example.com', 'someone-elses-token');
 
         $client = self::createClient();
@@ -300,11 +280,11 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function verifyTargetEmailTakenAfterRequestReturns422(): void
     {
-        $fixtures = $this->createUser('race-old@example.com');
+        $fixtures = $this->createAuthenticatedUser('race-old@example.com');
         $this->createTokenForUser($fixtures['user'], 'race-target@example.com', 'race-change-token');
 
         // Another account claims the target address before verification.
-        $this->createUser('race-target@example.com');
+        $this->createAuthenticatedUser('race-target@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -317,7 +297,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function verifyWithEmptyTokenReturns422(): void
     {
-        $fixtures = $this->createUser('empty-token@example.com');
+        $fixtures = $this->createAuthenticatedUser('empty-token@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -330,8 +310,8 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function noEmailIsSentWhenTargetIsAlreadyTaken(): void
     {
-        $this->createUser('occupied@example.com');
-        $fixtures = $this->createUser('hopeful@example.com');
+        $this->createAuthenticatedUser('occupied@example.com');
+        $fixtures = $this->createAuthenticatedUser('hopeful@example.com');
 
         self::createClient()->request('POST', '/users/me/email-change', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -346,7 +326,7 @@ final class EmailChangeTest extends ApiTestCase
     #[Test]
     public function aMailFailureAnswers503WithoutTheSmtpMessage(): void
     {
-        $fixtures = $this->createUser('mailfail@example.com');
+        $fixtures = $this->createAuthenticatedUser('mailfail@example.com');
 
         $client = self::createClient();
         $this->failTheMailer();

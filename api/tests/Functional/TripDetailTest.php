@@ -43,7 +43,7 @@ final class TripDetailTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTrip(string $tripId, ?\DateTimeImmutable $startDate = null): DoctrineTripRequestRepository
@@ -665,7 +665,7 @@ final class TripDetailTest extends ApiTestCase
         $this->seedTrip(self::TRIP_ID);
         $this->stageStore()->storeStages(self::TRIP_ID, []);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
@@ -768,7 +768,7 @@ final class TripDetailTest extends ApiTestCase
         $this->seedTrip(self::TRIP_ID);
         $this->stageStore()->storeStages(self::TRIP_ID, []);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('GET', \sprintf('/trips/%s/route', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
@@ -792,7 +792,7 @@ final class TripDetailTest extends ApiTestCase
             ),
         ]);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder2@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('intruder2@example.com');
 
         $stageId = ($this->stageStore()->getStages(self::TRIP_ID) ?? [])[0]->id;
         $this->client->request('GET', \sprintf('/trips/%s/stages/%s/detail', self::TRIP_ID, $stageId), [

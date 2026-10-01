@@ -41,7 +41,7 @@ final class AuthorizedApplicationsTest extends ApiTestCase
     {
         self::getContainer()->get('cache.oauth_consent')->clear();
 
-        ['user' => $this->owner, 'token' => $this->ownerJwt] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner, 'jwt' => $this->ownerJwt] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /**
@@ -121,7 +121,7 @@ final class AuthorizedApplicationsTest extends ApiTestCase
     #[Test]
     public function revokingOneUserLeavesAnotherUsersAccessAlone(): void
     {
-        $neighbour = $this->createTestUserWithJwt('neighbour@example.com')['user'];
+        $neighbour = $this->createAuthenticatedUser('neighbour@example.com')['user'];
         $neighbourToken = $this->issueAccessTokenFor($neighbour, ['trips:read']);
 
         $mine = $this->issueAccessTokenFor($this->reloadOwner(), ['trips:read']);
@@ -136,7 +136,7 @@ final class AuthorizedApplicationsTest extends ApiTestCase
     #[Test]
     public function anotherUsersGrantIsIndistinguishableFromNoGrantAtAll(): void
     {
-        $neighbour = $this->createTestUserWithJwt('neighbour@example.com')['user'];
+        $neighbour = $this->createAuthenticatedUser('neighbour@example.com')['user'];
         $this->issueAccessTokenFor($neighbour, ['trips:read']);
 
         $theirs = $this->grantRows()[0]['id'];
@@ -290,7 +290,7 @@ final class AuthorizedApplicationsTest extends ApiTestCase
         // The session token names the old address in its `username` claim, and the provider
         // loads by it — so it stops opening anything the moment the address changes. A browser
         // gets a new one from its refresh cookie; here, minting it is the shortest equivalent.
-        $this->ownerJwt = self::getContainer()->get('lexik_jwt_authentication.jwt_manager')->create($this->reloadOwner());
+        $this->ownerJwt = self::createJwt($this->reloadOwner());
     }
 
     /**

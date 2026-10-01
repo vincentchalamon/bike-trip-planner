@@ -46,7 +46,7 @@ final class TripEnrichmentGenerationTest extends ApiTestCase
         $client = self::createClient();
         $client->disableReboot();
         self::getContainer()->set('strava.client', new MockHttpClient(static fn (): MockResponse => new MockResponse((string) file_get_contents(__DIR__.'/../fixtures/multi-stage-route.gpx'))));
-        ['token' => $token] = $this->createTestUserWithJwt(\sprintf('enrichment-generation-%s@test.com', bin2hex(random_bytes(6))));
+        ['jwt' => $token] = $this->createAuthenticatedUser(\sprintf('enrichment-generation-%s@test.com', bin2hex(random_bytes(6))));
 
         $client->request('POST', '/trips', [
             'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'enrichment-generation-'.bin2hex(random_bytes(6))], $this->authHeader($token)),
@@ -67,7 +67,7 @@ final class TripEnrichmentGenerationTest extends ApiTestCase
         $client = self::createClient();
         $client->disableReboot();
         self::getContainer()->set('strava.client', new MockHttpClient(static fn (): MockResponse => new MockResponse((string) file_get_contents(__DIR__.'/../fixtures/multi-stage-route.gpx'))));
-        ['token' => $token] = $this->createTestUserWithJwt(\sprintf('enrichment-repace-%s@test.com', bin2hex(random_bytes(6))));
+        ['jwt' => $token] = $this->createAuthenticatedUser(\sprintf('enrichment-repace-%s@test.com', bin2hex(random_bytes(6))));
 
         $response = $client->request('POST', '/trips', [
             'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'enrichment-repace-'.bin2hex(random_bytes(6))], $this->authHeader($token)),

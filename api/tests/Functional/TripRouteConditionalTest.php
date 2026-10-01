@@ -46,7 +46,7 @@ final class TripRouteConditionalTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->ownerToken] = $this->createTestUserWithJwt('route-owner@example.com');
+        ['user' => $this->owner, 'jwt' => $this->ownerToken] = $this->createAuthenticatedUser('route-owner@example.com');
     }
 
     /**
@@ -140,7 +140,7 @@ final class TripRouteConditionalTest extends ApiTestCase
         $this->seedTrip();
         $etag = $this->routeEtag();
 
-        ['token' => $intruderToken] = $this->createTestUserWithJwt('route-intruder@example.com');
+        ['jwt' => $intruderToken] = $this->createAuthenticatedUser('route-intruder@example.com');
 
         $this->client->request('GET', $this->routeUrl(), [
             'headers' => array_merge(

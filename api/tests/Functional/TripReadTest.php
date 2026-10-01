@@ -43,7 +43,7 @@ final class TripReadTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTrip(string $tripId, ?\DateTimeImmutable $startDate = null, bool $withStages = true): void
@@ -140,7 +140,7 @@ final class TripReadTest extends ApiTestCase
     public function aStrangerGetsTheSame404AsForAMissingTrip(): void
     {
         $this->seedTrip(self::TRIP_ID);
-        ['token' => $intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $intruderToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('GET', '/trips/'.self::TRIP_ID, [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($intruderToken)),

@@ -26,7 +26,7 @@ final class TripCreateTest extends ApiTestCase
     #[\Override]
     protected function setUp(): void
     {
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('%s@test.com', bin2hex(random_bytes(8))));
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser(\sprintf('%s@test.com', bin2hex(random_bytes(8))));
     }
 
     #[Test]
@@ -282,7 +282,7 @@ final class TripCreateTest extends ApiTestCase
         // whichever transport happens to carry the request. A non-browser client
         // (an agent, a cron, the mobile app) sends no Accept-Language at all, and
         // must not silently fall back to a different language than the owner's.
-        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt('locale-owner@test.com');
+        ['user' => $user, 'jwt' => $token] = $this->createAuthenticatedUser('locale-owner@test.com');
 
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get('doctrine.orm.entity_manager');
@@ -319,7 +319,7 @@ final class TripCreateTest extends ApiTestCase
     #[Test]
     public function aThrottledCreationIsToldWhenToRetry(): void
     {
-        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt('throttled-creator@test.com');
+        ['user' => $user, 'jwt' => $token] = $this->createAuthenticatedUser('throttled-creator@test.com');
         $client = self::createClient();
         // The limiter's array pool dies with the kernel, which the browser reboots between
         // requests unless told not to.

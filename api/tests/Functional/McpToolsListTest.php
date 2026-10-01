@@ -41,7 +41,7 @@ final class McpToolsListTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->user] = $this->createTestUserWithJwt('agent@example.com');
+        ['user' => $this->user] = $this->createAuthenticatedUser('agent@example.com');
     }
 
     /** @var list<string> */

@@ -52,7 +52,7 @@ final class TripUpdateThroughDoctrineTest extends ApiTestCase
     {
         $this->client = self::createClient();
 
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('doctrine-patch@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('doctrine-patch@example.com');
     }
 
     #[Test]

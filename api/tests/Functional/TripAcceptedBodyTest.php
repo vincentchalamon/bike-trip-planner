@@ -47,7 +47,7 @@ final class TripAcceptedBodyTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private function seedTrip(?\DateTimeImmutable $startDate = null): void

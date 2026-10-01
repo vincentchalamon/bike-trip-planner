@@ -43,7 +43,7 @@ final class TripCreationIdempotencyTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['token' => $this->jwtToken] = $this->createTestUserWithJwt('idempotent@example.com');
+        ['jwt' => $this->jwtToken] = $this->createAuthenticatedUser('idempotent@example.com');
     }
 
     #[Test]
@@ -104,7 +104,7 @@ final class TripCreationIdempotencyTest extends ApiTestCase
         $mine = $this->create(self::KEY, self::SOURCE);
         $this->assertResponseStatusCodeSame(202);
 
-        ['token' => $otherToken] = $this->createTestUserWithJwt('someone-else@example.com');
+        ['jwt' => $otherToken] = $this->createAuthenticatedUser('someone-else@example.com');
         $theirs = $this->client->request('POST', '/trips', [
             'headers' => array_merge(
                 ['Content-Type' => 'application/ld+json', 'Idempotency-Key' => self::KEY],

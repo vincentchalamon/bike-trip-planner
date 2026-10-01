@@ -9,7 +9,6 @@ use App\ApiResource\TripRequest;
 use App\Entity\Stage;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
@@ -33,15 +32,12 @@ final class AccountExportTest extends ApiTestCase
      */
     private function createUserWithTrip(string $email): array
     {
+        $fixtures = $this->createAuthenticatedUser($email, ['locale' => 'en']);
+
         $em = $this->getEntityManager();
 
-        $user = new User($email);
-        $user->setLocale('en');
-
-        $em->persist($user);
-
         $trip = new TripRequest(Uuid::v7());
-        $trip->user = $user;
+        $trip->user = $fixtures['user'];
         $trip->title = 'My Bikepacking Trip';
         $trip->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $trip->fatigueFactor = 0.85;
@@ -66,11 +62,7 @@ final class AccountExportTest extends ApiTestCase
 
         $em->flush();
 
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-        $jwt = $jwtManager->create($user);
-
-        return ['user' => $user, 'jwt' => $jwt];
+        return $fixtures;
     }
 
     #[Test]
@@ -137,13 +129,12 @@ final class AccountExportTest extends ApiTestCase
     #[Test]
     public function exportOrdersStagesByPosition(): void
     {
+        $fixtures = $this->createAuthenticatedUser('ordered-export@example.com');
+
         $em = $this->getEntityManager();
 
-        $user = new User('ordered-export@example.com');
-        $em->persist($user);
-
         $trip = new TripRequest(Uuid::v7());
-        $trip->user = $user;
+        $trip->user = $fixtures['user'];
 
         $em->persist($trip);
 
@@ -165,11 +156,8 @@ final class AccountExportTest extends ApiTestCase
 
         $em->flush();
 
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-
         $response = self::createClient()->request('GET', '/users/me/export', [
-            'headers' => ['Authorization' => 'Bearer '.$jwtManager->create($user)],
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
         ]);
 
         $this->assertResponseIsSuccessful();

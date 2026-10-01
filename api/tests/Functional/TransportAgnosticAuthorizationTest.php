@@ -52,7 +52,7 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->owner, 'token' => $this->ownerToken] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner, 'jwt' => $this->ownerToken] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /**
@@ -104,7 +104,7 @@ final class TransportAgnosticAuthorizationTest extends ApiTestCase
     public function anotherUserIsDenied(string $method, string $uri, string $accept): void
     {
         $this->seedTrip();
-        ['token' => $intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $intruderToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request($method, $uri, $this->options($intruderToken, $method, $accept));
 

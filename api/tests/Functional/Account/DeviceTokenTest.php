@@ -9,7 +9,6 @@ use App\Entity\DeviceToken;
 use App\Entity\User;
 use App\Enum\DevicePlatform;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -22,25 +21,6 @@ final class DeviceTokenTest extends ApiTestCase
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');
-    }
-
-    /**
-     * @param non-empty-string $email
-     *
-     * @return array{user: User, jwt: string}
-     */
-    private function createUser(string $email): array
-    {
-        $em = $this->getEntityManager();
-
-        $user = new User($email);
-        $em->persist($user);
-        $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-
-        return ['user' => $user, 'jwt' => $jwtManager->create($user)];
     }
 
     private function persistToken(User $user, string $token, DevicePlatform $platform): DeviceToken
@@ -61,7 +41,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function registerNewTokenReturns201(): void
     {
-        $fixtures = $this->createUser('register@example.com');
+        $fixtures = $this->createAuthenticatedUser('register@example.com');
 
         $response = self::createClient()->request('POST', '/users/me/device-tokens', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -83,7 +63,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function reRegisterSameTokenReturns200AndDoesNotDuplicate(): void
     {
-        $fixtures = $this->createUser('reregister@example.com');
+        $fixtures = $this->createAuthenticatedUser('reregister@example.com');
         $this->persistToken($fixtures['user'], 'fcm-dupe', DevicePlatform::ANDROID);
 
         self::createClient()->request('POST', '/users/me/device-tokens', [
@@ -105,8 +85,8 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function reRegisterTokenOfAnotherUserReassignsIt(): void
     {
-        $owner = $this->createUser('previous-owner@example.com');
-        $newOwner = $this->createUser('new-owner@example.com');
+        $owner = $this->createAuthenticatedUser('previous-owner@example.com');
+        $newOwner = $this->createAuthenticatedUser('new-owner@example.com');
         $this->persistToken($owner['user'], 'fcm-shared-device', DevicePlatform::ANDROID);
 
         self::createClient()->request('POST', '/users/me/device-tokens', [
@@ -141,7 +121,7 @@ final class DeviceTokenTest extends ApiTestCase
     {
         // An unknown backed-enum value fails denormalization and surfaces as 422
         // (a validation violation), never 400 (ADR / API Platform 4.3 contract).
-        $fixtures = $this->createUser('bad-platform@example.com');
+        $fixtures = $this->createAuthenticatedUser('bad-platform@example.com');
 
         self::createClient()->request('POST', '/users/me/device-tokens', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -155,7 +135,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function deleteReturns204(): void
     {
-        $fixtures = $this->createUser('unregister@example.com');
+        $fixtures = $this->createAuthenticatedUser('unregister@example.com');
         $this->persistToken($fixtures['user'], 'fcm-to-delete', DevicePlatform::IOS);
 
         self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
@@ -173,8 +153,8 @@ final class DeviceTokenTest extends ApiTestCase
         // The delete is scoped to the caller's own tokens, so a foreign token is
         // "not found" -> 404 (indistinguishable from a missing one) and is never
         // touched.
-        $owner = $this->createUser('token-owner@example.com');
-        $attacker = $this->createUser('token-attacker@example.com');
+        $owner = $this->createAuthenticatedUser('token-owner@example.com');
+        $attacker = $this->createAuthenticatedUser('token-attacker@example.com');
         $this->persistToken($owner['user'], 'fcm-not-yours', DevicePlatform::ANDROID);
 
         self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
@@ -193,7 +173,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function deleteUnknownTokenReturns404(): void
     {
-        $fixtures = $this->createUser('delete-unknown@example.com');
+        $fixtures = $this->createAuthenticatedUser('delete-unknown@example.com');
 
         self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -206,7 +186,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function unregisterWithoutATokenReturns422(): void
     {
-        $fixtures = $this->createUser('unregister-blank@example.com');
+        $fixtures = $this->createAuthenticatedUser('unregister-blank@example.com');
 
         self::createClient()->request('POST', '/users/me/device-tokens/unregister', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
@@ -220,7 +200,7 @@ final class DeviceTokenTest extends ApiTestCase
     #[Test]
     public function theTokenIsNoLongerAcceptedInThePath(): void
     {
-        $fixtures = $this->createUser('unregister-path@example.com');
+        $fixtures = $this->createAuthenticatedUser('unregister-path@example.com');
         $this->persistToken($fixtures['user'], 'fcm-in-path', DevicePlatform::IOS);
 
         self::createClient()->request('DELETE', '/users/me/device-tokens/fcm-in-path', [

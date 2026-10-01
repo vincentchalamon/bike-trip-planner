@@ -35,7 +35,7 @@ final class TripDuplicateTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000002';

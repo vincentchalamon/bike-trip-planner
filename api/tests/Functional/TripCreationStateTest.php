@@ -110,7 +110,7 @@ final class TripCreationStateTest extends ApiTestCase
      */
     private function frenchOwner(): array
     {
-        ['user' => $user, 'token' => $token] = $this->createTestUserWithJwt(\sprintf('creation-state-%s@test.com', bin2hex(random_bytes(6))));
+        ['user' => $user, 'jwt' => $token] = $this->createAuthenticatedUser(\sprintf('creation-state-%s@test.com', bin2hex(random_bytes(6))));
         $user->setLocale('fr');
         $this->service(EntityManagerInterface::class)->flush();
 

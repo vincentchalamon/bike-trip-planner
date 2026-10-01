@@ -52,7 +52,7 @@ final class McpShareTripTest extends ApiTestCase
         self::getContainer()->get('cache.mcp_confirmation')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
         $this->seedTrip();
     }
 
@@ -144,7 +144,7 @@ final class McpShareTripTest extends ApiTestCase
     #[Test]
     public function anotherUsersTripIsIndistinguishableFromNoTripAtAll(): void
     {
-        ['user' => $stranger] = $this->createTestUserWithJwt('stranger@example.com');
+        ['user' => $stranger] = $this->createAuthenticatedUser('stranger@example.com');
         $strangerToken = $this->issueAccessTokenFor($stranger, ['trips:write']);
 
         $someoneElses = $this->tool('share_trip', ['tripId' => self::TRIP_ID], $strangerToken)->toArray(false);

@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Account;
 
 use App\Tests\ApiTestCase;
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -26,30 +23,6 @@ final class AccountUpdateTest extends ApiTestCase
     #[\Override]
     protected static ?bool $alwaysBootKernel = false;
 
-    private function getEntityManager(): EntityManagerInterface
-    {
-        return self::getContainer()->get('doctrine.orm.entity_manager');
-    }
-
-    /**
-     * @param non-empty-string $email
-     */
-    private function createUserJwt(string $email, string $locale): string
-    {
-        $em = $this->getEntityManager();
-
-        $user = new User($email);
-        $user->setLocale($locale);
-
-        $em->persist($user);
-        $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-
-        return $jwtManager->create($user);
-    }
-
     /**
      * @return array<string, string>
      */
@@ -66,7 +39,7 @@ final class AccountUpdateTest extends ApiTestCase
     #[Test]
     public function theOwnerChangesTheirLocaleAndReadsItBack(): void
     {
-        $jwt = $this->createUserJwt('switcher@example.com', 'fr');
+        $jwt = $this->createAuthenticatedUser('switcher@example.com', ['locale' => 'fr'])['jwt'];
         $client = self::createClient();
 
         $response = $client->request('PATCH', '/users/me', [
@@ -88,7 +61,7 @@ final class AccountUpdateTest extends ApiTestCase
     #[Test]
     public function anUnsupportedLocaleIsRejected(): void
     {
-        $jwt = $this->createUserJwt('exotic@example.com', 'fr');
+        $jwt = $this->createAuthenticatedUser('exotic@example.com', ['locale' => 'fr'])['jwt'];
 
         self::createClient()->request('PATCH', '/users/me', [
             'headers' => $this->patchHeaders($jwt),
@@ -101,7 +74,7 @@ final class AccountUpdateTest extends ApiTestCase
     #[Test]
     public function anOmittedLocaleIsRejectedRatherThanSilentlyIgnored(): void
     {
-        $jwt = $this->createUserJwt('empty@example.com', 'fr');
+        $jwt = $this->createAuthenticatedUser('empty@example.com', ['locale' => 'fr'])['jwt'];
 
         self::createClient()->request('PATCH', '/users/me', [
             'headers' => $this->patchHeaders($jwt),

@@ -15,7 +15,6 @@ use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -38,10 +37,9 @@ final class AccountDeleteTest extends ApiTestCase
      */
     private function createUserWithTrip(string $email): array
     {
-        $em = $this->getEntityManager();
+        ['user' => $user, 'jwt' => $jwt] = $this->createAuthenticatedUser($email);
 
-        $user = new User($email);
-        $em->persist($user);
+        $em = $this->getEntityManager();
 
         $refreshToken = RefreshToken::issue(
             $user,
@@ -59,10 +57,6 @@ final class AccountDeleteTest extends ApiTestCase
         $em->persist($trip);
 
         $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-        $jwt = $jwtManager->create($user);
 
         return ['user' => $user, 'jwt' => $jwt, 'refreshToken' => $refreshToken, 'tripId' => $tripId->toRfc4122()];
     }

@@ -46,7 +46,7 @@ final class McpSearchPlacesTest extends ApiTestCase
         self::getContainer()->get('cache.osm')->clear();
 
         $this->client = self::createClient();
-        ['user' => $user] = $this->createTestUserWithJwt('searcher@example.com');
+        ['user' => $user] = $this->createAuthenticatedUser('searcher@example.com');
 
         // Issued here, so that the only thing between installing the mock and the request is
         // the request: anything that touches the kernel in between drops the replacement and

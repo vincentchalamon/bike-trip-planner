@@ -43,7 +43,7 @@ final class AccountErasureRevokesAgentsTest extends ApiTestCase
     {
         self::getContainer()->get('cache.oauth_consent')->clear();
 
-        ['user' => $user, 'token' => $sessionJwt] = $this->createTestUserWithJwt('leaving@example.com');
+        ['user' => $user, 'jwt' => $sessionJwt] = $this->createAuthenticatedUser('leaving@example.com');
         $accessToken = $this->issueAccessTokenFor($user);
 
         self::assertSame(200, $this->toolsList($accessToken)->getStatusCode(), 'The agent should be able to act before the erasure.');

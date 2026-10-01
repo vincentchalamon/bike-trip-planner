@@ -46,7 +46,7 @@ final class McpInputSchemaTest extends ApiTestCase
         self::getContainer()->get('cache.oauth_consent')->clear();
 
         $this->client = self::createClient();
-        ['user' => $this->owner] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->owner] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     /**

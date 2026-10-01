@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Account;
 
 use App\Tests\ApiTestCase;
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -17,34 +14,10 @@ final class AccountMeTest extends ApiTestCase
     #[\Override]
     protected static ?bool $alwaysBootKernel = false;
 
-    private function getEntityManager(): EntityManagerInterface
-    {
-        return self::getContainer()->get('doctrine.orm.entity_manager');
-    }
-
-    /**
-     * @param non-empty-string $email
-     */
-    private function createUserJwt(string $email, string $locale): string
-    {
-        $em = $this->getEntityManager();
-
-        $user = new User($email);
-        $user->setLocale($locale);
-
-        $em->persist($user);
-        $em->flush();
-
-        /** @var JWTTokenManagerInterface $jwtManager */
-        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
-
-        return $jwtManager->create($user);
-    }
-
     #[Test]
     public function meReturnsTheCurrentUserProfile(): void
     {
-        $jwt = $this->createUserJwt('me@example.com', 'en');
+        $jwt = $this->createAuthenticatedUser('me@example.com', ['locale' => 'en'])['jwt'];
 
         $response = self::createClient()->request('GET', '/users/me', [
             'headers' => ['Authorization' => 'Bearer '.$jwt],

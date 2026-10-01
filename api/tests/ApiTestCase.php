@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Tests;
 
 use ApiPlatform\Test\ApiTestCase as BaseApiTestCase;
+use App\Entity\User;
+use App\Factory\UserFactory;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 /**
  * Base class for every functional test.
@@ -24,4 +27,27 @@ abstract class ApiTestCase extends BaseApiTestCase
 {
     #[\Override]
     protected static ?bool $alwaysBootKernel = true;
+
+    /**
+     * Persists a user and signs a session JWT for it.
+     *
+     * @param non-empty-string     $email
+     * @param array<string, mixed> $attributes extra {@see UserFactory} attributes (e.g. `locale`)
+     *
+     * @return array{user: User, jwt: string}
+     */
+    protected function createAuthenticatedUser(string $email, array $attributes = []): array
+    {
+        $user = UserFactory::createOne(['email' => $email] + $attributes);
+
+        return ['user' => $user, 'jwt' => self::createJwt($user)];
+    }
+
+    protected static function createJwt(User $user): string
+    {
+        /** @var JWTTokenManagerInterface $jwtManager */
+        $jwtManager = self::getContainer()->get('lexik_jwt_authentication.jwt_manager');
+
+        return $jwtManager->create($user);
+    }
 }

@@ -37,7 +37,7 @@ final class MercureTokenTest extends ApiTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('owner@example.com');
+        ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('owner@example.com');
     }
 
     private function seedTrip(string $tripId): void
@@ -100,7 +100,7 @@ final class MercureTokenTest extends ApiTestCase
         // foreign trip is indistinguishable from a non-existent one.
         $this->seedTrip(self::TRIP_ID);
 
-        ['token' => $intruderToken] = $this->createTestUserWithJwt('intruder@example.com');
+        ['jwt' => $intruderToken] = $this->createAuthenticatedUser('intruder@example.com');
 
         $this->client->request('GET', \sprintf('/trips/%s/mercure-token', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($intruderToken)),
