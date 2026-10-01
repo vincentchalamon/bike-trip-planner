@@ -11,3 +11,4 @@ email_change:
     email_taken: "This email address is already in use."
     rate_limited: "Too many email-change requests. Please try again in a moment."
     invalid_link: "Invalid or expired link."
+    mail_failed: "The confirmation email could not be sent. Please try again in a moment."

@@ -32,6 +32,7 @@ use App\Service\TripBootstrapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -87,6 +88,60 @@ final class FetchAndParseRouteHandlerTest extends TestCase
 
         // The handler must return normally (computation marked done), not re-throw.
         $handler(new FetchAndParseRoute('trip-1'));
+    }
+
+    /**
+     * A private Komoot link carries its share_token in the query, and a transport
+     * message quotes the URL it failed on: neither reaches the log whole.
+     */
+    #[Test]
+    public function aFailedFetchLogsTheSourceWithoutItsShareToken(): void
+    {
+        $request = new TripRequest();
+        $request->sourceUrl = 'https://www.komoot.com/tour/123?share_token=s3cr3t&ref=wtd';
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($request);
+
+        $fetcher = $this->createStub(RouteFetcherInterface::class);
+        $fetcher->method('fetch')->willThrowException(new \RuntimeException('HTTP/2 403 returned for "https://www.komoot.com/api/v007/tours/123?share_token=s3cr3t".'));
+        $registry = $this->createStub(RouteFetcherRegistryInterface::class);
+        $registry->method('get')->willReturn($fetcher);
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $logger = new class () extends AbstractLogger {
+            /** @var list<array<mixed>> */
+            public array $logged = [];
+
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->logged[] = $context;
+            }
+        };
+
+        $handler = new FetchAndParseRouteHandler(
+            $computationTracker,
+            $publisher,
+            $this->createStub(TripGenerationTrackerInterface::class),
+            $logger,
+            $tripStateManager,
+            $this->createStub(TripStageStoreInterface::class),
+            $points,
+            $registry,
+            $this->bootstrapper($tripStateManager, $points, $publisher, $this->createStub(DistanceCalculatorInterface::class), $this->createStub(ElevationCalculatorInterface::class), $this->createStub(RouteSimplifierInterface::class)),
+            $this->createStub(MessageBusInterface::class),
+            $this->createAlertRenderer(),
+        );
+
+        $handler(new FetchAndParseRoute('trip-1'));
+
+        $encoded = (string) json_encode($logger->logged);
+        self::assertStringContainsString('www.komoot.com\\/tour\\/123', $encoded);
+        self::assertStringNotContainsString('s3cr3t', $encoded);
     }
 
     /**

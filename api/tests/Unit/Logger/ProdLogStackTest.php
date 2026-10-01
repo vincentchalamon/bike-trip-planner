@@ -75,6 +75,26 @@ final class ProdLogStackTest extends TestCase
         self::assertStringNotContainsString('deadbeef', $written);
     }
 
+    /**
+     * The worker's `messenger:consume -vv` prints every info line to stdout; the
+     * http_client ones carry each outbound URL, trip coordinates included.
+     */
+    #[Test]
+    public function theProdConsoleHandlerLeavesOutgoingRequestsOut(): void
+    {
+        $container = new ContainerBuilder();
+        $container->registerExtension(new MonologExtension());
+        new PhpFileLoader($container, new FileLocator(\dirname(__DIR__, 3).'/config'), 'prod')->load('packages/monolog.php');
+
+        $console = null;
+        foreach ($container->getExtensionConfig('monolog') as $config) {
+            $console = ((array) ($config['handlers'] ?? []))['console'] ?? $console;
+        }
+
+        self::assertIsArray($console);
+        self::assertContains('!http_client', (array) ($console['channels'] ?? []));
+    }
+
     /** The stack above is only prod's if prod's stderr handlers do use that formatter. */
     #[Test]
     public function everyProdHandlerWritingJsonRedactsIt(): void

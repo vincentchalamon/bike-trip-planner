@@ -102,12 +102,17 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                     'formatter' => RedactingJsonFormatter::class,
                 ],
+                // The worker runs `messenger:consume -vv`, so this prints every info line
+                // to its stdout. Not http_client's: its `Request:`/`Response:` lines carry
+                // the full URL of each outbound call, trip coordinates included (Open-Meteo,
+                // Nominatim). They still reach stderr, redacted, with an error's buffer.
                 'console' => [
                     'type' => 'console',
                     'process_psr_3_messages' => false,
                     'channels' => [
                         '!event',
                         '!doctrine',
+                        '!http_client',
                     ],
                 ],
                 'deprecation' => [

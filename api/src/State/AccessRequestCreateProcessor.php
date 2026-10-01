@@ -19,6 +19,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -33,7 +35,7 @@ use Symfony\Component\DependencyInjection\Attribute\Target;
  * Handles access request creation: rate limiting, email deduplication, HMAC link generation and email sending.
  *
  * Returns 429 when the IP rate limit is exceeded; returns 202 for all other normal cases (new request, duplicate email, existing user) to prevent email enumeration.
- * Throws on infrastructure failure (e.g. mailer down) after removing the persisted record, so the client receives a 500 and can retry.
+ * Answers 503 on a mail failure after removing the persisted record, so the client can retry.
  *
  * @implements ProcessorInterface<AccessRequestDto, JsonResponse>
  */
@@ -132,14 +134,20 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
 
         try {
             $this->mailer->send($emailMessage);
-        } catch (\Throwable $throwable) {
+        } catch (TransportExceptionInterface $transportException) {
+            // The class and code only, and a 503 without the SMTP text: a rejection
+            // quotes the recipient. Unlike the magic link, this one is not answered
+            // neutrally: the record is gone, and a 202 would leave the requester
+            // waiting for an email that never comes instead of trying again.
             $this->logger->error('Failed to send access request verification email — removing record to allow retry', [
                 'emailHash' => EmailFingerprint::of($email),
-                'error' => $throwable->getMessage(),
+                'error' => $transportException::class,
+                'code' => $transportException->getCode(),
             ]);
             $this->entityManager->remove($accessRequest);
             $this->entityManager->flush();
-            throw $throwable;
+
+            throw new ServiceUnavailableHttpException(message: $this->translator->trans('access_request.error.mail_failed', [], 'access_request'), previous: $transportException, code: $transportException->getCode());
         }
 
         $this->logger->debug('Access request created and verification email sent', ['emailHash' => EmailFingerprint::of($email)]);

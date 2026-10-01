@@ -30,8 +30,8 @@ final class LogRedactor
      */
     private const string SECRET_PATH = '#(/auth/verify[/\#]|/account/email-change/verify[/\#]|/access-requests/verify\#|/s/|/users/me/device-tokens/(?!unregister\b))[^/?\#\s"\'<>.{]+#';
 
-    /** Query parameters whose value is a credential or personal data. */
-    private const string SECRET_QUERY = '/([?&#](?:email|signature|token|access_token|refresh_token|id_token|code|state|apikey|api_key|key|password)=)[^&#\s"\'<>]*/i';
+    /** Query parameters whose value is a credential or personal data (an address, a position). */
+    private const string SECRET_QUERY = '/([?&#](?:email|signature|token|share_token|access_token|refresh_token|id_token|code|state|apikey|api_key|key|password|lat|lon|lng|latitude|longitude)=)[^&#\s"\'<>]*/i';
 
     /** Route parameters and context keys whose value is a credential. */
     public const array SECRET_KEYS = ['token', 'plainToken', 'shortCode', 'signature', 'refresh_token', 'password', 'email', 'newEmail'];

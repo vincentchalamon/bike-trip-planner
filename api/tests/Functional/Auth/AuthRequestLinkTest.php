@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Auth;
 
 use App\Tests\ApiTestCase;
+use App\Tests\Functional\FailingMailerTrait;
+use App\Entity\MagicLink;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,6 +16,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class AuthRequestLinkTest extends ApiTestCase
 {
+    use FailingMailerTrait;
     use MailerAssertionsTrait;
 
     #[\Override]
@@ -180,5 +183,27 @@ final class AuthRequestLinkTest extends ApiTestCase
         $this->assertSame(202, $knownResponse->getStatusCode());
         $this->assertSame(202, $unknownResponse->getStatusCode());
         $this->assertSame($knownData['message'], $unknownData['message']);
+    }
+
+    /**
+     * Only an existing account reaches the send: a 500 there would say the address
+     * is registered. The link is not kept, so the next request makes a fresh one.
+     */
+    #[Test]
+    public function aMailFailureIsAnsweredNeutrallyAndKeepsNoLink(): void
+    {
+        $em = $this->getEntityManager();
+        $em->persist(new User('rider@example.com'));
+        $em->flush();
+
+        $client = self::createClient();
+        $this->failTheMailer();
+        $client->request('POST', '/auth/request-link', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'rider@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        $this->assertSame(0, $this->getEntityManager()->getRepository(MagicLink::class)->count([]));
     }
 }

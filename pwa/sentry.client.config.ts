@@ -7,6 +7,7 @@
  * captured.
  */
 import * as Sentry from "@sentry/nextjs";
+import { scrubBreadcrumb, scrubEvent } from "./src/lib/sentry-scrub";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -22,6 +23,12 @@ Sentry.init({
   // Strict-by-default PII posture (no IP, no cookie, no header content).
   // The backend already strips JWTs at the boundary; we mirror that here.
   sendDefaultPii: false,
+
+  // sendDefaultPii does not cover URLs: the page URL keeps its fragment (the
+  // verify token of an emailed link) and every fetch/navigation becomes a
+  // breadcrumb. Everything leaves through sentry-scrub.
+  beforeBreadcrumb: scrubBreadcrumb,
+  beforeSendTransaction: scrubEvent,
 
   beforeSend(event, hint) {
     // Drop transient network failures while the browser knows it is offline:
@@ -47,7 +54,7 @@ Sentry.init({
       return null;
     }
 
-    return event;
+    return scrubEvent(event);
   },
 });
 
