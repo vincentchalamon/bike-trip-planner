@@ -197,7 +197,7 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
         } catch (HttpClientExceptionInterface $httpClientException) {
             fclose($handle);
 
-            throw new ImportFailedException(\sprintf('OpenAgenda export download failed: %s', $httpClientException->getMessage()), 0, $httpClientException);
+            throw new ImportFailedException(\sprintf('OpenAgenda export download failed: %s', $this->withoutApiKey($httpClientException->getMessage())), 0, $httpClientException);
         } finally {
             if (\is_resource($handle)) {
                 fclose($handle);
@@ -355,5 +355,18 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
         ], 'psql drop openagenda staging schema');
+    }
+
+    /**
+     * A transport error quotes the URL it failed on, `?apikey=` included when a private
+     * portal sets one (EnvImporters): the message lands in provisioner.log and on the
+     * console.
+     */
+    private function withoutApiKey(string $message): string
+    {
+        parse_str((string) parse_url($this->exportUrl, \PHP_URL_QUERY), $query);
+        $apiKey = $query['apikey'] ?? '';
+
+        return \is_string($apiKey) && '' !== $apiKey ? str_replace([$apiKey, rawurlencode($apiKey)], '[redacted]', $message) : $message;
     }
 }

@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Provisioner\DataTourismeImporter;
 use Provisioner\Exception\ImportFailedException;
 use Provisioner\WikidataEnricher;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Process\Process;
@@ -763,5 +764,23 @@ final class DataTourismeImporterTest extends TestCase
 
         $this->expectException(ImportFailedException::class);
         $importer->run($this->workDir, 'bretagne');
+    }
+
+    #[Test]
+    public function aTransportErrorDoesNotQuoteTheAppKey(): void
+    {
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://diffuseur.datatourisme.fr/webservice/flux-1/s3cr3t-key',
+            httpClient: new MockHttpClient(static fn (string $method, string $url): never => throw new TransportException(\sprintf('Idle timeout reached for "%s".', $url))),
+            processFactory: $this->capturingFactory(),
+        );
+
+        try {
+            $importer->run($this->workDir, 'bretagne');
+            self::fail('The download should have failed.');
+        } catch (ImportFailedException $importFailedException) {
+            self::assertStringContainsString('flux-1/[redacted]', $importFailedException->getMessage());
+            self::assertStringNotContainsString('s3cr3t-key', $importFailedException->getMessage());
+        }
     }
 }
