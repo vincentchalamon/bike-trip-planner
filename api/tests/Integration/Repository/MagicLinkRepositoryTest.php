@@ -79,15 +79,34 @@ final class MagicLinkRepositoryTest extends KernelTestCase
         $repository = $this->repository($clock);
         $user = new User('pending@example.com');
         $this->em->persist($user);
-        $first = $repository->create($user);
-        $this->em->flush();
-        $whilePending = $repository->create($user);
-        $clock->modify('+31 minutes');
-        $afterExpiry = $repository->create($user);
-
+        $first = $repository->issue($user);
         self::assertInstanceOf(MagicLink::class, $first);
+        $repository->save($first);
+        $whilePending = $repository->issue($user);
+        $clock->modify('+31 minutes');
+        $afterExpiry = $repository->issue($user);
+
         self::assertNull($whilePending);
         self::assertInstanceOf(MagicLink::class, $afterExpiry);
+    }
+
+    /**
+     * The link is sent before it is stored: one whose email never left must not block the
+     * next request for thirty minutes.
+     */
+    #[Test]
+    public function anIssuedLinkIsNotStoredUntilSaved(): void
+    {
+        $repository = $this->repository(new NativeClock());
+        $user = new User('unsent@example.com');
+        $this->em->persist($user);
+        $this->em->flush();
+
+        $repository->issue($user);
+        $this->em->flush();
+
+        self::assertSame(0, $repository->count([]));
+        self::assertInstanceOf(MagicLink::class, $repository->issue($user));
     }
 
     private function repository(ClockInterface $clock): MagicLinkRepository
@@ -105,9 +124,9 @@ final class MagicLinkRepositoryTest extends KernelTestCase
     {
         $user = new User($email);
         $this->em->persist($user);
-        $link = $repository->create($user);
+        $link = $repository->issue($user);
         self::assertInstanceOf(MagicLink::class, $link);
-        $this->em->flush();
+        $repository->save($link);
 
         $token = $link->getPlainToken();
         self::assertIsString($token);

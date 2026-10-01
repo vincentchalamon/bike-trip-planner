@@ -7,7 +7,7 @@ namespace App\Security\Voter;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\OwnedTripFinderInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Uid\Uuid;
@@ -46,7 +46,7 @@ final class TripVoter extends Voter
     ];
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly OwnedTripFinderInterface $trips,
     ) {
     }
 
@@ -76,25 +76,6 @@ final class TripVoter extends Voter
             return false;
         }
 
-        return $this->isOwnerInDatabase($user, $tripId);
-    }
-
-    private function isOwnerInDatabase(User $user, string $tripId): bool
-    {
-        if (!Uuid::isValid($tripId)) {
-            return false;
-        }
-
-        $count = $this->entityManager->createQueryBuilder()
-            ->select('COUNT(t.id)')
-            ->from(TripRequest::class, 't')
-            ->where('t.id = :tripId')
-            ->andWhere('t.user = :user')
-            ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return (int) $count > 0;
+        return $this->trips->isOwnedBy($tripId, $user);
     }
 }

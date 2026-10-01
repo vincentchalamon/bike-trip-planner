@@ -10,7 +10,6 @@ use App\ApiResource\Account\EmailChange;
 use App\Entity\User;
 use App\Repository\EmailChangeTokenRepository;
 use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -44,7 +43,6 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
 {
     public function __construct(
         private Security $security,
-        private EntityManagerInterface $entityManager,
         private EmailChangeTokenRepository $emailChangeTokenRepository,
         private UserRepository $userRepository,
         private MailerInterface $mailer,
@@ -94,7 +92,6 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         }
 
         $token = $this->emailChangeTokenRepository->create($user, $newEmail);
-        $this->entityManager->flush();
 
         // In the fragment, which a browser never sends (see AuthRequestLinkProcessor).
         $verifyUrl = \sprintf('%s/account/email-change/verify#%s', rtrim($this->frontendUrl, '/'), (string) $token->getPlainToken());

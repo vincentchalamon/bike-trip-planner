@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
-use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -31,7 +29,6 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
     public function __construct(
         private MagicLinkRepository $magicLinkRepository,
         private RefreshTokenRepository $refreshTokenRepository,
-        private EntityManagerInterface $entityManager,
         private JWTTokenManagerInterface $jwtManager,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
@@ -68,14 +65,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
         $jwt = $this->jwtManager->create($user);
 
-        // Wrap refresh token creation in a transaction: if flush fails, the
-        // magic link's consumed_at is already set (atomic UPDATE) but we must
-        // ensure the refresh token is also committed.
-        $refreshToken = null;
-        $this->entityManager->wrapInTransaction(function () use ($user, &$refreshToken): void {
-            $refreshToken = $this->refreshTokenRepository->createForUser($user);
-        });
-        \assert($refreshToken instanceof RefreshToken);
+        $refreshToken = $this->refreshTokenRepository->createForUser($user);
 
         // Plaintext is available on the freshly minted token (stored encrypted).
         $plainToken = $refreshToken->getPlainToken();

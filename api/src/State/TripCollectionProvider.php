@@ -12,8 +12,8 @@ use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
+use App\Repository\OwnedTripFinderInterface;
 use App\State\Mcp\McpArguments;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Uid\Uuid;
 
@@ -32,7 +32,7 @@ use Symfony\Component\Uid\Uuid;
 final readonly class TripCollectionProvider implements ProviderInterface
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private OwnedTripFinderInterface $trips,
         private Pagination $pagination,
         private Security $security,
         private ComputationTrackerInterface $computationTracker,
@@ -58,67 +58,22 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         \assert($user instanceof User);
 
-        $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('t')
-            ->from(TripRequest::class, 't')
-            ->orderBy('t.createdAt', \SortDirection::Descending)
-            // createdAt alone is not a total order: two trips created in the same second sit
-            // in an order the database is free to change between queries, so a tie straddling
-            // a page boundary is served twice or not at all. The identifier is a UUID v7, so
-            // it breaks the tie in the same direction time runs.
-            ->addOrderBy('t.id', \SortDirection::Descending)
-            ->andWhere('t.user = :user')
-            ->setParameter('user', $user);
+        $title = isset($filters['title']) && \is_string($filters['title']) ? $filters['title'] : null;
+        $startsFrom = $this->date($filters['startDate'] ?? null);
+        $endsBy = $this->date($filters['endDate'] ?? null);
 
-        // Filter by title (partial, case-insensitive)
-        if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {
-            $qb->andWhere('LOWER(t.title) LIKE LOWER(:title)')
-                ->setParameter('title', '%'.addcslashes($filters['title'], '%_').'%');
-        }
+        $totalItems = $this->trips->countOwnedBy($user, $title, $startsFrom, $endsBy);
+        $entities = $this->trips->findPageOwnedBy($user, $title, $startsFrom, $endsBy, ($page - 1) * $limit, $limit);
 
-        // Filter by startDate (trips starting on or after this date)
-        if (!empty($filters['startDate']) && is_string($filters['startDate'])) {
-            try {
-                $start = new \DateTimeImmutable($filters['startDate']);
-                $qb->andWhere('t.startDate >= :startDate')
-                    ->setParameter('startDate', $start);
-            } catch (\Exception) {
-                // Ignore invalid date values
-            }
-        }
-
-        // Filter by endDate (trips ending on or before this date)
-        if (!empty($filters['endDate']) && is_string($filters['endDate'])) {
-            try {
-                $end = new \DateTimeImmutable($filters['endDate']);
-                $qb->andWhere('t.endDate <= :endDate')
-                    ->setParameter('endDate', $end);
-            } catch (\Exception) {
-                // Ignore invalid date values
-            }
-        }
-
-        // Count total matching items at the SQL level (without LIMIT/OFFSET). No join is in
-        // play at this point, so one row per trip and no DISTINCT to pay for.
-        $countQb = clone $qb;
-        $countQb->select('COUNT(t.id)')->resetDQLPart('orderBy');
-
-        $totalItems = (int) $countQb->getQuery()->getSingleScalarResult();
-
-        $qb->setFirstResult(($page - 1) * $limit)
-            ->setMaxResults($limit);
-
-        /** @var list<TripRequest> $entities */
-        $entities = $qb->getQuery()->getResult();
-
-        $tripIds = array_map(static function (TripRequest $entity): string {
+        $uuids = array_map(static function (TripRequest $entity): Uuid {
             \assert($entity->id instanceof Uuid);
 
-            return $entity->id->toRfc4122();
+            return $entity->id;
         }, $entities);
 
-        $statusesByTripId = $this->computationTracker->getStatusesBatch($tripIds);
-        $totalsByTripId = $this->stageTotals($entities);
+        $statusesByTripId = $this->computationTracker->getStatusesBatch(array_map(static fn (Uuid $id): string => $id->toRfc4122(), $uuids));
+        // A trip with no ridden stage yet is absent from the map and falls back to zero.
+        $totalsByTripId = $this->trips->stageTotalsByTrip($uuids);
 
         $items = array_map(function (TripRequest $entity) use ($statusesByTripId, $totalsByTripId): TripListItem {
             \assert($entity->id instanceof Uuid);
@@ -131,44 +86,19 @@ final readonly class TripCollectionProvider implements ProviderInterface
     }
 
     /**
-     * Ridden distance and stage count per trip, read as an aggregate.
-     *
-     * The page used to be fetch-joined with its stages so these two numbers could be summed
-     * in PHP, which hydrated eight JSONB columns per stage — geometry included — to produce
-     * a float and an int. One grouped scalar query instead, on the same identifiers the
-     * status lookup above already batches.
-     *
-     * Rest days are excluded here rather than in a join condition, and the query is separate
-     * rather than a GROUP BY on the page: a left join carrying that predicate in its WHERE
-     * turns into an inner join, and a trip with no stages — the state every new trip is in —
-     * would drop out of the list entirely. Trips missing from this map fall back to zero.
-     *
-     * @param list<TripRequest> $entities
-     *
-     * @return array<string, array{float, int}>
+     * An unparseable date filters nothing rather than failing the list.
      */
-    private function stageTotals(array $entities): array
+    private function date(mixed $value): ?\DateTimeImmutable
     {
-        if ([] === $entities) {
-            return [];
+        if (empty($value) || !\is_string($value)) {
+            return null;
         }
 
-        /** @var list<array{tripId: string, distance: numeric-string|float|null, stages: int}> $rows */
-        $rows = $this->entityManager->createQuery(
-            'SELECT IDENTITY(s.trip) AS tripId, SUM(s.distance) AS distance, COUNT(s.id) AS stages
-             FROM App\Entity\Stage s
-             WHERE s.trip IN (:tripIds) AND s.isRestDay = false
-             GROUP BY s.trip',
-        )
-            ->setParameter('tripIds', array_column($entities, 'id'))
-            ->getResult();
-
-        $totals = [];
-        foreach ($rows as $row) {
-            $totals[Uuid::fromString($row['tripId'])->toRfc4122()] = [(float) $row['distance'], (int) $row['stages']];
+        try {
+            return new \DateTimeImmutable($value);
+        } catch (\Exception) {
+            return null;
         }
-
-        return $totals;
     }
 
     /**

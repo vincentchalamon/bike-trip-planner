@@ -37,11 +37,11 @@ final class AuthVerifyTest extends ApiTestCase
 
         /** @var MagicLinkRepository $repo */
         $repo = self::getContainer()->get(MagicLinkRepository::class);
-        $magicLink = $repo->create($user);
+        $magicLink = $repo->issue($user);
         self::assertInstanceOf(MagicLink::class, $magicLink);
         $plainToken = $magicLink->getPlainToken();
         self::assertIsString($plainToken);
-        $em->flush();
+        $repo->save($magicLink);
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],

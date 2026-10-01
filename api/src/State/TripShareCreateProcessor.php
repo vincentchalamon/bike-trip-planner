@@ -10,8 +10,8 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
+use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripShareRepositoryInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -29,7 +29,7 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         /** @var ProcessorInterface<TripShare, TripShare> */
         #[Autowire(service: PersistProcessor::class)]
         private ProcessorInterface $persistProcessor,
-        private EntityManagerInterface $entityManager,
+        private TripRequestRepositoryInterface $trips,
         private TripShareRepositoryInterface $tripShareRepository,
     ) {
     }
@@ -76,13 +76,8 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         }
 
         if ($tripId instanceof Uuid || is_string($tripId)) {
-            try {
-                $uuid = $tripId instanceof Uuid ? $tripId : Uuid::fromString($tripId);
-            } catch (\InvalidArgumentException) {
-                throw new NotFoundHttpException('Trip not found.');
-            }
-
-            $trip = $this->entityManager->find(TripRequest::class, $uuid);
+            // getRequest() answers null for a malformed identifier as for an unknown one.
+            $trip = $this->trips->getRequest((string) $tripId);
             if (!$trip instanceof TripRequest) {
                 throw new NotFoundHttpException('Trip not found.');
             }

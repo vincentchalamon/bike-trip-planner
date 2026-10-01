@@ -8,7 +8,9 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 
 /**
  * @extends ServiceEntityRepository<RefreshToken>
@@ -38,18 +40,71 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      * encrypted at rest and looked up by its digest; the plaintext is kept on
      * the returned entity ({@see RefreshToken::getPlainToken()}) for immediate
      * re-serving to the client.
-     *
-     * Persists the entity but does NOT flush — the caller is responsible for flushing.
      */
     public function createForUser(User $user): RefreshToken
     {
-        $plain = bin2hex(random_bytes(64));
-        $expiresAt = new \DateTimeImmutable(\sprintf('+%d days', self::TTL_DAYS));
-
-        $refreshToken = RefreshToken::issue($user, $this->encryptor, $plain, $expiresAt);
+        $refreshToken = $this->issue($user);
         $this->getEntityManager()->persist($refreshToken);
+        $this->getEntityManager()->flush();
 
         return $refreshToken;
+    }
+
+    /**
+     * Rotates $existing: issues its successor, and keeps $existing usable for $graceSeconds
+     * pointing at it, so a reload race that re-sends the pre-rotation token resolves to the
+     * successor rather than a 401 that destroys the session (recette #649).
+     *
+     * Returns the successor, or, when a concurrent call rotated first, the live successor that
+     * call issued: null if that one is no longer valid either.
+     *
+     * The claim is a compare-and-swap in SQL: only the first concurrent caller flips
+     * replaced_by_token from NULL, which fences a double rotation that would otherwise orphan a
+     * live 30-day successor, and the successor is inserted in the same transaction. "Now" is the
+     * PHP clock on both sides of it, the one every expiry here is written with and that
+     * {@see RefreshToken::isValid()} reads: the database's NOW() runs in the session's zone,
+     * which need not be PHP's, and `expires_at` carries no zone to reconcile the two.
+     */
+    public function rotate(RefreshToken $existing, int $graceSeconds): ?RefreshToken
+    {
+        $now = new \DateTimeImmutable();
+        $grace = $now->modify(\sprintf('+%d seconds', $graceSeconds));
+        $successor = $this->issue($existing->getUser());
+        $em = $this->getEntityManager();
+        $claimed = 0;
+
+        $em->wrapInTransaction(static function () use ($em, $existing, $successor, $grace, $now, &$claimed): void {
+            $claimed = $em->getConnection()->executeStatement(
+                'UPDATE refresh_token SET replaced_by_token = :new, expires_at = :grace WHERE id = :id AND replaced_by_token IS NULL AND expires_at > :now',
+                [
+                    'new' => $successor->getTokenDigest(),
+                    'grace' => $grace,
+                    'id' => $existing->getId(),
+                    'now' => $now,
+                ],
+                [
+                    'grace' => Types::DATETIME_IMMUTABLE,
+                    'id' => UuidType::NAME,
+                    'now' => Types::DATETIME_IMMUTABLE,
+                ],
+            );
+
+            if (1 === $claimed) {
+                // Mirrored onto the managed entity so the flush closing the transaction does
+                // not write the old values back.
+                $existing->replaceWith($successor->getTokenDigest(), $grace);
+                $em->persist($successor);
+            }
+        });
+
+        if (1 === $claimed) {
+            return $successor;
+        }
+
+        $em->refresh($existing);
+        $replacedBy = $existing->getReplacedByToken();
+
+        return null !== $replacedBy ? $this->findValidByDigest($replacedBy) : null;
     }
 
     /**
@@ -87,9 +142,7 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     }
 
     /**
-     * Marks all refresh tokens for the given user for removal.
-     *
-     * Does NOT flush — the caller is responsible for flushing.
+     * Deletes every refresh token of the given user, in one statement.
      */
     public function removeAllForUser(User $user): void
     {
@@ -99,5 +152,13 @@ final class RefreshTokenRepository extends ServiceEntityRepository
             ->setParameter('user', $user)
             ->getQuery()
             ->execute();
+    }
+
+    private function issue(User $user): RefreshToken
+    {
+        $plain = bin2hex(random_bytes(64));
+        $expiresAt = new \DateTimeImmutable(\sprintf('+%d days', self::TTL_DAYS));
+
+        return RefreshToken::issue($user, $this->encryptor, $plain, $expiresAt);
     }
 }

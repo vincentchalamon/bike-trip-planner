@@ -6,8 +6,10 @@ namespace App\Repository;
 
 use App\ComputationTracker\ComputationStatusStore;
 use App\ApiResource\TripRequest;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\AbstractQuery;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 use Symfony\Component\Uid\Uuid;
@@ -180,6 +182,133 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $trips;
     }
 
+    public function isOwnedBy(string $tripId, User $owner): bool
+    {
+        if (!Uuid::isValid($tripId)) {
+            return false;
+        }
+
+        $count = $this->createQueryBuilder('t')
+            ->select('COUNT(t.id)')
+            ->where('t.id = :tripId')
+            ->andWhere('t.user = :user')
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('user', $owner)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count > 0;
+    }
+
+    public function findPageOwnedBy(User $owner, ?string $title, ?\DateTimeImmutable $startsFrom, ?\DateTimeImmutable $endsBy, int $offset, int $limit): array
+    {
+        /** @var list<TripRequest> $trips */
+        $trips = $this->ownedBy($owner, $title, $startsFrom, $endsBy)
+            ->orderBy('t.createdAt', \SortDirection::Descending)
+            // createdAt alone is not a total order: two trips created in the same second sit
+            // in an order the database is free to change between queries, so a tie straddling
+            // a page boundary is served twice or not at all. The identifier is a UUID v7, so
+            // it breaks the tie in the same direction time runs.
+            ->addOrderBy('t.id', \SortDirection::Descending)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $trips;
+    }
+
+    public function countOwnedBy(User $owner, ?string $title, ?\DateTimeImmutable $startsFrom, ?\DateTimeImmutable $endsBy): int
+    {
+        // One row per trip and no join, so no DISTINCT to pay for.
+        return (int) $this->ownedBy($owner, $title, $startsFrom, $endsBy)
+            ->select('COUNT(t.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function findAllOwnedBy(User $owner): array
+    {
+        /** @var list<TripRequest> $trips */
+        $trips = $this->createQueryBuilder('t')
+            ->where('t.user = :user')
+            ->setParameter('user', $owner)
+            ->orderBy('t.createdAt', \SortDirection::Ascending)
+            ->getQuery()
+            ->getResult();
+
+        return $trips;
+    }
+
+    /**
+     * Read as an aggregate rather than summed over a fetch-joined page, which hydrated eight
+     * JSONB columns per stage — geometry included — to produce a float and an int.
+     *
+     * Rest days are excluded here rather than in a join condition, and the query is separate
+     * rather than a GROUP BY on the page: a left join carrying that predicate in its WHERE
+     * turns into an inner join, and a trip with no stages — the state every new trip is in —
+     * would drop out of the list entirely.
+     */
+    public function stageTotalsByTrip(array $tripIds): array
+    {
+        if ([] === $tripIds) {
+            return [];
+        }
+
+        /** @var list<array{tripId: string, distance: numeric-string|float|null, stages: int}> $rows */
+        $rows = $this->getEntityManager()->createQuery(
+            'SELECT IDENTITY(s.trip) AS tripId, SUM(s.distance) AS distance, COUNT(s.id) AS stages
+             FROM App\Entity\Stage s
+             WHERE s.trip IN (:tripIds) AND s.isRestDay = false
+             GROUP BY s.trip',
+        )
+            ->setParameter('tripIds', $tripIds)
+            ->getResult();
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[Uuid::fromString($row['tripId'])->toRfc4122()] = [(float) $row['distance'], (int) $row['stages']];
+        }
+
+        return $totals;
+    }
+
+    /**
+     * A scalar read rather than the stages themselves: a fetch-join hydrated eight JSONB
+     * columns per stage — geometry, weather, alerts, accommodations — none of which the export
+     * ships. It carries its own ORDER BY, because the `#[ORM\OrderBy]` on the association only
+     * applies when the collection is the thing being loaded; sorting globally by position keeps
+     * each trip's own rows ascending.
+     */
+    public function stageSummariesByTrip(array $tripIds): array
+    {
+        if ([] === $tripIds) {
+            return [];
+        }
+
+        /** @var list<array{tripId: string, dayNumber: int, label: string|null, distance: float, elevation: float}> $rows */
+        $rows = $this->getEntityManager()->createQuery(
+            'SELECT IDENTITY(s.trip) AS tripId, s.dayNumber, s.label, s.distance, s.elevation
+             FROM App\Entity\Stage s
+             WHERE s.trip IN (:tripIds)
+             ORDER BY s.position ASC',
+        )
+            ->setParameter('tripIds', $tripIds)
+            ->getResult();
+
+        $byTripId = [];
+        foreach ($rows as $row) {
+            $byTripId[Uuid::fromString($row['tripId'])->toRfc4122()][] = [
+                'dayNumber' => $row['dayNumber'],
+                'label' => $row['label'],
+                'distance' => $row['distance'],
+                'elevation' => $row['elevation'],
+            ];
+        }
+
+        return $byTripId;
+    }
+
     /**
      * Mirrors the enrichment status map onto the trip row (ADR-072).
      *
@@ -286,6 +415,30 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         return $byTripId;
+    }
+
+    private function ownedBy(User $owner, ?string $title, ?\DateTimeImmutable $startsFrom, ?\DateTimeImmutable $endsBy): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.user = :user')
+            ->setParameter('user', $owner);
+
+        if (null !== $title && '' !== $title) {
+            $qb->andWhere('LOWER(t.title) LIKE LOWER(:title)')
+                ->setParameter('title', '%'.addcslashes($title, '%_').'%');
+        }
+
+        if ($startsFrom instanceof \DateTimeImmutable) {
+            $qb->andWhere('t.startDate >= :startDate')
+                ->setParameter('startDate', $startsFrom);
+        }
+
+        if ($endsBy instanceof \DateTimeImmutable) {
+            $qb->andWhere('t.endDate <= :endDate')
+                ->setParameter('endDate', $endsBy);
+        }
+
+        return $qb;
     }
 
     private function findTripRequest(string $tripId): ?TripRequest

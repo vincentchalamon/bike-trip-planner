@@ -153,6 +153,20 @@ What makes this robust:
   ([ADR-012](adr/adr-012-rule-based-nudge-and-contextual-alert-engine.md),
   [ADR-069](adr/adr-069-alerts-rendered-at-read.md), [Alert engine](alert-engine.md)).
 
+## Persistence: who queries, who flushes
+
+- **Queries live in repositories.** A State provider or processor, a voter or a handler asks a
+  repository method named for what it wants (`findPageOwnedBy()`, `isOwnedBy()`, `rotate()`); it
+  never builds a query builder, DQL or SQL itself. Raw SQL stays where the statement needs it (a
+  compare-and-swap, an insert whose unique violation is the expected outcome), but inside the
+  repository.
+- **A repository write is complete when the method returns.** Every repository method that
+  writes flushes, or executes its own statement, before returning, so no caller has to remember
+  a flush after it. A method that only builds an entity for the caller to send first
+  (`MagicLinkRepository::issue()`) writes nothing, and the separate method that stores it
+  (`save()`) flushes. A `flush()` in a processor or command is for the entities that class
+  changed itself.
+
 ## Live updates: Mercure as an invalidation channel
 
 Workers publish an event to the trip's topic whenever something changes. Mercure is never the

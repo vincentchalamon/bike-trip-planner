@@ -15,7 +15,7 @@ use Psr\Clock\ClockInterface;
  * Purges expired refresh tokens that were never rotated or revoked.
  *
  * Magic links are deleted on consumption and cleaned up opportunistically
- * in MagicLinkRepository::create(). Only refresh tokens from abandoned
+ * in MagicLinkRepository::issue(). Only refresh tokens from abandoned
  * sessions (user never returns) accumulate and need periodic purging.
  *
  * Intended to be run via cron (e.g. daily):
