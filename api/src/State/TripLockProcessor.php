@@ -18,7 +18,7 @@ use App\Repository\TripRequestRepositoryInterface;
  * Declared per operation rather than called by hand in each processor. Nine processors used to
  * call `assertNotLocked()` themselves, which meant the list of locked operations existed twice:
  * once in the calls, once in whatever documented them. Two lists drift. Here the flag is both
- * what applies the rule and what {@see \App\Metadata\TripLockMetadataFactory} publishes, so
+ * what applies the rule and what {@see \App\Metadata\OperationContractMetadataFactory} publishes, so
  * they cannot disagree — the same arrangement {@see PreconditionProcessor} uses for `If-Match`.
  *
  * Runs ahead of that precondition on purpose: telling a caller their version is stale, or that

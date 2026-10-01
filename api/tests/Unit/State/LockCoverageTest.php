@@ -18,7 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * once in those calls, once in whatever claimed to document them — and the second list was
  * empty, since 423 appeared nowhere in the published contract. The flag on the operation is now
  * both what {@see TripLockProcessor} enforces and what
- * {@see \App\Metadata\TripLockMetadataFactory} advertises. This stops the calls coming back.
+ * {@see \App\Metadata\OperationContractMetadataFactory} advertises. This stops the calls coming back.
  */
 final class LockCoverageTest extends KernelTestCase
 {

@@ -46,8 +46,8 @@ readonly class Idempotency
     /** The same thing, named as an argument where there is no header to put it in. */
     public const string ARGUMENT = 'idempotencyKey';
 
-    /** Opaque to the server, which only ever compares it. */
-    private const string KEY_PATTERN = '/^[A-Za-z0-9_-]{16,255}$/';
+    /** Opaque to the server, which only ever compares it. Without delimiters, so the OpenAPI document can publish it as is. */
+    public const string KEY_PATTERN = '^[A-Za-z0-9_-]{16,255}$';
 
     /**
      * How long a derived key stands for "the same call again" (seconds).
@@ -195,7 +195,7 @@ readonly class Idempotency
 
     private function validated(?string $key, string $name, string $carrier): string
     {
-        if (null === $key || 1 !== preg_match(self::KEY_PATTERN, $key)) {
+        if (null === $key || 1 !== preg_match('/'.self::KEY_PATTERN.'/', $key)) {
             throw new BadRequestHttpException(\sprintf('This operation requires an "%s" %s: an opaque string of 16 to 255 characters from [A-Za-z0-9_-], minted once per creation and sent again unchanged on every retry of it.', $name, $carrier));
         }
 

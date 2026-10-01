@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Parameter;
 use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
+use App\Concurrency\IfMatch;
 use App\State\TripRouteProvider;
 
 /**
@@ -33,7 +34,7 @@ use App\State\TripRouteProvider;
                         in: 'header',
                         description: 'The ETag of a previously served route, quoted — for example `"7"`. Answered 304 when the geometry has not changed since, which it only does when the stages are regenerated.',
                         required: false,
-                        schema: ['type' => 'string', 'pattern' => '^(\*|"\d+")$'],
+                        schema: ['type' => 'string', 'pattern' => IfMatch::PATTERN],
                     ),
                 ],
             ),
