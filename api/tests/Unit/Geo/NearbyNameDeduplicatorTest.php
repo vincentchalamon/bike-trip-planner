@@ -54,6 +54,15 @@ final class NearbyNameDeduplicatorTest extends TestCase
     }
 
     #[Test]
+    public function aCallerCanWidenTheProximityRadius(): void
+    {
+        $items = [$this->item('Camping du Lac', 'osm'), $this->item('Camping du Lac', 'datatourisme')];
+
+        self::assertCount(2, $this->deduplicator(120.0)->dedupe($items), 'beyond the 75 m default');
+        self::assertCount(1, $this->deduplicator(120.0)->dedupe($items, 200));
+    }
+
+    #[Test]
     public function normalisesAccentsAndCaseWhenComparingNames(): void
     {
         $result = $this->deduplicator(50.0)->dedupe([
