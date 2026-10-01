@@ -226,7 +226,7 @@ final class GpxUploadServiceTest extends TestCase
         $pacing = $this->createStub(PacingEngineInterface::class);
         $pacing->method('generateStages')->willReturn($stages);
 
-        $structural = new StructuralComputationService($repository, $points, $distance, $elevation, $simplifier, $pacing);
+        $structural = new StructuralComputationService($repository, $points, $distance, $elevation, $simplifier, $pacing, $this->createStub(TripStageStoreInterface::class));
 
         return new GpxUploadService(
             $this->createStub(GpxRouteParserInterface::class),

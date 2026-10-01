@@ -11,9 +11,11 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
+use App\Engine\StageRoute;
 use App\Enum\SourceType;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\TripStageStoreInterface;
 
 /**
  * Generates the structural stages of a trip (pacing) from its stored route data.
@@ -23,7 +25,11 @@ use App\Repository\TripRequestRepositoryInterface;
  *  - synchronously in {@see GpxUploadService} (the GPX upload is fully local CPU work),
  *  - asynchronously in the link/AI path that still needs a network fetch first.
  *
- * Pure in-memory CPU: no DB write, no network. The caller persists and publishes.
+ * No DB write, no network. The caller persists and publishes.
+ *
+ * The route is read from the transient points while they last, and from the stages' own
+ * geometry once they have expired ({@see StageRoute}, #1405): a trip has to stay re-pacable
+ * whatever the cache holds.
  */
 final readonly class StructuralComputationService
 {
@@ -34,6 +40,7 @@ final readonly class StructuralComputationService
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private PacingEngineInterface $pacingEngine,
+        private TripStageStoreInterface $stageStore,
     ) {
     }
 
@@ -99,19 +106,16 @@ final readonly class StructuralComputationService
     private function generateCollectionStages(string $tripId): array
     {
         $tracksData = $this->points->getTracksData($tripId);
-
-        if (null === $tracksData) {
-            return [];
-        }
+        $tracks = null !== $tracksData
+            ? array_map(static fn (array $track): array => array_map(
+                static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
+                $track,
+            ), $tracksData)
+            : StageRoute::tracks($this->stageStore->getStages($tripId) ?? []);
 
         $stages = [];
 
-        foreach ($tracksData as $i => $trackData) {
-            $points = array_map(
-                static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
-                $trackData,
-            );
-
+        foreach ($tracks as $i => $points) {
             if ([] === $points) {
                 continue;
             }
@@ -142,17 +146,15 @@ final readonly class StructuralComputationService
     private function generatePacingStages(string $tripId, TripRequest $request): array
     {
         $decimatedData = $this->points->getDecimatedPoints($tripId);
+        $decimatedPoints = null !== $decimatedData
+            ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
+            : StageRoute::points($this->stageStore->getStages($tripId) ?? []);
 
-        if (null === $decimatedData) {
+        if ([] === $decimatedPoints) {
             return [];
         }
 
-        $decimatedPoints = array_map(
-            static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
-            $decimatedData,
-        );
-
-        $allPointsData = $this->points->getRawPoints($tripId);
+        $allPointsData = null !== $decimatedData ? $this->points->getRawPoints($tripId) : null;
         $allPoints = null !== $allPointsData
             ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $allPointsData)
             : $decimatedPoints;

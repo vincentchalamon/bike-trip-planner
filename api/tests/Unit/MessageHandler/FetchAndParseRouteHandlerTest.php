@@ -269,7 +269,7 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $elevation,
             $publisher,
             $this->createStub(TripStageStoreInterface::class),
-            new StructuralComputationService($repository, $points, $distance, $elevation, $simplifier, $this->createStub(PacingEngineInterface::class)),
+            new StructuralComputationService($repository, $points, $distance, $elevation, $simplifier, $this->createStub(PacingEngineInterface::class), $this->createStub(TripStageStoreInterface::class)),
         );
     }
 }

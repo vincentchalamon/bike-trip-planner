@@ -148,6 +148,16 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 - Messenger transport (async job queue)
 - External API caches (OSM 24h, weather 3h, routing 24h, DataTourisme 24h)
 
+> **Note (2026-10, #1405).** "Re-fetchable" was never implemented. Nothing fetches the
+> points again, and a GPX upload keeps no file to read them back from. Once the half hour
+> had passed, re-pacing a trip found no route and stored an empty stage list over the
+> trip's stages. The points stay in Redis, but they are no longer the only copy of the
+> route: each stage persists its own slice of it as `geometry`, at the decimation
+> tolerance. `App\Engine\StageRoute` puts those slices back together once the points have
+> expired. It returns the decimated route, not the raw one, so elevation then comes from
+> the decimated profile. As a second line of defence, `TripBootstrapper::storeStages()`
+> refuses to replace existing stages with none.
+
 ### Entity Design
 
 Two Doctrine entities, intentionally minimal:
