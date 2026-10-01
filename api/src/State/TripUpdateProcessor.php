@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
 use App\Concurrency\IfMatch;
 use App\Concurrency\TripVersionEtag;
+use App\Mercure\TripSubscription;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ParameterChangeResolver;
@@ -51,6 +52,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
         $id = $uriVariables['id'] ?? '';
+        TripSubscription::stamp($operation, $context, $id, self::class);
 
         // Synchronous validations
         if (null !== $data->endDate && null !== $data->startDate && $data->endDate <= $data->startDate) {
