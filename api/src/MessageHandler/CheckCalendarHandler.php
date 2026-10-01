@@ -7,26 +7,17 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\Osm\AdminBoundaryRepositoryInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Yasumi\Holiday;
 use Yasumi\ProviderInterface;
 use Yasumi\Yasumi;
@@ -57,17 +48,10 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     private const string FALLBACK_YASUMI_LOCALE = 'en_US';
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckCalendar $message): void
@@ -82,14 +66,14 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
-        $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages, $locale): void {
+        $this->executeWithTracking($message, function () use ($tripId, $request, $stages, $locale): void {
             $startDate = $request->startDate ?? new \DateTimeImmutable('today');
             $providers = $this->resolveProviders($stages, $startDate, $locale);
 
             $alerts = [];
 
-            foreach ($stages as $i => $stage) {
-                $stageDate = $startDate->modify(\sprintf('+%d days', $i));
+            foreach ($stages as $stage) {
+                $stageDate = $stage->dateFrom($startDate);
                 $holiday = $this->findHoliday($providers, $stageDate);
 
                 if ($holiday instanceof Holiday) {

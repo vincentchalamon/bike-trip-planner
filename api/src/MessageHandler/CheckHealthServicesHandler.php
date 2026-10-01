@@ -7,25 +7,16 @@ namespace App\MessageHandler;
 use App\Geo\Nearest;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckHealthServices;
 use App\Osm\HealthServiceRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Checks for pharmacies, hospitals and clinics within 15 km of each stage.
@@ -45,19 +36,12 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
     private const int CORRIDOR_RADIUS_METERS = (int) self::HEALTH_SERVICE_PROXIMITY_METERS;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private TransientTripPointsStoreInterface $points,
         private HealthServiceRepositoryInterface $healthServiceRepository,
         private GeoDistanceInterface $haversine,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckHealthServices $message): void
@@ -69,7 +53,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages): void {
             // Read health services from the local-first index along the route corridor (ADR-040).
             $route = $this->routeCorridor($this->points, $tripId, $stages);
 

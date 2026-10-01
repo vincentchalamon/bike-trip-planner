@@ -20,6 +20,7 @@ use App\Mercure\MercureEventType;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
 use App\MessageHandler\FetchAndParseRouteHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -73,17 +74,10 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         $messageBus->expects($this->never())->method('dispatch');
 
         $handler = new FetchAndParseRouteHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $this->createStub(TripStageStoreInterface::class),
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $this->createStub(TripStageStoreInterface::class), $messageBus, $this->createAlertRenderer()),
             $points,
             $registry,
             $this->bootstrapper($tripStateManager, $points, $publisher, $this->createStub(DistanceCalculatorInterface::class), $this->createStub(ElevationCalculatorInterface::class), $this->createStub(RouteSimplifierInterface::class)),
-            $messageBus,
-            $this->createAlertRenderer(),
         );
 
         // The handler must return normally (computation marked done), not re-throw.
@@ -124,17 +118,10 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         };
 
         $handler = new FetchAndParseRouteHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            $logger,
-            $tripStateManager,
-            $this->createStub(TripStageStoreInterface::class),
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), $logger, $tripStateManager, $this->createStub(TripStageStoreInterface::class), $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $points,
             $registry,
             $this->bootstrapper($tripStateManager, $points, $publisher, $this->createStub(DistanceCalculatorInterface::class), $this->createStub(ElevationCalculatorInterface::class), $this->createStub(RouteSimplifierInterface::class)),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
 
         $handler(new FetchAndParseRoute('trip-1'));
@@ -246,17 +233,10 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         $simplifier->method('simplify')->willReturnArgument(0);
 
         $handler = new FetchAndParseRouteHandler(
-            $tracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $repository,
-            $this->createStub(TripStageStoreInterface::class),
+            new TripHandlerContext($tracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $repository, $this->createStub(TripStageStoreInterface::class), $bus, $this->createAlertRenderer()),
             $points,
             $registry,
             $this->bootstrapper($repository, $points, $publisher, $distance, $elevation, $simplifier),
-            $bus,
-            $this->createAlertRenderer(),
         );
 
         $handler(new FetchAndParseRoute('trip-1', 4));

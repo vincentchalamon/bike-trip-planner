@@ -4,38 +4,23 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationSupersession;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
 use App\Service\TripAnalysisDispatcher;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
 {
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
+        TripHandlerContext $context,
         private TripAnalysisDispatcher $analysisDispatcher,
         private ComputationSupersession $supersession,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(RecalculateStages $message): void

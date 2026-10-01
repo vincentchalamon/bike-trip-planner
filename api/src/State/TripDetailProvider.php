@@ -238,7 +238,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         }
 
         $availability = WeatherAvailability::forStage(
-            $startDate?->modify(\sprintf('+%d days', $stage->dayNumber - 1)),
+            $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null,
             // UTC, like FetchWeatherHandler: stage dates are normalized to UTC midnight, and a
             // local `today` would put the horizon a day off for a stage sitting exactly on it.
             new \DateTimeImmutable('today', new \DateTimeZone('UTC')),

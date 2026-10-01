@@ -21,6 +21,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\WaysRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -83,18 +84,11 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new AnalyzeTerrainHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $analyzerRegistry,
             $waysRepository,
             $distributor,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

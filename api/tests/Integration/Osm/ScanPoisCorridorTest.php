@@ -23,6 +23,7 @@ use App\Weather\WeatherForecastSerializer;
 use App\Mapper\StageArrayMapper;
 use App\Mapper\EventArrayMapper;
 use App\MessageHandler\ScanPoisHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
 use App\Poi\DataTourismeFoodPoiSource;
@@ -216,12 +217,7 @@ final class ScanPoisCorridorTest extends KernelTestCase
         $haversine = new HaversineDistance();
 
         $handler = new ScanPoisHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $points,
             new PoiSourceRegistry(
                 [
@@ -237,8 +233,6 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new PoiLabelResolver($translator),
             $this->createStub(RiderTimeEstimatorInterface::class),
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
 
         $handler(new ScanPois('trip-1'));

@@ -15,6 +15,7 @@ use App\Engine\RiderTimeEstimator;
 use App\Message\FetchWeather;
 use App\Mercure\MercureEventType;
 use App\MessageHandler\FetchWeatherHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -109,19 +110,12 @@ final class FetchWeatherHandlerTest extends TestCase
         $translator->method('trans')->willReturnArgument(0);
 
         return new FetchWeatherHandler(
-            $computationTracker,
-            $publisher ?? $this->createStub(TripUpdatePublisherInterface::class),
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher ?? $this->createStub(TripUpdatePublisherInterface::class), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $messageBus, $this->createAlertRenderer()),
             $provider,
             $cache,
             new RiderTimeEstimator(),
             new WeatherForecastDeriver(new WmoWeatherMapper($translator)),
             new WeatherForecastSerializer(),
-            $messageBus,
-            $this->createAlertRenderer(),
         );
     }
 

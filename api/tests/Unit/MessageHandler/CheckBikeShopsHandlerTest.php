@@ -16,6 +16,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
 use App\MessageHandler\CheckBikeShopsHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -100,17 +101,10 @@ final class CheckBikeShopsHandlerTest extends TestCase
         $tripRequestRepository->method('getLocale')->willReturn($locale);
 
         return new CheckBikeShopsHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripRequestRepository,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripRequestRepository, $stageStore, $messageBus, $this->createAlertRenderer()),
             $points ?? $this->createStub(TransientTripPointsStoreInterface::class),
             $bikeShopRepository,
             $haversine,
-            $messageBus,
-            $this->createAlertRenderer(),
         );
     }
 

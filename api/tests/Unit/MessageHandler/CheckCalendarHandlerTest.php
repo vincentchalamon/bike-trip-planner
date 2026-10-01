@@ -14,6 +14,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\MessageHandler\CheckCalendarHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -69,6 +70,38 @@ final class CheckCalendarHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $stageStore,
+            $publisher,
+            $this->adminBoundaryRepository(['FR']),
+        );
+        $handler(new CheckCalendar('trip-1'));
+    }
+
+    /**
+     * The stage is dated by its day number, not by where it sits in the list handed over: the
+     * two used to be mixed across handlers, and only agree while the list is the whole trip in
+     * order.
+     */
+    #[Test]
+    public function datesAStageByItsDayNumberRatherThanItsPositionInTheList(): void
+    {
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::CALENDAR_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    self::assertCount(1, $data['alerts']);
+                    self::assertSame('Stage 2 coincides with a public holiday (Bastille Day). Some businesses may be closed.', $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        // Day 2 of a trip starting on Monday 2026-07-13 is Bastille Day; position 0 would be the 13th.
+        $handler = $this->createHandler(
+            $this->tripStateManager(new \DateTimeImmutable('2026-07-13')),
+            $this->stageStore([$this->createStage('trip-1', 2)]),
             $publisher,
             $this->adminBoundaryRepository(['FR']),
         );
@@ -151,15 +184,8 @@ final class CheckCalendarHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new CheckCalendarHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripStateManager,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripStateManager, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $adminBoundaryRepository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

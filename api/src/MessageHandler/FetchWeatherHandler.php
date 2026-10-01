@@ -4,23 +4,16 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Entity\User;
-use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Message\CheckFords;
 use App\Message\FetchWeather;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
 use App\Weather\RawForecast;
 use App\Weather\RawHourlySlot;
 use App\Weather\RelativeWindCalculator;
@@ -28,10 +21,8 @@ use App\Weather\WeatherForecastDeriver;
 use App\Weather\WeatherForecastSerializer;
 use App\Weather\WeatherProviderInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
@@ -39,23 +30,16 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
     private const int CACHE_TTL_SECONDS = 10800; // 3 hours
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private WeatherForecastDeriver $deriver,
         private WeatherForecastSerializer $serializer,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(FetchWeather $message): void
@@ -71,7 +55,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
-        $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $request, $stages, $locale, $generation): void {
+        $this->executeWithTracking($message, function () use ($tripId, $request, $stages, $locale, $generation): void {
             $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
             $horizonEnd = $today->modify(\sprintf('+%d days', WeatherAvailability::HORIZON_DAYS));
             $baseDate = $request->startDate ?? $today;
@@ -87,7 +71,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             foreach ($stages as $i => $stage) {
                 $lat = $stage->startPoint->lat;
                 $lon = $stage->startPoint->lon;
-                $stageDate = $baseDate->modify(\sprintf('+%d days', $stage->dayNumber - 1));
+                $stageDate = $stage->dateFrom($baseDate);
                 $localDate = $stageDate->format('Y-m-d');
 
                 $contexts[$i] = [

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\ComputationName;
 use App\EventListener\ComputationFailureSubscriber;
 use App\Message\AllEnrichmentsCompleted;
 use App\Message\BelongsToATripGeneration;
@@ -132,7 +133,7 @@ final class TripCompletionGateFlowTest extends ApiTestCase
             $container->set($id, new MockHttpClient(static fn (): MockResponse => new MockResponse('{}')));
         }
 
-        ['token' => $this->token] = $this->createTestUserWithJwt(\sprintf('completion-gate-%s@test.com', bin2hex(random_bytes(6))));
+        ['jwt' => $this->token] = $this->createAuthenticatedUser(\sprintf('completion-gate-%s@test.com', bin2hex(random_bytes(6))));
 
         // Dated, so that every computation of the pipeline is dispatched and the first
         // generation can settle at all.
@@ -210,7 +211,7 @@ final class TripCompletionGateFlowTest extends ApiTestCase
             $queued = [];
             foreach ($this->transport()->get(\PHP_INT_MAX) as $envelope) {
                 $message = $envelope->getMessage();
-                if (isset(ComputationFailureSubscriber::MESSAGE_TO_COMPUTATION[$message::class])) {
+                if (ComputationFailureSubscriber::resolveComputation($message) instanceof ComputationName) {
                     $queued[] = $message::class;
                 }
             }

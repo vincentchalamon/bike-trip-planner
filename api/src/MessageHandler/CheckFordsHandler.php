@@ -4,27 +4,18 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Stage;
 use App\ApiResource\Model\WeatherForecast;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckFords;
 use App\Osm\FordRepositoryInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Flags stages whose route crosses a ford, contextualised by the weather.
@@ -44,24 +35,16 @@ final readonly class CheckFordsHandler extends AbstractRouteCrossingHandler
     private const int RAIN_THRESHOLD_PERCENT = 50;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private FordRepositoryInterface $fordRepository,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckFords $message): void
     {
         $this->checkCrossings(
-            $message->tripId,
-            ComputationName::FORDS,
+            $message,
             AlertGroup::FORD,
             MercureEventType::FORD_ALERTS,
             fn (array $stagePoints): array => $this->fordRepository->findNearStage($stagePoints, self::FORD_TOLERANCE_METERS),

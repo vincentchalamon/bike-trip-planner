@@ -4,26 +4,17 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckFerries;
 use App\Osm\FerryRepositoryInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Flags stages whose route takes a ferry crossing.
@@ -40,24 +31,16 @@ final readonly class CheckFerriesHandler extends AbstractRouteCrossingHandler
     private const int FERRY_TOLERANCE_METERS = 100;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private FerryRepositoryInterface $ferryRepository,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckFerries $message): void
     {
         $this->checkCrossings(
-            $message->tripId,
-            ComputationName::FERRIES,
+            $message,
             AlertGroup::FERRY,
             MercureEventType::FERRY_ALERTS,
             fn (array $stagePoints): array => $this->ferryRepository->findNearStage($stagePoints, self::FERRY_TOLERANCE_METERS),

@@ -16,6 +16,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckWaterPoints;
 use App\MessageHandler\CheckWaterPointsHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -105,18 +106,11 @@ final class CheckWaterPointsHandlerTest extends TestCase
         $tripRequestRepository->method('getLocale')->willReturn($locale);
 
         return new CheckWaterPointsHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
-            $tripRequestRepository,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $generationTracker, new NullLogger(), $tripRequestRepository, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $points ?? $this->decimatedPoints(),
             $waterPointRepository,
             $distributor,
             $haversine,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

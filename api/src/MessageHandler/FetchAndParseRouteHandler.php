@@ -4,42 +4,26 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Enum\ComputationName;
 use App\Logger\LogRedactor;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
 use App\Repository\TransientTripPointsStoreInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use App\Service\TripBootstrapper;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandler
 {
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private TransientTripPointsStoreInterface $points,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
         private TripBootstrapper $bootstrapper,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(FetchAndParseRoute $message): void
@@ -54,7 +38,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
 
         $sourceUrl = $request->sourceUrl;
 
-        $this->executeWithTracking($tripId, ComputationName::ROUTE, function () use ($tripId, $sourceUrl, $generation): void {
+        $this->executeWithTracking($message, function () use ($tripId, $sourceUrl, $generation): void {
             // The route source is a live, on-demand third party (Tier 3). HTTP-level
             // transient failures are already retried with back-off by the scoped
             // client; a RuntimeException here is therefore a clear, terminal fetch

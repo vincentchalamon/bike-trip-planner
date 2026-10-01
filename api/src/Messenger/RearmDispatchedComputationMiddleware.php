@@ -54,10 +54,9 @@ final readonly class RearmDispatchedComputationMiddleware implements MiddlewareI
             return $stack->next()->handle($envelope, $stack);
         }
 
-        // The same table `ComputationFailureSubscriber` resolves failures through, guarded in
-        // CI against `ComputationName::pipeline()`. A message absent from it is not a tracked
-        // computation and has no status to arm.
-        $computation = ComputationFailureSubscriber::MESSAGE_TO_COMPUTATION[$message::class] ?? null;
+        // Resolved the way `ComputationFailureSubscriber` resolves failures: a message that
+        // tracks no pipeline computation has no status to arm.
+        $computation = ComputationFailureSubscriber::resolveComputation($message);
         if ($computation instanceof ComputationName) {
             $this->computationTracker->rearmIfSettled($message->tripId, $computation);
         }

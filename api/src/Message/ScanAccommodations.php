@@ -6,8 +6,9 @@ namespace App\Message;
 
 use App\ApiResource\AccommodationScanRequest;
 use App\ApiResource\TripRequest;
+use App\Enum\ComputationName;
 
-final readonly class ScanAccommodations implements BelongsToATripGeneration
+final readonly class ScanAccommodations implements TracksComputation
 {
     /**
      * Scans accommodations for a whole trip, or for one stage when $stageId is given.
@@ -25,5 +26,11 @@ final readonly class ScanAccommodations implements BelongsToATripGeneration
         public bool $isExpandScan = false,
         public ?int $generation = null,
     ) {
+    }
+
+    #[\Override]
+    public static function computation(): ComputationName
+    {
+        return ComputationName::ACCOMMODATIONS;
     }
 }

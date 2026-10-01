@@ -14,6 +14,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckFords;
 use App\MessageHandler\CheckFordsHandler;
+use App\MessageHandler\TripHandlerContext;
 use App\Osm\FordRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -45,15 +46,8 @@ final class CheckFordsHandlerTest extends TestCase
         $tripRequestRepository->method('getLocale')->willReturn($locale);
 
         return new CheckFordsHandler(
-            $computationTracker,
-            $publisher,
-            $this->createStub(TripGenerationTrackerInterface::class),
-            new NullLogger(),
-            $tripRequestRepository,
-            $stageStore,
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripRequestRepository, $stageStore, $this->createStub(MessageBusInterface::class), $this->createAlertRenderer()),
             $fordRepository,
-            $this->createStub(MessageBusInterface::class),
-            $this->createAlertRenderer(),
         );
     }
 

@@ -8,27 +8,18 @@ use App\Geo\Nearest;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertCode;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckRailwayStations;
 use App\Osm\RailwayStationRepositoryInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Checks for railway stations within 10 km of each stage endpoint.
@@ -44,18 +35,11 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     private const int STATION_PROXIMITY_METERS = 10_000;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private RailwayStationRepositoryInterface $railwayStationRepository,
         private GeoDistanceInterface $haversine,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckRailwayStations $message): void
@@ -67,7 +51,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::RAILWAY_STATIONS, function () use ($tripId, $stages): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages): void {
             // Collect all stage endpoints (start + end of each stage)
             $endPoints = $this->collectEndpoints($stages);
 

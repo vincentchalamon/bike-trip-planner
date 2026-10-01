@@ -65,11 +65,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         // through the analysis context. It used to come from a 'stageIndex' context key,
         // which a rename elsewhere silently reduced to its `?? 0` default — every stage
         // then dated from the trip start (#1290 review).
-        $stageDate = $startDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
-
-        if (false === $stageDate) {
-            return [];
-        }
+        $stageDate = $stage->dateFrom($startDate);
 
         // The rider's timezone at the stage end point: everything below is local time.
         $timezone = $this->timezoneResolver->resolve($stage->endPoint->lat, $stage->endPoint->lon);

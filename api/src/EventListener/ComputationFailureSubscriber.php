@@ -6,23 +6,7 @@ namespace App\EventListener;
 
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Message\AnalyzeTerrain;
-use App\Message\AnalyzeWind;
-use App\Message\CheckBikeShops;
-use App\Message\CheckBorderCrossing;
-use App\Message\CheckCalendar;
-use App\Message\CheckCulturalPois;
-use App\Message\CheckFerries;
-use App\Message\CheckFords;
-use App\Message\CheckHealthServices;
-use App\Message\CheckRailwayStations;
-use App\Message\CheckWaterPoints;
-use App\Message\FetchAndParseRoute;
-use App\Message\FetchWeather;
-use App\Message\GenerateStages;
-use App\Message\ScanAccommodations;
-use App\Message\ScanEvents;
-use App\Message\ScanPois;
+use App\Message\TracksComputation;
 use App\Service\TripCompletionGate;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -49,38 +33,6 @@ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 #[AsEventListener(event: WorkerMessageFailedEvent::class)]
 final readonly class ComputationFailureSubscriber
 {
-    /**
-     * Maps each gated-pipeline message class to the computation it tracks.
-     *
-     * Single source of truth for {@see resolveComputation()}: a message absent
-     * from this table is not part of the gated pipeline (on-demand recalculations,
-     * LLM analyses tracked separately) and its failure must not disturb the gate.
-     * {@see \App\Tests\Unit\EventListener\ComputationFailureSubscriberTest::resolveComputationCoversAllPipelineEntries()}
-     * asserts every {@see ComputationName::pipeline()} entry is reachable through
-     * this table, so adding a computation to the pipeline without a mapping fails CI.
-     *
-     * @var array<class-string, ComputationName>
-     */
-    public const array MESSAGE_TO_COMPUTATION = [
-        FetchAndParseRoute::class => ComputationName::ROUTE,
-        GenerateStages::class => ComputationName::STAGES,
-        ScanPois::class => ComputationName::POIS,
-        ScanAccommodations::class => ComputationName::ACCOMMODATIONS,
-        AnalyzeTerrain::class => ComputationName::TERRAIN,
-        FetchWeather::class => ComputationName::WEATHER,
-        CheckCalendar::class => ComputationName::CALENDAR,
-        AnalyzeWind::class => ComputationName::WIND,
-        CheckBikeShops::class => ComputationName::BIKE_SHOPS,
-        CheckWaterPoints::class => ComputationName::WATER_POINTS,
-        CheckCulturalPois::class => ComputationName::CULTURAL_POIS,
-        CheckRailwayStations::class => ComputationName::RAILWAY_STATIONS,
-        CheckHealthServices::class => ComputationName::HEALTH_SERVICES,
-        CheckBorderCrossing::class => ComputationName::BORDER_CROSSING,
-        CheckFerries::class => ComputationName::FERRIES,
-        CheckFords::class => ComputationName::FORDS,
-        ScanEvents::class => ComputationName::EVENTS,
-    ];
-
     public function __construct(
         private ComputationTrackerInterface $computationTracker,
         private TripCompletionGate $completionGate,
@@ -98,12 +50,11 @@ final readonly class ComputationFailureSubscriber
 
         $message = $event->getEnvelope()->getMessage();
 
-        $computation = $this->resolveComputation($message);
-        if (!$computation instanceof ComputationName) {
+        $computation = self::resolveComputation($message);
+        if (!$message instanceof TracksComputation || !$computation instanceof ComputationName) {
             return;
         }
 
-        /** @var object{tripId: string} $message */
         $tripId = $message->tripId;
 
         $this->computationTracker->markFailed($tripId, $computation);
@@ -127,16 +78,19 @@ final readonly class ComputationFailureSubscriber
     }
 
     /**
-     * Maps an enrichment message to the pipeline computation it tracks.
+     * The pipeline computation a message tracks, as the message declares it.
      *
-     * Returns null for messages that are not part of the gated pipeline (e.g.
-     * on-demand recalculations or LLM analyses tracked separately), so their
-     * failure does not disturb the gate. The mapping lives in
-     * {@see self::MESSAGE_TO_COMPUTATION}, the single source of truth checked for
-     * pipeline parity by the unit test.
+     * Null for a message outside the gated pipeline (an on-demand route-segment recalculation,
+     * an edit), so its failure does not disturb the gate.
      */
-    private function resolveComputation(object $message): ?ComputationName
+    public static function resolveComputation(object $message): ?ComputationName
     {
-        return self::MESSAGE_TO_COMPUTATION[$message::class] ?? null;
+        if (!$message instanceof TracksComputation) {
+            return null;
+        }
+
+        $computation = $message::computation();
+
+        return \in_array($computation, ComputationName::pipeline(), true) ? $computation : null;
     }
 }

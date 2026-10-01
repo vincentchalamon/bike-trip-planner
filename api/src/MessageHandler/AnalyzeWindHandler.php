@@ -11,7 +11,6 @@ use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertGroup;
 use App\Enum\AlertParameterFormat;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Message\AnalyzeWind;
 use App\Weather\WeatherStageRule;
@@ -32,7 +31,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages): void {
             $alerts = [];
 
             foreach (WeatherStageRule::cases() as $rule) {

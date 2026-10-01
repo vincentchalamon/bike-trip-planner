@@ -8,25 +8,16 @@ use App\Geo\Nearest;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
 use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TransientTripPointsStoreInterface;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
@@ -39,19 +30,12 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
     private const int CORRIDOR_RADIUS_METERS = (int) self::BIKE_SHOP_PROXIMITY_METERS;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private TransientTripPointsStoreInterface $points,
         private BikeShopRepositoryInterface $bikeShopRepository,
         private GeoDistanceInterface $haversine,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(CheckBikeShops $message): void
@@ -63,7 +47,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages): void {
             // BR-06: Skip if trip is 5 days or fewer.
             //
             // "Does not apply" has to clear, not just skip (ADR-068): a long trip shortened to

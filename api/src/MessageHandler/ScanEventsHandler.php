@@ -4,22 +4,13 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Alert\AlertRenderer;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Enum\ComputationName;
 use App\EventSource\EventSourceRegistry;
 use App\Mapper\EventArrayMapper;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Attaches dated events to each stage: multi-source events (DataTourisme today,
@@ -34,18 +25,11 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     private const int EVENT_RADIUS_METERS = 20_000;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private EventSourceRegistry $eventSources,
         private EventArrayMapper $eventMapper,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(ScanEvents $message): void
@@ -55,7 +39,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $stages = $this->stageStore->getStages($tripId);
 
         if (null === $stages) {
-            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
+            $this->executeWithTracking($message, static fn (): null => null);
 
             return;
         }
@@ -64,18 +48,18 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $startDate = $request?->startDate;
 
         if (!$startDate instanceof \DateTimeImmutable) {
-            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null);
+            $this->executeWithTracking($message, static fn (): null => null);
 
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate): void {
-            foreach ($stages as $i => $stage) {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $startDate): void {
+            foreach ($stages as $stage) {
                 // A rest day is not scanned, and carries no events: the empty write below
                 // clears whatever a previous run left on a stage that has since become one.
                 $events = $stage->isRestDay
                     ? []
-                    : $this->fetchEventsForStage($stage, $startDate->modify(\sprintf('+%d days', $i)));
+                    : $this->fetchEventsForStage($stage, $stage->dateFrom($startDate));
 
                 foreach ($events as $event) {
                     $stage->addEvent($event);

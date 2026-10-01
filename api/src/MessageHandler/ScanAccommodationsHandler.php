@@ -6,31 +6,22 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
-use App\Alert\AlertRenderer;
 use App\Accommodation\CandidateRanker;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
-use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
-use App\Repository\TripRequestRepositoryInterface;
-use App\Repository\TripStageStoreInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
@@ -49,22 +40,15 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     private const int MAX_CANDIDATES_PER_STAGE = 5;
 
     public function __construct(
-        ComputationTrackerInterface $computationTracker,
-        TripUpdatePublisherInterface $publisher,
-        TripGenerationTrackerInterface $generationTracker,
-        LoggerInterface $logger,
-        TripRequestRepositoryInterface $tripRequestRepository,
-        TripStageStoreInterface $stageStore,
+        TripHandlerContext $context,
         private AccommodationSourceRegistry $registry,
         private GeoDistanceInterface $haversine,
         private GeometryDistributorInterface $distributor,
         private SeasonalityCheckerInterface $seasonalityChecker,
         private CandidateRanker $ranker,
         private StageArrayMapper $stageMapper,
-        MessageBusInterface $messageBus,
-        AlertRenderer $alertRenderer,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripRequestRepository, $stageStore, $messageBus, $alertRenderer);
+        parent::__construct($context);
     }
 
     public function __invoke(ScanAccommodations $message): void
@@ -97,7 +81,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $enabledAccommodationTypes = $message->enabledAccommodationTypes;
         $isExpandScan = $message->isExpandScan;
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $radiusMeters, $stageIndex, $enabledAccommodationTypes, $isExpandScan): void {
+        $this->executeWithTracking($message, function () use ($tripId, $stages, $request, $radiusMeters, $stageIndex, $enabledAccommodationTypes, $isExpandScan): void {
             // Preserve original stage keys so distributor output maps directly without re-mapping
             $stagesToProcess = (null !== $stageIndex && isset($stages[$stageIndex]))
                 ? [$stageIndex => $stages[$stageIndex]]
@@ -146,7 +130,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $existingKeys = [];
                 }
 
-                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
+                $stageDate = $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null;
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $key = \sprintf('%F,%F', $raw['lat'], $raw['lon']);
                     if (isset($existingKeys[$key])) {
