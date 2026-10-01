@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -25,7 +26,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
     private const int NUDGE_MAX_SPEED = 50;
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         // A rest day is not ridden: its traffic exposure is irrelevant.
         if ($stage->isRestDay) {
@@ -33,7 +34,7 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
         }
 
         /** @var list<array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays */
-        $osmWays = $context['osmWays'] ?? [];
+        $osmWays = $context->osmWays;
 
         $criticalSegments = [];
         $warningSegments = [];

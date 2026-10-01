@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use App\Analyzer\Rules\SteepGradientAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
@@ -254,7 +255,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             $geometry[] = new Coordinate(45.0 + $i / 1000, 5.0, 200.0 + $i * $segmentGain);
         }
 
-        $alerts = $analyzer->analyze($this->createStageWithGeometry($geometry), ['locale' => $locale]);
+        $alerts = $analyzer->analyze($this->createStageWithGeometry($geometry), new StageAnalysisContext());
 
         $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }

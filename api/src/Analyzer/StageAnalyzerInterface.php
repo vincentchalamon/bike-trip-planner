@@ -14,11 +14,9 @@ interface StageAnalyzerInterface
     /**
      * Analyzes a stage and returns alerts.
      *
-     * @param array<string, mixed> $context Additional data (nextStage, tripDays, startDate, osmPois, weatherData...)
-     *
      * @return list<Alert>
      */
-    public function analyze(Stage $stage, array $context = []): array;
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array;
 
     /**
      * Lower value = higher priority (runs first).

@@ -31,11 +31,9 @@ final readonly class AnalyzerRegistry implements AnalyzerRegistryInterface
     /**
      * Runs all analyzers on a stage and returns all generated alerts.
      *
-     * @param array<string, mixed> $context
-     *
      * @return list<Alert>
      */
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         $alerts = [];
 

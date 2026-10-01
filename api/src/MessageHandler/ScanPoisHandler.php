@@ -70,8 +70,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
         $request = $this->tripRequestRepository->getRequest($tripId);
-        $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
-        $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
+        $departureHour = $request instanceof TripRequest ? $request->departureHour : TripRequest::DEFAULT_DEPARTURE_HOUR;
+        $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : TripRequest::DEFAULT_AVERAGE_SPEED;
         // Needed to evaluate weekday-dependent opening_hours rules ("Mo-Sa 08:00-19:00").
         $startDate = $request instanceof TripRequest ? $request->startDate : null;
 

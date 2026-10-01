@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\Rules\TrafficDangerAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -47,7 +48,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, ['osmWays' => []]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(osmWays: []));
 
         $this->assertSame([], $alerts);
     }
@@ -57,13 +58,13 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'tertiary'],
                 ['highway' => 'residential'],
                 ['highway' => 'cycleway'],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -73,11 +74,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'cycleway' => 'lane', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -87,11 +88,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'cycleway:right' => 'track', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -101,11 +102,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'cycleway:left' => 'lane', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -115,11 +116,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'cycleway:both' => 'track', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -129,11 +130,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'bicycle' => 'designated', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -143,11 +144,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'bicycle' => 'use_sidepath', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -157,11 +158,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'length' => 499.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -171,11 +172,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -192,11 +193,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'trunk', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -208,11 +209,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $stage = $this->createStage();
 
         // A missing maxspeed tag is missing data, not a danger: NUDGE, never WARNING.
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -229,11 +230,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => 'walk', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -244,11 +245,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => '50', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -263,11 +264,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => '30', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -278,11 +279,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => '90', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -297,13 +298,13 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
                 ['highway' => 'secondary', 'maxspeed' => '90', 'lat' => 45.6, 'lon' => 5.6, 'length' => 700.0],
                 ['highway' => 'secondary', 'maxspeed' => '30', 'lat' => 45.7, 'lon' => 5.7, 'length' => 800.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(3, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -316,12 +317,12 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
                 ['highway' => 'primary', 'lat' => 45.7, 'lon' => 5.7, 'length' => 700.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -334,13 +335,13 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'length' => 600.0, 'geometry' => [[[45.5, 5.5], [45.6, 5.6]]]],
                 ['highway' => 'primary', 'length' => 700.0, 'geometry' => [[[45.7, 5.7], [45.8, 5.8]]]],
                 ['highway' => 'secondary', 'maxspeed' => '90', 'length' => 800.0, 'geometry' => [[[46.0, 6.0], [46.1, 6.1]]]],
             ],
-        ]);
+        ));
 
         $this->assertCount(2, $alerts);
         // Critical bucket: both primary segments.
@@ -359,11 +360,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->lat, 0.001);
@@ -375,11 +376,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => '50', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -390,11 +391,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => '50 km/h', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -405,11 +406,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'secondary', 'maxspeed' => 'FR:50', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -428,9 +429,9 @@ final class TrafficDangerAnalyzerTest extends TestCase
             isRestDay: true,
         );
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [['highway' => 'primary', 'length' => 3000.0]],
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [['highway' => 'primary', 'length' => 3000.0]],
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -456,13 +457,12 @@ final class TrafficDangerAnalyzerTest extends TestCase
     {
         $analyzer = new TrafficDangerAnalyzer();
 
-        $alerts = $analyzer->analyze($this->createStage(), [
-            'locale' => $locale,
-            'osmWays' => [
+        $alerts = $analyzer->analyze($this->createStage(), new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'primary', 'length' => 6_200.0],
                 ['highway' => 'trunk', 'length' => 6_200.0],
             ],
-        ]);
+        ));
 
         $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }

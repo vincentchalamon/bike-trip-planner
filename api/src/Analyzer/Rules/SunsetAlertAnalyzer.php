@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -39,18 +40,15 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
     ) {
     }
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         if ($stage->isRestDay) {
             return [];
         }
 
-        /** @var \DateTimeImmutable|null $startDate */
-        $startDate = $context['startDate'] ?? null;
-        /** @var int $departureHour */
-        $departureHour = $context['departureHour'] ?? 8;
-        /** @var float $averageSpeed */
-        $averageSpeed = $context['averageSpeed'] ?? 15.0;
+        $startDate = $context->startDate;
+        $departureHour = $context->departureHour;
+        $averageSpeed = $context->averageSpeed;
         // No date, no verdict (ADR-074). This used to fall back to `today`, so the alert was
         // frozen on whichever day the terrain scan happened to run — and unlike the weather
         // and the holidays it cannot be withheld at dispatch, because it lives inside TERRAIN
