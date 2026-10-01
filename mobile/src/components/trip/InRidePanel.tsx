@@ -347,7 +347,7 @@ function RecapBlock({
 }
 
 // A small pill: icon + label on a tinted background (mirrors the
-// `DifficultyPill` pattern in StageDetailView — reused visual language for the
+// `DifficultyPill` pattern in StageDetailSections — reused visual language for the
 // maquette's "row of badges").
 function Badge({
   icon,
