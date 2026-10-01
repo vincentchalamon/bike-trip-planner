@@ -67,10 +67,11 @@ final readonly class McpResource
     }
 
     /**
-     * Whether a request path is addressed to the MCP server.
+     * Whether a request path is addressed to the MCP server: the path itself or below it,
+     * never a sibling that only shares its first letters (`/mcpx`, `/mcp-tokens`).
      */
     public static function serves(string $pathInfo): bool
     {
-        return str_starts_with($pathInfo, self::PATH);
+        return self::PATH === $pathInfo || str_starts_with($pathInfo, self::PATH.'/');
     }
 }
