@@ -4,19 +4,12 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\ApiResource\Model\Alert;
-use App\Alert\AlertPayload;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\Resupply;
-use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\Engine\FixedSchedule;
-use App\Engine\OpeningHours;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Entity\User;
-use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
-use App\Enum\AlertType;
 use App\Geo\GeometryDistributorInterface;
 use App\Mapper\StageArrayMapper;
 use App\Mercure\MercureEventType;
@@ -24,6 +17,7 @@ use App\Message\ScanPois;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\PoiLabelResolver;
 use App\Poi\PoiSourceRegistry;
+use App\Poi\ResupplyAlertRules;
 use App\Poi\ResupplyBuilder;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TransientTripPointsStoreInterface;
@@ -32,17 +26,11 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 {
-    private const float LUNCH_NUDGE_DISTANCE_KM = 40.0;
+    /** The clock time (decimal hours) the resupply suggestions are anchored on: 12:30. */
+    private const float LUNCH_HOUR = 12.5;
 
     /** Corridor half-width (m) for the local-first POI/water reads (ADR-040), matching the former Overpass "around" radius. */
     private const int CORRIDOR_RADIUS_METERS = 2000;
-
-    /** @var list<string> */
-    private const array RESUPPLY_CATEGORIES = [
-        'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
-        'bakery', 'fast_food', 'marketplace', 'butcher', 'pastry',
-        'deli', 'greengrocer', 'general', 'farm', 'fuel',
-    ];
 
     public function __construct(
         TripHandlerContext $context,
@@ -55,6 +43,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private PoiLabelResolver $poiLabels,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private StageArrayMapper $stageMapper,
+        private ResupplyAlertRules $resupplyRules,
     ) {
         parent::__construct($context);
     }
@@ -125,42 +114,25 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     );
                 }
 
-                // Lunch nudge: flag long stages with no food POIs.
-                // Both alerts below are about passing through while riding, so a rest day
-                // is skipped — its POIs are still scanned and published (useful on the spot).
-                $alerts = [];
-                if (!$stage->isRestDay && $stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($fullPois)) {
-                    $alerts[] = AlertPayload::of(new Alert(
-                        code: AlertCode::RESUPPLY_NONE_ON_STAGE,
-                        type: AlertType::NUDGE,
-                        messageKey: 'alert.lunch.nudge',
-                        lat: $stage->startPoint->lat,
-                        lon: $stage->startPoint->lon,
-                    ));
-                }
-
-                // Resupply timing warning: warn when every resupply POI on this stage is
-                // *known* to be closed at the estimated rider passage time.
-                $stageDate = $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null;
-
-                if (!$stage->isRestDay && $this->allResupplyPoisAreClosed($fullPois, $stage, $departureHour, $averageSpeed, null !== $stageDate ? (int) $stageDate->format('N') : null)) {
-                    $alerts[] = AlertPayload::of(new Alert(
-                        code: AlertCode::RESUPPLY_CLOSED_AT_PASSAGE,
-                        type: AlertType::WARNING,
-                        messageKey: 'alert.resupply.timing_warning',
-                        lat: $stage->startPoint->lat,
-                        lon: $stage->startPoint->lon,
-                    ));
-                }
-
-                // Position food + water along the route (shared by the resupply
-                // curation and the supply timeline).
+                // Position food + water along the route, once: the alert rules, the resupply
+                // curation and the supply timeline all read the same distances.
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $cumulativeDistances = $this->supplyTimelineBuilder->buildCumulativeDistances($geometry);
 
+                $stageDate = $startDate instanceof \DateTimeImmutable ? $stage->dateFrom($startDate) : null;
+                $alerts = $this->resupplyRules->alertsFor(
+                    $stage,
+                    $fullPois,
+                    $geometry,
+                    $cumulativeDistances,
+                    $departureHour,
+                    $averageSpeed,
+                    null !== $stageDate ? (int) $stageDate->format('N') : null,
+                );
+
                 $foodPoisWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_values(array_filter(
                     $poisByStage[$i] ?? [],
-                    fn (array $p): bool => \in_array($p['category'], self::RESUPPLY_CATEGORIES, true),
+                    static fn (array $p): bool => ResupplyAlertRules::isResupply($p['category']),
                 )));
                 $waterPointsWithDistance = $this->supplyTimelineBuilder->computeDistancesForSupply($geometry, $cumulativeDistances, array_map(
                     static fn (array $w): array => ['name' => $w['name'], 'category' => 'water', 'lat' => $w['lat'], 'lon' => $w['lon']],
@@ -170,7 +142,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 // Curate the persisted POIs to <=6 resupply suggestions (#1099): the
                 // raw corridor set (thousands per stage) is a computation input, never
                 // a client payload — it blocked the mobile trip-open parse.
-                $lunchKm = $this->estimateLunchDistanceKm($stage->distance, $departureHour, $averageSpeed, $stage->elevation);
+                $lunchKm = $this->riderTimeEstimator->distanceAtHour(self::LUNCH_HOUR, $stage->distance, $departureHour, $averageSpeed, $stage->elevation);
                 $stage->resupply = $this->resupplyBuilder->select(
                     $foodPoisWithDistance,
                     $waterPointsWithDistance,
@@ -208,94 +180,5 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 $this->stageStore->updateStageResupply($tripId, $stage->id, $stage->resupply ?? new Resupply());
             }
         });
-    }
-
-    /**
-     * @param list<PointOfInterest> $pois
-     */
-    private function hasResupplyPoi(array $pois): bool
-    {
-        return array_any($pois, fn (PointOfInterest $poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
-    }
-
-    /**
-     * Distance marker (km) at which the rider reaches the lunch hour, used to
-     * anchor the resupply suggestions. Binary search over the (monotone in
-     * distance) passage-time model; clamps to the stage ends when lunch falls
-     * before departure or after arrival.
-     */
-    private function estimateLunchDistanceKm(float $totalKm, int $departureHour, float $averageSpeed, float $elevation): float
-    {
-        if ($totalKm <= 0.0) {
-            return 0.0;
-        }
-
-        $lunchHour = 12.5;
-        $lo = 0.0;
-        $hi = $totalKm;
-        for ($k = 0; $k < 24; ++$k) {
-            $mid = ($lo + $hi) / 2;
-            if ($this->riderTimeEstimator->estimateTimeAtDistance($mid, $totalKm, $departureHour, $averageSpeed, $elevation) < $lunchHour) {
-                $lo = $mid;
-            } else {
-                $hi = $mid;
-            }
-        }
-
-        return ($lo + $hi) / 2;
-    }
-
-    /**
-     * Returns true only when every resupply POI on the stage is *known* to be closed
-     * at the estimated rider passage time.
-     *
-     * A single POI that is open — or whose hours cannot be established — makes the
-     * stage inconclusive and suppresses the warning: it used to be raised from the
-     * category-typical slots alone, i.e. from schedules nobody had checked (#875).
-     *
-     * @param list<PointOfInterest> $pois
-     * @param int|null              $isoWeekday 1 (Monday) to 7 (Sunday), null when the trip has no start date
-     */
-    private function allResupplyPoisAreClosed(array $pois, Stage $stage, int $departureHour, float $averageSpeed, ?int $isoWeekday): bool
-    {
-        $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-        $cumulativeDistances = $this->supplyTimelineBuilder->buildCumulativeDistances($geometry);
-        $totalDistance = $stage->distance;
-        $closed = 0;
-
-        foreach ($pois as $poi) {
-            if (!\in_array($poi->category, self::RESUPPLY_CATEGORIES, true)) {
-                continue;
-            }
-
-            $nearestIndex = $this->supplyTimelineBuilder->findNearestGeometryIndex($geometry, $poi->lat, $poi->lon);
-            $distanceFromStart = $cumulativeDistances[$nearestIndex];
-            $estimatedTime = $this->riderTimeEstimator->estimateTimeAtDistance($distanceFromStart, $totalDistance, $departureHour, $averageSpeed, $stage->elevation);
-
-            if (false !== $this->isOpenAt($poi, $estimatedTime, $isoWeekday)) {
-                return false;
-            }
-
-            ++$closed;
-        }
-
-        return $closed > 0;
-    }
-
-    /**
-     * Tri-state openness of a POI: true = open, false = closed, null = unknown.
-     *
-     * The real OSM `opening_hours` wins whenever it is present and understood.
-     * Without it, the category-typical {@see FixedSchedule} is only allowed to
-     * answer "probably open" — never "closed", which would put an invented
-     * schedule behind a user-facing warning.
-     */
-    private function isOpenAt(PointOfInterest $poi, float $decimalHour, ?int $isoWeekday): ?bool
-    {
-        if (null !== $poi->openingHours) {
-            return OpeningHours::parse($poi->openingHours)?->isOpenAt($decimalHour, $isoWeekday);
-        }
-
-        return FixedSchedule::forCategory($poi->category)->isOpenAt($decimalHour) ? true : null;
     }
 }

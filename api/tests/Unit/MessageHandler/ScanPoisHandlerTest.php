@@ -10,6 +10,8 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Tests\Unit\Engine\FixedPassageTimeEstimator;
+use App\Poi\ResupplyAlertRules;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Geo\HaversineDistance;
@@ -177,6 +179,7 @@ final class ScanPoisHandlerTest extends TestCase
             new PoiLabelResolver($translator),
             $riderTimeEstimator,
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
+            new ResupplyAlertRules(new SupplyTimelineBuilder($haversine), $riderTimeEstimator),
         );
     }
 
@@ -290,7 +293,7 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     /**
-     * @return array{GeoDistanceInterface&Stub, RiderTimeEstimatorInterface&Stub}
+     * @return array{GeoDistanceInterface&Stub, FixedPassageTimeEstimator}
      */
     private function createDefaultStubs(): array
     {
@@ -300,7 +303,7 @@ final class ScanPoisHandlerTest extends TestCase
             static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => ($lat1 === $lat2 && $lon1 === $lon2) ? 0.0 : 10000.0,
         );
 
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+        $riderTimeEstimator = new FixedPassageTimeEstimator();
 
         return [$haversine, $riderTimeEstimator];
     }
@@ -325,7 +328,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         // 16:00 → both restaurants closed according to their own opening_hours
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
+        $riderTimeEstimator = new FixedPassageTimeEstimator(16.0);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -366,7 +369,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         // 15:00 → restaurant closed, supermarket open (9-20)
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(15.0);
+        $riderTimeEstimator = new FixedPassageTimeEstimator(15.0);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -546,7 +549,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         // 16:00 → both restaurants closed per their own opening_hours, so without the
         // rest-day guard this stage would emit the timing warning.
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
+        $riderTimeEstimator = new FixedPassageTimeEstimator(16.0);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -585,7 +588,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         // 10:00 → bakery open (7-13 slot)
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(10.0);
+        $riderTimeEstimator = new FixedPassageTimeEstimator(10.0);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -625,7 +628,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
-        $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn($passageTime);
+        $riderTimeEstimator = new FixedPassageTimeEstimator($passageTime);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -788,7 +791,7 @@ final class ScanPoisHandlerTest extends TestCase
             },
         );
 
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+        $riderTimeEstimator = new FixedPassageTimeEstimator();
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -913,7 +916,7 @@ final class ScanPoisHandlerTest extends TestCase
             },
         );
 
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+        $riderTimeEstimator = new FixedPassageTimeEstimator();
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);

@@ -29,6 +29,9 @@ final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
     /** Elevation penalty: -2 km/h per 500m of ascent. */
     private const float ELEVATION_PENALTY_PER_500M = 2.0;
 
+    /** Bisection steps of {@see distanceAtHour()}: a stage of 300 km is then resolved to under 0.02 m. */
+    private const int DISTANCE_SEARCH_ITERATIONS = 24;
+
     public function estimateTimeAtDistance(
         float $distanceKm,
         float $totalDistanceKm,
@@ -45,6 +48,36 @@ final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
         $breakDuration = $this->computeBreakDuration($ridingDuration, $departureHour);
 
         return $departureHour + $ratio * ($ridingDuration + $breakDuration);
+    }
+
+    /**
+     * Searched rather than solved: the passage time is monotone in distance, and bisecting
+     * over {@see estimateTimeAtDistance()} keeps this the exact inverse of whatever model
+     * that method implements.
+     */
+    public function distanceAtHour(
+        float $hour,
+        float $totalDistanceKm,
+        int $departureHour = 8,
+        float $averageSpeedKmh = 15.0,
+        float $elevationGainM = 0.0,
+    ): float {
+        if ($totalDistanceKm <= 0.0) {
+            return 0.0;
+        }
+
+        $lo = 0.0;
+        $hi = $totalDistanceKm;
+        for ($k = 0; $k < self::DISTANCE_SEARCH_ITERATIONS; ++$k) {
+            $mid = ($lo + $hi) / 2;
+            if ($this->estimateTimeAtDistance($mid, $totalDistanceKm, $departureHour, $averageSpeedKmh, $elevationGainM) < $hour) {
+                $lo = $mid;
+            } else {
+                $hi = $mid;
+            }
+        }
+
+        return ($lo + $hi) / 2;
     }
 
     /**

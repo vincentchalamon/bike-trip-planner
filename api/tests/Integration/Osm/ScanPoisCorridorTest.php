@@ -11,7 +11,8 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Engine\RiderTimeEstimatorInterface;
+use App\Tests\Unit\Engine\FixedPassageTimeEstimator;
+use App\Poi\ResupplyAlertRules;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
 use App\Geo\GeometryBasedDistributor;
@@ -231,8 +232,9 @@ final class ScanPoisCorridorTest extends KernelTestCase
             new SupplyTimelineBuilder($haversine),
             new ResupplyBuilder(),
             new PoiLabelResolver($translator),
-            $this->createStub(RiderTimeEstimatorInterface::class),
+            new FixedPassageTimeEstimator(),
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
+            new ResupplyAlertRules(new SupplyTimelineBuilder($haversine), new FixedPassageTimeEstimator()),
         );
 
         $handler(new ScanPois('trip-1'));

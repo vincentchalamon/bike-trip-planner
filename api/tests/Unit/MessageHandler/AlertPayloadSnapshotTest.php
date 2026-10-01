@@ -21,7 +21,8 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\CulturalPoiSource\CulturalPoiSourceInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
-use App\Engine\RiderTimeEstimatorInterface;
+use App\Tests\Unit\Engine\FixedPassageTimeEstimator;
+use App\Poi\ResupplyAlertRules;
 use App\Enum\AlertCode;
 use App\Enum\AlertType;
 use App\Geo\GeometryBasedDistributor;
@@ -399,8 +400,7 @@ final class AlertPayloadSnapshotTest extends TestCase
         };
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([1 => $pois], []);
-        $estimator = $this->createStub(RiderTimeEstimatorInterface::class);
-        $estimator->method('estimateTimeAtDistance')->willReturn(16.0);
+        $estimator = new FixedPassageTimeEstimator(16.0);
         $translator = $this->createAlertTranslator();
 
         $persisted = [];
@@ -416,6 +416,7 @@ final class AlertPayloadSnapshotTest extends TestCase
             new PoiLabelResolver($translator),
             $estimator,
             new StageArrayMapper(new WeatherForecastSerializer(), new EventArrayMapper()),
+            new ResupplyAlertRules(new SupplyTimelineBuilder(new HaversineDistance()), $estimator),
         );
         $handler(new ScanPois(self::TRIP));
 
