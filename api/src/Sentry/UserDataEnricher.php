@@ -6,6 +6,7 @@ namespace App\Sentry;
 
 use App\Entity\User;
 use App\EventListener\RequestIdListener;
+use App\Logger\CorrelationContext;
 use Sentry\State\HubInterface;
 use Sentry\UserDataBag;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -30,6 +31,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 final readonly class UserDataEnricher
 {
     public function __construct(
+        private CorrelationContext $correlation,
         private ?HubInterface $hub = null,
         private ?Security $security = null,
     ) {
@@ -50,20 +52,12 @@ final readonly class UserDataEnricher
 
         $request = $event->getRequest();
         $this->hub->configureScope(function ($scope) use ($request): void {
-            $correlationId = $this->stringAttribute($request, RequestIdListener::ATTRIBUTE);
+            $correlationId = $this->correlation->requestId();
             if (null !== $correlationId) {
                 $scope->setTag('request_id', $correlationId);
             }
 
-            // Mirror CorrelationIdProcessor: only treat the generic `id`
-            // attribute as a trip id when the path is unambiguously
-            // trip-scoped, otherwise a user/stage UUID on `/users/{id}`
-            // or `/stages/{id}` would be mislabelled as `trip_id`.
-            $tripId = $this->stringAttribute($request, 'tripId')
-                ?? $this->stringAttribute($request, 'trip_id')
-                ?? (str_starts_with($request->getPathInfo(), '/trips/')
-                    ? $this->stringAttribute($request, 'id')
-                    : null);
+            $tripId = $this->correlation->tripId();
             if (null !== $tripId) {
                 $scope->setTag('trip_id', $tripId);
             }

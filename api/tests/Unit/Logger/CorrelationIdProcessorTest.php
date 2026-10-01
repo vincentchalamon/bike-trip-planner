@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Logger;
 
 use App\Entity\User;
 use App\EventListener\RequestIdListener;
+use App\Logger\CorrelationContext;
 use App\Logger\CorrelationIdProcessor;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -43,7 +44,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -63,7 +64,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -82,7 +83,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn($user);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -100,7 +101,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -118,7 +119,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -136,7 +137,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -154,13 +155,13 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
-        $processor->setOverrideRequestId('worker-correlation-id');
+        $correlation = new CorrelationContext($stack);
+        $correlation->setOverrideRequestId('worker-correlation-id');
+        $processor = new CorrelationIdProcessor($correlation, $security);
 
         $record = $processor($this->buildRecord());
 
         self::assertSame('worker-correlation-id', $record->extra['request_id']);
-        self::assertSame('worker-correlation-id', $processor->getOverrideRequestId());
     }
 
     #[Test]
@@ -170,7 +171,7 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
+        $processor = new CorrelationIdProcessor(new CorrelationContext($stack), $security);
 
         $record = $processor($this->buildRecord());
 
@@ -190,9 +191,10 @@ final class CorrelationIdProcessorTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('getUser')->willReturn(null);
 
-        $processor = new CorrelationIdProcessor($stack, $security);
-        $processor->setOverrideRequestId('worker-value');
-        $processor->setOverrideRequestId(null);
+        $correlation = new CorrelationContext($stack);
+        $correlation->setOverrideRequestId('worker-value');
+        $correlation->setOverrideRequestId(null);
+        $processor = new CorrelationIdProcessor($correlation, $security);
 
         $record = $processor($this->buildRecord());
 

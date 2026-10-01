@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Sentry\EventScrubber;
 use App\Sentry\ExceptionFilter;
+use App\Logger\CorrelationContext;
 use App\Sentry\UserDataEnricher;
 use Sentry\State\HubInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -33,6 +34,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     if ('prod' === $containerConfigurator->env()) {
         $services->set(UserDataEnricher::class)
             ->args([
+                service(CorrelationContext::class),
                 service(HubInterface::class)->nullOnInvalid(),
                 service('security.helper')->nullOnInvalid(),
             ])
@@ -59,6 +61,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     // dev/test: register the enricher with a null hub so the kernel.request
     // event listener stays no-op until the SentryBundle is enabled.
     $services->set(UserDataEnricher::class)
-        ->args([null, service('security.helper')->nullOnInvalid()])
+        ->args([service(CorrelationContext::class), null, service('security.helper')->nullOnInvalid()])
         ->autoconfigure();
 };

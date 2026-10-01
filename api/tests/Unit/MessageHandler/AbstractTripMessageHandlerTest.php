@@ -7,10 +7,9 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Logger\CorrelationIdProcessor;
+use App\Logger\CorrelationContext;
 use App\Mapper\EventArrayMapper;
 use App\Mapper\StageArrayMapper;
-use App\Mercure\CurrentCorrelationIdProvider;
 use App\Mercure\MercureEventType;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisher;
@@ -24,7 +23,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -93,8 +91,7 @@ final class AbstractTripMessageHandlerTest extends TestCase
         $versionSource = $this->createStub(TripStageStoreInterface::class);
         $versionSource->method('getVersion')->willReturn(1);
 
-        $stack = new RequestStack();
-        $correlationIds = new CurrentCorrelationIdProvider($stack, new CorrelationIdProcessor($stack, $this->createStub(Security::class)));
+        $correlationIds = new CorrelationContext(new RequestStack());
 
         return new TripUpdatePublisher(
             $hub,

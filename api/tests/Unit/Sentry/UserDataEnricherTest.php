@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Sentry;
 
 use App\Entity\User;
 use App\EventListener\RequestIdListener;
+use App\Logger\CorrelationContext;
 use App\Sentry\UserDataEnricher;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -16,6 +17,7 @@ use Sentry\State\HubInterface;
 use Sentry\State\Scope;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
@@ -25,7 +27,7 @@ final class UserDataEnricherTest extends TestCase
 {
     public function testIsNoopWhenHubIsNull(): void
     {
-        $enricher = new UserDataEnricher();
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack()));
 
         // No exception, no side effect.
         $enricher->onRequest($this->event(new Request()));
@@ -37,7 +39,7 @@ final class UserDataEnricherTest extends TestCase
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::never())->method('configureScope');
 
-        $enricher = new UserDataEnricher($hub);
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack()), $hub);
         $enricher->onRequest($this->event(new Request(), HttpKernelInterface::SUB_REQUEST));
     }
 
@@ -52,7 +54,7 @@ final class UserDataEnricherTest extends TestCase
         $security->method('getUser')->willReturn(null);
 
         $scope = new Scope();
-        $enricher = new UserDataEnricher($this->capturingHub($scope), $security);
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack([$request])), $this->capturingHub($scope), $security);
         $enricher->onRequest($this->event($request));
 
         $event = $this->applyScope($scope);
@@ -72,7 +74,7 @@ final class UserDataEnricherTest extends TestCase
         $security->method('getUser')->willReturn($user);
 
         $scope = new Scope();
-        $enricher = new UserDataEnricher($this->capturingHub($scope), $security);
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack([$request])), $this->capturingHub($scope), $security);
         $enricher->onRequest($this->event($request));
 
         $event = $this->applyScope($scope);
@@ -87,7 +89,7 @@ final class UserDataEnricherTest extends TestCase
         $request->attributes->set('id', '11111111-1111-1111-1111-111111111111');
 
         $scope = new Scope();
-        $enricher = new UserDataEnricher($this->capturingHub($scope));
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack([$request])), $this->capturingHub($scope));
         $enricher->onRequest($this->event($request));
 
         $event = $this->applyScope($scope);
@@ -103,7 +105,7 @@ final class UserDataEnricherTest extends TestCase
         $request->attributes->set('id', '22222222-2222-2222-2222-222222222222');
 
         $scope = new Scope();
-        $enricher = new UserDataEnricher($this->capturingHub($scope));
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack([$request])), $this->capturingHub($scope));
         $enricher->onRequest($this->event($request));
 
         $event = $this->applyScope($scope);
@@ -114,7 +116,7 @@ final class UserDataEnricherTest extends TestCase
     {
         $request = new Request();
         $scope = new Scope();
-        $enricher = new UserDataEnricher($this->capturingHub($scope));
+        $enricher = new UserDataEnricher(new CorrelationContext(new RequestStack([$request])), $this->capturingHub($scope));
         $enricher->onRequest($this->event($request));
 
         $event = $this->applyScope($scope);
