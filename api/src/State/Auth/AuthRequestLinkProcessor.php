@@ -72,7 +72,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $neutralMessage = $this->translator->trans('auth.neutral_message', [], 'auth');
 
         if (!$ipAccepted || !$emailAccepted) {
-            $this->logger->debug('Auth request-link rate limited', ['emailHash' => EmailFingerprint::of($email), 'ip' => $clientIp]);
+            $this->logger->debug('Auth request-link rate limited', ['emailHash' => EmailFingerprint::of($email), 'ipLimited' => !$ipAccepted]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }

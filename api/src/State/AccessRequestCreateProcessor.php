@@ -74,7 +74,9 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // Rate limit by IP: max 3 requests per hour
         $ipLimit = $this->accessRequestIpLimiter->create($clientIp)->consume();
         if (!$ipLimit->isAccepted()) {
-            $this->logger->debug('Access request IP rate limited', ['ip' => $clientIp]);
+            // No IP: the limiter already keys on it, the edge access log has it, and a
+            // hash of an IPv4 address is reversed by enumerating 2^32 values.
+            $this->logger->debug('Access request IP rate limited');
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_TOO_MANY_REQUESTS, [
                 'Retry-After' => (string) RetryAfter::seconds($ipLimit, $this->clock),

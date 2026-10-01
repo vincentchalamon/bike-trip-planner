@@ -35,6 +35,24 @@ final class NoEmailInLogsTest extends TestCase
         self::assertSame([], $leaks, "Log the User id, or EmailFingerprint::of() when there is no User:\n".implode("\n", $leaks));
     }
 
+    /**
+     * Nor a client IP: the rate limiters key on it in Redis and the edge access log
+     * has it already, and a truncated hash of an IPv4 address is reversed by trying
+     * all 2^32 of them, so there is nothing to gain from writing it once more.
+     */
+    #[Test]
+    public function noLoggerCallCarriesAClientIp(): void
+    {
+        $leaks = [];
+        foreach ($this->loggerCalls(\dirname(__DIR__, 3).'/src') as [$file, $line, $call]) {
+            if (1 === preg_match('/getClientIp\(\)|[\'"]ip[\'"]\s*=>|\$clientIp\b|\$ip\b/', $call)) {
+                $leaks[] = \sprintf('%s:%d  %s', $file, $line, preg_replace('/\s+/', ' ', $call));
+            }
+        }
+
+        self::assertSame([], $leaks, "Log no client IP:\n".implode("\n", $leaks));
+    }
+
     #[Test]
     public function theGuardCatchesAnAddressInAMultiLineContext(): void
     {
