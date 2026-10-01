@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Security\OAuth\OAuthRoutes;
 use App\Security\OAuth\McpResource;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -36,11 +37,11 @@ final readonly class ResourceParameterListener
         $request = $event->getRequest();
         $route = $request->attributes->get('_route');
 
-        if (!\in_array($route, ['oauth2_authorize', 'oauth2_token'], true)) {
+        if (!\in_array($route, [OAuthRoutes::AUTHORIZE, OAuthRoutes::TOKEN], true)) {
             return;
         }
 
-        $requested = 'oauth2_token' === $route
+        $requested = OAuthRoutes::TOKEN === $route
             ? $request->request->get('resource')
             : $request->query->get('resource');
 

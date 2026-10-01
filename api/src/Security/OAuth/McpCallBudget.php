@@ -8,8 +8,6 @@ use League\Bundle\OAuth2ServerBundle\Security\Authentication\Token\OAuth2Token;
 use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\JsonRpc\Request;
 use Mcp\Schema\JsonRpc\Response;
-use Mcp\Schema\Request\CallToolRequest;
-use Mcp\Schema\Request\ReadResourceRequest;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\ReadResourceResult;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
@@ -77,11 +75,7 @@ final readonly class McpCallBudget implements RequestHandlerInterface
 
     public function handle(Request $request, SessionInterface $session): Response|Error
     {
-        $name = match (true) {
-            $request instanceof CallToolRequest => $request->name,
-            $request instanceof ReadResourceRequest => $request->uri,
-            default => null,
-        };
+        $name = McpToolScopes::addressedName($request);
 
         if (null === $name) {
             return $this->inner->handle($request, $session);
@@ -90,7 +84,7 @@ final readonly class McpCallBudget implements RequestHandlerInterface
         $key = $this->caller();
 
         $limit = $this->mcpToolCallLimiter->create($key)->consume();
-        if ($limit->isAccepted() && 'trips:write' === $this->toolScopes->requiredBy($name)) {
+        if ($limit->isAccepted() && McpResource::WRITE_SCOPE === $this->toolScopes->requiredBy($name)) {
             $limit = $this->mcpMutationLimiter->create($key)->consume();
         }
 

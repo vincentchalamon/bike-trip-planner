@@ -34,7 +34,7 @@ final readonly class McpUnauthorizedResponseListener
 
     public function __invoke(ResponseEvent $event): void
     {
-        if (!str_starts_with($event->getRequest()->getPathInfo(), '/mcp')) {
+        if (!McpResource::serves($event->getRequest()->getPathInfo())) {
             return;
         }
 

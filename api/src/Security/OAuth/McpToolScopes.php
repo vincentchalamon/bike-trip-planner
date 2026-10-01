@@ -6,6 +6,9 @@ namespace App\Security\OAuth;
 
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use ApiPlatform\Metadata\Resource\Factory\ResourceNameCollectionFactoryInterface;
+use Mcp\Schema\JsonRpc\Request;
+use Mcp\Schema\Request\CallToolRequest;
+use Mcp\Schema\Request\ReadResourceRequest;
 
 /**
  * Which scope each MCP tool consumes, read from the tools themselves (ADR-079).
@@ -26,6 +29,19 @@ final class McpToolScopes
         private readonly ResourceNameCollectionFactoryInterface $resourceNames,
         private readonly ResourceMetadataCollectionFactoryInterface $resourceMetadata,
     ) {
+    }
+
+    /**
+     * The name a message addresses: a tool call's tool, a resource read's URI. Null for any
+     * other message, which no scope governs.
+     */
+    public static function addressedName(Request $request): ?string
+    {
+        return match (true) {
+            $request instanceof CallToolRequest => $request->name,
+            $request instanceof ReadResourceRequest => $request->uri,
+            default => null,
+        };
     }
 
     public function requiredBy(string $toolName): ?string

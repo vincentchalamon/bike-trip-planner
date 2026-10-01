@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Security\OAuth\McpResource;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,7 +46,7 @@ final readonly class McpEnvelopeThrottleListener
     {
         $request = $event->getRequest();
 
-        if (!$event->isMainRequest() || !str_starts_with($request->getPathInfo(), '/mcp')) {
+        if (!$event->isMainRequest() || !McpResource::serves($request->getPathInfo())) {
             return;
         }
 

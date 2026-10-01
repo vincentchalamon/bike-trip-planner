@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Security\OAuth\McpResource;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 /*
@@ -37,7 +38,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'stdio' => false,
                 ],
                 'http' => [
-                    'path' => '/mcp',
+                    'path' => McpResource::PATH,
                     // DNS-rebinding protection. The SDK defaults to localhost only, which
                     // refuses every other Host header; the spike switched it off wholesale.
                     // Named instead, from the one URI the deployment already declares as its

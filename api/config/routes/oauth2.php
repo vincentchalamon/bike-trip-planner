@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Security\OAuth\OAuthRoutes;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 
 /*
@@ -19,11 +20,11 @@ use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
  */
 return static function (RoutingConfigurator $routes): void {
     $routes
-        ->add('oauth2_authorize', '/oauth/authorize')
+        ->add(OAuthRoutes::AUTHORIZE, '/oauth/authorize')
         ->controller(['league.oauth2_server.controller.authorization', 'indexAction'])
         ->methods(['GET'])
 
-        ->add('oauth2_token', '/oauth/token')
+        ->add(OAuthRoutes::TOKEN, '/oauth/token')
         ->controller(['league.oauth2_server.controller.token', 'indexAction'])
         ->methods(['POST'])
     ;

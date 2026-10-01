@@ -7,8 +7,6 @@ namespace App\Security\OAuth;
 use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\JsonRpc\Request;
 use Mcp\Schema\JsonRpc\Response;
-use Mcp\Schema\Request\CallToolRequest;
-use Mcp\Schema\Request\ReadResourceRequest;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\ReadResourceResult;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
@@ -64,11 +62,7 @@ final readonly class McpScopeGuard implements RequestHandlerInterface
 
     public function handle(Request $request, SessionInterface $session): Response|Error
     {
-        $name = match (true) {
-            $request instanceof CallToolRequest => $request->name,
-            $request instanceof ReadResourceRequest => $request->uri,
-            default => null,
-        };
+        $name = McpToolScopes::addressedName($request);
 
         if (null !== $name) {
             $scope = $this->toolScopes->requiredBy($name);

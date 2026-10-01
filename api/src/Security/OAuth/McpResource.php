@@ -26,7 +26,16 @@ final readonly class McpResource
      * Ownership still decides everything: a scope narrows what an agent may do with the
      * trips its user owns, it never grants access to anyone else's (ADR-063).
      */
-    public const array SCOPES = ['trips:read', 'trips:write'];
+    public const array SCOPES = [self::READ_SCOPE, self::WRITE_SCOPE];
+
+    public const string READ_SCOPE = 'trips:read';
+
+    public const string WRITE_SCOPE = 'trips:write';
+
+    /**
+     * Where the MCP server is mounted (`config/packages/mcp.php`).
+     */
+    public const string PATH = '/mcp';
 
     public function __construct(
         #[Autowire(env: 'DEFAULT_URI')]
@@ -45,6 +54,23 @@ final readonly class McpResource
      */
     public function canonicalUri(): string
     {
-        return $this->issuer().'/mcp';
+        return $this->issuer().self::PATH;
+    }
+
+    /**
+     * The protected resource metadata document (RFC 9728), path-inserted: what a
+     * `WWW-Authenticate` challenge names as `resource_metadata`.
+     */
+    public function metadataUrl(): string
+    {
+        return $this->issuer().'/.well-known/oauth-protected-resource'.self::PATH;
+    }
+
+    /**
+     * Whether a request path is addressed to the MCP server.
+     */
+    public static function serves(string $pathInfo): bool
+    {
+        return str_starts_with($pathInfo, self::PATH);
     }
 }
