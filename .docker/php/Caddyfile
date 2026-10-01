@@ -29,11 +29,11 @@
             request>uri multi_regexp {
                 regexp "(/(?:auth/verify|account/email-change/verify|s)/)[^/?#.{]+" "${1}[redacted]"
                 regexp "(/users/me/device-tokens/)[^/?#]*:[^/?#]*" "${1}[redacted]"
-                regexp "(?i)([?&](?:email|signature|token|access_token|refresh_token|code|state|apikey|api_key|key|password|lat|lon|lng|latitude|longitude)=)[^&#]*" "${1}[redacted]"
+                regexp "(?i)([?&](?:email|signature|token|share_token|access_token|refresh_token|code|state|apikey|api_key|key|password|lat|lon|lng|latitude|longitude)=)[^&#]*" "${1}[redacted]"
             }
             request>headers>Referer multi_regexp {
                 regexp "(/(?:auth/verify|account/email-change/verify|s)/)[^/?#.{]+" "${1}[redacted]"
-                regexp "(?i)([?&](?:email|signature|token|access_token|refresh_token|code|state|apikey|api_key|key|password|lat|lon|lng|latitude|longitude)=)[^&#]*" "${1}[redacted]"
+                regexp "(?i)([?&](?:email|signature|token|share_token|access_token|refresh_token|code|state|apikey|api_key|key|password|lat|lon|lng|latitude|longitude)=)[^&#]*" "${1}[redacted]"
             }
         }
     }

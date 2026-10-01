@@ -10,6 +10,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Logger\LogRedactor;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
@@ -65,8 +66,13 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 $result = $fetcher->fetch($sourceUrl);
             } catch (\RuntimeException $runtimeException) {
                 // Keep the technical detail (incl. raw cURL/transport messages) in
-                // the logs; show the user a stable, friendly message.
-                $this->logger->warning('Route fetch failed.', ['url' => $sourceUrl, 'error' => $runtimeException->getMessage()]);
+                // the logs; show the user a stable, friendly message. Host and path,
+                // never the whole URL: a private Komoot link carries its share_token
+                // in the query, and a transport message quotes the URL it failed on.
+                $this->logger->warning('Route fetch failed.', [
+                    'source' => LogRedactor::url($sourceUrl),
+                    'error' => LogRedactor::text($runtimeException->getMessage()),
+                ]);
                 $this->publisher->publishValidationError($tripId, 'ROUTE_FETCH_FAILED', 'The route could not be fetched. Please check the URL and try again.');
 
                 return;
