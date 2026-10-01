@@ -80,8 +80,12 @@ export function scrubEvent<T extends Event>(event: T): T {
     event.transaction = scrubUrl(event.transaction);
   }
   for (const span of event.spans ?? []) {
+    // Only an http span's description is a URL; a DB span's is SQL, where a
+    // `?` is a placeholder, not the start of a query string.
     if (span.description !== undefined) {
-      span.description = scrubUrl(span.description);
+      span.description = span.op?.startsWith("http")
+        ? scrubUrl(span.description)
+        : scrubText(span.description);
     }
     if (span.data) {
       delete span.data["http.query"];

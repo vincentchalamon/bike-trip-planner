@@ -94,6 +94,7 @@ describe("scrubEvent", () => {
           span_id: "a",
           trace_id: "b",
           start_timestamp: 0,
+          op: "http.client",
           description: "GET /geocode/reverse?lat=45.1&lon=5.7",
           data: {
             "http.query": "?lat=45.1&lon=5.7",
@@ -110,6 +111,28 @@ describe("scrubEvent", () => {
     expect(span?.data).toEqual({
       url: "/geocode/reverse?lat=[redacted]&lon=[redacted]",
     });
+  });
+});
+
+describe("scrubEvent on a non-http span", () => {
+  it("leaves an SQL description intact, its addresses aside", () => {
+    const event: Event = {
+      type: "transaction",
+      spans: [
+        {
+          span_id: "a",
+          trace_id: "b",
+          start_timestamp: 0,
+          op: "db.query",
+          description: "SELECT * FROM users WHERE email = ? AND id = ?",
+          data: {},
+        },
+      ],
+    };
+
+    expect(scrubEvent(event).spans?.[0]?.description).toBe(
+      "SELECT * FROM users WHERE email = ? AND id = ?",
+    );
   });
 });
 

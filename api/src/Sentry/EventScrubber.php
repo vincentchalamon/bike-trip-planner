@@ -76,9 +76,11 @@ final class EventScrubber
             }
 
             $span->setData($redacted);
+            // Only an http span's description is a URL; a DB span's is SQL, where a
+            // `?` is a placeholder, not the start of a query string.
             $description = $span->getDescription();
             if (null !== $description) {
-                $span->setDescription(LogRedactor::url($description));
+                $span->setDescription(str_starts_with((string) $span->getOp(), 'http.') ? LogRedactor::url($description) : LogRedactor::text($description));
             }
         }
 

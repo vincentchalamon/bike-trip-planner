@@ -104,6 +104,21 @@ final class EventScrubberTest extends TestCase
         self::assertSame('GET https://api.open-meteo.com/v1/forecast', $span->getDescription());
     }
 
+    /** Only an http span's description is a URL: in SQL a `?` is a placeholder. */
+    #[Test]
+    public function aDatabaseSpanKeepsItsStatement(): void
+    {
+        $span = new Hub()->startTransaction(TransactionContext::make())->startChild(SpanContext::make()
+            ->setOp('db.sql.query')
+            ->setDescription('SELECT * FROM "user" WHERE email = ? AND id = ?'));
+        $event = Event::createTransaction(EventId::generate());
+        $event->setSpans([$span]);
+
+        new EventScrubber()($event);
+
+        self::assertSame('SELECT * FROM "user" WHERE email = ? AND id = ?', $span->getDescription());
+    }
+
     #[Test]
     public function theExceptionFilterForwardsOnlyScrubbedEvents(): void
     {
