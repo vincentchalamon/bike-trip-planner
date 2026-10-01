@@ -207,10 +207,10 @@ final readonly class OverrideImporter
                 [$type, $id] = explode('/', $row['source_id']);
                 $osm[] = \sprintf(
                     '(%s, %d, %s, %s, %s, %s, %s, %s, now())',
-                    ZonePromotion::literal(strtoupper($type)),
+                    Sql::literal(strtoupper($type)),
                     (int) $id,
-                    ZonePromotion::literal($row['name']),
-                    ZonePromotion::literal($row['category']),
+                    Sql::literal($row['name']),
+                    Sql::literal($row['category']),
                     $this->nullable($row['website']),
                     $this->nullable($row['opening_hours']),
                     $this->nullable($row['description']),
@@ -221,9 +221,9 @@ final readonly class OverrideImporter
 
             $tourism[] = \sprintf(
                 '(%s, %s, %s, %s, %s, %s, %s, now())',
-                ZonePromotion::literal($row['source_id']),
-                ZonePromotion::literal($row['name']),
-                ZonePromotion::literal($row['category']),
+                Sql::literal($row['source_id']),
+                Sql::literal($row['name']),
+                Sql::literal($row['category']),
                 $this->nullable($row['website']),
                 $this->nullable($row['opening_hours']),
                 $this->nullable($row['description']),
@@ -235,7 +235,7 @@ final readonly class OverrideImporter
         if ([] !== $osm) {
             $statements[] = \sprintf(
                 'INSERT INTO osm.accommodations (osm_type, osm_id, name, category, website, opening_hours, description, geom, zone, last_seen_at) SELECT v.osm_type, v.osm_id, v.name, v.category, v.website, v.opening_hours, v.description, v.geom, %s, v.seen FROM (VALUES %s) AS v(osm_type, osm_id, name, category, website, opening_hours, description, geom, seen) ON CONFLICT (osm_type, osm_id) DO NOTHING;',
-                ZonePromotion::literal($zoneSlug),
+                Sql::literal($zoneSlug),
                 implode(', ', $osm),
             );
         }
@@ -243,7 +243,7 @@ final readonly class OverrideImporter
         if ([] !== $tourism) {
             $statements[] = \sprintf(
                 'INSERT INTO tourism.accommodations (id, name, category, website, opening_hours, description, geom, zone, last_seen_at) SELECT v.id, v.name, v.category, v.website, v.opening_hours, v.description, v.geom, %s, v.seen FROM (VALUES %s) AS v(id, name, category, website, opening_hours, description, geom, seen) ON CONFLICT (id) DO NOTHING;',
-                ZonePromotion::literal($zoneSlug),
+                Sql::literal($zoneSlug),
                 implode(', ', $tourism),
             );
         }
@@ -258,6 +258,6 @@ final readonly class OverrideImporter
 
     private function nullable(?string $value): string
     {
-        return null === $value ? 'NULL' : ZonePromotion::literal($value);
+        return null === $value ? 'NULL' : Sql::literal($value);
     }
 }

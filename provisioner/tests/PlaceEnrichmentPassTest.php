@@ -48,6 +48,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         return new PlaceEnrichmentPass(
             source: 'osm',
             identity: "a.osm_type || '/' || a.osm_id",
+            liveIdentity: 'l.osm_type = a.osm_type AND l.osm_id = a.osm_id',
             exemptCategories: ['shelter'],
             processFactory: function (array $command) use ($candidateLines, $rejectedCount): Process {
                 /** @var list<string> $cmd */
@@ -245,6 +246,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         new PlaceEnrichmentPass(
             source: 'datatourisme',
             identity: 'a.id',
+            liveIdentity: 'l.id = a.id',
             exemptCategories: [],
             osmSchema: 'osm',
             processFactory: function (array $command): Process {
@@ -500,6 +502,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         $pass = new PlaceEnrichmentPass(
             source: 'osm',
             identity: "a.osm_type || '/' || a.osm_id",
+            liveIdentity: 'l.osm_type = a.osm_type AND l.osm_id = a.osm_id',
             exemptCategories: ['shelter'],
             liveSchema: 'osm',
             processFactory: function (array $command): Process {
@@ -529,6 +532,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         $pass = new PlaceEnrichmentPass(
             source: 'datatourisme',
             identity: 'a.id',
+            liveIdentity: 'l.id = a.id',
             osmSchema: 'osm',
             liveSchema: 'tourism',
             processFactory: function (array $command): Process {

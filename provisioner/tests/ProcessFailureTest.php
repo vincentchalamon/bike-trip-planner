@@ -90,7 +90,7 @@ final class ProcessFailureTest extends TestCase
             'postgis' => new PostgisImporter('tier1.lua', processFactory: $factory)->dropStaging('osm_staging_bretagne'),
             'datatourisme' => new DataTourismeImporter('https://diffuseur.datatourisme.fr/flux', processFactory: $factory)->dropRefreshStaging('tourism_staging_bretagne'),
             'openagenda' => new OpenAgendaImporter('https://public.opendatasoft.com/export', processFactory: $factory)->dropRefreshStaging('openagenda_staging'),
-            'place enrichment' => new PlaceEnrichmentPass('osm', 'a.id', processFactory: $factory)->run($this->workDir, 'osm_staging_bretagne', 'accommodations'),
+            'place enrichment' => new PlaceEnrichmentPass('osm', 'a.id', 'l.id = a.id', processFactory: $factory)->run($this->workDir, 'osm_staging_bretagne', 'accommodations'),
             'wikidata enrichment' => new WikidataEnrichmentPass($factory)->run($this->workDir, 'osm_staging_bretagne', ['accommodations']),
             'override' => new OverrideImporter($factory)->import($this->overrideFile(), 'bretagne'),
             'routing perimeter' => new RoutingPerimeter($this->workDir, $factory)->record(),

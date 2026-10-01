@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Component\Process\Process;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -52,7 +49,16 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     private const string EVENTS_REFRESH_SCHEMA = 'tourism_events_refresh';
 
     /**
-     * Target tables and their COPY column order. `geom` always comes last and is
+     * Every table the flux feeds, in load order. The events table is staged and promoted
+     * by the pipeline it shares with OpenAgenda ({@see EventsStaging}), so only the place
+     * tables are described below.
+     *
+     * @var list<string>
+     */
+    private const array TABLES = ['cultural_pois', 'food_pois', 'accommodations', 'events'];
+
+    /**
+     * Place tables and their COPY column order. `geom` always comes last and is
      * fed EWKT. Must match Version20260616120000 / Version20260616140000 (the
      * live-schema bootstraps) plus Version20260617130000 (`website` on the POI
      * tables) and Version20260803120000 (the accommodation contact columns).
@@ -60,24 +66,18 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      * `image_url` / `wikipedia_url` are absent on purpose: they exist in the DDL
      * but are written by the Wikidata pass alone, never by the flux.
      *
-     * `events.source` is written explicitly as 'datatourisme' (Version20260810120000,
-     * ADR-051): the events table is now multi-source, so the origin is a per-row
-     * value a second source overrides rather than a runtime constant.
-     *
      * @var array<string, list<string>>
      */
     private const array TABLE_COLUMNS = [
         'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'website', 'wikidata', 'tags', 'geom'],
         'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'opening_hours', 'website', 'phone', 'wikidata', 'tags', 'geom'],
-        'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'],
     ];
 
     private const array STAGING_DDL = [
         'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, opening_hours text, website text, phone text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'events' => "id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), source text NOT NULL DEFAULT 'datatourisme', tags jsonb, geom geometry(Point, 4326) NOT NULL",
     ];
 
     /**
@@ -117,7 +117,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      * so identity is that id alone.
      *
      * `events` is deliberately absent: events are perishable, not append-only, so they are
-     * promoted by {@see EventsPromotion} (upsert + purge) instead — see {@see promoteEvents()}
+     * promoted by {@see EventsPromotion} (upsert + purge) instead — see {@see EventsStaging}
      * and ADR-051 §4.
      *
      * @var array<string, string>
@@ -128,7 +128,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         'accommodations' => 'l.id = s.id',
     ];
 
-    private HttpClientInterface $httpClient;
+    private FeedDownloader $downloader;
 
     private ProcessRunner $processes;
 
@@ -136,7 +136,9 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
 
     private ZonePromotion $promotion;
 
-    private EventsPromotion $eventsPromotion;
+    private EventsStaging $events;
+
+    private ZoneGeometry $zoneGeometry;
 
     private PlaceEnrichmentPass $placeEnrichmentPass;
 
@@ -153,29 +155,29 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         string $locale = 'fr',
         int $cacheTtlDays = 30,
     ) {
-        // Scoped to the DataTourisme origin (SSRF policy, see CLAUDE.md). Cap the
-        // total transfer (ADR-041) so a stalled flux endpoint fails fast rather
-        // than blocking the run; `timeout` is the per-chunk idle wait.
-        $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
-            HttpClient::create([
-                'max_redirects' => 2,
-                'timeout' => 120.0,
-                'max_duration' => $this->timeoutSeconds,
-            ]),
-            'https://diffuseur.datatourisme.fr/',
+        $this->downloader = new FeedDownloader(
+            // Cap the total transfer (ADR-041) so a stalled flux endpoint fails fast rather
+            // than blocking the run; `timeout` is the per-chunk idle wait.
+            $httpClient ?? ScopedHttpClient::create('https://diffuseur.datatourisme.fr/', ['timeout' => 120.0, 'max_duration' => $this->timeoutSeconds]),
+            $this->fluxUrl,
+            'DataTourisme flux',
+            // The flux URL's last segment is the app key (EnvImporters).
+            basename((string) parse_url($this->fluxUrl, \PHP_URL_PATH)),
         );
         $this->processes = new ProcessRunner($this->processFactory, $this->timeoutSeconds);
+        $this->zoneGeometry = new ZoneGeometry($this->processes);
         $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
         $this->promotion = new ZonePromotion(self::SOURCE, self::LIVE_SCHEMA, self::IDENTITY);
         // Events are perishable: promoted by upsert + purge, not the append-only anti-join
         // above (ADR-051 §4).
-        $this->eventsPromotion = new EventsPromotion(self::SOURCE, self::LIVE_SCHEMA);
+        $this->events = new EventsStaging(self::SOURCE, $this->processes);
         // Boundaries come from the live `osm` schema: the flux carries no administrative
         // geometry of its own, and the zone's own boundaries were promoted by the OSM step
         // that always runs first.
         $this->placeEnrichmentPass = new PlaceEnrichmentPass(
             source: 'datatourisme',
             identity: 'a.id',
+            liveIdentity: 'l.id = a.id',
             exemptCategories: [],
             osmSchema: 'osm',
             liveSchema: self::LIVE_SCHEMA,
@@ -190,7 +192,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      */
     public static function stagingSchema(string $zoneSlug): string
     {
-        return 'tourism_staging_'.preg_replace('/[^a-z0-9]+/', '_', strtolower($zoneSlug));
+        return Sql::zoneSchema('tourism_staging', $zoneSlug);
     }
 
     /**
@@ -210,7 +212,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         $staging = self::stagingSchema($zoneSlug);
 
         $zipPath = $workDir.'/datatourisme-flux.zip';
-        $this->download($zipPath);
+        $this->downloader->download($zipPath);
         $copyFiles = $this->extract($zipPath, $workDir);
         $this->load($staging, $copyFiles);
         $this->enrichmentPass->run($workDir, $staging, self::WIKIDATA_TABLES);
@@ -232,15 +234,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     {
         $staging = self::stagingSchema($zoneSlug);
 
-        // The promotion clips to the zone's registry geometry, so with no geometry it would
-        // promote exactly nothing and report success — silently, which is worse than
-        // refusing. That happens when the OSM step failed before writing the registry row,
-        // and also when it succeeded but its clipped extract yielded no boundary at all
-        // (#880). The precondition is therefore the geometry, not the sibling step's exit
-        // code: gating on the OSM outcome would make a failed OSM download also block a
-        // DataTourisme refresh for a zone that is already open, which is precisely the
-        // cross-source coupling ADR-041 forbids.
-        if (!$this->zoneHasGeometry($workDir, $zoneSlug)) {
+        if (!$this->zoneGeometry->exists($workDir.'/zone-geometry.tsv', $zoneSlug)) {
             $this->dropStaging($staging);
 
             return false;
@@ -257,52 +251,11 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         );
         // Events first, in their own transaction, so the metadata refresh inside promote()
         // counts the fresh events. Perishable, so upsert + purge, not append-only (ADR-051 §4).
-        $this->promoteEvents($staging, $zoneSlug, $today);
+        $this->events->promote($zoneSlug, $staging, $today);
         $this->promote($zoneSlug, $staging, $gate);
         $this->dropStaging($staging);
 
         return true;
-    }
-
-    /**
-     * Upserts the staged events covered by the zone and purges past events, in one
-     * transaction ({@see EventsPromotion}). Shared by the full zone open ({@see finish()})
-     * and the standalone events refresh ({@see promoteEventsForZone()}).
-     *
-     * @throws ImportFailedException
-     */
-    private function promoteEvents(string $stagingSchema, string $zoneSlug, string $today): void
-    {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->eventsPromotion->reportDdl(),
-        ], 'psql prepare events promotion report');
-
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
-            $this->eventsPromotion->sql($zoneSlug, $stagingSchema, $today),
-        ], \sprintf('psql upsert+purge datatourisme events zone %s', $zoneSlug));
-    }
-
-    /**
-     * Whether the zone has a geometry in the registry to clip the promotion against.
-     *
-     * @throws ImportFailedException
-     */
-    private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
-    {
-        $path = $workDir.'/zone-geometry.tsv';
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
-                ZonePromotion::literal($zoneSlug),
-                $path,
-            ),
-        ], 'psql check zone geometry');
-
-        $contents = is_file($path) ? file_get_contents($path) : false;
-
-        return \is_string($contents) && 0 < (int) trim($contents);
     }
 
     /**
@@ -334,18 +287,18 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     public function stageEventsForRefresh(string $workDir): string
     {
         $zipPath = $workDir.'/datatourisme-flux.zip';
-        $this->download($zipPath);
+        $this->downloader->download($zipPath);
         // Events only: the weekly refresh must not write the three place COPY files
         // (the bulk of the national flux) to disk just to discard them (ADR-051 §4).
         $copyFiles = $this->extract($zipPath, $workDir, ['events']);
-        $this->loadEventsOnly(self::EVENTS_REFRESH_SCHEMA, $copyFiles['events']);
+        $this->events->load(self::EVENTS_REFRESH_SCHEMA, $copyFiles['events']);
 
         return self::EVENTS_REFRESH_SCHEMA;
     }
 
     public function promoteEventsForZone(string $stagingSchema, string $zone, string $today): void
     {
-        $this->promoteEvents($stagingSchema, $zone, $today);
+        $this->events->promote($zone, $stagingSchema, $today);
     }
 
     public function dropRefreshStaging(string $stagingSchema): void
@@ -375,39 +328,6 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     }
 
     /**
-     * @throws ImportFailedException
-     */
-    public function download(string $zipPath): void
-    {
-        $handle = fopen($zipPath, 'w');
-        if (false === $handle) {
-            throw new ImportFailedException(\sprintf('Cannot open "%s" for writing', $zipPath));
-        }
-
-        try {
-            $response = $this->httpClient->request('GET', $this->fluxUrl);
-            $status = $response->getStatusCode();
-            if ($status < 200 || $status >= 300) {
-                throw new ImportFailedException(\sprintf('DataTourisme flux download failed with HTTP %d', $status));
-            }
-
-            foreach ($this->httpClient->stream($response) as $chunk) {
-                if (false === fwrite($handle, $chunk->getContent())) {
-                    throw new ImportFailedException(\sprintf('Failed to write the flux to "%s"', $zipPath));
-                }
-            }
-        } catch (HttpClientExceptionInterface $httpClientException) {
-            fclose($handle);
-
-            throw new ImportFailedException(\sprintf('DataTourisme flux download failed: %s', $this->withoutAppKey($httpClientException->getMessage())), 0, $httpClientException);
-        } finally {
-            if (\is_resource($handle)) {
-                fclose($handle);
-            }
-        }
-    }
-
-    /**
      * Streams the flux ZIP and writes one text-format COPY file per table. The
      * Wikidata enrichment collects its Q-IDs straight from the loaded staging
      * tables (see {@see WikidataEnrichmentPass}), so nothing is tracked here.
@@ -429,8 +349,8 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         }
 
         $tables = null === $onlyTables
-            ? array_keys(self::TABLE_COLUMNS)
-            : array_values(array_intersect(array_keys(self::TABLE_COLUMNS), $onlyTables));
+            ? self::TABLES
+            : array_values(array_intersect(self::TABLES, $onlyTables));
 
         $handles = [];
         $files = [];
@@ -498,30 +418,30 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
      */
     private function copyLine(string $table, array $row): string
     {
-        $geom = \sprintf('SRID=4326;POINT(%.7F %.7F)', $row['lon'], $row['lat']);
-        // The mapper already narrowed the source object down to the keys worth
-        // keeping (see DataTourismeMapper::tags); this only serialises them.
-        $tags = json_encode($row['tags'], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
-
-        $values = match ($table) {
-            'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['website'], $row['wikidata'], $tags, $geom],
-            'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $row['openingHours'], $row['website'], $row['phone'], $row['wikidata'], $tags, $geom],
-            'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['website'], $row['description'], $row['price'], 'datatourisme', $tags, $geom],
-            default => [],
-        };
-
-        return implode("\t", array_map($this->copyValue(...), $values))."\n";
-    }
-
-    private function copyValue(string|int|float|null $value): string
-    {
-        if (null === $value) {
-            return '\N';
+        if ('events' === $table) {
+            return $this->events->line([
+                'id' => $row['id'],
+                'name' => $row['name'],
+                'category' => $row['category'],
+                'start_date' => $row['startDate'],
+                'end_date' => $row['endDate'],
+                'url' => $row['website'],
+                'description' => $row['description'],
+                'price_min' => $row['price'],
+                'tags' => $row['tags'],
+                'lat' => $row['lat'],
+                'lon' => $row['lon'],
+            ]);
         }
 
-        $string = \is_string($value) ? $value : (string) $value;
+        $geom = CopyWriter::point($row['lat'], $row['lon']);
+        // The mapper already narrowed the source object down to the keys worth
+        // keeping (see DataTourismeMapper::tags); this only serialises them.
+        $tags = CopyWriter::json($row['tags']);
 
-        return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $string);
+        return CopyWriter::line('accommodations' === $table
+            ? [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $row['openingHours'], $row['website'], $row['phone'], $row['wikidata'], $tags, $geom]
+            : [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['website'], $row['wikidata'], $tags, $geom]);
     }
 
     /**
@@ -536,9 +456,17 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
             $ddl .= \sprintf(' CREATE TABLE %s.%s (%s);', $stagingSchema, $table, $columns);
         }
 
+        $ddl .= \sprintf(' CREATE TABLE %s.events (%s);', $stagingSchema, $this->events->ddl());
+
         $this->processes->run(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $ddl], 'psql create tourism staging');
 
         foreach ($copyFiles as $table => $path) {
+            if ('events' === $table) {
+                $this->events->copy($stagingSchema, $path);
+
+                continue;
+            }
+
             $columns = implode(', ', self::TABLE_COLUMNS[$table]);
             $copy = \sprintf("\\copy %s.%s (%s) FROM '%s'", $stagingSchema, $table, $columns, $path);
             $this->processes->run(['psql', '-v', 'ON_ERROR_STOP=1', '-c', $copy], \sprintf('psql copy %s', $table));
@@ -565,6 +493,8 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
                 ], \sprintf('psql index %s geography', $table));
             }
         }
+
+        $this->events->index($stagingSchema);
     }
 
     /**
@@ -581,7 +511,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     {
         $counts = implode(', ', array_map(
             static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::LIVE_SCHEMA),
-            array_keys(self::TABLE_COLUMNS),
+            self::TABLES,
         ));
         $completeness = new CompletenessMetrics(self::LIVE_SCHEMA)
             ->expression(self::COMPLETENESS_METRICS, self::COMPLETENESS_BY_CATEGORY);
@@ -607,7 +537,7 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
         );
 
         $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c', PromotionReportTable::ddl(),
         ], 'psql prepare promotion report');
 
         $this->processes->run([
@@ -617,54 +547,10 @@ final readonly class DataTourismeImporter implements EventsRefreshSourceInterfac
     }
 
     /**
-     * Loads only the events COPY file into a schema holding a single events table, for the
-     * standalone refresh. The GiST index serves the per-zone clip, as in {@see load()}.
-     *
-     * @throws ImportFailedException
-     */
-    private function loadEventsOnly(string $stagingSchema, string $eventsCopyFile): void
-    {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                'DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s; CREATE TABLE %1$s.events (%2$s);',
-                $stagingSchema,
-                self::STAGING_DDL['events'],
-            ),
-        ], 'psql create events refresh staging');
-
-        $columns = implode(', ', self::TABLE_COLUMNS['events']);
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf("\\copy %s.events (%s) FROM '%s'", $stagingSchema, $columns, $eventsCopyFile),
-        ], 'psql copy events');
-
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('CREATE INDEX ON %s.events USING gist (geom);', $stagingSchema),
-        ], 'psql index events');
-    }
-
-    /**
      * @throws ImportFailedException
      */
     private function dropStaging(string $stagingSchema): void
     {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
-        ], 'psql drop tourism staging schema');
-    }
-
-    /**
-     * A transport error quotes the URL it failed on, and the flux URL's last segment
-     * is the app key (EnvImporters): the message lands in provisioner.log and on the
-     * console.
-     */
-    private function withoutAppKey(string $message): string
-    {
-        $appKey = basename((string) parse_url($this->fluxUrl, \PHP_URL_PATH));
-
-        return '' === $appKey ? $message : str_replace([$appKey, rawurlencode($appKey)], '[redacted]', $message);
+        $this->processes->psql(\sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema), 'psql drop tourism staging schema');
     }
 }

@@ -165,15 +165,6 @@ final class ZonePromotionTest extends TestCase
     }
 
     #[Test]
-    public function reportDdlIsIdempotent(): void
-    {
-        $ddl = $this->promotion()->reportDdl();
-
-        self::assertStringContainsString('CREATE SCHEMA IF NOT EXISTS provisioner', $ddl);
-        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS provisioner.promotion_report', $ddl);
-    }
-
-    #[Test]
     public function escapesQuotesInEveryInterpolatedValue(): void
     {
         $sql = new ZonePromotion("o'source", "o'live", ["o'table" => 'l.id = s.id'])

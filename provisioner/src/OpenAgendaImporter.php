@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Component\Process\Process;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -36,13 +33,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Rows are emitted in PostgreSQL text COPY format (`\N` = NULL, tab-separated,
  * backslash-escaped); `geom` receives EWKT (`SRID=4326;POINT(lon lat)`). The DB
  * connection comes from the libpq environment (PG*), inherited by psql.
- *
- * @phpstan-import-type Row from OpenAgendaMapper
  */
 final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
 {
-    private const string LIVE_SCHEMA = 'tourism';
-
     private const string SOURCE = 'openagenda';
 
     /**
@@ -53,53 +46,40 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
      */
     private const string REFRESH_SCHEMA = 'openagenda_events_refresh';
 
-    /**
-     * COPY column order for the events table. `source` is written explicitly as
-     * 'openagenda' (the multi-source column of Version20260810120000, ADR-051);
-     * `geom` always comes last and is fed EWKT.
-     *
-     * @var list<string>
-     */
-    private const array EVENT_COLUMNS = ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'source', 'tags', 'geom'];
-
-    /**
-     * Same events staging DDL as {@see DataTourismeImporter}: a subset of the live
-     * tourism.events the promotion completes with the `zone` / `last_seen_at`
-     * provenance pair.
-     */
-    private const string EVENTS_DDL = "id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), source text NOT NULL DEFAULT 'openagenda', tags jsonb, geom geometry(Point, 4326) NOT NULL";
-
-    private HttpClientInterface $httpClient;
+    private FeedDownloader $downloader;
 
     private ProcessRunner $processes;
 
-    private EventsPromotion $promotion;
+    private ZoneGeometry $zoneGeometry;
+
+    private EventsStaging $events;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the psql processes; defaults to a real {@see Process}
      */
     public function __construct(
-        private string $exportUrl,
+        string $exportUrl,
         private OpenAgendaMapper $mapper = new OpenAgendaMapper(),
         ?HttpClientInterface $httpClient = null,
         ?\Closure $processFactory = null,
-        private float $timeoutSeconds = 1800.0,
+        float $timeoutSeconds = 1800.0,
     ) {
-        // Scoped to the Opendatasoft origin (SSRF policy, see CLAUDE.md). Cap the
-        // total transfer (ADR-041) so a stalled endpoint fails fast rather than
-        // blocking the run; `timeout` is the per-chunk idle wait.
-        $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
-            HttpClient::create([
-                'max_redirects' => 2,
-                'timeout' => 120.0,
-                'max_duration' => $this->timeoutSeconds,
-            ]),
-            'https://public.opendatasoft.com/',
+        parse_str((string) parse_url($exportUrl, \PHP_URL_QUERY), $query);
+        $apiKey = $query['apikey'] ?? '';
+        $this->downloader = new FeedDownloader(
+            // Cap the total transfer (ADR-041) so a stalled endpoint fails fast rather than
+            // blocking the run; `timeout` is the per-chunk idle wait.
+            $httpClient ?? ScopedHttpClient::create('https://public.opendatasoft.com/', ['timeout' => 120.0, 'max_duration' => $timeoutSeconds]),
+            $exportUrl,
+            'OpenAgenda export',
+            // `?apikey=` is there only when a private portal sets one (EnvImporters).
+            \is_string($apiKey) ? $apiKey : '',
         );
-        $this->processes = new ProcessRunner($processFactory, $this->timeoutSeconds);
+        $this->processes = new ProcessRunner($processFactory, $timeoutSeconds);
+        $this->zoneGeometry = new ZoneGeometry($this->processes);
         // Events are perishable, so promotion is upsert-and-purge, not the append-only
         // anti-join {@see ZonePromotion} runs for places (ADR-051 §4).
-        $this->promotion = new EventsPromotion(self::SOURCE, self::LIVE_SCHEMA);
+        $this->events = new EventsStaging(self::SOURCE, $this->processes);
     }
 
     public function label(): string
@@ -114,11 +94,16 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
      */
     public static function stagingSchema(string $zoneSlug): string
     {
-        return 'openagenda_staging_'.preg_replace('/[^a-z0-9]+/', '_', strtolower($zoneSlug));
+        return Sql::zoneSchema('openagenda_staging', $zoneSlug);
     }
 
     /**
      * Downloads, stages and promotes the events covered by the zone.
+     *
+     * Unlike DataTourisme, OpenAgenda does not refresh `tourism.metadata`: events feed a
+     * single table and DataTourisme owns that single-row snapshot. When both sources run,
+     * OpenAgenda is promoted before the DataTourisme finish, so the DataTourisme metadata
+     * refresh counts OpenAgenda's events in the live totals.
      *
      * @param string $today the purge boundary as `YYYY-MM-DD`, computed by the caller with
      *                      an explicit timezone (see {@see EventsPromotion})
@@ -133,20 +118,18 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
         $staging = self::stagingSchema($zoneSlug);
 
         $jsonlPath = $workDir.'/openagenda-export.jsonl';
-        $this->download($jsonlPath);
+        $this->downloader->download($jsonlPath);
         $copyFile = $this->extract($jsonlPath, $workDir);
-        $this->load($staging, $copyFile);
+        $this->events->load($staging, $copyFile);
 
-        // Promotion clips to the zone's registry geometry; with none it would promote
-        // exactly nothing and report success silently, which is worse than skipping.
         // Same precondition as DataTourisme (#885): the geometry, not the OSM exit code.
-        if (!$this->zoneHasGeometry($workDir, $zoneSlug)) {
+        if (!$this->zoneGeometry->exists($workDir.'/openagenda-zone-geometry.tsv', $zoneSlug)) {
             $this->dropStaging($staging);
 
             return false;
         }
 
-        $this->promote($zoneSlug, $staging, $today);
+        $this->events->promote($zoneSlug, $staging, $today);
         $this->dropStaging($staging);
 
         return true;
@@ -155,54 +138,21 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
     public function stageEventsForRefresh(string $workDir): string
     {
         $jsonlPath = $workDir.'/openagenda-export.jsonl';
-        $this->download($jsonlPath);
+        $this->downloader->download($jsonlPath);
         $copyFile = $this->extract($jsonlPath, $workDir);
-        $this->load(self::REFRESH_SCHEMA, $copyFile);
+        $this->events->load(self::REFRESH_SCHEMA, $copyFile);
 
         return self::REFRESH_SCHEMA;
     }
 
     public function promoteEventsForZone(string $stagingSchema, string $zone, string $today): void
     {
-        $this->promote($zone, $stagingSchema, $today);
+        $this->events->promote($zone, $stagingSchema, $today);
     }
 
     public function dropRefreshStaging(string $stagingSchema): void
     {
         $this->dropStaging($stagingSchema);
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    public function download(string $jsonlPath): void
-    {
-        $handle = fopen($jsonlPath, 'w');
-        if (false === $handle) {
-            throw new ImportFailedException(\sprintf('Cannot open "%s" for writing', $jsonlPath));
-        }
-
-        try {
-            $response = $this->httpClient->request('GET', $this->exportUrl);
-            $status = $response->getStatusCode();
-            if ($status < 200 || $status >= 300) {
-                throw new ImportFailedException(\sprintf('OpenAgenda export download failed with HTTP %d', $status));
-            }
-
-            foreach ($this->httpClient->stream($response) as $chunk) {
-                if (false === fwrite($handle, $chunk->getContent())) {
-                    throw new ImportFailedException(\sprintf('Failed to write the export to "%s"', $jsonlPath));
-                }
-            }
-        } catch (HttpClientExceptionInterface $httpClientException) {
-            fclose($handle);
-
-            throw new ImportFailedException(\sprintf('OpenAgenda export download failed: %s', $this->withoutApiKey($httpClientException->getMessage())), 0, $httpClientException);
-        } finally {
-            if (\is_resource($handle)) {
-                fclose($handle);
-            }
-        }
     }
 
     /**
@@ -246,7 +196,19 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
                     continue;
                 }
 
-                fwrite($out, $this->copyLine($row));
+                fwrite($out, $this->events->line([
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'category' => $row['category'],
+                    'start_date' => $row['startDate'],
+                    'end_date' => $row['endDate'],
+                    'url' => $row['url'],
+                    'description' => $row['description'],
+                    'price_min' => $row['priceMin'],
+                    'tags' => $row['tags'],
+                    'lat' => $row['lat'],
+                    'lon' => $row['lon'],
+                ]));
             }
         } finally {
             fclose($in);
@@ -257,116 +219,10 @@ final readonly class OpenAgendaImporter implements EventsRefreshSourceInterface
     }
 
     /**
-     * @phpstan-param Row $row
-     */
-    private function copyLine(array $row): string
-    {
-        $geom = \sprintf('SRID=4326;POINT(%.7F %.7F)', $row['lon'], $row['lat']);
-        $tags = json_encode($row['tags'], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
-
-        $values = [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], $row['url'], $row['description'], $row['priceMin'], self::SOURCE, $tags, $geom];
-
-        return implode("\t", array_map($this->copyValue(...), $values))."\n";
-    }
-
-    private function copyValue(string|int|float|null $value): string
-    {
-        if (null === $value) {
-            return '\N';
-        }
-
-        $string = \is_string($value) ? $value : (string) $value;
-
-        return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $string);
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    private function load(string $stagingSchema, string $copyFile): void
-    {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %1$s CASCADE; CREATE SCHEMA %1$s; CREATE TABLE %1$s.events (%2$s);', $stagingSchema, self::EVENTS_DDL),
-        ], 'psql create openagenda staging');
-
-        $columns = implode(', ', self::EVENT_COLUMNS);
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf("\\copy %s.events (%s) FROM '%s'", $stagingSchema, $columns, $copyFile),
-        ], 'psql copy events');
-
-        // Serves the zone clip: the promotion tests every staged row against the zone
-        // polygon with ST_Covers.
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('CREATE INDEX ON %s.events USING gist (geom);', $stagingSchema),
-        ], 'psql index events');
-    }
-
-    /**
-     * @throws ImportFailedException
-     */
-    private function zoneHasGeometry(string $workDir, string $zoneSlug): bool
-    {
-        $path = $workDir.'/openagenda-zone-geometry.tsv';
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf(
-                "\\copy (SELECT count(*) FROM osm.zones WHERE slug = %s AND geom IS NOT NULL) TO '%s'",
-                ZonePromotion::literal($zoneSlug),
-                $path,
-            ),
-        ], 'psql check zone geometry');
-
-        $contents = is_file($path) ? file_get_contents($path) : false;
-
-        return \is_string($contents) && 0 < (int) trim($contents);
-    }
-
-    /**
-     * Upserts the staged events covered by the zone into the live schema and purges past
-     * events, in one transaction (ADR-051 §4). Unlike DataTourisme, OpenAgenda does not
-     * refresh `tourism.metadata`: events feed a single table and DataTourisme owns that
-     * single-row snapshot. When both sources run, OpenAgenda is promoted before the
-     * DataTourisme finish, so the DataTourisme metadata refresh counts OpenAgenda's events
-     * in the live totals.
-     *
-     * @throws ImportFailedException
-     */
-    private function promote(string $zoneSlug, string $stagingSchema, string $today): void
-    {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c', $this->promotion->reportDdl(),
-        ], 'psql prepare promotion report');
-
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-c',
-            $this->promotion->sql($zoneSlug, $stagingSchema, $today),
-        ], \sprintf('psql upsert+purge openagenda events zone %s', $zoneSlug));
-    }
-
-    /**
      * @throws ImportFailedException
      */
     private function dropStaging(string $stagingSchema): void
     {
-        $this->processes->run([
-            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema),
-        ], 'psql drop openagenda staging schema');
-    }
-
-    /**
-     * A transport error quotes the URL it failed on, `?apikey=` included when a private
-     * portal sets one (EnvImporters): the message lands in provisioner.log and on the
-     * console.
-     */
-    private function withoutApiKey(string $message): string
-    {
-        parse_str((string) parse_url($this->exportUrl, \PHP_URL_QUERY), $query);
-        $apiKey = $query['apikey'] ?? '';
-
-        return \is_string($apiKey) && '' !== $apiKey ? str_replace([$apiKey, rawurlencode($apiKey)], '[redacted]', $message) : $message;
+        $this->processes->psql(\sprintf('DROP SCHEMA IF EXISTS %s CASCADE;', $stagingSchema), 'psql drop openagenda staging schema');
     }
 }

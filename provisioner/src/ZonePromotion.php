@@ -42,15 +42,6 @@ final readonly class ZonePromotion
     public const int PIPELINE_VERSION = 1;
 
     /**
-     * Per-run, per-source promotion detail: how many rows the staging schema offered and
-     * how many were new. Lives in the stable `provisioner` schema (the one the Wikidata
-     * cache already uses) rather than in a swapped schema, and is created by the
-     * provisioner itself so a database whose API migrations have not run still
-     * provisions.
-     */
-    public const string REPORT_TABLE = 'provisioner.promotion_report';
-
-    /**
      * @param array<string, string> $tables table name => predicate joining a live row `l` to a
      *                                      staging row `s`. The OSM tables holding a single object
      *                                      type (`ways`, `admin_boundaries`, `cycle_routes`) have no
@@ -62,17 +53,6 @@ final readonly class ZonePromotion
         private string $liveSchema,
         private array $tables,
     ) {
-    }
-
-    /**
-     * DDL for the report table; safe to run on every pass.
-     */
-    public function reportDdl(): string
-    {
-        return \sprintf(
-            'CREATE SCHEMA IF NOT EXISTS provisioner; CREATE TABLE IF NOT EXISTS %s (source text NOT NULL, zone text NOT NULL, table_name text NOT NULL, candidates bigint NOT NULL, inserted bigint NOT NULL, promoted_at timestamptz NOT NULL, PRIMARY KEY (source, zone, table_name));',
-            self::REPORT_TABLE,
-        );
     }
 
     /**
@@ -90,7 +70,7 @@ final readonly class ZonePromotion
     public function sql(string $zone, string $stagingSchema, string $clipToZone = '', ?string $registryUpsert = null): string
     {
         $specs = implode(', ', array_map(
-            static fn (string $table, string $identity): string => \sprintf('(%s, %s)', self::literal($table), self::literal($identity)),
+            static fn (string $table, string $identity): string => \sprintf('(%s, %s)', Sql::literal($table), Sql::literal($identity)),
             array_keys($this->tables),
             array_values($this->tables),
         ));
@@ -103,7 +83,7 @@ final readonly class ZonePromotion
             ? ''
             : $this->embedded(\sprintf(
                 ' AND ST_Covers((SELECT geom FROM osm.zones WHERE slug = %s), s.geom)',
-                self::literal($clipToZone),
+                Sql::literal($clipToZone),
             ));
 
         return strtr(<<<'SQL'
@@ -167,29 +147,14 @@ final readonly class ZonePromotion
             $promote$;
             SQL, [
             ':specs' => $specs,
-            ':staging' => self::literal($stagingSchema),
-            ':live' => self::literal($this->liveSchema),
-            ':zone' => self::literal($zone),
-            ':source' => self::literal($this->source),
-            ':report' => self::REPORT_TABLE,
+            ':staging' => Sql::literal($stagingSchema),
+            ':live' => Sql::literal($this->liveSchema),
+            ':zone' => Sql::literal($zone),
+            ':source' => Sql::literal($this->source),
+            ':report' => PromotionReportTable::NAME,
             ':clip' => $clip,
             ':registry' => $registryUpsert ?? '',
         ]);
-    }
-
-    /**
-     * Single-quoted SQL literal. Every value reaching this today is an internal constant
-     * or a slug already resolved against {@see GeofabrikRegionRegistry}, so this guards
-     * the boundary rather than sanitising untrusted input.
-     *
-     * Public because it is the single place that escaping lives: {@see PostgisImporter}
-     * builds the registry upsert spliced into this SQL and must quote the zone's name
-     * the same way. Two copies would let a future change to the quoting strategy be
-     * applied to one and forgotten in the other.
-     */
-    public static function literal(string $value): string
-    {
-        return "'".str_replace("'", "''", $value)."'";
     }
 
     /**

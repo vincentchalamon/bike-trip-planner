@@ -5,10 +5,45 @@ declare(strict_types=1);
 
 require __DIR__.'/../vendor/autoload.php';
 
+use Provisioner\EnvImporters;
+use Provisioner\OsmDataDownloader;
+use Provisioner\PostgisImporter;
+use Provisioner\PromotionReport;
 use Provisioner\ProvisionCommand;
+use Provisioner\ProvisionerLog;
+use Provisioner\RoutingPerimeter;
+use Provisioner\RunLock;
+use Provisioner\ZoneOpening;
+use Provisioner\ZoneOpeningReport;
 use Symfony\Component\Console\Application;
 
+// Everything under /data, which is bind-mounted: the operator picks the reports up on the
+// host, and `.docker/osm/data/*` is gitignored, so no data file can reach the repository.
+$filteredPbf = '/data/tier1-filtered.osm.pbf';
+$zonesDir = '/data/zones';
+
+$log = new ProvisionerLog('/data/provisioner.log');
+$routingPerimeter = new RoutingPerimeter();
+
 $app = new Application('OSM Provisioner');
-$app->addCommand(new ProvisionCommand());
+$app->addCommand(new ProvisionCommand(
+    new ZoneOpening(
+        downloader: new OsmDataDownloader(regionsDir: '/data/regions'),
+        postgisImporter: new PostgisImporter(flexStylePath: dirname(__DIR__).'/osm2pgsql/tier1.lua'),
+        routingPerimeter: $routingPerimeter,
+        // A source whose credentials are not set is null: skipped, never a failure (ADR-041).
+        dataTourismeImporter: EnvImporters::dataTourisme(),
+        openAgendaImporter: EnvImporters::openAgenda(),
+        report: new ZoneOpeningReport($log, new PromotionReport(), $zonesDir, dirname($filteredPbf)),
+        log: $log,
+        filteredPbf: $filteredPbf,
+        dataTourismeDir: '/data/datatourisme',
+        openAgendaDir: '/data/openagenda',
+        zonesDir: $zonesDir,
+    ),
+    $routingPerimeter,
+    $log,
+    new RunLock('/data/provision.lock', $log),
+));
 $app->setDefaultCommand('provision', true);
 $app->run();

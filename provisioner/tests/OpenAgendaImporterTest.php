@@ -113,14 +113,6 @@ final class OpenAgendaImporterTest extends TestCase
         self::assertStringContainsString('CREATE TABLE openagenda_staging_bretagne.events', $ddl);
         self::assertStringContainsString("source text NOT NULL DEFAULT 'openagenda'", $ddl);
 
-        self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains(
-                $c,
-                '\copy openagenda_staging_bretagne.events (id, name, category, start_date, end_date, url, description, price_min, source, tags, geom)',
-            )),
-            'events are copied with the source column in the column list',
-        );
-
         // Clipped to the zone, restricted to ids the live table lacks, source stamped.
         $promotion = array_values(array_filter($joined, static fn (string $c): bool => str_contains($c, '--single-transaction')));
         self::assertCount(1, $promotion);

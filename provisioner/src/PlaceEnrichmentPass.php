@@ -55,6 +55,8 @@ final readonly class PlaceEnrichmentPass
     /**
      * @param string       $source            cache partition, also the report label ('osm', 'datatourisme')
      * @param string       $identity          SQL expression identifying a row `a` of the target table
+     * @param string       $liveIdentity      the same identity as a predicate matching a live row `l` to `a`
+     *                                        (`l.id = a.id`), used to leave out rows already promoted
      * @param list<string> $exemptCategories  categories the gate does not apply to, and which are therefore
      *                                        not resolved either (`shelter`, arbitrated by #878)
      * @param string|null  $matchTable        qualified table of curated places to match unnamed rows against
@@ -65,6 +67,7 @@ final readonly class PlaceEnrichmentPass
     public function __construct(
         private string $source,
         private string $identity,
+        private string $liveIdentity,
         private array $exemptCategories = [],
         private ?string $osmSchema = null,
         private ?string $liveSchema = null,
@@ -112,11 +115,7 @@ final readonly class PlaceEnrichmentPass
 
             try {
                 foreach ($decisions as $decision) {
-                    fwrite($handle, implode("\t", [
-                        $this->copyValue($decision['source_id']),
-                        $this->copyValue($decision['payload']),
-                        $this->copyValue($decision['status']),
-                    ])."\n");
+                    fwrite($handle, CopyWriter::line([$decision['source_id'], $decision['payload'], $decision['status']]));
                 }
             } finally {
                 fclose($handle);
@@ -128,7 +127,7 @@ final readonly class PlaceEnrichmentPass
             $this->processes->psql(\sprintf(
                 'INSERT INTO %1$s (source, source_id, payload, status, resolver_version, fetched_at) SELECT %2$s, source_id, payload, status, %3$d, now() FROM %4$s ON CONFLICT (source, source_id) DO UPDATE SET payload = excluded.payload, status = excluded.status, resolver_version = excluded.resolver_version, fetched_at = excluded.fetched_at;',
                 self::CACHE_TABLE,
-                $this->literal($this->source),
+                Sql::literal($this->source),
                 NameResolver::VERSION,
                 $scratch,
             ), 'psql upsert place enrichment cache');
@@ -142,7 +141,7 @@ final readonly class PlaceEnrichmentPass
             $stagingSchema,
             $table,
             self::CACHE_TABLE,
-            $this->literal($this->source),
+            Sql::literal($this->source),
             $this->identity,
         ), \sprintf('psql apply resolved names to %s.%s', $stagingSchema, $table));
 
@@ -224,7 +223,7 @@ final readonly class PlaceEnrichmentPass
             $table,
             $this->notExempt(),
             self::CACHE_TABLE,
-            $this->literal($this->source),
+            Sql::literal($this->source),
             NameResolver::VERSION,
             $path,
             $this->matchExpression(),
@@ -285,10 +284,10 @@ final readonly class PlaceEnrichmentPass
             $stagingSchema,
             $table,
             self::CACHE_TABLE,
-            $this->literal($this->source),
+            Sql::literal($this->source),
             $this->gatePredicate($table),
             $path,
-            $this->literal($this->source),
+            Sql::literal($this->source),
         ), \sprintf('psql write reject report for %s.%s', $stagingSchema, $table));
     }
 
@@ -353,22 +352,8 @@ final readonly class PlaceEnrichmentPass
             $predicate,
             $this->liveSchema,
             $table,
-            $this->liveIdentityMatch(),
+            $this->liveIdentity,
         );
-    }
-
-    /**
-     * The identity predicate against the live table, derived from the same expression the
-     * cache is keyed on so the two cannot disagree: `a.osm_type || '/' || a.osm_id` becomes
-     * the pair of column comparisons, `a.id` the single one.
-     */
-    private function liveIdentityMatch(): string
-    {
-        if (str_contains($this->identity, 'osm_type')) {
-            return 'l.osm_type = a.osm_type AND l.osm_id = a.osm_id';
-        }
-
-        return 'l.id = a.id';
     }
 
     private function notExempt(): string
@@ -379,7 +364,7 @@ final readonly class PlaceEnrichmentPass
 
         return \sprintf(
             'a.category NOT IN (%s)',
-            implode(', ', array_map($this->literal(...), $this->exemptCategories)),
+            implode(', ', array_map(Sql::literal(...), $this->exemptCategories)),
         );
     }
 
@@ -504,15 +489,5 @@ final readonly class PlaceEnrichmentPass
     private function copyDecoded(string $value): string
     {
         return strtr($value, ['\\\\' => '\\', '\\t' => "\t", '\\n' => "\n", '\\r' => "\r"]);
-    }
-
-    private function copyValue(string $value): string
-    {
-        return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $value);
-    }
-
-    private function literal(string $value): string
-    {
-        return ZonePromotion::literal($value);
     }
 }
