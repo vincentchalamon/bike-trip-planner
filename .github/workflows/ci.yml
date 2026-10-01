@@ -1025,9 +1025,14 @@ jobs:
       # below the bar.
       - name: Run npm audit
         run: npm audit --audit-level=high --omit=dev --workspace mobile
+      # Offline, the version check compares against the table shipped in the
+      # installed expo package instead of Expo's live API: online, every Expo
+      # patch release failed every PR touching mobile or the lockfile until
+      # someone bumped. The SDK itself still moves with the lockfile.
       - name: Check dependencies against the Expo SDK
         env:
           EXPO_PUBLIC_API_URL: https://ci.invalid
+          EXPO_OFFLINE: "1"
         run: npm run doctor --workspace mobile
       - name: Bundle the Android app
         env:
