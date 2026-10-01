@@ -31,7 +31,7 @@ final class EnumValuesMirrorTest extends TestCase
                 continue;
             }
 
-            if ((new \ReflectionClass($class))->hasConstant('VALUES')) {
+            if (new \ReflectionClass($class)->hasConstant('VALUES')) {
                 yield $class => [$class];
             }
         }
@@ -46,7 +46,7 @@ final class EnumValuesMirrorTest extends TestCase
     {
         self::assertSame(
             array_map(static fn (\BackedEnum $case): int|string => $case->value, $enum::cases()),
-            (new \ReflectionClassConstant($enum, 'VALUES'))->getValue(),
+            new \ReflectionClassConstant($enum, 'VALUES')->getValue(),
             \sprintf('%s::VALUES drifted from its cases.', $enum),
         );
     }

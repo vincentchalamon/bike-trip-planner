@@ -93,7 +93,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         $token = $this->emailChangeTokenRepository->create($user, $newEmail);
 
         // In the fragment, which a browser never sends (see AuthRequestLinkProcessor).
-        $verifyUrl = $this->frontendUrl->to('/account/email-change/verify#'.(string) $token->getPlainToken());
+        $verifyUrl = $this->frontendUrl->to('/account/email-change/verify#'.$token->getPlainToken());
         $locale = $user->getLocale();
 
         $html = $this->twig->render('email/email_change.html.twig', [

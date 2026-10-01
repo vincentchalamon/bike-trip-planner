@@ -52,7 +52,7 @@ final readonly class MagicLinkMailer
         // getPlainToken() (not getToken(), which is the hash stored at rest): the link must carry
         // the plaintext the verify endpoint will hash (SEC-003). It rides in the fragment, which
         // a browser never sends, so it stays out of the access logs and the Referer.
-        $verifyUrl = $this->frontendUrl->to('/auth/verify#'.(string) $magicLink->getPlainToken());
+        $verifyUrl = $this->frontendUrl->to('/auth/verify#'.$magicLink->getPlainToken());
         $locale = $user->getLocale();
 
         $html = $this->twig->render($template, [
