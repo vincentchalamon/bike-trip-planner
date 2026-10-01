@@ -102,6 +102,15 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         $this->updateStatus($tripId, $computation, ComputationStatus::PENDING->value);
     }
 
+    public function restoreStatuses(string $tripId, array $statuses): void
+    {
+        $this->withStatusLock($tripId, function () use ($tripId, $statuses): void {
+            if (null === $this->getStatuses($tripId)) {
+                $this->set($this->statusKey($tripId), $statuses);
+            }
+        });
+    }
+
     public function claimReadyPublication(string $tripId, ?int $generation = null): bool
     {
         // Check and set under the lock: two workers settling the last computations at once

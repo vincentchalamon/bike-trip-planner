@@ -89,6 +89,24 @@ final class ComputationTrackerTest extends TestCase
     }
 
     #[Test]
+    public function restoreStatusesFillsAnEmptyCache(): void
+    {
+        $this->tracker->restoreStatuses('trip-1', ['route' => 'done', 'stages' => 'done']);
+
+        $this->assertSame(['route' => 'done', 'stages' => 'done'], $this->tracker->getStatuses('trip-1'));
+    }
+
+    #[Test]
+    public function restoreStatusesNeverOverwritesAMapTheCacheStillHolds(): void
+    {
+        $this->tracker->initializeComputations('trip-1', [ComputationName::ROUTE]);
+
+        $this->tracker->restoreStatuses('trip-1', ['route' => 'done', 'stages' => 'done']);
+
+        $this->assertSame(['route' => 'pending'], $this->tracker->getStatuses('trip-1'));
+    }
+
+    #[Test]
     public function getStatusesReturnsNullForUnknownTrip(): void
     {
         $this->assertNull($this->tracker->getStatuses('unknown-trip'));

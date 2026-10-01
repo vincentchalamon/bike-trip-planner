@@ -53,6 +53,16 @@ interface ComputationTrackerInterface
     public function resetComputation(string $tripId, ComputationName $computation): void;
 
     /**
+     * Puts back a whole status map the cache has lost, unless another writer already did.
+     *
+     * Only meant for a map read from the durable copy (ADR-072). It writes nothing when the
+     * cache still holds one: that map is newer than any copy.
+     *
+     * @param array<string, string> $statuses
+     */
+    public function restoreStatuses(string $tripId, array $statuses): void;
+
+    /**
      * Attempts to claim the "ready to publish" slot for a generation of the trip.
      *
      * Returns true on the first successful call — this worker owns the terminal

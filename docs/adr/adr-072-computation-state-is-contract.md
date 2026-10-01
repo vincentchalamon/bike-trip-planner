@@ -49,6 +49,14 @@ it delegates, and falls back to the column when the cache returns `null`.
 > only `TripStageStoreInterface`: the trip's own fields (`TripRequestRepositoryInterface`) carry
 > no stage-collection write and reach the repository undecorated.
 
+> **Note (2026-10).** Falling back on read only was not enough. The tracker's writes are a
+> read-modify-write on whatever the cache holds, so the first write after the TTL left a map of
+> one entry, which `getProgress()` took for the whole pipeline: an edit made half an hour after
+> the analysis settled announced `trip_complete` as soon as its first computation finished,
+> then once more per enrichment. Before any entry is written (and before the progress is
+> read), the decorator now puts the column's map back into an empty cache
+> (`restoreStatuses()`, a no-op when the cache already holds one).
+
 The point of that shape is that **neither provider changes to gain durability**. They ask the
 interface; the fallback is underneath. Three Mercure payloads, two DTOs and the frontend read
 `getStatuses()`'s shape, and none of them move.
