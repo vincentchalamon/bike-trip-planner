@@ -292,7 +292,16 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         return $signature;
     }
 
-    /** @return list<array{float, float}> Endpoints + geometry coordinates of a persisted stage entity. */
+    /**
+     * Endpoints + geometry coordinates of a persisted stage entity.
+     *
+     * The geometry is cast: the JSONB column is encoded without JSON_PRESERVE_ZERO_FRACTION, so
+     * a coordinate written as `2.0` reads back as the int `2`, and the strict comparison in
+     * {@see self::geometryUnchanged()} took every route with one integral coordinate for a
+     * moved one. Any other value round-trips exactly, so the cast is all the tolerance needed.
+     *
+     * @return list<array{float, float}>
+     */
     private function entityGeometrySignature(StageEntity $entity): array
     {
         $signature = [
@@ -300,7 +309,7 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
             [$entity->getEndLat(), $entity->getEndLon()],
         ];
         foreach ($entity->getGeometry() as $coord) {
-            $signature[] = [$coord['lat'], $coord['lon']];
+            $signature[] = [(float) $coord['lat'], (float) $coord['lon']];
         }
 
         return $signature;
@@ -723,7 +732,14 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         $entity->setEndLabel($dto->endLabel);
         $entity->setIsRestDay($dto->isRestDay);
 
-        $entity->setGeometry(array_map($this->stageMapper->coordinate(...), $dto->geometry));
+        // Loose on purpose: the column reads `2.0` back as the int `2` (see
+        // entityGeometrySignature()), and the unit of work compares strictly, so assigning an
+        // equal geometry would write the whole column again.
+        $geometry = array_map($this->stageMapper->coordinate(...), $dto->geometry);
+        if ($geometry != $entity->getGeometry()) {
+            $entity->setGeometry($geometry);
+        }
+
         $entity->setWeather($dto->weather instanceof WeatherForecast ? $this->stageMapper->weatherForStorage($dto->weather) : null);
 
         // Enrichment columns are deliberately absent here (ADR-068): alerts, events and the
