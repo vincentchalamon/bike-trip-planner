@@ -6,6 +6,7 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\AnalyzerRegistryInterface;
+use App\Analyzer\StageAnalysisContext;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\AlertActionKind;
@@ -147,7 +148,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $analyzerRegistry = $this->createMock(AnalyzerRegistryInterface::class);
         $analyzerRegistry->expects($this->once())
             ->method('analyze')
-            ->willReturnCallback(function (Stage $stage, array $context) use (&$capturedContext): array {
+            ->willReturnCallback(function (Stage $stage, StageAnalysisContext $context) use (&$capturedContext): array {
                 $capturedContext = $context;
 
                 return [];
@@ -165,12 +166,11 @@ final class AnalyzeTerrainHandlerTest extends TestCase
 
         $handler(new AnalyzeTerrain('trip-1'));
 
-        $this->assertIsArray($capturedContext);
-        $this->assertArrayHasKey('osmWays', $capturedContext);
-        $this->assertCount(1, $capturedContext['osmWays']);
-        $this->assertSame('primary', $capturedContext['osmWays'][0]['highway']);
-        $this->assertSame('asphalt', $capturedContext['osmWays'][0]['surface']);
-        $this->assertSame(1000.0, $capturedContext['osmWays'][0]['length']);
+        $this->assertInstanceOf(StageAnalysisContext::class, $capturedContext);
+        $this->assertCount(1, $capturedContext->osmWays);
+        $this->assertSame('primary', $capturedContext->osmWays[0]['highway']);
+        $this->assertSame('asphalt', $capturedContext->osmWays[0]['surface']);
+        $this->assertSame(1000.0, $capturedContext->osmWays[0]['length']);
     }
 
     #[Test]

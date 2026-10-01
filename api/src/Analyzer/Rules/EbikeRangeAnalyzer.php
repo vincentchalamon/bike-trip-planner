@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -28,7 +29,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
     ) {
     }
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         // A rest day is not ridden: the battery is not drained, and it is where the
         // bike gets charged anyway.
@@ -36,7 +37,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        if (true !== ($context['ebikeMode'] ?? false)) {
+        if (!$context->ebikeMode) {
             return [];
         }
 

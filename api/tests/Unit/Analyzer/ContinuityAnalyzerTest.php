@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use App\Analyzer\Rules\ContinuityAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
@@ -40,7 +41,7 @@ final class ContinuityAnalyzerTest extends TestCase
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
         $nextStage = $this->createStage(45.1, 5.1, 45.2, 5.2);
 
-        $alerts = $analyzer->analyze($stage, ['nextStage' => $nextStage]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(nextStage: $nextStage));
 
         $this->assertSame([], $alerts);
     }
@@ -53,7 +54,7 @@ final class ContinuityAnalyzerTest extends TestCase
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
         $nextStage = $this->createStage(45.102, 5.1, 45.2, 5.2);
 
-        $alerts = $analyzer->analyze($stage, ['nextStage' => $nextStage]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(nextStage: $nextStage));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -72,7 +73,7 @@ final class ContinuityAnalyzerTest extends TestCase
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
         $nextStage = $this->createStage(45.2, 5.2, 45.3, 5.3);
 
-        $alerts = $analyzer->analyze($stage, ['nextStage' => $nextStage]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(nextStage: $nextStage));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -88,7 +89,7 @@ final class ContinuityAnalyzerTest extends TestCase
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
         $nextStage = $this->createStage(45.10005, 5.10005, 45.2, 5.2);
 
-        $alerts = $analyzer->analyze($stage, ['nextStage' => $nextStage]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(nextStage: $nextStage));
 
         $this->assertSame([], $alerts);
     }
@@ -118,7 +119,7 @@ final class ContinuityAnalyzerTest extends TestCase
         $analyzer = new ContinuityAnalyzer($distanceCalculator);
         $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
 
-        $alerts = $analyzer->analyze($stage, ['locale' => $locale, 'nextStage' => $this->createStage(45.11, 5.1, 45.2, 5.2)]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(nextStage: $this->createStage(45.11, 5.1, 45.2, 5.2)));
 
         $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
@@ -153,7 +154,7 @@ final class ContinuityAnalyzerTest extends TestCase
         );
         $nextStage = $this->createStage(45.2, 5.2, 45.3, 5.3);
 
-        $alerts = $analyzer->analyze($restDay, ['nextStage' => $nextStage]);
+        $alerts = $analyzer->analyze($restDay, new StageAnalysisContext(nextStage: $nextStage));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);

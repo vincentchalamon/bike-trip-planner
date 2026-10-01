@@ -33,6 +33,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\HasLifecycleCallbacks]
 final class TripRequest
 {
+    /** Hour the rider sets off when the trip says nothing else. */
+    public const int DEFAULT_DEPARTURE_HOUR = 8;
+
+    /** Riding speed (km/h) when the trip says nothing else. */
+    public const float DEFAULT_AVERAGE_SPEED = 15.0;
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     #[ApiProperty(readable: false, writable: false)]
@@ -76,7 +82,7 @@ final class TripRequest
     #[ORM\Column]
     #[ApiProperty(description: 'Typical departure hour (0-23, default 8)')]
     #[Assert\Range(min: 0, max: 23)]
-    public int $departureHour = 8;
+    public int $departureHour = self::DEFAULT_DEPARTURE_HOUR;
 
     // Maximum distance per day cap (km), applied after pacing formula
     #[ORM\Column]
@@ -88,7 +94,7 @@ final class TripRequest
     #[ORM\Column]
     #[ApiProperty(description: 'Average cycling speed in km/h (default: 15)')]
     #[Assert\Range(min: 5, max: 50)]
-    public float $averageSpeed = 15.0;
+    public float $averageSpeed = self::DEFAULT_AVERAGE_SPEED;
 
     /**
      * Single source of truth for the searchable accommodation vocabulary, and

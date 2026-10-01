@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\Rules\ContinuityAnalyzer;
 use App\Analyzer\Rules\EbikeRangeAnalyzer;
 use App\Analyzer\Rules\ElevationAlertAnalyzer;
@@ -86,7 +87,7 @@ final class AlertScenarioTest extends TestCase
 
         $analyzer = new ContinuityAnalyzer($this->createHaversineDistanceCalculator());
 
-        $alerts = $analyzer->analyze($stages[0], ['nextStage' => $stages[1]]);
+        $alerts = $analyzer->analyze($stages[0], new StageAnalysisContext(nextStage: $stages[1]));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
@@ -104,7 +105,7 @@ final class AlertScenarioTest extends TestCase
         $this->assertGreaterThan(400.0, $stage->elevation, 'E-bike GPX should have significant elevation.');
 
         $analyzer = new EbikeRangeAnalyzer($this->createChargingStationRepository());
-        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -116,7 +117,7 @@ final class AlertScenarioTest extends TestCase
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'ebike-out-of-range.gpx');
 
         $analyzer = new EbikeRangeAnalyzer($this->createChargingStationRepository());
-        $alerts = $analyzer->analyze($stage, ['ebikeMode' => false]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: false));
 
         $this->assertSame([], $alerts);
     }
@@ -194,7 +195,7 @@ final class AlertScenarioTest extends TestCase
         };
 
         // For ebike, test with ebikeMode enabled — the nominal trace is short enough
-        $context = EbikeRangeAnalyzer::class === $analyzerClass ? ['ebikeMode' => true] : [];
+        $context = new StageAnalysisContext(ebikeMode: EbikeRangeAnalyzer::class === $analyzerClass);
 
         $alerts = $analyzer->analyze($stage, $context);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\Rules\SurfaceAlertAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
@@ -47,7 +48,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, ['osmWays' => []]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(osmWays: []));
 
         $this->assertSame([], $alerts);
     }
@@ -57,12 +58,12 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'asphalt', 'length' => 5000.0],
                 ['surface' => 'concrete', 'length' => 3000.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -72,11 +73,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 400.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -86,11 +87,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -108,14 +109,14 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 300.0, 'geometry' => [[[45.0, 5.0], [45.1, 5.1]]]],
                 // Smooth way: its geometry must NOT be highlighted.
                 ['surface' => 'asphalt', 'length' => 9000.0, 'geometry' => [[[45.5, 5.5], [45.6, 5.6]]]],
                 ['surface' => 'dirt', 'length' => 300.0, 'geometry' => [[[45.2, 5.2], [45.3, 5.3]]]],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertNotNull($alerts[0]->action);
@@ -160,11 +161,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => $surface, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -175,11 +176,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel;dirt', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
@@ -193,11 +194,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'asphalt;concrete', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -218,11 +219,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'track', 'tracktype' => $tracktype, 'length' => 600.0],
             ],
-        ]);
+        ));
 
         // Only the rough-surface warning: the missing-surface-data rule was dropped
         // as a tag-presence alert (issue #861).
@@ -237,11 +238,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['highway' => 'track', 'tracktype' => 'grade1', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         // No alert at all: grade1 is a solid surface, and an undocumented `surface`
         // is no longer an alert of its own (issue #861).
@@ -253,11 +254,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['smoothness' => 'very_bad', 'length' => 600.0],
             ],
-        ]);
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
@@ -269,12 +270,12 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'asphalt', 'smoothness' => 'bad', 'length' => 5000.0],
                 ['surface' => 'asphalt', 'tracktype' => 'grade5', 'length' => 5000.0],
             ],
-        ]);
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -284,12 +285,12 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 300.0],
                 ['surface' => 'dirt', 'length' => 300.0],
             ],
-        ]);
+        ));
 
         // 300 + 300 = 600 > 500 threshold
         $this->assertCount(1, $alerts);
@@ -300,11 +301,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 500.0],
             ],
-        ]);
+        ));
 
         // 500 is not < 500, so the condition `$unpavedLength < threshold` is false → alert fires
         $this->assertCount(1, $alerts);
@@ -316,11 +317,11 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage();
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel'],
             ],
-        ]);
+        ));
 
         // Missing length defaults to 0.0, below threshold
         $this->assertSame([], $alerts);
@@ -334,7 +335,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         // 100 % of ways without a surface tag: OSM completeness is not a terrain fact
         $osmWays = array_fill(0, 10, ['length' => 100.0]);
 
-        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(osmWays: $osmWays));
 
         $this->assertSame([], $alerts);
     }
@@ -346,7 +347,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
 
         $osmWays = array_fill(0, 5, ['surface' => '', 'length' => 100.0]);
 
-        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(osmWays: $osmWays));
 
         $this->assertSame([], $alerts);
     }
@@ -360,7 +361,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $osmWays = array_fill(0, 6, ['length' => 100.0]);
         $osmWays = [...$osmWays, ...array_fill(0, 4, ['surface' => 'gravel', 'length' => 150.0])];
 
-        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(osmWays: $osmWays));
 
         $this->assertCount(1, $alerts);
         $this->assertSame('alert.surface.warning', $alerts[0]->messageKey);
@@ -379,9 +380,9 @@ final class SurfaceAlertAnalyzerTest extends TestCase
             isRestDay: true,
         );
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'osmWays' => [['surface' => 'gravel', 'length' => 5000.0]],
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            osmWays: [['surface' => 'gravel', 'length' => 5000.0]],
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -407,13 +408,12 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $analyzer = new SurfaceAlertAnalyzer();
 
-        $alerts = $analyzer->analyze($this->createStage(), [
-            'locale' => $locale,
-            'osmWays' => [
+        $alerts = $analyzer->analyze($this->createStage(), new StageAnalysisContext(
+            osmWays: [
                 ['surface' => 'gravel', 'length' => 40_000.0],
                 ['surface' => 'dirt', 'length' => 3_871.0],
             ],
-        ]);
+        ));
 
         $this->assertSame($expected, $this->renderMessage($alerts[0], 1, $locale));
     }
@@ -424,10 +424,9 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     {
         $analyzer = new SurfaceAlertAnalyzer();
 
-        $alerts = $analyzer->analyze($this->createStage(), [
-            'locale' => 'fr',
-            'osmWays' => [['surface' => $surface, 'length' => 600.0]],
-        ]);
+        $alerts = $analyzer->analyze($this->createStage(), new StageAnalysisContext(
+            osmWays: [['surface' => $surface, 'length' => 600.0]],
+        ));
 
         $this->assertStringNotContainsString($surface, $this->renderMessage($alerts[0], 1, 'fr'));
         $this->assertStringNotContainsString(

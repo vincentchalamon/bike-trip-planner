@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -27,28 +28,21 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
     ) {
     }
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         // Rest days themselves don't need this alert
         if ($stage->isRestDay) {
             return [];
         }
 
-        /** @var list<Stage> $allStages */
-        $allStages = $context['allStages'] ?? [];
+        $allStages = $context->allStages;
 
         if ([] === $allStages) {
             return [];
         }
 
         // Find position of this stage in the full stage list
-        $stageIndex = null;
-        foreach ($allStages as $i => $s) {
-            if ($s->dayNumber === $stage->dayNumber) {
-                $stageIndex = $i;
-                break;
-            }
-        }
+        $stageIndex = array_find_key($allStages, static fn (Stage $s): bool => $s->dayNumber === $stage->dayNumber);
 
         if (null === $stageIndex) {
             return [];

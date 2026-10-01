@@ -13,9 +13,7 @@ use App\ApiResource\Stage;
 interface AnalyzerRegistryInterface
 {
     /**
-     * @param array<string, mixed> $context
-     *
      * @return list<Alert>
      */
-    public function analyze(Stage $stage, array $context = []): array;
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array;
 }

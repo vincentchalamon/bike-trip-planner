@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\SunsetAlertAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
@@ -50,7 +51,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
     {
         $stage = $this->createStage(isRestDay: true);
 
-        $alerts = $this->analyzer->analyze($stage, []);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext());
 
         $this->assertSame([], $alerts);
     }
@@ -64,11 +65,11 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(17.0);
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-07-15', new \DateTimeZone('UTC')),
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            startDate: new \DateTimeImmutable('2024-07-15', new \DateTimeZone('UTC')),
+            departureHour: 8,
+            averageSpeed: 15.0,
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -82,11 +83,11 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            startDate: new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            departureHour: 8,
+            averageSpeed: 15.0,
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -111,11 +112,11 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(23.0);
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2026-06-21', new \DateTimeZone('UTC')),
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            startDate: new \DateTimeImmutable('2026-06-21', new \DateTimeZone('UTC')),
+            departureHour: 8,
+            averageSpeed: 15.0,
+        ));
 
         $this->assertCount(1, $alerts);
         $this->assertStringContainsString('21:57', $this->renderMessage($alerts[0]));
@@ -139,11 +140,10 @@ final class SunsetAlertAnalyzerTest extends TestCase
         // A late arrival, which with a borrowed `today` would have produced an alert.
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
-        $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => null,
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(
+            departureHour: 8,
+            averageSpeed: 15.0,
+        ));
 
         $this->assertSame([], $alerts);
     }
@@ -164,7 +164,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         // time the alert reports makes the offset observable (#1290 review).
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(23.5);
         $startDate = new \DateTimeImmutable('2024-06-01', new \DateTimeZone('UTC'));
-        $context = ['startDate' => $startDate, 'departureHour' => 8, 'averageSpeed' => 15.0];
+        $context = new StageAnalysisContext(startDate: $startDate, departureHour: 8, averageSpeed: 15.0);
 
         // Paris, day 1 (1 June) against day 100 (8 September): the sun sets over an hour
         // earlier in September, so the two alerts cannot carry the same time.
@@ -193,11 +193,11 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $riderTimeEstimator->expects($this->never())->method('estimateTimeAtDistance');
         $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->timezoneResolver());
 
-        $alerts = $analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
-            'departureHour' => 8,
-            'averageSpeed' => 15.0,
-        ]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(
+            startDate: new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            departureHour: 8,
+            averageSpeed: 15.0,
+        ));
 
         $this->assertSame([], $alerts);
     }

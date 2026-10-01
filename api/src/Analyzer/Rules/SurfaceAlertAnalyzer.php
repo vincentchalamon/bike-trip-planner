@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -48,7 +49,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
     /** @var list<string> */
     private const array ROUGH_SMOOTHNESS = ['bad', 'very_bad', 'horrible', 'very_horrible', 'impassable'];
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         // A rest day is not ridden: its surface is irrelevant.
         if ($stage->isRestDay) {
@@ -56,7 +57,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         }
 
         /** @var list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float, geometry?: list<list<array{0: float, 1: float}>>}> $osmWays */
-        $osmWays = $context['osmWays'] ?? [];
+        $osmWays = $context->osmWays;
 
         if ([] === $osmWays) {
             return [];

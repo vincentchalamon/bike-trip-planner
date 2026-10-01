@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\EbikeRangeAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
@@ -33,7 +34,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
     {
         $stage = $this->createStage(distance: 100.0, elevation: 0.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => false]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: false));
 
         $this->assertSame([], $alerts);
     }
@@ -43,7 +44,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
     {
         $stage = $this->createStage(distance: 60.0, elevation: 0.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertSame([], $alerts);
     }
@@ -53,7 +54,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
     {
         $stage = $this->createStage(distance: 90.0, elevation: 0.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         // No charger in range: falls back to the distance-reduction auto-fix action.
         $this->assertCount(1, $alerts);
@@ -69,7 +70,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
         // effectiveRange = 80 - (1000 / 25) = 80 - 40 = 40 km
         $stage = $this->createStage(distance: 60.0, elevation: 1000.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -84,7 +85,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
         // effectiveRange = 80 - (500 / 25) = 80 - 20 = 60 km
         $stage = $this->createStage(distance: 50.0, elevation: 500.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertSame([], $alerts);
     }
@@ -95,7 +96,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
         // effectiveRange = max(0, 80 - (2500 / 25)) = max(0, -20) = 0 km
         $stage = $this->createStage(distance: 30.0, elevation: 2500.0);
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(0, $alerts[0]->parameters['%range%']);
@@ -106,7 +107,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
     {
         $stage = $this->createStage(distance: 100.0, elevation: 0.0);
 
-        $alerts = $this->analyzer->analyze($stage, []);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext());
 
         $this->assertSame([], $alerts);
     }
@@ -125,7 +126,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             new Coordinate(48.002, 2.0),
         ]);
 
-        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
@@ -153,7 +154,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             isRestDay: true,
         );
 
-        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+        $alerts = $this->analyzer->analyze($stage, new StageAnalysisContext(ebikeMode: true));
 
         $this->assertSame([], $alerts);
     }

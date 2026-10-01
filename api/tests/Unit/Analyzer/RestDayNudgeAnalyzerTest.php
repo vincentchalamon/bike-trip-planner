@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\Analyzer\Rules\RestDayNudgeAnalyzer;
 use App\ApiResource\Model\AlertActionKind;
@@ -35,7 +36,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $analyzer = new RestDayNudgeAnalyzer();
         $stage = $this->createStage(3, false);
 
-        $alerts = $analyzer->analyze($stage, []);
+        $alerts = $analyzer->analyze($stage, new StageAnalysisContext());
 
         $this->assertSame([], $alerts);
     }
@@ -49,7 +50,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(2, false),
         ];
 
-        $alerts = $analyzer->analyze($stages[1], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[1], new StageAnalysisContext(allStages: $stages));
 
         $this->assertSame([], $alerts);
     }
@@ -65,7 +66,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(4, false),
         ];
 
-        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[2], new StageAnalysisContext(allStages: $stages));
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
@@ -85,7 +86,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         ];
 
         // Day 3 reaches the threshold but is the last stage of the trip
-        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[2], new StageAnalysisContext(allStages: $stages));
 
         $this->assertSame([], $alerts);
     }
@@ -100,7 +101,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(3, false),
         ];
 
-        $alerts = $analyzer->analyze($stages[1], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[1], new StageAnalysisContext(allStages: $stages));
 
         $this->assertSame([], $alerts);
     }
@@ -120,13 +121,13 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         ];
 
         // Day 4, 5, 6 are the first 3 consecutive after the rest: nudge on 6
-        $alerts = $analyzer->analyze($stages[3], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[3], new StageAnalysisContext(allStages: $stages));
         $this->assertSame([], $alerts);
 
-        $alerts = $analyzer->analyze($stages[4], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[4], new StageAnalysisContext(allStages: $stages));
         $this->assertSame([], $alerts);
 
-        $alerts = $analyzer->analyze($stages[5], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[5], new StageAnalysisContext(allStages: $stages));
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
     }
@@ -145,7 +146,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(5, false),
         ];
 
-        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[2], new StageAnalysisContext(allStages: $stages));
 
         $this->assertSame([], $alerts);
     }
@@ -161,7 +162,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(4, true),  // rest day
         ];
 
-        $alerts = $analyzer->analyze($stages[3], ['allStages' => $stages]);
+        $alerts = $analyzer->analyze($stages[3], new StageAnalysisContext(allStages: $stages));
 
         $this->assertSame([], $alerts);
     }
@@ -175,9 +176,9 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             range(1, 7),
         );
 
-        $alertsDay3 = $analyzer->analyze($stages[2], ['allStages' => $stages]);
-        $alertsDay4 = $analyzer->analyze($stages[3], ['allStages' => $stages]);
-        $alertsDay6 = $analyzer->analyze($stages[5], ['allStages' => $stages]);
+        $alertsDay3 = $analyzer->analyze($stages[2], new StageAnalysisContext(allStages: $stages));
+        $alertsDay4 = $analyzer->analyze($stages[3], new StageAnalysisContext(allStages: $stages));
+        $alertsDay6 = $analyzer->analyze($stages[5], new StageAnalysisContext(allStages: $stages));
 
         $this->assertCount(1, $alertsDay3);
         $this->assertStringContainsString('3', $this->renderMessage($alertsDay3[0])); // consecutive count = 3

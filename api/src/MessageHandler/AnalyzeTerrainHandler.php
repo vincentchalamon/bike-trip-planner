@@ -6,6 +6,8 @@ namespace App\MessageHandler;
 
 use App\Alert\AlertPayload;
 use App\Analyzer\AnalyzerRegistryInterface;
+use App\Analyzer\StageAnalysisContext;
+use App\ApiResource\TripRequest;
 use App\ApiResource\Stage;
 use App\Entity\User;
 use App\Enum\AlertGroup;
@@ -51,8 +53,8 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         $request = $this->tripRequestRepository->getRequest($tripId);
         $ebikeMode = (bool) $request?->ebikeMode;
         $startDate = $request?->startDate;
-        $departureHour = $request?->departureHour ?? 8; // @phpstan-ignore nullsafe.neverNull
-        $averageSpeed = $request?->averageSpeed ?? 15.0; // @phpstan-ignore nullsafe.neverNull
+        $departureHour = $request?->departureHour ?? TripRequest::DEFAULT_DEPARTURE_HOUR; // @phpstan-ignore nullsafe.neverNull
+        $averageSpeed = $request?->averageSpeed ?? TripRequest::DEFAULT_AVERAGE_SPEED; // @phpstan-ignore nullsafe.neverNull
 
         $this->executeWithTracking($message, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);
@@ -62,17 +64,15 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
 
             for ($i = 0; $i < $stageCount; ++$i) {
                 $stage = $stages[$i];
-                $context = [
-                    'nextStage' => $stages[$i + 1] ?? null,
-                    'tripDays' => $stageCount,
-                    'ebikeMode' => $ebikeMode,
-                    'osmWays' => $waysByStage[$i] ?? [],
-                    'allStages' => $stages,
-                    'startDate' => $startDate,
-                    'stageId' => $stage->id,
-                    'departureHour' => $departureHour,
-                    'averageSpeed' => $averageSpeed,
-                ];
+                $context = new StageAnalysisContext(
+                    nextStage: $stages[$i + 1] ?? null,
+                    allStages: $stages,
+                    ebikeMode: $ebikeMode,
+                    osmWays: $waysByStage[$i] ?? [],
+                    startDate: $startDate,
+                    departureHour: $departureHour,
+                    averageSpeed: $averageSpeed,
+                );
 
                 // Built once, in the shape that goes both to the database and to the wire:
                 // the two consumers cannot drift when they read the same array (ADR-068).

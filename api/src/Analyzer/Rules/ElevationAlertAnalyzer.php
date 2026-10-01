@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
+use App\Analyzer\StageAnalysisContext;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\AlertAction;
@@ -16,7 +17,7 @@ final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
 {
     private const float THRESHOLD_METERS = 1200.0;
 
-    public function analyze(Stage $stage, array $context = []): array
+    public function analyze(Stage $stage, StageAnalysisContext $context = new StageAnalysisContext()): array
     {
         // A rest day is not ridden: it has no climbing to report.
         if ($stage->isRestDay) {
