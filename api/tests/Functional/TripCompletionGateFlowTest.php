@@ -132,7 +132,7 @@ final class TripCompletionGateFlowTest extends ApiTestCase
             $container->set($id, new MockHttpClient(static fn (): MockResponse => new MockResponse('{}')));
         }
 
-        ['token' => $this->token] = $this->createTestUserWithJwt(\sprintf('completion-gate-%s@test.com', bin2hex(random_bytes(6))));
+        ['jwt' => $this->token] = $this->createAuthenticatedUser(\sprintf('completion-gate-%s@test.com', bin2hex(random_bytes(6))));
 
         // Dated, so that every computation of the pipeline is dispatched and the first
         // generation can settle at all.
