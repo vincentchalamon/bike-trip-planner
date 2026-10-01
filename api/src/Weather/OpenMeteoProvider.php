@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Weather;
 
+use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+#[AsAlias(WeatherProviderInterface::class)]
 final readonly class OpenMeteoProvider implements WeatherProviderInterface
 {
     private const string HOURLY_VARS = 'temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,uv_index';
@@ -41,6 +43,51 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
         return $this->parseForecast($data);
     }
 
+    /**
+     * One call over the range covering every requested day (plus the day after the last),
+     * each series then cut down to its own two days.
+     */
+    #[\Override]
+    public function fetchDayForecasts(array $locations): array
+    {
+        if ([] === $locations) {
+            return [];
+        }
+
+        $dates = array_map(static fn (array $location): string => $location['date'], $locations);
+        $rangeStart = new \DateTimeImmutable(min($dates), new \DateTimeZone('UTC'));
+        $rangeEnd = new \DateTimeImmutable(max($dates), new \DateTimeZone('UTC'))->modify('+1 day');
+
+        $forecasts = $this->fetchForecasts(
+            array_map(static fn (array $location): array => ['lat' => $location['lat'], 'lon' => $location['lon']], $locations),
+            $rangeStart,
+            $rangeEnd,
+        );
+
+        $days = [];
+        foreach ($locations as $i => $location) {
+            $raw = $forecasts[$i] ?? null;
+            if (!$raw instanceof RawForecast) {
+                $days[] = null;
+                continue;
+            }
+
+            $nextDate = new \DateTimeImmutable($location['date'])->modify('+1 day')->format('Y-m-d');
+            $slots = array_merge($raw->slotsForDate($location['date']), $raw->slotsForDate($nextDate));
+            $days[] = [] === $slots ? null : new RawForecast($raw->timezone, $slots);
+        }
+
+        return $days;
+    }
+
+    /**
+     * Raw hourly series for several locations in a single API call, over the
+     * [startDate, endDate] range (inclusive), aligned to $locations by index.
+     *
+     * @param list<array{lat: float, lon: float}> $locations
+     *
+     * @return list<?RawForecast>
+     */
     public function fetchForecasts(array $locations, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): array
     {
         if ([] === $locations) {
