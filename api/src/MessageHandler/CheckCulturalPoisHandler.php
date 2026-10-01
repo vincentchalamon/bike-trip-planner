@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Entity\User;
 use App\Geo\Nearest;
 use App\ApiResource\Model\Alert;
 use App\Alert\AlertPayload;
@@ -78,7 +79,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
         $this->executeWithTracking($tripId, ComputationName::CULTURAL_POIS, function () use ($tripId, $stages, $locale): void {
             // Collect geometries for non-rest-day stages

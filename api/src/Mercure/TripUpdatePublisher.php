@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mercure;
 
 use App\ApiResource\Stage;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
@@ -127,7 +128,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     public function publishTripReady(string $tripId, array $stages, array $summary): void
     {
         $data = [
-            'stages' => $this->stagePayloadMapper->toPayloadList($stages, $this->tripStateManager->getLocale($tripId) ?? 'en'),
+            'stages' => $this->stagePayloadMapper->toPayloadList($stages, $this->tripStateManager->getLocale($tripId) ?? User::FALLBACK_LOCALE),
             'computationStatus' => $summary['status'] ?? [],
         ];
 
@@ -147,7 +148,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         $this->publish($tripId, MercureEventType::STAGE_UPDATED, [
             'stageId' => $stage->id,
             'position' => $position,
-            'stage' => $this->stagePayloadMapper->toPayload($stage, $this->tripStateManager->getLocale($tripId) ?? 'en'),
+            'stage' => $this->stagePayloadMapper->toPayload($stage, $this->tripStateManager->getLocale($tripId) ?? User::FALLBACK_LOCALE),
         ]);
     }
 }

@@ -11,6 +11,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\WeatherAvailability;
 use App\Mercure\MercureEventType;
@@ -68,7 +69,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
         $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $request, $stages, $locale, $generation): void {
             $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));

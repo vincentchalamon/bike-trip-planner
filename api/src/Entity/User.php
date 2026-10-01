@@ -23,6 +23,12 @@ class User implements UserInterface
      */
     public const array SUPPORTED_LOCALES = ['fr', 'en'];
 
+    /**
+     * Locale rendered when none is known for the trip or the reader, and the translator's
+     * default. Not the locale a new account starts with, which is French.
+     */
+    public const string FALLBACK_LOCALE = 'en';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;

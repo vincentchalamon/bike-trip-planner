@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Entity\User;
 use App\Enum\ComputationStatus;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
@@ -76,7 +77,7 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         // Whoever is reading, in their own language (ADR-069). Anonymous on /s/{shortCode}:
         // nobody chose a language, so the trip owner's stands in.
-        $locale = $this->readerLocale->or($this->tripStateManager->getLocale($id) ?? 'en');
+        $locale = $this->readerLocale->or($this->tripStateManager->getLocale($id) ?? User::FALLBACK_LOCALE);
 
         return new TripDetail(
             id: $request->id->toRfc4122(),

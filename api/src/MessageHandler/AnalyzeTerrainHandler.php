@@ -10,6 +10,7 @@ use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\AlertGroup;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
@@ -62,7 +63,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
         $request = $this->tripRequestRepository->getRequest($tripId);
         $ebikeMode = (bool) $request?->ebikeMode;
         $startDate = $request?->startDate;

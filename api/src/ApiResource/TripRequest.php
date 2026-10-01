@@ -140,7 +140,7 @@ final class TripRequest
 
     #[ORM\Column(length: 5)]
     #[ApiProperty(readable: false, writable: false)]
-    public string $locale = 'en';
+    public string $locale = User::FALLBACK_LOCALE;
 
     /**
      * Monotonic counter of structural writes to this trip, bumped on every write of the

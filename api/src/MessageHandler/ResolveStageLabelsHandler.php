@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Entity\User;
 use App\Message\ResolveStageLabels;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -45,7 +46,7 @@ final readonly class ResolveStageLabelsHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+        $locale = $this->tripStateManager->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
         foreach ($stages as $stage) {
             $startLabel = $this->adminBoundaryRepository->findLocalityAt($stage->startPoint->lat, $stage->startPoint->lon, $locale);

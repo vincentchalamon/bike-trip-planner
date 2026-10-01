@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notification;
 
 use App\Entity\Stage;
+use App\Entity\User;
 use App\Enum\NotificationCategory;
 use App\Repository\OwnedTripFinderInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -48,7 +49,7 @@ final readonly class WeatherSafetyNotifier
                 continue;
             }
 
-            $locale = '' !== $trip->locale ? $trip->locale : 'en';
+            $locale = '' !== $trip->locale ? $trip->locale : User::FALLBACK_LOCALE;
             $title = $this->translator->trans(
                 'notification.weather_safety.title',
                 ['%day%' => $dayNumber, '%headline%' => $this->weatherHeadline($stage, $locale)],

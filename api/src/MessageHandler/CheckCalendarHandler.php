@@ -13,6 +13,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\AlertCode;
 use App\Enum\AlertGroup;
 use App\Enum\AlertType;
@@ -79,7 +80,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripRequestRepository->getLocale($tripId) ?? 'en';
+        $locale = $this->tripRequestRepository->getLocale($tripId) ?? User::FALLBACK_LOCALE;
 
         $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages, $locale): void {
             $startDate = $request->startDate ?? new \DateTimeImmutable('today');
