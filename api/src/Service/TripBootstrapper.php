@@ -125,6 +125,14 @@ final readonly class TripBootstrapper
     {
         $stages = $this->structuralComputation->generateStages($tripId, $request);
 
+        // Storing a collection replaces the previous one. A generator that found no route to
+        // pace must not be read as "this trip has no stages": that is how a re-pacing once the
+        // route points had expired deleted every stage of the trip (#1405).
+        $existing = [] === $stages ? \count($this->stageStore->getStages($tripId) ?? []) : 0;
+        if ($existing > 0) {
+            throw new \LogicException(\sprintf('Pacing trip %s produced no stage; refusing to replace its %d stages with none.', $tripId, $existing));
+        }
+
         if (\count($stages) < TripStatus::MIN_STAGES) {
             $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
         }

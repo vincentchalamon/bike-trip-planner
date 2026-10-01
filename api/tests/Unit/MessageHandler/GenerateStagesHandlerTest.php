@@ -56,6 +56,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
+            $this->createStub(TripStageStoreInterface::class),
         );
     }
 

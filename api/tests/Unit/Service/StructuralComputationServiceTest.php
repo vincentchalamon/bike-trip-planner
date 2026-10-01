@@ -13,6 +13,7 @@ use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\SourceType;
 use App\Repository\TransientTripPointsStoreInterface;
+use App\Repository\TripStageStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\StructuralComputationService;
 use PHPUnit\Framework\Attributes\Test;
@@ -69,6 +70,7 @@ final class StructuralComputationServiceTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
+            $this->createStub(TripStageStoreInterface::class),
         );
 
         self::assertSame($expected, $service->generateStages('trip-1', $request));
@@ -122,6 +124,7 @@ final class StructuralComputationServiceTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
+            $this->createStub(TripStageStoreInterface::class),
         );
 
         $service->generateStages('trip-1', $request);
@@ -169,6 +172,7 @@ final class StructuralComputationServiceTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $pacingEngine,
+            $this->createStub(TripStageStoreInterface::class),
         );
 
         $stages = $service->generateStages('trip-1', $request);
@@ -215,6 +219,7 @@ final class StructuralComputationServiceTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $this->createStub(PacingEngineInterface::class),
+            $this->createStub(TripStageStoreInterface::class),
         );
 
         $stages = $service->generateStages('trip-1', $request);
@@ -224,13 +229,103 @@ final class StructuralComputationServiceTest extends TestCase
         self::assertSame(2, $stages[0]->dayNumber);
     }
 
+    /**
+     * The points expire from the cache after half an hour; the stages do not. Re-pacing past
+     * that used to return no stage, and the empty list replaced every stage of the trip (#1405).
+     */
     #[Test]
-    public function returnsEmptyWhenNoDecimatedPoints(): void
+    public function pacesTheRouteTheStagesCoverOnceThePointsHaveExpired(): void
+    {
+        $request = new TripRequest();
+        $request->maxDistancePerDay = 50.0;
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::GPX_UPLOAD->value);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn(null);
+        $points->method('getRawPoints')->willReturn([['lat' => 0.0, 'lon' => 0.0, 'ele' => 0.0]]);
+
+        $a = new Coordinate(45.0, 5.0, 200.0);
+        $b = new Coordinate(45.1, 5.1, 300.0);
+        $c = new Coordinate(45.2, 5.2, 250.0);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
+            new Stage(tripId: 'trip-1', dayNumber: 1, distance: 15.0, elevation: 100.0, startPoint: $a, endPoint: $b, geometry: [$a, $b]),
+            new Stage(tripId: 'trip-1', dayNumber: 2, distance: 0.0, elevation: 0.0, startPoint: $b, endPoint: $b, isRestDay: true),
+            new Stage(tripId: 'trip-1', dayNumber: 3, distance: 15.0, elevation: 0.0, startPoint: $b, endPoint: $c, geometry: [$b, $c]),
+        ]);
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(120.0);
+
+        $expected = [new Stage(tripId: 'trip-1', dayNumber: 1, distance: 120.0, elevation: 100.0, startPoint: $a, endPoint: $c)];
+        $pacingEngine = $this->createMock(PacingEngineInterface::class);
+        $pacingEngine->expects($this->once())
+            ->method('generateStages')
+            // The boundary point shared by consecutive stages is counted once, and the raw
+            // points left in the cache are not mixed with a route rebuilt from elsewhere.
+            ->with('trip-1', [$a, $b, $c], 3, 120.0, $this->anything(), $this->anything(), null, 50.0)
+            ->willReturn($expected);
+
+        $service = new StructuralComputationService(
+            $tripStateManager,
+            $points,
+            $distanceCalculator,
+            $this->createStub(ElevationCalculatorInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $pacingEngine,
+            $stageStore,
+        );
+
+        self::assertSame($expected, $service->generateStages('trip-1', $request));
+    }
+
+    #[Test]
+    public function rebuildsACollectionFromItsStagesOnceTheTracksHaveExpired(): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_COLLECTION->value);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getTracksData')->willReturn(null);
+
+        $a = new Coordinate(45.0, 5.0, 200.0);
+        $b = new Coordinate(45.1, 5.1, 300.0);
+        $c = new Coordinate(45.2, 5.2, 250.0);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn([
+            new Stage(tripId: 'trip-1', dayNumber: 1, distance: 15.0, elevation: 100.0, startPoint: $a, endPoint: $b, geometry: [$a, $b]),
+            new Stage(tripId: 'trip-1', dayNumber: 2, distance: 15.0, elevation: 0.0, startPoint: $b, endPoint: $c, geometry: [$b, $c]),
+        ]);
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $service = new StructuralComputationService(
+            $tripStateManager,
+            $points,
+            $this->createStub(DistanceCalculatorInterface::class),
+            $this->createStub(ElevationCalculatorInterface::class),
+            $routeSimplifier,
+            $this->createStub(PacingEngineInterface::class),
+            $stageStore,
+        );
+
+        $stages = $service->generateStages('trip-1', new TripRequest());
+
+        self::assertCount(2, $stages);
+        self::assertSame([$a, $b], $stages[0]->geometry);
+        self::assertSame([$b, $c], $stages[1]->geometry);
+    }
+
+    #[Test]
+    public function returnsEmptyWhenNeitherThePointsNorTheStagesCarryARoute(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
         $points->method('getDecimatedPoints')->willReturn(null);
         $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $stageStore = $this->createStub(TripStageStoreInterface::class);
+        $stageStore->method('getStages')->willReturn(null);
 
         $service = new StructuralComputationService(
             $tripStateManager,
@@ -239,6 +334,7 @@ final class StructuralComputationServiceTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $this->createStub(PacingEngineInterface::class),
+            $stageStore,
         );
 
         self::assertSame([], $service->generateStages('trip-1', new TripRequest()));
@@ -254,6 +350,7 @@ final class StructuralComputationServiceTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $this->createStub(PacingEngineInterface::class),
+            $this->createStub(TripStageStoreInterface::class),
         );
 
         $stage = new Stage(
