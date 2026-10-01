@@ -46,8 +46,8 @@ final readonly class McpAuthenticationEntryPoint implements AuthenticationEntryP
         ], Response::HTTP_UNAUTHORIZED);
 
         $response->headers->set('WWW-Authenticate', \sprintf(
-            'Bearer resource_metadata="%s/.well-known/oauth-protected-resource/mcp", scope="%s"',
-            $resource->issuer(),
+            'Bearer resource_metadata="%s", scope="%s"',
+            $resource->metadataUrl(),
             implode(' ', McpResource::SCOPES),
         ));
 

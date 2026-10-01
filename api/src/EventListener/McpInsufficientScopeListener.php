@@ -59,7 +59,7 @@ final readonly class McpInsufficientScopeListener
     {
         $request = $event->getRequest();
 
-        if (!str_starts_with($request->getPathInfo(), '/mcp')) {
+        if (!McpResource::serves($request->getPathInfo())) {
             return;
         }
 
@@ -79,9 +79,9 @@ final readonly class McpInsufficientScopeListener
         ], Response::HTTP_FORBIDDEN);
 
         $response->headers->set('WWW-Authenticate', \sprintf(
-            'Bearer error="insufficient_scope", scope="%s", resource_metadata="%s/.well-known/oauth-protected-resource/mcp"',
+            'Bearer error="insufficient_scope", scope="%s", resource_metadata="%s"',
             $scope,
-            $this->resource->issuer(),
+            $this->resource->metadataUrl(),
         ));
 
         $event->setResponse($response);

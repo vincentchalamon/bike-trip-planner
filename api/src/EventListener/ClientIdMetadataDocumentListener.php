@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Security\OAuth\OAuthRoutes;
 use League\Bundle\OAuth2ServerBundle\Model\ClientInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Entity\OAuthClient;
@@ -63,7 +64,7 @@ final readonly class ClientIdMetadataDocumentListener
     {
         $request = $event->getRequest();
 
-        if ('oauth2_authorize' !== $request->attributes->get('_route')) {
+        if (OAuthRoutes::AUTHORIZE !== $request->attributes->get('_route')) {
             return;
         }
 

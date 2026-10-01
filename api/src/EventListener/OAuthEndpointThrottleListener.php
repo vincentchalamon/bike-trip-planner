@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Security\OAuth\OAuthRoutes;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -45,8 +46,8 @@ final readonly class OAuthEndpointThrottleListener
         $request = $event->getRequest();
 
         [$limiter, $key] = match ($request->attributes->get('_route')) {
-            'oauth2_token' => [$this->oauthTokenLimiter, $request->getClientIp() ?? 'unknown'],
-            'oauth2_authorize' => [$this->oauthAuthorizeLimiter, $this->security->getUser()?->getUserIdentifier() ?? 'unknown'],
+            OAuthRoutes::TOKEN => [$this->oauthTokenLimiter, $request->getClientIp() ?? 'unknown'],
+            OAuthRoutes::AUTHORIZE => [$this->oauthAuthorizeLimiter, $this->security->getUser()?->getUserIdentifier() ?? 'unknown'],
             default => [null, ''],
         };
 

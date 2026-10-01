@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Mcp;
 
+use App\Service\FrontendUrl;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Mcp\ShareLink;
@@ -28,8 +29,7 @@ final readonly class McpShareTripProcessor implements ProcessorInterface
     public function __construct(
         #[Autowire(service: TripShareCreateProcessor::class)]
         private ProcessorInterface $shares,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl,
+        private FrontendUrl $frontendUrl,
     ) {
     }
 
@@ -42,7 +42,7 @@ final readonly class McpShareTripProcessor implements ProcessorInterface
         $share = $this->shares->process($data, $operation, $uriVariables, $context);
 
         return new ShareLink(
-            url: rtrim($this->frontendUrl, '/').'/s/'.$share->getShortCode(),
+            url: $this->frontendUrl->to('/s/'.$share->getShortCode()),
             shortCode: $share->getShortCode(),
             createdAt: $share->getCreatedAt(),
         );

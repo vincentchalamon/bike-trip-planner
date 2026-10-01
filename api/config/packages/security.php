@@ -44,7 +44,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             // presented here fails signature verification, because the two token systems
             // are told apart by their signing keys (ADR-079).
             'mcp' => [
-                'pattern' => '^/mcp',
+                // The boundary McpResource::serves() draws: `/mcpx` is not the MCP endpoint.
+                'pattern' => '^/mcp(?:/|$)',
                 'stateless' => true,
                 'provider' => 'app_user_provider',
                 // A deleted account's token stops working at use, not only at revocation.

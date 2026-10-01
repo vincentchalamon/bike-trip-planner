@@ -54,6 +54,19 @@ final class McpEnvelopeThrottleListenerTest extends TestCase
         self::assertNull($this->dispatch($listener, '/mcp', '203.0.113.7')->getResponse());
     }
 
+    /** A path that merely starts with the same letters is not the MCP endpoint. */
+    #[Test]
+    public function aPathSharingThePrefixIsNotCounted(): void
+    {
+        $listener = $this->listener(1);
+
+        foreach (range(1, 5) as $ignored) {
+            self::assertNull($this->dispatch($listener, '/mcpx', '203.0.113.7')->getResponse());
+        }
+
+        self::assertNull($this->dispatch($listener, '/mcp', '203.0.113.7')->getResponse());
+    }
+
     private function dispatch(McpEnvelopeThrottleListener $listener, string $path, string $ip): RequestEvent
     {
         $request = Request::create($path, 'POST', server: ['REMOTE_ADDR' => $ip]);

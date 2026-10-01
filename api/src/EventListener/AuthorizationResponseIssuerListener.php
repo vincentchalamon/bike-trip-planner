@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Security\OAuth\OAuthRoutes;
 use App\Security\OAuth\McpResource;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -36,7 +37,7 @@ final readonly class AuthorizationResponseIssuerListener
 
     public function __invoke(ResponseEvent $event): void
     {
-        if ('oauth2_authorize' !== $event->getRequest()->attributes->get('_route')) {
+        if (OAuthRoutes::AUTHORIZE !== $event->getRequest()->attributes->get('_route')) {
             return;
         }
 

@@ -8,6 +8,7 @@ use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Security\MagicLinkMailer;
+use App\Service\FrontendUrl;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -75,7 +76,7 @@ final class MagicLinkMailerTest extends TestCase
             static fn (string $id, array $parameters, ?string $domain, ?string $locale): string => $id.'|'.$locale,
         );
 
-        return new MagicLinkMailer($mailer, $twig, $translator, 'https://app.example/');
+        return new MagicLinkMailer($mailer, $twig, $translator, new FrontendUrl('https://app.example/'));
     }
 
     private function link(User $user): MagicLink
