@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Weather;
 
 use App\Weather\OpenMeteoProvider;
+use App\Weather\RawHourlySlot;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -119,5 +120,44 @@ final class OpenMeteoProviderTest extends TestCase
         self::assertNotNull($forecasts[0]);
         self::assertCount(3, $forecasts[0]->slots);
         self::assertNull($forecasts[1]);
+    }
+
+    #[Test]
+    public function fetchDayForecastsAsksForTheCoveringRangeAndKeepsEachLocationsTwoDays(): void
+    {
+        $hourly = $this->fullHourly();
+        $hourly['time'] = ['2026-09-03T23:00', '2026-09-04T10:00', '2026-09-05T02:00'];
+
+        $requested = [];
+        $client = new MockHttpClient(static function (string $method, string $url) use (&$requested, $hourly): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse((string) json_encode([
+                ['timezone' => 'UTC', 'hourly' => $hourly],
+                ['timezone' => 'UTC', 'hourly' => $hourly],
+            ]));
+        }, 'https://api.open-meteo.com');
+
+        $forecasts = $this->provider($client)->fetchDayForecasts([
+            ['lat' => 48.5, 'lon' => 2.3, 'date' => '2026-09-04'],
+            ['lat' => 45.0, 'lon' => 5.0, 'date' => '2026-09-03'],
+        ]);
+
+        self::assertCount(1, $requested, 'one call for the whole batch');
+        self::assertStringContainsString('start_date=2026-09-03', $requested[0]);
+        self::assertStringContainsString('end_date=2026-09-05', $requested[0], 'the day after the last date is included');
+
+        self::assertNotNull($forecasts[0]);
+        self::assertSame(['2026-09-04T10:00', '2026-09-05T02:00'], array_map(static fn (RawHourlySlot $slot): string => $slot->time->format('Y-m-d\\TH:i'), $forecasts[0]->slots));
+        self::assertNotNull($forecasts[1]);
+        self::assertSame(['2026-09-03T23:00', '2026-09-04T10:00'], array_map(static fn (RawHourlySlot $slot): string => $slot->time->format('Y-m-d\\TH:i'), $forecasts[1]->slots));
+    }
+
+    #[Test]
+    public function fetchDayForecastsHasNoForecastForADayTheSeriesDoesNotCover(): void
+    {
+        $client = new MockHttpClient($this->hourlyResponse($this->fullHourly(), 'UTC'));
+
+        self::assertSame([null], $this->provider($client)->fetchDayForecasts([['lat' => 48.5, 'lon' => 2.3, 'date' => '2026-09-10']]));
     }
 }

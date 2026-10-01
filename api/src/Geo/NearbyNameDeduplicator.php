@@ -8,7 +8,8 @@ namespace App\Geo;
  * Collapses near-duplicate places coming from several sources (OSM + DataTourisme).
  *
  * Two entries are the same place when they share a non-empty wikidata id, or when
- * their normalised names are equal and they sit within {@see PROXIMITY_METERS}.
+ * their normalised names are equal and they sit within a proximity radius
+ * ({@see PROXIMITY_METERS} unless the caller widens it).
  * The DataTourisme entry wins on a tie (curated name, opening hours, description).
  * Most flux objects carry no `owl:sameAs`, so the proximity+name pass is what
  * actually removes the OSM/DataTourisme doubles the wikidata key alone misses
@@ -22,7 +23,7 @@ namespace App\Geo;
  */
 final readonly class NearbyNameDeduplicator
 {
-    private const int PROXIMITY_METERS = 75;
+    public const int PROXIMITY_METERS = 75;
 
     private ?\Transliterator $transliterator;
 
@@ -34,15 +35,17 @@ final readonly class NearbyNameDeduplicator
 
     /**
      * @param list<array<string, mixed>> $items
+     * @param int                        $proximityMeters how far apart two same-name entries may sit and
+     *                                                    still be one place
      *
      * @return list<array<string, mixed>>
      */
-    public function dedupe(array $items): array
+    public function dedupe(array $items, int $proximityMeters = self::PROXIMITY_METERS): array
     {
         $kept = [];
 
         foreach ($items as $item) {
-            $match = array_find_key($kept, fn (array $existing): bool => $this->isSamePlace($item, $existing));
+            $match = array_find_key($kept, fn (array $existing): bool => $this->isSamePlace($item, $existing, $proximityMeters));
 
             if (null === $match) {
                 $kept[] = $item;
@@ -89,7 +92,7 @@ final readonly class NearbyNameDeduplicator
      * @param array<string, mixed> $a
      * @param array<string, mixed> $b
      */
-    private function isSamePlace(array $a, array $b): bool
+    private function isSamePlace(array $a, array $b, int $proximityMeters): bool
     {
         $wikidata = $a['wikidataId'] ?? null;
         if (\is_string($wikidata) && '' !== $wikidata && $wikidata === ($b['wikidataId'] ?? null)) {
@@ -109,7 +112,7 @@ final readonly class NearbyNameDeduplicator
             return false;
         }
 
-        return $this->haversine->inMeters($latA, $lonA, $latB, $lonB) <= self::PROXIMITY_METERS;
+        return $this->haversine->inMeters($latA, $lonA, $latB, $lonB) <= $proximityMeters;
     }
 
     /**

@@ -15,25 +15,18 @@ use App\Message\AnalyzeWind;
 use App\Message\CheckFords;
 use App\Message\FetchWeather;
 use App\Weather\RawForecast;
-use App\Weather\RawHourlySlot;
 use App\Weather\RelativeWindCalculator;
 use App\Weather\WeatherForecastDeriver;
 use App\Weather\WeatherForecastSerializer;
 use App\Weather\WeatherProviderInterface;
-use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 {
-    private const int CACHE_TTL_SECONDS = 10800; // 3 hours
-
     public function __construct(
         TripHandlerContext $context,
         private WeatherProviderInterface $weatherProvider,
-        #[Autowire(service: 'cache.weather')]
-        private CacheItemPoolInterface $weatherCache,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private WeatherForecastDeriver $deriver,
         private WeatherForecastSerializer $serializer,
@@ -60,13 +53,13 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             $horizonEnd = $today->modify(\sprintf('+%d days', WeatherAvailability::HORIZON_DAYS));
             $baseDate = $request->startDate ?? $today;
 
-            // Phase 1: per-stage context (date/window/bearing) + raw cache lookup.
-            /** @var array<int, array{lat: float, lon: float, localDate: string, startHour: float, endHour: float, bearing: float|null, cacheKey: string}> $contexts */
+            // Phase 1: per-stage context (date/window/bearing).
+            /** @var array<int, array{lat: float, lon: float, localDate: string, startHour: float, endHour: float, bearing: float|null}> $contexts */
             $contexts = [];
-            /** @var array<int, ?RawForecast> $rawByStage */
-            $rawByStage = [];
-            /** @var array<int, array{lat: float, lon: float}> $uncached */
-            $uncached = [];
+            /** @var list<array{lat: float, lon: float, date: string}> $requested */
+            $requested = [];
+            /** @var list<int> $requestedStages */
+            $requestedStages = [];
 
             foreach ($stages as $i => $stage) {
                 $lat = $stage->startPoint->lat;
@@ -87,64 +80,22 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                         $stage->elevation,
                     ),
                     'bearing' => $this->relativeWindCalculator->computeBearing($lat, $lon, $stage->endPoint->lat, $stage->endPoint->lon),
-                    'cacheKey' => \sprintf('weather2.%s.%s.%s', round($lat, 2), round($lon, 2), $localDate),
                 ];
 
                 // Beyond the forecast horizon (or in the past): no forecast, no fetch.
                 if ($stageDate < $today || $stageDate > $horizonEnd) {
-                    $rawByStage[$i] = null;
                     continue;
                 }
 
-                $item = $this->weatherCache->getItem($contexts[$i]['cacheKey']);
-                if ($item->isHit()) {
-                    /** @var array{tz: string, slots: list<array{t: string, temp: float, app: float, pmm: float, pprob: int, ws: float, wg: float, wd: int, hum: int, uv: float, code: int}>} $cached */
-                    $cached = $item->get();
-                    $rawByStage[$i] = $this->rawFromCache($cached);
-                } else {
-                    $uncached[$i] = ['lat' => $lat, 'lon' => $lon];
-                }
+                $requested[] = ['lat' => $lat, 'lon' => $lon, 'date' => $localDate];
+                $requestedStages[] = $i;
             }
 
-            // Phase 2: batch-fetch uncached locations over the covering date range.
-            if ([] !== $uncached) {
-                $indices = array_keys($uncached);
-                $dates = array_map(static fn (int $i): string => $contexts[$i]['localDate'], $indices);
-                $rangeStart = new \DateTimeImmutable(min($dates), new \DateTimeZone('UTC'));
-                // +1 day so a riding window that crosses midnight can read the next
-                // day's early hours (the deriver anchors the window on local midnight).
-                $rangeEnd = new \DateTimeImmutable(max($dates), new \DateTimeZone('UTC'))->modify('+1 day');
-
-                try {
-                    $forecasts = $this->weatherProvider->fetchForecasts(array_values($uncached), $rangeStart, $rangeEnd);
-
-                    foreach ($forecasts as $idx => $raw) {
-                        $stageIndex = $indices[$idx];
-                        if (!$raw instanceof RawForecast) {
-                            continue;
-                        }
-
-                        // Cache the stage day plus the following day, so a window
-                        // crossing midnight has its post-midnight hours available and
-                        // the cache stays independent of pace/departure.
-                        $localDate = $contexts[$stageIndex]['localDate'];
-                        $nextDate = new \DateTimeImmutable($localDate)->modify('+1 day')->format('Y-m-d');
-                        $daySlots = array_merge($raw->slotsForDate($localDate), $raw->slotsForDate($nextDate));
-                        $dayRaw = new RawForecast($raw->timezone, $daySlots);
-                        if ([] === $dayRaw->slots) {
-                            continue;
-                        }
-
-                        $rawByStage[$stageIndex] = $dayRaw;
-
-                        $item = $this->weatherCache->getItem($contexts[$stageIndex]['cacheKey']);
-                        $item->set($this->rawToCache($dayRaw));
-                        $item->expiresAfter(self::CACHE_TTL_SECONDS);
-                        $this->weatherCache->save($item);
-                    }
-                } catch (\Throwable $e) {
-                    $this->logger->warning('Batch weather fetch failed.', ['error' => $e->getMessage()]);
-                }
+            // Phase 2: one batch for every stage day within the horizon.
+            /** @var array<int, ?RawForecast> $rawByStage */
+            $rawByStage = [];
+            foreach ([] === $requested ? [] : $this->weatherProvider->fetchDayForecasts($requested) as $k => $raw) {
+                $rawByStage[$requestedStages[$k]] = $raw;
             }
 
             // Phase 3: derive per-stage forecast for the actual riding window.
@@ -177,59 +128,5 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             // Ford severity depends on the per-stage forecast, so run it after weather.
             $this->messageBus->dispatch(new CheckFords($tripId, $generation));
         });
-    }
-
-    /**
-     * @return array{tz: string, slots: list<array<string, mixed>>}
-     */
-    private function rawToCache(RawForecast $raw): array
-    {
-        return [
-            'tz' => $raw->timezone->getName(),
-            'slots' => array_map(static fn (RawHourlySlot $s): array => [
-                't' => $s->time->format(\DateTimeInterface::ATOM),
-                'temp' => $s->temp,
-                'app' => $s->apparentTemp,
-                'pmm' => $s->precipitationMm,
-                'pprob' => $s->precipitationProbability,
-                'ws' => $s->windSpeed,
-                'wg' => $s->windGusts,
-                'wd' => $s->windDirectionDeg,
-                'hum' => $s->humidity,
-                'uv' => $s->uvIndex,
-                'code' => $s->weatherCode,
-            ], $raw->slots),
-        ];
-    }
-
-    /**
-     * @param array{tz: string, slots: list<array{t: string, temp: float, app: float, pmm: float, pprob: int, ws: float, wg: float, wd: int, hum: int, uv: float, code: int}>} $cached
-     */
-    private function rawFromCache(array $cached): RawForecast
-    {
-        try {
-            $tz = new \DateTimeZone($cached['tz']);
-        } catch (\Exception) {
-            $tz = new \DateTimeZone('UTC');
-        }
-
-        $slots = [];
-        foreach ($cached['slots'] as $s) {
-            $slots[] = new RawHourlySlot(
-                time: new \DateTimeImmutable($s['t']),
-                temp: $s['temp'],
-                apparentTemp: $s['app'],
-                precipitationMm: $s['pmm'],
-                precipitationProbability: $s['pprob'],
-                windSpeed: $s['ws'],
-                windGusts: $s['wg'],
-                windDirectionDeg: $s['wd'],
-                humidity: $s['hum'],
-                uvIndex: $s['uv'],
-                weatherCode: $s['code'],
-            );
-        }
-
-        return new RawForecast($tz, $slots);
     }
 }

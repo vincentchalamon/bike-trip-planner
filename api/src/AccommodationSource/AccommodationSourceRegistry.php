@@ -10,6 +10,13 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 class AccommodationSourceRegistry
 {
+    /**
+     * Wider than the default: a lodging is often mapped twice in OSM (the reception node and
+     * the building or the pitch area), and the two sources place a campsite or a hotel at
+     * different points of a large plot, so the same name 100 to 200 m apart is still one place.
+     */
+    private const int SAME_PLACE_METERS = 200;
+
     /** @var list<AccommodationSourceInterface> */
     private readonly array $sources;
 
@@ -48,7 +55,7 @@ class AccommodationSourceRegistry
         }
 
         /** @var list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, stars: ?int, capacity: ?int, fee: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string, phone: ?string, osmType: ?string, osmId: ?int}> $deduped */
-        $deduped = $this->deduplicator->dedupe($all);
+        $deduped = $this->deduplicator->dedupe($all, self::SAME_PLACE_METERS);
 
         return $deduped;
     }

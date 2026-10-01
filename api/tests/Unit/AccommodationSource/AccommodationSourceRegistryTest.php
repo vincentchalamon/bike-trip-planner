@@ -8,7 +8,9 @@ use App\AccommodationSource\AccommodationSourceInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Coordinate;
 use App\Geo\GeoDistanceInterface;
+use App\Geo\HaversineDistance;
 use App\Geo\NearbyNameDeduplicator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -121,6 +123,42 @@ final class AccommodationSourceRegistryTest extends TestCase
 
         $this->assertCount(1, $results);
         $this->assertSame('datatourisme', $results[0]['source']);
+    }
+
+    /**
+     * The same lodging seen twice, at the distances the two sources (or two OSM objects of one
+     * plot) actually put between them. The 75 m default of the shared deduplicator let these
+     * through, and a second name+distance pass in ScanAccommodationsHandler (200 m) used to
+     * catch them; the registry now applies that radius in its single pass.
+     *
+     * @return iterable<string, array{string, string, float, string, string, int}>
+     */
+    public static function realisticPairs(): iterable
+    {
+        yield 'OSM node and DataTourisme point of one campsite, 120 m' => ['Camping Les Pins', 'osm', 120.0, 'Camping les Pins', 'datatourisme', 1];
+        yield 'reception node and building of one hotel, 90 m' => ['Hôtel de la Gare', 'osm', 90.0, 'Hôtel de la Gare', 'osm', 1];
+        yield 'accented and plain spelling of one hotel, 150 m' => ['Hôtel du Lac', 'osm', 150.0, 'Hotel du Lac', 'datatourisme', 1];
+        yield 'two namesakes in different villages, 3 km' => ['Gîte La Source', 'osm', 3000.0, 'Gîte La Source', 'datatourisme', 2];
+        yield 'two different lodgings next door, 40 m' => ['Hôtel du Lac', 'osm', 40.0, 'Hôtel des Alpes', 'osm', 2];
+    }
+
+    #[DataProvider('realisticPairs')]
+    #[Test]
+    public function collapsesOnePlaceSeenTwiceAndOnlyThat(string $name, string $source, float $metresNorth, string $otherName, string $otherSource, int $expected): void
+    {
+        $first = $this->makeCandidate($name, $source);
+        $second = ['name' => $otherName, 'source' => $otherSource, 'lat' => $first['lat'] + $metresNorth / 111_195.0] + $this->makeCandidate($otherName, $otherSource);
+        $registry = new AccommodationSourceRegistry(
+            [$this->sourceReturning($first), $this->sourceReturning($second)],
+            new NearbyNameDeduplicator(new HaversineDistance()),
+        );
+
+        $results = $registry->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertCount($expected, $results);
+        if (1 === $expected && 'datatourisme' === $otherSource) {
+            $this->assertSame('datatourisme', $results[0]['source'], 'the curated entry wins');
+        }
     }
 
     /**

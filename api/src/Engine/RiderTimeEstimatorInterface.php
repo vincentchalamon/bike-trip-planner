@@ -29,4 +29,16 @@ interface RiderTimeEstimatorInterface
         float $averageSpeedKmh = 15.0,
         float $elevationGainM = 0.0,
     ): float;
+
+    /**
+     * The inverse: the distance marker (km) the rider has reached at $hour, clamped to the
+     * stage ends when $hour falls before departure or after arrival.
+     */
+    public function distanceAtHour(
+        float $hour,
+        float $totalDistanceKm,
+        int $departureHour = 8,
+        float $averageSpeedKmh = 15.0,
+        float $elevationGainM = 0.0,
+    ): float;
 }

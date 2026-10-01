@@ -19,6 +19,7 @@ use App\MessageHandler\TripHandlerContext;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripStageStoreInterface;
+use App\Weather\CachingWeatherProvider;
 use App\Weather\RawForecast;
 use App\Weather\RawHourlySlot;
 use App\Weather\WeatherForecastDeriver;
@@ -111,8 +112,7 @@ final class FetchWeatherHandlerTest extends TestCase
 
         return new FetchWeatherHandler(
             new TripHandlerContext($computationTracker, $publisher ?? $this->createStub(TripUpdatePublisherInterface::class), $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $stageStore, $messageBus, $this->createAlertRenderer()),
-            $provider,
-            $cache,
+            new CachingWeatherProvider($provider, $cache, new NullLogger()),
             new RiderTimeEstimator(),
             new WeatherForecastDeriver(new WmoWeatherMapper($translator)),
             new WeatherForecastSerializer(),
@@ -126,7 +126,7 @@ final class FetchWeatherHandlerTest extends TestCase
         $stage1 = $this->stage(1, 48.0, 3.0);  // provider returns a valid raw series
 
         $provider = $this->createStub(WeatherProviderInterface::class);
-        $provider->method('fetchForecasts')->willReturn([null, $this->rawForToday()]);
+        $provider->method('fetchDayForecasts')->willReturn([null, $this->rawForToday()]);
 
         $cache = new ArrayAdapter();
 
@@ -155,7 +155,7 @@ final class FetchWeatherHandlerTest extends TestCase
         $cache = new ArrayAdapter();
 
         $provider = $this->createStub(WeatherProviderInterface::class);
-        $provider->method('fetchForecasts')->willReturn([$this->rawForToday()]);
+        $provider->method('fetchDayForecasts')->willReturn([$this->rawForToday()]);
 
         ($this->createHandler([$stage], $provider, $cache))(new FetchWeather('trip-1'));
         self::assertInstanceOf(WeatherForecast::class, $stage->weather);
@@ -163,7 +163,7 @@ final class FetchWeatherHandlerTest extends TestCase
         // Second run with a provider that would throw if called.
         $stage2 = $this->stage(1, 48.0, 3.0);
         $failing = $this->createStub(WeatherProviderInterface::class);
-        $failing->method('fetchForecasts')->willThrowException(new \RuntimeException('should not be called'));
+        $failing->method('fetchDayForecasts')->willThrowException(new \RuntimeException('should not be called'));
 
         ($this->createHandler([$stage2], $failing, $cache))(new FetchWeather('trip-1'));
         self::assertInstanceOf(WeatherForecast::class, $stage2->weather, 'weather derived from the cached raw series');
@@ -178,7 +178,7 @@ final class FetchWeatherHandlerTest extends TestCase
         $withoutWeather = $this->stage(2, 47.0, -2.0);
 
         $provider = $this->createStub(WeatherProviderInterface::class);
-        $provider->method('fetchForecasts')->willReturn([$this->rawForToday(), null]);
+        $provider->method('fetchDayForecasts')->willReturn([$this->rawForToday(), null]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())

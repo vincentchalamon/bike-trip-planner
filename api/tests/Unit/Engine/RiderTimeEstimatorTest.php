@@ -216,4 +216,23 @@ final class RiderTimeEstimatorTest extends TestCase
 
         $this->assertEqualsWithDelta(5.0, $result, 0.001);
     }
+
+    // ----- distanceAtHour -----
+
+    #[Test]
+    public function distanceAtHourInvertsThePassageTime(): void
+    {
+        // 90 km at 15 km/h from 8h: 6 h riding + 30 min of short breaks + 1 h at noon.
+        $distance = $this->estimator->distanceAtHour(12.5, 90.0, 8, 15.0, 0.0);
+
+        $this->assertEqualsWithDelta(12.5, $this->estimator->estimateTimeAtDistance($distance, 90.0, 8, 15.0, 0.0), 0.0001);
+    }
+
+    #[Test]
+    public function distanceAtHourClampsToTheStageEnds(): void
+    {
+        $this->assertEqualsWithDelta(0.0, $this->estimator->distanceAtHour(6.0, 90.0, 8), 0.001, 'before departure');
+        $this->assertEqualsWithDelta(90.0, $this->estimator->distanceAtHour(23.0, 90.0, 8), 0.001, 'after arrival');
+        $this->assertSame(0.0, $this->estimator->distanceAtHour(12.5, 0.0, 8));
+    }
 }
