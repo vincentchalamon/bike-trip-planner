@@ -18,6 +18,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
+import { logger } from "@/lib/logger";
 import type { AlertData, StageData } from "@btp/core";
 import { getStageColor } from "./stage-colors";
 import { createCategoryMarkerElement } from "./icons/markerDom";
@@ -243,6 +244,7 @@ export const MapView = memo(function MapView({
   const [poiPopupContainer, setPoiPopupContainer] =
     useState<HTMLDivElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<AlertData | null>(null);
 
   const storeStages = useTripStore((s) => s.stages);
@@ -341,13 +343,22 @@ export const MapView = memo(function MapView({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: tileStyle,
-      center: [2.35, 48.85],
-      zoom: 5,
-      attributionControl: false,
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: tileStyle,
+        center: [2.35, 48.85],
+        zoom: 5,
+        attributionControl: false,
+      });
+    } catch (error) {
+      // No WebGL2 (old browser, GPU blocklisted, hardening extension): the map alone is lost,
+      // not the whole trip page around it.
+      logger.warn("Map unavailable", { error });
+      setMapUnavailable(true);
+      return;
+    }
 
     map.addControl(
       new maplibregl.AttributionControl({ compact: true }),
@@ -779,6 +790,18 @@ export const MapView = memo(function MapView({
         className="w-full h-full bg-muted rounded-xl animate-pulse"
         aria-label={t("loading")}
       />
+    );
+  }
+
+  if (mapUnavailable) {
+    return (
+      <div
+        role="status"
+        className="w-full h-full flex items-center justify-center rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground"
+        data-testid="map-unavailable"
+      >
+        {t("unavailable")}
+      </div>
     );
   }
 
