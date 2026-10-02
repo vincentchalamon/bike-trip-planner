@@ -8,7 +8,7 @@
 # below links against the builder's libphp, so a PHP patch mismatch between the
 # two images breaks the dynamic link at boot. Both digests are FrankenPHP v1.12.7
 # / PHP 8.5.10 — bump them together, never one alone.
-FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:8c11fc8030f12123470ae23a301e553718eb93034589de50f5a3177bd2686b16 AS frankenphp_upstream
+FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:81231b570830952baa3e62db06707996a886ff0a61ca64c77d032c8a110e6bc1 AS frankenphp_upstream
 FROM docker.io/dunglas/frankenphp:1-builder-php8.5@sha256:f2fb7fe771514a98839326789c73e9cab53aa4c5d7258c1a658cda50fa557405 AS frankenphp_builder_upstream
 
 
