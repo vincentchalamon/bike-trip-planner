@@ -169,19 +169,17 @@ export const useAuthStore = create<AuthState>()(
             credentials: "include",
           });
 
-          if (!res.ok) {
+          const data = res.ok
+            ? ((await res.json()) as { token: string })
+            : null;
+          const payload = data ? parseJwtPayload(data.token) : null;
+
+          if (!data || !payload) {
             set((state) => {
               state.accessToken = null;
               state.user = null;
               state.isAuthenticated = false;
             });
-            return false;
-          }
-
-          const data = (await res.json()) as { token: string };
-          const payload = parseJwtPayload(data.token);
-
-          if (!payload) {
             return false;
           }
 
@@ -193,11 +191,8 @@ export const useAuthStore = create<AuthState>()(
 
           return true;
         } catch {
-          set((state) => {
-            state.accessToken = null;
-            state.user = null;
-            state.isAuthenticated = false;
-          });
+          // No answer at all (reload, dropped connection): that says nothing about
+          // the session, so it is kept; only a refusal above signs the user out.
           return false;
         } finally {
           pendingRefresh = null;
