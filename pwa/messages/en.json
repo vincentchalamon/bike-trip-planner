@@ -341,6 +341,7 @@
     "ariaLabel": "Interactive trip map",
     "panelAriaLabel": "Map and elevation profile panel",
     "loading": "Loading map...",
+    "unavailable": "Map unavailable: your browser does not support WebGL2.",
     "startMarker": "Starting point",
     "endMarker": "End point",
     "resetView": "Global view",

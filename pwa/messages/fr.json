@@ -341,6 +341,7 @@
     "ariaLabel": "Carte interactive du voyage",
     "panelAriaLabel": "Panneau carte et profil altimétrique",
     "loading": "Chargement de la carte...",
+    "unavailable": "Carte indisponible : ton navigateur ne prend pas en charge WebGL2.",
     "startMarker": "Point de départ",
     "endMarker": "Point d'arrivée",
     "resetView": "Vue globale",

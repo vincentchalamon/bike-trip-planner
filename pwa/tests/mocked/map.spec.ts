@@ -112,6 +112,31 @@ test.describe("Map panel", () => {
       timeout: 5000,
     });
   });
+
+  test("without WebGL2 only the map is replaced, the trip stays usable", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await mockedPage.evaluate(() => {
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (
+        this: HTMLCanvasElement,
+        type: string,
+        ...rest: unknown[]
+      ) {
+        return type === "webgl2"
+          ? null
+          : getContext.call(this, type as "2d", ...(rest as []));
+      } as typeof getContext;
+    });
+    await createTripWithGeometry(submitUrl, injectEvent);
+
+    await expect(mockedPage.getByTestId("map-unavailable")).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible();
+  });
 });
 
 test.describe("Elevation profile", () => {
