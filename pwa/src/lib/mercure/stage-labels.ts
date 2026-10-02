@@ -15,6 +15,9 @@ import { useTripStore } from "@/store/trip-store";
  * does not unwind a reply already in flight, and without the second check a late Nominatim
  * answer from a trip the user has navigated away from overwrites the labels of the one they are
  * looking at (#787).
+ *
+ * A label is cosmetic: a request that is aborted or fails leaves it empty rather than rejecting,
+ * since every caller fires this and forgets it, and a rejection would surface as an unhandled one.
  */
 export async function resolveStageLabels(
   stages: {
@@ -39,9 +42,11 @@ export async function resolveStageLabels(
       return [
         reverseGeocode(stage.startPoint.lat, stage.startPoint.lon, signal).then(
           write("startLabel"),
+          () => undefined,
         ),
         reverseGeocode(stage.endPoint.lat, stage.endPoint.lon, signal).then(
           write("endLabel"),
+          () => undefined,
         ),
       ];
     }),

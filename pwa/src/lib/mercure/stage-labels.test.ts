@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EMPTY_RESUPPLY, type StageData } from "@btp/core";
 
-const pending = vi.hoisted(
-  () => [] as ((result: { name: string } | null) => void)[],
-);
+const { pending, rejecters } = vi.hoisted(() => ({
+  pending: [] as ((result: { name: string } | null) => void)[],
+  rejecters: [] as ((reason: unknown) => void)[],
+}));
 
 vi.mock("@/lib/geocode/client", () => ({
   reverseGeocode: () =>
-    new Promise<{ name: string } | null>((resolve) => pending.push(resolve)),
+    new Promise<{ name: string } | null>((resolve, reject) => {
+      pending.push(resolve);
+      rejecters.push(reject);
+    }),
 }));
 
 import { resolveStageLabels } from "./stage-labels";
@@ -42,6 +46,7 @@ function stage(id: string, dayNumber: number): StageData {
 
 beforeEach(() => {
   pending.length = 0;
+  rejecters.length = 0;
   useTripStore.getState().clearTrip();
 });
 
@@ -73,5 +78,19 @@ describe("resolveStageLabels", () => {
     await done;
 
     expect(useTripStore.getState().stages[0]?.startLabel).toBeNull();
+  });
+
+  it("settles without rejecting when a request is aborted or fails", async () => {
+    const only = stage("s1", 1);
+    useTripStore.setState({ stages: [only] });
+
+    const done = resolveStageLabels([only]);
+    rejecters[0]?.(
+      new DOMException("The operation was aborted.", "AbortError"),
+    );
+    pending[1]?.({ name: "Lyon" });
+
+    await expect(done).resolves.toBeUndefined();
+    expect(useTripStore.getState().stages[0]?.endLabel).toBe("Lyon");
   });
 });
