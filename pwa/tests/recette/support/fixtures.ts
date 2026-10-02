@@ -12,6 +12,7 @@ import {
 } from "./current-recette-page";
 import { resetAccommodationScanRequest } from "./accommodation-scan-tracker";
 import { resetExportDownloadTracker } from "./export-download-tracker";
+import { recordClipboardWrites } from "./clipboard";
 
 interface RecetteFixtures {
   mockedPage: Page;
@@ -43,6 +44,7 @@ export const test = base.extend<
       },
     ]);
     await mockAllApis(page, mockOptions);
+    await recordClipboardWrites(page);
     setCurrentRecettePage(page);
     // Opt-in runtime monitor: attach before navigation so no event is missed.
     const monitor = mockOptions.assertNoRuntimeErrors

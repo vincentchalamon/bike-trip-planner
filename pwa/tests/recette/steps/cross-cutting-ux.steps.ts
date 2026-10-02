@@ -194,9 +194,6 @@ When(
   "j'effectue une action qui génère une notification",
   async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
     // Delete a stage — this triggers a toast notification
     await mockedPage.getByTestId("delete-stage-3").click();
   },
@@ -261,9 +258,6 @@ When(
   "I perform an action that generates a notification",
   async ({ createFullTrip, mockedPage }) => {
     await createFullTrip();
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
     // Delete a stage — this triggers a toast notification
     await mockedPage.getByTestId("delete-stage-3").click();
   },

@@ -819,9 +819,6 @@ Given(
   "j'ai créé un voyage complet avec un lien de partage actif",
   async ({ createFullTrip, mockedPage }) => {
     const { getTripId } = await import("../../fixtures/api-mocks");
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await mockedPage.route(
       `**/trips/${getTripId()}/share`,
       (route, request) => {
@@ -861,9 +858,6 @@ Given(
   "I have created a full trip with an active share link",
   async ({ createFullTrip, mockedPage }) => {
     const { getTripId } = await import("../../fixtures/api-mocks");
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await mockedPage.route(
       `**/trips/${getTripId()}/share`,
       (route, request) => {
