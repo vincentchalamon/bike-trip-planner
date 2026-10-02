@@ -113,3 +113,47 @@ describe("ensureResolved (recette #649 #8)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("silentRefresh", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  async function signedInStore() {
+    vi.resetModules();
+    const { useAuthStore: store } = await import("./auth-store");
+    store
+      .getState()
+      .setAuth("old-token", { id: "u1", email: "rider@example.com" });
+
+    return store;
+  }
+
+  it("signs the user out when the server refuses the refresh", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 401 })),
+    );
+    const store = await signedInStore();
+
+    expect(await store.getState().silentRefresh()).toBe(false);
+    expect(store.getState().isAuthenticated).toBe(false);
+  });
+
+  // A reload or a dropped connection aborts the request: that says nothing about
+  // the session, and signing out sent the user to /login mid-reload (WebKit).
+  it("keeps the session when the refresh request never got an answer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Load failed");
+      }),
+    );
+    const store = await signedInStore();
+
+    expect(await store.getState().silentRefresh()).toBe(false);
+    expect(store.getState().isAuthenticated).toBe(true);
+    expect(store.getState().accessToken).toBe("old-token");
+  });
+});

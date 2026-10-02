@@ -177,13 +177,24 @@ export async function apiFetch(
       rememberTripVersion(input, retry);
       return retry;
     }
-    // Refresh failed — redirect to login
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    redirectToLoginIfSignedOut();
   }
 
   return res;
+}
+
+/**
+ * After a failed refresh, send the user to /login only when the server refused
+ * the session. A refresh that got no answer (the page reloading, a dropped
+ * connection) keeps it, and navigating away then would hijack the reload.
+ */
+function redirectToLoginIfSignedOut(): void {
+  if (
+    typeof window !== "undefined" &&
+    !useAuthStore.getState().isAuthenticated
+  ) {
+    window.location.href = "/login";
+  }
 }
 
 /**
@@ -193,7 +204,8 @@ export async function apiFetch(
  * Flow on 401:
  * 1. Call `silentRefresh()` to rotate the refresh_token cookie and get a new JWT
  * 2. If refresh succeeds → retry the original request with the new token
- * 3. If refresh fails → redirect to `/login`
+ * 3. If the server refuses the refresh → redirect to `/login`; a refresh that got
+ *    no answer keeps the session and the 401 is returned as is
  */
 // Cache request bodies (as text) before fetch consumes them, so a 401 retry can
 // resend them. A string body is single-shot-safe and needs no `duplex` option,
@@ -272,9 +284,7 @@ const authMiddleware: Middleware = {
 
     const refreshed = await useAuthStore.getState().silentRefresh();
     if (!refreshed) {
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
-      }
+      redirectToLoginIfSignedOut();
       return response;
     }
 
