@@ -291,12 +291,7 @@ test.describe("Share modal", () => {
     submitUrl,
     injectSequence,
     mockedPage,
-    browserName,
   }) => {
-    test.skip(
-      browserName !== "chromium",
-      "canvas.toDataURL() download only fires reliably in Chromium",
-    );
     await openShareModal({ submitUrl, injectSequence, mockedPage });
 
     // Listen for the download event

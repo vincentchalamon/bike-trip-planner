@@ -157,7 +157,7 @@ test-e2e: ## Run Playwright End-to-End tests
 	@docker run --network host \
 		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
-		--rm --ipc=host \
+		--rm --ipc=host -e E2E_JWT \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm install; cd pwa && npx playwright test $(ARGS)'
 
@@ -167,7 +167,7 @@ test-e2e-browsers: ## Run Playwright End-to-End tests on Chromium, Firefox and W
 	@docker run --network host \
 		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
-		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
+		--rm --ipc=host -e E2E_JWT -e PLAYWRIGHT_ALL_BROWSERS=1 \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm install; cd pwa && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test $(ARGS)'
 
@@ -183,7 +183,7 @@ test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 	@docker run --network host \
 		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
-		--rm --ipc=host \
+		--rm --ipc=host -e E2E_JWT \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
@@ -191,7 +191,7 @@ test-recette-browsers: ## Run the BDD recette scenarios on Chromium, Firefox and
 	@docker run --network host \
 		-w /app -v $(CURDIR):/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
-		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
+		--rm --ipc=host -e E2E_JWT -e PLAYWRIGHT_ALL_BROWSERS=1 \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 

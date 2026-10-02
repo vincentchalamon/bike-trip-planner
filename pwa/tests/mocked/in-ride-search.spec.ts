@@ -366,7 +366,10 @@ test.describe("Recap states", () => {
       await createFullTrip();
       await openPanel(mockedPage);
       await mockedPage.getByTestId("in-ride-chip-water").click();
-      await expect(mockedPage.getByRole("alert")).toBeVisible();
+      // Scoped to the panel: Next's route announcer is a role="alert" too.
+      await expect(
+        mockedPage.getByTestId("in-ride-panel").getByRole("alert"),
+      ).toBeVisible();
     });
   });
 });

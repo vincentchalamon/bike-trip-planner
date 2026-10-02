@@ -464,6 +464,14 @@ export async function mockAllApis(
     });
   });
 
+  // GET /trips/{id}/route — the geometry split off /detail (ADR-057). Unmocked, it
+  // reached the real backend with the fake JWT and drew a 401 and a refresh on
+  // every trip page. No route: the stages carry their own geometry here.
+  await page.route("**/trips/*/route", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({ status: 404, body: "" });
+  });
+
   // GET /.well-known/mercure — abort real SSE (we use __test_mercure_event)
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 

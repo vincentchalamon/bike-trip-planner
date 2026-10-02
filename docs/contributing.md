@@ -60,6 +60,15 @@ check on each pull request and is the gate that counts.
 
 `make test` runs `qa`, PHPUnit, Playwright, the OpenAPI lint and the security check in sequence.
 
+The shared-trip specs and the `/s/<code_court>` recette steps need a real share, seeded with a
+user's token; without `E2E_JWT` they are skipped. Mint one as CI does, then pass it to the target:
+
+```bash
+docker compose exec php bin/console app:create-user e2e-share@example.com --no-invite
+export E2E_JWT=$(docker compose exec -T php bin/console lexik:jwt:generate-token e2e-share@example.com | tr -d '[:space:]')
+make test-e2e
+```
+
 ## Write a mocked end-to-end test
 
 Playwright tests live in `pwa/tests/`. `mocked/` holds the deterministic suite, which runs without

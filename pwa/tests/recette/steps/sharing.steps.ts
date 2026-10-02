@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { recordedClipboard } from "../support/clipboard";
 import { Given, When, Then } from "../support/fixtures";
 import { getTripId } from "../../fixtures/api-mocks";
 import { seededShare } from "../../fixtures/shared-trip-seed";
@@ -163,26 +164,18 @@ Then("the link is not yet visible", async ({ mockedPage }) => {
 Then(
   "le lien court est copié dans le presse-papiers",
   async ({ mockedPage }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
     const origin = new URL(mockedPage.url()).origin;
-    expect(clipboardText).toContain(`${origin}/s/`);
+    await expect
+      .poll(() => recordedClipboard(mockedPage))
+      .toContain(`${origin}/s/`);
   },
 );
 
 Then("the short link is copied to the clipboard", async ({ mockedPage }) => {
-  await mockedPage
-    .context()
-    .grantPermissions(["clipboard-read", "clipboard-write"]);
-  const clipboardText = await mockedPage.evaluate(() =>
-    navigator.clipboard.readText(),
-  );
   const origin = new URL(mockedPage.url()).origin;
-  expect(clipboardText).toContain(`${origin}/s/`);
+  await expect
+    .poll(() => recordedClipboard(mockedPage))
+    .toContain(`${origin}/s/`);
 });
 
 // i18n-equivalent button names (feature files may use FR text even in EN scenarios)
@@ -234,26 +227,18 @@ Then("a PNG file is downloaded", async ({ mockedPage }) => {
 Then(
   "le texte résumé contenant le titre du voyage est copié",
   async ({ mockedPage }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
-    expect(clipboardText).toContain("Tour de l'Ardeche");
+    await expect
+      .poll(() => recordedClipboard(mockedPage))
+      .toContain("Tour de l'Ardeche");
   },
 );
 
 Then(
   "the summary text containing the trip title is copied",
   async ({ mockedPage }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
-    expect(clipboardText).toContain("Tour de l'Ardeche");
+    await expect
+      .poll(() => recordedClipboard(mockedPage))
+      .toContain("Tour de l'Ardeche");
   },
 );
 
