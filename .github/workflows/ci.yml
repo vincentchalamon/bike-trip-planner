@@ -1022,9 +1022,10 @@ jobs:
       # The web gate leaves mobile out (npm-audit job), so its shipped
       # dependencies are audited here, at the same level and on production deps
       # only. The moderate advisories in Expo's config-plugin build chain stay
-      # below the bar.
+      # below the bar. The script accepts the high advisories that have no fixed
+      # release and never reach the app, each listed with its reason.
       - name: Run npm audit
-        run: npm audit --audit-level=high --omit=dev --workspace mobile
+        run: node scripts/npm-audit.mjs --omit=dev --workspace mobile
       # Offline, the version check compares against the table shipped in the
       # installed expo package instead of Expo's live API: online, every Expo
       # patch release failed every PR touching mobile or the lockfile until
