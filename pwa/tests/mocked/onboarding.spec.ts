@@ -72,28 +72,28 @@ test.describe("Onboarding tour", () => {
       page.locator(".driver-popover.onboarding-popover"),
     ).toBeVisible({ timeout: 3000 });
 
-    // Wait for driver.js animation to finish (400 ms transition) so that
-    // __activeElement / __activeStep are set in the rAF callback — destroy()
-    // only calls onDestroyed when those values are truthy.
-    await page.waitForTimeout(500);
+    // The component exposes its test helper once the first step is highlighted,
+    // i.e. once destroy() will run onDestroyed; a fixed wait for the animation was
+    // too short on WebKit.
+    await page.waitForFunction(
+      () =>
+        typeof (window as Window & { __onboardingDone?: () => void })
+          .__onboardingDone === "function",
+    );
 
-    // Programmatically complete the tour via the test helper exposed by the
-    // component. This calls driverObj.destroy() → onDestroyed → markOnboardingDone,
-    // exercising the full persistence path without triggering side-effects from
-    // clicking step 3 (which would open the config panel and block further clicks).
+    // Programmatically complete the tour: driverObj.destroy() → onDestroyed →
+    // markOnboardingDone, the full persistence path without clicking through.
     await page.evaluate(() => {
       (
         window as Window & { __onboardingDone?: () => void }
       ).__onboardingDone?.();
     });
 
-    // onDestroyed should have fired markOnboardingDone → localStorage
-    await page.waitForTimeout(300);
-    const flag = await page.evaluate(
-      (key) => localStorage.getItem(key),
-      ONBOARDING_KEY,
-    );
-    expect(flag).toBe("true");
+    await expect
+      .poll(() =>
+        page.evaluate((key) => localStorage.getItem(key), ONBOARDING_KEY),
+      )
+      .toBe("true");
 
     // Reload — tour must not reappear
     await page.reload();
