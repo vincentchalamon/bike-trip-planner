@@ -30,6 +30,12 @@ FROM docker.io/dunglas/frankenphp:1-builder-php8.5@sha256:f2fb7fe771514a98839326
 #     GOTOOLCHAIN=local, hence the GOTOOLCHAIN=auto below, which lets Go fetch
 #     the 1.27 toolchain on demand.
 #
+# Caddy is pinned: unpinned, xcaddy takes the latest release at build time, so the
+# version followed the build date and the layer cache (CI ran v2.11.4, a fresh
+# local build v2.11.6). v2.11.5 and v2.11.6 wrap request bodies in an idle-timeout
+# reader that dereferences nil on a finished HTTP/2 stream and kills the process
+# (caddyserver/caddy#8101). Move past v2.11.4 only once that is fixed.
+#
 # frankenphp itself is taken from the sources vendored in the builder image
 # (/go/src/app) rather than from the module proxy, so the binary is built against
 # the very libphp it will be shipped with.
@@ -49,7 +55,7 @@ RUN set -eux; \
 	XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
 	CGO_CFLAGS="$(php-config --includes)" \
 	CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
-	"$(go env GOPATH)/bin/xcaddy" build \
+	"$(go env GOPATH)/bin/xcaddy" build v2.11.4 \
 		--output /usr/local/bin/frankenphp \
 		--with github.com/dunglas/frankenphp=/go/src/app \
 		--with github.com/dunglas/frankenphp/caddy=/go/src/app/caddy \
@@ -58,6 +64,7 @@ RUN set -eux; \
 		--with github.com/dunglas/caddy-cbrotli; \
 	/usr/local/bin/frankenphp build-info > /tmp/build-info.txt; \
 	grep -q 'dunglas/mercure/caddy\s*v1\.0\.0' /tmp/build-info.txt; \
+	grep -q 'caddyserver/caddy/v2\s*v2\.11\.4\s' /tmp/build-info.txt; \
 	rm /tmp/build-info.txt
 
 
