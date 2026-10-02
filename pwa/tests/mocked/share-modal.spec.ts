@@ -17,6 +17,25 @@ function expectedShareUrl(page: import("@playwright/test").Page): string {
   return `${origin}/s/${SHORT_CODE}`;
 }
 
+/**
+ * Record what the page writes to the clipboard. Reading it back needs a
+ * permission only Chromium can grant, so the write is captured instead.
+ */
+async function recordClipboard(
+  page: import("@playwright/test").Page,
+): Promise<() => Promise<string | undefined>> {
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = async (text: string) => {
+      (window as unknown as { __clipboard?: string }).__clipboard = text;
+    };
+  });
+
+  return () =>
+    page.evaluate(
+      () => (window as unknown as { __clipboard?: string }).__clipboard,
+    );
+}
+
 /** Mock GET /trips/{tripId}/share — returns 404 (no active share). */
 function mockShareGetNone(
   page: import("@playwright/test").Page,
@@ -148,18 +167,12 @@ test.describe("Share modal", () => {
     injectSequence,
     mockedPage,
   }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    const clipboard = await recordClipboard(mockedPage);
 
     await openShareModal({ submitUrl, injectSequence, mockedPage });
     await mockedPage.getByTestId("share-copy-link-button").click();
 
-    // Verify clipboard content
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
-    expect(clipboardText).toBe(expectedShareUrl(mockedPage));
+    await expect.poll(clipboard).toBe(expectedShareUrl(mockedPage));
   });
 
   test("revoke shows create share link button without auto-creating", async ({
@@ -300,18 +313,14 @@ test.describe("Share modal", () => {
     injectSequence,
     mockedPage,
   }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    const clipboard = await recordClipboard(mockedPage);
 
     await openShareModal({ submitUrl, injectSequence, mockedPage });
     await mockedPage.getByTestId("share-copy-text-button").click();
 
     // Verify clipboard contains trip text (should include the trip title)
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
-    expect(clipboardText).toContain("Tour de l'Ardeche");
+    await expect.poll(clipboard).toContain("Tour de l'Ardeche");
+    const clipboardText = await clipboard();
     // Should also contain the share URL since a link was created
     expect(clipboardText).toContain(expectedShareUrl(mockedPage));
   });

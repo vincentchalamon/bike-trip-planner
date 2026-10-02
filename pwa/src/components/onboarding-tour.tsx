@@ -68,6 +68,19 @@ export function OnboardingTour() {
         delete (window as Window & { __onboardingDone?: () => void })
           .__onboardingDone;
       },
+      // Expose a test helper so E2E tests can complete the tour programmatically.
+      // Only once a step is highlighted: destroy() skips onDestroyed until the
+      // highlight animation has settled, so an earlier call would lose the flag.
+      onHighlighted: () => {
+        if (
+          (window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean })
+            .__PLAYWRIGHT_SHOW_ONBOARDING
+        ) {
+          (
+            window as Window & { __onboardingDone?: () => void }
+          ).__onboardingDone = () => driverObj.destroy();
+        }
+      },
       steps: [
         {
           // Step 1 — paste a link (Link card on the welcome screen)
@@ -120,15 +133,6 @@ export function OnboardingTour() {
         },
       ],
     });
-
-    // Expose a test helper so E2E tests can complete the tour programmatically
-    if (
-      (window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean })
-        .__PLAYWRIGHT_SHOW_ONBOARDING
-    ) {
-      (window as Window & { __onboardingDone?: () => void }).__onboardingDone =
-        () => driverObj.destroy();
-    }
 
     // Small delay so the page has fully painted before the tour starts
     const timeout = setTimeout(() => {

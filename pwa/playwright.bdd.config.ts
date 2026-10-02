@@ -13,6 +13,8 @@ const testDir = defineBddConfig({
 });
 
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+// Firefox and WebKit run on demand only (`make test-recette-browsers`), never in CI.
+const allBrowsers = process.env.PLAYWRIGHT_ALL_BROWSERS === "1";
 
 export default defineConfig({
   testDir,
@@ -45,7 +47,6 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  // Chromium only, CI included: Firefox never ran against these scenarios.
   projects: [
     {
       name: "chromium",
@@ -56,5 +57,16 @@ export default defineConfig({
         }),
       },
     },
+    ...(allBrowsers
+      ? [
+          {
+            name: "firefox",
+            // Headless Firefox exposes no WebGL2, whatever its prefs, so the map would never
+            // render: it runs headed, under xvfb in the Make target.
+            use: { ...devices["Desktop Firefox"], headless: false },
+          },
+          { name: "webkit", use: { ...devices["Desktop Safari"] } },
+        ]
+      : []),
   ],
 });

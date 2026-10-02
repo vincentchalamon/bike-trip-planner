@@ -20,6 +20,12 @@ export interface MockApiOptions {
    */
   nearbyPoiResults?:
     NearbyPoiSearchWire | Record<string, NearbyPoiSearchWire> | number;
+  /**
+   * Fetch the real CARTO / Esri basemap instead of a blank offline one. Only the
+   * documentation screenshots and the visual baselines want it: everywhere else
+   * the map's `load` event, which gates every marker, would wait on the network.
+   */
+  realBasemap?: boolean;
 }
 
 const TRIP_ID = "test-trip-abc-123";
@@ -202,7 +208,30 @@ export async function mockAllApis(
     deleteStageFail = false,
     addStageFail = false,
     nearbyPoiResults,
+    realBasemap = false,
   } = options;
+
+  if (!realBasemap) {
+    await page.route("https://basemaps.cartocdn.com/**", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          version: 8,
+          sources: {},
+          layers: [
+            {
+              id: "background",
+              type: "background",
+              paint: { "background-color": "#e5e3df" },
+            },
+          ],
+        }),
+      }),
+    );
+    await page.route("https://server.arcgisonline.com/**", (route) =>
+      route.fulfill({ status: 404 }),
+    );
+  }
 
   // POST /api/auth/refresh — the BFF route handler (ADR-053). The browser now
   // talks to the Next.js BFF, never the backend directly, so we intercept the

@@ -166,6 +166,9 @@ test.describe("ViewModeToggle — mode switching", () => {
 });
 
 test.describe("swipe gestures (mobile)", () => {
+  // Firefox only defines Touch on a touch-enabled context.
+  test.use({ hasTouch: true });
+
   async function swipeHorizontal(
     page: import("@playwright/test").Page,
     direction: "left" | "right",

@@ -53,6 +53,7 @@ check on each pull request and is the gate that counts.
 | Playwright E2E                     | `make test-e2e`                                  | a stack on `https://localhost` |
 | One Playwright spec                | `make test-e2e -- tests/mocked/my-feature.spec.ts` | a stack on `https://localhost` |
 | BDD recette scenarios (Gherkin)    | `make test-recette`                              | recette stack    |
+| Same suites on Firefox and WebKit too (local only, not in CI) | `make test-e2e-browsers`, `make test-recette-browsers` | same as above |
 | OpenAPI lint                       | `make openapi-lint`                              | dev stack        |
 | Security advisories                | `make security-check`                            | dev stack        |
 | Mobile type check, ESLint, Prettier, Jest, SDK check and bundle | `npm run typecheck --workspace mobile`, `npm run lint --workspace mobile`, `npm run format:check --workspace mobile` (`format` to fix), `npm test --workspace mobile`, then `npm run doctor --workspace mobile` and `npm run bundle --workspace mobile` (both with `EXPO_PUBLIC_API_URL` set) | `npm install` at the repo root |

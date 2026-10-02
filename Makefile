@@ -14,7 +14,7 @@ export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 # Make reads it as a command-line variable assignment. CLI_FLAGS rebuilds those words from
 # the command-line variables whose name starts with `-`. Positional words stay first so
 # `$(word 1,$(ARGS))` (routing-publish) and the zone of `provision` keep their place.
-ARGS_TARGETS := link-check phpunit test-php php-cs-fixer phpstan rector prettier test-e2e playwright test-recette visual-test visual-update screenshots routing-build routing-publish provision provision-recette provision-override events-refresh
+ARGS_TARGETS := link-check phpunit test-php php-cs-fixer phpstan rector prettier test-e2e test-e2e-browsers playwright test-recette test-recette-browsers visual-test visual-update screenshots routing-build routing-publish provision provision-recette provision-override events-refresh
 ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
   POS_ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
   CLI_FLAGS := $(foreach v,$(filter -%,$(.VARIABLES)),$(if $(filter command line,$(origin $v)),$v=$(value $v)))
@@ -163,6 +163,14 @@ test-e2e: ## Run Playwright End-to-End tests
 
 playwright: test-e2e ## Alias for "test-e2e"
 
+test-e2e-browsers: ## Run Playwright End-to-End tests on Chromium, Firefox and WebKit (local only, not in CI)
+	@docker run --network host \
+		-w /app -v $(CURDIR):/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
+		mcr.microsoft.com/playwright:v1.63.0-noble \
+		/bin/sh -c 'npm install; cd pwa && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test $(ARGS)'
+
 screenshots: ## Regenerate README + landing screenshots (run after UI changes; requires make start-dev)
 	@docker run --network host \
 		-w /repo/pwa -v $(CURDIR):/repo \
@@ -178,6 +186,14 @@ test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
 		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && npx playwright test --config playwright.bdd.config.ts $(ARGS)'
+
+test-recette-browsers: ## Run the BDD recette scenarios on Chromium, Firefox and WebKit (local only, not in CI)
+	@docker run --network host \
+		-w /app -v $(CURDIR):/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
+		mcr.microsoft.com/playwright:v1.63.0-noble \
+		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
 lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: make start)
 	@docker run --network host \
