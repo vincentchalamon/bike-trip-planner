@@ -468,8 +468,21 @@ export function localizedApiErrorMessage(
   return error.message || t(API_ERROR_FALLBACK_KEY[error.type]);
 }
 
+/**
+ * What `fetch` rejects with when the request never got a response, per engine:
+ * Chromium, Firefox, Safari. Only the message tells it apart from a TypeError
+ * thrown by the code itself.
+ */
+const NETWORK_ERROR_MESSAGES = new Set([
+  "Failed to fetch",
+  "NetworkError when attempting to fetch resource.",
+  "Load failed",
+]);
+
 export function isNetworkError(error: unknown): error is TypeError {
-  return error instanceof TypeError && error.message === "Failed to fetch";
+  return (
+    error instanceof TypeError && NETWORK_ERROR_MESSAGES.has(error.message)
+  );
 }
 
 /**

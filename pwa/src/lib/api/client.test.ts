@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { localizedApiErrorMessage, parseApiError } from "./client";
+import {
+  isNetworkError,
+  localizedApiErrorMessage,
+  parseApiError,
+} from "./client";
 
 describe("parseApiError", () => {
   it("returns validation error with joined messages for 422", () => {
@@ -251,5 +255,24 @@ describe("trip version precondition (ADR-067)", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(getTripVersion(TRIP_ID)).toBe(21);
+  });
+});
+
+describe("isNetworkError", () => {
+  it.each([
+    ["Chromium", "Failed to fetch"],
+    ["Firefox", "NetworkError when attempting to fetch resource."],
+    ["Safari", "Load failed"],
+  ])("recognises the %s network failure", (_engine, message) => {
+    expect(isNetworkError(new TypeError(message))).toBe(true);
+  });
+
+  it("leaves other type errors alone", () => {
+    expect(
+      isNetworkError(
+        new TypeError("Cannot read properties of undefined (reading 'id')"),
+      ),
+    ).toBe(false);
+    expect(isNetworkError(new Error("Failed to fetch"))).toBe(false);
   });
 });
