@@ -26,7 +26,14 @@ try {
   report = error.stdout;
 }
 
-const { vulnerabilities = {} } = JSON.parse(report);
+// An unreachable registry or a failing endpoint yields `{"error": ...}` and no
+// report: fail closed, as the plain `npm audit` step did.
+const parsed = JSON.parse(report);
+if (parsed.error || !parsed.vulnerabilities) {
+  console.error(`npm audit did not return a report: ${JSON.stringify(parsed.error ?? parsed)}`);
+  process.exit(1);
+}
+const { vulnerabilities } = parsed;
 const blocking = new Map();
 const seen = new Set();
 
