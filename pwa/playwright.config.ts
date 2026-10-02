@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+// Firefox and WebKit run on demand only (`make test-e2e-browsers`), never in CI:
+// tripling the suite there is not worth it for engines checked before a release.
+const allBrowsers = process.env.PLAYWRIGHT_ALL_BROWSERS === "1";
 
 export default defineConfig({
   testDir: "./tests",
@@ -24,7 +27,6 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  // Chromium only, CI included: Firefox and WebKit never ran against this suite.
   projects: [
     {
       name: "chromium",
@@ -35,5 +37,11 @@ export default defineConfig({
         }),
       },
     },
+    ...(allBrowsers
+      ? [
+          { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+          { name: "webkit", use: { ...devices["Desktop Safari"] } },
+        ]
+      : []),
   ],
 });
