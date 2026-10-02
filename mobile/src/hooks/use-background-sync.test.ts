@@ -64,7 +64,10 @@ describe('useBackgroundTripSync (#1147)', () => {
 
   it('re-syncs when AppState becomes active', async () => {
     let listener: (state: string) => void = () => {};
-    const addSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, cb) => {
+    // AppState.addEventListener is already a jest.fn in the react-native preset, so
+    // spyOn returns that same mock and mockRestore would strip its default
+    // implementation (returning a subscription) for every later test: override once.
+    jest.spyOn(AppState, 'addEventListener').mockImplementationOnce((_event, cb) => {
       listener = cb as (state: string) => void;
       return { remove: jest.fn() } as never;
     });
@@ -76,13 +79,11 @@ describe('useBackgroundTripSync (#1147)', () => {
       listener('active');
     });
     expect(mockSync).toHaveBeenCalledTimes(1);
-
-    addSpy.mockRestore();
   });
 
   it('does not re-sync for other AppState transitions', async () => {
     let listener: (state: string) => void = () => {};
-    const addSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, cb) => {
+    jest.spyOn(AppState, 'addEventListener').mockImplementationOnce((_event, cb) => {
       listener = cb as (state: string) => void;
       return { remove: jest.fn() } as never;
     });
@@ -94,21 +95,17 @@ describe('useBackgroundTripSync (#1147)', () => {
       listener('background');
     });
     expect(mockSync).not.toHaveBeenCalled();
-
-    addSpy.mockRestore();
   });
 
   it('removes the AppState listener on unmount', async () => {
     const removeSpy = jest.fn();
-    const addSpy = jest
+    jest
       .spyOn(AppState, 'addEventListener')
-      .mockImplementation(() => ({ remove: removeSpy }) as never);
+      .mockImplementationOnce(() => ({ remove: removeSpy }) as never);
 
     const { unmount } = await mount();
     expect(removeSpy).not.toHaveBeenCalled();
     unmount();
     expect(removeSpy).toHaveBeenCalledTimes(1);
-
-    addSpy.mockRestore();
   });
 });

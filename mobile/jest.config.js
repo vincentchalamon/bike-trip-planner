@@ -13,6 +13,7 @@ const lucideCjsIcons = path.join(path.dirname(require.resolve('lucide-react-nati
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.after-env.js'],
   // Map the @btp/core workspace subpaths to their TypeScript sources (outside
   // node_modules) so jest-expo's babel transform picks them up (#1014).
   moduleNameMapper: {

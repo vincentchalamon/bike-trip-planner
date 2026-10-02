@@ -419,6 +419,10 @@ describe('useTripLive keeps the roadbook live across gaps', () => {
   let live: ReturnType<typeof fakeSub>;
   let onOpen: SubscribeOptions['onOpen'];
   let appStateSpy: jest.SpyInstance;
+  // AppState.addEventListener is already a jest.fn in the react-native preset, so
+  // spyOn returns that same mock and mockRestore would strip its default
+  // implementation (returning a subscription) for every later test: put it back.
+  const defaultAddListener = jest.mocked(AppState.addEventListener).getMockImplementation()!;
 
   beforeEach(() => {
     appStateListener = () => {};
@@ -434,7 +438,7 @@ describe('useTripLive keeps the roadbook live across gaps', () => {
     mockDetail.mockResolvedValue(detail([apiStage()]));
   });
 
-  afterEach(() => appStateSpy.mockRestore());
+  afterEach(() => appStateSpy.mockImplementation(defaultAddListener));
 
   it('reopens the stream when the app comes back to the foreground', async () => {
     const { unmount } = await renderUseTripLive('t1');
