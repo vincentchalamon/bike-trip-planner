@@ -22,8 +22,8 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 /**
  * The PostGIS route metrics are geometry-derived, so a write that leaves the geometry alone
  * reuses the persisted values instead of re-scanning (#787). "Alone" is judged against what
- * the database hands back, and the geometry column does not hand back what was written: it is
- * encoded without JSON_PRESERVE_ZERO_FRACTION, so a coordinate of `2.0` reads back as the int
+ * the database hands back, and the geometry column did not hand back what was written: it was
+ * encoded without JSON_PRESERVE_ZERO_FRACTION, so a coordinate of `2.0` read back as the int
  * `2`. Compared strictly, every route with one integral coordinate looked moved on every write.
  */
 #[ResetDatabase]

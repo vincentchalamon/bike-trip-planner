@@ -325,20 +325,22 @@ final class StageArrayShapeCharacterisationTest extends KernelTestCase
     {
         return [
             ...$this->legacyStoredWeather(),
-            // A whole float loses its fraction in a column the entity writes, and reads back as an int.
-            'apparentTempMin' => 11,
-            'apparentTempMax' => 25,
+            // A whole float keeps its fraction (App\Doctrine\Jsonb), and reads back as a float.
+            'tempMin' => 12.0,
+            'tempMax' => 24.0,
+            'apparentTempMin' => 11.0,
+            'apparentTempMax' => 25.0,
             'windGusts' => 30.04,
             'precipitationMm' => 1.5,
             'uvIndex' => 6,
             'hourly' => [[
                 'hour' => 9,
                 'temp' => 15.5,
-                'apparentTemp' => 14,
+                'apparentTemp' => 14.0,
                 'precipitationMm' => 0.2,
                 'precipitationProbability' => 5,
                 'windSpeed' => 10.4,
-                'windGusts' => 20,
+                'windGusts' => 20.0,
                 'windDirectionDeg' => 270,
                 'relativeWindDirection' => 'headwind',
                 'weatherCode' => 1,

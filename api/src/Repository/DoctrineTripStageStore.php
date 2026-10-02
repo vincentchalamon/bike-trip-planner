@@ -295,10 +295,11 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
     /**
      * Endpoints + geometry coordinates of a persisted stage entity.
      *
-     * The geometry is cast: the JSONB column is encoded without JSON_PRESERVE_ZERO_FRACTION, so
-     * a coordinate written as `2.0` reads back as the int `2`, and the strict comparison in
-     * {@see self::geometryUnchanged()} took every route with one integral coordinate for a
-     * moved one. Any other value round-trips exactly, so the cast is all the tolerance needed.
+     * The geometry is cast: a row written before {@see \App\Doctrine\Jsonb} encoded floats
+     * without JSON_PRESERVE_ZERO_FRACTION holds `2` for `2.0`, which decodes as an int, and the
+     * strict comparison in {@see self::geometryUnchanged()} took every such route with one
+     * integral coordinate for a moved one. Any other value round-trips exactly, so the cast is
+     * all the tolerance needed.
      *
      * @return list<array{float, float}>
      */
@@ -732,15 +733,16 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         $entity->setEndLabel($dto->endLabel);
         $entity->setIsRestDay($dto->isRestDay);
 
-        // Loose on purpose: the column reads `2.0` back as the int `2` (see
-        // entityGeometrySignature()), and the unit of work compares strictly, so assigning an
-        // equal geometry would write the whole column again.
+        // The jsonb columns are only assigned when their content differs: see sameJson().
         $geometry = array_map($this->stageMapper->coordinate(...), $dto->geometry);
-        if ($geometry != $entity->getGeometry()) {
+        if (!$this->sameJson($geometry, $entity->getGeometry())) {
             $entity->setGeometry($geometry);
         }
 
-        $entity->setWeather($dto->weather instanceof WeatherForecast ? $this->stageMapper->weatherForStorage($dto->weather) : null);
+        $weather = $dto->weather instanceof WeatherForecast ? $this->stageMapper->weatherForStorage($dto->weather) : null;
+        if (!$this->sameJson($weather, $entity->getWeather())) {
+            $entity->setWeather($weather);
+        }
 
         // Enrichment columns are deliberately absent here (ADR-068): alerts, events and the
         // supply timeline belong to the producers that compute them, written through the
@@ -748,11 +750,48 @@ final readonly class DoctrineTripStageStore implements TripStageStoreInterface, 
         // structural edit replay whatever snapshot the processor happened to read.
 
         // Resupply → the (repurposed) pois JSONB column.
-        $entity->setPois($this->stageMapper->resupplyForStorage($dto->resupply ?? new Resupply()));
-        $entity->setAccommodations(array_map($this->stageMapper->accommodation(...), array_values($dto->accommodations)));
-        $entity->setSelectedAccommodation(
-            $dto->selectedAccommodation instanceof Accommodation ? $this->stageMapper->accommodation($dto->selectedAccommodation) : null,
-        );
+        $pois = $this->stageMapper->resupplyForStorage($dto->resupply ?? new Resupply());
+        if (!$this->sameJson($pois, $entity->getPois())) {
+            $entity->setPois($pois);
+        }
+
+        $accommodations = array_map($this->stageMapper->accommodation(...), array_values($dto->accommodations));
+        if (!$this->sameJson($accommodations, $entity->getAccommodations())) {
+            $entity->setAccommodations($accommodations);
+        }
+
+        $selectedAccommodation = $dto->selectedAccommodation instanceof Accommodation ? $this->stageMapper->accommodation($dto->selectedAccommodation) : null;
+        if (!$this->sameJson($selectedAccommodation, $entity->getSelectedAccommodation())) {
+            $entity->setSelectedAccommodation($selectedAccommodation);
+        }
+    }
+
+    /**
+     * Whether two jsonb values hold the same document, whatever the order of their object keys.
+     *
+     * The unit of work compares a jsonb column strictly with the array it loaded, and Postgres
+     * hands objects back with their keys reordered (shortest first), so assigning a freshly
+     * mapped but equal array would write the whole column again on every rewrite of the stage.
+     * Values stay compared strictly: a row written before {@see \App\Doctrine\Jsonb} holds an
+     * int for an integral float, and is written once more, in its float form.
+     *
+     * @param array<array-key, mixed>|null $a
+     * @param array<array-key, mixed>|null $b
+     */
+    private function sameJson(?array $a, ?array $b): bool
+    {
+        return self::sortedKeys($a) === self::sortedKeys($b);
+    }
+
+    private static function sortedKeys(mixed $value): mixed
+    {
+        if (!\is_array($value)) {
+            return $value;
+        }
+
+        ksort($value);
+
+        return array_map(self::sortedKeys(...), $value);
     }
 
     private function stageEntityToDto(StageEntity $entity): StageDto
