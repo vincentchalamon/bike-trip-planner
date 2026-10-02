@@ -3,7 +3,7 @@ import { render, screen, within, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../messages/fr.json";
-import { MOCK_SHARED_TRIP } from "../../../../tests/fixtures/shared-trip";
+import { MOCK_SHARED_TRIP } from "./shared-trip.fixture";
 import type { SharedTripDetail } from "@/lib/api/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTripStore } from "@/store/trip-store";
