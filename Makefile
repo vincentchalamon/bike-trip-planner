@@ -169,7 +169,7 @@ test-e2e-browsers: ## Run Playwright End-to-End tests on Chromium, Firefox and W
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
-		/bin/sh -c 'npm install; cd pwa && npx playwright test $(ARGS)'
+		/bin/sh -c 'npm install; cd pwa && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test $(ARGS)'
 
 screenshots: ## Regenerate README + landing screenshots (run after UI changes; requires make start-dev)
 	@docker run --network host \
@@ -193,7 +193,7 @@ test-recette-browsers: ## Run the BDD recette scenarios on Chromium, Firefox and
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host -e PLAYWRIGHT_ALL_BROWSERS=1 \
 		mcr.microsoft.com/playwright:v1.63.0-noble \
-		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && npx playwright test --config playwright.bdd.config.ts $(ARGS)'
+		/bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts && xvfb-run -a -s "-screen 0 3840x2160x24" npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
 lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: make start)
 	@docker run --network host \

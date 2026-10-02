@@ -39,7 +39,12 @@ export default defineConfig({
     },
     ...(allBrowsers
       ? [
-          { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+          {
+            name: "firefox",
+            // Headless Firefox exposes no WebGL2, whatever its prefs, so the map would never
+            // render: it runs headed, under xvfb in the Make target.
+            use: { ...devices["Desktop Firefox"], headless: false },
+          },
           { name: "webkit", use: { ...devices["Desktop Safari"] } },
         ]
       : []),

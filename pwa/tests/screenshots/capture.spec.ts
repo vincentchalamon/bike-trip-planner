@@ -88,6 +88,9 @@ async function showSplitView(page: Page): Promise<void> {
   await settle(page, 5000);
 }
 
+// The documentation shows the real basemap, not the blank one the assertion suites get.
+test.use({ mockOptions: { realBasemap: true } });
+
 test.describe("docs desktop", () => {
   test.use({ viewport: { ...DESKTOP }, ...ENGLISH });
 

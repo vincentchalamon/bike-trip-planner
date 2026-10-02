@@ -2,6 +2,23 @@ import { test, expect, type Page } from "@playwright/test";
 import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 
 /**
+ * Fill the email field once React owns it. A controlled input typed into before
+ * hydration is reset to its empty state, and a loaded WebKit hydrates well after
+ * `networkidle`; React tags the node with its props once it has.
+ */
+async function fillEmail(page: Page, email: string) {
+  const input = page.getByTestId("early-access-email-input");
+  await expect
+    .poll(() =>
+      input.evaluate((node) =>
+        Object.keys(node).some((key) => key.startsWith("__reactProps$")),
+      ),
+    )
+    .toBe(true);
+  await input.fill(email);
+}
+
+/**
  * Mock POST /auth/refresh as 401 to simulate an unauthenticated session.
  */
 async function mockUnauthenticated(page: Page) {
@@ -104,7 +121,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByTestId("early-access-email-input").fill("test@example.com");
+    await fillEmail(page, "test@example.com");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-success")).toBeVisible();
@@ -127,7 +144,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByTestId("early-access-email-input").fill("test@example.com");
+    await fillEmail(page, "test@example.com");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-throttled")).toBeVisible();
@@ -153,7 +170,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByTestId("early-access-email-input").fill("test@example.com");
+    await fillEmail(page, "test@example.com");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-error")).toBeVisible();
@@ -166,7 +183,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByTestId("early-access-email-input").fill("not-an-email");
+    await fillEmail(page, "not-an-email");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-email-error")).toBeVisible();

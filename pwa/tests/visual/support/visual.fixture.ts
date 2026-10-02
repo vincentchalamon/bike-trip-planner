@@ -111,7 +111,7 @@ export const test = base.extend<
         /* storage unavailable — colorScheme still drives prefers-color-scheme */
       }
     }, theme);
-    await mockAllApis(page, mockOptions);
+    await mockAllApis(page, { realBasemap: true, ...mockOptions });
     await use(page);
   },
 
