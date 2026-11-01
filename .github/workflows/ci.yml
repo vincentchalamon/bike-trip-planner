@@ -694,7 +694,7 @@ jobs:
           echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
           echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
           load: true
           files: |
@@ -809,7 +809,7 @@ jobs:
           echo "OAUTH_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/oauth/private.pem" >> "$GITHUB_ENV"
           echo "OAUTH_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/oauth/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
           load: true
           files: |
