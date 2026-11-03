@@ -474,7 +474,7 @@ final class McpToolContractTest extends KernelTestCase
             $input = $this->inputClass($operation);
 
             if (null === $input || $input === $operation->getClass()) {
-                $offenders[] = \sprintf('%s: no `input:` class of its own — the resource\'s fields would be published as arguments', $name);
+                $offenders[] = \sprintf("%s: no `input:` class of its own — the resource's fields would be published as arguments", $name);
                 continue;
             }
 

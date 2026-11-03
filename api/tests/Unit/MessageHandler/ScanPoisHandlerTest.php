@@ -325,7 +325,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
-        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine] = $this->createDefaultStubs();
 
         // 16:00 → both restaurants closed according to their own opening_hours
         $riderTimeEstimator = new FixedPassageTimeEstimator(16.0);
@@ -366,7 +366,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
-        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine] = $this->createDefaultStubs();
 
         // 15:00 → restaurant closed, supermarket open (9-20)
         $riderTimeEstimator = new FixedPassageTimeEstimator(15.0);
@@ -545,7 +545,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
-        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine] = $this->createDefaultStubs();
 
         // 16:00 → both restaurants closed per their own opening_hours, so without the
         // rest-day guard this stage would emit the timing warning.
@@ -585,7 +585,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
-        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine] = $this->createDefaultStubs();
 
         // 10:00 → bakery open (7-13 slot)
         $riderTimeEstimator = new FixedPassageTimeEstimator(10.0);
@@ -627,7 +627,7 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls([0 => $pois], []);
 
-        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine] = $this->createDefaultStubs();
         $riderTimeEstimator = new FixedPassageTimeEstimator($passageTime);
 
         $publishedEvents = [];

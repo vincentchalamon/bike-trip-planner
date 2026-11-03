@@ -126,7 +126,7 @@ final class AccessRequestHmacServiceTest extends TestCase
     public function constructorThrowsOnEmptySecret(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('ACCESS_REQUEST_HMAC_SECRET must not be empty.');
+        $this->expectExceptionMessageIsOrContains('ACCESS_REQUEST_HMAC_SECRET must not be empty.');
 
         new AccessRequestHmacService('');
     }

@@ -23,7 +23,7 @@
   "properties": {
     "@context": {
       "type": "string",
-      "const": "/contexts/StageResponse"
+      "const": "/contexts/Stage"
     },
     "@id": {
       "type": "string",

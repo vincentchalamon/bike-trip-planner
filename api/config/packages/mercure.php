@@ -15,6 +15,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // The hub is the FrankenPHP-embedded module, rebuilt at v1.0.0 —
                 // see .docker/php/Dockerfile and the ADR-037 addendum.
                 'protocol_version' => '1.0',
+                // Pinned: since mercure-bundle 0.6 the default drops the `__Secure-` prefix
+                // whenever kernel.debug is on, which would rename the cookie in dev and test only.
+                'cookie_name' => '__Secure-mercure_access_token',
                 'jwt' => [
                     'secret' => '%env(MERCURE_JWT_SECRET)%',
                     'publish' => '*',

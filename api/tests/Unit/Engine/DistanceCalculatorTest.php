@@ -120,7 +120,7 @@ final class DistanceCalculatorTest extends TestCase
         ];
 
         // Split starting from index 1
-        [$first, $second, $actual] = $this->calculator->splitAtDistance($points, 1, 15.0);
+        [$first, , $actual] = $this->calculator->splitAtDistance($points, 1, 15.0);
 
         // First slice should start from index 1
         $this->assertEqualsWithDelta(45.1, $first[0]->lat, 0.001);

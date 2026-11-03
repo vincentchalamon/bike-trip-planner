@@ -67,13 +67,15 @@ final class OpeningHoursGrammarTest extends TestCase
         self::assertTrue($always->always);
 
         self::assertTrue($holiday->holidayScoped);
-        self::assertSame(SelectorKind::PUBLIC_HOLIDAY, $holiday->selector[0]->kind ?? null);
+        self::assertNotNull($holiday->selector);
+        self::assertSame(SelectorKind::PUBLIC_HOLIDAY, $holiday->selector[0]->kind);
 
         self::assertNotNull($date->selector);
         self::assertSame(SelectorKind::MONTH_DAY, $date->selector[0]->kind);
         self::assertSame([12, 25], [$date->selector[0]->from, $date->selector[0]->to]);
 
-        self::assertSame(SelectorKind::UNKNOWN, $nth->selector[0]->kind ?? null);
+        self::assertNotNull($nth->selector);
+        self::assertSame(SelectorKind::UNKNOWN, $nth->selector[0]->kind);
         self::assertCount(1, $nth->spans);
     }
 

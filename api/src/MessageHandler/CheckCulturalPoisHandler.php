@@ -69,16 +69,13 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             // Collect geometries for non-rest-day stages
             /** @var list<list<array{lat: float, lon: float}>> $stageGeometries */
             $stageGeometries = [];
-            /** @var list<int> $activeStageIndices */
-            $activeStageIndices = [];
             /** @var list<Stage> $activeStages */
             $activeStages = [];
-            foreach ($stages as $i => $stage) {
+            foreach ($stages as $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
 
-                $activeStageIndices[] = $i;
                 $activeStages[] = $stage;
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $stageGeometries[] = array_map(
@@ -108,7 +105,6 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
             $alerts = [];
             foreach ($activeStages as $activeIdx => $stage) {
-                $originalIndex = $activeStageIndices[$activeIdx];
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
 
                 $stagePois = [];
