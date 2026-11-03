@@ -427,7 +427,7 @@ export default function Trips() {
               <View style={{ paddingVertical: theme.spacing.base }}>
                 <ActivityIndicator color={theme.colors.mutedIcon} />
               </View>
-            ) : null
+            ) : undefined
           }
           renderItem={({ item }) => {
             const displayTitle = item.title ?? t('trips.untitled');

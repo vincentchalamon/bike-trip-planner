@@ -5,7 +5,7 @@ jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn(),
 }));
 
-import { type View } from 'react-native';
+import { type ViewInstance } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { captureAndShareInfographic } from './share-image';
@@ -23,7 +23,7 @@ describe('captureAndShareInfographic (#1048)', () => {
     mockCapture.mockResolvedValue('file:///tmp/trip.png');
     mockIsAvailable.mockResolvedValue(true);
 
-    const ref = { current: {} as View };
+    const ref = { current: {} as ViewInstance };
     const uri = await captureAndShareInfographic(ref, 'Alps');
 
     expect(mockCapture).toHaveBeenCalledWith(ref, { format: 'png', quality: 1 });
@@ -46,7 +46,7 @@ describe('captureAndShareInfographic (#1048)', () => {
     mockCapture.mockResolvedValue('file:///tmp/trip.png');
     mockIsAvailable.mockResolvedValue(false);
 
-    const uri = await captureAndShareInfographic({ current: {} as View }, 'Alps');
+    const uri = await captureAndShareInfographic({ current: {} as ViewInstance }, 'Alps');
 
     expect(mockShare).not.toHaveBeenCalled();
     expect(uri).toBe('file:///tmp/trip.png');

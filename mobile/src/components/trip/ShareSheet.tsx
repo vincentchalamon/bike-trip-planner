@@ -13,7 +13,7 @@ import { todayUtc } from '@btp/core';
 import { buildTripText, computeTripTotals } from '../../lib/share';
 import { captureAndShareInfographic } from '../../lib/share-image';
 import { ShareInfographic } from './ShareInfographic';
-import { type View as RNView } from 'react-native';
+import { type ViewInstance } from 'react-native';
 
 interface ShareSheetProps {
   visible: boolean;
@@ -51,7 +51,7 @@ export function ShareSheet({ visible, onClose, tripId }: ShareSheetProps) {
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
 
-  const infographicRef = useRef<RNView>(null);
+  const infographicRef = useRef<ViewInstance>(null);
   // Guards the one-shot capture: set on press, consumed by the off-screen view's
   // onLayout so a screenshot fires exactly once, only after real layout.
   const captureArmedRef = useRef(false);

@@ -94,6 +94,7 @@ describe("scrubEvent", () => {
           span_id: "a",
           trace_id: "b",
           start_timestamp: 0,
+          status: "ok",
           op: "http.client",
           description: "GET /geocode/reverse?lat=45.1&lon=5.7",
           data: {
@@ -123,6 +124,7 @@ describe("scrubEvent on a non-http span", () => {
           span_id: "a",
           trace_id: "b",
           start_timestamp: 0,
+          status: "ok",
           op: "db.query",
           description: "SELECT * FROM users WHERE email = ? AND id = ?",
           data: {},

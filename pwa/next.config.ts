@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -37,8 +37,10 @@ export default withSentryConfig(withNextIntl(nextConfig), {
   widenClientFileUpload: true,
   // Disable Sentry-specific telemetry pinging back home.
   telemetry: false,
-  // Disable the SDK's startup logger (we already log structured JSON).
-  disableLogger: true,
+  // Strip the SDK's debug logger from the bundle (we already log structured JSON).
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+  },
   // Strip the uploaded `.map` files from the production bundle so the code
   // source never leaks even if someone scrapes /_next/static.
   sourcemaps: {

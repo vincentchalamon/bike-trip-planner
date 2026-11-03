@@ -4,6 +4,7 @@ import {
   type AccessibilityActionEvent,
   type GestureResponderEvent,
   type LayoutChangeEvent,
+  type ScrollViewInstance,
   Pressable,
   ScrollView,
   Text,
@@ -292,7 +293,7 @@ function SectionTitle({ title, description }: { title: string; description?: str
 export function ConfigSheet({ tripId, visible, onClose, initialSection }: ConfigSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const storeTitle = useTripStore((s) => s.title);
   const isLocked = useTripStore((s) => s.isLocked);

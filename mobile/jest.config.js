@@ -9,6 +9,9 @@ const path = require('node:path');
 // than hardcoded, so it survives hoisting changes.
 const lucideCjsIcons = path.join(path.dirname(require.resolve('lucide-react-native')), 'icons');
 
+// Same switch as metro.config.js, so tests run against the fetch the app ships with.
+process.env.EXPO_PUBLIC_USE_RN_FETCH ??= '1';
+
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',

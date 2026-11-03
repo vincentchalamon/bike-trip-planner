@@ -1,5 +1,5 @@
 import { type RefObject } from 'react';
-import { type View } from 'react-native';
+import { type ViewInstance } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 
@@ -7,7 +7,7 @@ import * as Sharing from 'expo-sharing';
 // share sheet (#1048). The RN adaptation of the web's canvas.toDataURL +
 // download: capture the rendered View instead of a canvas, then share the file.
 export async function captureAndShareInfographic(
-  ref: RefObject<View | null>,
+  ref: RefObject<ViewInstance | null>,
   dialogTitle: string,
 ): Promise<string | null> {
   if (!ref.current) {
