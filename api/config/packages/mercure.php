@@ -12,9 +12,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'public_url' => '%env(MERCURE_PUBLIC_URL)%',
                 // Mercure protocol 1.0: RFC 9068 access tokens (`typ: at+jwt`,
                 // `authorization_details`) instead of the legacy `mercure` claim.
-                // The hub is the FrankenPHP-embedded module, rebuilt at v1.0.0 —
-                // see .docker/php/Dockerfile and the ADR-037 addendum.
+                // The hub is the module embedded in the upstream FrankenPHP binary
+                // (mercure/caddy v1.1) — see the ADR-037 addenda.
                 'protocol_version' => '1.0',
+                // Pinned: since mercure-bundle 0.6 the default drops the `__Secure-` prefix
+                // whenever kernel.debug is on, which would rename the cookie in dev and test only.
+                'cookie_name' => '__Secure-mercure_access_token',
                 'jwt' => [
                     'secret' => '%env(MERCURE_JWT_SECRET)%',
                     'publish' => '*',

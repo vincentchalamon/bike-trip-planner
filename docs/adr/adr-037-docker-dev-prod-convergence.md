@@ -81,3 +81,21 @@ clients alive. Every client here (PWA, mobile, and the backend's own subscriptio
 
 Cost: the image build now compiles Go with CGO, adding roughly three minutes to an uncached
 build — including the arm64 build in `deploy.yml`.
+
+## Addendum (2026-11-03): back to the upstream binary
+
+FrankenPHP v1.13.4 embeds `dunglas/mercure/caddy` **v1.1.5** (protocol 1.0) and Caddy
+**v2.11.7**, which fixes the HTTP/2 request-body crash that held us on v2.11.4
+(caddyserver/caddy#8101, fixed by #8107). vulcain and cbrotli are still compiled in. The
+`frankenphp_builder` stage therefore no longer buys anything and has been removed: the `php`
+image runs the upstream binary again, there is a single digest to bump, and the uncached build
+loses its Go/CGO compile.
+
+The upstream binary is built with the `deprecated_topic` / `deprecated_claim` tags. They are
+inert here: they only take effect under `protocol_version_compatibility`, which the Caddyfile
+still does not enable.
+
+mercure/caddy v1.1 also allows a single unnamed hub per configuration. The `php` site block is
+served by two Caddy servers whenever `SERVER_NAME` lists an https and an http address (the
+default `localhost, http://php`), which provisions the handler twice, so the hub is named
+(`name bike-trip-planner`); the two handlers share one transport through that name.

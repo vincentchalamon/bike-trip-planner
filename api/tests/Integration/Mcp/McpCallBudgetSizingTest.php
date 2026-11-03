@@ -39,7 +39,7 @@ final class McpCallBudgetSizingTest extends KernelTestCase
         $key = McpCallBudget::key('sizing-runaway@example.com', 'https://agent.example.com/client.json');
 
         $accepted = 0;
-        foreach (range(1, 200) as $ignored) {
+        for ($i = 0; $i < 200; ++$i) {
             if ($calls->create($key)->consume()->isAccepted()) {
                 ++$accepted;
             }

@@ -104,7 +104,7 @@ final readonly class PlaceEnrichmentPass
         $this->processes->psql($this->exportCandidates($stagingSchema, $table, $candidatesPath), 'psql export name candidates');
 
         $decisions = $this->resolveAll($candidatesPath);
-        $counts = ['resolved' => 0, 'rejected' => 0, 'matched' => 0, 'ambiguous' => 0, 'reasons' => []];
+        $counts = ['resolved' => 0, 'matched' => 0, 'ambiguous' => 0, 'reasons' => []];
 
         if ([] !== $decisions) {
             $copyPath = $workDir.'/place-resolved.copy';

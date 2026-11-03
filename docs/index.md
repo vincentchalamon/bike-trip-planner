@@ -43,9 +43,9 @@ See [Architecture](architecture.md) for the full picture and the reasoning behin
 | Backend | PHP 8.5, Symfony 8.1, API Platform 5.0, Doctrine ORM 3, FrankenPHP (Caddy + Mercure) |
 | Data | PostgreSQL 18 + PostGIS, Redis 8, Valhalla (routing) |
 | Web | Next.js 16 (App Router), React 19, TypeScript (strict), Tailwind CSS 4 |
-| Mobile | Expo SDK 57, React Native 0.86, MapLibre React Native |
+| Mobile | Expo SDK 58, React Native 0.88, MapLibre React Native |
 | State | Zustand + Immer (in-memory), Mercure SSE (real-time) |
-| Testing | PHPUnit 12 (`api/`) and 13 (`provisioner/`), Playwright 1.63, Jest (mobile) |
+| Testing | PHPUnit 13 (`api/` and `provisioner/`), Playwright 1.64, Jest (mobile) |
 | Quality | PHPStan level 9, PHP-CS-Fixer, Rector, ESLint, Prettier |
 | Async | Symfony Messenger, Redis transport, `WORKER_REPLICAS` workers (2 by default) |
 

@@ -9,11 +9,7 @@
 import { execFileSync } from 'node:child_process';
 
 // GHSA id -> why it cannot be fixed and why it does not reach users.
-const ACCEPTED = {
-  'GHSA-86w9-cpqp-85rv':
-    'node-forge, every version affected and no fix released. Pulled by @expo/cli ' +
-    '(EAS update code signing), a build-time tool that is never bundled in the app.',
-};
+const ACCEPTED = {};
 
 let report;
 try {

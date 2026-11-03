@@ -964,7 +964,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        AccessRequest: {
+        "AccessRequest-validation.access_request.create": {
             /** Format: email */
             email: string;
         };
@@ -1133,10 +1133,14 @@ export interface components {
          *     URL identifier, so there is no IDOR surface.
          */
         "Account.jsonld": components["schemas"]["HydraItemBaseSchema"] & Record<string, never>;
-        Auth: {
+        "Auth-validation.auth.request-link": {
             /** Format: email */
             email: string;
             token?: string;
+        };
+        "Auth-validation.auth.verify": {
+            email?: string;
+            token: string;
         };
         "Auth.AuthSession.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             authenticated?: boolean;
@@ -1275,6 +1279,28 @@ export interface components {
             createdAt?: string | null;
         };
         /**
+         * @description Push-notification device-token registration for the authenticated user (epic #1051).
+         *
+         *     - POST   /users/me/device-tokens         idempotent upsert of an FCM token bound
+         *       to the current user (re-registering the same token does not duplicate; a token
+         *       held by another account is reassigned). 201 on create, 200 on update.
+         *     - POST   /users/me/device-tokens/unregister  unregister a token owned by the
+         *       current user, named in the body. The lookup is scoped to the caller's own tokens,
+         *       so an unknown or foreign token is simply "not found" -> 404 (no object-level
+         *       authorization to mask).
+         *
+         *     The current user is always resolved from the security token, never from a URL
+         *     identifier (no IDOR surface). The token never rides in a URL: a path segment lands
+         *     in every access log on the way, and an FCM token is what a push is addressed to.
+         */
+        "DeviceToken-validation.device-token.unregister": {
+            token: string;
+            /** @enum {string|null} */
+            platform?: "android" | "ios" | null;
+            /** Format: date-time */
+            createdAt?: string | null;
+        };
+        /**
          * @description Email-change-by-magic-link flow for the authenticated user (#777).
          *
          *     - POST /users/me/email-change         request a change to {newEmail}; a
@@ -1286,10 +1312,26 @@ export interface components {
          *     identifier (no IDOR surface). Distinct from the login magic link, which only
          *     re-authenticates the SAME email.
          */
-        EmailChange: {
+        "EmailChange-validation.email-change.request": {
             /** Format: email */
             newEmail: string;
             token?: string;
+        };
+        /**
+         * @description Email-change-by-magic-link flow for the authenticated user (#777).
+         *
+         *     - POST /users/me/email-change         request a change to {newEmail}; a
+         *       confirmation link is sent to the NEW address.
+         *     - POST /users/me/email-change/verify  consume the {token} from that link and
+         *       commit the new email (single-use, atomic, email uniqueness enforced).
+         *
+         *     The current user is always resolved from the security token, never from a URL
+         *     identifier (no IDOR surface). Distinct from the login magic link, which only
+         *     re-authenticates the SAME email.
+         */
+        "EmailChange-validation.email-change.verify": {
+            newEmail?: string;
+            token: string;
         };
         /** @description A representation of common errors. */
         Error: {
@@ -1724,7 +1766,7 @@ export interface components {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             /** @description Alerts in the shape their producer published, each tagged with its `group` (ADR-068). */
             alerts?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             resupply?: components["schemas"]["Resupply.jsonld"] | null;
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
@@ -1763,16 +1805,16 @@ export interface components {
             /** @description Alerts partitioned by the producer that owns them (ADR-068). */
             alertsByGroup?: {
                 [key: string]: {
-                    [key: string]: string | null;
+                    [key: string]: unknown;
                 }[];
             };
             /** @description Water and food markers ordered along the stage, as published (#778). */
             supplyTimeline?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             /** @description Every alert, flattened, in group order. */
             readonly alerts?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
@@ -1814,16 +1856,16 @@ export interface components {
             /** @description Alerts partitioned by the producer that owns them (ADR-068). */
             alertsByGroup?: {
                 [key: string]: {
-                    [key: string]: string | null;
+                    [key: string]: unknown;
                 }[];
             };
             /** @description Water and food markers ordered along the stage, as published (#778). */
             supplyTimeline?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             /** @description Every alert, flattened, in group order. */
             readonly alerts?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
@@ -1850,57 +1892,6 @@ export interface components {
             startPoint?: components["schemas"]["Coordinate.gpx"];
             endPoint?: components["schemas"]["Coordinate.gpx"];
             geometry?: components["schemas"]["Coordinate.gpx"][];
-            label?: string | null;
-            elevationLoss?: number;
-            isRestDay?: boolean;
-        };
-        "Stage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /**
-             * @description Stable identity of the stage, carried by the DTO so it survives every write:
-             *     the repository reconciles the persisted rows against these identifiers instead
-             *     of deleting and re-inserting the collection (ADR-066).
-             */
-            id?: string | null;
-            weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
-            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
-            alertsByGroup?: {
-                [key: string]: {
-                    [key: string]: string | null;
-                }[];
-            };
-            /** @description Water and food markers ordered along the stage, as published (#778). */
-            supplyTimeline?: {
-                [key: string]: string | null;
-            }[];
-            /** @description Every alert, flattened, in group order. */
-            readonly alerts?: {
-                [key: string]: string | null;
-            }[];
-            resupply?: components["schemas"]["Resupply.jsonld"] | null;
-            accommodations?: components["schemas"]["Accommodation.jsonld"][];
-            selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
-            /**
-             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
-             *     persisted at stage-store time and read back here (issue #775).
-             * @default 0
-             */
-            readonly onCycleNetwork: number;
-            /**
-             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
-             *     resolved server-side and persisted so the anonymous shared view and a
-             *     reloaded trip render city names instead of raw GPS coordinates. Readable
-             *     (the frontend consumes them) but never writable.
-             */
-            readonly startLabel?: string | null;
-            readonly endLabel?: string | null;
-            events?: components["schemas"]["Event.jsonld"][];
-            tripId?: string;
-            dayNumber?: number;
-            distance?: number;
-            elevation?: number;
-            startPoint?: components["schemas"]["Coordinate.jsonld"];
-            endPoint?: components["schemas"]["Coordinate.jsonld"];
-            geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
             elevationLoss?: number;
             isRestDay?: boolean;
@@ -1941,7 +1932,7 @@ export interface components {
             /** @enum {string} */
             status?: "draft" | "analyzing" | "analyzed" | "failed";
         };
-        "Trip.TripRequest": {
+        "Trip.TripRequest-validation.trip_request.create": {
             sourceUrl: string | null;
             /** Format: date-time */
             startDate?: string | null;
@@ -2043,6 +2034,14 @@ export interface components {
             isLocked?: boolean;
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
+            isLocked?: boolean;
+        };
+        "Trip.jsonld-validation.trip_request.create": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             /** @description Map of ComputationName->value to status string */
             computationStatus?: {
@@ -2327,16 +2326,16 @@ export interface components {
             /** @description Alerts partitioned by the producer that owns them (ADR-068). */
             alertsByGroup?: {
                 [key: string]: {
-                    [key: string]: string | null;
+                    [key: string]: unknown;
                 }[];
             };
             /** @description Water and food markers ordered along the stage, as published (#778). */
             supplyTimeline?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             /** @description Every alert, flattened, in group order. */
             readonly alerts?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             resupply?: components["schemas"]["Resupply.fit"] | null;
             accommodations?: components["schemas"]["Accommodation.fit"][];
@@ -2378,16 +2377,16 @@ export interface components {
             /** @description Alerts partitioned by the producer that owns them (ADR-068). */
             alertsByGroup?: {
                 [key: string]: {
-                    [key: string]: string | null;
+                    [key: string]: unknown;
                 }[];
             };
             /** @description Water and food markers ordered along the stage, as published (#778). */
             supplyTimeline?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             /** @description Every alert, flattened, in group order. */
             readonly alerts?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             }[];
             resupply?: components["schemas"]["Resupply.gpx"] | null;
             accommodations?: components["schemas"]["Accommodation.gpx"][];
@@ -2750,7 +2749,7 @@ export interface operations {
         /** @description The new AccessRequest resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["AccessRequest"];
+                "application/ld+json": components["schemas"]["AccessRequest-validation.access_request.create"];
             };
         };
         responses: {
@@ -3189,7 +3188,7 @@ export interface operations {
         /** @description The new Auth resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["Auth"];
+                "application/ld+json": components["schemas"]["Auth-validation.auth.request-link"];
             };
         };
         responses: {
@@ -3265,7 +3264,7 @@ export interface operations {
         /** @description The new Auth resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["Auth"];
+                "application/ld+json": components["schemas"]["Auth-validation.auth.verify"];
             };
         };
         responses: {
@@ -3536,7 +3535,7 @@ export interface operations {
         /** @description The new DeviceToken resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["DeviceToken"];
+                "application/ld+json": components["schemas"]["DeviceToken-validation.device-token.unregister"];
             };
         };
         responses: {
@@ -3599,7 +3598,7 @@ export interface operations {
         /** @description The new EmailChange resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["EmailChange"];
+                "application/ld+json": components["schemas"]["EmailChange-validation.email-change.request"];
             };
         };
         responses: {
@@ -3655,7 +3654,7 @@ export interface operations {
         /** @description The new EmailChange resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["EmailChange"];
+                "application/ld+json": components["schemas"]["EmailChange-validation.email-change.verify"];
             };
         };
         responses: {
@@ -4877,7 +4876,7 @@ export interface operations {
         /** @description The new Trip resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["Trip.TripRequest"];
+                "application/ld+json": components["schemas"]["Trip.TripRequest-validation.trip_request.create"];
             };
         };
         responses: {
@@ -4887,7 +4886,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/ld+json": components["schemas"]["Trip.jsonld"];
+                    "application/ld+json": components["schemas"]["Trip.jsonld-validation.trip_request.create"];
                 };
             };
             /** @description The "Idempotency-Key" header is missing or malformed. */

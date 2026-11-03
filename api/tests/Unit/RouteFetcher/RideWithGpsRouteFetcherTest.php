@@ -93,7 +93,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('not found (404)');
+        $this->expectExceptionMessageIsOrContains('not found (404)');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }
@@ -115,7 +115,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('private or access denied (403)');
+        $this->expectExceptionMessageIsOrContains('private or access denied (403)');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }
@@ -143,7 +143,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('no track points');
+        $this->expectExceptionMessageIsOrContains('no track points');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }
@@ -209,7 +209,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('no valid coordinates');
+        $this->expectExceptionMessageIsOrContains('no valid coordinates');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }
@@ -232,7 +232,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('has no route data');
+        $this->expectExceptionMessageIsOrContains('has no route data');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }

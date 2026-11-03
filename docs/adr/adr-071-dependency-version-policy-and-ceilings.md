@@ -41,16 +41,16 @@ condition, not on a hunch.
 
 | Held at | Blocker | Lift when |
 |---|---|---|
-| `phpunit/phpunit ^12.5` (`api/` only) | `api-platform/test` — required by `api-platform/symfony` 5's `ApiTestCase` since the 5.0 package split — requires `phpunit/phpunit ^11.5 \|\| ^12.2`, although its classes run unchanged on 13 | [api-platform/core#8537](https://github.com/api-platform/core/pull/8537) is released. `provisioner/` has no API Platform dependency and stays on PHPUnit 13. |
 | `typescript ^5.9` (`pwa`) | `openapi-typescript` 7.13 declares `typescript: ^5.x`, on `latest` and on `next` | openapi-typescript widens its peer range |
 | `typescript ~6.0` (`mobile`) | `typescript-eslint` refuses TS 7 outright (`Error: typescript-eslint does not support TS 7.0`). npm hoists one TypeScript for the workspace, so mobile's choice decides what `eslint-config-next` parses with in `pwa`. | [typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940) |
 | `eslint ^9` | `eslint-plugin-react`, pulled in by `eslint-config-next`, calls `context.getFilename()`, removed in ESLint 10 (`TypeError: contextOrFilename.getFilename is not a function`). The peer ranges permit ESLint 10 — they are wrong. | eslint-plugin-react ships an ESLint 10-compatible release |
-| `react ~19.2.8` (whole workspace) | Expo SDK 57 pins React 19.2 and `jest-expo` ships `react-test-renderer@19.2.3`; React 19.3 breaks every mobile render test. Hoisting makes this workspace-wide, not per-package. | Expo SDK 58 (still `preview` at the time of writing) |
-| Expo SDK 57 / React Native 0.86 | SDK 58 is preview-only | SDK 58 is released |
+| `react ~19.3.1` (whole workspace) | Expo SDK 58 pins React 19.3 and the mobile render tests run on `react-test-renderer`, which must match React exactly (jest-expo 58 no longer ships it, so `mobile` declares it). Hoisting makes this workspace-wide, not per-package. | Expo SDK 59 |
+| Expo SDK 58 / React Native 0.88 | SDK 59 is not released | SDK 59 is released |
+| `symfony/mcp-bundle ^0.14` | 0.15 requires `mcp/sdk ^0.9`, `api-platform/mcp` 5.0.5 requires `mcp/sdk ^0.8` | `api-platform/mcp` allows `mcp/sdk ^0.9` |
 | Symfony `8.1.*` | Nothing — 8.1 is the current stable | 8.2 is released |
 
 Note the shape of three of these: **the constraint that bites is not the one you declare.**
-`~19.2.8` on React and `~6.0` on TypeScript exist because of how npm arranges the workspace,
+`~19.3.1` on React and `~6.0` on TypeScript exist because of how npm arranges the workspace,
 not because of what any manifest asks for. Check the resolved tree (`npm ls <pkg>`), not the
 manifests.
 
@@ -79,9 +79,21 @@ Reproduce with `rm -rf node_modules && npm ci`, never with an incremental instal
 
 ## Consequences
 
-`api/` and `provisioner/` run different PHPUnit majors on purpose, and `api/rector.php`
-carries a comment saying why. The asymmetry is the price of not regressing a project that has
-no reason to wait for API Platform.
-
 Lifting the two undocumented pins cost nothing, which is the point: an unexplained pin is
 usually stale, not protective.
+
+## Addendum (2026-11-03): upgrade pass
+
+- PHPUnit 13 in `api/`: `api-platform/test` 5.0.5 accepts `^13.0`, so both PHP projects are
+  on the same major again.
+- The React and Expo rows moved to SDK 58 (React 19.3, React Native 0.88).
+- New ceiling on `symfony/mcp-bundle`, held by `api-platform/mcp`'s `mcp/sdk` range.
+- `provisioner/` still pinned `rector/rector: ~2.5.9`, which this ADR had lifted for `api/`
+  only; lifted there too.
+- SDK 58 replaces the global `fetch` with `expo/fetch` by default, which rejects React Native's
+  `{ uri, name, type }` FormData parts (the GPX upload failed on a device). The app keeps
+  React Native's fetch through `EXPO_PUBLIC_USE_RN_FETCH`, set in `mobile/metro.config.js` and
+  `mobile/jest.config.js`. Moving to `expo/fetch` is its own piece of work (FormData parts,
+  401 retry, encoding), to be validated on a device.
+- Sentry 11 replaces `sendDefaultPii` with `dataCollection`, whose defaults all collect; the
+  strict posture of ADR-031 is restated field by field (`pwa/src/lib/sentry-scrub.ts`).

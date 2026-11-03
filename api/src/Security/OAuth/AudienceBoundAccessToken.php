@@ -44,10 +44,7 @@ final class AudienceBoundAccessToken implements AccessTokenEntityInterface
     /**
      * Replaces the trait's own, which the trait's `toString()` calls: a method declared on
      * the class takes precedence over the one the trait brings in, and the trait's is then
-     * not inserted at all. That is also why static analysis reads it as unused — it resolves
-     * `$this->convertToJWT()` inside the trait to the trait's copy, which PHP has discarded.
-     *
-     * @phpstan-ignore method.unused
+     * not inserted at all.
      */
     private function convertToJWT(): Token
     {

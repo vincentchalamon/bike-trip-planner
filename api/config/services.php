@@ -11,6 +11,7 @@ use App\RouteFetcher\RouteSourceBaseUri;
 use App\Security\OAuth\McpCallBudget;
 use App\Security\OAuth\McpGrantUsage;
 use App\Security\OAuth\McpScopeGuard;
+use App\JsonSchema\ExclusiveBoundRestriction;
 use App\JsonSchema\Mcp\McpCollectionSchema;
 use App\Serializer\Mcp\McpTextFloor;
 use App\State\Mcp\McpConfirmationProcessor;
@@ -191,6 +192,17 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(McpGrantUsage::class)
         ->decorate('api_platform.mcp.handler', null, 20)
         ->args([service(McpGrantUsage::class.'.inner')])
+        ->autoconfigure(false);
+
+    // One class, two bounds: the class id takes the lower one, a second id the upper one.
+    // Decoration hands the restriction tag over to the decorator, as above.
+    $services->set(ExclusiveBoundRestriction::class)
+        ->decorate('api_platform.metadata.property_schema.greater_than_restriction')
+        ->args([service(ExclusiveBoundRestriction::class.'.inner'), 'minimum', 'exclusiveMinimum'])
+        ->autoconfigure(false);
+    $services->set('app.exclusive_maximum_restriction', ExclusiveBoundRestriction::class)
+        ->decorate('api_platform.metadata.property_schema.less_than_restriction')
+        ->args([service('app.exclusive_maximum_restriction.inner'), 'maximum', 'exclusiveMaximum'])
         ->autoconfigure(false);
 
     // The envelope a tool that answers a list publishes, around the item schema the factory

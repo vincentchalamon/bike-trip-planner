@@ -47,7 +47,7 @@ final class McpEnvelopeThrottleListenerTest extends TestCase
     {
         $listener = $this->listener(1);
 
-        foreach (range(1, 5) as $ignored) {
+        for ($i = 0; $i < 5; ++$i) {
             self::assertNull($this->dispatch($listener, '/trips', '203.0.113.7')->getResponse());
         }
 
@@ -60,7 +60,7 @@ final class McpEnvelopeThrottleListenerTest extends TestCase
     {
         $listener = $this->listener(1);
 
-        foreach (range(1, 5) as $ignored) {
+        for ($i = 0; $i < 5; ++$i) {
             self::assertNull($this->dispatch($listener, '/mcpx', '203.0.113.7')->getResponse());
         }
 

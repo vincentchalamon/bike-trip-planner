@@ -275,7 +275,7 @@ final class PlaceEnrichmentPassTest extends TestCase
         $export = $this->sqlContaining('place-candidates.tsv');
         self::assertStringNotContainsString('ST_DWithin', $export);
         // Six columns either way, the last a constant, so the reader's field count is stable.
-        self::assertSame(1, preg_match("/LIMIT 1\), ''\),\s+'\{\}'/", $export), 'a constant stands in for the match');
+        self::assertMatchesRegularExpression("/LIMIT 1\), ''\),\s+'\{\}'/", $export, 'a constant stands in for the match');
     }
 
     #[Test]

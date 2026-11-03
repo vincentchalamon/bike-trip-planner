@@ -1,4 +1,4 @@
-import type { Breadcrumb, Event } from "@sentry/nextjs";
+import type { Breadcrumb, BrowserOptions, Event } from "@sentry/nextjs";
 
 /**
  * Takes what must never reach the error tracker out of a Sentry event: email
@@ -8,7 +8,7 @@ import type { Breadcrumb, Event } from "@sentry/nextjs";
  *
  * The browser SDK records the page URL with its fragment, which is where the
  * emailed verify links carry their token, and every fetch and navigation as a
- * breadcrumb; `sendDefaultPii: false` covers none of it.
+ * breadcrumb; `dataCollection` covers none of it.
  */
 const REDACTED = "[redacted]";
 const EMAIL =
@@ -99,3 +99,22 @@ export function scrubEvent<T extends Event>(event: T): T {
   }
   return event;
 }
+
+/**
+ * Strict data posture (no IP, no user, no cookie, no header or body content).
+ * Sentry 11 replaced `sendDefaultPii: false` with these switches and defaults
+ * every one of them to collecting, so each is closed explicitly.
+ */
+export const dataCollection: BrowserOptions["dataCollection"] = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: false,
+  httpBodies: [],
+  urlQueryParams: false,
+  graphQL: { document: false, variables: false },
+  genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
+  databaseQueryData: false,
+  queues: false,
+  stackFrameVariables: false,
+};
