@@ -94,3 +94,8 @@ loses its Go/CGO compile.
 The upstream binary is built with the `deprecated_topic` / `deprecated_claim` tags. They are
 inert here: they only take effect under `protocol_version_compatibility`, which the Caddyfile
 still does not enable.
+
+mercure/caddy v1.1 also allows a single unnamed hub per configuration. The `php` site block is
+served by two Caddy servers whenever `SERVER_NAME` lists an https and an http address (the
+default `localhost, http://php`), which provisions the handler twice, so the hub is named
+(`name bike-trip-planner`); the two handlers share one transport through that name.

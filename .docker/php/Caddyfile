@@ -99,6 +99,10 @@
     # access-token validation to keep 0.x clients working, and every client here
     # (PWA, mobile, the backend's own subscription check) speaks 1.0.
     mercure {
+        # Named because this site block is served twice when SERVER_NAME lists an https and
+        # an http address (`localhost, http://php`): mercure/caddy v1.1 allows a single
+        # unnamed hub per configuration, and the two handlers share one transport by name.
+        name bike-trip-planner
         # Transport to use (default to Bolt)
         transport bolt {
             path /data/mercure.db

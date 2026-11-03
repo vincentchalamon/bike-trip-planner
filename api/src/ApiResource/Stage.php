@@ -134,6 +134,9 @@ use App\ApiResource\Mcp\GetStageInput;
             status: 202,
             openapi: new Operation(summary: 'Delete a stage (merge with adjacent).'),
             security: "is_granted('TRIP_EDIT', tripId)",
+            // The processor returns nothing: without this the Stage schema is still generated
+            // for the 202 and left unreferenced in the spec.
+            output: false,
             provider: StageProvider::class,
             processor: StageDeleteProcessor::class,
             extraProperties: [PreconditionProcessor::EXTRA_PROPERTY => true, TripLockProcessor::EXTRA_PROPERTY => true],

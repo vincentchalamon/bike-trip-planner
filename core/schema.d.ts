@@ -1896,57 +1896,6 @@ export interface components {
             elevationLoss?: number;
             isRestDay?: boolean;
         };
-        "Stage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            /**
-             * @description Stable identity of the stage, carried by the DTO so it survives every write:
-             *     the repository reconciles the persisted rows against these identifiers instead
-             *     of deleting and re-inserting the collection (ADR-066).
-             */
-            id?: string | null;
-            weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
-            /** @description Alerts partitioned by the producer that owns them (ADR-068). */
-            alertsByGroup?: {
-                [key: string]: {
-                    [key: string]: unknown;
-                }[];
-            };
-            /** @description Water and food markers ordered along the stage, as published (#778). */
-            supplyTimeline?: {
-                [key: string]: unknown;
-            }[];
-            /** @description Every alert, flattened, in group order. */
-            readonly alerts?: {
-                [key: string]: unknown;
-            }[];
-            resupply?: components["schemas"]["Resupply.jsonld"] | null;
-            accommodations?: components["schemas"]["Accommodation.jsonld"][];
-            selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
-            /**
-             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
-             *     persisted at stage-store time and read back here (issue #775).
-             * @default 0
-             */
-            readonly onCycleNetwork: number;
-            /**
-             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
-             *     resolved server-side and persisted so the anonymous shared view and a
-             *     reloaded trip render city names instead of raw GPS coordinates. Readable
-             *     (the frontend consumes them) but never writable.
-             */
-            readonly startLabel?: string | null;
-            readonly endLabel?: string | null;
-            events?: components["schemas"]["Event.jsonld"][];
-            tripId?: string;
-            dayNumber?: number;
-            distance?: number;
-            elevation?: number;
-            startPoint?: components["schemas"]["Coordinate.jsonld"];
-            endPoint?: components["schemas"]["Coordinate.jsonld"];
-            geometry?: components["schemas"]["Coordinate.jsonld"][];
-            label?: string | null;
-            elevationLoss?: number;
-            isRestDay?: boolean;
-        };
         "Trip.NearbyPoiSearchRequest": {
             /** @enum {string|null} */
             category: "water" | "shelter" | "food" | "resupply" | "mechanic" | "health" | "train" | "charging" | null;
