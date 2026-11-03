@@ -92,9 +92,8 @@
     vars @valid_request_id correlation_id {http.request.header.X-Request-Id}
     request_header X-Request-Id "{vars.correlation_id}"
 
-    # Mercure hub, protocol 1.0. The module is rebuilt at v1.0.0 by the
-    # frankenphp_builder stage (the upstream image ships 0.24.2) — see the
-    # Dockerfile and the ADR-037 addendum.
+    # Mercure hub, protocol 1.0, as embedded in the upstream FrankenPHP binary
+    # (mercure/caddy v1.1.x since FrankenPHP v1.13); see the ADR-037 addenda.
     #
     # Deliberately NOT in `protocol_version_compatibility` mode: it weakens
     # access-token validation to keep 0.x clients working, and every client here
