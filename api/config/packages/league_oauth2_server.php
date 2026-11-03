@@ -78,7 +78,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'doctrine' => null,
         ],
         'client' => [
-            'allow_plaintext_secrets' => false,
             // A Client ID Metadata Document names its client by an HTTPS URL, which does not
             // fit the bundle's VARCHAR(32) identifier. See App\Entity\OAuthClient.
             'classname' => OAuthClient::class,
