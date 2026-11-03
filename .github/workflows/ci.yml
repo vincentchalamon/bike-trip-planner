@@ -749,7 +749,7 @@ jobs:
           docker run --network host
           -w /app -v .:/app
           --rm --ipc=host -e CI -e E2E_JWT
-          mcr.microsoft.com/playwright:v1.63.0-noble
+          mcr.microsoft.com/playwright:v1.64.1-noble
           /bin/sh -c 'npm ci; cd pwa && npx playwright test'
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -829,7 +829,7 @@ jobs:
           docker run --network host
           -w /app -v .:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.63.0-noble
+          mcr.microsoft.com/playwright:v1.64.1-noble
           /bin/sh -c 'npm ci; cd pwa && npx bddgen --config playwright.bdd.config.ts'
       - name: Mint a JWT for the shared-trip seed
         # The /s/{code} page fetches the share server-side, out of page.route()'s
@@ -852,7 +852,7 @@ jobs:
           docker run --network host
           -w /app -v .:/app
           --rm --ipc=host -e CI -e E2E_JWT
-          mcr.microsoft.com/playwright:v1.63.0-noble
+          mcr.microsoft.com/playwright:v1.64.1-noble
           /bin/sh -c 'cd pwa && npx playwright test --config playwright.bdd.config.ts'
       - uses: actions/upload-artifact@v7
         if: always()

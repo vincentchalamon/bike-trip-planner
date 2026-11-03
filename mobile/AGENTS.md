@@ -3,5 +3,5 @@
 
 # Mobile app
 
-Expo (SDK 57) foundation for Bike Trip Planner. See `README.md` for setup, the
+Expo (SDK 58) foundation for Bike Trip Planner. See `README.md` for setup, the
 API pointer (ngrok), deep-link testing and the assetlinks note.

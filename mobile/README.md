@@ -1,7 +1,7 @@
 # Bike Trip Planner - Mobile (Expo)
 
 Native app foundation. Covers R1 (magic-link auth via deep link), R2 (typed API
-client) and R4 (route map). Built with Expo SDK 57, expo-router, MapLibre RN and
+client) and R4 (route map). Built with Expo SDK 58, expo-router, MapLibre RN and
 openapi-fetch.
 
 ## Prerequisites
