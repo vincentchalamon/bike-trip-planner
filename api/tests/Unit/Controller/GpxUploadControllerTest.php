@@ -66,6 +66,26 @@ final class GpxUploadControllerTest extends TestCase
     }
 
     #[Test]
+    public function aFailedUploadDoesNotEchoTheServerLimits(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'gpx');
+        self::assertIsString($tmp);
+        $this->tmp = $tmp;
+        $file = new UploadedFile($tmp, 'route.gpx', null, \UPLOAD_ERR_INI_SIZE, true);
+
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn($this->user);
+        $controller = new GpxUploadController($this->createStub(GpxUploadServiceInterface::class), $security, $this->limiter(1), new NativeClock(), new NullLogger());
+
+        $response = $controller(new Request([], [], [], [], ['gpxFile' => $file]));
+        $body = json_decode((string) $response->getContent(), true);
+        \assert(\is_array($body));
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertSame('File upload failed.', $body['detail']);
+    }
+
+    #[Test]
     public function aFailedParseStillConsumesTheBudget(): void
     {
         $limiter = $this->limiter(1);

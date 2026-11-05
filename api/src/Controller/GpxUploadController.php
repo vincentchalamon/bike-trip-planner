@@ -51,7 +51,10 @@ final readonly class GpxUploadController
         }
 
         if (!$file->isValid()) {
-            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'File upload failed: '.$file->getErrorMessage());
+            // The PHP message quotes the server's ini limits; it goes to the log, not the client.
+            $this->logger->info('GPX upload failed before reaching the controller.', ['error' => $file->getErrorMessage()]);
+
+            return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'File upload failed.');
         }
 
         if ($file->getSize() > self::MAX_FILE_SIZE) {
