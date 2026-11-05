@@ -611,6 +611,11 @@
     "requestNewLink": "Redemander un lien",
     "verifying": "Vérification en cours...",
     "verifyFailed": "Lien invalide ou expiré. Demande un nouveau lien de connexion.",
+    "confirmSignInTitle": "Te connecter à ce compte ?",
+    "confirmSignInAccount": "Ce lien te connecte en tant que <strong>{email}</strong>.",
+    "confirmSignInWarning": "Il a été demandé depuis un autre navigateur ou appareil. Ne continue que si c'est toi qui l'as demandé : quelqu'un essaie peut-être de te faire travailler dans son compte.",
+    "confirmSignInContinue": "Continuer",
+    "confirmSignInCancel": "Annuler",
     "backToLogin": "Retour à la connexion",
     "logout": "Déconnexion"
   },
