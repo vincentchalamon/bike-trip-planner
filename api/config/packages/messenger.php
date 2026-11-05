@@ -29,6 +29,7 @@ use App\Messenger\RearmDispatchedComputationMiddleware;
 use App\Messenger\SendCorrelationIdMiddleware;
 use App\Messenger\StaleMessageMiddleware;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\Mailer\Messenger\SendEmailMessage;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
@@ -80,7 +81,22 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ScanEvents::class => 'async',
                 SendPushNotification::class => 'async',
                 AllEnrichmentsCompleted::class => 'async',
+                // Off the request path, so a sign-in or access request for a known address
+                // answers in the time an unknown one does: an inline SMTP round trip would say
+                // which addresses are registered.
+                SendEmailMessage::class => 'async',
             ],
         ],
     ]);
+
+    if ('test' === $containerConfigurator->env()) {
+        // The suites assert on sent mail (assertEmailCount), which a message parked on the
+        // in-memory async transport never becomes.
+        $containerConfigurator->extension('framework', [
+            'messenger' => [
+                'transports' => ['sync' => 'sync://'],
+                'routing' => [SendEmailMessage::class => 'sync'],
+            ],
+        ]);
+    }
 };
