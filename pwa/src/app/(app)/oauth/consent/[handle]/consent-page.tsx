@@ -11,20 +11,6 @@ import {
 } from "@/lib/api/client";
 
 /**
- * Where an agent asks for access, and the only place it is granted (ADR-079).
- *
- * The browser arrives here from the authorization endpoint, which has already validated the
- * request and parked it server-side. Everything shown is read back from the API rather than
- * from the URL this page was reached on: the client's name, the scopes the server actually
- * validated, and the address the agent will be returned to. A page that rendered the query
- * string would be showing the request rather than what is about to be granted.
- *
- * The decision is POSTed with the session Bearer before the browser goes back. That ordering
- * is the anti-CSRF of the whole flow: the return leg is a plain top-level GET that any page
- * could trigger, and it only completes because a decision is already on file — recorded with
- * a credential that lives in this tab's memory and that no third-party page can produce.
- */
-/**
  * The only place the browser is ever sent from here is back to the authorization endpoint
  * of this origin. The server builds `continueUrl`, but a page that follows whatever it is
  * handed would turn any future bug there into an open redirect off the consent screen.
@@ -41,6 +27,20 @@ function isAuthorizeEndpoint(raw: string): boolean {
   }
 }
 
+/**
+ * Where an agent asks for access, and the only place it is granted (ADR-079).
+ *
+ * The browser arrives here from the authorization endpoint, which has already validated the
+ * request and parked it server-side. Everything shown is read back from the API rather than
+ * from the URL this page was reached on: the client's name, the scopes the server actually
+ * validated, and the address the agent will be returned to. A page that rendered the query
+ * string would be showing the request rather than what is about to be granted.
+ *
+ * The decision is POSTed with the session Bearer before the browser goes back. That ordering
+ * is the anti-CSRF of the whole flow: the return leg is a plain top-level GET that any page
+ * could trigger, and it only completes because a decision is already on file — recorded with
+ * a credential that lives in this tab's memory and that no third-party page can produce.
+ */
 export default function OAuthConsentPage({ handle }: { handle: string }) {
   const t = useTranslations("oauthConsent");
   const [consent, setConsent] = useState<PendingConsent | null>(null);
