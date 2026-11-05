@@ -120,7 +120,10 @@ rotate `REFRESH_TOKEN_ENC_KEY` (generic procedure); for agents, revoke their gra
 
 Both `authorized_keys` files (`deploy`, `preview-deploy`) are written **exclusively** from their
 list: whatever is not in the list is removed. A key added by hand on the VM is therefore removed
-at the next playbook run too.
+at the next playbook run too. An **empty** list is the exception: the task is skipped and the
+file is left as it is, so always **replace** the last key, never just delete it. To cut a key
+with no replacement (e.g. disable previews), remove it on the VM by hand
+(`sudo truncate -s0 ~preview-deploy/.ssh/authorized_keys`).
 
 1. Generate the new pair offline: `ssh-keygen -t ed25519 -N '' -C 'gha-<env>-YYYYMMDD' -f gha-<env>`.
 2. In `group_vars/all.yml`, **replace** the old public key with the new one in

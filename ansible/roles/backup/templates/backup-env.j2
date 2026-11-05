@@ -12,5 +12,7 @@ KEEP_DAILY={{ backup_keep_daily }}
 KEEP_WEEKLY={{ backup_keep_weekly }}
 KEEP_MONTHLY={{ backup_keep_monthly }}
 RETENTION_MODE={{ backup_retention_mode }}
-HEARTBEAT_URL={{ backup_heartbeat_url }}
-FAILURE_URL={{ backup_failure_url }}
+# Quoted: `make backup-now` sources this file in a shell, and a monitor URL
+# often carries `&`. systemd's EnvironmentFile strips the quotes.
+HEARTBEAT_URL="{{ backup_heartbeat_url }}"
+FAILURE_URL="{{ backup_failure_url }}"
