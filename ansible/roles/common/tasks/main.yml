@@ -26,13 +26,14 @@
     create_home: true
     state: present
 
+# exclusive + every key in one call: a key removed from the list is revoked,
+# so a rotation (new key in, old key out, re-run) actually retires the old one.
 - name: Install the deploy authorized_keys (GHA SSH)
   ansible.posix.authorized_key:
     user: "{{ deploy_user }}"
-    key: "{{ item }}"
+    key: "{{ deploy_ssh_public_keys | join('\n') }}"
     state: present
-    exclusive: false
-  loop: "{{ deploy_ssh_public_keys }}"
+    exclusive: true
   when: deploy_ssh_public_keys | length > 0
 
 - name: Create the preview deploy user
