@@ -14,14 +14,24 @@ export type PushData = {
 // unit-testable without a navigator. Most specific target wins: a stage-scoped
 // payload opens the stage, a trip-scoped one the roadbook, a zone-opening
 // announcement the trip-creation tab (where a newly-opened region is usable).
+// Same pattern as SAFE_ID in src/store/trip-cache.ts, kept here so this module stays
+// pure. The payload comes from outside the app: an id carrying `/`, `?` or `..` would
+// otherwise be interpolated into the route as path or query.
+const SAFE_ID = /^[A-Za-z0-9_-]+$/;
+
+function safeId(value: unknown): string | null {
+  return typeof value === 'string' && SAFE_ID.test(value) ? value : null;
+}
+
 export function resolvePushRoute(data: PushData | null | undefined): Href | null {
   if (!data) return null;
-  const stageId = data.stageId;
-  if (data.tripId && stageId != null && stageId !== '') {
-    return `/trip/${data.tripId}/stage/${stageId}` as Href;
+  const tripId = safeId(data.tripId);
+  const stageId = safeId(data.stageId);
+  if (tripId && stageId) {
+    return `/trip/${tripId}/stage/${stageId}` as Href;
   }
-  if (data.tripId) {
-    return `/trip/${data.tripId}` as Href;
+  if (tripId) {
+    return `/trip/${tripId}` as Href;
   }
   if (data.category === 'zoneOpening') {
     return '/(tabs)/create' as Href;
