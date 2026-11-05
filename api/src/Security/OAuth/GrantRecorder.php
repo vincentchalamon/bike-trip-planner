@@ -7,7 +7,6 @@ namespace App\Security\OAuth;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Connection;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
 use Psr\Clock\ClockInterface;
 
@@ -15,7 +14,8 @@ use Psr\Clock\ClockInterface;
  * Writes down that an application was let in, at the one moment that proves it was.
  *
  * Called from {@see AudienceBoundAccessTokenRepository::persistNewAccessToken()}, which is the
- * only place a token is actually issued. The two seats that look better are worse: the bundle's
+ * only place a token is actually issued, inside the transaction that persists the token: a
+ * failure here rolls the token back. The two seats that look better are worse: the bundle's
  * `AccessTokenManager::save()` is *also* its revocation hook — a refresh calls it twice, once
  * with a revoked token — and `ACCESS_TOKEN_EXTRA_CLAIMS_RESOLVE` is dead here, because the
  * decorator above replaces the very method that dispatches it. A listener on it would never run
@@ -42,7 +42,6 @@ final readonly class GrantRecorder
     public function __construct(
         private Connection $connection,
         private UserRepository $users,
-        private LoggerInterface $logger,
         private ClockInterface $clock,
     ) {
     }
@@ -58,12 +57,9 @@ final readonly class GrantRecorder
             // Not theoretical: a refresh replays the email carried in the old token's payload
             // (RefreshTokenGrant reads `user_id` from it, never the user row), so an address
             // changed in between resolves to nobody. The email change revokes those tokens for
-            // exactly this reason — this branch is the belt, and it never fails an issuance.
-            $this->logger->info('No account for the identifier a token was issued to; no grant recorded.', [
-                'client' => $clientIdentifier,
-            ]);
-
-            return;
+            // exactly this reason. This branch is the belt: a token nobody can see on the
+            // account page is one nobody can revoke, so its issuance fails.
+            throw new \RuntimeException('No account for the identifier a token was issued to; no grant recorded.');
         }
 
         $this->connection->executeStatement(

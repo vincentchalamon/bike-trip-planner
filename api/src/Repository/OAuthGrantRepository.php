@@ -125,4 +125,24 @@ final class OAuthGrantRepository extends ServiceEntityRepository
 
         return $grant;
     }
+
+    /**
+     * The live grant a token was issued under. Tokens name the user by email, grants by row,
+     * so the join goes through the user.
+     */
+    public function findLiveByEmailAndClient(string $email, string $clientIdentifier): ?OAuthGrant
+    {
+        /** @var OAuthGrant|null $grant */
+        $grant = $this->createQueryBuilder('g')
+            ->join('g.user', 'u')
+            ->where('u.email = :email')
+            ->andWhere('IDENTITY(g.client) = :client')
+            ->andWhere('g.revokedAt IS NULL')
+            ->setParameter('email', $email)
+            ->setParameter('client', $clientIdentifier)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $grant;
+    }
 }
