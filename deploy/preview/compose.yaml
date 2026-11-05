@@ -132,6 +132,9 @@ services:
       - 192mb
       - --maxmemory-policy
       - volatile-lru
+      # Replacing the base command drops its --requirepass: keep it.
+      - --requirepass
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD must be set for preview stacks}"
     deploy:
       resources:
         limits:

@@ -1,0 +1,39 @@
+# {{ ansible_managed }}
+# Shared env file of every PR preview, passed by btp-preview with --env-file.
+# Rendered from Vault (vault_preview_*), never copied from app.env: a preview
+# runs code nobody has reviewed yet, so every secret here is its own value, and
+# the playbook refuses one equal to its prod counterpart (SEC-20). No FCM, no
+# Sentry: a preview has no business holding those credentials.
+#
+# NOTE: docker compose interpolates `$` in this file; double a literal `$` as
+# `$$` in vault.yml.
+DOMAIN={{ domain }}
+APP_ENV=prod
+TRUSTED_PROXIES={{ trusted_proxies }}
+
+APP_SECRET={{ vault_preview_app_secret }}
+MERCURE_JWT_KEY={{ vault_preview_mercure_jwt_key }}
+REFRESH_TOKEN_ENC_KEY={{ vault_preview_refresh_token_enc_key }}
+ACCESS_REQUEST_HMAC_SECRET={{ vault_preview_access_request_hmac_secret }}
+
+# Preview keypairs (deploy/preview/compose.yaml requires these paths), distinct
+# from prod's and from each other.
+JWT_PASSPHRASE={{ vault_preview_jwt_passphrase }}
+PREVIEW_JWT_PRIVATE_KEY_PATH={{ preview_root }}/jwt/private.pem
+PREVIEW_JWT_PUBLIC_KEY_PATH={{ preview_root }}/jwt/public.pem
+OAUTH_PASSPHRASE={{ vault_preview_oauth_passphrase }}
+OAUTH_ENCRYPTION_KEY={{ vault_preview_oauth_encryption_key }}
+PREVIEW_OAUTH_PRIVATE_KEY_PATH={{ preview_root }}/oauth/private.pem
+PREVIEW_OAUTH_PUBLIC_KEY_PATH={{ preview_root }}/oauth/public.pem
+
+# Per-preview, disposable PostgreSQL and Redis (one value shared by all previews).
+DATABASE_PASSWORD={{ vault_preview_database_password }}
+REDIS_PASSWORD={{ vault_preview_redis_password }}
+
+# Shared read-only PG-reference, as the same read-only role prod uses.
+REFERENCE_DATABASE_URL=postgresql://{{ pg_reference_ro_user }}:{{ vault_reference_ro_password | urlencode }}@pg-reference:5432/{{ vault_reference_db_name }}?serverVersion=18&charset=utf8
+VALHALLA_BASE_URI={{ valhalla_base_uri }}
+
+MAILER_DSN={{ vault_preview_mailer_dsn | default('null://null', true) }}
+MAILER_SENDER_EMAIL={{ mailer_sender_email }}
+CONTACT_EMAIL={{ contact_email }}

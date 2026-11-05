@@ -90,6 +90,32 @@ case "${APP_SECRET:-}" in
 		;;
 esac
 
+# Fail closed (SEC-20): an empty JWT_PASSPHRASE means the session signing key is
+# stored unencrypted, or that the passphrase never reached the container (compose
+# passes it through without a default). Either way the env file is wrong.
+if [ -z "${JWT_PASSPHRASE:-}" ]; then
+	echo 'FATAL: JWT_PASSPHRASE is empty; refusing to boot (SEC-20). Set the passphrase of the JWT keypair.' >&2
+	exit 1
+fi
+
+# Fail closed (SEC-20): the compose defaults of the PostgreSQL and Redis passwords
+# are public. Only the local iso-prod stacks, whose database volume was created
+# with the default, may opt out with ALLOW_LOCAL_DEFAULT_CREDENTIALS=true.
+if [ "${ALLOW_LOCAL_DEFAULT_CREDENTIALS:-false}" != 'true' ]; then
+	case "${DATABASE_URL:-}" in
+		*':!ChangeMe!@'*)
+			echo 'FATAL: DATABASE_PASSWORD is unset or still the compose default; refusing to boot (SEC-20). Set a strong DATABASE_PASSWORD.' >&2
+			exit 1
+			;;
+	esac
+	case "${REDIS_URL:-}" in
+		*':ChangeMeRedis@'*)
+			echo 'FATAL: REDIS_PASSWORD is unset or still the compose default; refusing to boot (SEC-21). Set a strong REDIS_PASSWORD.' >&2
+			exit 1
+			;;
+	esac
+fi
+
 if [ "${MIGRATIONS_ON_BOOT:-false}" = "true" ]; then
 	# Wait for the database to accept connections before migrating. The compose
 	# healthcheck (pg_isready) can briefly report ready during Postgres' init

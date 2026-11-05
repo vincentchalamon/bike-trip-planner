@@ -8,22 +8,54 @@ services:
     restart: unless-stopped
     command:
       - --configFile=/etc/traefik/traefik.yml
-    # Both edge sides: prod php is on `edge`, preview php on `edge-preview`.
+    # Both edge sides: prod php is on `edge`, preview php on `edge-preview`;
+    # `docker-api` reaches the socket proxy only.
     networks:
       - edge
       - edge-preview
+      - docker-api
+    depends_on:
+      - socket-proxy
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     volumes:
-      # Traefik's Docker provider needs the socket to read container labels.
-      # `:ro` does NOT restrict the Docker API — a read-only socket mount still
-      # grants full Engine access (equivalent to host root). Accepted single-
-      # tenant tradeoff for the beta VM. TODO (post-beta hardening): put a
-      # least-privilege docker-socket-proxy (tecnativa/docker-socket-proxy) in
-      # front, exposing only the containers/events endpoints Traefik reads.
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - {{ traefik_dir }}/traefik.yml:/etc/traefik/traefik.yml:ro
+
+  # The Docker socket is root on the host, `:ro` or not. Traefik reads the
+  # Engine API through this proxy instead (SEC-19), which answers GET on
+  # /containers, /events, /version and /_ping and refuses everything else
+  # (POST=0: no create, exec, start or stop).
+  socket-proxy:
+    image: {{ docker_socket_proxy_image }}
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      EVENTS: "1"
+      PING: "1"
+      VERSION: "1"
+      POST: "0"
+    networks:
+      - docker-api
+    read_only: true
+    # The entrypoint renders haproxy.cfg into /tmp at start.
+    tmpfs:
+      - /run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
 networks:
   edge:
     external: true
   edge-preview:
     external: true
+  # Traefik <-> socket proxy only; `internal`: no route out.
+  docker-api:
+    internal: true

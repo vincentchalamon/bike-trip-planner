@@ -67,6 +67,11 @@ vault_database_username: "app"
 vault_database_password: "REPLACE_ME"
 vault_database_name: "bike_trip_planner"
 
+# --- Redis (per-stack) --------------------------------------------------------
+# Required by redis-server and put verbatim in every Redis DSN: generate it with
+# `openssl rand -hex 32` (hex: nothing to URL-encode).
+vault_redis_password: "REPLACE_ME"
+
 # --- PG-reference (shared PostGIS; osm/tourism/provisioner, split PG plan W2) -
 # Superuser owns the reference DB (used by the provisioner for DDL + imports).
 vault_reference_db_user: "reference"
@@ -125,3 +130,37 @@ vault_oci_access_key_id: "REPLACE_ME"             # OCI_* — access key id
 vault_oci_secret_access_key: "REPLACE_ME"         # OCI_* — secret access key
 vault_oci_s3_endpoint: "https://REPLACE_ME.compat.objectstorage.REPLACE_ME.oraclecloud.com"
 vault_oci_region: "REPLACE_ME"                    # e.g. eu-paris-1
+
+# --- PR previews (SEC-20) -----------------------------------------------------
+# Rendered into /opt/bike-trip-planner-previews/preview.env and its keypair files.
+# A preview runs unreviewed code: EVERY value below must be generated on its own,
+# never copied from the prod one above. The app_deploy role refuses a value equal
+# to its prod counterpart. Keypairs: a third and a fourth pair,
+#   scripts/generate-keypairs.sh --jwt ./preview-jwt --oauth ./preview-oauth --passphrase <p>
+vault_preview_app_secret: "REPLACE_ME"
+vault_preview_mercure_jwt_key: "REPLACE_ME"       # at least 32 bytes
+vault_preview_refresh_token_enc_key: "REPLACE_ME"
+vault_preview_access_request_hmac_secret: "REPLACE_ME"
+vault_preview_database_password: "REPLACE_ME"
+vault_preview_redis_password: "REPLACE_ME"        # openssl rand -hex 32
+vault_preview_jwt_passphrase: "REPLACE_ME"
+vault_preview_jwt_private_key: |
+  -----BEGIN ENCRYPTED PRIVATE KEY-----
+  REPLACE_ME
+  -----END ENCRYPTED PRIVATE KEY-----
+vault_preview_jwt_public_key: |
+  -----BEGIN PUBLIC KEY-----
+  REPLACE_ME_PREVIEW_JWT
+  -----END PUBLIC KEY-----
+vault_preview_oauth_passphrase: "REPLACE_ME"
+vault_preview_oauth_encryption_key: "REPLACE_ME"
+vault_preview_oauth_private_key: |
+  -----BEGIN ENCRYPTED PRIVATE KEY-----
+  REPLACE_ME
+  -----END ENCRYPTED PRIVATE KEY-----
+vault_preview_oauth_public_key: |
+  -----BEGIN PUBLIC KEY-----
+  REPLACE_ME_PREVIEW_OAUTH
+  -----END PUBLIC KEY-----
+# Optional. Empty = null://null: previews send no email (magic links included).
+vault_preview_mailer_dsn: ""

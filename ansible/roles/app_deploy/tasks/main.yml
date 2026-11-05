@@ -31,6 +31,15 @@
 # crash-looping container at cutover into a playbook that stops before writing anything —
 # and it is the one place that can see both values at once, since Vault holds them and the
 # VM only ever receives the files.
+# Redis requires a password (SEC-21); compose puts it verbatim in the DSNs.
+- name: Refuse a Redis password that is not URL-safe
+  ansible.builtin.assert:
+    that:
+      - vault_redis_password is match('^[0-9a-fA-F]{32,}$')
+    fail_msg: vault_redis_password must be hex, at least 32 characters (openssl rand -hex 32).
+    quiet: true
+  no_log: true
+
 - name: Refuse a Vault where the OAuth keypair is the JWT one
   ansible.builtin.assert:
     that:
@@ -143,8 +152,30 @@
 # --- PR previews ---------------------------------------------------------------
 # The preview user owns its root and the `base` checkout; it can read neither
 # app.env, the prod keypairs nor the prod checkout. preview.env and the preview
-# keypairs it names are not provisioned here yet: put them under preview_root,
-# readable by the preview user (root:{{ preview_deploy_user }} 0640).
+# keypairs are rendered from Vault (vault_preview_*), root:{{ preview_deploy_user }}
+# 0640, and must not reuse a single prod value: a preview runs unreviewed code,
+# and a shared APP_SECRET / MERCURE_JWT_KEY / keypair would let it forge what
+# prod trusts (SEC-20).
+- name: Refuse preview secrets equal to their prod counterpart
+  ansible.builtin.assert:
+    that:
+      - vault_preview_app_secret != vault_app_secret
+      - vault_preview_mercure_jwt_key != vault_mercure_jwt_key
+      - vault_preview_refresh_token_enc_key != vault_refresh_token_enc_key
+      - vault_preview_access_request_hmac_secret != vault_access_request_hmac_secret
+      - vault_preview_oauth_encryption_key != vault_oauth_encryption_key
+      - vault_preview_database_password != vault_database_password
+      - vault_preview_redis_password != vault_redis_password
+      - vault_preview_jwt_public_key | trim not in [vault_jwt_public_key | trim, vault_oauth_public_key | trim]
+      - vault_preview_oauth_public_key | trim not in [vault_jwt_public_key | trim, vault_oauth_public_key | trim, vault_preview_jwt_public_key | trim]
+      - vault_preview_redis_password is match('^[0-9a-fA-F]{32,}$')
+    fail_msg: >-
+      Every vault_preview_* secret must differ from its prod value (and the two preview
+      keypairs from each other and from prod's), and vault_preview_redis_password must be
+      hex, at least 32 characters (it goes verbatim into the Redis DSNs).
+    quiet: true
+  no_log: true
+
 - name: Create the preview root
   ansible.builtin.file:
     path: "{{ preview_root }}"
@@ -152,6 +183,42 @@
     owner: "{{ preview_deploy_user }}"
     group: "{{ preview_deploy_user }}"
     mode: "0750"
+
+- name: Create the preview keypair directories
+  ansible.builtin.file:
+    path: "{{ preview_root }}/{{ item }}"
+    state: directory
+    owner: root
+    group: "{{ preview_deploy_user }}"
+    mode: "0750"
+  loop:
+    - jwt
+    - oauth
+
+- name: Write the preview keypairs (from Vault)
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ preview_root }}/{{ item.dest }}"
+    owner: root
+    group: "{{ preview_deploy_user }}"
+    mode: "0640"
+  loop:
+    - { dest: jwt/private.pem, content: "{{ vault_preview_jwt_private_key }}" }
+    - { dest: jwt/public.pem, content: "{{ vault_preview_jwt_public_key }}" }
+    - { dest: oauth/private.pem, content: "{{ vault_preview_oauth_private_key }}" }
+    - { dest: oauth/public.pem, content: "{{ vault_preview_oauth_public_key }}" }
+  loop_control:
+    label: "{{ item.dest }}"
+  no_log: true
+
+- name: Render the preview env file (from Vault)
+  ansible.builtin.template:
+    src: preview-env.j2
+    dest: "{{ preview_root }}/preview.env"
+    owner: root
+    group: "{{ preview_deploy_user }}"
+    mode: "0640"
+  no_log: true
 
 # The compose files every preview runs. btp-preview moves it to the tip of
 # preview_base_ref on each deploy; Ansible only clones it once.

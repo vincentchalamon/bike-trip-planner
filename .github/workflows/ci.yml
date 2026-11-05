@@ -680,6 +680,10 @@ jobs:
       # in compose so the prod entrypoint fails closed (ADR-079); set here so it boots.
       OAUTH_PASSPHRASE: "ci-test-passphrase"
       OAUTH_ENCRYPTION_KEY: "ci-test-oauth-encryption-key"
+      # Non-default so the SEC-20 / SEC-21 boot guards pass (the prod image refuses
+      # the compose default PostgreSQL and Redis passwords).
+      DATABASE_PASSWORD: "ci-test-database-password"
+      REDIS_PASSWORD: "0123456789abcdef0123456789abcdef"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -795,6 +799,10 @@ jobs:
       # in compose so the prod entrypoint fails closed (ADR-079); set here so it boots.
       OAUTH_PASSPHRASE: "ci-test-passphrase"
       OAUTH_ENCRYPTION_KEY: "ci-test-oauth-encryption-key"
+      # Non-default so the SEC-20 / SEC-21 boot guards pass (the prod image refuses
+      # the compose default PostgreSQL and Redis passwords).
+      DATABASE_PASSWORD: "ci-test-database-password"
+      REDIS_PASSWORD: "0123456789abcdef0123456789abcdef"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

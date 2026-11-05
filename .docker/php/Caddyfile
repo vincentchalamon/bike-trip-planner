@@ -1,6 +1,11 @@
 {
     {$CADDY_GLOBAL_OPTIONS}
 
+    # No admin API (SEC-19): it would let anything in the container (or able to
+    # reach its loopback) rewrite the whole server config. Nothing uses it; the
+    # healthchecks go through the site itself (compose.yaml).
+    admin off
+
     # Keep the inbound X-Forwarded-For chain when proxying to the PWA: without a
     # trusted peer Caddy replaces it with Traefik's IP, so the BFF could not relay
     # the client IP to the backend. Same private ranges as TRUSTED_PROXIES. Strict
@@ -133,9 +138,11 @@
         # MERCURE_URL (http://php/...) while browsers subscribe on the public
         # one — an unpinned hub would expect a different audience per origin.
         resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
-        # Allow anonymous subscribers (double-check that it's what you want)
-        anonymous
-        # Enable the subscription API (double-check that it's what you want)
+        # No `anonymous`: every update is published private (TripUpdatePublisher),
+        # so a subscriber without a token could never receive anything, and the
+        # hub now answers it 401 instead of holding a connection open (SEC-21).
+        # The subscription API stays: MercureSubscriptionChecker reads it with a
+        # short-lived server-side token.
         subscriptions
         # Extra directives. Careful: since 1.0 an unknown directive here is a
         # fatal config error rather than a silent no-op (`ui` became `debugger`,
