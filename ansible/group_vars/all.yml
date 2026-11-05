@@ -21,6 +21,29 @@ preview_deploy_user: "preview-deploy"
 # Must differ from deploy_ssh_public_keys. List of strings.
 preview_deploy_ssh_public_keys: []
 
+# --- Host hardening (SEC-07, roles/hardening) --------------------------------
+# sshd only lets these users in (PermitRootLogin no, key only): the operator
+# account(s) Ansible connects with, plus deploy_user and preview_deploy_user,
+# which the role adds itself. Never root.
+ssh_operator_users:
+  - "{{ ansible_user | default('ubuntu') }}"
+# Sources allowed to reach port 22 (host nftables filter). The default stays open
+# because GHA deploy-prod / deploy-preview SSH straight to SSH_HOST from
+# GitHub-hosted runners, whose addresses are not fixed. Narrow it with the
+# rollout order of ansible/README.md ("Restrict SSH"), never in one step.
+ssh_allowed_cidrs:
+  - "0.0.0.0/0"
+  - "::/0"
+# true: also allow the GitHub Actions runner ranges from api.github.com/meta,
+# refreshed on every playbook run. Use with ssh_allowed_cidrs set to the
+# operator's own addresses only.
+ssh_allow_github_actions: false
+# Hostname of a Cloudflare Access SSH application (e.g. "ssh.example.com").
+# Non-empty: cloudflared routes it to the host sshd and the firewall accepts 22
+# from the edge subnet. With ssh_allowed_cidrs: [] and
+# ssh_allow_github_actions: false, SSH is then reachable through the tunnel only.
+ssh_tunnel_hostname: ""
+
 # --- Paths -------------------------------------------------------------------
 etc_dir: "/etc/bike-trip-planner"
 jwt_dir: "/etc/bike-trip-planner/jwt"
@@ -65,6 +88,9 @@ docker_networks:
   # Valhalla + PG-reference <-> preview php/worker.
   - name: btp-shared-preview
 edge_subnet: "10.210.0.0/24"
+# Docker's gateway on edge_subnet (its first address): the host side of the
+# bridge, where cloudflared reaches sshd when ssh_tunnel_hostname is set.
+edge_gateway: "10.210.0.1"
 # Container log rotation (daemon.json, json-file driver): each container's
 # stdout/stderr is capped at max_file x max_size on disk, oldest file dropped
 # first. Without it docker logs grow, and are kept, forever.

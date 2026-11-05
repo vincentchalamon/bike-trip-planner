@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Loads ONLY the inet btp_host table. Not nftables.service: its ExecStop runs
+# `nft flush ruleset`, which would also drop Docker's own tables and cut every
+# container off the network until dockerd restarts.
+[Unit]
+Description=bike-trip-planner host firewall (nftables, inet btp_host)
+DefaultDependencies=no
+# After nftables.service: if that unit is enabled, its `flush ruleset` runs first.
+After=nftables.service
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f {{ hardening_firewall_rules }}
+ExecReload=/usr/sbin/nft -f {{ hardening_firewall_rules }}
+ExecStop=/usr/sbin/nft delete table inet btp_host
+
+[Install]
+WantedBy=sysinit.target

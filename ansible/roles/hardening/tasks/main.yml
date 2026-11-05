@@ -1,0 +1,99 @@
+---
+# Host hardening (SEC-07): key-only sshd limited to the known users, an nftables
+# INPUT filter that leaves Docker's tables alone, and sshguard. See the rollout
+# order in ansible/README.md before narrowing ssh_allowed_cidrs.
+- name: Install the hardening packages
+  ansible.builtin.apt:
+    name: "{{ hardening_packages }}"
+    state: present
+
+- name: Refuse an empty or root operator login
+  ansible.builtin.assert:
+    that:
+      - ssh_operator_users | length > 0
+      - "'root' not in ssh_operator_users"
+    fail_msg: >-
+      ssh_operator_users must name the non-root account Ansible connects with
+      (PermitRootLogin is turned off and AllowUsers would lock any other one out).
+    quiet: true
+
+- name: Compute the sshd and firewall allow lists
+  ansible.builtin.set_fact:
+    hardening_ssh_allow_users: "{{ (ssh_operator_users + [deploy_user, preview_deploy_user]) | unique }}"
+    hardening_ssh_cidrs: "{{ ssh_allowed_cidrs }}"
+
+# api.github.com/meta lists the address ranges GitHub-hosted runners use. They
+# change: re-run the playbook to refresh them (README, "Restrict SSH").
+- name: Fetch the GitHub Actions runner ranges
+  ansible.builtin.uri:
+    url: https://api.github.com/meta
+    return_content: true
+  register: hardening_github_meta
+  when: ssh_allow_github_actions | bool
+
+- name: Add the GitHub Actions runner ranges to the SSH allow list
+  ansible.builtin.set_fact:
+    hardening_ssh_cidrs: "{{ hardening_ssh_cidrs + hardening_github_meta.json.actions }}"
+  when: ssh_allow_github_actions | bool
+
+- name: Split the SSH allow list by address family
+  ansible.builtin.set_fact:
+    hardening_ssh_v4: "{{ hardening_ssh_cidrs | reject('search', ':') | list }}"
+    hardening_ssh_v6: "{{ hardening_ssh_cidrs | select('search', ':') | list }}"
+
+# sshd -t checks the whole configuration (the main file includes the drop-in);
+# a drop-in that breaks it is removed before anything reloads sshd.
+- name: Harden sshd
+  block:
+    - name: Install the sshd hardening drop-in
+      ansible.builtin.template:
+        src: sshd-hardening.conf.j2
+        dest: "{{ hardening_sshd_dropin }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload sshd
+
+    - name: Validate the sshd configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+  rescue:
+    - name: Remove the drop-in sshd rejected
+      ansible.builtin.file:
+        path: "{{ hardening_sshd_dropin }}"
+        state: absent
+
+    - name: Stop on an invalid sshd configuration
+      ansible.builtin.fail:
+        msg: sshd -t rejected the hardening drop-in; it was removed and sshd was not reloaded.
+
+- name: Render the host firewall rules
+  ansible.builtin.template:
+    src: firewall.nft.j2
+    dest: "{{ hardening_firewall_rules }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/nft -c -f %s
+  notify: Reload the host firewall
+
+- name: Install the host firewall unit
+  ansible.builtin.template:
+    src: btp-firewall.service.j2
+    dest: /etc/systemd/system/btp-firewall.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start the host firewall
+  ansible.builtin.systemd_service:
+    name: btp-firewall.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Enable and start sshguard
+  ansible.builtin.systemd_service:
+    name: sshguard
+    enabled: true
+    state: started

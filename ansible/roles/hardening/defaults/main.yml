@@ -1,0 +1,7 @@
+---
+hardening_packages:
+  - nftables
+  - sshguard
+
+hardening_sshd_dropin: /etc/ssh/sshd_config.d/00-btp-hardening.conf
+hardening_firewall_rules: /etc/bike-trip-planner-firewall.nft

@@ -6,7 +6,8 @@ Production is a single Oracle Cloud Always Free ARM VM. **Ansible** provisions i
 Traefik, `cloudflared`, the shared Valhalla and PG-reference, secrets from Vault); the
 `.github/workflows/deploy.yml` workflow **deploys over SSH**. Traffic reaches the VM only through
 a **Cloudflare Tunnel**, and **Traefik** routes it to the stacks by Docker labels; the VM exposes
-no public port. The reasoning is in [ADR-061](adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md)
+no public web port. Port 22 is the one exception: the deploy jobs SSH straight to the VM, which
+is why it is key-only and filtered ([Restrict SSH](../ansible/README.md#restrict-ssh)). The reasoning is in [ADR-061](adr/adr-061-deployment-ansible-gha-ssh-traefik-tunnel.md)
 (amending [ADR-019](adr/adr-019-deployment-infrastructure-strategy.md)) and the topology in
 [`ansible/README.md`](../ansible/README.md).
 
@@ -169,7 +170,7 @@ All are systemd timers installed by Ansible; there is no in-stack cron.
 
 | Timer             | Default                           | Does                                                              |
 |-------------------|-----------------------------------|-------------------------------------------------------------------|
-| `btp-backup`      | daily 02:30                       | `pg_dump` of PG-app, encrypted with `age`, uploaded with `rclone` to B2 and/or OCI, GFS retention ([ADR-062](adr/adr-062-backup-and-disaster-recovery.md)). On demand: `make backup-now BACKUP_SSH=deploy@<vm>` |
+| `btp-backup`      | daily 02:30                       | `pg_dump` of PG-app, encrypted with `age`, uploaded with `rclone` to B2 and/or OCI, GFS retention ([ADR-062](adr/adr-062-backup-and-disaster-recovery.md)), heartbeat and `OnFailure=` alert ([backups](runbooks/backup-restore.md)). On demand: `make backup-now BACKUP_SSH=deploy@<vm>`; restore test from a workstation: `make backup-restore-test AGE_IDENTITY=<key>` |
 | `events-refresh`  | off; Monday 04:00 when enabled    | Re-imports DataTourisme and OpenAgenda events for the open zones and purges past events ([events refresh](runbooks/events-refresh.md)) |
 | reclaim heartbeat | off; every 10 minutes when enabled | Keeps the VM above Oracle's idle-reclaim threshold               |
 

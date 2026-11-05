@@ -16,7 +16,7 @@ Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutiv
 From a workstation:
 
 ```bash
-ssh deploy@<vm-host>     # through the Cloudflare Access SSH app; the VM has no public IP
+ssh ubuntu@<vm-host>     # public IP on port 22 (or the Access SSH app, ansible/README.md "Restrict SSH")
 curl -sS -o /dev/null -w '%{http_code}\n' https://www.<domain>/api/healthz
 ```
 
@@ -37,12 +37,12 @@ In the OCI console:
     - OCI console → Compute → Create Instance
     - Shape: `VM.Standard.A1.Flex`, 4 OCPU / 24 GB RAM
     - Image source: "Boot volume" → select the preserved volume
-    - Subnet: same VCN as before. **No reserved public IP**: ingress is the outbound Cloudflare Tunnel, nothing to reattach.
+    - Subnet: same VCN as before. Web ingress is the outbound Cloudflare Tunnel, nothing to reattach; attach a public IP for the GHA deploy SSH and update `SSH_HOST` if it changed.
     - Launch. The VM boots with everything already configured. Confirm `cloudflared` reconnected and `/api/healthz` is green.
     - If the host SSH key changed, update the `SSH_KNOWN_HOSTS` secret of both the `production` and `preview` environments, or the deploy jobs will refuse the host.
 
 3. **If the boot volume is also gone** (rare: full reclaim after long inactivity), **re-run the Ansible playbook** on a fresh VM:
-    - Provision a fresh `VM.Standard.A1.Flex` (Ubuntu ARM64, 4 OCPU / 24 GB) with **no public IP**. On `Out of host capacity`, retry or change availability domain or region. First SSH via the OCI serial console or a temporary public IP.
+    - Provision a fresh `VM.Standard.A1.Flex` (Ubuntu ARM64, 4 OCPU / 24 GB) with a public IP reachable on TCP 22 only (the GHA deploy jobs SSH to it). On `Out of host capacity`, retry or change availability domain or region. Keep the OCI serial console available until the first playbook run has applied the SSH hardening.
     - From a workstation, in `ansible/`: `ansible-galaxy collection install -r requirements.yml`, then `ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`. This reinstalls Docker, Traefik, cloudflared, the shared Valhalla and PG-reference, the prod env file, both keypairs and the backup timer. See [`ansible/README.md`](../../ansible/README.md).
     - Seed the routing graph: `make routing-publish deploy@<vm-host> <slug> [slug...]` from a workstation that holds a built graph (see [valhalla-routing-graph.md](valhalla-routing-graph.md)), or ship the tar, set `valhalla_tiles_tar` in `group_vars/all.yml` and re-run the playbook.
     - Deploy the app: re-run GHA `deploy-prod` for the current tag. A fresh VM has no release record, so `deploy-prod.sh <tag>` alone is refused; on the VM, pass the commit and digests from that run's summary (`deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>`). The fresh clone is on `main`, and `btp-compose` (every prod compose call) refuses to run until this step has put it on a recorded release tag.

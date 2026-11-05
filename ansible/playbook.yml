@@ -14,6 +14,9 @@
     - vault.yml
   roles:
     - role: common
+    # sshd drop-in, nftables INPUT filter, sshguard (SEC-07). After common: the
+    # deploy users must exist before AllowUsers names them.
+    - role: hardening
     - role: docker
     - role: traefik
     - role: cloudflared

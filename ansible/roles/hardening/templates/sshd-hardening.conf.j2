@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# sshd keeps the FIRST value it reads for a keyword, and the Include of
+# sshd_config.d/*.conf comes first in Ubuntu's sshd_config: the 00- prefix makes
+# this file win over 50-cloud-init.conf (which may turn passwords back on).
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+X11Forwarding no
+AllowUsers {{ hardening_ssh_allow_users | join(' ') }}
