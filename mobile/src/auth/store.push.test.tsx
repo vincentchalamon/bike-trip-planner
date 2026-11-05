@@ -14,10 +14,22 @@ jest.mock('../notifications/push', () => ({
   subscribeTokenRotation: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
-jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
+jest.mock('./authApi', () => ({
+  verifyMagicToken: jest.fn(),
+  revokeSession: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('./tokens', () => ({
   loadTokens: jest.fn().mockResolvedValue({ jwt: null, refresh: null }),
   clearTokens: jest.fn().mockResolvedValue(undefined),
+  setTokens: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('./login-nonce', () => ({
+  ensureLoginNonce: jest.fn().mockResolvedValue('nonce'),
+  readLoginNonce: jest.fn().mockResolvedValue('nonce'),
+  clearLoginNonce: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../store/local-account-data', () => ({
+  clearLocalAccountData: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => undefined) }));
 jest.mock('../api/client', () => ({
@@ -49,7 +61,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('AuthProvider push wiring', () => {
   it('registers the device token on login', async () => {
-    verify.mockResolvedValue(true);
+    verify.mockResolvedValue({ kind: 'tokens', jwt: 'jwt', refresh: 'refresh' });
     await mount();
     expect(register).not.toHaveBeenCalled();
 
@@ -61,7 +73,7 @@ describe('AuthProvider push wiring', () => {
   });
 
   it('unregisters the device token on logout', async () => {
-    verify.mockResolvedValue(true);
+    verify.mockResolvedValue({ kind: 'tokens', jwt: 'jwt', refresh: 'refresh' });
     await mount();
     await act(async () => {
       await captured.auth.verify('magic-token');
@@ -84,7 +96,7 @@ describe('AuthProvider push wiring', () => {
       onInvalidated = cb;
       return () => undefined;
     });
-    verify.mockResolvedValue(true);
+    verify.mockResolvedValue({ kind: 'tokens', jwt: 'jwt', refresh: 'refresh' });
     await mount();
     await act(async () => {
       await captured.auth.verify('magic-token');

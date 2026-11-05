@@ -45,6 +45,19 @@ use Symfony\Component\Validator\Constraints as Assert;
                         ]),
                     ),
                     '401' => new Response(description: 'Invalid or expired magic link'),
+                    '409' => new Response(
+                        description: 'The link was not requested by this client: nothing was consumed, and signing in needs `confirm: true` once the user has seen the account email',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'email' => ['type' => 'string'],
+                                    ],
+                                ],
+                            ],
+                        ]),
+                    ),
                 ],
             ),
             validationContext: ['groups' => ['auth:verify']],
@@ -104,6 +117,15 @@ final class Auth
         public string $email = '',
         #[Assert\NotBlank(groups: ['auth:verify'])]
         public string $token = '',
+        /**
+         * Secret the client keeps between request-link and verify (SEC-15). Sent with the
+         * request, it binds the link to this client; sent with the verify, it proves the
+         * link is opened where it was asked for.
+         */
+        #[Assert\Length(min: 32, max: 128, groups: ['auth:request-link', 'auth:verify'])]
+        public ?string $nonce = null,
+        /** The user saw the account email and chose to sign in to it anyway. */
+        public bool $confirm = false,
     ) {
     }
 }

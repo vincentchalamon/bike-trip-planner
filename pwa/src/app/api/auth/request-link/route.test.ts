@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cookies } from "next/headers";
 import { POST } from "./route";
 
 vi.mock("next/headers", () => ({
@@ -17,13 +18,21 @@ function sameOriginPost(body: unknown): Request {
   });
 }
 
+const jar = { set: vi.fn(), get: vi.fn() };
+
 describe("POST /api/auth/request-link", () => {
+  beforeEach(() => {
+    vi.mocked(cookies).mockResolvedValue(
+      jar as unknown as Awaited<ReturnType<typeof cookies>>,
+    );
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it("forwards { email } and mirrors the backend 202", async () => {
+  it("forwards { email, nonce } and mirrors the backend 202", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(new Response(null, { status: 202 }));
@@ -35,9 +44,15 @@ describe("POST /api/auth/request-link", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toMatch(/\/auth\/request-link$/);
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({
-      email: "alice@example.com",
-    });
+    const sent = JSON.parse(init.body as string) as Record<string, string>;
+    expect(sent.email).toBe("alice@example.com");
+    // SEC-15: the link is bound to the secret this browser keeps in its cookie.
+    expect(sent.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(jar.set).toHaveBeenCalledWith(
+      "__Host-login_nonce",
+      sent.nonce,
+      expect.objectContaining({ httpOnly: true }),
+    );
   });
 
   it("rejects a cross-site request with 403 and never calls the backend", async () => {

@@ -34,6 +34,14 @@ export const en: typeof fr = {
     expiredTitle: 'Link expired or invalid',
     expiredBody: 'This sign-in link is no longer valid. Request a new one.',
     requestNew: 'Request a new link',
+    confirmTitle: 'Sign in to this account?',
+    confirmAccount: 'This link signs you in as {{email}}.',
+    confirmWarning:
+      'It was requested from another device. Continue only if you asked for it yourself: someone may be trying to get you to work in their account.',
+    confirmSwitch:
+      'You are signed in as {{email}} on this device. Continuing signs that account out and clears its offline data.',
+    confirmContinue: 'Continue',
+    confirmCancel: 'Cancel',
   },
   trips: {
     title: 'My trips',

@@ -6,9 +6,21 @@ jest.mock('../api/client', () => ({ api: { GET: jest.fn(), POST: jest.fn() } }))
 jest.mock('./tokens', () => ({
   loadTokens: jest.fn(),
   clearTokens: jest.fn().mockResolvedValue(undefined),
+  setTokens: jest.fn().mockResolvedValue(undefined),
   getJwt: jest.fn(),
 }));
-jest.mock('./authApi', () => ({ verifyMagicToken: jest.fn() }));
+jest.mock('./authApi', () => ({
+  verifyMagicToken: jest.fn(),
+  revokeSession: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('./login-nonce', () => ({
+  ensureLoginNonce: jest.fn().mockResolvedValue('device-nonce'),
+  readLoginNonce: jest.fn().mockResolvedValue('device-nonce'),
+  clearLoginNonce: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../notifications/native', () => ({
+  cancelAllLocalNotifications: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('./session', () => ({ onSessionInvalidated: jest.fn(() => () => {}) }));
 jest.mock('../store/trip-cache', () => ({
   clearAllTripCache: jest.fn().mockResolvedValue(undefined),
@@ -26,7 +38,11 @@ jest.mock('../notifications/push', () => ({
 }));
 
 import { api } from '../api/client';
-import { loadTokens } from './tokens';
+import { clearTokens, loadTokens, setTokens } from './tokens';
+import { revokeSession, verifyMagicToken } from './authApi';
+import { clearLoginNonce } from './login-nonce';
+import { unregisterDeviceToken } from '../notifications/push';
+import { cancelAllLocalNotifications } from '../notifications/native';
 import { clearAllTripCache } from '../store/trip-cache';
 import { clearCachedTripList } from '../store/trips-list-cache';
 import { AuthProvider, useAuth } from './store';
@@ -183,5 +199,127 @@ describe('AuthProvider stale-response guard (#1117)', () => {
       await refreshPromise;
     });
     expect(captured.email).toBeNull();
+  });
+});
+
+describe('AuthProvider magic-link binding and account switch (SEC-15)', () => {
+  let captured: AuthContextValue;
+  let renderer: ReturnType<typeof TestRenderer.create>;
+  const mockVerify = verifyMagicToken as jest.MockedFunction<typeof verifyMagicToken>;
+  const mockPost = api.POST as jest.Mock;
+
+  function Consumer() {
+    captured = useAuth();
+    return null;
+  }
+
+  async function mount(jwt: string | null) {
+    mockLoadTokens.mockResolvedValue({ jwt, refresh: jwt ? 'old-refresh' : null });
+    mockGet.mockResolvedValue({ data: { email: 'current@example.com' } } as never);
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(AuthProvider, null, createElement(Consumer)));
+    });
+  }
+
+  afterEach(() => act(() => renderer?.unmount()));
+
+  it('sends the device nonce with the link request', async () => {
+    await mount(null);
+    mockPost.mockResolvedValue({ response: { ok: true } });
+
+    await act(async () => {
+      await captured.requestLink('me@example.com');
+    });
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/auth/request-link',
+      expect.objectContaining({
+        body: { email: 'me@example.com', nonce: 'device-nonce' },
+      }),
+    );
+  });
+
+  it('signs in with the device nonce when no session is open', async () => {
+    await mount(null);
+    mockVerify.mockResolvedValue({ kind: 'tokens', jwt: 'new-jwt', refresh: 'new-refresh' });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await captured.verify('magic');
+    });
+
+    expect(outcome).toEqual({ kind: 'ok' });
+    expect(mockVerify).toHaveBeenCalledWith('magic', { nonce: 'device-nonce', confirm: false });
+    expect(setTokens).toHaveBeenCalledWith('new-jwt', 'new-refresh');
+    expect(clearLoginNonce).toHaveBeenCalled();
+    expect(captured.authenticated).toBe(true);
+    // Nothing to tear down: there was no session.
+    expect(revokeSession).not.toHaveBeenCalled();
+  });
+
+  it('never presents the nonce while signed in, and touches nothing on a confirmation', async () => {
+    await mount('old-jwt');
+    mockVerify.mockResolvedValue({ kind: 'confirm', email: 'other@example.com' });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await captured.verify('magic');
+    });
+
+    expect(outcome).toEqual({ kind: 'confirm', email: 'other@example.com' });
+    expect(mockVerify).toHaveBeenCalledWith('magic', { nonce: null, confirm: false });
+    expect(setTokens).not.toHaveBeenCalled();
+    expect(clearTokens).not.toHaveBeenCalled();
+    expect(captured.authenticated).toBe(true);
+  });
+
+  it('ends the current session in full before storing the tokens of an accepted switch', async () => {
+    await mount('old-jwt');
+    mockVerify.mockResolvedValue({ kind: 'tokens', jwt: 'new-jwt', refresh: 'new-refresh' });
+
+    await act(async () => {
+      await captured.verify('magic', true);
+    });
+
+    expect(mockVerify).toHaveBeenCalledWith('magic', { nonce: null, confirm: true });
+    const order = (fn: unknown) => (fn as jest.Mock).mock.invocationCallOrder[0] ?? Infinity;
+    const stored = order(setTokens);
+    for (const teardown of [
+      unregisterDeviceToken,
+      revokeSession,
+      clearTokens,
+      mockClearAllTripCache,
+      cancelAllLocalNotifications,
+    ]) {
+      expect(order(teardown)).toBeLessThan(stored);
+    }
+    expect(setTokens).toHaveBeenCalledWith('new-jwt', 'new-refresh');
+    expect(captured.authenticated).toBe(true);
+  });
+
+  it('keeps the current session when the switch is refused by the server', async () => {
+    await mount('old-jwt');
+    mockVerify.mockResolvedValue({ kind: 'invalid' });
+
+    await act(async () => {
+      await captured.verify('magic', true);
+    });
+
+    expect(clearTokens).not.toHaveBeenCalled();
+    expect(captured.authenticated).toBe(true);
+  });
+
+  it('revokes the refresh tokens and cancels local reminders on logout (SEC-26)', async () => {
+    await mount('old-jwt');
+
+    await act(async () => {
+      await captured.logout();
+    });
+
+    expect(revokeSession).toHaveBeenCalledTimes(1);
+    expect((revokeSession as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+      (clearTokens as jest.Mock).mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(cancelAllLocalNotifications).toHaveBeenCalledTimes(1);
   });
 });

@@ -32,6 +32,14 @@ export const fr = {
     expiredTitle: 'Lien expiré ou invalide',
     expiredBody: "Ce lien de connexion n'est plus valide. Demande-en un nouveau.",
     requestNew: 'Demander un nouveau lien',
+    confirmTitle: 'Te connecter à ce compte ?',
+    confirmAccount: 'Ce lien te connecte en tant que {{email}}.',
+    confirmWarning:
+      "Il a été demandé depuis un autre appareil. Ne continue que si c'est toi qui l'as demandé : quelqu'un essaie peut-être de te faire travailler dans son compte.",
+    confirmSwitch:
+      'Tu es connecté(e) en tant que {{email}} sur cet appareil. Continuer déconnecte ce compte et efface ses données hors ligne.',
+    confirmContinue: 'Continuer',
+    confirmCancel: 'Annuler',
   },
   trips: {
     title: 'Mes voyages',

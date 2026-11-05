@@ -151,4 +151,74 @@ test.describe("Auth flow", () => {
     await expect(page).toHaveURL("/");
     expect(postedToken).toBe("test-token");
   });
+
+  test("verify page asks before signing in with a link requested elsewhere (SEC-15)", async ({
+    page,
+  }) => {
+    const posted: { token?: unknown; confirm?: unknown }[] = [];
+    await page.route("**/api/auth/verify", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      const body = request.postDataJSON() as {
+        token?: unknown;
+        confirm?: unknown;
+      };
+      posted.push(body);
+      // No login nonce cookie matched: the BFF mirrors the backend 409.
+      if (body.confirm !== true) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ email: "owner@example.com" }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      });
+    });
+    await page.route("**/api/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      });
+    });
+    await page.route(
+      (url) => url.pathname === "/trips",
+      (route, request) => {
+        if (request.method() !== "GET") return route.fallback();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/ld+json",
+          body: JSON.stringify({
+            "@context": "/contexts/Trip",
+            "@id": "/trips",
+            "@type": "hydra:Collection",
+            "hydra:totalItems": 0,
+            "hydra:member": [],
+            member: [],
+            totalItems: 0,
+          }),
+        });
+      },
+    );
+    await page.route("**/.well-known/mercure*", (route) => route.abort());
+
+    await page.goto("/auth/verify#forwarded-token");
+
+    await expect(page.getByTestId("magic-link-confirm-email")).toContainText(
+      "owner@example.com",
+    );
+    await expect(page).toHaveURL(/\/auth\/verify$/);
+
+    await page.getByTestId("magic-link-confirm-continue").click();
+    await page.waitForURL("/", { timeout: 5000 });
+
+    expect(posted).toEqual([
+      { token: "forwarded-token", confirm: false },
+      { token: "forwarded-token", confirm: true },
+    ]);
+  });
 });

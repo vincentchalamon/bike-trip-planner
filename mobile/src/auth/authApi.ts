@@ -1,7 +1,7 @@
 import { API_BASE_URL, LD_JSON } from '../api/config';
 import { unregisterDeviceToken } from '../notifications/push';
 import { notifySessionInvalidated } from './session';
-import { clearTokens, getRefresh, setTokens } from './tokens';
+import { clearTokens, getJwt, getRefresh, setTokens } from './tokens';
 import { clearLocalAccountData } from '../store/local-account-data';
 
 // verify / refresh use plain fetch rather than the typed client: both return the
@@ -15,22 +15,47 @@ const ldJsonHeaders = {
 
 type TokenPair = { token?: string; refresh_token?: string };
 
-// Exchange a magic-link token for a JWT + refresh token, then persist both.
-export async function verifyMagicToken(token: string): Promise<boolean> {
+export type VerifyResult =
+  | { kind: 'tokens'; jwt: string; refresh: string | null }
+  // The link was not requested from this device, or this device is signed in:
+  // nothing was consumed, and the user has to see the account before going on.
+  | { kind: 'confirm'; email: string }
+  | { kind: 'invalid' };
+
+// Exchange a magic-link token for a JWT + refresh token. Persists nothing: the
+// caller decides, since a switch has to end the current session first (SEC-15).
+export async function verifyMagicToken(
+  token: string,
+  { nonce, confirm }: { nonce: string | null; confirm: boolean },
+): Promise<VerifyResult> {
   const res = await fetch(`${API_BASE_URL}/auth/verify`, {
     method: 'POST',
     headers: ldJsonHeaders,
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token, confirm, ...(nonce ? { nonce } : {}) }),
   });
+  if (res.status === 409) {
+    const data = (await res.json().catch(() => ({}))) as { email?: string };
+    return data.email ? { kind: 'confirm', email: data.email } : { kind: 'invalid' };
+  }
   if (!res.ok) {
-    return false;
+    return { kind: 'invalid' };
   }
   const data = (await res.json().catch(() => ({}))) as TokenPair;
   if (!data.token) {
-    return false;
+    return { kind: 'invalid' };
   }
-  await setTokens(data.token, data.refresh_token ?? null);
-  return true;
+  return { kind: 'tokens', jwt: data.token, refresh: data.refresh_token ?? null };
+}
+
+// Revoke the account's refresh tokens server-side on logout, while the JWT is
+// still valid. Best-effort: the local session ends regardless.
+export async function revokeSession(): Promise<void> {
+  const jwt = getJwt();
+  if (!jwt) return;
+  await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: 'POST',
+    headers: { ...ldJsonHeaders, Authorization: `Bearer ${jwt}` },
+  }).catch(() => undefined);
 }
 
 // Deduplicated refresh: concurrent 401s share a single in-flight request.

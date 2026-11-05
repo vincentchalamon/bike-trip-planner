@@ -611,6 +611,11 @@
     "requestNewLink": "Request a new link",
     "verifying": "Verifying...",
     "verifyFailed": "Invalid or expired link. Please request a new sign-in link.",
+    "confirmSignInTitle": "Sign in to this account?",
+    "confirmSignInAccount": "This link signs you in as <strong>{email}</strong>.",
+    "confirmSignInWarning": "It was requested from another browser or device. Continue only if you asked for it yourself: someone may be trying to get you to work in their account.",
+    "confirmSignInContinue": "Continue",
+    "confirmSignInCancel": "Cancel",
     "backToLogin": "Back to sign in",
     "logout": "Sign out"
   },

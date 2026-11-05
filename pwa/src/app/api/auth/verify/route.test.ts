@@ -9,8 +9,16 @@ vi.mock("next/headers", () => ({
 
 const mockedCookies = vi.mocked(cookies);
 
-function stubCookieJar(): { set: ReturnType<typeof vi.fn> } {
-  const jar = { set: vi.fn(), get: vi.fn(), delete: vi.fn() };
+function stubCookieJar(nonce?: string): { set: ReturnType<typeof vi.fn> } {
+  const jar = {
+    set: vi.fn(),
+    get: vi.fn((name: string) =>
+      name === "__Host-login_nonce" && nonce !== undefined
+        ? { name, value: nonce }
+        : undefined,
+    ),
+    delete: vi.fn(),
+  };
   mockedCookies.mockResolvedValue(
     jar as unknown as Awaited<ReturnType<typeof cookies>>,
   );
@@ -62,7 +70,85 @@ describe("POST /api/auth/verify", () => {
     // The magic-link token is forwarded to the backend.
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toMatch(/\/auth\/verify$/);
-    expect(JSON.parse(init.body as string)).toEqual({ token: "magic" });
+    expect(JSON.parse(init.body as string)).toEqual({
+      token: "magic",
+      confirm: false,
+    });
+  });
+
+  it("forwards the login nonce cookie, then drops it once signed in", async () => {
+    const jar = stubCookieJar("browser-nonce");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ token: "jwt-123", refresh_token: "refresh-abc" }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await POST(sameOriginPost({ token: "magic" }));
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(JSON.parse(init.body as string)).toEqual({
+      token: "magic",
+      nonce: "browser-nonce",
+      confirm: false,
+    });
+    expect(jar.set).toHaveBeenCalledWith(
+      "__Host-login_nonce",
+      "",
+      expect.objectContaining({ maxAge: 0 }),
+    );
+  });
+
+  it("mirrors a confirmation request with the account email and no session", async () => {
+    const jar = stubCookieJar();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ email: "owner@example.com" }), {
+          status: 409,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    const res = await POST(sameOriginPost({ token: "magic" }));
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ email: "owner@example.com" });
+    expect(jar.set).not.toHaveBeenCalled();
+  });
+
+  it("turns a 409 without a readable email into a 401", async () => {
+    const jar = stubCookieJar();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("conflict", { status: 409 })),
+    );
+
+    const res = await POST(sameOriginPost({ token: "magic" }));
+
+    expect(res.status).toBe(401);
+    expect(jar.set).not.toHaveBeenCalled();
+  });
+
+  it("forwards only a literal confirm: true", async () => {
+    stubCookieJar();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await POST(sameOriginPost({ token: "magic", confirm: "yes" }));
+    await POST(sameOriginPost({ token: "magic", confirm: true }));
+
+    const bodies = fetchMock.mock.calls.map(
+      ([, init]) => JSON.parse(init.body as string) as { confirm: boolean },
+    );
+    expect(bodies.map((b) => b.confirm)).toEqual([false, true]);
   });
 
   it("mirrors a backend rejection without setting a cookie", async () => {

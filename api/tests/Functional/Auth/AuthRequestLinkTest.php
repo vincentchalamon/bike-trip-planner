@@ -11,6 +11,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
+use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
@@ -205,5 +206,52 @@ final class AuthRequestLinkTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertSame(0, $this->getEntityManager()->getRepository(MagicLink::class)->count([]));
+    }
+
+    /**
+     * SEC-15: the nonce sent with the request binds the link to that client. Opened with it,
+     * the link signs in at once; opened with another one, it asks for a confirmation first.
+     */
+    #[Test]
+    public function theNonceSentWithTheRequestIsTheOneTheVerifyAccepts(): void
+    {
+        $em = $this->getEntityManager();
+        $em->persist(new User('bound@example.com'));
+        $em->flush();
+
+        $client = self::createClient();
+        $client->request('POST', '/auth/request-link', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'bound@example.com', 'nonce' => str_repeat('a', 43)],
+        ]);
+        $this->assertResponseStatusCodeSame(202);
+
+        $email = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $email);
+        self::assertSame(1, preg_match('~/auth/verify#([0-9a-f]+)~', (string) $email->getHtmlBody(), $matches));
+        $token = $matches[1];
+
+        $client->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => $token, 'nonce' => str_repeat('b', 43)],
+        ]);
+        $this->assertResponseStatusCodeSame(409);
+
+        $client->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => $token, 'nonce' => str_repeat('a', 43)],
+        ]);
+        $this->assertResponseStatusCodeSame(200);
+    }
+
+    #[Test]
+    public function aNonceTooShortToBeASecretIsRefused(): void
+    {
+        self::createClient()->request('POST', '/auth/request-link', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['email' => 'alice@example.com', 'nonce' => 'short'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
     }
 }
