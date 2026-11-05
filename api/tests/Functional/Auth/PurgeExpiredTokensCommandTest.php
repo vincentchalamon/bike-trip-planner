@@ -155,4 +155,40 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $repo = self::getContainer()->get(RefreshTokenRepository::class);
         $this->assertCount(0, $repo->findAll());
     }
+
+    /**
+     * A rotated token is past its 30-second grace, but its row is the evidence the refresh
+     * endpoint needs to recognise a replay: purging it would turn a reuse into a plain 401
+     * and leave the successor alive.
+     */
+    #[Test]
+    public function keepsRotatedTokensWhileTheirSuccessorCanLive(): void
+    {
+        $em = $this->getEntityManager();
+
+        $user = new User('rotated@example.com');
+        $em->persist($user);
+
+        $recent = $this->refreshToken($user, 'rotated-recently', new \DateTimeImmutable('+30 days'));
+        $recent->replaceWith(RefreshTokenEncryptor::digest('successor-recent'), new \DateTimeImmutable('-1 day'));
+
+        $em->persist($recent);
+
+        $old = $this->refreshToken($user, 'rotated-long-ago', new \DateTimeImmutable('+30 days'));
+        $old->replaceWith(RefreshTokenEncryptor::digest('successor-old'), new \DateTimeImmutable(\sprintf('-%d days', RefreshTokenRepository::TTL_DAYS + 1)));
+
+        $em->persist($old);
+        $em->flush();
+
+        $tester = $this->createCommandTester();
+        $tester->execute([]);
+
+        $this->assertStringContainsString('Purged 1 expired refresh token', $tester->getDisplay());
+
+        /** @var RefreshTokenRepository $repo */
+        $repo = self::getContainer()->get(RefreshTokenRepository::class);
+        $remaining = $repo->findAll();
+        $this->assertCount(1, $remaining);
+        $this->assertSame(RefreshTokenEncryptor::digest('rotated-recently'), $remaining[0]->getTokenDigest());
+    }
 }

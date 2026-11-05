@@ -8,9 +8,11 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<RefreshToken>
@@ -26,7 +28,7 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      * number is a product decision about sessions, and moving that one is a security decision
      * about delegated access. Neither should drag the other along.
      */
-    private const int TTL_DAYS = 30;
+    public const int TTL_DAYS = 30;
 
     public function __construct(
         ManagerRegistry $registry,
@@ -152,6 +154,26 @@ final class RefreshTokenRepository extends ServiceEntityRepository
             ->setParameter('user', $user)
             ->getQuery()
             ->execute();
+    }
+
+    /**
+     * Deletes every refresh token of the given user but the listed ones.
+     *
+     * @param list<Uuid> $keptIds
+     */
+    public function removeAllForUserExcept(User $user, array $keptIds): void
+    {
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->delete(RefreshToken::class, 'rt')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user);
+
+        if ([] !== $keptIds) {
+            $qb->andWhere('rt.id NOT IN (:kept)')
+                ->setParameter('kept', array_map(static fn (Uuid $id): string => $id->toRfc4122(), $keptIds), ArrayParameterType::STRING);
+        }
+
+        $qb->getQuery()->execute();
     }
 
     private function issue(User $user): RefreshToken
