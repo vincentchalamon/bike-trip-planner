@@ -18,6 +18,8 @@ entryPoints:
 
 providers:
   docker:
+    # Through the read-only socket proxy (compose.yaml.j2), never the socket.
+    endpoint: "tcp://socket-proxy:2375"
     exposedByDefault: false
     # Default network to reach a container on. Preview php overrides it with the
     # `traefik.docker.network=edge-preview` label.

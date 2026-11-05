@@ -28,6 +28,17 @@ services:
       target: frankenphp_prod
     restart: unless-stopped
     read_only: true
+    # Least privilege (SEC-19). The process is still root in the container: the
+    # keypairs are bind mounts owned by the host (root:deploy 0640 on the VM, the
+    # CI runner's 0600), and DAC_OVERRIDE is what lets it read them whoever owns
+    # them. NET_BIND_SERVICE for :80/:443. Nothing else.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
     tmpfs:
       - /tmp
       # Writable cache on the read-only rootfs. cache.app already goes to Redis
@@ -47,8 +58,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    # `backend` holds PostgreSQL and Redis; pwa only joins `default`, so it can
+    # reach php but neither data store (SEC-21).
     networks:
       - default
+      - backend
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
@@ -92,13 +106,16 @@ services:
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
       # closed rather than silently using the committed dev default.
       REFRESH_TOKEN_ENC_KEY: "${REFRESH_TOKEN_ENC_KEY:-}"
-      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
-      MESSENGER_FAILED_DSN: redis://redis:6379/failed
-      REDIS_URL: redis://redis:6379
+      # Redis requires a password (SEC-21): Messenger and the cache unserialize what
+      # they read, so write access to Redis is code execution in php and worker.
+      # The password goes in the userinfo verbatim: keep it URL-safe (hex).
+      MESSENGER_TRANSPORT_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379/messages"
+      MESSENGER_FAILED_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379/failed"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379"
       # Symfony Lock store. Without this, framework.lock falls back to api/.env's
       # redis://localhost:6379 (unreachable from the container) -> trip creation
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
-      LOCK_DSN: redis://redis:6379
+      LOCK_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379"
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       # Shared read-only PG-référence (osm/tourism reads, ADR-060). Defaults to the
       # SAME `database` service so a single Postgres still works in dev/CI; prod/Ansible
@@ -130,6 +147,10 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      # "true" lets the prod image boot on the compose default PostgreSQL and Redis
+      # passwords. Only the local iso-prod stacks set it (`make start`, recette),
+      # whose database volume was initialised with the default; never prod.
+      ALLOW_LOCAL_DEFAULT_CREDENTIALS: "${ALLOW_LOCAL_DEFAULT_CREDENTIALS:-false}"
       # Doctrine migrations executed at container boot via entrypoint.sh (ADR-032).
       # Set to "false" if a migration is suspected to be problematic — then run migrations manually.
       MIGRATIONS_ON_BOOT: "${MIGRATIONS_ON_BOOT:-true}"
@@ -172,8 +193,16 @@ services:
     command: bin/console messenger:consume async --time-limit=3600 -vv
     networks:
       - default
+      - backend
     restart: unless-stopped
     read_only: true
+    # Same as php, minus the ports (SEC-19).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
     tmpfs:
       - /tmp
       # Writable cache on the read-only rootfs. cache.app already goes to Redis
@@ -226,13 +255,16 @@ services:
       # env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot guard fails
       # closed rather than silently using the committed dev default.
       REFRESH_TOKEN_ENC_KEY: "${REFRESH_TOKEN_ENC_KEY:-}"
-      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
-      MESSENGER_FAILED_DSN: redis://redis:6379/failed
-      REDIS_URL: redis://redis:6379
+      # Redis requires a password (SEC-21): Messenger and the cache unserialize what
+      # they read, so write access to Redis is code execution in php and worker.
+      # The password goes in the userinfo verbatim: keep it URL-safe (hex).
+      MESSENGER_TRANSPORT_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379/messages"
+      MESSENGER_FAILED_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379/failed"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379"
       # Symfony Lock store. Without this, framework.lock falls back to api/.env's
       # redis://localhost:6379 (unreachable from the container) -> trip creation
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
-      LOCK_DSN: redis://redis:6379
+      LOCK_DSN: "redis://:${REDIS_PASSWORD:-ChangeMeRedis}@redis:6379"
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       # Shared read-only PG-référence (osm/tourism reads, ADR-060). Same default as php.
       REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8}"
@@ -261,6 +293,7 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      ALLOW_LOCAL_DEFAULT_CREDENTIALS: "${ALLOW_LOCAL_DEFAULT_CREDENTIALS:-false}"
       # Workers must not run migrations — only the php service does (see ADR-032).
       MIGRATIONS_ON_BOOT: "false"
       VALHALLA_BASE_URI: ${VALHALLA_BASE_URI:-http://valhalla:8002}
@@ -320,6 +353,11 @@ services:
       secrets:
         - sentry_auth_token
     restart: unless-stopped
+    # Runs as 1001 and needs no capability (SEC-19).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     # Next.js standalone server memory budget (#566).
     deploy:
       resources:
@@ -461,6 +499,20 @@ services:
     # former postgres:18-alpine base (same PG18 binaries + data layout). ADR-040.
     image: postgis/postgis:18-3.6-alpine
     restart: unless-stopped
+    networks:
+      - backend
+    # The entrypoint starts as root, fixes the data directory ownership and drops
+    # to `postgres` (SEC-19): those are the only capabilities it uses.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     # Modest tuning for the beta profile (#566): max_connections covers php +
     # 2 async workers + provisioner with headroom; shared_buffers
     # stays well inside the 1 GB limit below. effective_cache_size tells the
@@ -515,6 +567,21 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+    networks:
+      - backend
+    # Same entrypoint pattern as database: chown, then drop to `redis` (SEC-19).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # redis-cli in this container (healthcheck, runbooks, make perf-db-report)
+    # authenticates with this.
+    environment:
+      REDISCLI_AUTH: "${REDIS_PASSWORD:-ChangeMeRedis}"
     # volatile-lru protects the Messenger queue (the transport's streams carry no TTL,
     # so they are never evicted) while letting the TTL-bearing OSM/weather caches be
     # evicted under pressure — so enqueue (XADD) writes keep succeeding instead of
@@ -536,6 +603,8 @@ services:
       - "10000"
       - --slowlog-max-len
       - "256"
+      - --requirepass
+      - "${REDIS_PASSWORD:-ChangeMeRedis}"
     deploy:
       resources:
         limits:
@@ -558,6 +627,9 @@ services:
       context: ./
       dockerfile: .docker/provisioner/Dockerfile
       target: prod
+    # Reaches the in-stack `database` (dev, CI) over backend.
+    networks:
+      - backend
     volumes:
       - .docker/osm/data:/data
       # Read-only view of the routing volume, so the provisioner can observe which
@@ -602,6 +674,10 @@ services:
       resources:
         limits:
           memory: 2G
+
+networks:
+  # PostgreSQL + Redis, and the services that use them (php, worker, provisioner).
+  backend: ~
 
 volumes:
   caddy_data: ~

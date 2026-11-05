@@ -37,7 +37,7 @@ only Traefik, Valhalla and PG-reference join both sides. Traefik trusts
 |------|----------------|
 | `common` | Timezone, base packages, unattended-upgrades, `deploy` user + SSH keys, `preview-deploy` user + forced-command SSH keys, `/etc/bike-trip-planner{,/jwt}`, optional anti-reclaim heartbeat timer |
 | `docker` | Docker Engine + compose plugin (arm64), `edge` / `btp-shared` (prod) and `edge-preview` / `btp-shared-preview` (previews) networks, optional GHCR login |
-| `traefik` | Traefik as the single reverse proxy on both edge networks: Docker provider, plain HTTP, **no ACME**, no published ports |
+| `traefik` | Traefik as the single reverse proxy on both edge networks: Docker provider through a read-only socket proxy (`tecnativa/docker-socket-proxy`, GET on containers/events only), plain HTTP, **no ACME**, no published ports |
 | `cloudflared` | Cloudflare Tunnel with a **locally-managed `config.yml`** (wildcard `*.${DOMAIN}` + `www.${DOMAIN}` -> `http://traefik:80`), credentials from Vault |
 | `app_deploy` | Repo checkout (first clone only, for compose bind mounts), prod env file (`/etc/bike-trip-planner/app.env`) + JWT PEM from Vault, release records dir, `btp-compose` wrapper, `deploy-prod.sh` hook, preview root + `main` checkout + `btp-preview` forced command, optional events-refresh timer |
 | `shared_infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared` and its read-only `reference_ro` app role (SELECT on `osm` + `tourism`), seed `valhalla-tiles` volume from a shipped tar |
@@ -145,8 +145,9 @@ Previews never go through the `deploy` user. GHA `deploy-preview` /
 `/usr/local/bin/btp-preview` (`deploy <pr> <php-digest> <pwa-digest>` or
 `teardown <pr>`). It runs the `-preview` images by digest with the compose
 files of `/opt/bike-trip-planner-previews/base` (a checkout of `main` it fetches
-on each deploy) and `/opt/bike-trip-planner-previews/preview.env`, which the
-operator provides, readable by `preview-deploy` (`root:preview-deploy 0640`).
+on each deploy) and `/opt/bike-trip-planner-previews/preview.env`. Ansible renders
+that file and the preview keypairs from the `vault_preview_*` secrets
+(`root:preview-deploy 0640`), and stops if one of them equals its prod value.
 
 Ansible clones the repo once and never moves the checkout afterwards
 (`update: false`): the deploy owns the revision. `btp-compose` therefore fails

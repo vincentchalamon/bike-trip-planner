@@ -57,13 +57,15 @@ Every command below runs **from the worktree root** — the `docker run` resolve
 ./scripts/generate-keypairs.sh --jwt api/config/jwt --oauth api/config/oauth --passphrase test --force
 # (or `make keypairs-test`, which is this exact line)
 
-docker run --rm --network bike-trip-planner_default -u 1000:1000 -e APP_ENV=test -e XDEBUG_MODE=off \
+docker run --rm --network bike-trip-planner_backend -u 1000:1000 -e APP_ENV=test -e XDEBUG_MODE=off \
   -e JWT_PASSPHRASE=test -e OAUTH_PASSPHRASE=test \
   -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8" \
-  -e REDIS_URL="redis://redis:6379" -e LOCK_DSN="redis://redis:6379" -e FRONTEND_URL="https://localhost" \
+  -e REDIS_URL="redis://:ChangeMeRedis@redis:6379" -e LOCK_DSN="redis://:ChangeMeRedis@redis:6379" -e FRONTEND_URL="https://localhost" \
   -v "$PWD/api:/app" -v "$PWD/api/var:/app/var" -v "$PWD/docs:/docs:ro" -v "$PWD/core:/core:ro" \
   -w /app --entrypoint vendor/bin/phpunit bike-trip-planner-php:dev --no-coverage tests/Unit tests/Integration
 ```
+
+Database and Redis sit on the stack's `backend` network (pwa is kept off it), and Redis requires the password (`ChangeMeRedis` in dev, `REDIS_PASSWORD` elsewhere).
 
 Three traps in that command:
 
@@ -75,7 +77,7 @@ Three traps in that command:
 
 - **`-v "$PWD/docs:/docs:ro"` is required.** `AlertDocumentationTest` reads the alert-engine table at `docs/alert-engine.md` relative to the project root, i.e. `/app/../docs/alert-engine.md`. Mounting only `api/` makes it fail with `docs/alert-engine.md not found at project root` — a false alarm that looks like a real regression.
 - **`-v "$PWD/core:/core:ro"` is required for the same reason.** `MercureEventContractTest` reads `core/mercure.ts` at the project root to diff the published event list against the shared TypeScript contract. Both mounts exist only because the command mounts `api/` as `/app`; CI checks the whole repository out, so neither is needed there.
-- The test database is auto-suffixed `_test` (`doctrine.php dbname_suffix`), so this never touches the dev data. **When several agents run PHPUnit in parallel, give each its own database** (`.../app_<name>?...`, created with `bin/console doctrine:database:create --if-not-exists -e test`) and its own Redis index (`redis://redis:6379/<n>` for both `REDIS_URL` and `LOCK_DSN`): suites such as `StageSnapshotInvariantTest` drop and recreate schemas, so a shared `app_test` fails mid-run with `ConnectionLost` in whichever agent is not the one dropping. Drop those databases when the work is merged.
+- The test database is auto-suffixed `_test` (`doctrine.php dbname_suffix`), so this never touches the dev data. **When several agents run PHPUnit in parallel, give each its own database** (`.../app_<name>?...`, created with `bin/console doctrine:database:create --if-not-exists -e test`) and its own Redis index (`redis://:ChangeMeRedis@redis:6379/<n>` for both `REDIS_URL` and `LOCK_DSN`): suites such as `StageSnapshotInvariantTest` drop and recreate schemas, so a shared `app_test` fails mid-run with `ConnectionLost` in whichever agent is not the one dropping. Drop those databases when the work is merged.
 - **API Platform's metadata cache survives `cache:clear`, so a resource or DTO you just edited can be read from the previous run.** The pools live in Redis, which `cache:clear` does not touch — it only empties `var/cache`. This bites hardest on the contract guards (`McpToolContractTest`, `PreconditionCoverageTest`, `IdempotencyCoverageTest`): they read property and operation metadata, so after adding or removing a property they can report the *old* shape, and a sabotage check comes back green when it should have failed. Run `bin/console cache:pool:clear --all -e test` in the throwaway container before trusting a metadata-driven assertion. CI checks out fresh and never sees this.
 
 `make test-e2e` needs the PWA built and served on `https://localhost`; a worktree's changes are not in the main stack's bundle. **CI is the real gate for Playwright** — say so plainly rather than implying local coverage you did not have. Since the pre-commit hook replays `make qa`, commit with `git -c core.hooksPath=/dev/null commit` once the legs are individually green.

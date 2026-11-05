@@ -61,7 +61,8 @@ those files.
 
 A preview reads the production Valhalla and PG-reference (over `btp-shared-preview`, never prod's
 networks), but has its own PG-app and Redis and reads its own non-production env file
-(`/opt/bike-trip-planner-previews/preview.env`). Each one budgets about 2 GB of RAM, so keep the
+(`/opt/bike-trip-planner-previews/preview.env`), rendered by Ansible from the `vault_preview_*`
+secrets; the playbook refuses a preview secret or keypair equal to the prod one. Each one budgets about 2 GB of RAM, so keep the
 number of open previews small. A change to the reference schema cannot be previewed, because
 previews never migrate the shared PG-reference.
 
@@ -129,10 +130,17 @@ the previews and the Cloudflare wildcard need the zone. The two addresses are se
 
 The `php` entrypoint refuses to boot when `APP_SECRET`, `MERCURE_JWT_KEY` or
 `REFRESH_TOKEN_ENC_KEY` is unset or still a default, when `MERCURE_JWT_KEY` is shorter than
-32 bytes, when `OAUTH_ENCRYPTION_KEY` is unset, or when the OAuth keypair is missing or identical
+32 bytes, when `OAUTH_ENCRYPTION_KEY` or `JWT_PASSPHRASE` is empty, when `DATABASE_PASSWORD` or
+`REDIS_PASSWORD` is still the compose default (only the local iso-prod stacks opt out, with
+`ALLOW_LOCAL_DEFAULT_CREDENTIALS=true`), or when the OAuth keypair is missing or identical
 to the session JWT keypair ([ADR-079](adr/adr-079-authorizing-an-agent-without-giving-it-a-session.md)).
 `ACCESS_REQUEST_HMAC_SECRET` fails closed at request time instead. The full list of secrets is in
 the [secrets inventory](runbooks/secrets-inventory.md).
+
+The containers run with `no-new-privileges` and every capability dropped except the few each
+one uses (`compose.yaml`); PostgreSQL and Redis sit on a `backend` network that pwa does not
+join, and Redis requires `REDIS_PASSWORD`. The Caddy admin API is off. Traefik reads the Docker
+API through a read-only socket proxy, never the socket itself.
 
 A new runtime variable must be passed through in `compose.yaml` for both `php` and `worker`, and
 added to the Ansible env template when production must set it: a variable only declared in
