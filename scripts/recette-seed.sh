@@ -14,7 +14,7 @@ BASE_URL="${BASE_URL:-https://localhost}"
 MAILCATCHER_URL="${MAILCATCHER_URL:-http://localhost:1080}"
 RECETTE_EMAIL="${RECETTE_EMAIL:-recette@example.com}"
 LOCALE="${RECETTE_LOCALE:-fr}"
-COMPOSE="docker compose -f compose.yaml -f compose.recette.yaml"
+COMPOSE="docker compose --env-file .env --env-file .env.recette -f compose.yaml -f compose.recette.yaml"
 CURL="curl -sk"
 
 json() { python3 -c "import sys,json;$1"; }

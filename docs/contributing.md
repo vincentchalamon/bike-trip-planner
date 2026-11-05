@@ -16,6 +16,15 @@ Task-oriented recipes for changing Bike Trip Planner. If you have never run the 
 `make stop` stops the containers, `make clean` also deletes the volumes. `make help` lists every
 target.
 
+The recette secrets (`APP_SECRET`, the Mercure key, the token encryption keys, the access-request
+HMAC secret) are not in the repository: `make start-recette` writes random ones to the untracked
+`.env.recette` on first run, and keeps them afterwards (delete the file to rotate, which logs every
+recette session out). A manual compose call against the recette stack must name both env files:
+`docker compose --env-file .env --env-file .env.recette -f compose.yaml -f compose.recette.yaml ...`.
+To reach the recette from a phone, `scripts/ngrok-recette.sh` explains the tunnel setup; the
+tunnel is public, so gate it with ngrok's `--oauth` flag when you test from a browser, and stop it
+when the session is over.
+
 ## Make a change
 
 1. Create a branch from `main`.

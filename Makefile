@@ -47,6 +47,11 @@ install: ## Install dependencies
 # both, here and in CI (#1309).
 ensure-keypairs-recette:
 	@./scripts/generate-keypairs.sh --jwt .docker/jwt-recette --oauth .docker/oauth-recette --passphrase recette
+	@./scripts/generate-recette-secrets.sh .env.recette
+
+# The recette secrets live in the untracked .env.recette (SEC-22); .env must be named too,
+# since an explicit --env-file replaces the implicit one.
+RECETTE_COMPOSE := docker compose --env-file .env --env-file .env.recette -f compose.yaml -f compose.recette.yaml
 
 # Routing is opt-in since #881: `valhalla` only serves a graph built out of band
 # by `make routing-build`, so booting it on a machine without a graph would fail.
@@ -77,7 +82,7 @@ start: ensure-keypairs-recette ## Start the Docker environment (Detached) in pro
 		docker compose -f compose.yaml up --wait
 
 start-recette: ensure-keypairs-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make routing-build <slug>` + `make routing-up`.
-	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
+	@$(RECETTE_COMPOSE) up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop
@@ -269,7 +274,7 @@ provision-override: ## Import operator corrections for a zone (e.g. make provisi
 
 provision-recette: ensure-keypairs-recette ## Open one reference zone on the iso-prod recette stack (e.g. make provision-recette nord-pas-de-calais)
 	@test -n "$(ARGS)" || { echo "Usage: make provision-recette <zone> (e.g. make provision-recette nord-pas-de-calais)"; exit 1; }
-	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner $(ARGS)
+	@$(RECETTE_COMPOSE) --profile provisioning run --rm -T provisioner $(ARGS)
 
 # Events are perishable, so unlike reference data they are refreshed on a schedule: this
 # re-imports the feeds (DataTourisme + OpenAgenda) for every open zone and purges events
