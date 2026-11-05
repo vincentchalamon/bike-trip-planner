@@ -64,6 +64,69 @@ final class AuthorizedApplicationsTest extends ApiTestCase
     }
 
     /**
+     * The grant row is the handle the account page revokes by. A token issued without one would
+     * be invisible there, and so impossible to take back: no row, no token.
+     */
+    #[Test]
+    public function aTokenWhoseGrantCannotBeRecordedIsNotIssued(): void
+    {
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+        $connection->executeStatement('ALTER TABLE oauth_grant RENAME TO oauth_grant_unavailable');
+
+        try {
+            $response = $this->requestTokenResponse($this->owner, ['trips:read']);
+        } finally {
+            $connection->executeStatement('ALTER TABLE oauth_grant_unavailable RENAME TO oauth_grant');
+        }
+
+        self::assertArrayNotHasKey('access_token', $response);
+        self::assertSame('server_error', $response['error'] ?? null);
+
+        $issued = $connection->fetchOne('SELECT COUNT(*) FROM oauth2_access_token');
+        self::assertIsNumeric($issued);
+        self::assertSame(0, (int) $issued, 'The token must be rolled back with the grant it could not record.');
+    }
+
+    /**
+     * A refresh token is single-use. Seeing a spent one again means two parties hold it, and
+     * nothing tells which is the agent: the whole grant goes, the pair minted by the first
+     * refresh included.
+     */
+    #[Test]
+    public function replayingASpentRefreshTokenRevokesTheGrant(): void
+    {
+        $first = $this->issueTokenResponse($this->owner, ['trips:read']);
+        self::assertIsString($first['refresh_token'] ?? null);
+
+        $rotated = $this->refresh($first['refresh_token']);
+        self::assertIsString($rotated['access_token'] ?? null, 'The first use of a refresh token must succeed.');
+        self::assertIsString($rotated['refresh_token'] ?? null);
+        self::assertSame(200, $this->callMcp($rotated['access_token'])->getStatusCode());
+
+        $replay = $this->refresh($first['refresh_token']);
+        self::assertSame('invalid_grant', $replay['error'] ?? null);
+
+        self::assertSame(401, $this->callMcp($rotated['access_token'])->getStatusCode(), 'The access token minted by the first refresh must die with the grant.');
+        self::assertSame('invalid_grant', $this->refresh($rotated['refresh_token'])['error'] ?? null, 'And so must its refresh token.');
+        self::assertNotNull($this->grantRows()[0]['revoked_at']);
+        self::assertSame([], $this->list());
+    }
+
+    #[Test]
+    public function aFirstRefreshLeavesTheGrantAlone(): void
+    {
+        $first = $this->issueTokenResponse($this->owner, ['trips:read']);
+        self::assertIsString($first['refresh_token'] ?? null);
+
+        $rotated = $this->refresh($first['refresh_token']);
+        self::assertIsString($rotated['access_token'] ?? null);
+
+        self::assertSame(200, $this->callMcp($rotated['access_token'])->getStatusCode());
+        self::assertNull($this->grantRows()[0]['revoked_at']);
+    }
+
+    /**
      * The one the review of this unit would have missed: a second authorisation that widens the
      * permissions must widen the row.
      *
@@ -379,6 +442,22 @@ final class AuthorizedApplicationsTest extends ApiTestCase
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function refresh(string $refreshToken): array
+    {
+        return $this->client()->request('POST', '/oauth/token', [
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            'extra' => ['parameters' => [
+                'grant_type' => 'refresh_token',
+                'client_id' => self::OAUTH_CLIENT_ID,
+                'refresh_token' => $refreshToken,
+                'resource' => 'https://localhost/mcp',
+            ]],
+        ])->toArray(false);
     }
 
     private function client(): Client

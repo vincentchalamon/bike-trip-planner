@@ -52,6 +52,22 @@ trait IssuesOAuthTokensTrait
      */
     private function issueTokenResponse(User $user, array $scopes): array
     {
+        $token = $this->requestTokenResponse($user, $scopes);
+
+        self::assertArrayHasKey('access_token', $token, 'The flow did not issue a token.');
+
+        return $token;
+    }
+
+    /**
+     * The same walk, without insisting that it ends in a token.
+     *
+     * @param list<string> $scopes
+     *
+     * @return array<string, mixed>
+     */
+    private function requestTokenResponse(User $user, array $scopes): array
+    {
         $cookie = bin2hex(random_bytes(16));
 
         $em = self::getContainer()->get('doctrine.orm.entity_manager');
@@ -87,7 +103,7 @@ trait IssuesOAuthTokensTrait
         $query = parse_url($this->redirectLocation($browser, $scopes), \PHP_URL_QUERY);
         parse_str(\is_string($query) ? $query : '', $parameters);
 
-        $token = $browser->request('POST', '/oauth/token', [
+        return $browser->request('POST', '/oauth/token', [
             'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
             'extra' => ['parameters' => [
                 'grant_type' => 'authorization_code',
@@ -98,10 +114,6 @@ trait IssuesOAuthTokensTrait
                 'resource' => 'https://localhost/mcp',
             ]],
         ])->toArray(false);
-
-        self::assertArrayHasKey('access_token', $token, 'The flow did not issue a token.');
-
-        return $token;
     }
 
     /**

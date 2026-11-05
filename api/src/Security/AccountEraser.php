@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\ApiResource\TripRequest;
+use App\Entity\DeviceToken;
+use App\Entity\EmailChangeToken;
+use App\Entity\NotificationPreference;
 use App\Entity\User;
 use App\Repository\AccessRequestRepository;
 use App\Repository\MagicLinkRepository;
@@ -69,6 +72,18 @@ final readonly class AccountEraser
             // CASCADE, so a lingering valid link could otherwise still authenticate the (now
             // anonymised) account.
             $this->magicLinkRepository->removeAllForUser($user);
+
+            // Same reason, three more tables hanging off the user: push tokens (a device that
+            // keeps receiving notifications for an erased account), pending email changes (the
+            // address the user was moving to, in clear) and notification settings.
+            foreach ([DeviceToken::class, EmailChangeToken::class, NotificationPreference::class] as $entity) {
+                $this->entityManager->createQueryBuilder()
+                    ->delete($entity, 'r')
+                    ->where('r.user = :user')
+                    ->setParameter('user', $user)
+                    ->getQuery()
+                    ->execute();
+            }
 
             // Purge early-access requests holding the email/IP PII (standalone table, no user FK).
             $this->accessRequestRepository->removeAllForEmail($email);

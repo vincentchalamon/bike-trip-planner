@@ -41,6 +41,11 @@ use Symfony\Component\DependencyInjection\Attribute\Target;
  * request to an attacker-named host behind no authentication at all. It does not need to —
  * the client was persisted by the authorization leg, and the token endpoint finds it in the
  * database like any other.
+ *
+ * A client built from a document keeps it only for the max-age the document was served with
+ * (bounded by the resolver). Past that, the next authorization reads it again: on success the
+ * name and redirect URIs are replaced, on failure the authorization is refused. A redirect URI
+ * the document withdrew therefore stops being accepted within that max-age.
  */
 // Priority 7: just AFTER the firewall, which sits at 8. Running before it would mean
 // fetching a third-party URL on behalf of nobody — and an unauthenticated request never
@@ -73,10 +78,10 @@ final readonly class ClientIdMetadataDocumentListener
             return;
         }
 
-        if ($this->clients->find($clientId) instanceof ClientInterface) {
-            // Already known. Re-reading the document on every authorization would hand a
-            // third party a request per attempt; the resolver's own cache expiry is what
-            // brings changes back in.
+        $known = $this->clients->find($clientId);
+        if ($known instanceof ClientInterface && !$this->isStale($known)) {
+            // Known and within the max-age its document asked for. Re-reading the document on
+            // every authorization would hand a third party a request per attempt.
             return;
         }
 
@@ -89,7 +94,9 @@ final readonly class ClientIdMetadataDocumentListener
             $this->throttle($user->getUserIdentifier(), $clientId);
             $metadata = $this->resolver->resolve($clientId);
         } catch (ClientMetadataRejected) {
-            // One answer for every refusal. The reason is in the log; telling the caller
+            // One answer for every refusal, a stale client's included: a document that no
+            // longer resolves is no longer evidence of anything, so the redirect URIs it once
+            // listed are not honoured from memory. The reason is in the log; telling the caller
             // whether the host timed out, resolved to a private address or answered badly
             // would turn this endpoint into a network probe.
             $event->setResponse(new JsonResponse([
@@ -100,7 +107,41 @@ final readonly class ClientIdMetadataDocumentListener
             return;
         }
 
+        if ($known instanceof OAuthClient) {
+            // League then checks the requested redirect_uri against this list, so one the
+            // document withdrew is refused from now on.
+            $this->apply($known, $metadata);
+            $this->clients->save($known);
+
+            return;
+        }
+
         $this->persist($metadata);
+    }
+
+    /**
+     * A client registered by hand carries no expiry and is never re-read; one built from a
+     * document is, once the max-age it was fetched with has passed.
+     */
+    private function isStale(ClientInterface $client): bool
+    {
+        if (!$client instanceof OAuthClient) {
+            return false;
+        }
+
+        $expiresAt = $client->getMetadataExpiresAt();
+
+        return $expiresAt instanceof \DateTimeImmutable && $expiresAt <= $this->clock->now();
+    }
+
+    private function apply(OAuthClient $client, ClientMetadata $metadata): void
+    {
+        $client->setName($metadata->clientName);
+        $client->setRedirectUris(...array_map(
+            static fn (string $uri): RedirectUri => new RedirectUri($uri),
+            $metadata->redirectUris,
+        ));
+        $client->setMetadataExpiresAt($metadata->expiresAt);
     }
 
     private function throttle(string $userIdentifier, string $clientId): void
@@ -120,10 +161,7 @@ final readonly class ClientIdMetadataDocumentListener
     private function persist(ClientMetadata $metadata): void
     {
         $client = new OAuthClient($metadata->clientName, $metadata->clientId, null);
-        $client->setRedirectUris(...array_map(
-            static fn (string $uri): RedirectUri => new RedirectUri($uri),
-            $metadata->redirectUris,
-        ));
+        $this->apply($client, $metadata);
         // Public client, no secret, and the two grants an MCP client uses. Plain-text PKCE
         // is refused explicitly rather than left to a default that could move.
         $client->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));

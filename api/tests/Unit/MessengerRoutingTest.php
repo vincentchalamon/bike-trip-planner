@@ -39,6 +39,9 @@ final class MessengerRoutingTest extends TestCase
     /** Matches `SomeMessage::class => 'transport',` rows of the routing table. */
     private const string ROUTING_PATTERN = '/^\s*([A-Za-z_][A-Za-z0-9_]*)::class\s*=>\s*\'([a-z_]+)\',/m';
 
+    /** Framework messages routed on purpose: they live outside api/src/Message. */
+    private const array FRAMEWORK_MESSAGES = ['SendEmailMessage'];
+
     #[Test]
     public function everyMessageIsRoutedToATransport(): void
     {
@@ -59,7 +62,7 @@ final class MessengerRoutingTest extends TestCase
     #[Test]
     public function everyRoutedMessageStillExists(): void
     {
-        $stale = array_values(array_diff(array_keys($this->routedMessages()), $this->declaredMessages()));
+        $stale = array_values(array_diff(array_keys($this->routedMessages()), $this->declaredMessages(), self::FRAMEWORK_MESSAGES));
 
         self::assertSame(
             [],
@@ -70,6 +73,16 @@ final class MessengerRoutingTest extends TestCase
                 implode(', ', $stale),
             ),
         );
+    }
+
+    /**
+     * An inline SMTP round trip only happens for an address that exists, so its latency tells
+     * a caller of /auth/request-link or /access-requests which addresses are registered.
+     */
+    #[Test]
+    public function mailIsSentOffTheRequestPath(): void
+    {
+        self::assertSame('async', $this->routedMessages()['SendEmailMessage'] ?? null, 'SendEmailMessage must be routed to the "async" transport, which the worker consumes.');
     }
 
     #[Test]

@@ -204,3 +204,26 @@ costs one re-authorization.
   filter is what makes that invisible.
 - **The mobile screen has no maquette.** It follows the components and spacing of its
   neighbours, which is a convention and not a design decision.
+
+## Addendum, 05/11/2026 - the grant row is a condition of the token
+
+§3 said "a user it cannot resolve is logged, not raised", and the code went further: any
+failure to write the row was caught and logged while the token was served. A token with no
+row is invisible on the account page and therefore impossible to revoke from it, so that
+trade (availability over revocability) is reversed. `AudienceBoundAccessTokenRepository`
+now persists the token and writes the row in **one transaction**; any failure rolls the token
+back and answers `server_error`, including the unresolvable user, which `GrantRecorder` now
+raises. The upsert stays a DBAL `ON CONFLICT`, so the concurrent-exchange race §3 describes is
+still the normal path rather than an exception.
+
+The same review made a replayed refresh token revoke the grant it belongs to, through
+`GrantRevoker` (ADR-079 addendum of the same date).
+
+§5 goes further too: a verified email change now also deletes every other first-party
+refresh token of the account (the caller's, identified by its refresh cookie, survives; a
+mobile caller cannot be told apart and is signed out with the rest) and sends a notice to the
+previous address.
+
+On the sweep in the known limits: `PurgeExpiredTokensCommand` (PWA session tokens only) now
+keeps a rotated token for the lifetime of the successor it pointed at, so the first-party reuse
+detection still finds the row it needs.

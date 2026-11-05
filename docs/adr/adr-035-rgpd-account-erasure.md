@@ -43,6 +43,10 @@ Handled by `AccountDeleteProcessor` inside a single transaction:
    the bulk of personal and route data, so they are physically removed.
 2. **Revoke sessions** — all refresh tokens for the user are removed, so no lingering session can
    be reused.
+   The rows hanging off the user are deleted explicitly too: the soft-delete below fires no
+   `ON DELETE CASCADE`. That covers magic links, push device tokens, pending email changes (which
+   hold the target address in clear), notification preferences, early-access requests, and the
+   OAuth credentials and grant rows of ADR-079/ADR-082 (see `App\Security\AccountEraser`).
 3. **Anonymise the account** — `User::anonymize()` stamps `deletedAt` (soft-delete) and
    irreversibly replaces the email with a non-routable, unique placeholder, breaking the PII link.
 4. The response is `204 No Content` and clears the refresh-token cookie.

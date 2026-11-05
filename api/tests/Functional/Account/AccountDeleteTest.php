@@ -7,6 +7,11 @@ namespace App\Tests\Functional\Account;
 use App\Tests\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\Entity\AccessRequest;
+use App\Entity\DeviceToken;
+use App\Entity\EmailChangeToken;
+use App\Entity\NotificationPreference;
+use App\Enum\DevicePlatform;
+use App\Enum\NotificationCategory;
 use App\Entity\MagicLink;
 use App\Entity\RefreshToken;
 use App\Entity\User;
@@ -181,6 +186,43 @@ final class AccountDeleteTest extends ApiTestCase
         \assert($reloaded instanceof User);
 
         $this->assertCount(0, $repo->findBy(['user' => $reloaded]), 'magic_link rows must be purged on erasure');
+    }
+
+    /**
+     * The soft delete fires no ON DELETE CASCADE, so every table hanging off the user has to be
+     * emptied by hand: a pending email change holds the new address in clear, and a device
+     * token would keep a phone receiving pushes for an erased account.
+     */
+    #[Test]
+    public function deleteAccountPurgesDeviceTokensPendingEmailChangesAndNotificationPreferences(): void
+    {
+        $fixtures = $this->createUserWithTrip('rows-purge@example.com');
+        $user = $fixtures['user'];
+        $userId = $user->getId()->toRfc4122();
+
+        $em = $this->getEntityManager();
+        $em->persist(new DeviceToken($user, 'ExponentPushToken[erasure]', DevicePlatform::ANDROID));
+        $em->persist(new EmailChangeToken($user, hash('sha256', 'pending-change'), 'next-address@example.com', new \DateTimeImmutable('+30 minutes')));
+        $em->persist(new NotificationPreference($user, NotificationCategory::WEATHER_SAFETY, false));
+
+        $bystander = new User('bystander-rows@example.com');
+        $em->persist($bystander);
+        $em->persist(new DeviceToken($bystander, 'ExponentPushToken[bystander]', DevicePlatform::IOS));
+        $em->flush();
+
+        self::createClient()->request('DELETE', '/users/me', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+        $this->assertResponseStatusCodeSame(204);
+
+        $em->clear();
+        $reloaded = $em->find(User::class, Uuid::fromString($userId));
+        \assert($reloaded instanceof User);
+
+        $this->assertSame(0, $em->getRepository(DeviceToken::class)->count(['user' => $reloaded]), 'device_token rows must be purged on erasure');
+        $this->assertSame(0, $em->getRepository(EmailChangeToken::class)->count(['user' => $reloaded]), 'email_change_token rows must be purged on erasure');
+        $this->assertSame(0, $em->getRepository(NotificationPreference::class)->count(['user' => $reloaded]), 'notification_preference rows must be purged on erasure');
+        $this->assertSame(1, $em->getRepository(DeviceToken::class)->count([]), 'Another account keeps its device tokens.');
     }
 
     #[Test]

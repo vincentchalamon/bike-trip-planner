@@ -6,6 +6,11 @@ email_change:
     button: "Confirmer mon adresse"
     expires: "Ce lien expire dans %minutes% minutes et ne peut être utilisé qu'une seule fois."
     ignore: "Si tu n'as pas demandé ce changement, tu peux ignorer cet email : ton adresse actuelle reste inchangée."
+  notice:
+    subject: "L'adresse email de ton compte a été modifiée - Bike Trip Planner"
+    body: "L'adresse email de ton compte Bike Trip Planner vient d'être modifiée. Cette adresse ne permet plus de s'y connecter."
+    sessions: "Tous les autres appareils connectés au compte ont été déconnectés."
+    not_you: "Si tu n'es pas à l'origine de ce changement, quelqu'un d'autre a peut-être accès à ton compte : contacte vite le support Bike Trip Planner pour qu'on t'aide à le récupérer."
   error:
     same_email: "Cette adresse est déjà celle de ton compte."
     email_taken: "Cette adresse email est déjà utilisée."

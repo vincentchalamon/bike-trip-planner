@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -193,6 +194,6 @@ final class ClientMetadataResolverTest extends TestCase
 
     private function resolver(MockHttpClient $http): ClientMetadataResolver
     {
-        return new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), self::OWN_URI);
+        return new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), self::OWN_URI, new MockClock());
     }
 }

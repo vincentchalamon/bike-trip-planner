@@ -7,6 +7,10 @@ namespace App\Tests\Functional\Account;
 use App\Tests\ApiTestCase;
 use App\Tests\Functional\FailingMailerTrait;
 use App\Entity\EmailChangeToken;
+use App\Entity\RefreshToken;
+use App\Security\AuthCookies;
+use App\Security\RefreshTokenEncryptor;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -183,6 +187,85 @@ final class EmailChangeTest extends ApiTestCase
         $reloaded = $em->getRepository(User::class)->find($fixtures['user']->getId());
         $this->assertInstanceOf(User::class, $reloaded);
         $this->assertSame('verify-new@example.com', $reloaded->getEmail());
+    }
+
+    /**
+     * Whoever completes the change may be someone holding a stolen session: the old address is
+     * told, and every other session of the account ends. The caller's own, identified by its
+     * refresh cookie, survives, or the change would sign out the person who just made it.
+     */
+    #[Test]
+    public function verifyNotifiesThePreviousAddressAndEndsTheOtherSessions(): void
+    {
+        $fixtures = $this->createAuthenticatedUser('notice-old@example.com');
+        $user = $fixtures['user'];
+        $encryptor = self::getContainer()->get(RefreshTokenEncryptor::class);
+
+        $em = $this->getEntityManager();
+        $em->persist(RefreshToken::issue($user, $encryptor, 'caller-session', new \DateTimeImmutable('+30 days')));
+        $em->persist(RefreshToken::issue($user, $encryptor, 'other-device', new \DateTimeImmutable('+30 days')));
+
+        $bystander = $this->createAuthenticatedUser('notice-bystander@example.com')['user'];
+        $em->persist(RefreshToken::issue($bystander, $encryptor, 'bystander-session', new \DateTimeImmutable('+30 days')));
+        $em->flush();
+        $this->createTokenForUser($user, 'notice-new@example.com', 'notice-change-token');
+
+        $client = self::createClient();
+        $client->getCookieJar()->set(new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, 'caller-session', null, '/', 'localhost'));
+        $client->request('POST', '/users/me/email-change/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'notice-change-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertSame(['notice-old@example.com'], $this->getSentRecipients(), 'The notice goes to the previous address, and only there.');
+
+        $remaining = array_map(
+            static fn (RefreshToken $token): string => $token->getTokenDigest(),
+            $this->getEntityManager()->getRepository(RefreshToken::class)->findAll(),
+        );
+        sort($remaining);
+        $expected = [RefreshTokenEncryptor::digest('caller-session'), RefreshTokenEncryptor::digest('bystander-session')];
+        sort($expected);
+        $this->assertSame($expected, $remaining);
+    }
+
+    /** Without a cookie (a mobile client) the caller cannot be told apart: every session ends. */
+    #[Test]
+    public function verifyWithoutARefreshCookieEndsEverySession(): void
+    {
+        $fixtures = $this->createAuthenticatedUser('nocookie-old@example.com');
+        $em = $this->getEntityManager();
+        $em->persist(RefreshToken::issue($fixtures['user'], self::getContainer()->get(RefreshTokenEncryptor::class), 'some-device', new \DateTimeImmutable('+30 days')));
+        $em->flush();
+        $this->createTokenForUser($fixtures['user'], 'nocookie-new@example.com', 'nocookie-change-token');
+
+        self::createClient()->request('POST', '/users/me/email-change/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'nocookie-change-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertSame(0, $this->getEntityManager()->getRepository(RefreshToken::class)->count([]));
+    }
+
+    /** A change that did not happen ends nothing and tells nobody. */
+    #[Test]
+    public function aRefusedVerifyKeepsTheSessionsAndSendsNothing(): void
+    {
+        $fixtures = $this->createAuthenticatedUser('refused-old@example.com');
+        $em = $this->getEntityManager();
+        $em->persist(RefreshToken::issue($fixtures['user'], self::getContainer()->get(RefreshTokenEncryptor::class), 'kept-device', new \DateTimeImmutable('+30 days')));
+        $em->flush();
+
+        self::createClient()->request('POST', '/users/me/email-change/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'no-such-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertSame([], $this->getSentRecipients());
+        $this->assertSame(1, $this->getEntityManager()->getRepository(RefreshToken::class)->count([]));
     }
 
     #[Test]

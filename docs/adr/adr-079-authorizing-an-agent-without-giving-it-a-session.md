@@ -223,3 +223,33 @@ carried.
 
 **Moving the PWA and the mobile app onto OAuth too.** Rejected for now, with reasons above.
 Revisiting it is a unit of its own, not a paragraph in this one.
+
+## Addendum, 05/11/2026 - a document is re-read, and a replayed refresh token costs the grant
+
+Two behaviours above changed after a security review.
+
+**A client built from a document is re-read once its max-age has passed.** The section on
+registration said nothing about what happens after the first fetch, and the code answered
+"never": a known client short-circuited the resolver, so the redirect URIs and name of its
+first document stayed authoritative forever. A client that withdrew a callback address (a
+sub-domain it gave up, say) kept it accepted under its own trusted `client_id`.
+`oauth2_client.metadata_expires_at` now records when the document stops being trusted, from
+its own `max-age` bounded by the resolver's floor and ceiling (5 minutes to a day). Past it,
+the next authorization re-resolves through the same throttle and checks as a first fetch. On
+success the name and redirect URIs are replaced before league matches the requested
+`redirect_uri`; on any failure the authorization is refused with the usual `invalid_client`,
+because a document that no longer resolves is no longer evidence for the URIs it once listed.
+A client registered by hand has no expiry and is never re-read. Re-resolution still runs on
+`/oauth/authorize` only.
+
+**Replaying a spent refresh token revokes the grant.** "The bespoke refresh path is stricter
+than league's" stays true of the grace window and the encryption, no longer of replay. League
+answers a revoked refresh token with a plain `invalid_grant`, so whoever refreshed first, the
+agent or a thief, kept the new pair. `ReplayRevokingRefreshTokenRepository` decorates league's
+refresh token repository: when `isRefreshTokenRevoked()` is true (reached only after the token
+decrypted, matched the client and is unexpired), the live (user, client) grant it was issued
+under is revoked through `GrantRevoker`, the pair minted by the first refresh included. There
+is no grace window on this side: an agent racing two refreshes with the same token loses its
+grant, as OAuth 2.1 §4.3.1 recommends. A token revoked by the user leaves no live grant, so its
+replay revokes nothing; one revoked before a later re-authorisation of the same client does
+revoke that new grant, which is the conservative reading of a stale credential resurfacing.
