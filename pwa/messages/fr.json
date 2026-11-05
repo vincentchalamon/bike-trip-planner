@@ -1048,6 +1048,7 @@
   },
   "oauthConsent": {
     "title": "Autoriser cette application",
+    "publisherLabel": "Publiée depuis",
     "loading": "Chargement de la demande…",
     "goneTitle": "Cette demande n'est plus valable",
     "goneDescription": "Elle a expiré, a déjà reçu une réponse, ou ne vous appartient pas. Relancez l'autorisation depuis votre application.",
@@ -1059,6 +1060,7 @@
     "redirectLabel": "Elle sera renvoyée vers",
     "redirectUnknown": "adresse non précisée",
     "loopbackWarning": "Cette application s'exécute sur votre propre machine. Rien ne permet de vérifier qu'il s'agit bien de celle que vous croyez : n'autorisez que si vous venez de la lancer vous-même.",
+    "redirectMismatchWarning": "L'adresse de retour n'est pas sur le domaine qui publie cette application. Le nom affiché est celui qu'elle s'est choisi : n'autorisez que si vous reconnaissez les deux domaines.",
     "approve": "Autoriser",
     "deny": "Refuser"
   },

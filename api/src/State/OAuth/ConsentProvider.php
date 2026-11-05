@@ -44,10 +44,13 @@ final readonly class ConsentProvider implements ProviderInterface
         }
 
         $host = null === $record->redirectUri ? null : parse_url($record->redirectUri, \PHP_URL_HOST);
+        // The name is whatever the metadata document says; the host it was fetched from is not.
+        $clientIdHost = parse_url($record->clientId, \PHP_URL_HOST);
 
         return new Consent(
             handle: $handle,
             clientName: $record->clientName,
+            clientIdHost: \is_string($clientIdHost) ? $clientIdHost : null,
             scopes: $record->scopes,
             redirectHost: \is_string($host) ? $host : null,
             redirectsToLoopback: \in_array($host, ['127.0.0.1', '[::1]', '::1'], true),

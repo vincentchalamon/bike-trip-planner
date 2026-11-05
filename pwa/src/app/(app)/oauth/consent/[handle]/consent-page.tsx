@@ -24,6 +24,23 @@ import {
  * could trigger, and it only completes because a decision is already on file — recorded with
  * a credential that lives in this tab's memory and that no third-party page can produce.
  */
+/**
+ * The only place the browser is ever sent from here is back to the authorization endpoint
+ * of this origin. The server builds `continueUrl`, but a page that follows whatever it is
+ * handed would turn any future bug there into an open redirect off the consent screen.
+ */
+function isAuthorizeEndpoint(raw: string): boolean {
+  try {
+    const url = new URL(raw, window.location.origin);
+    return (
+      url.origin === window.location.origin &&
+      url.pathname === "/oauth/authorize"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function OAuthConsentPage({ handle }: { handle: string }) {
   const t = useTranslations("oauthConsent");
   const [consent, setConsent] = useState<PendingConsent | null>(null);
@@ -49,6 +66,10 @@ export default function OAuthConsentPage({ handle }: { handle: string }) {
 
   const decide = async (decision: "approve" | "deny") => {
     if (!consent?.continueUrl) return;
+    if (!isAuthorizeEndpoint(consent.continueUrl)) {
+      setState("gone");
+      return;
+    }
     setState("working");
 
     if (!(await decidePendingConsent(handle, decision))) {
@@ -113,6 +134,14 @@ export default function OAuthConsentPage({ handle }: { handle: string }) {
         >
           {consent.clientName}
         </p>
+        {consent.clientIdHost ? (
+          <p className="text-muted-foreground text-xs">
+            {t("publisherLabel")}{" "}
+            <span className="font-mono" data-testid="oauth-consent-client-host">
+              {consent.clientIdHost}
+            </span>
+          </p>
+        ) : null}
       </header>
 
       <section
@@ -149,6 +178,24 @@ export default function OAuthConsentPage({ handle }: { handle: string }) {
           >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>{t("loopbackWarning")}</span>
+          </p>
+        ) : null}
+
+        {/*
+          The name is self-declared; the client_id host is not. A return address on another
+          domain is legitimate for some clients, but it is exactly what an impostor document
+          borrowing a known name looks like, so it is said out loud.
+        */}
+        {!consent.redirectsToLoopback &&
+        consent.clientIdHost &&
+        consent.redirectHost &&
+        consent.redirectHost !== consent.clientIdHost ? (
+          <p
+            className="flex items-start gap-2 text-xs"
+            data-testid="oauth-consent-redirect-mismatch-warning"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>{t("redirectMismatchWarning")}</span>
           </p>
         ) : null}
       </section>

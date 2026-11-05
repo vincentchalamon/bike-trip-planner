@@ -65,6 +65,8 @@ final readonly class Consent
         public string $handle,
         #[ApiProperty(description: "The client's self-declared name. Third-party text: display it, never interpolate it into a sentence.")]
         public string $clientName,
+        #[ApiProperty(description: 'Host of the client_id URL, i.e. who actually published the client. Null for a client_id that is not a URL.')]
+        public ?string $clientIdHost,
         public array $scopes,
         #[ApiProperty(description: 'Host of the address the agent will be sent back to. The specification requires showing it.')]
         public ?string $redirectHost,

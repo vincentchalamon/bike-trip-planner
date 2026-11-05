@@ -123,6 +123,7 @@ final class ConsentFlowTest extends ApiTestCase
         $consent = $this->read($handle, $this->jwt)->toArray(false);
 
         self::assertSame('Example Agent', $consent['clientName']);
+        self::assertSame('agent.example.com', $consent['clientIdHost']);
         self::assertSame(['trips:read'], $consent['scopes']);
         self::assertSame('127.0.0.1', $consent['redirectHost']);
         self::assertTrue($consent['redirectsToLoopback']);

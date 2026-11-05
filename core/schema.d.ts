@@ -1606,6 +1606,8 @@ export interface components {
             handle?: string;
             /** @description The client's self-declared name. Third-party text: display it, never interpolate it into a sentence. */
             clientName?: string;
+            /** @description Host of the client_id URL, i.e. who actually published the client. Null for a client_id that is not a URL. */
+            clientIdHost?: string | null;
             /**
              * @description What the agent is asking for, as the authorization server
              *     resolved it — not as the request asked
