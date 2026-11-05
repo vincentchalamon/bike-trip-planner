@@ -25,6 +25,8 @@ final readonly class ClientMetadata
         public string $clientId,
         public string $clientName,
         public array $redirectUris,
+        /** When the document stops being trusted, from its own max-age, bounded. */
+        public \DateTimeImmutable $expiresAt,
     ) {
     }
 }

@@ -26,6 +26,9 @@ use League\Bundle\OAuth2ServerBundle\Model\AbstractClient;
  *
  * So the column is widened, and the resolver refuses a client_id longer than it.
  *
+ * `metadataExpiresAt` is the one column of ours: when a client built from a metadata document
+ * has to be read again.
+ *
  * Everything else — name, secret, redirect URIs, grants, scopes, active, plaintext-PKCE
  * flag — comes from AbstractClient, which the bundle maps as a mapped superclass.
  */
@@ -44,4 +47,21 @@ class OAuthClient extends AbstractClient
     #[ORM\Column(type: 'string', length: self::IDENTIFIER_MAX_LENGTH)]
     #[\Override]
     protected string $identifier;
+
+    /**
+     * When the metadata document this client was built from stops being trusted, after which
+     * the next authorization reads it again. Null for a client registered by hand.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $metadataExpiresAt = null;
+
+    public function getMetadataExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->metadataExpiresAt;
+    }
+
+    public function setMetadataExpiresAt(\DateTimeImmutable $metadataExpiresAt): void
+    {
+        $this->metadataExpiresAt = $metadataExpiresAt;
+    }
 }

@@ -25,7 +25,8 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
-use Symfony\Component\Clock\NativeClock;
+use Symfony\Component\Clock\MockClock;
+use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 
 /**
  * When the authorization server is willing to open a connection on a caller's say-so.
@@ -43,10 +44,13 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
 
     private MockObject&Security $security;
 
+    private MockClock $clock;
+
     #[\Override]
     protected function setUp(): void
     {
         $this->clients = $this->createMock(ClientManagerInterface::class);
+        $this->clock = new MockClock('2026-11-05 12:00:00');
         $this->security = $this->createMock(Security::class);
         $this->security->method('getUser')->willReturn(new User('owner@example.com'));
     }
@@ -83,18 +87,79 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
     }
 
     /**
-     * A client already on file is not re-read on every authorization: that would hand a third
-     * party one request per attempt. The resolver's cache expiry is what brings changes back.
+     * A client already on file is not re-read on every authorization while its document is
+     * fresh: that would hand a third party one request per attempt.
      */
     #[Test]
-    public function aKnownClientIsNotFetchedAgain(): void
+    public function aKnownClientIsNotFetchedAgainWithinItsMaxAge(): void
     {
         $http = new MockHttpClient([]);
-        $this->clients->method('find')->willReturn(new OAuthClient('Known', self::CLIENT_ID, null));
+        $this->clients->method('find')->willReturn($this->knownClient('+1 minute'));
+        $this->clients->expects(self::never())->method('save');
 
         $this->listener($http)($this->event('oauth2_authorize'));
 
         self::assertSame(0, $http->getRequestsCount());
+    }
+
+    /** A client registered by hand has no document to go back to. */
+    #[Test]
+    public function aClientRegisteredByHandIsNeverFetched(): void
+    {
+        $http = new MockHttpClient([]);
+        $this->clients->method('find')->willReturn(new OAuthClient('Registered', self::CLIENT_ID, null));
+
+        $this->listener($http)($this->event('oauth2_authorize'));
+
+        self::assertSame(0, $http->getRequestsCount());
+    }
+
+    /**
+     * Past its max-age the document is read again and what it says now replaces what it said:
+     * a redirect URI it withdrew must stop being one league will send a user to.
+     */
+    #[Test]
+    public function aStaleClientIsReadAgainAndTakesWhatTheDocumentSaysNow(): void
+    {
+        $http = new MockHttpClient(new MockResponse(json_encode([
+            'client_id' => self::CLIENT_ID,
+            'client_name' => 'Renamed Agent',
+            'redirect_uris' => ['https://agent.example.com/new-callback'],
+        ], \JSON_THROW_ON_ERROR), ['response_headers' => ['cache-control' => 'max-age=600']]));
+
+        $known = $this->knownClient('-1 second');
+        $this->clients->method('find')->willReturn($known);
+        $this->clients->expects(self::once())->method('save')->with($known);
+
+        $event = $this->event('oauth2_authorize');
+        $this->listener($http)($event);
+
+        self::assertSame(1, $http->getRequestsCount());
+        self::assertFalse($event->hasResponse());
+        self::assertSame('Renamed Agent', $known->getName());
+        self::assertSame(['https://agent.example.com/new-callback'], array_map(strval(...), $known->getRedirectUris()));
+        self::assertEquals($this->clock->now()->modify('+600 seconds'), $known->getMetadataExpiresAt());
+    }
+
+    /**
+     * A stale client whose document no longer resolves is refused, not served from memory: the
+     * URIs it once listed are not evidence of anything any more.
+     */
+    #[Test]
+    public function aStaleClientWhoseDocumentNoLongerResolvesIsRefused(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['http_code' => 404]));
+        $known = $this->knownClient('-1 second');
+        $this->clients->method('find')->willReturn($known);
+        $this->clients->expects(self::never())->method('save');
+
+        $event = $this->event('oauth2_authorize');
+        $this->listener($http)($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(Response::class, $response);
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertSame(['http://127.0.0.1:3000/old-cb'], array_map(strval(...), $known->getRedirectUris()));
     }
 
     #[Test]
@@ -122,6 +187,7 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
         self::assertSame('Example Agent', $saved->getName());
         self::assertNull($saved->getSecret(), 'A client registered by document is public.');
         self::assertFalse($saved->isPlainTextPkceAllowed());
+        self::assertEquals($this->clock->now()->modify('+300 seconds'), $saved->getMetadataExpiresAt(), 'No max-age: the resolver floor applies.');
     }
 
     #[Test]
@@ -157,12 +223,12 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
         $spent->create('owner@example.com')->consume();
 
         $listener = new ClientIdMetadataDocumentListener(
-            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test'),
+            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test', $this->clock),
             $this->clients,
             $this->security,
             $spent,
             $this->limiter('per_host', 10),
-            new NativeClock(),
+            $this->clock,
         );
 
         try {
@@ -187,12 +253,12 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
         $spent->create(parse_url(self::CLIENT_ID, \PHP_URL_HOST))->consume();
 
         $listener = new ClientIdMetadataDocumentListener(
-            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test'),
+            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test', $this->clock),
             $this->clients,
             $this->security,
             $this->limiter('per_user', 10),
             $spent,
-            new NativeClock(),
+            $this->clock,
         );
 
         try {
@@ -203,6 +269,15 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
         } finally {
             self::assertSame(0, $http->getRequestsCount());
         }
+    }
+
+    private function knownClient(string $expiresIn): OAuthClient
+    {
+        $client = new OAuthClient('Known', self::CLIENT_ID, null);
+        $client->setRedirectUris(new RedirectUri('http://127.0.0.1:3000/old-cb'));
+        $client->setMetadataExpiresAt($this->clock->now()->modify($expiresIn));
+
+        return $client;
     }
 
     private function event(string $route, string $clientId = self::CLIENT_ID): RequestEvent
@@ -220,12 +295,12 @@ final class ClientIdMetadataDocumentListenerTest extends TestCase
     private function listener(MockHttpClient $http): ClientIdMetadataDocumentListener
     {
         return new ClientIdMetadataDocumentListener(
-            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test'),
+            new ClientMetadataResolver($http, new ArrayAdapter(), new NullLogger(), 'https://bike-trip-planner.test', $this->clock),
             $this->clients,
             $this->security,
             $this->limiter('per_user', 10),
             $this->limiter('per_host', 10),
-            new NativeClock(),
+            $this->clock,
         );
     }
 

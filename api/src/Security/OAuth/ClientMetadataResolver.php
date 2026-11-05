@@ -6,6 +6,7 @@ namespace App\Security\OAuth;
 
 use App\Entity\OAuthClient;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
@@ -68,6 +69,7 @@ final readonly class ClientMetadataResolver
         private LoggerInterface $logger,
         #[Autowire(env: 'DEFAULT_URI')]
         private string $ownUri,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -108,9 +110,10 @@ final readonly class ClientMetadataResolver
             throw $this->reject($clientId, 'Metadata document could not be fetched: '.$transport->getMessage());
         }
 
-        $metadata = $this->parse($clientId, $body);
+        $lifetime = $this->lifetimeFrom($cacheControl);
+        $metadata = $this->parse($clientId, $body, $this->clock->now()->modify(\sprintf('+%d seconds', $lifetime)));
 
-        $item->set($metadata)->expiresAfter($this->lifetimeFrom($cacheControl));
+        $item->set($metadata)->expiresAfter($lifetime);
         $this->cache->save($item);
 
         return $metadata;
@@ -179,7 +182,7 @@ final readonly class ClientMetadataResolver
     /**
      * @throws ClientMetadataRejected
      */
-    private function parse(string $clientId, string $body): ClientMetadata
+    private function parse(string $clientId, string $body, \DateTimeImmutable $expiresAt): ClientMetadata
     {
         try {
             $document = json_decode($body, true, 8, \JSON_THROW_ON_ERROR);
@@ -219,7 +222,7 @@ final readonly class ClientMetadataResolver
         $name = trim($name);
         \assert('' !== $name && '' !== $clientId);
 
-        return new ClientMetadata($clientId, $name, $redirectUris);
+        return new ClientMetadata($clientId, $name, $redirectUris, $expiresAt);
     }
 
     /**
