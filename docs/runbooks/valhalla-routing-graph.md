@@ -164,7 +164,7 @@ mv /tmp/valhalla-france-YYYYMM.tar.gz /tmp/valhalla-france.tar.gz
 # Stop the shared service so nothing reads the volume mid-write:
 docker compose -p valhalla-shared -f deploy/valhalla/compose.yaml stop valhalla
 
-VOL=$(docker volume ls -q | grep valhalla-tiles)   # valhalla-shared_valhalla-tiles
+VOL=valhalla-shared_valhalla-tiles   # exact name, never a pattern: the next command wipes it
 # Wipe the old tiles, then unpack the new tar into the volume root:
 docker run --rm -v "$VOL":/dst alpine \
   sh -c 'rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles'
