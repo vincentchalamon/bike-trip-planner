@@ -270,9 +270,7 @@ final class TripRequest
         return (int) $this->startDate->diff($this->endDate)->days + 1 > self::MAX_TRIP_DAYS;
     }
 
-    // Both groups: creation validates `trip_request:create` alone, and a create is where a
-    // date range is most often sent.
-    #[Assert\Callback(groups: ['Default', 'trip_request:create'])]
+    #[Assert\Callback]
     public function validateDuration(ExecutionContextInterface $context): void
     {
         if ($this->exceedsMaxDuration()) {

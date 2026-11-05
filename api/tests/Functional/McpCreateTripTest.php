@@ -159,6 +159,19 @@ final class McpCreateTripTest extends ApiTestCase
     }
 
     /**
+     * The settings carry their bounds in the `Default` group; a create that validated only its
+     * own group would store a pacing the engine was never meant to run.
+     */
+    #[Test]
+    public function aCreationWithOutOfRangeSettingsIsRefusedBeforeAnythingIsWritten(): void
+    {
+        $envelope = $this->tool('create_trip', ['sourceUrl' => 'https://www.komoot.com/tour/123456789', 'fatigueFactor' => 5.0, 'elevationPenalty' => -1.0])->toArray(false);
+
+        self::assertArrayHasKey('error', $envelope, json_encode($envelope, \JSON_THROW_ON_ERROR));
+        self::assertSame(0, $this->tripCount(), 'A trip was created with out-of-range settings.');
+    }
+
+    /**
      * Two identical calls are a retry, not two intentions.
      *
      * No key is asked of the caller: a model minting a nonce fails in both directions — reusing

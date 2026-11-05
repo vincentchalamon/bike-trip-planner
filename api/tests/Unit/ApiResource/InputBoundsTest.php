@@ -135,7 +135,7 @@ final class InputBoundsTest extends TestCase
     public static function validationGroups(): iterable
     {
         yield 'update (Default)' => [null];
-        yield 'creation' => [['trip_request:create']];
+        yield 'creation' => [['Default', 'trip_request:create']];
     }
 
     /**
