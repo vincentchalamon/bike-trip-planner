@@ -130,6 +130,32 @@ final class StageAddManualAccommodationProcessorTest extends TestCase
     }
 
     #[Test]
+    public function schemeLessUrlIsStoredInItsCanonicalForm(): void
+    {
+        $repo = $this->createStub(TripRequestRepositoryInterface::class);
+        $store = $this->createMock(TripStageStoreInterface::class);
+        $this->stubMutateStages($store);
+        $repo->method('getRequest')->willReturn(new TripRequest());
+        $stages = $this->twoStages();
+        $store->method('getStages')->willReturn($stages);
+        $stored = null;
+        $store->method('storeStages')->willReturnCallback(function (string $t, array $s) use (&$stored): void {
+            $stored = $s;
+        });
+
+        $geocoder = $this->createStub(GeocoderInterface::class);
+        $geocoder->method('geocode')->willReturn(new Coordinate(48.0, 2.0));
+
+        $req = $this->request();
+        $req->url = '  www.Gite.fr/chambre ';
+
+        $this->processor($repo, $store, $geocoder)->process($req, new Post(), ['tripId' => 'trip-1', 'stageId' => $stages[0]->id]);
+
+        self::assertNotNull($stored);
+        self::assertSame('https://www.gite.fr/chambre', $stored[0]->selectedAccommodation?->url);
+    }
+
+    #[Test]
     public function omittedPriceProducesNoExactPrice(): void
     {
         $repo = $this->createStub(TripRequestRepositoryInterface::class);

@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\Concurrency\IfMatch;
 use App\Concurrency\TripVersionEtag;
+use App\Format\WebsiteUrl;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageManualAccommodationRequest;
@@ -73,7 +74,8 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
 
         // Total price maps onto the standard exact-price contract; omitted → no price.
         $price = $data->priceTotal;
-        $url = null !== $data->url ? trim($data->url) : '';
+        // The DTO already rejected a value that does not normalise; this stores the canonical form.
+        $url = WebsiteUrl::normalize($data->url);
 
         $accommodation = new Accommodation(
             name: $data->name,
@@ -83,7 +85,7 @@ final readonly class StageAddManualAccommodationProcessor implements ProcessorIn
             estimatedPriceMin: $price ?? 0.0,
             estimatedPriceMax: $price ?? 0.0,
             isExactPrice: null !== $price,
-            url: '' !== $url ? $url : null,
+            url: $url,
             source: 'manual',
             address: $data->address,
         );

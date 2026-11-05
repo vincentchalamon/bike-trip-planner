@@ -93,6 +93,23 @@ final class OsmCulturalPoiSourceTest extends TestCase
     }
 
     #[Test]
+    public function servedUrlsAreNormalisedToHttpOrDropped(): void
+    {
+        // Stored as imported (OSM tag, Wikidata claim): the read path is the guard.
+        $source = $this->makeSource($this->repository([
+            ['name' => 'A', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => null, 'website' => 'javascript:alert(1)', 'imageUrl' => 'data:image/png;base64,AAAA', 'wikipediaUrl' => 'mailto:x@y.fr'],
+            ['name' => 'B', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => null, 'website' => 'www.Musee.fr/visite'],
+        ]));
+
+        $pois = $source->fetchForStages($this->stageGeometries(), 500);
+
+        self::assertNull($pois[0]['website']);
+        self::assertNull($pois[0]['imageUrl']);
+        self::assertNull($pois[0]['wikipediaUrl']);
+        self::assertSame('https://www.musee.fr/visite', $pois[1]['website']);
+    }
+
+    #[Test]
     public function nullNameIsNotReplacedByTheCategorySlug(): void
     {
         // The category is an OSM tag value, never a name: keeping it null lets the

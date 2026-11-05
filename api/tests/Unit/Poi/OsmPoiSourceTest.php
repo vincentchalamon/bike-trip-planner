@@ -65,4 +65,16 @@ final class OsmPoiSourceTest extends TestCase
         self::assertNull($poi['name']);
         self::assertSame('supermarket', $poi['category']);
     }
+
+    #[Test]
+    public function websiteIsNormalisedToHttpOrDropped(): void
+    {
+        $pois = $this->source([
+            ['name' => 'A', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'openingHours' => null, 'website' => 'javascript:alert(1)'],
+            ['name' => 'B', 'category' => 'bakery', 'lat' => 48.1, 'lon' => 2.1, 'openingHours' => null, 'website' => 'boulangerie.fr'],
+        ])->fetchInCorridor($this->route(), 2000);
+
+        self::assertNull($pois[0]['website']);
+        self::assertSame('https://boulangerie.fr', $pois[1]['website']);
+    }
 }

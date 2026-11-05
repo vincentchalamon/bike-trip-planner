@@ -1753,7 +1753,7 @@ export interface components {
             address: string;
             /** @description Optional total price in euros. Maps to estimatedPriceMin = estimatedPriceMax with isExactPrice = true. */
             priceTotal?: number | null;
-            /** @description Optional booking/listing link. */
+            /** @description Optional booking/listing link: an http(s) URL; a missing scheme is read as https. */
             url?: string | null;
         };
         "Stage.StagePoiWaypointRequest": {
