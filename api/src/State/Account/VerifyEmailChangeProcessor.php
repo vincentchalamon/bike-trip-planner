@@ -9,17 +9,26 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Account\EmailChange;
 use App\Entity\EmailChangeToken;
 use App\Entity\User;
+use App\Entity\RefreshToken;
 use App\Repository\EmailChangeTokenRepository;
+use App\Repository\RefreshTokenRepository;
+use App\Security\AuthCookies;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Service\CredentialsRevokerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Twig\Environment;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Verifies an email-change token (#777): checks ownership first, then atomically
@@ -32,6 +41,10 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * at the DB level — if the target address was taken between request and verify,
  * the unique constraint violation is mapped to a 422.
  *
+ * A committed change signs out every other first-party session and tells the OLD address:
+ * someone who stole a session and moved the account to their own mailbox would otherwise keep
+ * every other session alive, and the owner would learn nothing until they could not sign in.
+ *
  * @implements ProcessorInterface<EmailChange, JsonResponse>
  */
 final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
@@ -43,6 +56,10 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
         private TranslatorInterface $translator,
         private LoggerInterface $logger,
         private CredentialsRevokerInterface $credentialsRevoker,
+        private RefreshTokenRepository $refreshTokenRepository,
+        private RequestStack $requestStack,
+        private MailerInterface $mailer,
+        private Environment $twig,
     ) {
     }
 
@@ -99,6 +116,7 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
         // the applications, and the user can let them back in.
         $this->credentialsRevoker->revokeCredentialsForUser($user);
 
+        $oldEmail = $user->getEmail();
         $user->setEmail($newEmail);
 
         try {
@@ -112,9 +130,67 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
 
         $this->logger->info('Email changed', ['user' => $user->getId()->toRfc4122()]);
 
+        $this->refreshTokenRepository->removeAllForUserExcept($user, $this->callerSessionTokenIds($user));
+        $this->notifyPreviousAddress($oldEmail, $user);
+
         return new JsonResponse(
             ['email' => $newEmail],
             Response::HTTP_OK,
         );
+    }
+
+    /**
+     * The session making this request, when it can be told apart: the web client's refresh
+     * cookie reaches this endpoint, a mobile client's refresh token does not, and that client is
+     * signed out with the others. Its successor is kept too while a rotation is in its grace
+     * window, or the very next refresh would sign the caller out.
+     *
+     * @return list<Uuid>
+     */
+    private function callerSessionTokenIds(User $user): array
+    {
+        $cookie = $this->requestStack->getCurrentRequest()?->cookies->get(AuthCookies::REFRESH_TOKEN);
+        if (!\is_string($cookie) || '' === $cookie) {
+            return [];
+        }
+
+        $current = $this->refreshTokenRepository->findValidByToken($cookie);
+        if (!$current instanceof RefreshToken || !$current->getUser()->getId()->equals($user->getId())) {
+            return [];
+        }
+
+        $kept = [$current->getId()];
+        $replacedBy = $current->getReplacedByToken();
+        $successor = null !== $replacedBy ? $this->refreshTokenRepository->findValidByDigest($replacedBy) : null;
+        if ($successor instanceof RefreshToken) {
+            $kept[] = $successor->getId();
+        }
+
+        return $kept;
+    }
+
+    /**
+     * After the commit, and never a reason to undo it: the change is made, and the notice is
+     * what lets an owner who did not make it react.
+     */
+    private function notifyPreviousAddress(string $oldEmail, User $user): void
+    {
+        $locale = $user->getLocale();
+
+        $message = new Email()
+            ->to($oldEmail)
+            ->subject($this->translator->trans('email_change.notice.subject', [], 'account', $locale))
+            ->html($this->twig->render('email/email_changed_notice.html.twig', ['locale' => $locale]));
+
+        try {
+            $this->mailer->send($message);
+        } catch (TransportExceptionInterface $transportException) {
+            // Class and code only: an SMTP rejection quotes the recipient.
+            $this->logger->error('Email change notice to the previous address could not be sent', [
+                'user' => $user->getId()->toRfc4122(),
+                'error' => $transportException::class,
+                'code' => $transportException->getCode(),
+            ]);
+        }
     }
 }
