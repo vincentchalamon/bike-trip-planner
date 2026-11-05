@@ -309,16 +309,21 @@ routing-up: ## Start the Valhalla routing service (requires a graph built by `ma
 ROUTING_HOST := $(word 1,$(ARGS))
 ROUTING_PUBLISH_SLUGS := $(wordlist 2,$(words $(ARGS)),$(ARGS))
 ROUTING_REMOTE_COMPOSE ?= /opt/bike-trip-planner/deploy/valhalla/compose.yaml
+# Exact volume names, never a pattern: the remote step wipes the graph in it.
+ROUTING_REMOTE_VOLUME ?= valhalla-shared_valhalla-tiles
 
 routing-publish: ## Ship the built routing graph to a server (e.g. make routing-publish deploy@prod-host france belgium)
 	@test -n "$(ARGS)" || { echo "Usage: make routing-publish <user@host> <slug> [slug...] (e.g. make routing-publish deploy@prod-host france belgium)"; exit 1; }
 	@ARTIFACT="valhalla-$$(echo $(ROUTING_PUBLISH_SLUGS) | tr ' ' '-')-$$(date +%Y%m).tar.gz" && \
-	VOL=$$(docker volume ls -q | grep valhalla-tiles) && \
+	VOL="$$(docker compose config | sed -n 's/^name: //p')_valhalla-tiles" && \
+	docker volume inspect "$$VOL" >/dev/null && \
 	docker run --rm -v "$$VOL":/src -v "$(CURDIR)":/out alpine:3.24 tar czf /out/$$ARTIFACT -C /src valhalla_tiles.tar && \
-	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):/tmp/valhalla-tiles.tar.gz" && \
+	REMOTE_TMP=$$(ssh "$(ROUTING_HOST)" mktemp -d) && test -n "$$REMOTE_TMP" && \
+	rsync -avP --partial "$$ARTIFACT" "$(ROUTING_HOST):$$REMOTE_TMP/valhalla-tiles.tar.gz" && \
 	rm -f "$$ARTIFACT" && \
+	ssh "$(ROUTING_HOST)" 'docker volume inspect $(ROUTING_REMOTE_VOLUME) >/dev/null' && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) stop valhalla' && \
-	ssh "$(ROUTING_HOST)" 'set -e; VOL=$$(docker volume ls -q | grep valhalla-tiles) && docker run --rm -v "$$VOL":/dst alpine:3.24 sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v "$$VOL":/dst -v /tmp:/in alpine:3.24 tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f /tmp/valhalla-tiles.tar.gz' && \
+	ssh "$(ROUTING_HOST)" 'set -e; docker run --rm -v $(ROUTING_REMOTE_VOLUME):/dst alpine:3.24 sh -c "rm -rf /dst/valhalla_tiles /dst/valhalla_tiles.tar /dst/tiles" && docker run --rm -v $(ROUTING_REMOTE_VOLUME):/dst -v '"$$REMOTE_TMP"':/in:ro alpine:3.24 tar xzf /in/valhalla-tiles.tar.gz -C /dst && rm -f '"$$REMOTE_TMP"'/valhalla-tiles.tar.gz && rmdir '"$$REMOTE_TMP" && \
 	ssh "$(ROUTING_HOST)" 'docker compose -p valhalla-shared -f $(ROUTING_REMOTE_COMPOSE) restart valhalla'
 
 ## --- 💾 Backup & DR ---

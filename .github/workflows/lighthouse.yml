@@ -6,6 +6,10 @@ name: Lighthouse
 on:
   workflow_dispatch: ~
 
+# Least-privilege default: jobs needing more declare it themselves.
+permissions:
+  contents: read
+
 jobs:
   lighthouse:
     name: Lighthouse
@@ -23,9 +27,9 @@ jobs:
       OAUTH_ENCRYPTION_KEY: "ci-test-oauth-encryption-key"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # Two keypairs, and they must differ or the prod image refuses to boot (ADR-079).
       # One script knows both (#1309); the paths stay exported here, as Actions plumbing.
       - name: Generate keypairs
@@ -55,7 +59,7 @@ jobs:
         run: make lighthouse
       - name: Upload Lighthouse report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lighthouse-report
           path: pwa/.lighthouseci/

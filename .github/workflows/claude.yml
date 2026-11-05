@@ -10,6 +10,10 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Least-privilege default: jobs needing more declare it themselves.
+permissions:
+  contents: read
+
 jobs:
   pick:
     if: |
@@ -35,16 +39,21 @@ jobs:
         run: |
           # Extract optional base branch: "@claude pick [base-branch]"
           BASE=$(echo "$COMMENT_BODY" | grep -oP '@claude\s+pick\s+\K\S+' || echo "main")
+          # The value is interpolated into the prompt and the git commands below.
+          if ! [[ "$BASE" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$BASE" == -* ]]; then
+            echo "::error::Invalid base branch name in comment."
+            exit 1
+          fi
           echo "base_branch=$BASE" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@aa8a7738e48bf30a40ee499ce818bef081c5ab5e # v1.0.257
         env:
           BASE_BRANCH: ${{ steps.parse.outputs.base_branch }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -52,6 +61,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
+          # Bash(*) is deliberate: implementing an issue needs git, npx and gh pr checks.
+          # The trigger is limited to comments by the repository owner, and no web tools
+          # are granted.
           claude_args: |
             --allowedTools "mcp__github__*,Bash(*),Read,Glob,Grep,Write,Edit"
           prompt: |
@@ -122,12 +134,12 @@ jobs:
 
       - name: Upload Claude execution log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: claude-pick-execution
           path: ${{ steps.claude.outputs.execution_file }}
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 2
 
       - name: Check for permission denials
         if: always()
@@ -178,28 +190,30 @@ jobs:
       actions: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@aa8a7738e48bf30a40ee499ce818bef081c5ab5e # v1.0.257
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
+          # Free-form owner requests (fix, refactor, investigate) need the same shell as
+          # pick; only the repository owner can trigger this job.
           claude_args: |
             --allowedTools "mcp__github__*,Bash(*),Read,Glob,Grep,Write,Edit"
 
       - name: Upload Claude execution log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: claude-execution
           path: ${{ steps.claude.outputs.execution_file }}
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 2
 
       - name: Check for permission denials
         if: always()
