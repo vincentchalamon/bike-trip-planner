@@ -47,7 +47,8 @@ final readonly class OsmDataDownloader
      *
      * The file is always written to "{target}.tmp" first then atomically
      * renamed to the final path so a partial download (or any pre-rename
-     * failure) cannot corrupt an existing PBF at the target path.
+     * failure) cannot corrupt an existing PBF at the target path. The
+     * transfer must match the `.md5` Geofabrik publishes next to it.
      *
      * @throws DownloadFailedException
      */
@@ -63,6 +64,8 @@ final readonly class OsmDataDownloader
         // whether to skip already-present files via file_exists() before calling download().
         $writePath = $targetPath.'.tmp';
         $url = GeofabrikRegionRegistry::downloadUrl($slug);
+        $expectedMd5 = $this->expectedMd5($slug, $url);
+        $hash = hash_init('md5');
 
         $fileHandle = fopen($writePath, 'w');
         if (false === $fileHandle) {
@@ -78,9 +81,15 @@ final readonly class OsmDataDownloader
             }
 
             foreach ($this->httpClient->stream($response) as $chunk) {
-                if (false === fwrite($fileHandle, $chunk->getContent())) {
+                $content = $chunk->getContent();
+                hash_update($hash, $content);
+                if (false === fwrite($fileHandle, $content)) {
                     throw new DownloadFailedException(\sprintf('Failed to write to "%s" while downloading "%s"', $writePath, $slug));
                 }
+            }
+
+            if (!hash_equals($expectedMd5, hash_final($hash))) {
+                throw new DownloadFailedException(\sprintf('Download of "%s" does not match its published MD5 checksum', $slug));
             }
         } catch (HttpClientExceptionInterface $e) {
             fclose($fileHandle);
@@ -101,5 +110,32 @@ final readonly class OsmDataDownloader
 
             throw new DownloadFailedException(\sprintf('Atomic rename of "%s" to "%s" failed', $writePath, $targetPath));
         }
+    }
+
+    /**
+     * Geofabrik publishes "<md5>  <file>" next to each extract. A truncated or altered
+     * transfer would otherwise be imported as if it were the region.
+     *
+     * @throws DownloadFailedException
+     */
+    private function expectedMd5(string $slug, string $url): string
+    {
+        try {
+            $response = $this->httpClient->request('GET', $url.'.md5');
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new DownloadFailedException(\sprintf('Checksum of "%s" unavailable (HTTP %d)', $slug, $statusCode));
+            }
+
+            $body = $response->getContent();
+        } catch (HttpClientExceptionInterface $httpClientException) {
+            throw new DownloadFailedException(\sprintf('Checksum of "%s" unavailable: %s', $slug, $httpClientException->getMessage()), 0, $httpClientException);
+        }
+
+        if (1 !== preg_match('/^([0-9a-f]{32})\b/i', trim($body), $matches)) {
+            throw new DownloadFailedException(\sprintf('Checksum of "%s" is not an MD5 digest', $slug));
+        }
+
+        return strtolower($matches[1]);
     }
 }

@@ -90,7 +90,7 @@ final class ProvisionCommandTest extends TestCase
             new ZoneOpening(
                 downloader: new OsmDataDownloader(
                     regionsDir: $this->regionsDir,
-                    httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+                    httpClient: $httpClient ?? OsmDataDownloaderTest::geofabrik(static fn (): MockResponse => new MockResponse('osm-bytes')),
                 ),
                 postgisImporter: $postgisImporter ?? $this->capturingImporter(),
                 routingPerimeter: $routingPerimeter,
